@@ -25,7 +25,7 @@ async def handle_submission(request: Request):
     fatigue = answers[12]["answer"]
     injuries = answers[13]["answer"]
     available_days = answers[14]["answer"]
-    weak_areas = ", ".join(answers[15]["choices"]) if "choices" in answers[15] else answers[15]["answer"]
+    weak_areas = ", ".join(answers[15].get("choices", [])) if "choices" in answers[15] else answers[15].get("answer", "")
     leak = answers[16]["answer"]
     mental_block = answers[17]["answer"]
     notes = answers[18]["answer"]
