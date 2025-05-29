@@ -1,16 +1,9 @@
-from fastapi import FastAPI, Request
+ from fastapi import FastAPI, Request
 import openai
 import os
 from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-
-import base64
-
-if os.getenv("GOOGLE_CREDS_B64"):
-    with open("clientsecrettallyso.json", "w") as f:
-        decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
-        f.write(decoded.decode("utf-8"))
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 app = FastAPI()
@@ -24,11 +17,8 @@ creds = service_account.Credentials.from_service_account_file(
 docs_service = build('docs', 'v1', credentials=creds)
 
 def create_doc(title, content):
-    # Create the doc
     doc = docs_service.documents().create(body={"title": title}).execute()
     doc_id = doc.get("documentId")
-
-    # Insert text into the doc
     docs_service.documents().batchUpdate(
         documentId=doc_id,
         body={
@@ -42,17 +32,6 @@ def create_doc(title, content):
             ]
         }
     ).execute()
-
-    # Share the doc publicly (viewer access)
-    drive_service = build('drive', 'v3', credentials=creds)
-    drive_service.permissions().create(
-        fileId=doc_id,
-        body={
-            'type': 'anyone',
-            'role': 'reader'
-        }
-    ).execute()
-
     return f"https://docs.google.com/document/d/{doc_id}"
 
 @app.post("/webhook")
@@ -156,5 +135,4 @@ Always program like the fighter is preparing for a world title. Your tone should
     print(result)
 
     doc_link = create_doc(f"Fight Plan – {full_name}", result)
-    print("Google Doc Link:", doc_link)
     return {"doc_link": doc_link}
