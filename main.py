@@ -6,26 +6,42 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import base64
 
-# Decode and save Google credentials if environment variable is set
+# Decode and save service account credentials
 if os.getenv("GOOGLE_CREDS_B64"):
     with open("clientsecrettallyso.json", "w") as f:
         decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
         f.write(decoded.decode("utf-8"))
 
+# Set OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
 app = FastAPI()
 
-# Google Docs setup
-SCOPES = ['https://www.googleapis.com/auth/documents']
+# Google Docs and Drive setup
+DOCS_SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
 creds = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    SERVICE_ACCOUNT_FILE, scopes=DOCS_SCOPES
 )
 docs_service = build('docs', 'v1', credentials=creds)
+drive_service = build('drive', 'v3', credentials=creds)
 
+# Find folder ID by name
+def get_folder_id(folder_name):
+    response = drive_service.files().list(q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
+                                          spaces='drive').execute()
+    folders = response.get('files', [])
+    return folders[0]['id'] if folders else None
+
+# Create doc in folder
 def create_doc(title, content):
+    folder_id = get_folder_id("Unlxck Auto Docs")
     doc = docs_service.documents().create(body={"title": title}).execute()
     doc_id = doc.get("documentId")
+
+    if folder_id:
+        drive_service.files().update(fileId=doc_id, addParents=folder_id, removeParents='root').execute()
+
     docs_service.documents().batchUpdate(
         documentId=doc_id,
         body={
@@ -50,9 +66,9 @@ async def handle_submission(request: Request):
         for field in fields:
             if field.get("label", "").strip() == label.strip():
                 if isinstance(field["value"], list):
-                    return ", ".join(
-                        [opt["text"] for opt in field.get("options", []) if opt["id"] in field["value"]]
-                    )
+                    return ", ".join([
+                        opt["text"] for opt in field.get("options", []) if opt["id"] in field["value"]
+                    ])
                 return field["value"]
         return ""
 
