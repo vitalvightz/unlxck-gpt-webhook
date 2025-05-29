@@ -8,7 +8,7 @@ app = FastAPI()
 @app.post("/webhook")
 async def handle_submission(request: Request):
     data = await request.json()
-    answers = data["data"]["answers"]
+    answers = data["answers"]
 
     full_name = answers[0]["answer"]
     age = answers[1]["answer"]
