@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
-import openai
+from openai import OpenAI
 import os
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 app = FastAPI()
 
 @app.post("/webhook")
@@ -79,12 +80,12 @@ Your coaching logic must follow these rules (Unlxck Coaching Brain):
 Always program like the fighter is preparing for a world title. Your tone should be clear, grounded, and elite — no filler, no simplifications.
     """
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3,
         max_tokens=1400
     )
 
-    result = response["choices"][0]["message"]["content"]
+    result = response.choices[0].message.content
     return {"plan": result}
