@@ -136,3 +136,4 @@ Always program like the fighter is preparing for a world title. Your tone should
 
     doc_link = create_doc(f"Fight Plan – {full_name}", result)
     return {"doc_link": doc_link}
+    
