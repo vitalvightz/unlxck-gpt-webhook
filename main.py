@@ -107,4 +107,8 @@ Always program like the fighter is preparing for a world title. Your tone should
     )
 
     result = response.choices[0].message.content
+
+    print("===== RETURNED PLAN =====")
+    print(result)
+
     return {"plan": result}
