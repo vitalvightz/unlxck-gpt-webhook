@@ -24,8 +24,11 @@ creds = service_account.Credentials.from_service_account_file(
 docs_service = build('docs', 'v1', credentials=creds)
 
 def create_doc(title, content):
+    # Create the doc
     doc = docs_service.documents().create(body={"title": title}).execute()
     doc_id = doc.get("documentId")
+
+    # Insert text into the doc
     docs_service.documents().batchUpdate(
         documentId=doc_id,
         body={
@@ -39,6 +42,17 @@ def create_doc(title, content):
             ]
         }
     ).execute()
+
+    # Share the doc publicly (viewer access)
+    drive_service = build('drive', 'v3', credentials=creds)
+    drive_service.permissions().create(
+        fileId=doc_id,
+        body={
+            'type': 'anyone',
+            'role': 'reader'
+        }
+    ).execute()
+
     return f"https://docs.google.com/document/d/{doc_id}"
 
 @app.post("/webhook")
