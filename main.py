@@ -2,28 +2,53 @@ from fastapi import FastAPI, Request
 import openai
 import os
 from datetime import datetime
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 app = FastAPI()
+
+# Google Docs setup
+SCOPES = ['https://www.googleapis.com/auth/documents']
+SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
+creds = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=SCOPES
+)
+docs_service = build('docs', 'v1', credentials=creds)
+
+def create_doc(title, content):
+    doc = docs_service.documents().create(body={"title": title}).execute()
+    doc_id = doc.get("documentId")
+    docs_service.documents().batchUpdate(
+        documentId=doc_id,
+        body={
+            "requests": [
+                {
+                    "insertText": {
+                        "location": {"index": 1},
+                        "text": content
+                    }
+                }
+            ]
+        }
+    ).execute()
+    return f"https://docs.google.com/document/d/{doc_id}"
 
 @app.post("/webhook")
 async def handle_submission(request: Request):
     data = await request.json()
     fields = data["data"]["fields"]
 
-    # Helper function to get value by label
     def get_value(label):
         for field in fields:
             if field.get("label", "").strip() == label.strip():
                 if isinstance(field["value"], list):
-                    # For dropdowns or checkboxes, resolve text
                     return ", ".join(
                         [opt["text"] for opt in field.get("options", []) if opt["id"] in field["value"]]
                     )
                 return field["value"]
         return ""
 
-    # Parse all values from Tally form
     full_name = get_value("Full name")
     age = get_value("Age")
     weight = get_value("Weight (kg)")
@@ -43,7 +68,6 @@ async def handle_submission(request: Request):
     mental_block = get_value("What is your biggest mental barrier")
     notes = get_value("Anything else you want us to know before we build your system?")
 
-    # Convert date to weeks out
     if next_fight_date:
         fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
         weeks_out = max(1, (fight_date - datetime.now()).days // 7)
@@ -107,8 +131,8 @@ Always program like the fighter is preparing for a world title. Your tone should
     )
 
     result = response.choices[0].message.content
-
     print("===== RETURNED PLAN =====")
     print(result)
 
-    return {"plan": result}
+    doc_link = create_doc(f"Fight Plan – {full_name}", result)
+    return {"doc_link": doc_link}
