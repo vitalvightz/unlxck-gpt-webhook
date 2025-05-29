@@ -4,6 +4,13 @@ import os
 from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+import base64
+
+# Decode and save Google credentials if environment variable is set
+if os.getenv("GOOGLE_CREDS_B64"):
+    with open("clientsecrettallyso.json", "w") as f:
+        decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
+        f.write(decoded.decode("utf-8"))
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 app = FastAPI()
@@ -135,4 +142,5 @@ Always program like the fighter is preparing for a world title. Your tone should
     print(result)
 
     doc_link = create_doc(f"Fight Plan – {full_name}", result)
+    print("Google Doc Link:", doc_link)  # ✅ ADD THIS TO VERIFY CREATION
     return {"doc_link": doc_link}
