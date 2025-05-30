@@ -227,3 +227,4 @@ Athlete Profile:
     doc_link = create_doc(f"Fight Plan – {full_name}", result)
     print("Google Doc Link:", doc_link)
     return {"doc_link": doc_link}
+    
