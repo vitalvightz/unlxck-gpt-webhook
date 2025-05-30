@@ -57,11 +57,6 @@ def create_doc(title, content):
 
 app = FastAPI()
 
-# Placeholder for your function to extract form values
-def get_value(field):
-    # Implementation for retrieving values from the form submission
-    pass
-
 # --- Safety and Injury Handling ---
 SAFETY_RULES = {
     "spinal": "• BAN axial loading (squats, OH presses)\n• Use anti-flexion core work",
@@ -113,6 +108,18 @@ def get_phase(weeks_out: int, age: int) -> str:
     else:
         return "• TAPER PHASE: Peak intensity, 30-50% volume drop"
 
+def classify_fight_format(rounds_format):
+    if not rounds_format:
+        return "generic"
+    text = rounds_format.lower()
+    if any(x in text for x in ["3x3", "3x5", "3 rounds"]):
+        return "short"
+    elif any(x in text for x in ["4x3", "5x3", "6x3", "5 rounds"]):
+        return "mid"
+    elif any(x in text for x in ["5x5", "10x2", "12x3", "championship", "title"]):
+        return "long"
+    return "generic"
+
 @app.post("/webhook")
 async def handle_submission(request: Request):
     data = await request.json()
@@ -153,6 +160,8 @@ async def handle_submission(request: Request):
     else:
         weeks_out = "N/A"
 
+    fight_type = classify_fight_format(rounds_format)
+
     # --- Safety Logic Injection ---
     safety_prompts = []
     for term, rule in SAFETY_RULES.items():
@@ -181,6 +190,7 @@ You are an elite strength & conditioning coach (MSc-level) who has trained 100+ 
 You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, psychological recalibration tools, and integrated recovery systems used at the highest levels.
 
 {get_phase(weeks_out if weeks_out != 'N/A' else 10, int(age))}
+Fight Length Classification: {fight_type.upper()}
 {safety_block}
 {mental_protocols}
 
@@ -229,4 +239,3 @@ Athlete Profile:
     doc_link = create_doc(f"Fight Plan – {full_name}", result)
     print("Google Doc Link:", doc_link)
     return {"doc_link": doc_link}
-    
