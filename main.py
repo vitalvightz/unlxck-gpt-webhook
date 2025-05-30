@@ -173,13 +173,15 @@ async def handle_submission(request: Request):
         "generic": "• STANDARD visualization protocols"
     }[mental_category]
 
+    safety_block = ''.join([f"{line}\n" for line in safety_prompts])
+
     prompt = f"""
 You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters in UFC, Glory, ONE Championship, and Olympic combat sports.
 
 You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, psychological recalibration tools, and integrated recovery systems used at the highest levels.
 
 {get_phase(weeks_out if weeks_out != 'N/A' else 10, int(age))}
-{''.join([f"{line}\n" for line in safety_prompts])}
+{safety_block}
 {mental_protocols}
 
 Based on the athlete’s input below, generate a tailored 3-phase Fight-Ready program including:
