@@ -1,6 +1,61 @@
 from datetime import datetime
-from openai import OpenAI
-import re
+from fastapi import FastAPI, Request
+import openai
+import os
+import base64
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+# Decode and save service account credentials
+if os.getenv("GOOGLE_CREDS_B64"):
+    with open("clientsecrettallyso.json", "w") as f:
+        decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
+        f.write(decoded.decode("utf-8"))
+
+# Set OpenAI API key
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# Google Docs and Drive setup
+DOCS_SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
+SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
+creds = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE, scopes=DOCS_SCOPES
+)
+docs_service = build('docs', 'v1', credentials=creds)
+drive_service = build('drive', 'v3', credentials=creds)
+
+# Find folder ID by name
+def get_folder_id(folder_name):
+    response = drive_service.files().list(q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
+                                          spaces='drive').execute()
+    folders = response.get('files', [])
+    return folders[0]['id'] if folders else None
+
+# Create doc in folder
+def create_doc(title, content):
+    folder_id = get_folder_id("Unlxck Auto Docs")
+    doc = docs_service.documents().create(body={"title": title}).execute()
+    doc_id = doc.get("documentId")
+
+    if folder_id:
+        drive_service.files().update(fileId=doc_id, addParents=folder_id, removeParents='root').execute()
+
+    docs_service.documents().batchUpdate(
+        documentId=doc_id,
+        body={
+            "requests": [
+                {
+                    "insertText": {
+                        "location": {"index": 1},
+                        "text": content
+                    }
+                }
+            ]
+        }
+    ).execute()
+    return f"https://docs.google.com/document/d/{doc_id}"
+
+app = FastAPI()
 
 # Placeholder for your function to extract form values
 def get_value(field):
@@ -34,27 +89,17 @@ EXERCISE_LIBRARY = {
 
 # --- Helper Functions ---
 def classify_mental_block(block_text):
-    if not block_text or not isinstance(block_text, str):
-        return "generic"
-
-    text = block_text.lower().strip()
-
-    non_answers = ["n/a", "none", "nothing", "idk", "not sure", "no", "skip", "na"]
-    if any(phrase in text for phrase in non_answers) or len(text.split()) < 2:
-        return "generic"
-
-    mental_blocks = {
-        "confidence": ["confidence", "doubt", "self-belief", "don't believe", "imposter"],
-        "gas tank": ["gas", "cardio", "tired", "fade", "gassed", "conditioning"],
-        "injury fear": ["injury", "hurt", "reinjure", "scared to tear", "pain"],
-        "pressure": ["pressure", "nerves", "stress", "expectation", "choke"],
-        "attention": ["focus", "distracted", "adhd", "concentration", "mental lapse"]
-    }
-
-    for block, keywords in mental_blocks.items():
-        if any(re.search(rf"\\b{kw}\\b", text) for kw in keywords):
-            return block
-
+    text = block_text.lower()
+    if any(term in text for term in ["confidence", "doubt", "self-belief", "don't believe"]):
+        return "confidence"
+    elif any(term in text for term in ["gas", "cardio", "round", "tired", "fade"]):
+        return "gas tank"
+    elif any(term in text for term in ["injury", "hurt", "reinjure"]):
+        return "injury fear"
+    elif any(term in text for term in ["pressure", "nerves", "stress", "expectation"]):
+        return "pressure"
+    elif any(term in text for term in ["focus", "distracted", "adhd"]):
+        return "attention"
     return "generic"
 
 def get_phase(weeks_out: int, age: int) -> str:
@@ -68,56 +113,67 @@ def get_phase(weeks_out: int, age: int) -> str:
     else:
         return "• TAPER PHASE: Peak intensity, 30-50% volume drop"
 
-# Collect form inputs
-full_name = get_value("Full name")
-age = get_value("Age")
-weight = get_value("Weight (kg)")
-weight_class = get_value("Weight Class")
-height = get_value("Height (cm)")
-fighting_style = get_value("Fighting Style")
-stance = get_value("Stance")
-status = get_value("Professional Status")
-record = get_value("Current Record")
-next_fight_date = get_value("Next Fight 👇")
-rounds_format = get_value("Rounds & Format")
-frequency = get_value("Weekly Training Frequency")
-fatigue = get_value("Fatigue Level")
-injuries = get_value("Any past or current injuries that we should avoid loading?")
-available_days = get_value("Days Available for S&C training")
-weak_areas = get_value("Where do you feel weakest right now?")
-mental_block = get_value("What is your biggest mental barrier")
-notes = get_value("Anything else you want us to know before we build your system?")
+@app.post("/webhook")
+async def handle_submission(request: Request):
+    data = await request.json()
+    fields = data["data"]["fields"]
 
-# Calculate weeks out from next fight
-if next_fight_date:
-    fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
-    weeks_out = max(1, (fight_date - datetime.now()).days // 7)
-else:
-    weeks_out = "N/A"
+    def get_value(label):
+        for field in fields:
+            if field.get("label", "").strip() == label.strip():
+                if isinstance(field["value"], list):
+                    return ", ".join([
+                        opt["text"] for opt in field.get("options", []) if opt["id"] in field["value"]
+                    ])
+                return field["value"]
+        return ""
 
-# --- Safety Logic Injection ---
-safety_prompts = []
-for term, rule in SAFETY_RULES.items():
-    if term in injuries.lower():
-        safety_prompts.append(rule)
+    full_name = get_value("Full name")
+    age = get_value("Age")
+    weight = get_value("Weight (kg)")
+    weight_class = get_value("Weight Class")
+    height = get_value("Height (cm)")
+    fighting_style = get_value("Fighting Style")
+    stance = get_value("Stance")
+    status = get_value("Professional Status")
+    record = get_value("Current Record")
+    next_fight_date = get_value("Next Fight 👇")
+    rounds_format = get_value("Rounds & Format")
+    frequency = get_value("Weekly Training Frequency")
+    fatigue = get_value("Fatigue Level")
+    injuries = get_value("Any past or current injuries that we should avoid loading?")
+    available_days = get_value("Days Available for S&C training")
+    weak_areas = get_value("Where do you feel weakest right now?")
+    mental_block = get_value("What is your biggest mental barrier")
+    notes = get_value("Anything else you want us to know before we build your system?")
 
-if "shoulder" in injuries.lower():
-    safety_prompts.append(EXERCISE_LIBRARY["shoulder"]["protocols"].get("instability", ""))
-    safety_prompts.extend([f"• {k} → {v}" for k,v in EXERCISE_LIBRARY["shoulder"]["substitutes"].items()])
+    if next_fight_date:
+        fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
+        weeks_out = max(1, (fight_date - datetime.now()).days // 7)
+    else:
+        weeks_out = "N/A"
 
-# Mental mapping
-mental_category = classify_mental_block(mental_block)
-mental_protocols = {
-    "confidence": "• DAILY power pose ritual + achievement journaling",
-    "gas tank": "• HYPOXIC training visualization + round 10 mindset drills",
-    "injury fear": "• GRADED exposure therapy with progressively heavier loads",
-    "pressure": "• SIMULATED high-stakes scenarios in training",
-    "attention": "• Use Pomodoro training + visual cue anchoring",
-    "generic": "• STANDARD visualization protocols"
-}[mental_category]
+    # --- Safety Logic Injection ---
+    safety_prompts = []
+    for term, rule in SAFETY_RULES.items():
+        if term in injuries.lower():
+            safety_prompts.append(rule)
 
-# Construct the prompt
-prompt = f"""
+    if "shoulder" in injuries.lower():
+        safety_prompts.append(EXERCISE_LIBRARY["shoulder"]["protocols"].get("instability", ""))
+        safety_prompts.extend([f"• {k} → {v}" for k,v in EXERCISE_LIBRARY["shoulder"]["substitutes"].items()])
+
+    mental_category = classify_mental_block(mental_block)
+    mental_protocols = {
+        "confidence": "• DAILY power pose ritual + achievement journaling",
+        "gas tank": "• HYPOXIC training visualization + round 10 mindset drills",
+        "injury fear": "• GRADED exposure therapy with progressively heavier loads",
+        "pressure": "• SIMULATED high-stakes scenarios in training",
+        "attention": "• Use Pomodoro training + visual cue anchoring",
+        "generic": "• STANDARD visualization protocols"
+    }[mental_category]
+
+    prompt = f"""
 You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters in UFC, Glory, ONE Championship, and Olympic combat sports.
 
 You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, psychological recalibration tools, and integrated recovery systems used at the highest levels.
@@ -155,19 +211,19 @@ Athlete Profile:
 - Physical Weaknesses: {weak_areas}
 - Mental Blocker: {mental_block}
 - Extra Notes: {notes}
-
-... [rest of Unlxck programming prompt continues as before]
 """
 
-# Send to OpenAI
-client = OpenAI(api_key="your_api_key")
-response = client.chat.completions.create(
-    model="gpt-4",
-    messages=[{"role": "user", "content": prompt}],
-    temperature=0.3,
-    max_tokens=1600
-)
+    response = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        max_tokens=1600
+    )
 
-# Output
-output_text = response.choices[0].message.content
-print(output_text)
+    result = response.choices[0].message.content
+    print("===== RETURNED PLAN =====")
+    print(result)
+
+    doc_link = create_doc(f"Fight Plan – {full_name}", result)
+    print("Google Doc Link:", doc_link)
+    return {"doc_link": doc_link}
