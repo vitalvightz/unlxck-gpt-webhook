@@ -1,4 +1,4 @@
-def generate_recovery_block(age: int, phase: str, weight: float, weight_class: str, flags: dict) -> str:
+def generate_recovery_block(*, age: int, phase: str, weight: float, weight_class: str, flags: dict) -> str:
     recovery_block = ""
 
     # Core Recovery
