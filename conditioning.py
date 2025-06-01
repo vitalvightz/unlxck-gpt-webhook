@@ -1,4 +1,4 @@
-from pathlib import Pat
+from pathlib import Path
 
 def generate_conditioning_block(phase: str, flags: dict, fight_format: str = None) -> str:
     """
