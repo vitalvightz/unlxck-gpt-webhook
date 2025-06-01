@@ -134,13 +134,9 @@ async def handle_submission(request: Request):
     mental_protocols = get_mental_protocols(flags["mental_block"], phase)
     mindset_context = get_mindset_by_phase(phase, flags)
     strength_context = generate_strength_block(
-        phase=phase,
-        age=age_int,
-        weight_class=weight_class,
-        weaknesses=weaknesses_list,
-        injuries=flags["injuries"],
-        fatigue=fatigue
-    )
+    flags=flags,
+    weaknesses=weaknesses_list
+)
     conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
     recovery_context = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
     nutrition_context = generate_nutrition_block(flags)
