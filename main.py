@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 
 # Modular imports powering GPT context
 from flag_router import flag_router
-from mindset_module import classify_mental_block, get_mindset_by_phase
+from mindset_module import classify_mental_block, get_mindset_by_phase, get_mental_protocols
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
 from recovery import generate_recovery_block
