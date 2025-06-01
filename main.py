@@ -6,6 +6,14 @@ import base64
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
+# Import your modular functions here
+from modules.flag_router import flag_router
+from modules.strength import generate_strength_block
+from modules.conditioning import generate_conditioning_block
+from modules.mindset import generate_mindset_block
+from modules.recovery import generate_recovery_block
+from modules.nutrition import generate_nutrition_block
+
 # Decode and save service account credentials
 if os.getenv("GOOGLE_CREDS_B64"):
     with open("clientsecrettallyso.json", "w") as f:
@@ -24,10 +32,8 @@ creds = service_account.Credentials.from_service_account_file(
 docs_service = build('docs', 'v1', credentials=creds)
 drive_service = build('drive', 'v3', credentials=creds)
 
-# Core config
 app = FastAPI()
 
-# --- Utility Functions ---
 def get_value(label, fields):
     for field in fields:
         if field.get("label", "").strip() == label.strip():
@@ -67,7 +73,6 @@ def create_doc(title, content):
     ).execute()
     return f"https://docs.google.com/document/d/{doc_id}"
 
-# --- Webhook Endpoint ---
 @app.post("/webhook")
 async def handle_submission(request: Request):
     data = await request.json()
@@ -92,72 +97,79 @@ async def handle_submission(request: Request):
     mental_block = get_value("What is your biggest mental barrier", fields)
     notes = get_value("Anything else you want us to know before we build your system?", fields)
 
+    # Calculate weeks out
     if next_fight_date:
-        fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
-        weeks_out = max(1, (fight_date - datetime.now()).days // 7)
+        try:
+            fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
+            weeks_out = max(1, (fight_date - datetime.now()).days // 7)
+        except Exception:
+            weeks_out = "N/A"
     else:
         weeks_out = "N/A"
 
-    prompt = f"""
-You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters in UFC, Glory, ONE Championship, and Olympic combat sports.
+    # Determine phase from weeks_out
+    if weeks_out == "N/A":
+        phase = "GPP"
+    else:
+        try:
+            wo_int = int(weeks_out)
+            if wo_int > 8:
+                phase = "GPP"
+            elif 3 < wo_int <= 8:
+                phase = "SPP"
+            else:
+                phase = "TAPER"
+        except Exception:
+            phase = "GPP"
 
-You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, and psychological recalibration tools used at the highest levels.
+    # Parse numeric inputs safely
+    try:
+        age_int = int(age)
+    except Exception:
+        age_int = 25
+    try:
+        weight_float = float(weight)
+    except Exception:
+        weight_float = 70.0
+    try:
+        fatigue_int = int(fatigue)
+    except Exception:
+        fatigue_int = 1
 
-Based on the athlete’s input below, generate a comprehensive and tailored 3-phase Fight-Ready program including:
-1. Weekly physical training targets (S&C + conditioning focus)
-2. Phase-specific goals based on time to fight
-3. One key mindset tool or mental focus for each phase
-4. Red flags to watch for based on their inputs (fatigue, taper risk, recovery needs)
+    injuries_str = injuries if injuries else ""
 
-Athlete Profile:
-- Name: {full_name}
-- Age: {age}
-- Weight: {weight}kg
-- Weight Class: {weight_class}
-- Height: {height}cm
-- Style: {fighting_style}
-- Stance: {stance}
-- Level: {status}
-- Record: {record}
-- Fight Format: {rounds_format}
-- Fight Date: {next_fight_date}
-- Weeks Out: {weeks_out}
-- S&C Frequency: {frequency}/week
-- Fatigue Level: {fatigue}
-- Injuries: {injuries}
-- Available S&C Days: {available_days}
-- Physical Weaknesses: {weak_areas}
-- Mental Blocker: {mental_block}
-- Extra Notes: {notes}
+    # Prepare weaknesses list if any
+    weaknesses_list = [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else None
 
-Your coaching logic must follow these rules (Unlxck Coaching Brain):
-• Use 3-phase camp logic:
-  • GPP (12–8 weeks out): build strength base, aerobic capacity, durability
-  • SPP (8–3 weeks out): sharpen force output, alactic/anaerobic conditioning
-  • Taper (final 2 weeks): maintain intensity, cut volume, refeed for performance
-• Program S&C using triphasic → max strength → contrast methods (e.g. trap bar jumps, isos, clusters)
-• Scale sprint/conditioning volume to weight class, fatigue, and fight distance
-• Include mindset anchors (visualisation, cue words, ego control) per phase
-• Trigger red flags if: weight cut is above 6%, RPE is high, taper period is too short
-• Nutrition rules:
-  • Maintain high protein (~2g/kg), carbs based on training phase
-  • Final week = low-residue diet → refeed with high-GI carbs + fluids post-weigh-in
-  • Flag risky cuts or poor taper fueling
-
-Always program like the fighter is preparing for a world title. Your tone should be clear, grounded, and elite — no filler, no simplifications.
-    """
-
-    response = openai.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=1800
+    # Run flag router to centralize flags
+    flags = flag_router(
+        age=age_int,
+        fatigue_score=fatigue_int,
+        phase=phase,
+        weight=weight_float,
+        weight_class=weight_class,
+        injuries=injuries_str
     )
+    flags["phase"] = phase
+    flags["mental_block"] = mental_block.lower() if mental_block else "generic"
 
-    result = response.choices[0].message.content
-    print("===== RETURNED PLAN =====")
-    print(result)
+    # Generate plans using modular functions
+    strength_plan = generate_strength_block(flags, weaknesses=weaknesses_list)
+    conditioning_plan = generate_conditioning_block(phase, flags, fight_format=rounds_format)
+    mindset_plan = generate_mindset_block(phase, flags)
+    recovery_plan = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
+    nutrition_plan = generate_nutrition_block(flags)
 
-    doc_link = create_doc(f"Fight Plan – {full_name}", result)
-    print("Google Doc Link:", doc_link)
+    # Combine all plans
+    full_plan = "\n\n".join([
+        strength_plan,
+        conditioning_plan,
+        mindset_plan,
+        recovery_plan,
+        nutrition_plan,
+    ])
+
+    # Create Google Doc and return link
+    doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
+
     return {"doc_link": doc_link}
