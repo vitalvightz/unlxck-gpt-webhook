@@ -97,7 +97,6 @@ async def handle_submission(request: Request):
     mental_block = get_value("What is your biggest mental barrier", fields)
     notes = get_value("Anything else you want us to know before we build your system?", fields)
 
-    # Calculate weeks out
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
@@ -107,7 +106,6 @@ async def handle_submission(request: Request):
     else:
         weeks_out = "N/A"
 
-    # Determine phase from weeks_out
     if weeks_out == "N/A":
         phase = "GPP"
     else:
@@ -122,7 +120,6 @@ async def handle_submission(request: Request):
         except Exception:
             phase = "GPP"
 
-    # Parse numeric inputs safely
     try:
         age_int = int(age)
     except Exception:
@@ -139,7 +136,6 @@ async def handle_submission(request: Request):
     injuries_str = injuries if injuries else ""
     weaknesses_list = [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else None
 
-    # Run flag router to centralize flags
     flags = flag_router(
         age=age_int,
         fatigue_score=fatigue_int,
@@ -150,18 +146,15 @@ async def handle_submission(request: Request):
     )
     flags["phase"] = phase
 
-    # Classify and store mental block
     classified = classify_mental_block(mental_block)
     flags["mental_block"] = classified
 
-    # Generate plans using modular functions
-    strength_plan = generate_strength_block(flags, weaknesses=weaknesses_list)
-    conditioning_plan = generate_conditioning_block(phase, flags, fight_format=rounds_format)
-    mindset_plan = get_mindset_by_phase(phase, flags)
-    recovery_plan = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
-    nutrition_plan = generate_nutrition_block(flags)
+    strength_plan = generate_strength_block(flags, weaknesses=weaknesses_list) or ""
+    conditioning_plan = generate_conditioning_block(phase, flags, fight_format=rounds_format) or ""
+    mindset_plan = get_mindset_by_phase(phase, flags) or ""
+    recovery_plan = generate_recovery_block(age_int, phase, weight_float, weight_class, flags) or ""
+    nutrition_plan = generate_nutrition_block(flags) or ""
 
-    # Combine all plans
     full_plan = "\n\n".join([
         strength_plan,
         conditioning_plan,
@@ -170,6 +163,5 @@ async def handle_submission(request: Request):
         nutrition_plan,
     ])
 
-    # Create Google Doc and return link
     doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
     return {"doc_link": doc_link}
