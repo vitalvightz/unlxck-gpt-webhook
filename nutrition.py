@@ -1,4 +1,4 @@
-def generate_nutrition_block(flags: dict) -> str:
+def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block = "\n🍽️ **Nutrition Module**\n"
 
     # General Recommendations
