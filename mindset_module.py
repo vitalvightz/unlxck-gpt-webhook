@@ -23,7 +23,7 @@ mindset_bank = {
         "fear of takedowns": "Introduce anti-takedown drills w/ cue focus. Visualize stuffing shot mid-fatigue.",
         "generic": "Visualize adversity (e.g. bad round, crowd noise, injury scare) and successful reaction."
     },
-    "Taper": {
+    "TAPER": {
         "confidence": "Watch best clips + write 'evidence list' of preparation daily.",
         "gas tank": "Use calm affirmations: 'My lungs are ready'. Rehearse controlled exchanges in head.",
         "injury fear": "Repeat safe movement patterns daily with speed. Use mirror to reinforce smoothness.",
@@ -36,7 +36,6 @@ mindset_bank = {
         "generic": "3x/day ritual: breathe → affirm → visualize (short, sharp, elite imagery only)."
     }
 }
-
 
 def classify_mental_block(block_text):
     if not block_text or not isinstance(block_text, str):
@@ -65,7 +64,9 @@ def classify_mental_block(block_text):
 
     return "generic"
 
-
 def get_mindset_by_phase(phase: str, flags: dict) -> str:
     block = flags.get("mental_block", "generic")
     return mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+
+def get_mental_protocols(block: str, phase: str) -> str:
+    return f"**Mental Block Strategy ({block}):**\n{mindset_bank.get(phase, {}).get(block, mindset_bank[phase]['generic'])}"
