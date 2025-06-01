@@ -5,15 +5,21 @@ def generate_conditioning_block(phase: str, flags: dict, fight_format: str = Non
     """
     Conditioning training block using centralized flags.
     """
-    output = f"\\n📦 CONDITIONING MODULE\\nPhase: {phase}\\n"
+    output = "\\n📦 CONDITIONING MODULE\\n"
+    output += f"Phase: {phase}\\n"
 
     # --- Fight format logic ---
     rounds = 3
     if fight_format:
         try:
             rounds = int(fight_format.split('x')[0])
-        except:
+        except (ValueError, IndexError):
             pass
+
+    # [Insert rest of conditioning logic here using `flags` and `rounds` as needed]
+
+    return output
+'''
 
     if rounds >= 5:
         output += "\\n• Fight format: 5 rounds → increased aerobic + glycolytic load"
