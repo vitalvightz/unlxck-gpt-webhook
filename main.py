@@ -137,7 +137,7 @@ async def handle_submission(request: Request):
     conditioning_context = generate_conditioning_block(phase=phase, flags=flags, fight_format=rounds_format)
     recovery_context = generate_recovery_block(age=age_int, phase=phase, weight=weight_float, weight_class=weight_class, flags=flags)
     nutrition_context = generate_nutrition_block(flags=flags)
-    injury_subs_context = generate_injury_subs(injuries_str)
+    injury_subs_context = generate_injury_subs(injury_string=injuries_str)
 
     prompt = f"""
 You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across the UFC, Glory, ONE Championship, and Olympic combat sports.
