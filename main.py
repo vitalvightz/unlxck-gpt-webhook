@@ -205,24 +205,24 @@ Athlete Profile:
 - Extra Notes: {notes}
 """
 
-try:
-    response = openai.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=1800
-    )
-    full_plan = response.choices[0].message.content.strip()
-    print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
-except Exception as e:
-    print("❌ GPT API Error:", e)
-    return {"error": "Failed to generate plan from OpenAI"}
+    try:
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=1800
+        )
+        full_plan = response.choices[0].message.content.strip()
+        print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
+    except Exception as e:
+        print("❌ GPT API Error:", e)
+        return {"error": "Failed to generate plan from OpenAI"}
 
-try:
-    doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
-    print("✅ Google Doc Created:", doc_link)
-except Exception as e:
-    print("❌ Google Docs API Error:", e)
-    doc_link = None
+    try:
+        doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
+        print("✅ Google Doc Created:", doc_link)
+    except Exception as e:
+        print("❌ Google Docs API Error:", e)
+        doc_link = None
 
-return {"doc_link": doc_link or "Document creation failed"}
+    return {"doc_link": doc_link or "Document creation failed"}
