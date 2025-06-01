@@ -7,12 +7,12 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 # Import your modular functions here
-from modules.flag_router import flag_router
-from modules.strength import generate_strength_block
-from modules.conditioning import generate_conditioning_block
-from modules.mindset import generate_mindset_block
-from modules.recovery import generate_recovery_block
-from modules.nutrition import generate_nutrition_block
+from flag_router import flag_router
+from strength import generate_strength_block
+from conditioning import generate_conditioning_block
+from mindset import generate_mindset_block
+from recovery import generate_recovery_block
+from nutrition import generate_nutrition_block
 
 # Decode and save service account credentials
 if os.getenv("GOOGLE_CREDS_B64"):
