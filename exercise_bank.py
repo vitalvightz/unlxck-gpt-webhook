@@ -1,3 +1,4 @@
+# exercise_bank.py
 exercise_bank = {
     "hinge": {
         "GPP": [
@@ -17,15 +18,16 @@ exercise_bank = {
         "TAPER": [
             "Isometric Hip Thrust Hold",
             "Explosive Kettlebell Swing",
-            "Bodyweight RDL (Tempo)"
+            "Body-weight RDL (Tempo)"
         ]
     },
+
     "squat": {
         "GPP": [
             "Back Squat",
             "Zercher Squat",
             "Goblet Squat",
-            "Step-Up (6'' box)",
+            "Step-Up (6\" box)",
             "Tempo Split Squat"
         ],
         "SPP": [
@@ -36,32 +38,34 @@ exercise_bank = {
             "Heels-Elevated Goblet Squat"
         ],
         "TAPER": [
-            "Front Squat (2x3, Bar Speed Focus)",
-            "Bodyweight Jump Squat",
-            "Isometric Wall Sit (20–30s)"
+            "Front Squat (2×3, bar-speed focus)",
+            "Body-weight Jump Squat",
+            "Isometric Wall Sit (20-30 s)"
         ]
     },
+
     "horizontal_push": {
         "GPP": [
             "DB Bench Press",
-            "Push-Up (Weighted or Band-Assisted)",
+            "Push-Up (weighted or band-assist)",
             "Incline DB Press",
             "Tempo Push-Up",
             "Swiss Ball Press"
         ],
         "SPP": [
-            "Bench Press + Med Ball Chest Pass",
+            "Bench Press + Med-Ball Chest Pass",
             "Clap Push-Up",
             "Banded Push-Up",
             "Explosive Incline Press",
             "Landmine Press"
         ],
         "TAPER": [
-            "Landmine Press (2x5)",
-            "Medicine Ball Chest Toss",
+            "Landmine Press (2×5)",
+            "Medicine-Ball Chest Toss",
             "Isometric Push-Up Hold"
         ]
     },
+
     "vertical_push": {
         "GPP": [
             "DB Overhead Press",
@@ -74,7 +78,7 @@ exercise_bank = {
             "Push Press",
             "Push Jerk",
             "Barbell Overhead Press",
-            "DB Clean and Press",
+            "DB Clean & Press",
             "Explosive Landmine Press"
         ],
         "TAPER": [
@@ -83,6 +87,7 @@ exercise_bank = {
             "Band-Resisted Push Press"
         ]
     },
+
     "pull": {
         "GPP": [
             "Chin-Up",
@@ -95,32 +100,35 @@ exercise_bank = {
             "Weighted Pull-Up",
             "Explosive Inverted Row",
             "Towel Pull-Up",
-            "Banded Row (Speed Focus)",
+            "Banded Row (speed focus)",
             "High Pull"
         ],
         "TAPER": [
-            "Bodyweight Chin-Up",
+            "Body-weight Chin-Up",
             "Isometric Pull-Up Hold",
             "Band-Assisted Row"
         ]
     },
+
     "core": {
         "GPP": [
             "Deadbug",
             "Plank",
-            "Bird Dog",
+            "Bird-Dog",
             "Cable Pallof Press",
             "Side Plank"
         ],
         "SPP": [
             "Cable Rotations",
-            "Med Ball Rotational Slam",
+            "Med-Ball Rotational Slam",
             "Barbell Rollout",
             "Anti-Rotation Press",
             "Weighted Side Plank"
         ],
         "TAPER": [
             "Isometric Pallof Hold",
-            "Hollow Body Hold",
-            "Controlled Bird Dog"
+            "Hollow-Body Hold",
+            "Controlled Bird-Dog"
         ]
+    }
+}
