@@ -163,5 +163,11 @@ async def handle_submission(request: Request):
         nutrition_plan,
     ])
 
+    print("\n=== GENERATED PLAN PREVIEW ===")
+    print(full_plan[:500])  # preview first 500 chars
+    print("\n=== END PREVIEW ===\n")
+
     doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
+    print(f"Generated Google Doc: {doc_link}")
+
     return {"doc_link": doc_link}
