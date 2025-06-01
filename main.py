@@ -133,13 +133,10 @@ async def handle_submission(request: Request):
     safety_block = "Follow smart loading strategies. Avoid training through pain. Prioritize movement quality."
     mental_protocols = get_mental_protocols(flags["mental_block"], phase)
     mindset_context = get_mindset_by_phase(phase, flags)
-    strength_context = generate_strength_block(
-    flags=flags,
-    weaknesses=weaknesses_list
-)
-    conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
-    recovery_context = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
-    nutrition_context = generate_nutrition_block(flags)
+    strength_context = generate_strength_block(flags=flags, weaknesses=weaknesses_list)
+    conditioning_context = generate_conditioning_block(phase=phase, flags=flags, fight_format=rounds_format)
+    recovery_context = generate_recovery_block(age=age_int, phase=phase, weight=weight_float, weight_class=weight_class, flags=flags)
+    nutrition_context = generate_nutrition_block(flags=flags)
     injury_subs_context = generate_injury_subs(injuries_str)
 
     prompt = f"""
