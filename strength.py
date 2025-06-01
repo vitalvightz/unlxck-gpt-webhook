@@ -9,21 +9,23 @@ def generate_strength_block(flags: dict, weaknesses=None):
     strength_output = []
 
     def substitute_exercises(base_exercises, injuries_detected):
-        modified = []
-        for ex in base_exercises:
-            replaced = False
-            for area, subs in injury_subs.items():
-                if area in injuries_detected:
-                    for orig, sub in subs.items():
-                        if orig in ex.lower():
-                            modified.append(ex.replace(orig, sub))
-                            replaced = True
-                            break
+    modified = []
+    for ex in base_exercises:
+        replaced = False
+        for area, subs_list in injury_subs.items():
+            if area in injuries_detected:
+                for sub_ex in subs_list:
+                    # Check if any keyword in sub_ex matches the current exercise 'ex'
+                    # Using simple containment for flexibility
+                    if any(keyword in ex.lower() for keyword in sub_ex.lower().split()):
+                        modified.append(sub_ex)
+                        replaced = True
+                        break
                 if replaced:
                     break
-            if not replaced:
-                modified.append(ex)
-        return modified
+        if not replaced:
+            modified.append(ex)
+    return modified
 
     def select_exercises(phase, weaknesses):
         selected = []
