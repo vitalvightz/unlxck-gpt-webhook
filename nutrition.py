@@ -1,47 +1,37 @@
-# Create the nutrition.py module with structured logic based on phase and weight cut status
+def generate_nutrition_block(flags: dict) -> str:
+    nutrition_block = "\n🍽️ **Nutrition Module**\n"
 
-nutrition_logic_code = '''
-def generate_nutrition_guidance(phase: str, weight_cut_percentage: float) -> str:
-    guidance = "**🥗 Nutrition Module**\\n"
+    # General Recommendations
+    nutrition_block += "- 3 core meals + 2–3 snacks per day\n"
+    nutrition_block += "- Prioritize whole foods: lean protein, complex carbs, healthy fats\n"
+    nutrition_block += "- 0.8–1g protein per lb bodyweight\n"
+    nutrition_block += "- Hydration: 30–40ml per kg of bodyweight\n"
 
-    # Baseline guidelines
-    if phase == "GPP":
-        guidance += "- Emphasize nutrient density (whole foods)\\n"
-        guidance += "- Moderate carbs (4-5g/kg), higher fats for energy\\n"
-        guidance += "- Protein ~2g/kg\\n"
+    # Fatigue Adaptations
+    fatigue = flags.get("fatigue")
+    if fatigue == "high":
+        nutrition_block += "\n**Fatigue Nutrition Tips:**\n"
+        nutrition_block += "- Add intra-workout carbs (15–30g per hour of training)\n"
+        nutrition_block += "- Increase daily calories by ~10%\n"
+        nutrition_block += "- Magnesium + electrolyte supplementation (evening)\n"
+    elif fatigue == "moderate":
+        nutrition_block += "\n**Moderate Fatigue Adjustments:**\n"
+        nutrition_block += "- Increase post-training carb load\n"
+        nutrition_block += "- Focus on sleep-promoting foods (cherries, banana, oats)\n"
 
-    elif phase == "SPP":
-        guidance += "- Increase carbs to fuel high output blocks (5-6g/kg)\\n"
-        guidance += "- Lower fats slightly to maintain body comp\\n"
-        guidance += "- Protein maintained (2g/kg)\\n"
-        guidance += "- Start monitoring water/salt intake\\n"
+    # Taper Week Adjustments
+    if flags.get("taper_week"):
+        nutrition_block += "\n**Taper Week Nutrition:**\n"
+        nutrition_block += "- Reduce total calories by ~15%\n"
+        nutrition_block += "- Increase carb % in final 2 days\n"
+        nutrition_block += "- Emphasize digestion-friendly meals pre-fight\n"
 
-    elif phase == "TAPER":
-        guidance += "- Carb taper: Reduce carbs slightly Mon–Wed\\n"
-        guidance += "- Fiber taper: Cut high-residue foods from Wed\\n"
-        guidance += "- Sodium taper: Reduce salt Thurs–Fri\\n"
-        guidance += "- Final 2 days: Low fiber, moderate carbs, clean hydration\\n"
+    # Weight Cut Risk
+    if flags.get("weight_cut_risk"):
+        cut_pct = flags.get("weight_cut_pct")
+        nutrition_block += "\n**⚠️ Weight Cut Protocol Triggered:**\n"
+        nutrition_block += f"- Weight cut >{cut_pct}% → elevated cut strategy\n"
+        nutrition_block += "- Use refeed protocol post-weigh-in (high-GI carbs + sodium-rich fluids)\n"
+        nutrition_block += "- Monitor sleep, hydration, and energy levels daily\n"
 
-    else:
-        guidance += "- Maintain general fueling habits and hydration\\n"
-
-    # Weight cut logic
-    if weight_cut_percentage > 6:
-        guidance += "\\n⚠️ **Weight Cut Risk:** Over 6% to lose.\\n"
-        guidance += "- Start water loading 6–7 days out (if cleared)\\n"
-        guidance += "- Ensure fiber + sodium tapering\\n"
-        guidance += "- Consider professional oversight for cut execution\\n"
-    elif weight_cut_percentage > 3:
-        guidance += "\\n⚠️ **Moderate Cut:** 3–6% range.\\n"
-        guidance += "- Start dietary adjustments 10–14 days out\\n"
-        guidance += "- Carb + sodium manipulation in taper week\\n"
-    else:
-        guidance += "\\n✅ No major weight cut stress detected.\\n"
-
-    return guidance.strip()
-'''
-
-# Save to file
-with open("/mnt/data/nutrition.py", "w") as f:
-    f.write(nutrition_logic_code)
-"/mnt/data/nutrition.py module written and ready for use."
+    return nutrition_block.strip()
