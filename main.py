@@ -8,13 +8,13 @@ from googleapiclient.discovery import build
 
 # Modular imports powering GPT context
 from flag_router import flag_router
-from mindset_module import classify_mental_block, get_mindset_by_phase
+from mindset_module import classify_mental_block, get_mindset_by_phase, get_mental_protocols
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
 from recovery import generate_recovery_block
 from nutrition import generate_nutrition_block
 from injury_subs import generate_injury_subs
-from utils import get_phase, get_safety_block, get_mental_protocols
+from red_flags import aggregate_flags_and_advice
 
 # Decode and save service account credentials
 if os.getenv("GOOGLE_CREDS_B64"):
@@ -118,23 +118,20 @@ async def handle_submission(request: Request):
     flags["mental_block"] = classify_mental_block(mental_block)
 
     # Modular Context Sections
-    phase_goals = get_phase(weeks_out if weeks_out != 'N/A' else 10, age_int)
-    safety_block = get_safety_block(flags)
+    safety_block = "Follow smart loading strategies. Avoid training through pain. Prioritize movement quality."
     mental_protocols = get_mental_protocols(flags["mental_block"], phase)
     mindset_context = get_mindset_by_phase(phase, flags)
-    strength_context = generate_strength_block(flags, weaknesses=weaknesses_list)
+    strength_context = generate_strength_block(phase, age_int, weight_class, weaknesses=weaknesses_list, injuries=flags["injuries"], fatigue=fatigue)
     conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
     recovery_context = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
     nutrition_context = generate_nutrition_block(flags)
     injury_subs_context = generate_injury_subs(injuries_str)
+    advisory_summary = aggregate_flags_and_advice({}, flags)
 
     prompt = f"""
 You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters in UFC, Glory, ONE Championship, and Olympic combat sports.
 
 You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, psychological recalibration tools, and integrated recovery systems used at the highest levels.
-
-# PHASE CONTEXT
-{phase_goals}
 
 # SAFETY RULES
 {safety_block}
@@ -158,14 +155,8 @@ You follow the Unlxck Method — a high-performance system combining periodised 
 # NUTRITION INPUTS
 {nutrition_context}
 
-Based on the athlete’s input below, generate a tailored 3-phase Fight-Ready program including:
-1. Weekly physical training targets (S&C + conditioning focus, with breakdown by energy system: ATP-PCr, glycolytic, aerobic)
-2. Phase-specific goals based on time to fight
-3. One key mindset tool or mental focus for each phase
-4. Recovery strategies based on fatigue, age, and tapering principles
-5. Red flags to watch for based on their inputs (fatigue, taper risk, recovery needs)
-6. Use logic based on age, fight format (e.g. 3x3 vs 5x5), fatigue, and injury
-7. Specify exact exercise names, loads (RPE or %1RM), reps, rest times, and movement types in S&C and conditioning sessions.
+# RED FLAGS
+{advisory_summary}
 
 Athlete Profile:
 - Name: {full_name}
@@ -196,10 +187,6 @@ Athlete Profile:
         max_tokens=1800
     )
     full_plan = response.choices[0].message.content.strip()
-
-    print("\n=== GPT FINAL OUTPUT ===\n")
-    print(full_plan[:500])
-    print("\n=== END ===\n")
 
     doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
     return {"doc_link": doc_link}
