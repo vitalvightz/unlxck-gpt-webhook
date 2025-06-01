@@ -35,7 +35,3 @@ def assess_weight_cut_risk(current_weight: float, target_weight: float) -> dict:
         "advice": advice
     }
 """
-
-# Save the file
-file_path.write_text(weight_cut_module_code.strip())
-file_path
