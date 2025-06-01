@@ -1,5 +1,3 @@
-# Upgraded mindset.py with expanded categories and personalized tools
-
 mindset_bank = {
     "GPP": {
         "confidence": "Use future-self visualization and complete 1 small, measurable success daily to rebuild belief.",
@@ -68,5 +66,6 @@ def classify_mental_block(block_text):
     return "generic"
 
 
-def get_mindset_by_phase(phase, block):
+def get_mindset_by_phase(phase: str, flags: dict) -> str:
+    block = flags.get("mental_block", "generic")
     return mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
