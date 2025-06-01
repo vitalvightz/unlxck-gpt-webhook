@@ -22,7 +22,7 @@ injury_subs = {
     "triceps": ["bicep work", "push-ups", "landmine press"]
 }
 
-def generate_injury_subs(injury_string: str) -> str:
+def generate_injury_subs(*, injury_string: str) -> str:
     if not injury_string:
         return ""
 
