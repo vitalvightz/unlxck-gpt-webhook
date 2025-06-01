@@ -8,7 +8,7 @@ from googleapiclient.discovery import build
 
 # Modular imports powering GPT context
 from flag_router import flag_router
-from mindset_module import classify_mental_block, get_mindset_by_phase, get_mental_protocols
+from mindset_module import classify_mental_block, get_mindset_by_phase
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
 from recovery import generate_recovery_block
@@ -119,7 +119,6 @@ async def handle_submission(request: Request):
 
     # Modular Context Sections
     safety_block = "Follow smart loading strategies. Avoid training through pain. Prioritize movement quality."
-    mental_protocols = get_mental_protocols(flags["mental_block"], phase)
     mindset_context = get_mindset_by_phase(phase, flags)
     strength_context = generate_strength_block(phase, age_int, weight_class, weaknesses=weaknesses_list, injuries=flags["injuries"], fatigue=fatigue)
     conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
@@ -137,7 +136,6 @@ You follow the Unlxck Method — a high-performance system combining periodised 
 {safety_block}
 
 # MINDSET STRATEGY
-{mental_protocols}
 {mindset_context}
 
 # CONDITIONING INPUTS
