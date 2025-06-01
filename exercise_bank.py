@@ -124,6 +124,3 @@ exercise_bank = {
             "Hollow Body Hold",
             "Controlled Bird Dog"
         ]
-    }
-}
-'''
