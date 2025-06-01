@@ -1,4 +1,8 @@
-# weight_classes.py
+from pathlib import Path
+
+# Define the merged weight class logic with weight cut analysis
+merged_logic_code = '''
+# weight_class_logic.py
 
 weight_class_map = {
     "MMA": {
@@ -33,3 +37,29 @@ weight_class_map = {
         "Super Heavyweight": 120.0
     }
 }
+
+def assess_weight_cut(current_weight, fight_weight_class, sport="MMA"):
+    """
+    Assess weight cut severity.
+    """
+    try:
+        class_limit = weight_class_map[sport][fight_weight_class]
+        cut_amount = current_weight - class_limit
+
+        if cut_amount < 2:
+            return "🟢 No significant cut — maintain performance."
+        elif 2 <= cut_amount < 5:
+            return "🟡 Moderate cut — monitor hydration, recovery stress."
+        elif 5 <= cut_amount < 8:
+            return "🔴 Aggressive cut — risk of CNS/mood disruption."
+        else:
+            return "🚨 Critical cut — taper hard training, maximize recovery, hydration, and rest."
+    except KeyError:
+        return "❓ Unknown weight class or sport — check input."
+'''
+
+# Save the merged logic to a file
+file_path = Path("/mnt/data/weight_class_logic.py")
+file_path.write_text(merged_logic_code)
+
+file_path
