@@ -21,3 +21,15 @@ injury_subs = {
     "bicep": ["triceps focus", "hammer grip row", "pull-ups with straps"],
     "triceps": ["bicep work", "push-ups", "landmine press"]
 }
+
+def generate_injury_subs(injury_string: str) -> str:
+    if not injury_string:
+        return ""
+
+    result_lines = []
+    for key in injury_subs:
+        if key in injury_string.lower():
+            subs = injury_subs[key]
+            result_lines.append(f"- {key.title()}: " + ", ".join(subs))
+
+    return "\n".join(result_lines) if result_lines else "No known substitutions found."
