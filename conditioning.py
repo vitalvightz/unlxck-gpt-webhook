@@ -1,16 +1,13 @@
 from pathlib import Path
 
-# Conditioning module with fatigue logic delegated to fatigue_utils
-conditioning_module_code = '''
-from fatigue_utils import interpret_fatigue_level
-
-def generate_conditioning_block(phase, weight_class, fight_format, fatigue_level, injury_flags):
+conditioning_upgrade = '''
+def generate_conditioning_block(phase: str, flags: dict, fight_format: str = None) -> str:
     """
-    Generate a conditioning training block based on fight context, weight class, fatigue, and injuries.
+    Conditioning training block using centralized flags.
     """
     output = f"\\n📦 CONDITIONING MODULE\\nPhase: {phase}\\n"
 
-    # --- Fight format logic (influences energy system bias) ---
+    # --- Fight format logic ---
     rounds = 3
     if fight_format:
         try:
@@ -24,20 +21,10 @@ def generate_conditioning_block(phase, weight_class, fight_format, fatigue_level
         output += "\\n• Fight format: 3 rounds → alactic + power emphasis"
 
     # --- Weight class logic ---
-    if weight_class:
-        try:
-            weight_val = int(weight_class.split("kg")[0].strip())
-            if weight_val >= 90:
-                weight_note = "\\n• Heavyweight detected → limit long aerobic sessions, increase rest ratios, emphasize joint care"
-            elif weight_val <= 66:
-                weight_note = "\\n• Lightweight detected → handle higher glycolytic volumes, more speed-based conditioning"
-            else:
-                weight_note = "\\n• Mid-weight detected → balanced energy system distribution"
-            output += weight_note
-        except:
-            pass
+    if flags.get("weight_cut_risk"):
+        output += f"\\n⚠️ Weight Cut Risk: {flags.get('weight_cut_pct')}% above limit → prioritize low-impact conditioning"
 
-    # --- Phase-specific conditioning targets ---
+    # --- Phase-specific programming ---
     if phase == "GPP":
         output += """
 \\n• Energy System Targets:
@@ -98,32 +85,30 @@ def generate_conditioning_block(phase, weight_class, fight_format, fatigue_level
   - CNS freshness is key: use flywheel, ball, eye tracking drills
 """
 
-    else:
-        output += "\\n• Phase not recognized — default to aerobic capacity and light intervals."
+    # Fatigue modifiers
+    fatigue = flags.get("fatigue", "")
+    if fatigue == "high":
+        output += "\\n⚠️ High fatigue → cut glycolytic sessions by 30%, extend all rest intervals by 20%"
+    elif fatigue == "moderate":
+        output += "\\n⚠️ Moderate fatigue → reduce one interval from highest-load session"
 
-    # --- Fatigue-aware adjustments ---
-    fatigue_note = interpret_fatigue_level(fatigue_level)
-    if fatigue_note:
-        output += f"\\n{fatigue_note}"
+    # Injury handling
+    for injury in flags.get("injuries", []):
+        if "hamstring" in injury:
+            output += "\\n⚠️ Hamstring → avoid max sprints, use sled drag or bike sprints"
+        elif "ankle" in injury:
+            output += "\\n⚠️ Ankle → remove lateral hops or bounding"
+        elif "knee" in injury:
+            output += "\\n⚠️ Knee → no deep squats or bounding; use upright bike or prowler"
+        elif "back" in injury:
+            output += "\\n⚠️ Back → avoid axial loading under fatigue (e.g., sprints with vest)"
+        elif "shoulder" in injury:
+            output += "\\n⚠️ Shoulder → avoid high-velocity upper body ballistic work"
 
-    # --- Injury considerations ---
-    if injury_flags:
-        flags = injury_flags.lower()
-        if "hamstring" in flags:
-            output += "\\n⚠️ Hamstring issue → avoid max sprints, use sled drag or bike sprints"
-        if "ankle" in flags:
-            output += "\\n⚠️ Ankle limitation → remove lateral hops or bounding"
-        if "knee" in flags:
-            output += "\\n⚠️ Knee injury → no deep squats or bounding; use upright bike or prowler"
-        if "back" in flags:
-            output += "\\n⚠️ Back strain → avoid axial loading under fatigue (e.g., sprints with vest)"
-        if "shoulder" in flags:
-            output += "\\n⚠️ Shoulder issue → avoid high-velocity upper body ballistic work (e.g., med ball slams)"
-
-    return output
+    return output.strip()
 '''
 
-# Save the updated conditioning module
 path = Path("/mnt/data/conditioning.py")
-path.write_text(conditioning_module_code.strip())
-"✅ Conditioning module updated with fatigue_utils integration."
+path.write_text(conditioning_upgrade.strip())
+
+"✅ conditioning.py fully upgraded to use `flag_router()` flags dictionary."
