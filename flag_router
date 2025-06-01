@@ -56,4 +56,4 @@ def route_flags(age, weight, weight_class, fatigue_score, phase, injuries):
         "age_risk": detect_age_risk(age),
         "taper": detect_taper_phase(phase),
         "injury": parse_injury_flags(injuries)
-    }p
+    }
