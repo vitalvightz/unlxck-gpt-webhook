@@ -6,13 +6,15 @@ import base64
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-# Import your modular functions here
+# Modular imports powering GPT context
 from flag_router import flag_router
+from mindset_module import classify_mental_block, get_mindset_by_phase
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
-from mindset_module import classify_mental_block, get_mindset_by_phase
 from recovery import generate_recovery_block
 from nutrition import generate_nutrition_block
+from injury_subs import generate_injury_subs
+from utils import get_phase, get_safety_block, get_mental_protocols
 
 # Decode and save service account credentials
 if os.getenv("GOOGLE_CREDS_B64"):
@@ -20,15 +22,11 @@ if os.getenv("GOOGLE_CREDS_B64"):
         decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
         f.write(decoded.decode("utf-8"))
 
-# Set OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Google Docs and Drive setup
 DOCS_SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
-creds = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=DOCS_SCOPES
-)
+creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=DOCS_SCOPES)
 docs_service = build('docs', 'v1', credentials=creds)
 drive_service = build('drive', 'v3', credentials=creds)
 
@@ -45,8 +43,7 @@ def get_value(label, fields):
     return ""
 
 def get_folder_id(folder_name):
-    response = drive_service.files().list(q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
-                                          spaces='drive').execute()
+    response = drive_service.files().list(q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'", spaces='drive').execute()
     folders = response.get('files', [])
     return folders[0]['id'] if folders else None
 
@@ -54,23 +51,9 @@ def create_doc(title, content):
     folder_id = get_folder_id("Unlxck Auto Docs")
     doc = docs_service.documents().create(body={"title": title}).execute()
     doc_id = doc.get("documentId")
-
     if folder_id:
         drive_service.files().update(fileId=doc_id, addParents=folder_id, removeParents='root').execute()
-
-    docs_service.documents().batchUpdate(
-        documentId=doc_id,
-        body={
-            "requests": [
-                {
-                    "insertText": {
-                        "location": {"index": 1},
-                        "text": content
-                    }
-                }
-            ]
-        }
-    ).execute()
+    docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}).execute()
     return f"https://docs.google.com/document/d/{doc_id}"
 
 @app.post("/webhook")
@@ -120,54 +103,103 @@ async def handle_submission(request: Request):
         except Exception:
             phase = "GPP"
 
-    try:
-        age_int = int(age)
-    except Exception:
-        age_int = 25
-    try:
-        weight_float = float(weight)
-    except Exception:
-        weight_float = 70.0
-    try:
-        fatigue_int = int(fatigue)
-    except Exception:
-        fatigue_int = 1
+    try: age_int = int(age)
+    except: age_int = 25
+    try: weight_float = float(weight)
+    except: weight_float = 70.0
+    try: fatigue_int = int(fatigue)
+    except: fatigue_int = 1
 
     injuries_str = injuries if injuries else ""
     weaknesses_list = [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else None
 
-    flags = flag_router(
-        age=age_int,
-        fatigue_score=fatigue_int,
-        phase=phase,
-        weight=weight_float,
-        weight_class=weight_class,
-        injuries=injuries_str
-    )
+    flags = flag_router(age=age_int, fatigue_score=fatigue_int, phase=phase, weight=weight_float, weight_class=weight_class, injuries=injuries_str)
     flags["phase"] = phase
+    flags["mental_block"] = classify_mental_block(mental_block)
 
-    classified = classify_mental_block(mental_block)
-    flags["mental_block"] = classified
+    # Modular Context Sections
+    phase_goals = get_phase(weeks_out if weeks_out != 'N/A' else 10, age_int)
+    safety_block = get_safety_block(flags)
+    mental_protocols = get_mental_protocols(flags["mental_block"], phase)
+    mindset_context = get_mindset_by_phase(phase, flags)
+    strength_context = generate_strength_block(flags, weaknesses=weaknesses_list)
+    conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
+    recovery_context = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
+    nutrition_context = generate_nutrition_block(flags)
+    injury_subs_context = generate_injury_subs(injuries_str)
 
-    strength_plan = generate_strength_block(flags, weaknesses=weaknesses_list) or ""
-    conditioning_plan = generate_conditioning_block(phase, flags, fight_format=rounds_format) or ""
-    mindset_plan = get_mindset_by_phase(phase, flags) or ""
-    recovery_plan = generate_recovery_block(age_int, phase, weight_float, weight_class, flags) or ""
-    nutrition_plan = generate_nutrition_block(flags) or ""
+    prompt = f"""
+You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters in UFC, Glory, ONE Championship, and Olympic combat sports.
 
-    full_plan = "\n\n".join([
-        strength_plan,
-        conditioning_plan,
-        mindset_plan,
-        recovery_plan,
-        nutrition_plan,
-    ])
+You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, psychological recalibration tools, and integrated recovery systems used at the highest levels.
 
-    print("\n=== GENERATED PLAN PREVIEW ===")
-    print(full_plan[:500])  # preview first 500 chars
-    print("\n=== END PREVIEW ===\n")
+# PHASE CONTEXT
+{phase_goals}
+
+# SAFETY RULES
+{safety_block}
+
+# MINDSET STRATEGY
+{mental_protocols}
+{mindset_context}
+
+# CONDITIONING INPUTS
+{conditioning_context}
+
+# STRENGTH INPUTS
+{strength_context}
+
+# RECOVERY INPUTS
+{recovery_context}
+
+# INJURY ADJUSTMENTS
+{injury_subs_context}
+
+# NUTRITION INPUTS
+{nutrition_context}
+
+Based on the athlete’s input below, generate a tailored 3-phase Fight-Ready program including:
+1. Weekly physical training targets (S&C + conditioning focus, with breakdown by energy system: ATP-PCr, glycolytic, aerobic)
+2. Phase-specific goals based on time to fight
+3. One key mindset tool or mental focus for each phase
+4. Recovery strategies based on fatigue, age, and tapering principles
+5. Red flags to watch for based on their inputs (fatigue, taper risk, recovery needs)
+6. Use logic based on age, fight format (e.g. 3x3 vs 5x5), fatigue, and injury
+7. Specify exact exercise names, loads (RPE or %1RM), reps, rest times, and movement types in S&C and conditioning sessions.
+
+Athlete Profile:
+- Name: {full_name}
+- Age: {age}
+- Weight: {weight}kg
+- Weight Class: {weight_class}
+- Height: {height}cm
+- Style: {fighting_style}
+- Stance: {stance}
+- Level: {status}
+- Record: {record}
+- Fight Format: {rounds_format}
+- Fight Date: {next_fight_date}
+- Weeks Out: {weeks_out}
+- S&C Frequency: {frequency}/week
+- Fatigue Level: {fatigue}
+- Injuries: {injuries}
+- Available S&C Days: {available_days}
+- Physical Weaknesses: {weak_areas}
+- Mental Blocker: {mental_block}
+- Extra Notes: {notes}
+"""
+
+    response = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3,
+        max_tokens=1800
+    )
+    full_plan = response.choices[0].message.content.strip()
+
+    print("\n=== GPT FINAL OUTPUT ===\n")
+    print(full_plan[:500])
+    print("\n=== END ===\n")
 
     doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
-    print(f"Generated Google Doc: {doc_link}")
-
     return {"doc_link": doc_link}
