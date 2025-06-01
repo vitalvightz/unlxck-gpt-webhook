@@ -1,7 +1,7 @@
 from injury_subs import injury_subs
 from exercise_bank import exercise_bank
 
-def generate_strength_block(flags: dict, weaknesses=None):
+def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
