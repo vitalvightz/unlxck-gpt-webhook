@@ -1,4 +1,3 @@
-exercise_bank_code = '''
 exercise_bank = {
     "hinge": {
         "GPP": [
