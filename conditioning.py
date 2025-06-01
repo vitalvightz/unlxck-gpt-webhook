@@ -108,7 +108,4 @@ def generate_conditioning_block(phase: str, flags: dict, fight_format: str = Non
     return output.strip()
 '''
 
-path = Path("/mnt/data/conditioning.py")
-path.write_text(conditioning_upgrade.strip())
-
 "✅ conditioning.py fully upgraded to use `flag_router()` flags dictionary."
