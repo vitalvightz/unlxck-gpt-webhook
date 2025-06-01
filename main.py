@@ -205,7 +205,7 @@ Athlete Profile:
 - Extra Notes: {notes}
 """
 
-    try:
+try:
     response = openai.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
