@@ -14,7 +14,6 @@ from conditioning import generate_conditioning_block
 from recovery import generate_recovery_block
 from nutrition import generate_nutrition_block
 from injury_subs import generate_injury_subs
-from red_flags import aggregate_flags_and_advice
 
 # Decode and save service account credentials
 if os.getenv("GOOGLE_CREDS_B64"):
@@ -119,23 +118,41 @@ async def handle_submission(request: Request):
 
     # Modular Context Sections
     safety_block = "Follow smart loading strategies. Avoid training through pain. Prioritize movement quality."
+    mental_protocols = ""  # get_mental_protocols call removed — no such function available
     mindset_context = get_mindset_by_phase(phase, flags)
     strength_context = generate_strength_block(phase, age_int, weight_class, weaknesses=weaknesses_list, injuries=flags["injuries"], fatigue=fatigue)
     conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
     recovery_context = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
     nutrition_context = generate_nutrition_block(flags)
     injury_subs_context = generate_injury_subs(injuries_str)
-    advisory_summary = aggregate_flags_and_advice({}, flags)
 
     prompt = f"""
-You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters in UFC, Glory, ONE Championship, and Olympic combat sports.
+You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across the UFC, Glory, ONE Championship, and Olympic combat sports.
 
-You follow the Unlxck Method — a high-performance system combining periodised fight camp phases (GPP → SPP → Taper), neuro-driven sprint/strength protocols, psychological recalibration tools, and integrated recovery systems used at the highest levels.
+You follow the Unlxck Method — a high-performance system built on:
+• Periodised fight camp phases (GPP → SPP → Taper)
+• Neuro-driven sprint & strength protocols
+• Psychological recalibration strategies
+• Integrated recovery, nutrition, and CNS management
+
+Use the athlete profile and context blocks below to generate a **3-phase Fight Camp Plan**.
+
+You’re not a rigid robot — use the data and modules as high-quality references. Adapt intelligently like a human coach would. You're writing for real-world application, not textbook theory.
+
+Your deliverable should include:
+1. Weekly physical targets (S&C + conditioning), broken down by energy system (ATP-PCr, glycolytic, aerobic)
+2. Tactical goals per phase based on time to fight and key athlete flags (e.g. fatigue, age, injury)
+3. 1 mindset anchor per phase linked to the athlete’s mental block
+4. Recovery strategy tailored to fatigue state, taper period, and injury load
+5. Brief advisory call-outs if red flags exist (e.g. weight cut, high fatigue, taper window)
+
+Keep it clear, high-level but practical, and coach-readable. Avoid fluff. Think like you're briefing a UFC head coach.
 
 # SAFETY RULES
 {safety_block}
 
 # MINDSET STRATEGY
+{mental_protocols}
 {mindset_context}
 
 # CONDITIONING INPUTS
@@ -152,9 +169,6 @@ You follow the Unlxck Method — a high-performance system combining periodised 
 
 # NUTRITION INPUTS
 {nutrition_context}
-
-# RED FLAGS
-{advisory_summary}
 
 Athlete Profile:
 - Name: {full_name}
@@ -188,4 +202,3 @@ Athlete Profile:
 
     doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
     return {"doc_link": doc_link}
-    
