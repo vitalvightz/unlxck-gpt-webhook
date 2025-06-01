@@ -1,31 +1,9 @@
-strength_module_code = '''
-def generate_strength_block(phase, age, weight_class, injuries=None, fatigue=None):
+from injury_subs import injury_subs
+from exercise_bank import exercise_bank
+
+
+def generate_strength_block(phase, age, weight_class, weaknesses=None, injuries=None, fatigue=None):
     strength_output = []
-
-    # Progression logic per phase
-    progression_map = {
-        "GPP": [
-            "Week 1: 3x10 @ 65%",
-            "Week 2: 3x8 @ 70%",
-            "Week 3: 4x8 @ 70–75%",
-        ],
-        "SPP": [
-            "Week 1: 4x5 @ 80%",
-            "Week 2: 4x3 @ 85%",
-            "Week 3: 5x3 @ 90%",
-        ],
-        "TAPER": [
-            "Week 1: 2x3 @ 75% (cluster sets, bar speed focus)",
-            "Week 2: 2x2 @ 70%, only main lifts, high velocity"
-        ]
-    }
-
-    # Injury substitution rules
-    injury_subs = {
-        "knee": {"squat": "belt squat", "lunge": "step-up (6'' box)"},
-        "shoulder": {"overhead press": "landmine press", "bench press": "neutral grip DB press"},
-        "back": {"deadlift": "trap bar deadlift"}
-    }
 
     def substitute_exercises(base_exercises, injuries_detected):
         modified = []
@@ -44,25 +22,35 @@ def generate_strength_block(phase, age, weight_class, injuries=None, fatigue=Non
                 modified.append(ex)
         return modified
 
-    # Phase-specific logic
+    # Select base exercises from bank
+    def select_exercises(phase, weaknesses):
+        selected = []
+        for group, options in exercise_bank.items():
+            if weaknesses and group not in weaknesses:
+                continue
+            if phase in options:
+                selected += options[phase][:2]  # Take top 2 per relevant group
+        return selected if selected else ["Back Squat", "Pull-Up", "DB Bench Press"]
+
+    base_exercises = select_exercises(phase, weaknesses)
+
+    if injuries:
+        base_exercises = substitute_exercises(base_exercises, injuries.lower())
+
+    # Phase-specific loading logic
     if phase == "GPP":
-        exercises = ["Back Squat", "RDL", "DB Incline Press", "Pull-Ups", "Landmine Press"]
+        base_block = "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1"
         focus = "Build hypertrophy base, tendon durability, and general strength."
     elif phase == "SPP":
-        exercises = ["Trap Bar Deadlift", "Band Push-Ups", "Power Clean", "Med Ball Slams"]
+        base_block = "3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)"
         focus = "Max strength + explosive power. Contrast and triphasic methods emphasized."
     elif phase == "TAPER":
-        exercises = ["Front Squat", "Landmine Push Press", "Bar Speed Bench", "Isometric Split Squat"]
+        base_block = "2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load"
         focus = "Maintain intensity, cut volume, CNS freshness. High bar speed focus."
     else:
-        exercises = ["Back Squat", "Pull-Ups", "Bench Press"]
+        base_block = "Default fallback block — check logic."
         focus = "Default phase. Ensure proper phase detection upstream."
 
-    # Substitute based on injuries
-    if injuries:
-        exercises = substitute_exercises(exercises, injuries.lower())
-
-    # Adjust volume if fatigue exists
     fatigue_note = ""
     if fatigue:
         try:
@@ -74,23 +62,15 @@ def generate_strength_block(phase, age, weight_class, injuries=None, fatigue=Non
         except ValueError:
             pass
 
-    # Output assembly
+    # Output formatting
     strength_output.append("🏋️‍♂️ **Strength & Power Module**")
     strength_output.append(f"**Phase:** {phase}")
     strength_output.append(f"**Primary Focus:** {focus}")
     strength_output.append("**Top Exercises:**")
-    for ex in exercises:
+    for ex in base_exercises:
         strength_output.append(f"- {ex}")
-    strength_output.append("**Progression Plan:**")
-    for line in progression_map.get(phase, ["No progression found."]):
-        strength_output.append(f"- {line}")
+    strength_output.append(f"**Prescription:** {base_block}")
     if fatigue_note:
         strength_output.append(f"**Adjustment:** {fatigue_note}")
 
-    return "\\n".join(strength_output)
-'''
-
-with open("/mnt/data/strength.py", "w") as f:
-    f.write(strength_module_code)
-
-"✅ strength.py updated with week-to-week progression logic and saved."
+    return "\n".join(strength_output)
