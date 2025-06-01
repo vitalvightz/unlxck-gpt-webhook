@@ -1,6 +1,9 @@
 from pathlib import Path
 
+# Conditioning module with fatigue logic delegated to fatigue_utils
 conditioning_module_code = '''
+from fatigue_utils import interpret_fatigue_level
+
 def generate_conditioning_block(phase, weight_class, fight_format, fatigue_level, injury_flags):
     """
     Generate a conditioning training block based on fight context, weight class, fatigue, and injuries.
@@ -99,10 +102,9 @@ def generate_conditioning_block(phase, weight_class, fight_format, fatigue_level
         output += "\\n• Phase not recognized — default to aerobic capacity and light intervals."
 
     # --- Fatigue-aware adjustments ---
-    if fatigue_level and "high" in fatigue_level.lower():
-        output += "\\n⚠️ High fatigue → cut glycolytic sessions by 30%, extend all rest intervals by 20%"
-    elif fatigue_level and "moderate" in fatigue_level.lower():
-        output += "\\n⚠️ Moderate fatigue → reduce one interval from highest-load session"
+    fatigue_note = interpret_fatigue_level(fatigue_level)
+    if fatigue_note:
+        output += f"\\n{fatigue_note}"
 
     # --- Injury considerations ---
     if injury_flags:
@@ -121,7 +123,7 @@ def generate_conditioning_block(phase, weight_class, fight_format, fatigue_level
     return output
 '''
 
+# Save the updated conditioning module
 path = Path("/mnt/data/conditioning.py")
 path.write_text(conditioning_module_code.strip())
-
-"✅ Conditioning module upgraded and saved as 'conditioning.py'. Ready for next."
+"✅ Conditioning module updated with fatigue_utils integration."
