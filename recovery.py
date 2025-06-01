@@ -1,6 +1,4 @@
-from fatigue_utils import classify_fatigue_level
-
-def generate_recovery_block(age: int, fatigue_level: str, phase: str, weight: float, weight_class: str, weight_cut_flags=None) -> str:
+def generate_recovery_block(age: int, phase: str, weight: float, weight_class: str, flags: dict) -> str:
     recovery_block = ""
 
     # Core Recovery
@@ -12,27 +10,27 @@ def generate_recovery_block(age: int, fatigue_level: str, phase: str, weight: fl
     recovery_block += "- Mobility circuits/light recovery work daily\n"
 
     # Age-based Adjustments
-    if age >= 30:
+    if flags.get("age_risk"):
         recovery_block += "\n**Age-Specific Adjustments:**\n"
         recovery_block += "- 72h muscle group rotation\n"
         recovery_block += "- Weekly float tank session\n"
         recovery_block += "- Collagen supplementation\n"
 
-    # Fatigue Classification
-    fatigue_tag = classify_fatigue_level(fatigue_level)
-    if fatigue_tag == "high":
+    # Fatigue Score Flags
+    fatigue_flag = flags.get("fatigue", "low")
+    if fatigue_flag == "high":
         recovery_block += "\n**Fatigue Red Flags:**\n"
         recovery_block += "- Drop 1 session if sleep < 6.5hrs for 3+ days\n"
         recovery_block += "- Cut weekly volume by 25–40%\n"
         recovery_block += "- Replace eccentrics with isometrics if DOMS >72hrs\n"
         recovery_block += "- Monitor for appetite/mood dips (cortisol/motivation risk)\n"
-    elif fatigue_tag == "moderate":
+    elif fatigue_flag == "moderate":
         recovery_block += "\n**Moderate Fatigue Notes:**\n"
         recovery_block += "- Add 1 full rest day\n"
         recovery_block += "- Prioritize post-session nutrition & breathwork\n"
 
     # Phase-Based Adjustments
-    if phase == "TAPER":
+    if flags.get("taper_week"):
         recovery_block += "\n**Fight Week Protocol (Taper):**\n"
         recovery_block += "- Reduce volume to 30–40% of taper week\n"
         recovery_block += "- Final hard session = Tue/Wed\n"
@@ -48,7 +46,7 @@ def generate_recovery_block(age: int, fatigue_level: str, phase: str, weight: fl
         recovery_block += "- Reset sleep routine\n"
 
     # Weight Cut Risk Trigger
-    if weight_cut_flags and "high_cut_risk" in weight_cut_flags:
+    if flags.get("weight_cut_risk"):
         recovery_block += "\n**⚠️ Weight Cut Recovery Warning:**\n"
         recovery_block += "- Cut >6% → elevate recovery urgency\n"
         recovery_block += "- Add 2 float tank or Epsom salt baths in fight week\n"
