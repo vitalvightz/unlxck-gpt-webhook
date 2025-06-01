@@ -1,7 +1,7 @@
 from pathlib import Path
 
 conditioning_upgrade = '''
-def generate_conditioning_block(phase: str, flags: dict, fight_format: str = None) -> str:
+    def generate_conditioning_block(phase: str, flags: dict, fight_format: str = None) -> str:
     """
     Conditioning training block using centralized flags.
     """
