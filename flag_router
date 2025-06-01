@@ -1,0 +1,59 @@
+def classify_fatigue(fatigue_score):
+    try:
+        score = int(fatigue_score)
+        if score >= 8:
+            return "high"
+        elif score >= 5:
+            return "moderate"
+        else:
+            return "low"
+    except:
+        return "unknown"
+
+def assess_weight_cut(weight, weight_class):
+    """
+    Detects weight cut severity based on known class limits (UFC standards).
+    Returns 'red' if cut >6%, 'moderate' if 4–6%, else 'green'
+    """
+    class_limits = {
+        "Flyweight": 56.7, "Bantamweight": 61.2, "Featherweight": 65.8,
+        "Lightweight": 70.3, "Welterweight": 77.1, "Middleweight": 83.9,
+        "Light Heavyweight": 93.0, "Heavyweight": 120.2
+    }
+    try:
+        weight = float(weight)
+        limit = class_limits.get(weight_class)
+        if not limit:
+            return "unknown"
+        percent_cut = ((weight - limit) / weight) * 100
+        if percent_cut > 6:
+            return "red"
+        elif percent_cut >= 4:
+            return "moderate"
+        else:
+            return "green"
+    except:
+        return "unknown"
+
+def detect_age_risk(age):
+    try:
+        return int(age) >= 30
+    except:
+        return False
+
+def detect_taper_phase(phase):
+    return phase.upper().strip() == "TAPER"
+
+def parse_injury_flags(injury_text):
+    if not injury_text or not isinstance(injury_text, str):
+        return []
+    return [inj.strip().lower() for inj in injury_text.split(",") if inj.strip()]
+
+def route_flags(age, weight, weight_class, fatigue_score, phase, injuries):
+    return {
+        "fatigue": classify_fatigue(fatigue_score),
+        "weight_cut": assess_weight_cut(weight, weight_class),
+        "age_risk": detect_age_risk(age),
+        "taper": detect_taper_phase(phase),
+        "injury": parse_injury_flags(injuries)
+    }p
