@@ -156,7 +156,7 @@ async def handle_submission(request: Request):
     # Generate plans using modular functions
     strength_plan = generate_strength_block(flags, weaknesses=weaknesses_list)
     conditioning_plan = generate_conditioning_block(phase, flags, fight_format=rounds_format)
-    mindset_plan = generate_mindset_block(phase, flags)
+    mindset_plan = classify_mental_block(phase, flags)
     recovery_plan = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
     nutrition_plan = generate_nutrition_block(flags)
 
