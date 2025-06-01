@@ -1,30 +1,30 @@
 from pathlib import Path
+import re
 
 def generate_conditioning_block(*, phase: str, flags: dict, fight_format: str = None) -> str:
     """
-    Conditioning training block using centralized flags.
+    Generates conditioning block based on camp phase, athlete flags, and fight format.
     """
     output = f"\n📦 CONDITIONING MODULE\nPhase: {phase}\n"
 
     # --- Fight format logic ---
     rounds = 3
     if fight_format:
-        try:
-            rounds = int(fight_format.lower().split('x')[0])
-        except Exception:
-            pass
+        match = re.search(r"(\d+)\s*[xX]", fight_format)
+        if match:
+            rounds = int(match.group(1))
 
     if rounds >= 5:
         output += "\n• Fight format: 5 rounds → increased aerobic + glycolytic load"
     elif rounds == 3:
         output += "\n• Fight format: 3 rounds → alactic + power emphasis"
 
-    # --- Weight‐cut risk logic (from flags) ---
+    # --- Weight cut risk ---
     if flags.get("weight_cut_risk"):
         pct = flags.get("weight_cut_pct", 0.0)
         output += f"\n⚠️ Weight Cut Risk: {pct}% above limit → prioritize low‐impact conditioning"
 
-    # --- Phase‐specific programming ---
+    # --- Phase programming ---
     if phase == "GPP":
         output += """
 \n• Energy System Targets:
@@ -85,24 +85,23 @@ def generate_conditioning_block(*, phase: str, flags: dict, fight_format: str = 
     else:
         output += "\n• Phase not recognized — default to aerobic capacity and light intervals."
 
-    # --- Fatigue modifiers (from flags) ---
-    fatigue = flags.get("fatigue", "")
+    # --- Fatigue impact ---
+    fatigue = flags.get("fatigue", "").lower()
     if fatigue == "high":
         output += "\n⚠️ High fatigue → cut glycolytic sessions by 30%, extend all rest intervals by 20%"
     elif fatigue == "moderate":
         output += "\n⚠️ Moderate fatigue → reduce one interval from highest‐load session"
 
-    # --- Injury handling (from flags) ---
-    for injury in flags.get("injuries", []):
-        if "hamstring" in injury:
-            output += "\n⚠️ Hamstring → avoid max sprints, use sled drag or bike sprints"
-        elif "ankle" in injury:
-            output += "\n⚠️ Ankle → remove lateral hops or bounding"
-        elif "knee" in injury:
-            output += "\n⚠️ Knee → no deep squats or bounding; use upright bike or prowler"
-        elif "back" in injury:
-            output += "\n⚠️ Back → avoid axial loading under fatigue (e.g., sprints with vest)"
-        elif "shoulder" in injury:
-            output += "\n⚠️ Shoulder → avoid high‐velocity upper‐body ballistic work"
+    # --- Injury adjustments ---
+    injuries = flags.get("injuries") or []
+    if isinstance(injuries, str):
+        injuries = [injuries]
 
-    return output.strip()
+    for injury in injuries:
+        lower_injury = injury.lower()
+        if "hamstring" in lower_injury:
+            output += "\n⚠️ Hamstring → avoid max sprints, use sled drag or bike sprints"
+        elif "ankle" in lower_injury:
+            output += "\n⚠️ Ankle → remove lateral hops or bounding"
+        elif "knee" in lower_injury:
+            output
