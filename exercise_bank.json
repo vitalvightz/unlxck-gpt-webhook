@@ -398,4 +398,194 @@
     "movement": "core",
     "type": "unilateral",
     "tags": ["core", "rehab_friendly"]
+  },
+  [
+  // ===== LOWER BODY (25 Exercises) ===== //
+  // Rehab Focus
+  {
+    "name": "Pistol Squat (Assisted)",
+    "category": "lower_body",
+    "phases": ["GPP", "TAPER"],
+    "method": "rehab",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": ["quad_dominant", "balance", "rehab_friendly"],
+    "equipment": "TRX/band"
+  },
+  {
+    "name": "Step-Up (Bodyweight)",
+    "category": "lower_body",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": ["quad_dominant", "rehab_friendly"],
+    "equipment": "box"
+  },
+  // Strength/Power
+  {
+    "name": "Trap Bar Deadlift",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "glutes", "compound"],
+    "equipment": "trap_bar"
+  },
+  {
+    "name": "Single-Leg RDL (Kettlebell)",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "unilateral",
+    "tags": ["posterior_chain", "balance"],
+    "equipment": "kettlebell"
+  },
+  // Explosive
+  {
+    "name": "Box Jump (Soft Landing)",
+    "category": "lower_body",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["explosive", "plyometric"],
+    "equipment": "box"
+  },
+
+  // ===== UPPER BODY (25 Exercises) ===== //
+  // Rehab Focus
+  {
+    "name": "Band Face Pull",
+    "category": "upper_body",
+    "phases": ["GPP", "TAPER"],
+    "method": "rehab",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["shoulders", "rehab_friendly"],
+    "equipment": "bands"
+  },
+  {
+    "name": "Swiss Ball Press",
+    "category": "upper_body",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["chest", "rehab_friendly"],
+    "equipment": "swiss_ball"
+  },
+  // Strength/Power
+  {
+    "name": "Weighted Pull-Up",
+    "category": "upper_body",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["back", "compound"],
+    "equipment": "weight_belt"
+  },
+  {
+    "name": "Landmine Press",
+    "category": "upper_body",
+    "phases": ["GPP", "SPP"],
+    "method": "power",
+    "movement": "vertical_push",
+    "type": "unilateral",
+    "tags": ["shoulders", "anti_rotation"],
+    "equipment": "landmine"
+  },
+
+  // ===== CORE/ROTATIONAL (20 Exercises) ===== //
+  // Rehab Focus
+  {
+    "name": "Deadbug (Band-Resisted)",
+    "category": "core",
+    "phases": ["GPP", "TAPER"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["core", "rehab_friendly"],
+    "equipment": "bands"
+  },
+  {
+    "name": "Side Plank (Banded)",
+    "category": "core",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation", "rehab_friendly"],
+    "equipment": "bands"
+  },
+  // Anti-Rotation
+  {
+    "name": "Pallof Press (Isometric Hold)",
+    "category": "core",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation"],
+    "equipment": "cable"
+  },
+
+  // ===== COMBAT-SPECIFIC (15 Exercises) ===== //
+  {
+    "name": "Sprawl-to-Stand (Weighted Vest)",
+    "category": "combat",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["explosive", "conditioning"],
+    "equipment": "weighted_vest"
+  },
+  {
+    "name": "Clinch Knee Strike (Band-Resisted)",
+    "category": "combat",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "unilateral",
+    "type": "unilateral",
+    "tags": ["explosive", "hip"],
+    "equipment": "bands"
+  },
+
+  // ===== GRIP/NECK (10 Exercises) ===== //
+  {
+    "name": "Towel Hang",
+    "category": "grip_neck",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": ["grip", "posterior_chain"],
+    "equipment": "towel/bar"
+  },
+  {
+    "name": "Neck Harness Flexion",
+    "category": "grip_neck",
+    "phases": ["GPP", "TAPER"],
+    "method": "rehab",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": ["neck", "rehab_friendly"],
+    "equipment": "neck_harness"
+  },
+
+  // ===== UNCONVENTIONAL (5 Exercises) ===== //
+  {
+    "name": "Sandbag Shouldering",
+    "category": "unconventional",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "compound",
+    "type": "unilateral",
+    "tags": ["explosive", "core"],
+    "equipment": "sandbag"
   }
+]
