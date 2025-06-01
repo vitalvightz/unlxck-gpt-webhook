@@ -203,3 +203,4 @@ Athlete Profile:
 
     doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
     return {"doc_link": doc_link}
+    
