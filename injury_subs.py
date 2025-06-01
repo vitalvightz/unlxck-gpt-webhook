@@ -21,7 +21,3 @@ injury_subs = {
     "bicep": ["triceps focus", "hammer grip row", "pull-ups with straps"],
     "triceps": ["bicep work", "push-ups", "landmine press"]
 }
-
-import json
-with open("/mnt/data/injury_subs.py", "w") as f:
-    f.write("injury_subs = " + json.dumps(injury_subs, indent=4))
