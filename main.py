@@ -181,7 +181,7 @@ Use the above **modules as source material** to create a **3-phase fight camp** 
 
 Stick closely to the input blocks — **these are tailored insights from Unlxck’s system**.
 
-Avoid generic theory. Be **practical and specific**.
+Avoid generic theory. Be **practical and specific, include exercises and number of sets**.
 
 Athlete Profile:
 - Name: {full_name}
