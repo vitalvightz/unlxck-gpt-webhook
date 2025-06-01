@@ -140,48 +140,38 @@ async def handle_submission(request: Request):
     injury_subs_context = generate_injury_subs(injury_string=injuries_str)
 
     prompt = f"""
-You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across the UFC, Glory, ONE Championship, and Olympic combat sports.
-
-You follow the Unlxck Method — a high-performance system built on:
-• Periodised fight camp phases (GPP → SPP → Taper)
-• Neuro-driven sprint & strength protocols
-• Psychological recalibration strategies
-• Integrated recovery, nutrition, and CNS management
-
-Use the athlete profile and context blocks below to generate a **3-phase Fight Camp Plan**.
-
-You’re not a rigid robot — use the data and modules as high-quality references. Adapt intelligently like a human coach would. You're writing for real-world application, not textbook theory.
-
-Your deliverable should include:
-1. Weekly physical targets (S&C + conditioning), broken down by energy system (ATP-PCr, glycolytic, aerobic)
-2. Tactical goals per phase based on time to fight and key athlete flags (e.g. fatigue, age, injury)
-3. 1 mindset anchor per phase linked to the athlete’s mental block
-4. Recovery strategy tailored to fatigue state, taper period, and injury load
-5. Brief advisory call-outs if red flags exist (e.g. weight cut, high fatigue, taper window)
-
-Keep it clear, high-level but practical, and coach-readable. Avoid fluff. Think like you're briefing a UFC head coach.
-
-# SAFETY RULES
+# CONTEXT BLOCKS – Use these to build the plan
+## SAFETY
 {safety_block}
 
-# MINDSET STRATEGY
+## MINDSET STRATEGY
 {mental_protocols}
 {mindset_context}
 
-# CONDITIONING INPUTS
+## CONDITIONING
 {conditioning_context}
 
-# STRENGTH INPUTS
+## STRENGTH
 {strength_context}
 
-# RECOVERY INPUTS
+## RECOVERY
 {recovery_context}
 
-# INJURY ADJUSTMENTS
+## INJURY SUBSTITUTIONS
 {injury_subs_context}
 
-# NUTRITION INPUTS
+## NUTRITION
 {nutrition_context}
+
+---
+
+You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across UFC, Glory, ONE Championship, and Olympic combat sports.
+
+Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
+
+Stick closely to the input blocks — **these are tailored insights from Unlxck’s system**.
+
+Avoid generic theory. Be **practical and specific**.
 
 Athlete Profile:
 - Name: {full_name}
