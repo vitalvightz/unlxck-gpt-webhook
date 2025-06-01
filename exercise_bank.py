@@ -128,8 +128,3 @@ exercise_bank = {
     }
 }
 '''
-
-with open("/mnt/data/exercise_bank.py", "w") as f:
-    f.write(exercise_bank_code)
-
-"/mnt/data/exercise_bank.py has been saved and is ready for import."
