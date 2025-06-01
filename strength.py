@@ -1,5 +1,6 @@
 from injury_subs import injury_subs
 from exercise_bank import exercise_bank
+from fatigue_utils import interpret_fatigue_score  # <- shared fatigue logic
 
 
 def generate_strength_block(phase, age, weight_class, weaknesses=None, injuries=None, fatigue=None):
@@ -11,9 +12,9 @@ def generate_strength_block(phase, age, weight_class, weaknesses=None, injuries=
             replaced = False
             for area, subs in injury_subs.items():
                 if area in injuries_detected:
-                    for orig, sub in subs.items():
-                        if orig in ex.lower():
-                            modified.append(ex.replace(orig, sub))
+                    for orig in subs:
+                        if orig.lower() in ex.lower():
+                            modified.append(ex.replace(orig, subs[0]))  # crude swap
                             replaced = True
                             break
                 if replaced:
@@ -22,14 +23,13 @@ def generate_strength_block(phase, age, weight_class, weaknesses=None, injuries=
                 modified.append(ex)
         return modified
 
-    # Select base exercises from bank
     def select_exercises(phase, weaknesses):
         selected = []
         for group, options in exercise_bank.items():
             if weaknesses and group not in weaknesses:
                 continue
             if phase in options:
-                selected += options[phase][:2]  # Take top 2 per relevant group
+                selected += options[phase][:2]
         return selected if selected else ["Back Squat", "Pull-Up", "DB Bench Press"]
 
     base_exercises = select_exercises(phase, weaknesses)
@@ -37,7 +37,7 @@ def generate_strength_block(phase, age, weight_class, weaknesses=None, injuries=
     if injuries:
         base_exercises = substitute_exercises(base_exercises, injuries.lower())
 
-    # Phase-specific loading logic
+    # Phase logic
     if phase == "GPP":
         base_block = "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1"
         focus = "Build hypertrophy base, tendon durability, and general strength."
@@ -51,16 +51,8 @@ def generate_strength_block(phase, age, weight_class, weaknesses=None, injuries=
         base_block = "Default fallback block — check logic."
         focus = "Default phase. Ensure proper phase detection upstream."
 
-    fatigue_note = ""
-    if fatigue:
-        try:
-            fatigue_score = int(fatigue)
-            if fatigue_score >= 7:
-                fatigue_note = "⚠️ High fatigue – reduce volume by 30–40% and drop last set of each lift."
-            elif 4 <= fatigue_score <= 6:
-                fatigue_note = "⚠️ Moderate fatigue – monitor closely. Optionally reduce 1 set if performance drops."
-        except ValueError:
-            pass
+    # Sync fatigue logic
+    fatigue_note = interpret_fatigue_score(fatigue, domain="strength")
 
     # Output formatting
     strength_output.append("🏋️‍♂️ **Strength & Power Module**")
