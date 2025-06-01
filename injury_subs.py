@@ -24,12 +24,16 @@ injury_subs = {
 
 def generate_injury_subs(*, injury_string: str) -> str:
     if not injury_string:
-        return ""
+        return "\n✅ No injury substitutions needed."
 
-    result_lines = []
-    for key in injury_subs:
-        if key in injury_string.lower():
-            subs = injury_subs[key]
-            result_lines.append(f"- {key.title()}: " + ", ".join(subs))
+    injury_string = injury_string.lower()
+    result_lines = [
+        f"- {key.title()}: {', '.join(subs)}"
+        for key, subs in injury_subs.items()
+        if key in injury_string
+    ]
 
-    return "\n".join(result_lines) if result_lines else "No known substitutions found."
+    if not result_lines:
+        return "\n⚠️ No known substitutions found. Please review manually."
+
+    return "\n🔁 **Injury Substitution Guidelines**\n" + "\n".join(result_lines)
