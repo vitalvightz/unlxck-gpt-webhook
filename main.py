@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from flag_router import flag_router
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
-from mindset_module import classify_mental_block
+from mindset_module import classify_mental_block, get_mindset_by_phase
 from recovery import generate_recovery_block
 from nutrition import generate_nutrition_block
 
