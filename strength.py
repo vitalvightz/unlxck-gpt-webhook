@@ -8,7 +8,7 @@ def generate_strength_block(flags: dict, weaknesses=None):
 
     strength_output = []
 
-    def substitute_exercises(base_exercises, injuries_detected):
+def substitute_exercises(base_exercises, injuries_detected):
     modified = []
     for ex in base_exercises:
         replaced = False
