@@ -1,0 +1,401 @@
+[
+  {
+    "name": "Trap Bar Deadlift",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "glutes", "compound"]
+  },
+  {
+    "name": "Single-Leg RDL",
+    "phases": ["GPP", "SPP"],
+    "method": "rehab",
+    "movement": "hinge",
+    "type": "unilateral",
+    "tags": ["posterior_chain", "balance", "rehab_friendly"]
+  },
+  {
+    "name": "Landmine Press",
+    "phases": ["GPP", "SPP", "TAPER"],
+    "method": "power",
+    "movement": "vertical_push",
+    "type": "unilateral",
+    "tags": ["shoulders", "core", "anti_rotation"]
+  },
+  {
+    "name": "Box Jump",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["power", "explosive"]
+  },
+  {
+    "name": "Romanian Deadlift (RDL)",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "hamstrings", "compound"]
+  },
+  {
+    "name": "Goblet Squat",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "core", "rehab_friendly"]
+  },
+  {
+    "name": "Push-Up (weighted or band-assist)",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["anterior_chain", "core", "compound"]
+  },
+  {
+    "name": "Barbell Overhead Press",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "vertical_push",
+    "type": "bilateral",
+    "tags": ["shoulders", "compound"]
+  },
+  {
+    "name": "Banded Row (speed focus)",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "explosive"]
+  },
+  {
+    "name": "Kettlebell Swing",
+    "phases": ["GPP", "SPP", "TAPER"],
+    "method": "power",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "explosive"]
+  },
+  {
+    "name": "Good Morning",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "hamstrings"]
+  },
+  {
+    "name": "Back Squat",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "glutes", "compound"]
+  },
+  {
+    "name": "Zercher Squat",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "core"]
+  },
+  {
+    "name": "Trap Bar Jump Squat",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["power", "explosive"]
+  },
+  {
+    "name": "Bulgarian Split Squat",
+    "phases": ["SPP", "TAPER"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": ["quad_dominant", "glutes", "balance"]
+  },
+  {
+    "name": "Speed Box Squat",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["explosive", "power"]
+  },
+  {
+    "name": "Isometric Wall Sit (20-30 s)",
+    "phases": ["TAPER"],
+    "method": "isometric",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "isometric"]
+  },
+  {
+    "name": "Front Squat",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "core", "compound"]
+  },
+  {
+    "name": "Heels-Elevated Goblet Squat",
+    "phases": ["SPP"],
+    "method": "rehab",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "core", "rehab_friendly"]
+  },
+  {
+    "name": "Isometric Wall Sit (20-30 s)",
+    "phases": ["TAPER"],
+    "method": "rehab",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "rehab_friendly"]
+  },
+  {
+    "name": "DB Bench Press",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["chest", "triceps", "compound"]
+  },
+  {
+    "name": "Incline DB Press",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["chest", "shoulder", "compound"]
+  },
+  {
+    "name": "Swiss Ball Press",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["core", "rehab_friendly", "chest"]
+  },
+  {
+    "name": "Clap Push-Up",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["explosive", "chest", "rate_of_force"]
+  },
+  {
+    "name": "Explosive Incline Press",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["explosive", "chest", "shoulder"]
+  },
+  {
+    "name": "Medicine-Ball Chest Toss",
+    "phases": ["TAPER"],
+    "method": "power",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["explosive", "chest"]
+  },
+  {
+    "name": "Z Press",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "vertical_push",
+    "type": "bilateral",
+    "tags": ["core", "shoulder"]
+  },
+  {
+    "name": "Push Press",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "vertical_push",
+    "type": "bilateral",
+    "tags": ["explosive", "shoulder", "rate_of_force"]
+  },
+  {
+    "name": "Barbell Overhead Press",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "vertical_push",
+    "type": "bilateral",
+    "tags": ["shoulder", "triceps", "compound"]
+  },
+  {
+    "name": "DB Clean & Press",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "vertical_push",
+    "type": "unilateral",
+    "tags": ["explosive", "shoulder", "core"]
+  },
+  {
+    "name": "Band-Resisted Push Press",
+    "phases": ["TAPER"],
+    "method": "power",
+    "movement": "vertical_push",
+    "type": "bilateral",
+    "tags": ["explosive", "rate_of_force", "shoulder"]
+  },
+  {
+    "name": "Bent-Over Row",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["back", "compound", "posterior_chain"]
+  },
+  {
+    "name": "Lat Pulldown",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["back", "compound"]
+  },
+  {
+    "name": "Face Pull",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["shoulder", "posterior_chain", "rehab_friendly"]
+  },
+  {
+    "name": "Weighted Pull-Up",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["back", "compound", "grip"]
+  },
+  {
+    "name": "Towel Pull-Up",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["grip", "back", "posterior_chain"]
+  },
+  {
+    "name": "High Pull",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["explosive", "posterior_chain", "rate_of_force"]
+  },
+  {
+    "name": "Deadbug",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["core", "rehab_friendly"]
+  },
+  {
+    "name": "Plank",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["core", "anti_rotation"]
+  },
+  {
+    "name": "Bird-Dog",
+    "phases": ["GPP", "TAPER"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "rehab_friendly"]
+  },
+  {
+    "name": "Cable Pallof Press",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation"]
+  },
+  {
+    "name": "Side Plank",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation", "rehab_friendly"]
+  },
+  {
+    "name": "Cable Rotations",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation"]
+  },
+  {
+    "name": "Med-Ball Rotational Slam",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["core", "explosive"]
+  },
+  {
+    "name": "Barbell Rollout",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["core", "anterior_chain"]
+  },
+  {
+    "name": "Anti-Rotation Press",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation"]
+  },
+  {
+    "name": "Weighted Side Plank",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation"]
+  },
+  {
+    "name": "Isometric Pallof Hold",
+    "phases": ["TAPER"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "anti_rotation", "rehab_friendly"]
+  },
+  {
+    "name": "Hollow-Body Hold",
+    "phases": ["TAPER"],
+    "method": "strength",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["core", "anterior_chain"]
+  },
+  {
+    "name": "Controlled Bird-Dog",
+    "phases": ["TAPER"],
+    "method": "rehab",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": ["core", "rehab_friendly"]
+  }
