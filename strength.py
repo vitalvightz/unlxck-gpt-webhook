@@ -48,10 +48,15 @@ def generate_strength_block(phase, age, weight_class, injuries=None, fatigue=Non
         exercises = substitute_exercises(exercises, injuries.lower())
 
     # Adjust volume if fatigue exists
-    fatigue_note = ""
-    if fatigue and "high" in fatigue.lower():
-        fatigue_note = "⚠️ Fatigue detected – reduce volume by 30–40% and drop last set of each lift."
-
+fatigue_note = ""
+if fatigue:
+    try:
+        fatigue_score = int(fatigue)
+        if fatigue_score >= 7:
+            fatigue_note = "⚠️ High fatigue – reduce volume by 30–40% and drop last set of each lift."
+        elif 4 <= fatigue_score <= 6:
+            fatigue_note = "⚠️ Moderate fatigue – monitor closely. Optionally reduce 1 set if performance drops."
+        
     # Output assembly
     strength_output.append("🏋️‍♂️ **Strength & Power Module**")
     strength_output.append(f"**Phase:** {phase}")
