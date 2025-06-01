@@ -1,59 +1,43 @@
-def classify_fatigue(fatigue_score):
-    try:
-        score = int(fatigue_score)
-        if score >= 8:
-            return "high"
-        elif score >= 5:
-            return "moderate"
-        else:
-            return "low"
-    except:
-        return "unknown"
+def flag_router(age: int, fatigue_score: int, phase: str, weight: float, weight_class: str, injuries: str = None):
+    """
+    Centralized flag aggregator for downstream module use.
+    Returns a dictionary of flags.
+    """
+    flags = {}
 
-def assess_weight_cut(weight, weight_class):
-    """
-    Detects weight cut severity based on known class limits (UFC standards).
-    Returns 'red' if cut >6%, 'moderate' if 4–6%, else 'green'
-    """
-    class_limits = {
+    # Fatigue classification
+    if fatigue_score >= 8:
+        flags["fatigue"] = "high"
+    elif 5 <= fatigue_score <= 7:
+        flags["fatigue"] = "moderate"
+    else:
+        flags["fatigue"] = "low"
+
+    # Weight cut logic
+    weight_class_limits = {
         "Flyweight": 56.7, "Bantamweight": 61.2, "Featherweight": 65.8,
         "Lightweight": 70.3, "Welterweight": 77.1, "Middleweight": 83.9,
         "Light Heavyweight": 93.0, "Heavyweight": 120.2
     }
-    try:
-        weight = float(weight)
-        limit = class_limits.get(weight_class)
-        if not limit:
-            return "unknown"
-        percent_cut = ((weight - limit) / weight) * 100
-        if percent_cut > 6:
-            return "red"
-        elif percent_cut >= 4:
-            return "moderate"
-        else:
-            return "green"
-    except:
-        return "unknown"
+    class_limit = weight_class_limits.get(weight_class)
+    if class_limit:
+        cut_pct = ((weight - class_limit) / weight) * 100
+        if cut_pct > 6:
+            flags["weight_cut_risk"] = True
+            flags["weight_cut_pct"] = round(cut_pct, 1)
 
-def detect_age_risk(age):
-    try:
-        return int(age) >= 30
-    except:
-        return False
+    # Age flag
+    if age >= 30:
+        flags["age_risk"] = True
 
-def detect_taper_phase(phase):
-    return phase.upper().strip() == "TAPER"
+    # Phase detection
+    if phase.strip().upper() == "TAPER":
+        flags["taper_week"] = True
 
-def parse_injury_flags(injury_text):
-    if not injury_text or not isinstance(injury_text, str):
-        return []
-    return [inj.strip().lower() for inj in injury_text.split(",") if inj.strip()]
+    # Injury parsing
+    if injuries:
+        flags["injuries"] = [i.strip().lower() for i in injuries.split(",")]
+    else:
+        flags["injuries"] = []
 
-def route_flags(age, weight, weight_class, fatigue_score, phase, injuries):
-    return {
-        "fatigue": classify_fatigue(fatigue_score),
-        "weight_cut": assess_weight_cut(weight, weight_class),
-        "age_risk": detect_age_risk(age),
-        "taper": detect_taper_phase(phase),
-        "injury": parse_injury_flags(injuries)
-    }
+    return flags
