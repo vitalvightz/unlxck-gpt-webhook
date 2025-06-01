@@ -102,17 +102,30 @@ async def handle_submission(request: Request):
         except Exception:
             phase = "GPP"
 
-    try: age_int = int(age)
-    except: age_int = 25
-    try: weight_float = float(weight)
-    except: weight_float = 70.0
-    try: fatigue_int = int(fatigue)
-    except: fatigue_int = 1
+    try:
+        age_int = int(age)
+    except:
+        age_int = 25
+    try:
+        weight_float = float(weight)
+    except:
+        weight_float = 70.0
+    try:
+        fatigue_int = int(fatigue)
+    except:
+        fatigue_int = 1
 
     injuries_str = injuries if injuries else ""
     weaknesses_list = [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else None
 
-    flags = flag_router(age=age_int, fatigue_score=fatigue_int, phase=phase, weight=weight_float, weight_class=weight_class, injuries=injuries_str)
+    flags = flag_router(
+        age=age_int,
+        fatigue_score=fatigue_int,
+        phase=phase,
+        weight=weight_float,
+        weight_class=weight_class,
+        injuries=injuries_str
+    )
     flags["phase"] = phase
     flags["mental_block"] = classify_mental_block(mental_block)
 
@@ -120,7 +133,14 @@ async def handle_submission(request: Request):
     safety_block = "Follow smart loading strategies. Avoid training through pain. Prioritize movement quality."
     mental_protocols = get_mental_protocols(flags["mental_block"], phase)
     mindset_context = get_mindset_by_phase(phase, flags)
-    strength_context = generate_strength_block(phase, age_int, weight_class, weaknesses=weaknesses_list, injuries=flags["injuries"], fatigue=fatigue)
+    strength_context = generate_strength_block(
+        phase=phase,
+        age=age_int,
+        weight_class=weight_class,
+        weaknesses=weaknesses_list,
+        injuries=flags["injuries"],
+        fatigue=fatigue
+    )
     conditioning_context = generate_conditioning_block(phase, flags, fight_format=rounds_format)
     recovery_context = generate_recovery_block(age_int, phase, weight_float, weight_class, flags)
     nutrition_context = generate_nutrition_block(flags)
