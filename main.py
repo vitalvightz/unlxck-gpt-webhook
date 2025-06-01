@@ -139,6 +139,16 @@ async def handle_submission(request: Request):
     nutrition_context = generate_nutrition_block(flags=flags)
     injury_subs_context = generate_injury_subs(injury_string=injuries_str)
 
+# 🧠 Debug: Print all blocks before GPT call
+print("== SAFETY BLOCK ==\n", safety_block)
+print("== MENTAL PROTOCOLS ==\n", mental_protocols)
+print("== MINDSET CONTEXT ==\n", mindset_context)
+print("== CONDITIONING CONTEXT ==\n", conditioning_context)
+print("== STRENGTH CONTEXT ==\n", strength_context)
+print("== RECOVERY CONTEXT ==\n", recovery_context)
+print("== INJURY SUBS ==\n", injury_subs_context)
+print("== NUTRITION CONTEXT ==\n", nutrition_context)
+
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 ## SAFETY
