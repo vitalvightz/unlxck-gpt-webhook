@@ -96,3 +96,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         "num_sessions": len(used_days),
         "preferred_tags": list(set(all_tags))
     }
+    
