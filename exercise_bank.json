@@ -99,8 +99,6 @@
     "tags": ["posterior_chain", "conditioning"],
     "equipment": "sled"
   },
-
-  // 11-20: Rehab & Unilateral
   {
     "name": "Single-Leg RDL",
     "category": "lower_body",
