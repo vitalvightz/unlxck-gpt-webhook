@@ -4,7 +4,7 @@ def generate_nutrition_block(*, flags: dict) -> str:
     # General Recommendations
     nutrition_block += "- 3 core meals + 2–3 snacks per day\n"
     nutrition_block += "- Prioritize whole foods: lean protein, complex carbs, healthy fats\n"
-    nutrition_block += "- 0.8–1g protein per lb bodyweight\n"
+    nutrition_block += "- 1.7–2.2g protein per lkg bodyweight\n"
     nutrition_block += "- Hydration: 30–40ml per kg of bodyweight\n"
 
     # Fatigue Adaptations
