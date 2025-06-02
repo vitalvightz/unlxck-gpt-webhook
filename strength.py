@@ -13,7 +13,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style = flags.get("style", "")
     training_days = flags.get("training_days", [])
 
-    # Fighter style → tag boosting
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power"],
         "pressure fighter": ["conditioning", "core", "rate_of_force"],
@@ -27,7 +26,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style_tags = style_tag_map.get(style.lower(), [])
     target_tags = set((weaknesses or []) + style_tags)
 
-    # --- Phase-filtered, tag-matched exercises ---
     filtered = []
     for ex in exercise_bank:
         if phase not in ex["phases"]:
@@ -38,11 +36,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             continue
         filtered.append(ex)
 
-    # Fallback
     if not filtered:
         filtered = [ex for ex in exercise_bank if phase in ex["phases"]][:6]
 
-    # Injury substitution
     def substitute_exercises(exercises, injuries_detected):
         modified = []
         for ex in exercises:
@@ -63,11 +59,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     base_exercises = substitute_exercises(filtered[:6], injuries)
 
-    # Assign strength days
     used_days = training_days[:min(len(training_days), 3)]
     tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
 
-    # Load logic
     phase_loads = {
         "GPP": ("3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1", "Build hypertrophy base, tendon durability, and general strength."),
         "SPP": ("3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)", "Max strength + explosive power. Contrast and triphasic methods emphasized."),
