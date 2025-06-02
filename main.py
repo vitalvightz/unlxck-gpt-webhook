@@ -87,11 +87,12 @@ async def handle_submission(request: Request):
     mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
+    # Fight phase logic
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
             weeks_out = max(1, (fight_date - datetime.now()).days // 7)
-        except Exception:
+        except:
             weeks_out = "N/A"
     else:
         weeks_out = "N/A"
@@ -99,87 +100,61 @@ async def handle_submission(request: Request):
     if weeks_out == "N/A":
         phase = "GPP"
     else:
-        try:
-            wo_int = int(weeks_out)
-            if wo_int > 8:
-                phase = "GPP"
-            elif 3 < wo_int <= 8:
-                phase = "SPP"
-            else:
-                phase = "TAPER"
-        except Exception:
+        weeks_out = int(weeks_out)
+        if weeks_out > 8:
             phase = "GPP"
+        elif 3 < weeks_out <= 8:
+            phase = "SPP"
+        else:
+            phase = "TAPER"
 
-    try:
-        age_int = int(age)
-    except:
-        age_int = 25
-    try:
-        weight_float = float(weight)
-    except:
-        weight_float = 70.0
-    try:
-        fatigue_int = int(fatigue)
-    except:
-        fatigue_int = 1
+    training_context = build_training_context()
 
-    injuries_str = injuries if injuries else ""
-    weaknesses_list = [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else None
-
-    flags = flag_router(
-        age=age_int,
-        fatigue_score=fatigue_int,
-        phase=phase,
-        weight=weight_float,
-        weight_class=weight_class,
-        injuries=injuries_str
-    )
-    flags["phase"] = phase
+    # Build modules
+    flags = training_context.copy()
     flags["mental_block"] = classify_mental_block(mental_block)
 
-    # Modular Context Sections
-    safety_block = "Follow smart loading strategies. Avoid training through pain. Prioritize movement quality."
-    mental_protocols = get_mental_protocols(flags["mental_block"], phase)
-    mindset_context = get_mindset_by_phase(phase, flags)
-    strength_context = generate_strength_block(flags=flags, weaknesses=weaknesses_list)
-    conditioning_context = generate_conditioning_block(phase=phase, flags=flags, fight_format=rounds_format)
-    recovery_context = generate_recovery_block(age=age_int, phase=phase, weight=weight_float, weight_class=weight_class, flags=flags)
-    nutrition_context = generate_nutrition_block(flags=flags)
-    injury_subs_context = generate_injury_subs(injury_string=injuries_str)
+    mindset_block = get_mindset_by_phase(phase, flags)
+    mental_strategies = get_mental_protocols(flags["mental_block"], phase)
+    strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
+    conditioning_block = generate_conditioning_block(training_context)
+    recovery_block = generate_recovery_block(
+        age=int(age), phase=phase, weight=float(weight), weight_class=weight_class, flags=training_context
+    )
+    nutrition_block = generate_nutrition_block(flags=training_context)
+    injury_sub_block = generate_injury_subs(injury_string=injuries)
 
-    # 🧠 Debug: Print all blocks before GPT call
-    print("== SAFETY BLOCK ==\n", safety_block)
-    print("== MENTAL PROTOCOLS ==\n", mental_protocols)
-    print("== MINDSET CONTEXT ==\n", mindset_context)
-    print("== CONDITIONING CONTEXT ==\n", conditioning_context)
-    print("== STRENGTH CONTEXT ==\n", strength_context)
-    print("== RECOVERY CONTEXT ==\n", recovery_context)
-    print("== INJURY SUBS ==\n", injury_subs_context)
-    print("== NUTRITION CONTEXT ==\n", nutrition_context)
+    # 🧠 Debug: Print all blocks before GPT call re-edit and complete
 
+    print("== NUTRITION BLOCK ==\n", nutrition_block)
+
+        # Compile final prompt
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
+
 ## SAFETY
-{safety_block}
+Avoid training through pain. Prioritize recovery. Emphasize technique.
 
-## MINDSET STRATEGY
-{mental_protocols}
-{mindset_context}
+## MINDSET
+{mindset_block}
 
-## CONDITIONING
-{conditioning_context}
+## MENTAL PROTOCOLS
+{mental_strategies}
 
 ## STRENGTH
-{strength_context}
+{strength_block["block"]}
+
+## CONDITIONING
+{conditioning_block}
 
 ## RECOVERY
-{recovery_context}
-
-## INJURY SUBSTITUTIONS
-{injury_subs_context}
+{recovery_block}
 
 ## NUTRITION
-{nutrition_context}
+{nutrition_block}
+
+## INJURY SUBSTITUTIONS
+{injury_sub_block}
 
 ---
 
@@ -195,16 +170,16 @@ Athlete Profile:
 - Name: {full_name}
 - Age: {age}
 - Weight: {weight}kg
-- Weight Class: {weight_class}
+- Target Weight: {target_weight}kg
 - Height: {height}cm
-- Style: {fighting_style}
+- Techincal Style: {fighting_style_technical}
+- Techincal Style: {fighting_style_tactical}
 - Stance: {stance}
 - Level: {status}
 - Record: {record}
 - Fight Format: {rounds_format}
 - Fight Date: {next_fight_date}
 - Weeks Out: {weeks_out}
-- S&C Frequency: {frequency}/week
 - Fatigue Level: {fatigue}
 - Injuries: {injuries}
 - Available S&C Days: {available_days}
