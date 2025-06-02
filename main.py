@@ -78,7 +78,6 @@ async def handle_submission(request: Request):
     rounds_format = get_value("Rounds x Minutes", fields)
     frequency = get_value("Weekly Training Frequency", fields)
     fatigue = get_value("Fatigue Level", fields)
-    training_phase = get_value("Training Phase", fields)
     equipment_access = get_value("Equipment Access", fields)
     available_days = get_value("Time Availability for Training", fields)
     injuries = get_value("Any injuries or areas you need to work around?", fields)
