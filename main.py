@@ -1,13 +1,12 @@
 from datetime import datetime
 from fastapi import FastAPI, Request
+import os, json, base64
 import openai
-import os
-import base64
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-# Modular imports powering GPT context
-from flag_router import flag_router
+# Modules
+from training_context import build_training_context
 from mindset_module import classify_mental_block, get_mindset_by_phase, get_mental_protocols
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
@@ -15,17 +14,16 @@ from recovery import generate_recovery_block
 from nutrition import generate_nutrition_block
 from injury_subs import generate_injury_subs
 
-# Decode and save service account credentials
+# Auth
 if os.getenv("GOOGLE_CREDS_B64"):
     with open("clientsecrettallyso.json", "w") as f:
         decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
         f.write(decoded.decode("utf-8"))
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-
-DOCS_SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
 SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
-creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=DOCS_SCOPES)
+SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
+creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
 docs_service = build('docs', 'v1', credentials=creds)
 drive_service = build('drive', 'v3', credentials=creds)
 
@@ -34,11 +32,16 @@ app = FastAPI()
 def get_value(label, fields):
     for field in fields:
         if field.get("label", "").strip() == label.strip():
-            if isinstance(field["value"], list):
-                return ", ".join([
-                    opt["text"] for opt in field.get("options", []) if opt["id"] in field["value"]
-                ])
-            return field["value"]
+            value = field.get("value")
+            if isinstance(value, list):
+                # Case 1: it's a list of option IDs and we have options to match
+                if "options" in field:
+                    return ", ".join([
+                        opt["text"] for opt in field["options"] if opt.get("id") in value
+                    ])
+                # Case 2: it's already a list of strings (Tally sometimes sends this)
+                return ", ".join(str(v) for v in value)
+            return str(value).strip() if value is not None else ""
     return ""
 
 def get_folder_id(folder_name):
@@ -49,7 +52,7 @@ def get_folder_id(folder_name):
 def create_doc(title, content):
     folder_id = get_folder_id("Unlxck Auto Docs")
     doc = docs_service.documents().create(body={"title": title}).execute()
-    doc_id = doc.get("documentId")
+    doc_id = doc["documentId"]
     if folder_id:
         drive_service.files().update(fileId=doc_id, addParents=folder_id, removeParents='root').execute()
     docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}).execute()
@@ -60,24 +63,30 @@ async def handle_submission(request: Request):
     data = await request.json()
     fields = data["data"]["fields"]
 
+    # Basic info
     full_name = get_value("Full name", fields)
     age = get_value("Age", fields)
     weight = get_value("Weight (kg)", fields)
-    weight_class = get_value("Weight Class", fields)
+    target_weight = get_value("Target Weight (kg)", fields)
     height = get_value("Height (cm)", fields)
-    fighting_style = get_value("Fighting Style", fields)
+    fighting_style_technical = get_value("Fighting Style (Technical)", fields)
+    fighting_style_tactical = get_value("Fighting Style (Tactical)", fields)
     stance = get_value("Stance", fields)
     status = get_value("Professional Status", fields)
     record = get_value("Current Record", fields)
-    next_fight_date = get_value("Next Fight 👇", fields)
-    rounds_format = get_value("Rounds & Format", fields)
+    next_fight_date = get_value("When is your next fight?", fields)
+    rounds_format = get_value("Rounds x Minutes", fields)
     frequency = get_value("Weekly Training Frequency", fields)
     fatigue = get_value("Fatigue Level", fields)
-    injuries = get_value("Any past or current injuries that we should avoid loading?", fields)
-    available_days = get_value("Days Available for S&C training", fields)
+    training_phase = get_value("Training Phase", fields)
+    equipment_access = get_value("Equipment Access", fields)
+    available_days = get_value("Time Availability for Training", fields)
+    injuries = get_value("Any injuries or areas you need to work around?", fields)
+    key_goals = get_value("What are your key performance goals?", fields)
     weak_areas = get_value("Where do you feel weakest right now?", fields)
-    mental_block = get_value("What is your biggest mental barrier", fields)
-    notes = get_value("Anything else you want us to know before we build your system?", fields)
+    training_preference = get_value ("Do you prefer certain training styles?", fields)
+    mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
+    notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
     if next_fight_date:
         try:
