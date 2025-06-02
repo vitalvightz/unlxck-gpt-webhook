@@ -87,8 +87,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     if fatigue_note:
         strength_output.append(f"**Adjustment:** {fatigue_note}")
 
+    all_tags = []
+    for ex in base_exercises:
+        all_tags.extend(ex.get("tags", []))
+
     return {
         "block": "\n".join(strength_output),
-        "days_used": used_days,
-        "tags_by_day": tags_by_day
+        "num_sessions": len(used_days),
+        "preferred_tags": list(set(all_tags))
     }
