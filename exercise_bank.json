@@ -1,5 +1,3 @@
-    # LOWER BODY 
-    # Strength & Power
 [
   {
     "name": "Trap Bar Deadlift",
@@ -203,9 +201,6 @@
     "tags": ["quad_dominant", "rehab_friendly"],
     "equipment": "bodyweight"
   },
-
-  // ===== UPPER BODY (30 Exercises) ===== //
-  // 21-30: Push
   {
     "name": "Barbell Overhead Press",
     "category": "upper_body",
@@ -306,8 +301,6 @@
     "tags": ["explosive", "shoulders"],
     "equipment": "bands"
   },
-
-  // 31-40: Pull
   {
     "name": "Bent-Over Row",
     "category": "upper_body",
@@ -408,9 +401,6 @@
     "tags": ["explosive", "posterior_chain"],
     "equipment": "bands"
   },
-
-  // ===== CORE/ROTATIONAL (20 Exercises) ===== //
-  // 41-50: Anti-Rotation
   {
     "name": "Deadbug",
     "category": "core",
@@ -511,8 +501,6 @@
     "tags": ["core", "rehab_friendly"],
     "equipment": "bodyweight"
   },
-
-  // 51-60: Rotational Power
   {
     "name": "Med-Ball Rotational Slam",
     "category": "core",
@@ -613,9 +601,6 @@
     "tags": ["core", "rehab_friendly"],
     "equipment": "swiss_ball"
   },
-
-  // ===== COMBAT-SPECIFIC (10 Exercises) ===== //
-  // 61-70: Explosive Drills
   {
     "name": "Sprawl-to-Stand (Weighted Vest)",
     "category": "combat",
@@ -716,9 +701,6 @@
     "tags": ["shoulders", "conditioning"],
     "equipment": "battle_ropes"
   },
-
-  // ===== GRIP/NECK (5 Exercises) ===== //
-  // 71-75
   {
     "name": "Towel Hang",
     "category": "grip_neck",
@@ -769,9 +751,6 @@
     "tags": ["forearm", "rehab_friendly"],
     "equipment": "wrist_roller"
   },
-
-  // ===== UNCONVENTIONAL (5 Exercises) ===== //
-  // 76-80
   {
     "name": "Log Press",
     "category": "unconventional",
@@ -822,9 +801,6 @@
     "tags": ["core", "shoulders"],
     "equipment": "bulgarian_bag"
   },
-
-  // ===== FINISHERS (5 Exercises) ===== //
-  // 81-85
   {
     "name": "EMOM: 5 Squat Cleans + 5 Burpees",
     "category": "finishers",
@@ -875,9 +851,6 @@
     "tags": ["power", "endurance"],
     "equipment": "box/kettlebell"
   },
-
-  // ===== RECOVERY/MOBILITY (10 Exercises) ===== //
-  // 86-95
   {
     "name": "Banded Hip Flexor Stretch",
     "category": "recovery",
@@ -978,9 +951,6 @@
     "tags": ["thoracic", "rehab_friendly"],
     "equipment": "foam_roller"
   },
-
-  // ===== COMBAT CONDITIONING (5 Exercises) ===== //
-  // 96-100
   {
     "name": "Grappler’s Bridge (Weighted)",
     "category": "combat",
@@ -1032,8 +1002,6 @@
     "equipment": "bands"
   },
   {
-  // ===== FOOTWORK & DEFENSE (5) ===== //
-  {
     "name": "Boxing Shuffle Drill (Ladder)",
     "category": "boxing",
     "phases": ["GPP", "SPP"],
@@ -1083,8 +1051,6 @@
     "tags": ["rotational", "rate_of_force"],
     "equipment": "bodyweight"
   },
-
-  // ===== UPPER BODY POWER (5) ===== //
   {
     "name": "Band-Resisted Straight Punch",
     "category": "boxing",
@@ -1135,8 +1101,6 @@
     "tags": ["rate_of_force", "shoulders"],
     "equipment": "weighted_ball"
   },
-
-  // ===== CORE/ROTATIONAL (5) ===== //
   {
     "name": "Seated Russian Twist (Band-Resisted)",
     "category": "boxing",
@@ -1187,8 +1151,6 @@
     "tags": ["rotational", "grip"],
     "equipment": "sledgehammer/tire"
   },
-
-  // ===== NECK/GRIP (3) ===== //
   {
     "name": "Neck Harness Lateral Flexion",
     "category": "boxing",
@@ -1219,8 +1181,6 @@
     "tags": ["grip", "rotational"],
     "equipment": "plates"
   },
-
-  // ===== ENDURANCE/CONDITIONING (5) ===== //
   {
     "name": "3-Minute Heavy Bag Interval",
     "category": "boxing",
