@@ -1,99 +1,83 @@
-from pathlib import Path
-import json
-from injury_subs import injury_subs
+from training_context import build_training_context
 
-# Load JSON-based exercise bank
-exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
-def generate_strength_block(*, flags: dict, weaknesses=None):
-    phase = flags.get("phase", "GPP")
-    injuries = flags.get("injuries", [])
-    fatigue = flags.get("fatigue", "low")
-    equipment_access = flags.get("equipment", [])
-    style = flags.get("style", "")
-    training_days = flags.get("training_days", [])
+def generate_recovery_block(training_context: dict) -> str:
+    phase = training_context["phase"]
+    fatigue = training_context["fatigue"]
+    weight = training_context.get("weight", 0.0)
+    weight_class = training_context.get("weight_class", "")
+    age_risk = training_context.get("age_risk", False)
+    taper_week = phase == "TAPER"
+    weight_cut_risk = training_context.get("weight_cut_risk", False)
+    weight_cut_pct = training_context.get("weight_cut_pct", 0.0)
 
-    style_tag_map = {
-        "brawler": ["compound", "posterior_chain", "power"],
-        "pressure fighter": ["conditioning", "core", "rate_of_force"],
-        "clinch fighter": ["grip", "core", "unilateral", "shoulders"],
-        "distance striker": ["explosive", "reactive", "balance"],
-        "counter striker": ["reactive", "core", "anti_rotation"],
-        "submission hunter": ["grip", "mobility", "core", "stability"],
-        "kicker": ["hinge", "posterior_chain", "balance", "mobility"],
-        "scrambler": ["core", "rotational", "balance", "endurance"]
-    }
-    style_tags = style_tag_map.get(style.lower(), [])
-    target_tags = set((weaknesses or []) + style_tags)
+    recovery_block = []
 
-    filtered = []
-    for ex in exercise_bank:
-        if phase not in ex["phases"]:
-            continue
-        if equipment_access and ex["equipment"] not in equipment_access:
-            continue
-        if not target_tags.intersection(set(ex["tags"])):
-            continue
-        filtered.append(ex)
-
-    if not filtered:
-        filtered = [ex for ex in exercise_bank if phase in ex["phases"]][:6]
-
-    def substitute_exercises(exercises, injuries_detected):
-        modified = []
-        for ex in exercises:
-            name = ex["name"]
-            replaced = False
-            for area, subs_list in injury_subs.items():
-                if area in injuries_detected:
-                    for sub_ex in subs_list:
-                        if any(keyword in name.lower() for keyword in sub_ex.lower().split()):
-                            modified.append({"name": sub_ex, "tags": ex["tags"]})
-                            replaced = True
-                            break
-                if replaced:
-                    break
-            if not replaced:
-                modified.append(ex)
-        return modified
-
-    base_exercises = substitute_exercises(filtered[:6], injuries)
-
-    used_days = training_days[:min(len(training_days), 3)]
-    tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
-
-    phase_loads = {
-        "GPP": ("3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1", "Build hypertrophy base, tendon durability, and general strength."),
-        "SPP": ("3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)", "Max strength + explosive power. Contrast and triphasic methods emphasized."),
-        "TAPER": ("2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load", "Maintain intensity, cut volume, CNS freshness. High bar speed focus.")
-    }
-    base_block, focus = phase_loads.get(phase, ("Default fallback block", "Default phase. Ensure proper phase detection upstream."))
-
-    fatigue_note = ""
-    if fatigue == "high":
-        fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
-    elif fatigue == "moderate":
-        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
-
-    strength_output = [
-        "\n🏋️‍♂️ **Strength & Power Module**",
-        f"**Phase:** {phase}",
-        f"**Primary Focus:** {focus}",
-        "**Top Exercises:**"
+    # Core Recovery
+    recovery_block.append("**Core Recovery Strategies:**")
+    recovery_block += [
+        "- Daily breathwork (5–10 mins post-session)",
+        "- Contrast showers daily or post-training",
+        "- 8–9 hours of sleep/night + 90-min blue light cutoff",
+        "- Cold exposure 2–3x/week (if needed)",
+        "- Mobility circuits/light recovery work daily"
     ]
-    for ex in base_exercises:
-        strength_output.append(f"- {ex['name']}")
-    strength_output.append(f"**Prescription:** {base_block}")
-    if fatigue_note:
-        strength_output.append(f"**Adjustment:** {fatigue_note}")
 
-    all_tags = []
-    for ex in base_exercises:
-        all_tags.extend(ex.get("tags", []))
+    # Age-based Adjustments
+    if age_risk:
+        recovery_block.append("\n**Age-Specific Adjustments:**")
+        recovery_block += [
+            "- 72h muscle group rotation",
+            "- Weekly float tank session",
+            "- Collagen supplementation"
+        ]
 
-    return {
-        "block": "\n".join(strength_output),
-        "num_sessions": len(used_days),
-        "preferred_tags": list(set(all_tags))
-    }
-    
+    # Fatigue Score Flags
+    if fatigue == "high":
+        recovery_block.append("\n**Fatigue Red Flags:**")
+        recovery_block += [
+            "- Drop 1 session if sleep < 6.5hrs for 3+ days",
+            "- Cut weekly volume by 25–40%",
+            "- Replace eccentrics with isometrics if DOMS >72hrs",
+            "- Monitor for appetite/mood dips (cortisol/motivation risk)"
+        ]
+    elif fatigue == "moderate":
+        recovery_block.append("\n**Moderate Fatigue Notes:**")
+        recovery_block += [
+            "- Add 1 full rest day",
+            "- Prioritize post-session nutrition & breathwork"
+        ]
+
+    # Phase-Based Adjustments
+    if taper_week:
+        recovery_block.append("\n**Fight Week Protocol (Taper):**")
+        recovery_block += [
+            "- Reduce volume to 30–40% of taper week",
+            "- Final hard session = Tue/Wed",
+            "- No soreness-inducing lifts after Wed",
+            "- Final 2 days = breathwork, float tank, shadow drills"
+        ]
+    elif phase == "SPP":
+        recovery_block.append("\n**SPP Recovery Focus:**")
+        recovery_block += [
+            "- Manage CNS load and alactic fatigue",
+            "- Introduce 1–2 full recovery days"
+        ]
+    elif phase == "GPP":
+        recovery_block.append("\n**GPP Recovery Focus:**")
+        recovery_block += [
+            "- Focus on tissue prep, joint mobility",
+            "- Reset sleep routine"
+        ]
+
+    # Weight Cut Risk Trigger
+    if weight_cut_risk:
+        recovery_block.append("\n**⚠️ Weight Cut Recovery Warning:**")
+        recovery_block += [
+            "- Cut >6% → elevate recovery urgency",
+            "- Add 2 float tank or Epsom salt baths in fight week",
+            "- Emphasize post-weigh-in refeed: fluids, high-GI carbs",
+            "- Monitor mood, sleep, and hydration hourly post-weigh-in"
+        ]
+
+    return "\n".join(recovery_block).strip()
