@@ -1076,7 +1076,7 @@
     "category": "boxing",
     "phases": ["SPP"],
     "method": "plyometric",
-    "movement": "horizontal_push",
+    "movement": "compound",
     "type": "bilateral",
     "tags": ["rate_of_force", "chest"],
     "equipment": "bodyweight"
@@ -1230,5 +1230,310 @@
     "type": "bilateral",
     "tags": ["endurance", "shoulders"],
     "equipment": "battle_ropes"
+  }
+  {
+    "name": "Sprint Acceleration (10-20m)",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "sprint",
+    "type": "bilateral",
+    "tags": ["explosive", "CNS"],
+    "equipment": "open_space"
+  },
+  {
+    "name": "Lateral Shuffle Sprint",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "CNS"],
+    "equipment": "open_space"
+  },
+  {
+    "name": "Alternating Skater Hops",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "explosive"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Depth Jump to Sprint",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["CNS", "explosive"],
+    "equipment": "box"
+  },
+  {
+    "name": "Rapid Hurdle Hops (2-foot)",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "vertical",
+    "type": "bilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "hurdles"
+  },
+  {
+    "name": "Backpedal-to-Sprint Transition",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "sprint",
+    "type": "bilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "open_space"
+  },
+  {
+    "name": "Single-Leg Bounding",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "horizontal",
+    "type": "unilateral",
+    "tags": ["CNS", "explosive"],
+    "equipment": "open_space"
+  },
+  {
+    "name": "Jump-in-Place (Max Frequency)",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "vertical",
+    "type": "bilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Carioca Sprint",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": ["lateral", "CNS"],
+    "equipment": "open_space"
+  },
+  {
+    "name": "Drop-Step Lateral Bound",
+    "category": "locomotion",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "reactive"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Lateral Lunge (Plyometric)",
+    "category": "lateral",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "explosive"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Cossack Squat (Dynamic)",
+    "category": "lateral",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "mobility"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Side Hop-to-Stabilize",
+    "category": "lateral",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "reactive"],
+    "equipment": "line/tape"
+  },
+  {
+    "name": "Lateral Med Ball Slam",
+    "category": "lateral",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": ["lateral", "CNS"],
+    "equipment": "medicine_ball"
+  },
+  {
+    "name": "Defensive Slide Drill (Weighted)",
+    "category": "lateral",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "conditioning"],
+    "equipment": "weighted_vest"
+  },
+  {
+    "name": "Lateral Box Push-Off",
+    "category": "lateral",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "explosive"],
+    "equipment": "box"
+  },
+  {
+    "name": "Cross-Step Lunge",
+    "category": "lateral",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": ["lateral", "balance"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Lateral Resisted Band Walk",
+    "category": "lateral",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "lateral",
+    "type": "unilateral",
+    "tags": ["lateral", "rehab_friendly"],
+    "equipment": "bands"
+  },
+  {
+    "name": "Depth Jump (Stick Landing)",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "vertical",
+    "type": "bilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "box"
+  },
+  {
+    "name": "Reactive Hurdle Hop (Single-Leg)",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "vertical",
+    "type": "unilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "hurdles"
+  },
+  {
+    "name": "Ballistic Box Jump (Min Ground Contact)",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "vertical",
+    "type": "bilateral",
+    "tags": ["CNS", "explosive"],
+    "equipment": "box"
+  },
+  {
+    "name": "Reactive Dot Drills",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "compound",
+    "type": "unilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "agility_dots"
+  },
+  {
+    "name": "Band-Resisted Reaction Hop",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "horizontal",
+    "type": "unilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "bands"
+  },
+  {
+    "name": "Plyometric Shadow Boxing",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "compound",
+    "type": "unilateral",
+    "tags": ["CNS", "rate_of_force"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Staggered-Stance Reactive Jumps",
+    "category": "reactive",
+    "phases": ["SPP"],
+    "method": "plyometric",
+    "movement": "vertical",
+    "type": "unilateral",
+    "tags": ["CNS", "reactive"],
+    "equipment": "bodyweight"
+  }
+  {
+    "name": "Single-Leg Balance (Eyes Closed)",
+    "category": "proprioception",
+    "phases": ["GPP", "TAPER"],
+    "method": "rehab",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": ["balance", "rehab_friendly"],
+    "equipment": "bodyweight",
+    "notes": "Progress by adding head turns or unstable surface"
+  },
+  {
+    "name": "Tandem Gait Walk (Heel-to-Toe)",
+    "category": "proprioception",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "locomotion",
+    "type": "unilateral",
+    "tags": ["balance", "rehab_friendly"],
+    "equipment": "line/tape",
+    "notes": "Add backward walking for progression"
+  },
+  {
+    "name": "Bosu Ball Mini-Squats",
+    "category": "proprioception",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["balance", "rehab_friendly"],
+    "equipment": "bosu_ball",
+    "notes": "Keep squats shallow (30° knee bend)"
+  },
+  {
+    "name": "Foam Pad Alphabet Tracing",
+    "category": "proprioception",
+    "phases": ["GPP"],
+    "method": "rehab",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": ["balance", "rehab_friendly"],
+    "equipment": "foam_pad",
+    "notes": "Trace letters with toes while standing on one leg"
+  },
+  {
+    "name": "Reactive Band Taps (Partner)",
+    "category": "proprioception",
+    "phases": ["GPP", "SPP"],
+    "method": "rehab",
+    "movement": "reactive",
+    "type": "unilateral",
+    "tags": ["balance", "rehab_friendly", "CNS"],
+    "equipment": "bands/partner",
+    "notes": "Partner gently tugs band in random directions during single-leg stance"
   }
 ]
