@@ -173,7 +173,7 @@ Athlete Profile:
 - Target Weight: {target_weight}kg
 - Height: {height}cm
 - Techincal Style: {fighting_style_technical}
-- Techincal Style: {fighting_style_tactical}
+- Tactical Style: {fighting_style_tactical}
 - Stance: {stance}
 - Level: {status}
 - Record: {record}
@@ -183,8 +183,9 @@ Athlete Profile:
 - Fatigue Level: {fatigue}
 - Injuries: {injuries}
 - Available S&C Days: {available_days}
-- Physical Weaknesses: {weak_areas}
-- Mental Blocker: {mental_block}
+- Weaknesses: {weak_areas}
+- Key Goals: {key_goals}
+- Mindset Challenges: {mental_block}
 - Extra Notes: {notes}
 """
 
