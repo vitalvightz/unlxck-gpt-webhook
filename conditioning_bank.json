@@ -100,7 +100,6 @@
     "notes": "Fight-specific movement without CNS drag"
   },
   {
-    #aerobic
     "name": "Nasal Breathing Ruck March",
     "phases": ["GPP"],
     "system": "aerobic",
@@ -259,5 +258,565 @@
     "duration": "10min",
     "tags": ["footwork"],
     "notes": "50% speed, perfect form"
+  },
+  {
+    "name": "Band-Resisted Broad Jump",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 1:8 rest",
+    "tags": ["explosive", "lower_body"],
+    "notes": "POSTERIOR CHAIN WARNING: Only program after upper body days. HAMSTRING ALERT: Disable if tightness >3/10"
+  },
+  {
+    "name": "Medicine Ball Rotational Throw",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "8x5/side, 1:6 rest",
+    "tags": ["rotational", "core"],
+    "notes": "SPINE LOAD RULE: No same week as max deadlifts. TAPER: Reduce to 3/side"
+  },
+  {
+    "name": "Depth Jump to Sprint",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "5x3 reps, 2min rest",
+    "tags": ["reactive", "plyometric"],
+    "notes": "CNS LOAD: Requires 48h recovery after. BOX HEIGHT: 12-18\" based on experience"
+  },
+  {
+    "name": "Plyo Push-Up to Sprint",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "6x5 reps + 10m sprint, 1:6 rest",
+    "tags": ["upper_body", "contrast_pairing"],
+    "notes": "BENCH PRESS PAIRING: Ideal 48h post heavy bench. SHOULDER INJURY: Replace with med ball throws"
+  },
+  {
+    "name": "Sled Sprint (Empty)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "8x15yds, 1:6 rest",
+    "tags": ["posterior_chain", "low_impact"],
+    "notes": "DEADLIFT RECOVERY: Safe 48h post pulls at <30% intensity. HAMSTRING: Preferred over hill sprints"
+  },
+  {
+    "name": "Box Jump (Stick Landing)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 90s rest",
+    "tags": ["explosive", "quad_dominant"],
+    "notes": "KNEE RULE: Depth must match competition squat. FATIGUE: Disable if vertical jump drops >10%"
+  },
+  {
+    "name": "KB Swing (Heavy)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "8x8 reps, 1:5 rest",
+    "tags": ["posterior_chain", "hip_dominant"],
+    "notes": "DEADLIFT SUB: Use when axial loading contraindicated. WEIGHT: 24-32kg for athletes"
+  },
+  {
+    "name": "Alternating Bound",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "4x5/side, 2min rest",
+    "tags": ["unilateral", "elastic"],
+    "notes": "ANKLE STABILITY: Not for acute sprains. SURFACE: Grass preferred"
+  },
+  {
+    "name": "Med Ball Chest Pass (Reactive)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "10x3 reps, 45s rest",
+    "tags": ["upper_body", "rate_of_force"],
+    "notes": "BENCH PRESS SYNERGY: Program 24h post volume bench. BALL WEIGHT: 4-6kg"
+  },
+  {
+    "name": "Hurdle Hop (Stick Landing)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "5x5 reps, 2min rest",
+    "tags": ["reactive", "plyometric"],
+    "notes": "HEIGHT: 20-24\". CONTRAINDICATED with hip impingement"
+  },
+  {
+    "name": "Band-Resisted Sprint Start",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "8x10m, 1:8 rest",
+    "tags": ["acceleration", "low_volume"],
+    "notes": "HAMSTRING PROTECTION: Lighter band if posterior tightness"
+  },
+  {
+    "name": "Depth Drop to Vertical",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 2min rest",
+    "tags": ["eccentric", "reactive"],
+    "notes": "BOX HEIGHT: 50% max vertical jump. CNS LOAD: Max 2x/week"
+  },
+  {
+    "name": "Sled Push (Light)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "6x20yds, 1:6 rest",
+    "tags": ["posterior_chain", "concentric"],
+    "notes": "LOAD: 25% BW. DEADLIFT RECOVERY: Safe 48h post max effort"
+  },
+  {
+    "name": "Single-Leg Hop (Stabilize)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "4x5/side, 90s rest",
+    "tags": ["unilateral", "balance"],
+    "notes": "KNEE RULE: Must pass single-leg squat test first"
+  },
+  {
+    "name": "Wall Ball Shot (Max Height)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "8x3 reps, 90s rest",
+    "tags": ["triple_extension", "overhead"],
+    "notes": "TARGET: 10-12ft. SHOULDER CAUTION: Reduce volume if impingement"
+  },
+  {
+    "name": "Broad Jump (Stick Landing)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 2min rest",
+    "tags": ["horizontal_power", "eccentric"],
+    "notes": "LANDING RULE: Must demonstrate proper mechanics first"
+  },
+  {
+    "name": "Split Jump (Alternating)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "5x5/side, 90s rest",
+    "tags": ["lunge_pattern", "elastic"],
+    "notes": "KNEE ALIGNMENT: Monitor valgus. DEPTH: Match fighting stance"
+  },
+  {
+    "name": "Med Ball Slam (Rotational)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "8x3/side, 1min rest",
+    "tags": ["core", "anti_rotation"],
+    "notes": "WEIGHT: 6-8kg. SPINE RULE: No flexion under load"
+  },
+  {
+    "name": "Box Jump-Over (Continuous)",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "4x8 reps, 2min rest",
+    "tags": ["reactive", "elastic"],
+    "notes": "HEIGHT: 12-16\". CONTRAINDICATED with hip replacements"
+  },
+  {
+    "name": "Band-Resisted Lateral Bound",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "duration": "5x4/side, 90s rest",
+    "tags": ["lateral_power", "adductors"],
+    "notes": "GROIN STRAIN WARNING: Reduce ROM if tender"
+  },
+  {
+    "name": "Thai Clinch EMOM",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "10x1min (knee every 15s), 30s rest",
+    "tags": ["clinch", "muay_thai"],
+    "notes": "HIP FLEXOR WARNING: Monitor fatigue. ALTERNATE weekly with sprawl drills"
+  },
+  {
+    "name": "Takedown Sprawl Circuit",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x30s max reps, 90s rest",
+    "tags": ["wrestling", "eccentric"],
+    "notes": "POSTERIOR CHAIN: 72h after deadlifts. GPP: Limit to 3 sets"
+  },
+  {
+    "name": "Pad Round Triples",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x3min (power shots every 30s), 1min rest",
+    "tags": ["striking", "shoulders"],
+    "notes": "SHOULDER RECOVERY: Reduce volume if bench press >85% 1RM that week"
+  },
+  {
+    "name": "Grappling Escape Chains",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x4min (escape every 45s), 90s rest",
+    "tags": ["bjj", "grip"],
+    "notes": "GRIP WARNING: No same day as pull-ups. TAPER: Remove if hands torn"
+  },
+  {
+    "name": "Wall Drill Intervals",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "12x30s (strike combo every 5s), 45s rest",
+    "tags": ["striking", "footwork"],
+    "notes": "LOWER BODY: Contraindicated with ankle sprains <2 weeks"
+  },
+  {
+    "name": "Sandbag Shouldering",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x90s (alternate sides), 2min rest",
+    "tags": ["core", "rotational"],
+    "notes": "SPINE LOAD: Not same week as heavy cleans. WEIGHT: 25-35% BW"
+  },
+  {
+    "name": "Battle Rope Gauntlet",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "4x2min (30s waves/30s slams), 90s rest",
+    "tags": ["shoulders", "grip"],
+    "notes": "UPPER BODY: Program before rest day. FATIGUE: Reduce waves if bench press drops >10%"
+  },
+  {
+    "name": "Tire Flip Sprints",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x(2 flips + 20yd sprint), 2min rest",
+    "tags": ["posterior_chain", "explosive"],
+    "notes": "DEADLIFT RECOVERY: 72h minimum after max effort. TIRE WEIGHT: 50-70% deadlift 1RM"
+  },
+  {
+    "name": "Kettlebell Snatch Test",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "10min AMRAP (switch every min)",
+    "tags": ["grip", "overhead"],
+    "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. WEIGHT: 16-24kg"
+  },
+  {
+    "name": "Sled Drag Intervals",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x45s (walk back recovery), 90s rest",
+    "tags": ["posterior_chain", "low_impact"],
+    "notes": "HAMSTRING FRIENDLY: Preferred over sprints with tightness. LOAD: 30-40% BW"
+  },
+  {
+    "name": "Sprawl-Burpee Complex",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x(5 sprawls + 5 burpees), 2min rest",
+    "tags": ["compound", "explosive"],
+    "notes": "CNS LOAD: Max 2x/week. GPP: Reduce to 3 sets"
+  },
+  {
+    "name": "Rope Climb Sprints",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x15ft climb + 20yd sprint, 3min rest",
+    "tags": ["grip", "pull"],
+    "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Towel hangs if rope unavailable"
+  },
+  {
+    "name": "Med Ball Circuit",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "4 rounds: 10 slams, 10 throws, 10 twists",
+    "tags": ["core", "rotational"],
+    "notes": "SPINE LOAD: Contraindicated with disc issues. WEIGHT: 6-10kg"
+  },
+  {
+    "name": "Hill Sprint Repeats",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x8sec max effort, 2min rest",
+    "tags": ["posterior_chain", "eccentric"],
+    "notes": "HAMSTRING ALERT: Replace with bike sprints if tight. GRADE: 15-20% incline"
+  },
+  {
+    "name": "Wrestling Shot Series",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "10x10sec max shots, 50sec rest",
+    "tags": ["quad_dominant", "explosive"],
+    "notes": "KNEE LOAD: Must pass bodyweight squat depth test first"
+  },
+  {
+    "name": "Stair Running Intervals",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "12x15sec max effort, 45sec rest",
+    "tags": ["quad_dominant", "plyometric"],
+    "notes": "ACHILLES WARNING: Not for acute tendonitis. STEP HEIGHT: 6-8 inches"
+  },
+  {
+    "name": "Heavy Bag Power Rounds",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x3min (10sec power/20sec pace), 1min rest",
+    "tags": ["striking", "shoulders"],
+    "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz"
+  },
+  {
+    "name": "Sandbag Get-Up Complex",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "4x(5/side), 90sec rest",
+    "tags": ["core", "anti_rotation"],
+    "notes": "SPINE LOAD: Reduce reps if form breaks. WEIGHT: 20-25% BW"
+  },
+  {
+    "name": "Sledgehammer Strikes",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x1min (alternate sides), 1min rest",
+    "tags": ["rotational", "grip"],
+    "notes": "ELBOW WARNING: Not for golfers elbow. HAMMER WEIGHT: 6-8lbs"
+  },
+  {
+    "name": "Defensive Movement Drill",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x30sec (slips/rolls/ducks), 30sec rest",
+    "tags": ["footwork", "reactive"],
+    "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up"
+  },
+  {
+    "name": "Ground-N-Pound Intervals",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x90s (strike combo every 15s), 2min rest",
+    "tags": ["mma", "top_control"],
+    "notes": "SHOULDER ENDURANCE: Reduce volume if bench press >85% 1RM that week"
+  },
+  {
+    "name": "Clinch Knee-to-Teepee Drill",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x45s (alternate knees), 75s rest",
+    "tags": ["muay_thai", "hip_dominant"],
+    "notes": "HIP FLEXOR RECOVERY: Follow with couch stretch series"
+  },
+  {
+    "name": "Towel Pull-Up Sprints",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x(5 pull-ups + 20yd sprint), 3min rest",
+    "tags": ["grip", "pull"],
+    "notes": "GRIP WARNING: No same week as heavy deadlifts. SUB: Rope climbs if available"
+  },
+  {
+    "name": "Plyo Push-Up Burpee",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x10 reps, 90s rest",
+    "tags": ["explosive", "upper_body"],
+    "notes": "CHEST RECOVERY: Minimum 48h after heavy bench"
+  },
+  {
+    "name": "Sled Push-Pull Complex",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "4x(30yd push + 30yd pull), 3min rest",
+    "tags": ["posterior_chain", "concentric"],
+    "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight"
+  },
+  {
+    "name": "Wall Ball Conditioning",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x2min (shot every 10s), 1min rest",
+    "tags": ["triple_extension", "overhead"],
+    "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. BALL WEIGHT: 6-8kg"
+  },
+  {
+    "name": "Agility Ladder Power Drills",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x30s max effort, 45s rest",
+    "tags": ["footwork", "reactive"],
+    "notes": "ANKLE STABILITY: Not for acute sprains. PATTERN: Change every 2 sets"
+  },
+  {
+    "name": "Sandbag Bearhug Carry",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "4x60yds, 2min rest",
+    "tags": ["core", "grip"],
+    "notes": "SPINE LOAD: Maintain neutral alignment. WEIGHT: 25-35% BW"
+  },
+  {
+    "name": "Striking Combos Under Fatigue",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x3min (combo every 30s), 1min rest",
+    "tags": ["boxing", "shoulders"],
+    "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz"
+  },
+  {
+    "name": "Tire Slam Intervals",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x45s (alternate sides), 75s rest",
+    "tags": ["rotational", "core"],
+    "notes": "ELBOW WARNING: Not for golfers elbow. SLEDGEHAMMER: 6-8lbs"
+  },
+  {
+    "name": "Defensive Level Change Drill",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "10x20s max reps, 40s rest",
+    "tags": ["wrestling", "eccentric"],
+    "notes": "QUAD LOAD: Must pass bodyweight squat depth test first"
+  },
+  {
+    "name": "Plyo Step-Up Jumps",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x8/side, 90s rest",
+    "tags": ["unilateral", "explosive"],
+    "notes": "BOX HEIGHT: 12-16\". KNEE ALIGNMENT: Monitor valgus"
+  },
+  {
+    "name": "Rope Wave Sprints",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x(30s waves + 20yd sprint), 2min rest",
+    "tags": ["shoulders", "grip"],
+    "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Battle ropes if rope unavailable"
+  },
+  {
+    "name": "Overhead Carry Complex",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "4x(30yd walk + 10 presses), 3min rest",
+    "tags": ["shoulders", "core"],
+    "notes": "LOAD: 20-25% BW. SHOULDER STABILITY: Must pass overhead squat test"
+  },
+  {
+    "name": "Sprawl-to-Stand Sprint",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x(5 reps + 15yd sprint), 90s rest",
+    "tags": ["explosive", "compound"],
+    "notes": "POSTERIOR CHAIN: 48h after deadlifts. GPP: Reduce to 5 sets"
+  },
+  {
+    "name": "Med Ball Reaction Drill",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "10x15s max catches, 45s rest",
+    "tags": ["reactive", "core"],
+    "notes": "BALL WEIGHT: 2-4kg. SPACE: Minimum 10x10ft area"
+  },
+  {
+    "name": "Kettlebell Snatch Complex",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x(5/side + 10 swings), 2min rest",
+    "tags": ["grip", "overhead"],
+    "notes": "SHOULDER PREHAB: Must pass Turkish get-up test first. WEIGHT: 16-24kg"
+  },
+  {
+    "name": "Sandbag Clean & Carry",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x(3 cleans + 30yd walk), 3min rest",
+    "tags": ["compound", "explosive"],
+    "notes": "LOAD: 25-30% BW. SPINE LOAD: Maintain neutral alignment"
+  },
+  {
+    "name": "Striking Defense Circuits",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x3min (slip/roll/parry combo), 1min rest",
+    "tags": ["footwork", "reactive"],
+    "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up. FATIGUE: Stop if form breaks"
+  },
+  {
+    "name": "Sled Drag Sprint Complex",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x(30yd drag + 20yd sprint), 3min rest",
+    "tags": ["posterior_chain", "low_impact"],
+    "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight"
+  },
+  {
+    "name": "MMA Gauntlet (Strike-Grapple-Strike)",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "5x3min stations",
+    "tags": ["mma", "transition"],
+    "notes": "ORDER: Boxing → Takedown → Ground strikes. REST: 1min between. NO HEAD IMPACT"
+  },
+  {
+    "name": "Boxing Punishment Drill (Bad Position Rounds)",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x2min (start each round fatigued)",
+    "tags": ["boxing", "mental_toughness"],
+    "notes": "SIMULATION: Begin rounds already at 70% fatigue"
+  },
+  {
+    "name": "Wrestling Chain Reaction Sparring",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "8x90s (live transitions)",
+    "tags": ["wrestling", "reactive"],
+    "notes": "PARTNER REQUIRED: Switch attacker/defender every round"
+  },
+  {
+    "name": "Heat Acclimation Rounds",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "3x5min in heated room",
+    "tags": ["environmental", "work_capacity"],
+    "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post"
+  },
+  {
+    "name": "Cold Exposure Recovery (Between Rounds)",
+    "phases": ["TAPER"],
+    "system": "cognitive",
+    "duration": "4x1min ice bath intervals",
+    "tags": ["recovery", "cns_freshness"],
+    "notes": "TEMPERATURE: 50-59°F. CONTRAINDICATED with circulatory issues"
+  },
+  {
+    "name": "Water Jug Carries (No Sled)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "5x60yds",
+    "tags": ["grip", "core"],
+    "notes": "SUBSTITUTE: 5-gallon jugs @ 25-40lbs. GRIP: Switch hands every 20yds"
+  },
+  {
+    "name": "Tire Flip Drag (No Sled)",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "duration": "6x40yds",
+    "tags": ["posterior_chain", "improvised"],
+    "notes": "TIRE WEIGHT: 50-70% deadlift max. FORM: Maintain neutral spine"
+  },
+  {
+    "name": "Backpack Step-Ups (No Weight Vest)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "4x50/side",
+    "tags": ["quad_dominant", "improvised"],
+    "notes": "LOAD: 15-20% BW. STEP HEIGHT: Match competition knee angle"
+  },
+  {
+    "name": "Dynamic Visual Tracking Drills",
+    "phases": ["TAPER"],
+    "system": "cognitive",
+    "duration": "3x3min (track moving objects)",
+    "tags": ["visual_processing", "reaction"],
+    "notes": "OBJECTS: Use 2-3 colored balls. SPEED: Progress from slow to fast"
+  },
+  {
+    "name": "Tactical Breathing Recovery",
+    "phases": ["GPP", "TAPER"],
+    "system": "cognitive",
+    "duration": "5x1min (4-7-8 pattern)",
+    "tags": ["parasympathetic", "recovery"],
+    "notes": "POST-SESSION: Use after high-CNS workouts. POSITION: Supine preferred"
   },
   {
