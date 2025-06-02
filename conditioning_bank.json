@@ -98,5 +98,166 @@
     "intensity": "moderate",
     "tags": ["reactive", "shoulders", "conditioning"],
     "notes": "Fight-specific movement without CNS drag"
-  }
-]
+  },
+  {
+    #aerobic
+    "name": "Nasal Breathing Ruck March",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "45-60min zone 2",
+    "tags": ["low_cns"],
+    "notes": "After lower body strength days only"
+  },
+  {
+    "name": "Pool Running (Weight Belt)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "30min continuous",
+    "tags": ["zero_impact"],
+    "notes": "Mandatory for lower body injuries"
+  },
+  {
+    "name": "Bike Zone 2 (Nasal Only)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "40min",
+    "tags": ["low_impact"],
+    "notes": "Primary hamstring rehab modality"
+  },
+  {
+    "name": "Swim Intervals (Freestyle)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "20x50m, 30s rest",
+    "tags": ["upper_body"],
+    "notes": "Active recovery after shoulder strength"
+  },
+  {
+    "name": "Step Mill (No Hands)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "30min tempo",
+    "tags": ["quad_dominant"],
+    "notes": "Contraindicated with knee pain"
+  },
+  {
+    "name": "Shadowboxing (Light Pace)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "3x10min rounds",
+    "tags": ["skill"],
+    "notes": "Focus on technique, not intensity"
+  },
+  {
+    "name": "Rowing (Zone 2)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "30min",
+    "tags": ["posterior_chain"],
+    "notes": "Low-impact deadlift alternative"
+  },
+  {
+    "name": "Hiking (Weighted Vest)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "60min",
+    "tags": ["work_capacity"],
+    "notes": "Terrain variation recommended"
+  },
+  {
+    "name": "Jump Rope (Recovery Pace)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "15min continuous",
+    "tags": ["footwork"],
+    "notes": "Focus on rhythm, not speed"
+  },
+  {
+    "name": "Sled Drag Walk",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "4x100yds",
+    "tags": ["posterior_chain"],
+    "notes": "25% BW load max"
+  },
+  {
+    "name": "Recumbent Bike",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "45min",
+    "tags": ["rehab_friendly"],
+    "notes": "For acute lower back pain"
+  },
+  {
+    "name": "Arm Ergometer",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "30min",
+    "tags": ["upper_body"],
+    "notes": "Leg injury alternative"
+  },
+  {
+    "name": "Yoga Flow (Dynamic)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "45min",
+    "tags": ["mobility"],
+    "notes": "Emphasize hip/shoulder ROM"
+  },
+  {
+    "name": "Farmers Walk (Light)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "5x100yds",
+    "tags": ["grip"],
+    "notes": "50% max grip duration"
+  },
+  {
+    "name": "Stair Climbing (Recovery)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "20min",
+    "tags": ["quad_dominant"],
+    "notes": "Skip every other step"
+  },
+  {
+    "name": "Elliptical (Nasal Only)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "30min",
+    "tags": ["low_impact"],
+    "notes": "Backward motion for hamstrings"
+  },
+  {
+    "name": "Padded Circuit (Zone 2)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "5x3min rounds",
+    "tags": ["skill"],
+    "notes": "30% intensity technique work"
+  },
+  {
+    "name": "Breath Control Drills",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "15min",
+    "tags": ["recovery"],
+    "notes": "Diaphragmatic focus"
+  },
+  {
+    "name": "Sandbag Carry (Light)",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "duration": "5x60yds",
+    "tags": ["core"],
+    "notes": "25% BW load"
+  },
+  {
+    "name": "Agility Ladder (Recovery)",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "duration": "10min",
+    "tags": ["footwork"],
+    "notes": "50% speed, perfect form"
+  },
+  {
