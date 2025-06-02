@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Assault Bike Sprint Intervals",
+    "phases": ["GPP", "SPP"],
+    "system": "ATP-PCr",
+    "modality": "bike",
+    "duration": "10s x 8 rounds, 1:5 rest",
+    "intensity": "max effort",
+    "tags": ["explosive", "posterior_chain", "low_impact"],
+    "notes": "Good for posterior-chain drive without joint pounding"
+  },
+  {
+    "name": "Zone 2 Sled Circuit",
+    "phases": ["GPP"],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "25–30min continuous",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "conditioning", "core"],
+    "notes": "Great for building base without CNS load"
+  },
+  {
+    "name": "Pad EMOM (5x5 format)",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "modality": "pad_drills",
+    "duration": "5x5min, 30s rest",
+    "intensity": "high",
+    "tags": ["glycolytic", "shoulders", "reactive"],
+    "notes": "Simulates fight pacing under fatigue"
+  },
+  {
+    "name": "Reaction Ball Drills",
+    "phases": ["TAPER"],
+    "system": "anaerobic_alactic",
+    "modality": "reaction",
+    "duration": "5–10min",
+    "intensity": "low",
+    "tags": ["coordination", "cns_freshness", "sharpness"],
+    "notes": "Pre-fight CNS sharpening"
+  },
+  {
+    "name": "Nasal Jog",
+    "phases": ["GPP", "TAPER"],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "30–40min",
+    "intensity": "low (zone 2)",
+    "tags": ["aerobic", "low_impact", "recovery"],
+    "notes": "Low load; good for mental reset and recovery flush"
+  },
+  {
+    "name": "Grapple Circuits (High Pace)",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "modality": "grappling",
+    "duration": "5x4min w/30s rest",
+    "intensity": "high",
+    "tags": ["grip", "core", "conditioning"],
+    "notes": "Grip-taxing & skill-based fatigue drill"
+  },
+  {
+    "name": "Sled Sprint Repeats",
+    "phases": ["SPP"],
+    "system": "ATP-PCr",
+    "modality": "sled",
+    "duration": "10s x 6, 1:6 rest",
+    "intensity": "max",
+    "tags": ["posterior_chain", "explosive", "low_impact"],
+    "notes": "Safe CNS explosive work when sprinting is contraindicated"
+  },
+  {
+    "name": "Jump Rope Conditioning",
+    "phases": ["GPP", "SPP"],
+    "system": "aerobic",
+    "modality": "jump_rope",
+    "duration": "15min continuous or intervals",
+    "intensity": "moderate",
+    "tags": ["coordination", "light_impact", "aerobic"],
+    "notes": "Low barrier to entry; rhythm & footwork focused"
+  },
+  {
+    "name": "Tempo Hill Runs",
+    "phases": ["SPP"],
+    "system": "glycolytic",
+    "modality": "run",
+    "duration": "20s uphill x 6 reps",
+    "intensity": "hard",
+    "tags": ["posterior_chain", "conditioning", "intensity"],
+    "notes": "High intensity, not ideal with hamstring injuries"
+  },
+  {
+    "name": "Shadowboxing Intervals",
+    "phases": ["TAPER", "SPP"],
+    "system": "glycolytic",
+    "modality": "shadowbox",
+    "duration": "3x3min RPE 6",
+    "intensity": "moderate",
+    "tags": ["reactive", "shoulders", "conditioning"],
+    "notes": "Fight-specific movement without CNS drag"
+  }
+]
