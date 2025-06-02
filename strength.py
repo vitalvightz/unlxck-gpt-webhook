@@ -1,8 +1,8 @@
-import json
 from pathlib import Path
+import json
 from injury_subs import injury_subs
 
-# Load exercise bank JSON
+# Load JSON-based exercise bank
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 def generate_strength_block(*, flags: dict, weaknesses=None):
@@ -11,7 +11,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     fatigue = flags.get("fatigue", "low")
     equipment_access = flags.get("equipment", [])
     style = flags.get("style", "")
+    training_days = flags.get("training_days", [])
 
+    # Fighter style → tag boosting
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power"],
         "pressure fighter": ["conditioning", "core", "rate_of_force"],
@@ -25,55 +27,59 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style_tags = style_tag_map.get(style.lower(), [])
     target_tags = set((weaknesses or []) + style_tags)
 
-    # Filter + score
+    # --- Phase-filtered, tag-matched exercises ---
     filtered = []
     for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
         if equipment_access and ex["equipment"] not in equipment_access:
             continue
-        match_score = len(set(ex["tags"]).intersection(target_tags))
-        if match_score:
-            filtered.append((ex["name"], match_score))
+        if not target_tags.intersection(set(ex["tags"])):
+            continue
+        filtered.append(ex)
 
-    filtered.sort(key=lambda x: x[1], reverse=True)
-    top_exercises = [ex[0] for ex in filtered[:6]]
-
-    if not top_exercises:
-        top_exercises = [ex["name"] for ex in exercise_bank if phase in ex["phases"]][:6]
+    # Fallback
+    if not filtered:
+        filtered = [ex for ex in exercise_bank if phase in ex["phases"]][:6]
 
     # Injury substitution
-    def substitute_exercises(base_exercises, injuries_detected):
+    def substitute_exercises(exercises, injuries_detected):
         modified = []
-        for ex in base_exercises:
+        for ex in exercises:
+            name = ex["name"]
             replaced = False
-            for area, subs in injury_subs.items():
+            for area, subs_list in injury_subs.items():
                 if area in injuries_detected:
-                    for sub_ex in subs:
-                        if any(k in ex.lower() for k in sub_ex.lower().split()):
-                            modified.append(sub_ex)
+                    for sub_ex in subs_list:
+                        if any(keyword in name.lower() for keyword in sub_ex.lower().split()):
+                            modified.append({"name": sub_ex, "tags": ex["tags"]})
                             replaced = True
                             break
-                    if replaced:
-                        break
+                if replaced:
+                    break
             if not replaced:
                 modified.append(ex)
         return modified
 
-    final_exercises = substitute_exercises(top_exercises, injuries)
+    base_exercises = substitute_exercises(filtered[:6], injuries)
 
-    phase_prescriptions = {
-        "GPP": ("3x8-12 @ 60–75% 1RM, tempo 3-1-1", "Build hypertrophy base, tendon durability, and general strength."),
-        "SPP": ("3–5x3-5 @ 85–90% 1RM, contrast methods", "Max strength + explosive power. Contrast and triphasic methods."),
-        "TAPER": ("2–3x3-5 @ 80–85%, cluster sets", "Maintain intensity, cut volume. Preserve CNS freshness.")
+    # Assign strength days
+    used_days = training_days[:min(len(training_days), 3)]
+    tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
+
+    # Load logic
+    phase_loads = {
+        "GPP": ("3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1", "Build hypertrophy base, tendon durability, and general strength."),
+        "SPP": ("3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)", "Max strength + explosive power. Contrast and triphasic methods emphasized."),
+        "TAPER": ("2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load", "Maintain intensity, cut volume, CNS freshness. High bar speed focus.")
     }
-    prescription, focus = phase_prescriptions.get(phase, ("2x10 bodyweight basics", "Fallback default"))
+    base_block, focus = phase_loads.get(phase, ("Default fallback block", "Default phase. Ensure proper phase detection upstream."))
 
     fatigue_note = ""
     if fatigue == "high":
-        fatigue_note = "\n⚠️ High fatigue → drop 30% volume, skip final set each lift."
+        fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
     elif fatigue == "moderate":
-        fatigue_note = "\n⚠️ Moderate fatigue → reduce 1 set per lift if needed."
+        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
 
     strength_output = [
         "\n🏋️‍♂️ **Strength & Power Module**",
@@ -81,9 +87,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         f"**Primary Focus:** {focus}",
         "**Top Exercises:**"
     ]
-    strength_output += [f"- {ex}" for ex in final_exercises]
-    strength_output.append(f"**Prescription:** {prescription}")
+    for ex in base_exercises:
+        strength_output.append(f"- {ex['name']}")
+    strength_output.append(f"**Prescription:** {base_block}")
     if fatigue_note:
-        strength_output.append(fatigue_note)
+        strength_output.append(f"**Adjustment:** {fatigue_note}")
 
-    return "\n".join(strength_output)
+    return {
+        "block": "\n".join(strength_output),
+        "days_used": used_days,
+        "tags_by_day": tags_by_day
+    }
