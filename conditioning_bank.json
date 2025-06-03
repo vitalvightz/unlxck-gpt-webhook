@@ -755,7 +755,7 @@
   },
   {
     "name": "Tire Slam Intervals",
-    "equipment": ["Tire",Sledgehammer],
+    "equipment": ["Tire","Sledgehammer"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x45s (alternate sides), 75s rest",
