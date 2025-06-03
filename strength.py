@@ -25,13 +25,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
-    # NORMALIZE: strip whitespace and lowercase user equipment entries
     equipment_access = [e.lower().strip() for e in flags.get("equipment", [])]
     style = flags.get("style_tactical", "")
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
 
-    known_equipment = ["barbell", "dumbbell", "kettlebell", "sled", "medicine ball", "trap bar", "bands", "cable"]
+    known_equipment = [
+        "barbell", "dumbbell", "kettlebell", "sled", "medicine ball",
+        "trap bar", "bands", "cable"
+    ]
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
