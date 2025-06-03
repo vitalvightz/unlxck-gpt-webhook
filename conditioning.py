@@ -2,6 +2,15 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
+# 🔁 Equipment fallback
+def allow_equipment_match(entry_equip, user_equipment):
+    if not entry_equip:
+        return True
+    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",")]
+    if "bodyweight" in entry_equip_list:
+        return True
+    return any(eq in user_equipment for eq in entry_equip_list)
+
 # Load bank
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
 
@@ -14,14 +23,8 @@ def generate_conditioning_block(flags: dict):
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
 
-    # Tag weights
-    weight_map = {
-        "weakness": 3,
-        "goal": 2,
-        "style": 1
-    }
+    weight_map = {"weakness": 3, "goal": 2, "style": 1}
 
-    # Tag maps (could move out into config)
     style_tag_map = {
         "brawler": ["posterior_chain", "explosive", "rate_of_force", "mental_toughness"],
         "pressure fighter": ["aerobic", "work_capacity", "glycolytic", "mental_toughness"],
@@ -48,37 +51,33 @@ def generate_conditioning_block(flags: dict):
         "mental": ["cognitive", "mental_toughness", "visual_processing"]
     }
 
-    # Combine all tags with weighting
     tag_counter = {}
-
     for w in weaknesses:
         for tag in goal_tag_map.get(w, []):
             tag_counter[tag] = tag_counter.get(tag, 0) + weight_map["weakness"]
-
     for g in goals:
         for tag in goal_tag_map.get(g, []):
             tag_counter[tag] = tag_counter.get(tag, 0) + weight_map["goal"]
-
     for s in style:
         for tag in style_tag_map.get(s.lower(), []):
             tag_counter[tag] = tag_counter.get(tag, 0) + weight_map["style"]
 
-    # Filter conditioning bank
     scored = []
     for entry in conditioning_bank:
         if phase not in entry["phases"]:
             continue
-        if entry["equipment"] and not any(eq in equipment for eq in entry["equipment"]):
+
+        entry_equip_str = ",".join(entry.get("equipment", []))
+        if not allow_equipment_match(entry_equip_str, equipment):
             continue
+
         score = sum(tag_counter.get(tag, 0) for tag in entry.get("tags", []))
         if score > 0:
             scored.append((entry, score))
 
-    # Sort by score and select top
     top_entries = sorted(scored, key=lambda x: x[1], reverse=True)[:6]
     selected = [ex for ex, _ in top_entries]
 
-    # Format block
     conditioning_block = ["🏃‍♂️ **Conditioning Module**", f"**Phase:** {phase}", "**Top Drills:**"]
     for ex in selected:
         conditioning_block.append(f"- {ex['name']}")
