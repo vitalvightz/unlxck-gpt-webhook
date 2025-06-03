@@ -7,7 +7,7 @@ def normalize_equipment_list(raw):
     return [p.strip().lower().replace(" ", "_") for p in parts if p.strip()]
 
 # ✅ Correct constant definition (not a function)
-KNOWN_EQUIPMENT = [
+known_equipment = [
     "barbell", "dumbbell", "dumbbells", "kettlebell", "sled", "medicine_ball",
     "trap_bar", "bands", "cable", "box", "weight_vest", "landmine",
     "towel", "partner", "bench", "trx", "pullup_bar", "plate",
