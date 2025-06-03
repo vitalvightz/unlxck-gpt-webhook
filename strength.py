@@ -49,9 +49,8 @@ for ex in exercise_bank:
 
     ex_equip = [e.strip() for e in ex.get("equipment", "").lower().replace("/", ",").split(",")]
 
-    # ✅ Equipment filter — inside the loop
-    if ex["equipment"].lower() != "bodyweight" and ex_equip and not any(eq in equipment_access for eq in ex_equip):
-        continue
+    if not allow_equipment_match(ex.get("equipment", ""), equipment_access):
+    continue
 
     score = 0
     tags = ex.get("tags", [])
