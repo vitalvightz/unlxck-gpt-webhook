@@ -55,15 +55,43 @@ goal_tag_map = {
 }
 
     style_tag_map = {
-        "brawler": ["compound", "posterior_chain", "power"],
-        "pressure fighter": ["conditioning", "core", "rate_of_force"],
-        "clinch fighter": ["grip", "core", "unilateral", "shoulders"],
-        "distance striker": ["explosive", "reactive", "balance"],
-        "counter striker": ["reactive", "core", "anti_rotation"],
-        "submission hunter": ["grip", "mobility", "core", "stability"],
-        "kicker": ["hinge", "posterior_chain", "balance", "mobility"],
-        "scrambler": ["core", "rotational", "balance", "endurance"]
-    }
+    "brawler": [
+        "compound", "posterior_chain", "power", "rate_of_force", "grip", "core"
+    ],
+    "pressure fighter": [
+        "conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"
+    ],
+    "clinch fighter": [
+        "grip", "core", "unilateral", "shoulders", "rotational", "balance"
+    ],
+    "distance striker": [
+        "explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"
+    ],
+    "counter striker": [
+        "reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"
+    ],
+    "submission hunter": [
+        "grip", "mobility", "core", "stability", "anti_rotation", "rotational"
+    ],
+    "kicker": [
+        "hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"
+    ],
+    "scrambler": [
+        "core", "rotational", "balance", "endurance", "agility", "reactive"
+    ],
+    "boxer": [
+        "speed", "footwork", "reactive", "core", "shoulders", "rate_of_force"
+    ],
+    "wrestler": [
+        "grip", "posterior_chain", "core", "unilateral", "rotational", "endurance"
+    ],
+    "muay thai": [
+        "balance", "mobility", "core", "explosive", "shoulders", "hip_dominant"
+    ],
+    "bjj": [
+        "grip", "core", "mobility", "stability", "anti_rotation", "endurance"
+    ]
+}
     style_tags = style_tag_map.get(style.lower(), [])
     target_tags = set((weaknesses or []) + style_tags)
 
