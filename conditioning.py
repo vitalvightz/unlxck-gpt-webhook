@@ -13,7 +13,7 @@ KNOWN_EQUIPMENT = [
     "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
     "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
     "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
-    "elliptical", "bodyweight", "med_balls", "battle_rope, "med", "balls"
+    "elliptical", "bodyweight", "med_balls", "battle_rope", "med", "balls"
 ]
 
 # 🔁 Equipment match with fallback penalty logic
