@@ -2,13 +2,22 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
-def allow_equipment_match(entry_equip, user_equipment):
-    if not entry_equip:
-        return True
-    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",")]
-    if "bodyweight" in entry_equip_list:
-        return True
-    return any(eq in user_equipment for eq in entry_equip_list)
+# 🔁 Equipment scoring logic with penalty
+def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
+    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
+    user_equipment = [e.lower() for e in user_equipment]
+    known_equipment = [e.lower() for e in known_equipment]
+
+    if not entry_equip_list or "bodyweight" in entry_equip_list:
+        return 0  # Always pass
+
+    if any(eq in user_equipment for eq in entry_equip_list):
+        return 0  # Selected by user
+
+    if any(eq in known_equipment for eq in entry_equip_list):
+        return -999  # Known but unselected = skip
+
+    return -1  # Unknown = small penalty
 
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
@@ -20,6 +29,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style = flags.get("style_tactical", "")
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
+
+    # Your list of all form equipment options
+    known_equipment = ["barbell", "dumbbell", "kettlebell", "sled", "medicine ball", "trap bar", "bands", "cable"]  # ← EDIT this to match form
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
@@ -46,22 +58,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     }
 
     style_tags = style_tag_map.get(style.lower(), [])
-    goal_tags = []
-    for g in goals:
-        goal_tags.extend(goal_tag_map.get(g, []))
+    goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
 
     weighted_exercises = []
     for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
-        if not allow_equipment_match(ex.get("equipment", ""), equipment_access):
+
+        penalty = equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment)
+        if penalty == -999:
             continue
 
-        score = 0
         tags = ex.get("tags", [])
+        score = 0
         score += sum(3 for tag in tags if tag in (weaknesses or []))
         score += sum(2 for tag in tags if tag in goal_tags)
         score += sum(1 for tag in tags if tag in style_tags)
+        score += penalty
 
         if score > 0:
             weighted_exercises.append((ex, score))
