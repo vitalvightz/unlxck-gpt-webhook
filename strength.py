@@ -2,7 +2,6 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
-# 🔁 Shared fallback logic for both strength & conditioning
 def allow_equipment_match(entry_equip, user_equipment):
     if not entry_equip:
         return True
@@ -11,14 +10,13 @@ def allow_equipment_match(entry_equip, user_equipment):
         return True
     return any(eq in user_equipment for eq in entry_equip_list)
 
-# Load exercise bank (strength)
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
-    
+
 def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
-    equipment_access = flags.get("equipment", [])
+    equipment_access = [e.lower() for e in flags.get("equipment", [])]
     style = flags.get("style_tactical", "")
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
@@ -48,31 +46,29 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     }
 
     style_tags = style_tag_map.get(style.lower(), [])
-goal_tags = []
-for g in goals:
-    goal_tags.extend(goal_tag_map.get(g, []))
+    goal_tags = []
+    for g in goals:
+        goal_tags.extend(goal_tag_map.get(g, []))
 
-weighted_exercises = []
-for ex in exercise_bank:
-    if phase not in ex["phases"]:
-        continue
+    weighted_exercises = []
+    for ex in exercise_bank:
+        if phase not in ex["phases"]:
+            continue
+        if not allow_equipment_match(ex.get("equipment", ""), equipment_access):
+            continue
 
-    ex_equip = [e.strip() for e in ex.get("equipment", "").lower().replace("/", ",").split(",")]
+        score = 0
+        tags = ex.get("tags", [])
+        score += sum(3 for tag in tags if tag in (weaknesses or []))
+        score += sum(2 for tag in tags if tag in goal_tags)
+        score += sum(1 for tag in tags if tag in style_tags)
 
-    if not allow_equipment_match(ex.get("equipment", ""), equipment_access):
-    continue
+        if score > 0:
+            weighted_exercises.append((ex, score))
 
-    score = 0
-    tags = ex.get("tags", [])
-    score += sum(3 for tag in tags if tag in (weaknesses or []))
-    score += sum(2 for tag in tags if tag in goal_tags)
-    score += sum(1 for tag in tags if tag in style_tags)
+    weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    top_exercises = [ex for ex, _ in weighted_exercises[:6]]
 
-    if score > 0:
-        weighted_exercises.append((ex, score))
-
-weighted_exercises.sort(key=lambda x: x[1], reverse=True)
-top_exercises = [ex for ex, _ in weighted_exercises[:6]]
     def substitute_exercises(exercises, injuries_detected):
         modified = []
         for ex in exercises:
