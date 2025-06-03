@@ -61,7 +61,7 @@ def classify_mental_block(text):
         "wavering", "crash", "pretend", "fail", "inadequate", "edge", "depth"
     ],
     "gas tank": [
-        "gas", "cardio", "tired", "fade", "gassed", "condition", "exhaust", 
+        "gas", "cardi", "tire", "fade", "gassed", "condition", "exhaust", 
         "wind", "burn", "empty", "stamina", "breath", "heavy", "energy", 
         "wall", "drain", "spent", "weary", "fatigue", "zap", "unfit", 
         "overtrain", "dehydrate", "muscle", "sustain", "collapse", "pace"
