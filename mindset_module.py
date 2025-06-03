@@ -37,14 +37,21 @@ mindset_bank = {
     }
 }
 
-def classify_mental_block(block_text):
-    if not block_text or not isinstance(block_text, str):
+def classify_mental_block(text):
+    if not text or not isinstance(text, str):
         return "generic"
 
-    text = block_text.lower().strip()
-    non_answers = ["n/a", "none", "nothing", "idk", "not sure", "no", "skip", "na"]
-    if any(phrase in text for phrase in non_answers) or len(text.split()) < 2:
+    text = text.lower().strip()
+    if any(bad in text for bad in ["n/a", "none", "idk", "na"]) or len(text.split()) < 2:
         return "generic"
+
+    scores = {}
+    for block, keywords in mental_blocks.items():
+        matches = [kw for kw in keywords if kw in text]
+        if matches:
+            scores[block] = len(matches)
+
+    return max(scores, key=scores.get) if scores else "generic"
 
  mental_blocks = {
     "confidence": [
