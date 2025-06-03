@@ -1,7 +1,7 @@
 [
   {
     "name": "Assault Bike Sprint Intervals",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "SPP"],
     "system": "ATP-PCr",
     "modality": "bike",
@@ -47,7 +47,7 @@
   },
   {
     "name": "Nasal Jog",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "modality": "run",
@@ -58,7 +58,7 @@
   },
   {
     "name": "Grapple Circuits (High Pace)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "modality": "grappling",
@@ -81,7 +81,7 @@
   },
   {
     "name": "Jump Rope Conditioning",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "SPP"],
     "system": "aerobic",
     "modality": "jump_rope",
@@ -92,7 +92,7 @@
   },
   {
     "name": "Tempo Hill Runs",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "modality": "run",
@@ -103,7 +103,7 @@
   },
   {
     "name": "Shadowboxing Intervals",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["TAPER", "SPP"],
     "system": "glycolytic",
     "modality": "shadowbox",
@@ -114,7 +114,7 @@
   },
   {
     "name": "Nasal Breathing Ruck March",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "45-60min zone 2",
@@ -123,7 +123,7 @@
   },
   {
     "name": "Pool Running (Weight Belt)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "30min continuous",
@@ -132,7 +132,7 @@
   },
   {
     "name": "Bike Zone 2 (Nasal Only)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "40min",
@@ -142,7 +142,7 @@
   },
   {
     "name": "Swim Intervals (Freestyle)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "20x50m, 30s rest",
@@ -151,7 +151,7 @@
   },
   {
     "name": "Step Mill (No Hands)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "30min tempo",
@@ -161,7 +161,7 @@
   },
   {
     "name": "Shadowboxing (Light Pace)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "3x10min rounds",
@@ -170,7 +170,7 @@
   },
   {
     "name": "Rowing (Zone 2)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "30min",
@@ -180,7 +180,7 @@
   },
   {
     "name": "Hiking (Weighted Vest)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "60min",
@@ -189,7 +189,7 @@
   },
   {
     "name": "Jump Rope (Recovery Pace)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "15min continuous",
@@ -208,7 +208,7 @@
   },
   {
     "name": "Recumbent Bike",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "45min",
@@ -218,7 +218,7 @@
   },
   {
     "name": "Arm Ergometer",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "30min",
@@ -228,7 +228,7 @@
   },
   {
     "name": "Yoga Flow (Dynamic)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "45min",
@@ -246,7 +246,7 @@
   },
   {
     "name": "Stair Climbing (Recovery)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "20min",
@@ -255,7 +255,7 @@
   },
   {
     "name": "Elliptical (Nasal Only)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "30min",
@@ -274,7 +274,7 @@
   },
   {
     "name": "Breath Control Drills",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "15min",
@@ -283,7 +283,7 @@
   },
   {
     "name": "Sandbag Carry (Light)",
-    "equipment": ["Sandbag"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "5x60yds",
@@ -293,7 +293,7 @@
   },
   {
     "name": "Agility Ladder (Recovery)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "10min",
@@ -320,7 +320,7 @@
   },
   {
     "name": "Depth Jump to Sprint",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x3 reps, 2min rest",
@@ -329,7 +329,7 @@
   },
   {
     "name": "Plyo Push-Up to Sprint",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x5 reps + 10m sprint, 1:6 rest",
@@ -348,7 +348,7 @@
   },
   {
     "name": "Box Jump (Stick Landing)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 90s rest",
@@ -366,7 +366,7 @@
   },
   {
     "name": "Alternating Bound",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "4x5/side, 2min rest",
@@ -384,7 +384,7 @@
   },
   {
     "name": "Hurdle Hop (Stick Landing)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x5 reps, 2min rest",
@@ -402,7 +402,7 @@
   },
   {
     "name": "Depth Drop to Vertical",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 2min rest",
@@ -421,7 +421,7 @@
   },
   {
     "name": "Single-Leg Hop (Stabilize)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "4x5/side, 90s rest",
@@ -439,7 +439,7 @@
   },
   {
     "name": "Broad Jump (Stick Landing)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 2min rest",
@@ -448,7 +448,7 @@
   },
   {
     "name": "Split Jump (Alternating)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x5/side, 90s rest",
@@ -466,7 +466,7 @@
   },
   {
     "name": "Box Jump-Over (Continuous)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "4x8 reps, 2min rest",
@@ -484,7 +484,7 @@
   },
   {
     "name": "Thai Clinch EMOM",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10x1min (knee every 15s), 30s rest",
@@ -493,7 +493,7 @@
   },
   {
     "name": "Takedown Sprawl Circuit",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x30s max reps, 90s rest",
@@ -511,7 +511,7 @@
   },
   {
     "name": "Grappling Escape Chains",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x4min (escape every 45s), 90s rest",
@@ -520,7 +520,7 @@
   },
   {
     "name": "Wall Drill Intervals",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "12x30s (strike combo every 5s), 45s rest",
@@ -578,7 +578,7 @@
   },
   {
     "name": "Sprawl-Burpee Complex",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x(5 sprawls + 5 burpees), 2min rest",
@@ -606,7 +606,7 @@
   },
   {
     "name": "Hill Sprint Repeats",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x8sec max effort, 2min rest",
@@ -615,7 +615,7 @@
   },
   {
     "name": "Wrestling Shot Series",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10x10sec max shots, 50sec rest",
@@ -624,7 +624,7 @@
   },
   {
     "name": "Stair Running Intervals",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "12x15sec max effort, 45sec rest",
@@ -633,7 +633,7 @@
   },
   {
     "name": "Heavy Bag Power Rounds",
-    "equipment": ["Bodyweight Only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x3min (10sec power/20sec pace), 1min rest",
@@ -663,7 +663,7 @@
   },
   {
     "name": "Defensive Movement Drill",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x30sec (slips/rolls/ducks), 30sec rest",
@@ -672,7 +672,7 @@
   },
   {
     "name": "Ground-N-Pound Intervals",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x90s (strike combo every 15s), 2min rest",
@@ -681,7 +681,7 @@
   },
   {
     "name": "Clinch Knee-to-Teepee Drill",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x45s (alternate knees), 75s rest",
@@ -690,7 +690,7 @@
   },
   {
     "name": "Towel Pull-Up Sprints",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x(5 pull-ups + 20yd sprint), 3min rest",
@@ -699,7 +699,7 @@
   },
   {
     "name": "Plyo Push-Up Burpee",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x10 reps, 90s rest",
@@ -727,7 +727,7 @@
   },
   {
     "name": "Agility Ladder Power Drills",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x30s max effort, 45s rest",
@@ -746,7 +746,7 @@
   },
   {
     "name": "Striking Combos Under Fatigue",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x3min (combo every 30s), 1min rest",
@@ -765,7 +765,7 @@
   },
   {
     "name": "Defensive Level Change Drill",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10x20s max reps, 40s rest",
@@ -774,7 +774,7 @@
   },
   {
     "name": "Plyo Step-Up Jumps",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x8/side, 90s rest",
@@ -801,7 +801,7 @@
   },
   {
     "name": "Sprawl-to-Stand Sprint",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x(5 reps + 15yd sprint), 90s rest",
@@ -837,7 +837,7 @@
   },
   {
     "name": "Striking Defense Circuits",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x3min (slip/roll/parry combo), 1min rest",
@@ -855,7 +855,7 @@
   },
   {
     "name": "MMA Gauntlet (Strike-Grapple-Strike)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x3min stations",
@@ -864,7 +864,7 @@
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x2min (start each round fatigued)",
@@ -873,7 +873,7 @@
   },
   {
     "name": "Wrestling Chain Reaction Sparring",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x90s (live transitions)",
@@ -882,7 +882,7 @@
   },
   {
     "name": "Heat Acclimation Rounds",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "3x5min in heated room",
@@ -891,7 +891,7 @@
   },
   {
     "name": "Cold Exposure Recovery (Between Rounds)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["TAPER"],
     "system": "cognitive",
     "duration": "4x1min ice bath intervals",
@@ -900,7 +900,7 @@
   },
   {
     "name": "Water Jug Carries (No Sled)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "5x60yds",
@@ -918,7 +918,7 @@
   },
   {
     "name": "Backpack Step-Ups (No Weight Vest)",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "4x50/side",
@@ -927,7 +927,7 @@
   },
   {
     "name": "Dynamic Visual Tracking Drills",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["TAPER"],
     "system": "cognitive",
     "duration": "3x3min (track moving objects)",
@@ -936,7 +936,7 @@
   },
   {
     "name": "Tactical Breathing Recovery",
-    "equipment": ["Bodyweight only"],
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "cognitive",
     "duration": "5x1min (4-7-8 pattern)",
