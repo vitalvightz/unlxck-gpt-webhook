@@ -44,7 +44,7 @@ def generate_conditioning_block(flags: dict):
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
 
-    weight_map = {"weakness": 3, "goal": 2, "style": 1}
+    weight_map = {"weakness": 2.5, "goal": 2, "style": 1}
 
     style_tag_map = {
         "brawler": ["posterior_chain", "explosive", "rate_of_force", "mental_toughness"],
