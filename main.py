@@ -89,26 +89,23 @@ async def handle_submission(request: Request):
     mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
+    # Fix weeks_out calculation and phase determination
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
             weeks_out = max(1, (fight_date - datetime.now()).days // 7)
+            phase = (
+                "GPP" if weeks_out > 8 else
+                "SPP" if 3 < weeks_out <= 8 else
+                "TAPER"
+            )
         except:
+            phase = "GPP"
             weeks_out = "N/A"
     else:
+        phase = "GPP"
         weeks_out = "N/A"
 
-    if weeks_out == "N/A":
-        phase = "GPP"
-    else:
-        weeks_out = int(weeks_out)
-        if weeks_out > 8:
-            phase = "GPP"
-        elif 3 < weeks_out <= 8:
-            phase = "SPP"
-        else:
-            phase = "TAPER"
-            
     training_context = {
         "phase": phase,
         "fatigue": fatigue.lower(),
@@ -125,7 +122,9 @@ async def handle_submission(request: Request):
         "training_split": allocate_sessions(int(frequency)),
         "key_goals": [g.strip().lower() for g in key_goals.split(",")] if key_goals else [],
         "training_preference": training_preference.strip().lower() if training_preference else "",
-        "mental_block": classify_mental_block(mental_block)
+        "mental_block": classify_mental_block(mental_block),
+        "age": int(age) if age.isdigit() else 0,
+        "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
     }
 
     flags = training_context.copy()
@@ -135,9 +134,7 @@ async def handle_submission(request: Request):
     mental_strategies = get_mental_protocols(flags["mental_block"], phase)
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
-    recovery_block = generate_recovery_block(
-        age=int(age), phase=phase, weight=float(weight), weight_class=None, flags=training_context
-    )
+    recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
 
     # ✅ UPDATED: Use real exercise_bank
