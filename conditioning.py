@@ -23,11 +23,11 @@ def get_equipment_penalty(entry_equip, user_equipment):
 
     # Check for known equipment that's not selected
     for eq in entry_equip_list:
-        if eq in KNOWN_EQUIPMENT and eq not in user_equipment:
+        if eq in known_equipment and eq not in user_equipment:
             return -999
             
     # Apply penalty for unlisted equipment
-    if any(eq not in KNOWN_EQUIPMENT for eq in entry_equip_list):
+    if any(eq not in known_equipment for eq in entry_equip_list):
         return -1
         
     return 0
