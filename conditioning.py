@@ -2,14 +2,16 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
-# 🔁 Equipment fallback
-def allow_equipment_match(entry_equip, user_equipment):
+# 🔁 Equipment match with fallback penalty logic
+def get_equipment_penalty(entry_equip, user_equipment):
     if not entry_equip:
-        return True
+        return 0  # No equipment required
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",")]
     if "bodyweight" in entry_equip_list:
-        return True
-    return any(eq in user_equipment for eq in entry_equip_list)
+        return 0
+    if any(eq in user_equipment for eq in entry_equip_list):
+        return 0
+    return -1  # Soft penalty if mismatch
 
 # Load bank
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
@@ -18,7 +20,7 @@ def generate_conditioning_block(flags: dict):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
-    equipment = flags.get("equipment", [])
+    equipment = [e.lower() for e in flags.get("equipment", [])]
     style = [flags.get("style_tactical", ""), flags.get("style_technical", "")]
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
@@ -68,10 +70,9 @@ def generate_conditioning_block(flags: dict):
             continue
 
         entry_equip_str = ",".join(entry.get("equipment", []))
-        if not allow_equipment_match(entry_equip_str, equipment):
-            continue
+        penalty = get_equipment_penalty(entry_equip_str, equipment)
+        score = sum(tag_counter.get(tag, 0) for tag in entry.get("tags", [])) + penalty
 
-        score = sum(tag_counter.get(tag, 0) for tag in entry.get("tags", []))
         if score > 0:
             scored.append((entry, score))
 
