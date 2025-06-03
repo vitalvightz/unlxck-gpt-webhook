@@ -4,49 +4,62 @@ from injury_subs import injury_subs
 
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
-goal_tag_map = {
-    "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
-    "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
-    "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
-    "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
-    "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors"],
-    "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
-    "striking": ["striking", "boxing", "muay_thai", "shoulders", "rate_of_force", "coordination", "visual_processing"],
-    "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
-    "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "environmental"],
-    "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
-}
-
-style_tag_map = {
-    "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
-    "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
-    "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
-    "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
-    "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
-    "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
-    "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
-    "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"],
-    "boxer": ["speed", "footwork", "reactive", "core", "shoulders", "rate_of_force"],
-    "wrestler": ["grip", "posterior_chain", "core", "unilateral", "rotational", "endurance"],
-    "muay thai": ["balance", "mobility", "core", "explosive", "shoulders", "hip_dominant"],
-    "bjj": ["grip", "core", "mobility", "stability", "anti_rotation", "endurance"]
-}
-
 def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = flags.get("equipment", [])
-    style = flags.get("style", "")
-    goals = flags.get("goals", [])
+    style = flags.get("style_tactical", "")
+    goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
+
+    style_tag_map = {
+        "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
+        "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
+        "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
+        "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
+        "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
+        "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
+        "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
+        "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
+    }
+
+    goal_tag_map = {
+        "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
+        "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
+        "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
+        "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
+        "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors", "stability"],
+        "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
+        "striking": ["striking", "boxing", "muay_thai", "shoulders", "rate_of_force", "coordination", "visual_processing"],
+        "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
+        "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
+        "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
+    }
 
     style_tags = style_tag_map.get(style.lower(), [])
     goal_tags = []
-    for goal in goals:
-        goal_tags.extend(goal_tag_map.get(goal.lower(), []))
+    for g in goals:
+        goal_tags.extend(goal_tag_map.get(g, []))
 
-    target_tags = set((weaknesses or []) + style_tags + goal_tags)
+    weighted_exercises = []
+    for ex in exercise_bank:
+        if phase not in ex["phases"]:
+            continue
+        if equipment_access and ex["equipment"] not in equipment_access:
+            continue
+
+        score = 0
+        tags = ex.get("tags", [])
+        score += sum(3 for tag in tags if tag in (weaknesses or []))
+        score += sum(2 for tag in tags if tag in goal_tags)
+        score += sum(1 for tag in tags if tag in style_tags)
+
+        if score > 0:
+            weighted_exercises.append((ex, score))
+
+    weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    top_exercises = [ex for ex, _ in weighted_exercises[:6]]
 
     def substitute_exercises(exercises, injuries_detected):
         modified = []
@@ -66,20 +79,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
                 modified.append(ex)
         return modified
 
-    filtered = [
-        ex for ex in exercise_bank
-        if phase in ex["phases"]
-        and (not equipment_access or ex["equipment"] in equipment_access)
-        and target_tags.intersection(set(ex["tags"]))
-    ]
+    base_exercises = substitute_exercises(top_exercises, injuries)
 
-    if not filtered:
-        filtered = [ex for ex in exercise_bank if phase in ex["phases"]][:6]
-
-    selected = substitute_exercises(filtered[:6], injuries)
-
-    used_days = training_days[:min(len(training_days), len(selected))]
-    tags_by_day = {day: ex.get("tags", []) for day, ex in zip(used_days, selected)}
+    used_days = training_days[:min(len(training_days), 3)]
+    tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
 
     phase_loads = {
         "GPP": ("3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1", "Build hypertrophy base, tendon durability, and general strength."),
@@ -87,26 +90,32 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         "TAPER": ("2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load", "Maintain intensity, cut volume, CNS freshness. High bar speed focus.")
     }
 
-    base_block, focus = phase_loads.get(phase, ("Default fallback", "Ensure phase logic."))
+    base_block, focus = phase_loads.get(phase, ("Default fallback block", "Ensure phase logic handled upstream."))
 
-    fatigue_note = {
-        "high": "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift.",
-        "moderate": "⚠️ Moderate fatigue → reduce 1 set if performance drops."
-    }.get(fatigue, "")
+    fatigue_note = ""
+    if fatigue == "high":
+        fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
+    elif fatigue == "moderate":
+        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
 
-    output = [
+    strength_output = [
         "\n🏋️‍♂️ **Strength & Power Module**",
         f"**Phase:** {phase}",
         f"**Primary Focus:** {focus}",
         "**Top Exercises:**"
-    ] + [f"- {ex['name']}" for ex in selected] + [
-        f"**Prescription:** {base_block}"
     ]
+    for ex in base_exercises:
+        strength_output.append(f"- {ex['name']}")
+    strength_output.append(f"**Prescription:** {base_block}")
     if fatigue_note:
-        output.append(f"**Adjustment:** {fatigue_note}")
+        strength_output.append(f"**Adjustment:** {fatigue_note}")
+
+    all_tags = []
+    for ex in base_exercises:
+        all_tags.extend(ex.get("tags", []))
 
     return {
-        "block": "\n".join(output),
+        "block": "\n".join(strength_output),
         "num_sessions": len(used_days),
-        "preferred_tags": list(set(tag for ex in selected for tag in ex.get("tags", [])))
+        "preferred_tags": list(set(all_tags))
     }
