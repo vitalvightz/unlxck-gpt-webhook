@@ -46,17 +46,79 @@ def classify_mental_block(block_text):
     if any(phrase in text for phrase in non_answers) or len(text.split()) < 2:
         return "generic"
 
-    mental_blocks = {
-        "confidence": ["confidence", "doubt", "self-belief", "don't believe", "imposter"],
-        "gas tank": ["gas", "cardio", "tired", "fade", "gassed", "conditioning"],
-        "injury fear": ["injury", "hurt", "reinjure", "scared to tear", "pain", "body won't hold"],
-        "pressure": ["pressure", "nerves", "stress", "expectation", "choke", "stage fright"],
-        "attention": ["focus", "distracted", "adhd", "concentration", "mental lapse"],
-        "motivation": ["lazy", "can't be bothered", "no energy", "no motivation", "struggling to train"],
-        "fear of losing": ["lose", "loss", "afraid to lose", "record", "undefeated", "winning"],
-        "fear of striking": ["striking", "punch", "hit", "hurt when hit", "sparring fear"],
-        "fear of takedowns": ["takedown", "shot", "wrestling", "thrown", "slammed"]
-    }
+ mental_blocks = {
+    "confidence": [
+        "confid", "doubt", "belie", "imposter", "insecure", "hesita", 
+        "unsure", "timid", "shak", "unworthy", "sabotage", "incapable", 
+        "inferior", "fraud", "fragile", "phony", "uncertain", "cautious", 
+        "wavering", "crash", "pretend", "fail", "inadequate", "edge", "depth"
+    ],
+    "gas tank": [
+        "gas", "cardio", "tired", "fade", "gassed", "condition", "exhaust", 
+        "wind", "burn", "empty", "stamina", "breath", "heavy", "energy", 
+        "wall", "drain", "spent", "weary", "fatigue", "zap", "unfit", 
+        "overtrain", "dehydrate", "muscle", "sustain", "collapse", "pace"
+    ],
+    "injury fear": [
+        "injur", "hurt", "pain", "tear", "reinjur", "body", "fragile", 
+        "protect", "nag", "damage", "health", "glass", "vulnerable", 
+        "heal", "twinge", "strain", "snap", "break", "limit", "favor", 
+        "paranoid", "betray", "surgery", "trauma", "chronic", "worry", 
+        "brittle", "compensate", "flinch", "anticipate", "avoid", "contact"
+    ],
+    "pressure": [
+        "pressure", "nerve", "stress", "expect", "choke", "stage", 
+        "overwhelm", "burden", "spotlight", "heat", "frozen", "tight", 
+        "analysis", "overthink", "crack", "fold", "moment", "disappoint", 
+        "terror", "stake", "clutch", "failure", "judgment", "perfect", 
+        "anxiety", "freeze", "exposure", "shaky", "audience", "legacy", 
+        "contract", "rank", "title", "break", "perform", "count", "blank"
+    ],
+    "attention": [
+        "focus", "distract", "adhd", "concentrate", "lapse", "zone", 
+        "wander", "scatter", "overstim", "crowd", "noise", "trash", 
+        "personal", "emotional", "overload", "indecisive", "slow", 
+        "forget", "space", "deficit", "sensory", "thought", "lock", 
+        "sidetrack", "clarity", "fog", "brain", "decide", "fatigue", 
+        "aware", "opponent", "track", "chaotic", "sloppy", "mistake", 
+        "rush", "impulsive", "gameplan", "absent", "daydream", "unaware"
+    ],
+    "motivation": [
+        "lazy", "bother", "energy", "motivat", "train", "inspire", 
+        "motion", "procrastinate", "gym", "alarm", "discipline", 
+        "burnout", "passion", "why", "drive", "stale", "indifferent", 
+        "apathetic", "job", "dread", "practice", "excuse", "skip", 
+        "rep", "effort", "autopilot", "fire", "spark", "purpose", 
+        "empty", "detach", "isolate", "coach", "pity", "victim", 
+        "goal", "direction", "potential", "regret"
+    ],
+    "fear of losing": [
+        "lose", "loss", "afraid", "record", "undefeat", "win", 
+        "streak", "legacy", "embarrass", "humiliat", "failure", 
+        "exposure", "perfect", "stat", "rank", "contract", "sponsor", 
+        "media", "critic", "fan", "respect", "teammate", "disapprove", 
+        "shame", "social", "hate", "decline", "wash", "prime", 
+        "irrelevant", "hype", "average", "pity", "identity"
+    ],
+    "fear of striking": [
+        "strike", "punch", "hit", "hurt", "spar", "flinch", 
+        "headshot", "terror", "chin", "glass", "jaw", "cut", 
+        "swell", "panic", "concuss", "brain", "damage", "anticipate", 
+        "shell", "cover", "combo", "power", "puncher", "phobia", 
+        "counter", "anxiety", "exchange", "knee", "trauma", "body", 
+        "liver", "nose", "break", "orbital", "fracture", "blood", 
+        "freeze", "retreat"
+    ],
+    "fear of takedowns": [
+        "takedown", "shot", "wrestle", "throw", "slam", "grapple", 
+        "ground", "panic", "position", "helpless", "submit", "dread", 
+        "control", "smother", "claustro", "mat", "return", "trauma", 
+        "slam", "anxiety", "suplex", "terror", "spinal", "neck", 
+        "shoulder", "reinjur", "knee", "pop", "stack", "guard", 
+        "pass", "pound", "fence", "cage", "pace", "scramble", 
+        "turtle", "clinch", "sprawl"
+    ]
+}
 
     for block, keywords in mental_blocks.items():
         if any(kw in text for kw in keywords):
