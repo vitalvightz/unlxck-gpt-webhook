@@ -2,8 +2,18 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
-exercise_bank = json.loads(Path("exercise_bank.json").read_text())
+# 🔁 Shared fallback logic for both strength & conditioning
+def allow_equipment_match(entry_equip, user_equipment):
+    if not entry_equip:
+        return True
+    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",")]
+    if "bodyweight" in entry_equip_list:
+        return True
+    return any(eq in user_equipment for eq in entry_equip_list)
 
+# Load exercise bank (strength)
+exercise_bank = json.loads(Path("exercise_bank.json").read_text())
+    
 def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
