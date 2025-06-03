@@ -186,7 +186,7 @@ Athlete Profile:
 - Weight: {weight}kg
 - Target Weight: {target_weight}kg
 - Height: {height}cm
-- Techincal Style: {fighting_style_technical}
+- Technical Style: {fighting_style_technical}
 - Tactical Style: {fighting_style_tactical}
 - Stance: {stance}
 - Level: {status}
