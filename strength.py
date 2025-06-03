@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 from injury_subs import injury_subs
-from training_context import normalize_equipment_list
+from training_context import normalize_equipment_list, KNOWN_EQUIPMENT as known_equipment
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
@@ -31,10 +31,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
 
-    known_equipment = [
-        "barbell", "dumbbell", "kettlebell", "sled", "medicine ball",
-        "trap bar", "bands", "cable"
-    ]
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
