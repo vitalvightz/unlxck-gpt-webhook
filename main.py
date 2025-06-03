@@ -115,13 +115,17 @@ async def handle_submission(request: Request):
     "days_available": int(frequency),
     "training_days": available_days.split(", "),
     "injuries": [inj.strip().lower() for inj in injuries.split(",")] if injuries else [],
-    "style": fighting_style_tactical.lower().strip(),
+    "style_technical": fighting_style_technical.strip().lower(),
+    "style_tactical": fighting_style_tactical.strip().lower(),
     "weaknesses": [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else [],
     "equipment": [e.strip().lower() for e in equipment_access.split(",")] if equipment_access else [],
     "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
     "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
     "fight_format": rounds_format,
-    "training_split": allocate_sessions(int(frequency))
+    "training_split": allocate_sessions(int(frequency)),
+    "key_goals": [g.strip().lower() for g in key_goals.split(",")] if key_goals else [],
+    "training_preference": training_preference.strip().lower() if training_preference else "",
+    "mental_block": classify_mental_block(mental_block)
 }
 
     # Build modules
