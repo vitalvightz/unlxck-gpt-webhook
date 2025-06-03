@@ -70,7 +70,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
         tags = ex.get("tags", [])
         score = 0
-        score += sum(3 for tag in tags if tag in (weaknesses or []))
+        score += sum(2.5 for tag in tags if tag in (weaknesses or []))
         score += sum(2 for tag in tags if tag in goal_tags)
         score += sum(1 for tag in tags if tag in style_tags)
         score += penalty
