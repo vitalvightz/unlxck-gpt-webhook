@@ -13,6 +13,47 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style = flags.get("style", "")
     training_days = flags.get("training_days", [])
 
+goal_tag_map = {
+    "power": [
+        "explosive", "rate_of_force", "triple_extension", "horizontal_power",
+        "plyometric", "elastic", "lateral_power", "deadlift"
+    ],
+    "strength": [
+        "posterior_chain", "quad_dominant", "upper_body", "core", "pull",
+        "hamstring", "hip_dominant", "eccentric", "deadlift"
+    ],
+    "endurance": [
+        "aerobic", "glycolytic", "work_capacity", "mental_toughness",
+        "conditioning", "sustain", "improvised"
+    ],
+    "speed": [
+        "speed", "agility", "footwork", "reactive", "acceleration",
+        "ATP-PCr", "anaerobic_alactic"
+    ],
+    "mobility": [
+        "mobility", "hip_dominant", "balance", "eccentric", "unilateral",
+        "adductors", "stability"
+    ],
+    "grappling": [
+        "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "scramble"
+    ],
+    "striking": [
+        "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
+        "coordination", "visual_processing"
+    ],
+    "injury prevention": [
+        "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
+        "cns_freshness", "unilateral"
+    ],
+    "mental resilience": [
+        "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
+        "focus", "pressure", "environmental"
+    ],
+    "skill refinement": [
+        "coordination", "skill", "footwork", "cognitive", "reaction", "drill"
+    ]
+}
+
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power"],
         "pressure fighter": ["conditioning", "core", "rate_of_force"],
