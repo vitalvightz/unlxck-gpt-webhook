@@ -1,93 +1,91 @@
-# conditioning.py
-import re
-from typing import List, Dict
+from pathlib import Path
+import json
+from injury_subs import injury_subs
 
-def adjust_for_fatigue(fatigue: str) -> str:
-    if fatigue == "high":
-        return "\n⚠️ High fatigue → cut glycolytic sessions by 30%, extend rest intervals by 20%"
-    elif fatigue == "moderate":
-        return "\n⚠️ Moderate fatigue → reduce one interval from highest-load session"
-    return ""
+# Load bank
+conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
 
-def adjust_for_injury(injuries: List[str]) -> List[str]:
-    adjustments = []
-    for injury in injuries:
-        if "hamstring" in injury:
-            adjustments.append("⚠️ Hamstring → avoid max sprints, use sled drag or bike sprints")
-        elif "ankle" in injury:
-            adjustments.append("⚠️ Ankle → remove lateral hops or bounding")
-        elif "knee" in injury:
-            adjustments.append("⚠️ Knee → no deep squatting, use bike over runs")
-    return adjustments
+def generate_conditioning_block(flags: dict):
+    phase = flags.get("phase", "GPP")
+    injuries = flags.get("injuries", [])
+    fatigue = flags.get("fatigue", "low")
+    equipment = flags.get("equipment", [])
+    style = [flags.get("style_tactical", ""), flags.get("style_technical", "")]
+    goals = flags.get("key_goals", [])
+    weaknesses = flags.get("weaknesses", [])
 
-def fight_format_notes(fight_format: str) -> str:
-    rounds = 3
-    if fight_format:
-        match = re.search(r"(\d+)[xX]", fight_format)
-        if match:
-            rounds = int(match.group(1))
-    if rounds >= 5:
-        return "\n• Fight format: 5 rounds → increased aerobic + glycolytic load"
-    elif rounds == 3:
-        return "\n• Fight format: 3 rounds → alactic + power emphasis"
-    return ""
-
-def build_energy_targets(phase: str) -> str:
-    if phase == "GPP":
-        return """
-• Energy System Targets:
-  - Aerobic base (60–70% HR): 2x 30-min steady-state (nasal breathing) + 1x zone 2 circuit
-  - ATP-PCr: 2x10s sprints (sled/bike), 1:5 rest ratio
-
-• Psychological Anchor: “Earn your base”
-• HR cap: 150 bpm
-• Notes: Emphasize nasal breathing and aerobic foundation
-"""
-    elif phase == "SPP":
-        return """
-• Energy System Targets:
-  - ATP-PCr: Sprint 10s x10, 1:6 rest
-  - Glycolytic: 2x/week 20s–45s bursts (EMOM pads, intervals)
-
-• Psychological Anchor: “Fight while tired”
-• Notes: Combine skill & fatigue. Pad + sprawl EMOMs encouraged
-"""
-    elif phase == "TAPER":
-        return """
-• Energy System Targets:
-  - Maintain sharpness: 1x anaerobic reaction (<15min)
-  - Aerobic flush: 1x 20–25min nasal session
-
-• Psychological Anchor: “Nothing left to prove”
-• Notes: Limit HR spikes post-Wed. Use eye-tracking, flywheel, ball drills
-"""
-    return "\n• Unknown phase. Default to aerobic + light intervals."
-
-def generate_conditioning_block(training_context: Dict) -> Dict:
-    phase = training_context["phase"]
-    fatigue = training_context["fatigue"]
-    injuries = training_context["injuries"]
-    fight_format = training_context.get("fight_format")
-    weight_cut_pct = training_context.get("weight_cut_pct", 0.0)
-    weight_cut_risk = training_context.get("weight_cut_risk", False)
-
-    output = ["\n📦 **CONDITIONING MODULE**"]
-    output.append(f"**Phase:** {phase}")
-    output.append(fight_format_notes(fight_format))
-
-    if weight_cut_risk:
-        output.append(f"⚠️ Weight Cut Risk: {weight_cut_pct}% above limit → prioritize low-impact conditioning")
-
-    output.append(build_energy_targets(phase))
-    output.append(adjust_for_fatigue(fatigue))
-    output.extend(adjust_for_injury(injuries))
-
-    preferred_tags = ["aerobic", "glycolytic", "ATP-PCr", "conditioning"]
-
-    session_count = training_context.get("training_split", {}).get("conditioning", 2)
-
-    return {
-        "block": "\n".join(output),
-        "num_sessions": session_count,
-        "preferred_tags": preferred_tags
+    # Tag weights
+    weight_map = {
+        "weakness": 3,
+        "goal": 2,
+        "style": 1
     }
+
+    # Tag maps (could move out into config)
+    style_tag_map = {
+        "brawler": ["posterior_chain", "explosive", "rate_of_force", "mental_toughness"],
+        "pressure fighter": ["aerobic", "work_capacity", "glycolytic", "mental_toughness"],
+        "clinch fighter": ["grip", "core", "eccentric", "shoulders"],
+        "distance striker": ["footwork", "reactive", "rate_of_force", "visual_processing"],
+        "counter striker": ["reactive", "balance", "cognitive", "core"],
+        "submission hunter": ["core", "top_control", "parasympathetic"],
+        "kicker": ["hip_dominant", "balance", "posterior_chain"],
+        "scrambler": ["reactive", "agility", "endurance"],
+        "boxer": ["rate_of_force", "footwork", "shoulders"],
+        "muay thai": ["shoulders", "balance", "eccentric"],
+        "bjj": ["grip", "core", "parasympathetic"]
+    }
+
+    goal_tag_map = {
+        "power": ["rate_of_force", "explosive", "triple_extension"],
+        "endurance": ["aerobic", "work_capacity", "glycolytic", "mental_toughness"],
+        "speed": ["acceleration", "footwork", "reactive"],
+        "mobility": ["mobility", "balance", "unilateral"],
+        "grappling": ["wrestling", "top_control", "grip"],
+        "striking": ["striking", "footwork", "rate_of_force"],
+        "recovery": ["recovery", "parasympathetic", "low_impact"],
+        "injury prevention": ["zero_impact", "rehab_friendly", "parasympathetic"],
+        "mental": ["cognitive", "mental_toughness", "visual_processing"]
+    }
+
+    # Combine all tags with weighting
+    tag_counter = {}
+
+    for w in weaknesses:
+        for tag in goal_tag_map.get(w, []):
+            tag_counter[tag] = tag_counter.get(tag, 0) + weight_map["weakness"]
+
+    for g in goals:
+        for tag in goal_tag_map.get(g, []):
+            tag_counter[tag] = tag_counter.get(tag, 0) + weight_map["goal"]
+
+    for s in style:
+        for tag in style_tag_map.get(s.lower(), []):
+            tag_counter[tag] = tag_counter.get(tag, 0) + weight_map["style"]
+
+    # Filter conditioning bank
+    scored = []
+    for entry in conditioning_bank:
+        if phase not in entry["phases"]:
+            continue
+        if equipment and entry["equipment"] not in equipment:
+            continue
+        score = sum(tag_counter.get(tag, 0) for tag in entry.get("tags", []))
+        if score > 0:
+            scored.append((entry, score))
+
+    # Sort by score and select top
+    top_entries = sorted(scored, key=lambda x: x[1], reverse=True)[:6]
+    selected = [ex for ex, _ in top_entries]
+
+    # Format block
+    conditioning_block = ["🏃‍♂️ **Conditioning Module**", f"**Phase:** {phase}", "**Top Drills:**"]
+    for ex in selected:
+        conditioning_block.append(f"- {ex['name']}")
+
+    if fatigue == "high":
+        conditioning_block.append("⚠️ High fatigue → swap 1 drill for recovery work or reduce total time by 25%.")
+    elif fatigue == "moderate":
+        conditioning_block.append("⚠️ Moderate fatigue → remove 1 set or reduce tempo.")
+
+    return "\n".join(conditioning_block)
