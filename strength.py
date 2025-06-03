@@ -2,24 +2,21 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
-# Replace equipment_score_adjust with this corrected version
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
     user_equipment = [e.lower() for e in user_equipment]
     known_equipment = [e.lower() for e in known_equipment]
-    
-    if not entry_equip_list or "bodyweight" in entry_equip_list:
-        return 0  # Always pass
 
-    # Check for known equipment that's not selected
+    if not entry_equip_list or "bodyweight" in entry_equip_list:
+        return 0
+
     for eq in entry_equip_list:
         if eq in known_equipment and eq not in user_equipment:
-            return -999  # Skip - listed but not selected
-            
-    # Apply penalty for unlisted equipment
+            return -999
+
     if any(eq not in known_equipment for eq in entry_equip_list):
-        return -1  # Penalty for unlisted equipment
-        
+        return -1
+
     return 0
 
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
@@ -33,8 +30,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
 
-    # Your list of all form equipment options
-    known_equipment = ["barbell", "dumbbell", "kettlebell", "sled", "medicine ball", "trap bar", "bands", "cable"]  # ← EDIT this to match form
+    known_equipment = ["barbell", "dumbbell", "kettlebell", "sled", "medicine ball", "trap bar", "bands", "cable"]
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
