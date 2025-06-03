@@ -5,7 +5,7 @@ from training_context import normalize_equipment_list
 
 # Add this KNOWN_EQUIPMENT list at the top
 KNOWN_EQUIPMENT = [
-    "barbell", "dumbbell", "kettlebell", "sled", "medicine_ball",
+    "barbell", "dumbbell", "dumbbells", "kettlebell", "sled", "medicine_ball",
     "trap_bar", "bands", "cable", "box", "weight_vest", "landmine",
     "towel", "partner", "bench", "trx", "pullup_bar", "plate",
     "swiss_ball", "heavy_bag", "thai_pads", "neck_harness", "log",
