@@ -4,6 +4,11 @@ import os, json, base64
 import openai
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from pathlib import Path  # ✅ Added
+import json  # ✅ Already present but emphasized for context
+
+# Load exercise bank ✅ NEW
+exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 # Modules
 from training_context import allocate_sessions
@@ -34,12 +39,10 @@ def get_value(label, fields):
         if field.get("label", "").strip() == label.strip():
             value = field.get("value")
             if isinstance(value, list):
-                # Case 1: it's a list of option IDs and we have options to match
                 if "options" in field:
                     return ", ".join([
                         opt["text"] for opt in field["options"] if opt.get("id") in value
                     ])
-                # Case 2: it's already a list of strings (Tally sometimes sends this)
                 return ", ".join(str(v) for v in value)
             return str(value).strip() if value is not None else ""
     return ""
@@ -63,7 +66,6 @@ async def handle_submission(request: Request):
     data = await request.json()
     fields = data["data"]["fields"]
 
-    # Basic info
     full_name = get_value("Full name", fields)
     age = get_value("Age", fields)
     weight = get_value("Weight (kg)", fields)
@@ -83,11 +85,10 @@ async def handle_submission(request: Request):
     injuries = get_value("Any injuries or areas you need to work around?", fields)
     key_goals = get_value("What are your key performance goals?", fields)
     weak_areas = get_value("Where do you feel weakest right now?", fields)
-    training_preference = get_value ("Do you prefer certain training styles?", fields)
+    training_preference = get_value("Do you prefer certain training styles?", fields)
     mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
-    # Fight phase logic
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
@@ -108,27 +109,25 @@ async def handle_submission(request: Request):
         else:
             phase = "TAPER"
             
-    # --- Build live training context from form ---
     training_context = {
-    "phase": phase,
-    "fatigue": fatigue.lower(),
-    "days_available": int(frequency),
-    "training_days": available_days.split(", "),
-    "injuries": [inj.strip().lower() for inj in injuries.split(",")] if injuries else [],
-    "style_technical": fighting_style_technical.strip().lower(),
-    "style_tactical": fighting_style_tactical.strip().lower(),
-    "weaknesses": [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else [],
-    "equipment": [e.strip().lower() for e in equipment_access.split(",")] if equipment_access else [],
-    "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
-    "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
-    "fight_format": rounds_format,
-    "training_split": allocate_sessions(int(frequency)),
-    "key_goals": [g.strip().lower() for g in key_goals.split(",")] if key_goals else [],
-    "training_preference": training_preference.strip().lower() if training_preference else "",
-    "mental_block": classify_mental_block(mental_block)
-}
+        "phase": phase,
+        "fatigue": fatigue.lower(),
+        "days_available": int(frequency),
+        "training_days": available_days.split(", "),
+        "injuries": [inj.strip().lower() for inj in injuries.split(",")] if injuries else [],
+        "style_technical": fighting_style_technical.strip().lower(),
+        "style_tactical": fighting_style_tactical.strip().lower(),
+        "weaknesses": [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else [],
+        "equipment": [e.strip().lower() for e in equipment_access.split(",")] if equipment_access else [],
+        "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
+        "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
+        "fight_format": rounds_format,
+        "training_split": allocate_sessions(int(frequency)),
+        "key_goals": [g.strip().lower() for g in key_goals.split(",")] if key_goals else [],
+        "training_preference": training_preference.strip().lower() if training_preference else "",
+        "mental_block": classify_mental_block(mental_block)
+    }
 
-    # Build modules
     flags = training_context.copy()
     flags["mental_block"] = classify_mental_block(mental_block)
 
@@ -137,16 +136,18 @@ async def handle_submission(request: Request):
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(
-        age=int(age), phase=phase, weight=float(weight), weight_class=weight_class, flags=training_context
+        age=int(age), phase=phase, weight=float(weight), weight_class=None, flags=training_context
     )
     nutrition_block = generate_nutrition_block(flags=training_context)
-    injury_sub_block = generate_injury_subs(injury_string=injuries)
 
-    # 🧠 Debug: Print all blocks before GPT call re-edit and complete
+    # ✅ UPDATED: Use real exercise_bank
+    injury_sub_block = generate_injury_subs(
+        injury_string=injuries,
+        exercise_data=exercise_bank
+    )
 
     print("== NUTRITION BLOCK ==\n", nutrition_block)
 
-        # Compile final prompt
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
