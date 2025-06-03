@@ -2,22 +2,25 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
-# 🔁 Equipment scoring logic with penalty
+# Replace equipment_score_adjust with this corrected version
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
     user_equipment = [e.lower() for e in user_equipment]
     known_equipment = [e.lower() for e in known_equipment]
-
+    
     if not entry_equip_list or "bodyweight" in entry_equip_list:
         return 0  # Always pass
 
-    if any(eq in user_equipment for eq in entry_equip_list):
-        return 0  # Selected by user
-
-    if any(eq in known_equipment for eq in entry_equip_list):
-        return -999  # Known but unselected = skip
-
-    return -1  # Unknown = small penalty
+    # Check for known equipment that's not selected
+    for eq in entry_equip_list:
+        if eq in known_equipment and eq not in user_equipment:
+            return -999  # Skip - listed but not selected
+            
+    # Apply penalty for unlisted equipment
+    if any(eq not in known_equipment for eq in entry_equip_list):
+        return -1  # Penalty for unlisted equipment
+        
+    return 0
 
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
