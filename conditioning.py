@@ -2,16 +2,41 @@ from pathlib import Path
 import json
 from injury_subs import injury_subs
 
+# Add this KNOWN_EQUIPMENT list at the top
+KNOWN_EQUIPMENT = [
+    "barbell", "dumbbell", "kettlebell", "sled", "medicine ball", 
+    "trap bar", "bands", "cable", "box", "weight_vest", "landmine",
+    "towel", "partner", "bench", "trx", "pullup_bar", "plate",
+    "medicine_ball", "swiss_ball", "weighted_vest", "thai_pads",
+    "neck_harness", "plates", "fat_grip", "wrist_roller", "log",
+    "tire", "atlas_stone", "water_jug", "bulgarian_bag", "sandbag",
+    "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
+    "heavy_bag", "climbing_rope", "bosu_ball", "foam_pad", "foam_roller",
+    "assault_bike", "stationary_bike", "step_mill", "recumbent_bike",
+    "arm_ergometer", "elliptical", "bodyweight"
+]
+
 # 🔁 Equipment match with fallback penalty logic
 def get_equipment_penalty(entry_equip, user_equipment):
     if not entry_equip:
-        return 0  # No equipment required
-    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",")]
+        return 0
+        
+    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
+    user_equipment = [e.lower() for e in user_equipment]  # ADDED NORMALIZATION
+    
     if "bodyweight" in entry_equip_list:
         return 0
-    if any(eq in user_equipment for eq in entry_equip_list):
-        return 0
-    return -1  # Soft penalty if mismatch
+
+    # Check for known equipment that's not selected
+    for eq in entry_equip_list:
+        if eq in KNOWN_EQUIPMENT and eq not in user_equipment:
+            return -999
+            
+    # Apply penalty for unlisted equipment
+    if any(eq not in KNOWN_EQUIPMENT for eq in entry_equip_list):
+        return -1
+        
+    return 0
 
 # Load bank
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
