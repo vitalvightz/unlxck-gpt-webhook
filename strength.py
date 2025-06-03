@@ -44,23 +44,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     weighted_exercises = []
     for ex in exercise_bank:
-    if phase not in ex["phases"]:
-        continue
+        if phase not in ex["phases"]:
+            continue
+        if equipment_access and ex["equipment"] not in equipment_access:
+            continue
 
-    # ✅ Fix: Allow bodyweight (empty list), filter others
-    if equipment_access:
-        if ex["equipment"]:  # requires gear
-            if not any(eq in equipment_access for eq in ex["equipment"]):
-                continue
+        score = 0
+        tags = ex.get("tags", [])
+        score += sum(3 for tag in tags if tag in (weaknesses or []))
+        score += sum(2 for tag in tags if tag in goal_tags)
+        score += sum(1 for tag in tags if tag in style_tags)
 
-    score = 0
-    tags = ex.get("tags", [])
-    score += sum(3 for tag in tags if tag in (weaknesses or []))
-    score += sum(2 for tag in tags if tag in goal_tags)
-    score += sum(1 for tag in tags if tag in style_tags)
-
-    if score > 0:
-        weighted_exercises.append((ex, score))
+        if score > 0:
+            weighted_exercises.append((ex, score))
 
     weighted_exercises.sort(key=lambda x: x[1], reverse=True)
     top_exercises = [ex for ex, _ in weighted_exercises[:6]]
