@@ -1,5 +1,13 @@
 # training_context.py
 
+import re
+
+def normalize_equipment_list(raw):
+    if not raw:
+        return []
+    parts = re.split(r"\s*(?:,|/| and )\s*", raw)
+    return [p.strip().lower().replace(" ", "_") for p in parts if p.strip()]
+
 def allocate_sessions(days_available: int) -> dict:
     """
     Returns a session split based on number of available training days.
@@ -13,4 +21,3 @@ def allocate_sessions(days_available: int) -> dict:
         return {'strength': 2, 'conditioning': 2, 'recovery': 1}
     else:
         return {'strength': 3, 'conditioning': 2, 'recovery': 1}
-    
