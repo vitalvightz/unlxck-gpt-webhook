@@ -4,25 +4,31 @@ from injury_subs import injury_subs
 
 # Add this KNOWN_EQUIPMENT list at the top
 KNOWN_EQUIPMENT = [
-    "barbell", "dumbbell", "kettlebell", "sled", "medicine ball", 
-    "trap bar", "bands", "cable", "box", "weight_vest", "landmine",
+    "barbell", "dumbbell", "kettlebell", "sled", "medicine_ball",
+    "trap_bar", "bands", "cable", "box", "weight_vest", "landmine",
     "towel", "partner", "bench", "trx", "pullup_bar", "plate",
-    "medicine_ball", "swiss_ball", "weighted_vest", "thai_pads",
-    "neck_harness", "plates", "fat_grip", "wrist_roller", "log",
+    "swiss_ball", "heavy_bag", "thai_pads", "neck_harness", "log",
     "tire", "atlas_stone", "water_jug", "bulgarian_bag", "sandbag",
     "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
-    "heavy_bag", "climbing_rope", "bosu_ball", "foam_pad", "foam_roller",
-    "assault_bike", "stationary_bike", "step_mill", "recumbent_bike",
-    "arm_ergometer", "elliptical", "bodyweight"
+    "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
+    "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
+    "elliptical", "bodyweight", "med_balls", "battle_rope"
 ]
 
 # 🔁 Equipment match with fallback penalty logic
 def get_equipment_penalty(entry_equip, user_equipment):
+    """
+    Unified equipment penalty logic:
+    - Consistent with strength module
+    - Handles bodyweight/empty cases
+    - Only excludes when known equipment is missing
+    - Penalizes unknown equipment but includes
+    """
     if not entry_equip:
         return 0
         
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
-    user_equipment = [e.lower() for e in user_equipment]  # ADDED NORMALIZATION
+    user_equipment = [e.lower() for e in user_equipment]
     
     if "bodyweight" in entry_equip_list:
         return 0
