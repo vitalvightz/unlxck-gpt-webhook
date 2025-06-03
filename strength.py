@@ -4,7 +4,7 @@ from injury_subs import injury_subs
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
-    user_equipment = [e.lower() for e in user_equipment]
+    user_equipment = [e.lower().strip() for e in user_equipment]
     known_equipment = [e.lower() for e in known_equipment]
 
     if not entry_equip_list or "bodyweight" in entry_equip_list:
@@ -25,7 +25,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
-    equipment_access = [e.lower() for e in flags.get("equipment", [])]
+    # NORMALIZE: strip whitespace and lowercase user equipment entries
+    equipment_access = [e.lower().strip() for e in flags.get("equipment", [])]
     style = flags.get("style_tactical", "")
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
