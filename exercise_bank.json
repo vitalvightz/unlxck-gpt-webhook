@@ -1478,7 +1478,7 @@
     "type": "unilateral",
     "tags": ["CNS", "reactive"],
     "equipment": "bodyweight"
-  }
+  },
   {
     "name": "Single-Leg Balance (Eyes Closed)",
     "category": "proprioception",
