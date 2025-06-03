@@ -3,19 +3,6 @@ import json
 from injury_subs import injury_subs
 from training_context import normalize_equipment_list
 
-# Add this KNOWN_EQUIPMENT list at the top
-KNOWN_EQUIPMENT = [
-    "barbell", "dumbbell", "dumbbells", "kettlebell", "sled", "medicine_ball",
-    "trap_bar", "bands", "cable", "box", "weight_vest", "landmine",
-    "towel", "partner", "bench", "trx", "pullup_bar", "plate",
-    "swiss_ball", "heavy_bag", "thai_pads", "neck_harness", "log",
-    "tire", "atlas_stone", "water_jug", "bulgarian_bag", "sandbag",
-    "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
-    "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
-    "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
-    "elliptical", "bodyweight", "med_balls", "battle_rope", "kettlebells"
-]
-
 # 🔁 Equipment match with fallback penalty logic
 def get_equipment_penalty(entry_equip, user_equipment):
     """
