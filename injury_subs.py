@@ -51,7 +51,6 @@ def generate_injury_subs(*, injury_string: str, exercise_data: list) -> str:
     
     for injury_key, subs in injury_subs.items():
         if injury_key in injury_string:
-            # Case-insensitive match and rehab validation
             valid_subs = [
                 ex["name"] for ex in exercise_data 
                 if any(s.lower() == ex["name"].lower() for s in subs)
