@@ -1,11 +1,13 @@
 import re
 
 def normalize_equipment_list(raw):
-    if not raw:
-        return []
-    parts = re.split(r"\s*(?:,|/| and )\s*", raw)
-    return [p.strip().lower().replace(" ", "_") for p in parts if p.strip()]
-
+    if isinstance(raw, list):
+        return [item.lower().strip() for item in raw]
+    if isinstance(raw, str):
+        parts = re.split(r"\s*(?:,|/| and )\s*", raw)
+        return [part.lower().strip() for part in parts if part]
+    return []
+    
 # ✅ Correct constant definition (not a function)
 known_equipment = [
     "barbell", "dumbbell", "dumbbells", "kettlebell", "sled", "medicine_ball",
