@@ -1,26 +1,31 @@
 [
   {
     "name": "Assault Bike Sprint Intervals",
+    "equipment": [],
     "phases": ["GPP", "SPP"],
     "system": "ATP-PCr",
     "modality": "bike",
     "duration": "10s x 8 rounds, 1:5 rest",
     "intensity": "max effort",
     "tags": ["explosive", "posterior_chain", "low_impact"],
-    "notes": "Good for posterior-chain drive without joint pounding"
+    "notes": "Good for posterior-chain drive without joint pounding",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Assault Bike"
   },
   {
     "name": "Zone 2 Sled Circuit",
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "modality": "sled",
     "duration": "25–30min continuous",
     "intensity": "zone 2",
     "tags": ["aerobic", "conditioning", "core"],
-    "notes": "Great for building base without CNS load"
+    "notes": "Great for building base without CNS load",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Pad EMOM (5x5 format)",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "modality": "pad_drills",
@@ -31,6 +36,7 @@
   },
   {
     "name": "Reaction Ball Drills",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["TAPER"],
     "system": "anaerobic_alactic",
     "modality": "reaction",
@@ -41,6 +47,7 @@
   },
   {
     "name": "Nasal Jog",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "modality": "run",
@@ -51,6 +58,7 @@
   },
   {
     "name": "Grapple Circuits (High Pace)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "modality": "grappling",
@@ -61,16 +69,19 @@
   },
   {
     "name": "Sled Sprint Repeats",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "modality": "sled",
     "duration": "10s x 6, 1:6 rest",
     "intensity": "max",
     "tags": ["posterior_chain", "explosive", "low_impact"],
-    "notes": "Safe CNS explosive work when sprinting is contraindicated"
+    "notes": "Safe CNS explosive work when sprinting is contraindicated",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Jump Rope Conditioning",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "SPP"],
     "system": "aerobic",
     "modality": "jump_rope",
@@ -81,6 +92,7 @@
   },
   {
     "name": "Tempo Hill Runs",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "modality": "run",
@@ -91,6 +103,7 @@
   },
   {
     "name": "Shadowboxing Intervals",
+    "equipment": ["Bodyweight only"],
     "phases": ["TAPER", "SPP"],
     "system": "glycolytic",
     "modality": "shadowbox",
@@ -101,6 +114,7 @@
   },
   {
     "name": "Nasal Breathing Ruck March",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "45-60min zone 2",
@@ -109,6 +123,7 @@
   },
   {
     "name": "Pool Running (Weight Belt)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "30min continuous",
@@ -117,14 +132,17 @@
   },
   {
     "name": "Bike Zone 2 (Nasal Only)",
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "40min",
     "tags": ["low_impact"],
-    "notes": "Primary hamstring rehab modality"
+    "notes": "Primary hamstring rehab modality",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Stationary Bike"
   },
   {
     "name": "Swim Intervals (Freestyle)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "20x50m, 30s rest",
@@ -133,14 +151,17 @@
   },
   {
     "name": "Step Mill (No Hands)",
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "30min tempo",
     "tags": ["quad_dominant"],
-    "notes": "Contraindicated with knee pain"
+    "notes": "Contraindicated with knee pain",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Step Mill"
   },
   {
     "name": "Shadowboxing (Light Pace)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "3x10min rounds",
@@ -149,14 +170,17 @@
   },
   {
     "name": "Rowing (Zone 2)",
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "30min",
     "tags": ["posterior_chain"],
-    "notes": "Low-impact deadlift alternative"
+    "notes": "Low-impact deadlift alternative",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Rower"
   },
   {
     "name": "Hiking (Weighted Vest)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "60min",
@@ -165,6 +189,7 @@
   },
   {
     "name": "Jump Rope (Recovery Pace)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "15min continuous",
@@ -173,30 +198,37 @@
   },
   {
     "name": "Sled Drag Walk",
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "4x100yds",
     "tags": ["posterior_chain"],
-    "notes": "25% BW load max"
+    "notes": "25% BW load max",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Recumbent Bike",
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "45min",
     "tags": ["rehab_friendly"],
-    "notes": "For acute lower back pain"
+    "notes": "For acute lower back pain",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Recumbent Bike"
   },
   {
     "name": "Arm Ergometer",
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "30min",
     "tags": ["upper_body"],
-    "notes": "Leg injury alternative"
+    "notes": "Leg injury alternative",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Arm Ergometer"
   },
   {
     "name": "Yoga Flow (Dynamic)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "45min",
@@ -205,6 +237,7 @@
   },
   {
     "name": "Farmers Walk (Light)",
+    "equipment": ["Dumbbells"],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "5x100yds",
@@ -213,6 +246,7 @@
   },
   {
     "name": "Stair Climbing (Recovery)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "20min",
@@ -221,14 +255,17 @@
   },
   {
     "name": "Elliptical (Nasal Only)",
+    "equipment": [],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "30min",
     "tags": ["low_impact"],
-    "notes": "Backward motion for hamstrings"
+    "notes": "Backward motion for hamstrings",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Elliptical"
   },
   {
     "name": "Padded Circuit (Zone 2)",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "5x3min rounds",
@@ -237,6 +274,7 @@
   },
   {
     "name": "Breath Control Drills",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "15min",
@@ -245,14 +283,17 @@
   },
   {
     "name": "Sandbag Carry (Light)",
+    "equipment": [],
     "phases": ["GPP"],
     "system": "aerobic",
     "duration": "5x60yds",
     "tags": ["core"],
-    "notes": "25% BW load"
+    "notes": "25% BW load",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
   },
   {
     "name": "Agility Ladder (Recovery)",
+    "equipment": ["Bodyweight only"],
     "phases": ["GPP", "TAPER"],
     "system": "aerobic",
     "duration": "10min",
@@ -261,6 +302,7 @@
   },
   {
     "name": "Band-Resisted Broad Jump",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 1:8 rest",
@@ -269,6 +311,7 @@
   },
   {
     "name": "Medicine Ball Rotational Throw",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "8x5/side, 1:6 rest",
@@ -277,6 +320,7 @@
   },
   {
     "name": "Depth Jump to Sprint",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x3 reps, 2min rest",
@@ -285,6 +329,7 @@
   },
   {
     "name": "Plyo Push-Up to Sprint",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x5 reps + 10m sprint, 1:6 rest",
@@ -293,14 +338,17 @@
   },
   {
     "name": "Sled Sprint (Empty)",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "8x15yds, 1:6 rest",
     "tags": ["posterior_chain", "low_impact"],
-    "notes": "DEADLIFT RECOVERY: Safe 48h post pulls at <30% intensity. HAMSTRING: Preferred over hill sprints"
+    "notes": "DEADLIFT RECOVERY: Safe 48h post pulls at <30% intensity. HAMSTRING: Preferred over hill sprints",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Box Jump (Stick Landing)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 90s rest",
@@ -309,6 +357,7 @@
   },
   {
     "name": "KB Swing (Heavy)",
+    "equipment": ["Kettlebells"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "8x8 reps, 1:5 rest",
@@ -317,6 +366,7 @@
   },
   {
     "name": "Alternating Bound",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "4x5/side, 2min rest",
@@ -325,6 +375,7 @@
   },
   {
     "name": "Med Ball Chest Pass (Reactive)",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "10x3 reps, 45s rest",
@@ -333,6 +384,7 @@
   },
   {
     "name": "Hurdle Hop (Stick Landing)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x5 reps, 2min rest",
@@ -341,6 +393,7 @@
   },
   {
     "name": "Band-Resisted Sprint Start",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "8x10m, 1:8 rest",
@@ -349,6 +402,7 @@
   },
   {
     "name": "Depth Drop to Vertical",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 2min rest",
@@ -357,14 +411,17 @@
   },
   {
     "name": "Sled Push (Light)",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x20yds, 1:6 rest",
     "tags": ["posterior_chain", "concentric"],
-    "notes": "LOAD: 25% BW. DEADLIFT RECOVERY: Safe 48h post max effort"
+    "notes": "LOAD: 25% BW. DEADLIFT RECOVERY: Safe 48h post max effort",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Single-Leg Hop (Stabilize)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "4x5/side, 90s rest",
@@ -373,6 +430,7 @@
   },
   {
     "name": "Wall Ball Shot (Max Height)",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "8x3 reps, 90s rest",
@@ -381,6 +439,7 @@
   },
   {
     "name": "Broad Jump (Stick Landing)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "6x3 reps, 2min rest",
@@ -389,6 +448,7 @@
   },
   {
     "name": "Split Jump (Alternating)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x5/side, 90s rest",
@@ -397,6 +457,7 @@
   },
   {
     "name": "Med Ball Slam (Rotational)",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "8x3/side, 1min rest",
@@ -405,6 +466,7 @@
   },
   {
     "name": "Box Jump-Over (Continuous)",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "4x8 reps, 2min rest",
@@ -413,6 +475,7 @@
   },
   {
     "name": "Band-Resisted Lateral Bound",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "duration": "5x4/side, 90s rest",
@@ -421,6 +484,7 @@
   },
   {
     "name": "Thai Clinch EMOM",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10x1min (knee every 15s), 30s rest",
@@ -429,6 +493,7 @@
   },
   {
     "name": "Takedown Sprawl Circuit",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x30s max reps, 90s rest",
@@ -437,6 +502,7 @@
   },
   {
     "name": "Pad Round Triples",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x3min (power shots every 30s), 1min rest",
@@ -445,6 +511,7 @@
   },
   {
     "name": "Grappling Escape Chains",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x4min (escape every 45s), 90s rest",
@@ -453,6 +520,7 @@
   },
   {
     "name": "Wall Drill Intervals",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "12x30s (strike combo every 5s), 45s rest",
@@ -461,30 +529,37 @@
   },
   {
     "name": "Sandbag Shouldering",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x90s (alternate sides), 2min rest",
     "tags": ["core", "rotational"],
-    "notes": "SPINE LOAD: Not same week as heavy cleans. WEIGHT: 25-35% BW"
+    "notes": "SPINE LOAD: Not same week as heavy cleans. WEIGHT: 25-35% BW",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
   },
   {
     "name": "Battle Rope Gauntlet",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "4x2min (30s waves/30s slams), 90s rest",
     "tags": ["shoulders", "grip"],
-    "notes": "UPPER BODY: Program before rest day. FATIGUE: Reduce waves if bench press drops >10%"
+    "notes": "UPPER BODY: Program before rest day. FATIGUE: Reduce waves if bench press drops >10%",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Battle Ropes"
   },
   {
     "name": "Tire Flip Sprints",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x(2 flips + 20yd sprint), 2min rest",
     "tags": ["posterior_chain", "explosive"],
-    "notes": "DEADLIFT RECOVERY: 72h minimum after max effort. TIRE WEIGHT: 50-70% deadlift 1RM"
+    "notes": "DEADLIFT RECOVERY: 72h minimum after max effort. TIRE WEIGHT: 50-70% deadlift 1RM",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Tire"
   },
   {
     "name": "Kettlebell Snatch Test",
+    "equipment": ["Kettlebells"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10min AMRAP (switch every min)",
@@ -493,14 +568,17 @@
   },
   {
     "name": "Sled Drag Intervals",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x45s (walk back recovery), 90s rest",
     "tags": ["posterior_chain", "low_impact"],
-    "notes": "HAMSTRING FRIENDLY: Preferred over sprints with tightness. LOAD: 30-40% BW"
+    "notes": "HAMSTRING FRIENDLY: Preferred over sprints with tightness. LOAD: 30-40% BW",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Sprawl-Burpee Complex",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x(5 sprawls + 5 burpees), 2min rest",
@@ -509,14 +587,17 @@
   },
   {
     "name": "Rope Climb Sprints",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x15ft climb + 20yd sprint, 3min rest",
     "tags": ["grip", "pull"],
-    "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Towel hangs if rope unavailable"
+    "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Towel hangs if rope unavailable",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Climbing Rope"
   },
   {
     "name": "Med Ball Circuit",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "4 rounds: 10 slams, 10 throws, 10 twists",
@@ -525,6 +606,7 @@
   },
   {
     "name": "Hill Sprint Repeats",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x8sec max effort, 2min rest",
@@ -533,6 +615,7 @@
   },
   {
     "name": "Wrestling Shot Series",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10x10sec max shots, 50sec rest",
@@ -541,6 +624,7 @@
   },
   {
     "name": "Stair Running Intervals",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "12x15sec max effort, 45sec rest",
@@ -549,30 +633,37 @@
   },
   {
     "name": "Heavy Bag Power Rounds",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x3min (10sec power/20sec pace), 1min rest",
     "tags": ["striking", "shoulders"],
-    "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz"
+    "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Heavy Bag"
   },
   {
     "name": "Sandbag Get-Up Complex",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "4x(5/side), 90sec rest",
     "tags": ["core", "anti_rotation"],
-    "notes": "SPINE LOAD: Reduce reps if form breaks. WEIGHT: 20-25% BW"
+    "notes": "SPINE LOAD: Reduce reps if form breaks. WEIGHT: 20-25% BW",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
   },
   {
     "name": "Sledgehammer Strikes",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x1min (alternate sides), 1min rest",
     "tags": ["rotational", "grip"],
-    "notes": "ELBOW WARNING: Not for golfers elbow. HAMMER WEIGHT: 6-8lbs"
+    "notes": "ELBOW WARNING: Not for golfers elbow. HAMMER WEIGHT: 6-8lbs",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sledgehammer"
   },
   {
     "name": "Defensive Movement Drill",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x30sec (slips/rolls/ducks), 30sec rest",
@@ -581,6 +672,7 @@
   },
   {
     "name": "Ground-N-Pound Intervals",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x90s (strike combo every 15s), 2min rest",
@@ -589,6 +681,7 @@
   },
   {
     "name": "Clinch Knee-to-Teepee Drill",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x45s (alternate knees), 75s rest",
@@ -597,6 +690,7 @@
   },
   {
     "name": "Towel Pull-Up Sprints",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x(5 pull-ups + 20yd sprint), 3min rest",
@@ -605,6 +699,7 @@
   },
   {
     "name": "Plyo Push-Up Burpee",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x10 reps, 90s rest",
@@ -613,14 +708,17 @@
   },
   {
     "name": "Sled Push-Pull Complex",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "4x(30yd push + 30yd pull), 3min rest",
     "tags": ["posterior_chain", "concentric"],
-    "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight"
+    "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
   },
   {
     "name": "Wall Ball Conditioning",
+    "equipment": ["Med Balls / Bands"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x2min (shot every 10s), 1min rest",
@@ -629,6 +727,7 @@
   },
   {
     "name": "Agility Ladder Power Drills",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x30s max effort, 45s rest",
@@ -637,14 +736,17 @@
   },
   {
     "name": "Sandbag Bearhug Carry",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "4x60yds, 2min rest",
     "tags": ["core", "grip"],
-    "notes": "SPINE LOAD: Maintain neutral alignment. WEIGHT: 25-35% BW"
+    "notes": "SPINE LOAD: Maintain neutral alignment. WEIGHT: 25-35% BW",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
   },
   {
     "name": "Striking Combos Under Fatigue",
+    "equipment": ["Bodyweight only"],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "6x3min (combo every 30s), 1min rest",
@@ -653,11 +755,13 @@
   },
   {
     "name": "Tire Slam Intervals",
+    "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x45s (alternate sides), 75s rest",
     "tags": ["rotational", "core"],
-    "notes": "ELBOW WARNING: Not for golfers elbow. SLEDGEHAMMER: 6-8lbs"
+    "notes": "ELBOW WARNING: Not for golfers elbow. SLEDGEHAMMER: 6-8lbs",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Tire + Sledgehammer"
   },
   {
     "name": "Defensive Level Change Drill",
