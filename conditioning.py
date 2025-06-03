@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 from injury_subs import injury_subs
+from training_context import normalize_equipment_list
 
 # Add this KNOWN_EQUIPMENT list at the top
 KNOWN_EQUIPMENT = [
@@ -51,7 +52,7 @@ def generate_conditioning_block(flags: dict):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
-    equipment = [e.lower() for e in flags.get("equipment", [])]
+    equipment = normalize_equipment_list(flags.get("equipment", []))
     style = [flags.get("style_tactical", ""), flags.get("style_technical", "")]
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
