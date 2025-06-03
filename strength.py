@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 from injury_subs import injury_subs
-from training_context import normalize_equipment_list, KNOWN_EQUIPMENT as known_equipment
+from training_context import normalize_equipment_list, known_equipment
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
