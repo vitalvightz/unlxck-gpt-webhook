@@ -11,7 +11,7 @@ import json  # ✅ Already present but emphasized for context
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 # Modules
-from training_context import allocate_sessions
+from training_context import allocate_sessions, normalize_equipment_list
 from mindset_module import classify_mental_block, get_mindset_by_phase, get_mental_protocols
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
@@ -115,7 +115,7 @@ async def handle_submission(request: Request):
         "style_technical": fighting_style_technical.strip().lower(),
         "style_tactical": fighting_style_tactical.strip().lower(),
         "weaknesses": [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else [],
-        "equipment": [e.strip().lower().replace(" ", "_") for e in equipment_access.split(",")] if equipment_access else [],
+        "equipment": normalize_equipment_list(equipment_access),
         "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
         "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
         "fight_format": rounds_format,
