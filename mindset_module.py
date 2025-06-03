@@ -1,3 +1,5 @@
+# mindset_module.py
+
 mindset_bank = {
     "GPP": {
         "confidence": "Use future-self visualization and complete 1 small, measurable success daily to rebuild belief.",
@@ -18,7 +20,7 @@ mindset_bank = {
         "pressure": "Schedule 2 pressure simulations weekly. Use self-talk script post-scenario.",
         "attention": "Set distraction triggers before training (e.g. song or phrase). Rate focus each session.",
         "motivation": "Create 'fight wall' with goals + competitors. Use as a pre-training activation ritual.",
-        "fear of losing": "Practice detachment: spar as if outcome doesn’t matter. Reflect after.",
+        "fear of losing": "Practice detachment: spar as if outcome doesn't matter. Reflect after.",
         "fear of striking": "Use 'flow to fire' drill: start light, increase intensity across rounds. Focus on rhythm.",
         "fear of takedowns": "Introduce anti-takedown drills w/ cue focus. Visualize stuffing shot mid-fatigue.",
         "generic": "Visualize adversity (e.g. bad round, crowd noise, injury scare) and successful reaction."
@@ -38,12 +40,88 @@ mindset_bank = {
 }
 
 mental_blocks = {
-    "confidence": [...],  # keep your keywords as-is
-    "gas tank": [...],
-    ...
+    "confidence": [
+        "confid", "doubt", "belie", "imposter", "insecure", "hesita", 
+        "unsure", "timid", "shak", "unworthy", "sabotage", "incapable", 
+        "inferior", "fraud", "fragile", "phony", "uncertain", "cautious", 
+        "wavering", "crash", "pretend", "fail", "inadequate", "edge", "depth"
+    ],
+    "gas tank": [
+        "gas", "cardi", "tire", "fade", "gassed", "condition", "exhaust", 
+        "wind", "burn", "empty", "stamina", "breath", "heavy", "energy", 
+        "wall", "drain", "spent", "weary", "fatigue", "zap", "unfit", 
+        "overtrain", "dehydrate", "muscle", "sustain", "collapse", "pace"
+    ],
+    "injury fear": [
+        "injur", "hurt", "pain", "tear", "reinjur", "body", "fragile", 
+        "protect", "nag", "damage", "health", "glass", "vulnerable", 
+        "heal", "twinge", "strain", "snap", "break", "limit", "favor", 
+        "paranoid", "betray", "surgery", "trauma", "chronic", "worry", 
+        "brittle", "compensate", "flinch", "anticipate", "avoid", "contact"
+    ],
+    "pressure": [
+        "pressure", "nerve", "stress", "expect", "choke", "stage", 
+        "overwhelm", "burden", "spotlight", "heat", "frozen", "tight", 
+        "analysis", "overthink", "crack", "fold", "moment", "disappoint", 
+        "terror", "stake", "clutch", "failure", "judgment", "perfect", 
+        "anxiety", "freeze", "exposure", "shaky", "audience", "legacy", 
+        "contract", "rank", "title", "break", "perform", "count", "blank"
+    ],
+    "attention": [
+        "focus", "distract", "adhd", "concentrate", "lapse", "zone", 
+        "wander", "scatter", "overstim", "crowd", "noise", "trash", 
+        "personal", "emotional", "overload", "indecisive", "slow", 
+        "forget", "space", "deficit", "sensory", "thought", "lock", 
+        "sidetrack", "clarity", "fog", "brain", "decide", "fatigue", 
+        "aware", "opponent", "track", "chaotic", "sloppy", "mistake", 
+        "rush", "impulsive", "gameplan", "absent", "daydream", "unaware"
+    ],
+    "motivation": [
+        "lazy", "bother", "energy", "motivat", "train", "inspire", 
+        "motion", "procrastinate", "gym", "alarm", "discipline", 
+        "burnout", "passion", "why", "drive", "stale", "indifferent", 
+        "apathetic", "job", "dread", "practice", "excuse", "skip", 
+        "rep", "effort", "autopilot", "fire", "spark", "purpose", 
+        "empty", "detach", "isolate", "coach", "pity", "victim", 
+        "goal", "direction", "potential", "regret"
+    ],
+    "fear of losing": [
+        "lose", "loss", "afraid", "record", "undefeat", "win", 
+        "streak", "legacy", "embarrass", "humiliat", "failure", 
+        "exposure", "perfect", "stat", "rank", "contract", "sponsor", 
+        "media", "critic", "fan", "respect", "teammate", "disapprove", 
+        "shame", "social", "hate", "decline", "wash", "prime", 
+        "irrelevant", "hype", "average", "pity", "identity"
+    ],
+    "fear of striking": [
+        "strike", "punch", "hit", "hurt", "spar", "flinch", 
+        "headshot", "terror", "chin", "glass", "jaw", "cut", 
+        "swell", "panic", "concuss", "brain", "damage", "anticipate", 
+        "shell", "cover", "combo", "power", "puncher", "phobia", 
+        "counter", "anxiety", "exchange", "knee", "trauma", "body", 
+        "liver", "nose", "break", "orbital", "fracture", "blood", 
+        "freeze", "retreat"
+    ],
+    "fear of takedowns": [
+        "takedown", "shot", "wrestle", "throw", "slam", "grapple", 
+        "ground", "panic", "position", "helpless", "submit", "dread", 
+        "control", "smother", "claustro", "mat", "return", "trauma", 
+        "slam", "anxiety", "suplex", "terror", "spinal", "neck", 
+        "shoulder", "reinjur", "knee", "pop", "stack", "guard", 
+        "pass", "pound", "fence", "cage", "pace", "scramble", 
+        "turtle", "clinch", "sprawl"
+    ]
 }
 
-def classify_mental_block(text):
+def classify_mental_block(text: str) -> str:
+    """Classify the mental block based on input text.
+    
+    Args:
+        text: User's description of their mental challenge
+        
+    Returns:
+        str: The classified mental block type or 'generic' if none match
+    """
     if not text or not isinstance(text, str):
         return "generic"
 
@@ -59,11 +137,27 @@ def classify_mental_block(text):
 
     return max(scores, key=scores.get) if scores else "generic"
 
-
 def get_mindset_by_phase(phase: str, flags: dict) -> str:
+    """Get the mindset strategy for a given training phase and mental block.
+    
+    Args:
+        phase: Current training phase (GPP, SPP, TAPER)
+        flags: Dictionary containing user flags including 'mental_block'
+        
+    Returns:
+        str: The appropriate mindset strategy
+    """
     block = flags.get("mental_block", "generic")
     return mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
 
-
 def get_mental_protocols(block: str, phase: str) -> str:
+    """Format the mental protocols for display.
+    
+    Args:
+        block: The classified mental block
+        phase: Current training phase
+        
+    Returns:
+        str: Formatted mental protocol string
+    """
     return f"**Mental Block Strategy ({block}):**\n{mindset_bank.get(phase, {}).get(block, mindset_bank[phase]['generic'])}"
