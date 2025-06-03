@@ -68,7 +68,7 @@ def generate_conditioning_block(flags: dict):
     for entry in conditioning_bank:
         if phase not in entry["phases"]:
             continue
-        if equipment and entry["equipment"] not in equipment:
+        if entry["equipment"] and not any(eq in equipment for eq in entry["equipment"]):
             continue
         score = sum(tag_counter.get(tag, 0) for tag in entry.get("tags", []))
         if score > 0:
