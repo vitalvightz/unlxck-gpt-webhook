@@ -95,7 +95,9 @@ def generate_conditioning_block(flags: dict):
         if score > 0:
             scored.append((entry, score))
 
-    top_entries = sorted(scored, key=lambda x: x[1], reverse=True)[:6]
+    days_available = flags.get("days_available", [])
+    max_exercises = min(6 + max(len(days_available) - 2, 0) * 2, 12)
+    top_entries = sorted(scored, key=lambda x: x[1], reverse=True)[:max_exercises]
     selected = [ex for ex, _ in top_entries]
 
     conditioning_block = ["🏃‍♂️ **Conditioning Module**", f"**Phase:** {phase}", "**Top Drills:**"]
