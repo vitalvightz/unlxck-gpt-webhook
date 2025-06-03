@@ -1,15 +1,14 @@
-from training_context import build_training_context
-
-
 def generate_recovery_block(training_context: dict) -> str:
     phase = training_context["phase"]
     fatigue = training_context["fatigue"]
-    weight = training_context.get("weight", 0.0)
-    weight_class = training_context.get("weight_class", "")
-    age_risk = training_context.get("age_risk", False)
+    weight = float(training_context.get("weight", 0.0))
+    age = int(training_context.get("age", 0))
     taper_week = phase == "TAPER"
     weight_cut_risk = training_context.get("weight_cut_risk", False)
     weight_cut_pct = training_context.get("weight_cut_pct", 0.0)
+
+    # Heuristic: Age-based risk >34y
+    age_risk = age >= 35 or training_context.get("age_risk", False)
 
     recovery_block = []
 
@@ -28,8 +27,8 @@ def generate_recovery_block(training_context: dict) -> str:
         recovery_block.append("\n**Age-Specific Adjustments:**")
         recovery_block += [
             "- 72h muscle group rotation",
-            "- Weekly float tank session",
-            "- Collagen supplementation"
+            "- Weekly float tank or sauna session",
+            "- Collagen + vitamin C pre-training"
         ]
 
     # Fatigue Score Flags
@@ -71,7 +70,7 @@ def generate_recovery_block(training_context: dict) -> str:
         ]
 
     # Weight Cut Risk Trigger
-    if weight_cut_risk:
+    if weight_cut_risk and weight_cut_pct >= 6.0:
         recovery_block.append("\n**⚠️ Weight Cut Recovery Warning:**")
         recovery_block += [
             "- Cut >6% → elevate recovery urgency",
