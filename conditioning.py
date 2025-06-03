@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 from injury_subs import injury_subs
-from training_context import normalize_equipment_list
+from training_context import normalize_equipment_list, known_equipment
 
 # 🔁 Equipment match with fallback penalty logic
 def get_equipment_penalty(entry_equip, user_equipment):
