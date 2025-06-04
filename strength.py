@@ -78,7 +78,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         if score > 0:
             weighted_exercises.append((ex, score))
 
-   weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    weighted_exercises.sort(key=lambda x: x[1], reverse=True)
     days_count = (
         len(training_days) if isinstance(training_days, list) else training_days
     )
