@@ -78,12 +78,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         if score > 0:
             weighted_exercises.append((ex, score))
 
-    weighted_exercises.sort(key=lambda x: x[1], reverse=True)
- days_count = (
+   weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    days_count = (
         len(training_days) if isinstance(training_days, list) else training_days
     )
     if not isinstance(days_count, int):
-        days_count = 3  # Fallback    
+        days_count = 3  # Fallback
         
     max_exercises = min(6 + max(days_count - 2, 0) * 2, 12)
     top_exercises = [ex for ex, _ in weighted_exercises[:max_exercises]]
@@ -96,7 +96,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             for area, subs_list in injury_subs.items():
                 if area in injuries_detected:
                     for sub_ex in subs_list:
-                           if any(
+                        if any(
                             keyword in name.lower()
                             for keyword in sub_ex.lower().split()
                         ):
