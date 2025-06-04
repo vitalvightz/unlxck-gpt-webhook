@@ -61,7 +61,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     weighted_exercises = []
   
-    if phase == "GPP":
+   if phase == "GPP":
     universal_lifts = [
         "Push-Up",
         "Barbell Back Squat",
