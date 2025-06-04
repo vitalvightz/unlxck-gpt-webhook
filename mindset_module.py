@@ -140,30 +140,34 @@ def classify_mental_block(text: str) -> str:
 
 def get_mindset_by_phase(phase: str, flags: dict) -> str:
     """Get the mindset strategy for a given training phase and mental block.
-    
+
     Args:
         phase: Current training phase (GPP, SPP, TAPER)
-        flags: Dictionary containing user flags including 'mental_block'
-        
+        flags: Dictionary containing user flags including ``mental_block``
+
     Returns:
         str: The appropriate mindset strategy
     """
     block = flags.get("mental_block", "generic")
-      text = mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+    text = mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+
     if phase and phase.upper() == "TAPER":
         activation = mindset_bank.get("TAPER", {}).get("pre-fight_activation")
         if activation:
             text += f"\nPre-fight Activation: {activation}"
+
     return text
 
-def get_mental_protocols(block: str, phase: str) -> str:
-    """Return a formatted mental block strategy string.
-    
-    Args:
-        block: The classified mental block
-        phase: Current training phase
-        
-    Returns:
-        str: The formatted mental block strategy
-    """
-    return f"**Mental Block Strategy ({block}):**\n{mindset_bank.get(phase, {}).get(block, mindset_bank[phase]['generic'])}"
+def get_mental_protocols(block: str) -> str:
+    """Return mental training guidance for all phases for the given block."""
+
+    sections = ["**Mental Block Strategy – {0}**".format(block)]
+    for phase in ["GPP", "SPP", "TAPER"]:
+        text = mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+        if phase == "TAPER":
+            activation = mindset_bank.get("TAPER", {}).get("pre-fight_activation")
+            if activation:
+                text += f"\nPre-fight Activation: {activation}"
+        sections.append(f"### {phase}\n{text}")
+
+    return "\n\n".join(sections)
