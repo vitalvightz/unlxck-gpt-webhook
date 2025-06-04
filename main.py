@@ -93,7 +93,7 @@ async def handle_submission(request: Request):
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
             weeks_out = max(1, (fight_date - datetime.now()).days // 7)
-          if weeks_out > 10:
+            if weeks_out > 10:
                 phase = "GPP"
             elif 6 <= weeks_out <= 10:
                 phase = "SPP"
@@ -101,7 +101,7 @@ async def handle_submission(request: Request):
                 phase = "SPP"
             else:
                 phase = "TAPER"
-        except:
+        except Exception:
             phase = "GPP"
             weeks_out = "N/A"
     else:
@@ -133,7 +133,7 @@ async def handle_submission(request: Request):
     flags["mental_block"] = classify_mental_block(mental_block)
 
     mindset_block = get_mindset_by_phase(phase, flags)
-    mental_strategies = get_mental_protocols(flags["mental_block"], phase)
+    mental_strategies = get_mental_protocols(flags["mental_block"])
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
@@ -207,11 +207,11 @@ Athlete Profile:
 """
 
     try:
-         response = openai.ChatCompletion.create(
-         model="gpt-4",
-         messages=[{"role": "user", "content": prompt}],
-         temperature=0.3,
-         max_tokens=1800
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=1800,
         )
         full_plan = response.choices[0].message.content.strip()
         print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
