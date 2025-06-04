@@ -60,6 +60,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
 
     weighted_exercises = []
+  
+    if phase == "GPP":
+    universal_lifts = [
+        "Push-Up",
+        "Barbell Back Squat",
+        "Trap Bar Deadlift",
+        "Barbell Bench Press",
+        "Barbell Overhead Press"
+    ]
+    
     for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
@@ -85,8 +95,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     if not isinstance(days_count, int):
         days_count = 3  # Fallback
         
-    max_exercises = min(6 + max(days_count - 2, 0) * 2, 12)
-    top_exercises = [ex for ex, _ in weighted_exercises[:max_exercises]]
+   target_exercises = 12
+
+if len(weighted_exercises) < target_exercises:
+    print(f"⚠️ Only found {len(weighted_exercises)} scored exercises. Filling with low/no-score entries...")
+
+    # Get unsorted leftovers that passed equipment + phase
+    fallback_exercises = [
+        ex for ex in exercise_bank
+        if phase in ex["phases"]
+        and equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment) > -999
+        and ex not in [we[0] for we in weighted_exercises]
+    ][:target_exercises - len(weighted_exercises)]
+
+    weighted_exercises += [(ex, 0) for ex in fallback_exercises]
+
+# Final top 12
+top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
 
     def substitute_exercises(exercises, injuries_detected):
         modified = []
