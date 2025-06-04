@@ -3,6 +3,7 @@ import json
 from injury_subs import injury_subs
 from training_context import normalize_equipment_list, known_equipment
 
+
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
     user_equipment = [e.lower().strip() for e in user_equipment]
@@ -20,7 +21,9 @@ def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
 
     return 0
 
+
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
+
 
 def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP")
@@ -30,7 +33,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style = flags.get("style_tactical", "")
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
-
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
@@ -60,7 +62,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
 
     weighted_exercises = []
-  
+
     if phase == "GPP":
         universal_lifts = [
             "Push-Up",
@@ -69,7 +71,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             "Barbell Bench Press",
             "Barbell Overhead Press",
         ]
-    
+
     for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
@@ -96,15 +98,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     )
     if not isinstance(days_count, int):
         days_count = 3  # Fallback
-        
-   target_exercises = 12
 
-if len(weighted_exercises) < target_exercises:
+    target_exercises = 12
+
+    if len(weighted_exercises) < target_exercises:
         print(
             f"⚠️ Only found {len(weighted_exercises)} scored exercises. Filling with low/no-score entries..."
         )
 
-  # Get unsorted leftovers that passed equipment + phase
         fallback_exercises = [
             ex
             for ex in exercise_bank
@@ -114,13 +115,10 @@ if len(weighted_exercises) < target_exercises:
             )
             > -999
             and ex not in [we[0] for we in weighted_exercises]
-        ][
-            : target_exercises - len(weighted_exercises)
-        ]
+        ][: target_exercises - len(weighted_exercises)]
 
-    weighted_exercises += [(ex, 0) for ex in fallback_exercises]
+        weighted_exercises += [(ex, 0) for ex in fallback_exercises]
 
-# Final top 12
     top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
 
     def substitute_exercises(exercises, injuries_detected):
@@ -145,7 +143,7 @@ if len(weighted_exercises) < target_exercises:
         return modified
 
     base_exercises = substitute_exercises(top_exercises, injuries)
-    
+
     used_days = training_days[: min(len(training_days), 3)]
     tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
 
@@ -167,7 +165,7 @@ if len(weighted_exercises) < target_exercises:
     base_block, focus = phase_loads.get(
         phase, ("Default fallback block", "Ensure phase logic handled upstream.")
     )
-    
+
     fatigue_note = ""
     if fatigue == "high":
         fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
@@ -195,4 +193,3 @@ if len(weighted_exercises) < target_exercises:
         "num_sessions": len(used_days),
         "preferred_tags": list(set(all_tags)),
     }
-    
