@@ -151,13 +151,13 @@ def get_mindset_by_phase(phase: str, flags: dict) -> str:
     return mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
 
 def get_mental_protocols(block: str, phase: str) -> str:
-    """Format the mental protocols for display.
+    """Return a formatted mental block strategy string.
     
     Args:
         block: The classified mental block
         phase: Current training phase
         
     Returns:
-        str: Formatted mental protocol string
+        str: The formatted mental block strategy
     """
     return f"**Mental Block Strategy ({block}):**\n{mindset_bank.get(phase, {}).get(block, mindset_bank[phase]['generic'])}"
