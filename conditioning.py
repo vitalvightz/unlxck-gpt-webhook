@@ -115,11 +115,11 @@ def generate_conditioning_block(flags: dict):
         conditioning_block.append(f"- {ex['name']}")
 
     if fatigue == "high":
-           conditioning_block.append(
+        conditioning_block.append(
             "⚠️ High fatigue → swap 1 drill for recovery work or reduce total time by 25%."
         )
     elif fatigue == "moderate":
-conditioning_block.append(
+        conditioning_block.append(
             "⚠️ Moderate fatigue → remove 1 set or reduce tempo."
         )
 
