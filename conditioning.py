@@ -95,15 +95,9 @@ def generate_conditioning_block(flags: dict):
         if score > 0:
             scored.append((entry, score))
 
-    days = flags.get("days_available", [])
-if isinstance(days, int):
-    days_count = days
-else:
-    days_count = len(days)
+    
 
-max_exercises = min(6 + max(days_count - 2, 0) * 2, 12)
-
-    conditioning_block = ["🏃‍♂️ **Conditioning Module**", f"**Phase:** {phase}", "**Top Drills:**"]
+    
     for ex in selected:
         conditioning_block.append(f"- {ex['name']}")
 
