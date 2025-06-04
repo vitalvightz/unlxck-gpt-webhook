@@ -204,7 +204,7 @@ Athlete Profile:
 """
 
     try:
-        response = openai.chat.completions.create(
+         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
