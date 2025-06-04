@@ -33,5 +33,7 @@ def generate_nutrition_block(*, flags: dict) -> str:
         nutrition_block += f"- Weight cut >{cut_pct}% → elevated cut strategy\n"
         nutrition_block += "- Use refeed protocol post-weigh-in (high-GI carbs + sodium-rich fluids)\n"
         nutrition_block += "- Monitor sleep, hydration, and energy levels daily\n"
-
+        if cut_pct >= 6.0:
+            nutrition_block += "- Sodium protocol: 10g/day until 72h out → 5g/day → 2g/day weigh-in"
+    
     return nutrition_block.strip()
