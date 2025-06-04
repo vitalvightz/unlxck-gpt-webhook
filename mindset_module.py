@@ -15,6 +15,7 @@ mindset_bank = {
     },
     "SPP": {
         "confidence": "Pressure-test during fatigue drills using cue words. Use post-rep success anchor statements.",
+        "pre-fight_activation": "Exhale-focused breathing (6s inhale/10s exhale) 5min pre-warmup",
         "gas tank": "Rehearse high-effort exchanges visually before pad/sparring rounds. Reinforce 'stay calm' cues.",
         "injury fear": "Reinforce robustness with performance reflection. Keep a 'pain-free milestone' tracker.",
         "pressure": "Schedule 2 pressure simulations weekly. Use self-talk script post-scenario.",
