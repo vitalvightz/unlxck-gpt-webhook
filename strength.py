@@ -61,20 +61,22 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     weighted_exercises = []
   
-   if phase == "GPP":
-    universal_lifts = [
-        "Push-Up",
-        "Barbell Back Squat",
-        "Trap Bar Deadlift",
-        "Barbell Bench Press",
-        "Barbell Overhead Press"
-    ]
+    if phase == "GPP":
+        universal_lifts = [
+            "Push-Up",
+            "Barbell Back Squat",
+            "Trap Bar Deadlift",
+            "Barbell Bench Press",
+            "Barbell Overhead Press",
+        ]
     
     for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
 
-        penalty = equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment)
+        penalty = equipment_score_adjust(
+            ex.get("equipment", ""), equipment_access, known_equipment
+        )
         if penalty == -999:
             continue
 
@@ -98,20 +100,28 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
    target_exercises = 12
 
 if len(weighted_exercises) < target_exercises:
-    print(f"⚠️ Only found {len(weighted_exercises)} scored exercises. Filling with low/no-score entries...")
+        print(
+            f"⚠️ Only found {len(weighted_exercises)} scored exercises. Filling with low/no-score entries..."
+        )
 
-    # Get unsorted leftovers that passed equipment + phase
-    fallback_exercises = [
-        ex for ex in exercise_bank
-        if phase in ex["phases"]
-        and equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment) > -999
-        and ex not in [we[0] for we in weighted_exercises]
-    ][:target_exercises - len(weighted_exercises)]
+  # Get unsorted leftovers that passed equipment + phase
+        fallback_exercises = [
+            ex
+            for ex in exercise_bank
+            if phase in ex["phases"]
+            and equipment_score_adjust(
+                ex.get("equipment", ""), equipment_access, known_equipment
+            )
+            > -999
+            and ex not in [we[0] for we in weighted_exercises]
+        ][
+            : target_exercises - len(weighted_exercises)
+        ]
 
     weighted_exercises += [(ex, 0) for ex in fallback_exercises]
 
 # Final top 12
-top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
+    top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
 
     def substitute_exercises(exercises, injuries_detected):
         modified = []
@@ -135,18 +145,29 @@ top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
         return modified
 
     base_exercises = substitute_exercises(top_exercises, injuries)
-
-    used_days = training_days[:min(len(training_days), 3)]
+    
+    used_days = training_days[: min(len(training_days), 3)]
     tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
 
     phase_loads = {
-        "GPP": ("3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1", "Build hypertrophy base, tendon durability, and general strength."),
-        "SPP": ("3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)", "Max strength + explosive power. Contrast and triphasic methods emphasized."),
-        "TAPER": ("2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load", "Maintain intensity, cut volume, CNS freshness. High bar speed focus.")
+        "GPP": (
+            "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1",
+            "Build hypertrophy base, tendon durability, and general strength.",
+        ),
+        "SPP": (
+            "3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)",
+            "Max strength + explosive power. Contrast and triphasic methods emphasized.",
+        ),
+        "TAPER": (
+            "2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load",
+            "Maintain intensity, cut volume, CNS freshness. High bar speed focus.",
+        ),
     }
 
-    base_block, focus = phase_loads.get(phase, ("Default fallback block", "Ensure phase logic handled upstream."))
-
+    base_block, focus = phase_loads.get(
+        phase, ("Default fallback block", "Ensure phase logic handled upstream.")
+    )
+    
     fatigue_note = ""
     if fatigue == "high":
         fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
@@ -157,7 +178,7 @@ top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
         "\n🏋️‍♂️ **Strength & Power Module**",
         f"**Phase:** {phase}",
         f"**Primary Focus:** {focus}",
-        "**Top Exercises:**"
+        "**Top Exercises:**",
     ]
     for ex in base_exercises:
         strength_output.append(f"- {ex['name']}")
@@ -172,6 +193,6 @@ top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
     return {
         "block": "\n".join(strength_output),
         "num_sessions": len(used_days),
-        "preferred_tags": list(set(all_tags))
+        "preferred_tags": list(set(all_tags)),
     }
     
