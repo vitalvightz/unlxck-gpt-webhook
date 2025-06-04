@@ -149,7 +149,12 @@ def get_mindset_by_phase(phase: str, flags: dict) -> str:
         str: The appropriate mindset strategy
     """
     block = flags.get("mental_block", "generic")
-    return mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+      text = mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+    if phase and phase.upper() == "TAPER":
+        activation = mindset_bank.get("TAPER", {}).get("pre-fight_activation")
+        if activation:
+            text += f"\nPre-fight Activation: {activation}"
+    return text
 
 def get_mental_protocols(block: str, phase: str) -> str:
     """Return a formatted mental block strategy string.
