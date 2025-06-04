@@ -35,6 +35,16 @@ def get_equipment_penalty(entry_equip, user_equipment):
 # Load bank
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
 
+def format_conditioning_drill(drill: dict, index: int) -> str:
+    return f"""**{index + 1}. {drill['name']}**
+- System: {drill.get('system', 'N/A')}
+- Load: {drill.get('intensity', 'N/A')}
+- Timing: {drill.get('duration', 'N/A')}
+- Rest: ________
+- Volume (sets/reps): ________
+- Purpose: {drill.get('notes', 'N/A')}
+- Red Flags: ________"""
+
 def generate_conditioning_block(flags: dict):
     phase = flags.get("phase", "GPP")
     injuries = flags.get("injuries", [])
@@ -106,13 +116,15 @@ def generate_conditioning_block(flags: dict):
     max_exercises = min(6 + max(days_count - 2, 0) * 2, 12)
     selected = [ex for ex, _ in scored[:max_exercises]]
 
+    formatted = [
+        format_conditioning_drill(drill, i)
+        for i, drill in enumerate(selected)
+    ]
     conditioning_block = [
         "🏃‍♂️ **Conditioning Module**",
         f"**Phase:** {phase}",
-        "**Top Drills:**",
+        *formatted
     ]
-    for ex in selected:
-        conditioning_block.append(f"- {ex['name']}")
 
     if fatigue == "high":
         conditioning_block.append(
@@ -123,4 +135,4 @@ def generate_conditioning_block(flags: dict):
             "⚠️ Moderate fatigue → remove 1 set or reduce tempo."
         )
 
-    return "\n".join(conditioning_block)
+    return "\n\n".join(conditioning_block)
