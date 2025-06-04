@@ -95,15 +95,32 @@ def generate_conditioning_block(flags: dict):
         if score > 0:
             scored.append((entry, score))
 
-    
+    scored.sort(key=lambda x: x[1], reverse=True)
 
-    
+    days = flags.get("days_available", [])
+    if isinstance(days, int):
+        days_count = days
+    else:
+        days_count = len(days)
+
+    max_exercises = min(6 + max(days_count - 2, 0) * 2, 12)
+    selected = [ex for ex, _ in scored[:max_exercises]]
+
+    conditioning_block = [
+        "🏃‍♂️ **Conditioning Module**",
+        f"**Phase:** {phase}",
+        "**Top Drills:**",
+    ]
     for ex in selected:
         conditioning_block.append(f"- {ex['name']}")
 
     if fatigue == "high":
-        conditioning_block.append("⚠️ High fatigue → swap 1 drill for recovery work or reduce total time by 25%.")
+        conditioning_block.append(
+            "⚠️ High fatigue → swap 1 drill for recovery work or reduce total time by 25%."
+        )
     elif fatigue == "moderate":
-        conditioning_block.append("⚠️ Moderate fatigue → remove 1 set or reduce tempo.")
-
+         conditioning_block.append(
+            "⚠️ Moderate fatigue → remove 1 set or reduce tempo."
+        )
+    
     return "\n".join(conditioning_block)
