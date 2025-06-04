@@ -4,10 +4,9 @@ import os, json, base64
 import openai
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from pathlib import Path  # ✅ Added
-import json  # ✅ Already present but emphasized for context
+from pathlib import Path
 
-# Load exercise bank ✅ NEW
+# Load exercise bank
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 # Modules
@@ -137,7 +136,6 @@ async def handle_submission(request: Request):
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
 
-    # ✅ UPDATED: Use real exercise_bank
     injury_sub_block = generate_injury_subs(
         injury_string=injuries,
         exercise_data=exercise_bank
