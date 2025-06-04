@@ -15,7 +15,6 @@ mindset_bank = {
     },
     "SPP": {
         "confidence": "Pressure-test during fatigue drills using cue words. Use post-rep success anchor statements.",
-        "pre-fight_activation": "Exhale-focused breathing (6s inhale/10s exhale) 5min pre-warmup",
         "gas tank": "Rehearse high-effort exchanges visually before pad/sparring rounds. Reinforce 'stay calm' cues.",
         "injury fear": "Reinforce robustness with performance reflection. Keep a 'pain-free milestone' tracker.",
         "pressure": "Schedule 2 pressure simulations weekly. Use self-talk script post-scenario.",
@@ -36,7 +35,8 @@ mindset_bank = {
         "fear of losing": "Walkthrough fight in head while smiling. Practice identity detachment.",
         "fear of striking": "Visualize first strike exchange with sharpness and control. Repeat daily.",
         "fear of takedowns": "Rehearse quick sprawl or frame and reset. Reduce panic impulse with breath cue.",
-        "generic": "3x/day ritual: breathe → affirm → visualize (short, sharp, elite imagery only)."
+        "generic": "3x/day ritual: breathe → affirm → visualize (short, sharp, elite imagery only).",
+        "pre-fight_activation": "Quick neural warm-up + 3 power breaths (6s inhale/10s exhale). Cue phrase 'I'm sharp' before walkout."
     }
 }
 
