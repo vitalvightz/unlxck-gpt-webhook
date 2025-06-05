@@ -88,7 +88,7 @@ async def handle_submission(request: Request):
     mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
-    # Fix weeks_out calculation and phase determination
+    # Phase logic
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
@@ -108,19 +108,33 @@ async def handle_submission(request: Request):
         phase = "GPP"
         weeks_out = "N/A"
 
+    # Map fighting style to fight format
+    style_map = {
+        "mma": "mma",
+        "boxer": "boxing",
+        "kickboxer": "kickboxing",
+        "muay thai": "muay_thai",
+        "bjj": "mma",
+        "wrestler": "mma",
+        "grappler": "mma",
+        "karate": "kickboxing"
+    }
+    raw_tech_style = fighting_style_technical.strip().lower()
+    mapped_format = style_map.get(raw_tech_style, "mma")
+
     training_context = {
         "phase": phase,
         "fatigue": fatigue.lower(),
         "days_available": int(frequency),
         "training_days": available_days.split(", "),
         "injuries": [inj.strip().lower() for inj in injuries.split(",")] if injuries else [],
-        "style_technical": fighting_style_technical.strip().lower(),
+        "style_technical": raw_tech_style,
         "style_tactical": fighting_style_tactical.strip().lower(),
         "weaknesses": [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else [],
         "equipment": normalize_equipment_list(equipment_access),
         "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
         "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
-        "fight_format": rounds_format,
+        "fight_format": mapped_format,
         "training_split": allocate_sessions(int(frequency)),
         "key_goals": [g.strip().lower() for g in key_goals.split(",")] if key_goals else [],
         "training_preference": training_preference.strip().lower() if training_preference else "",
@@ -138,11 +152,7 @@ async def handle_submission(request: Request):
     conditioning_block = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
-
-    injury_sub_block = generate_injury_subs(
-        injury_string=injuries,
-        exercise_data=exercise_bank
-    )
+    injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
     print("== NUTRITION BLOCK ==\n", nutrition_block)
 
