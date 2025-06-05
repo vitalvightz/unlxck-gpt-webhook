@@ -1,0 +1,58 @@
+# same day as strength
+[
+  {
+    "name": "Steady-State Cardio (Run / Bike / Row)",
+    "phase": "GPP",
+    "system": "Aerobic",
+    "duration": "30–60 minutes",
+    "intensity": "60–70% max HR (Zone 2)",
+    "volume": "2–3x/week",
+    "equipment": ["road", "treadmill", "bike", "rower"],
+    "tags": ["aerobic", "low_impact", "oxidative", "recovery"],
+    "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions."
+  },
+  {
+    "name": "Jump Rope Endurance (Footwork Conditioning)",
+    "phase": "GPP",
+    "system": "Aerobic + Coordination",
+    "duration": "3–5 rounds × 3–5 minutes",
+    "intensity": "Moderate steady pace",
+    "volume": "2–4x/week",
+    "equipment": ["jump rope"],
+    "tags": ["aerobic", "reactive", "coordination", "footwork"],
+    "notes": "Improves foot speed, rhythm, and aerobic fitness. Versatile as warm-up or standalone."
+  },
+  {
+    "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
+    "phase": "GPP",
+    "system": "Alactic → Glycolytic",
+    "duration": "6–8 × 20–30s max effort",
+    "intensity": "Maximal sprint",
+    "volume": "1–2x/week",
+    "equipment": ["track", "field", "hill", "sled"],
+    "tags": ["alactic", "explosive", "power", "sprint"],
+    "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS."
+  },
+  {
+    "name": "Battle Rope Circuits",
+    "phase": "GPP",
+    "system": "Glycolytic",
+    "duration": "4–6 rounds × 30s work",
+    "intensity": "High effort",
+    "volume": "1–2x/week",
+    "equipment": ["battle rope"],
+    "tags": ["glycolytic", "shoulders", "core", "power_endurance"],
+    "notes": "Builds shoulder endurance, core control, and lactic threshold. Safe option for upper-body dominant day."
+  },
+  {
+    "name": "Bodyweight MetCon Circuit",
+    "phase": "GPP",
+    "system": "Glycolytic",
+    "duration": "3–4 rounds of 3–5 exercises × 30s each",
+    "intensity": "High tempo",
+    "volume": "1–2x/week",
+    "equipment": ["bodyweight"],
+    "tags": ["glycolytic", "metcon", "work_capacity", "scramble_sim"],
+    "notes": "Full-body circuit mimicking MMA scramble effort. Effective as conditioning block or session finisher."
+  }
+]
