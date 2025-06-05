@@ -942,5 +942,59 @@
     "duration": "5x1min (4-7-8 pattern)",
     "tags": ["parasympathetic", "recovery"],
     "notes": "POST-SESSION: Use after high-CNS workouts. POSITION: Supine preferred"
-  }
-]
+  },
+  {
+    {
+  "name": "Aerobic Sparring Rounds",
+  "equipment": ["partner", "gloves"],
+  "phases": ["GPP", "SPP"],
+  "system": "aerobic",
+  "duration": "5x3min rounds (1:1 rest)",
+  "tags": ["aerobic", "striking", "cognitive"],
+  "notes": "Light technical sparring focusing on continuous movement and breathing control"
+},
+{
+  "name": "Alactic Hill Sprints",
+  "equipment": [],
+  "phases": ["SPP", "Peak"],
+  "system": "alactic",
+  "duration": "8x8s sprints (2min rest)",
+  "tags": ["explosive", "acceleration", "triple_extension"],
+  "notes": "Max effort sprints on 5-10% grade for ATP-CP development"
+},
+{
+  "name": "Rope Flow Aerobics",
+  "equipment": ["battle rope"],
+  "phases": ["GPP"],
+  "system": "aerobic",
+  "duration": "3x5min (continuous waves)",
+  "tags": ["aerobic", "shoulders", "grip"],
+  "notes": "Sustained wave patterns at 60% effort for aerobic shoulder endurance"
+},
+{
+  "name": "Plyo Push-Up Repeats",
+  "equipment": [],
+  "phases": ["SPP", "Peak"],
+  "system": "alactic",
+  "duration": "5x5 reps (90s rest)",
+  "tags": ["rate_of_force", "explosive", "upper_body"],
+  "notes": "Max explosive push-ups with full reset between reps"
+},
+{
+  "name": "Shadow Grappling Rounds",
+  "equipment": [],
+  "phases": ["GPP", "SPP"],
+  "system": "aerobic",
+  "duration": "4x5min (1:1 rest)",
+  "tags": ["aerobic", "grappling", "cognitive"],
+  "notes": "Continuous movement drilling takedowns and transitions at 70% pace"
+},
+{
+  "name": "Medicine Ball Slams",
+  "equipment": ["medicine ball"],
+  "phases": ["SPP", "Peak"],
+  "system": "alactic",
+  "duration": "6x6s bursts (90s rest)",
+  "tags": ["explosive", "core", "striking"],
+  "notes": "Max power overhead slams with full recovery between sets"
+}
