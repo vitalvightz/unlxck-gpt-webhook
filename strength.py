@@ -89,7 +89,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         score += sum(1 for tag in tags if tag in style_tags)
         score += penalty
 
-        if score > 0:
+        if score >= 0:
             weighted_exercises.append((ex, score))
 
     weighted_exercises.sort(key=lambda x: x[1], reverse=True)
