@@ -71,19 +71,28 @@ def generate_conditioning_block(flags):
 
         system_drills[system].append((drill, total_score))
 
-    # Select drills per system
-    final_drills = []
-    for system in preferred_order:
-        drills = sorted(system_drills.get(system, []), key=lambda x: x[1], reverse=True)
-        top = drills[:3] if fatigue == "low" else drills[:2]
-        if not top:
-            continue
-        final_drills.append((system, [d[0] for d in top]))
+    ## Select drills per system and scale count by energy system weighting
+final_drills = []
+base_max = 3 if fatigue == "low" else 2
 
+for system in preferred_order:
+    drills = sorted(system_drills.get(system, []), key=lambda x: x[1], reverse=True)
+    if not drills:
+        continue
+
+    # Dynamically scale count based on format-driven weight
+    weight = energy_weights.get(system, 0)
+    count = max(1, round(base_max * weight))
+
+    # Prevent oversampling in taper phase
+    if phase.upper() == "TAPER":
+        count = min(count, 2)
+
+    final_drills.append((system, [d[0] for d in drills[:count]]))
     # Format output
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system, drills in final_drills:
-        output_lines.append(f"\n📌 **System: {system.upper()}**")
+        output_lines.append(f"\n📌 **System: {system.upper()}** (scaled by fight format emphasis)")
         for d in drills:
             name = d.get("name", "Unnamed Drill")
             load = d.get("load", "—")
