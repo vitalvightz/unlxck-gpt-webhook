@@ -229,11 +229,23 @@ Athlete Profile:
         print("❌ GPT API Error:", e)
         return {"error": "Failed to generate plan from OpenAI"}
 
+    import asyncio
+from functools import partial
+
+# Create Google Doc safely in async environment
+loop = asyncio.get_event_loop()
+for _ in range(2):  # retry once if it fails
     try:
-        doc_link = create_doc(f"Fight Plan – {full_name}", full_plan)
+        doc_link = await loop.run_in_executor(
+            None,
+            partial(create_doc, f"Fight Plan – {full_name}", full_plan)
+        )
         print("✅ Google Doc Created:", doc_link)
+        break
     except Exception as e:
-        print("❌ Google Docs API Error:", e)
-        doc_link = None
+        print("❌ Google Docs API Error (Retrying):", e)
+        await asyncio.sleep(2)
+else:
+    doc_link = None
 
     return {"doc_link": doc_link or "Document creation failed"}
