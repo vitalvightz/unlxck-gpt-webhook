@@ -2,6 +2,8 @@ from datetime import datetime
 from fastapi import FastAPI, Request
 import os, json, base64
 import openai
+import asyncio
+from functools import partial
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from pathlib import Path
@@ -229,23 +231,20 @@ Athlete Profile:
         print("❌ GPT API Error:", e)
         return {"error": "Failed to generate plan from OpenAI"}
 
-    import asyncio
-from functools import partial
-
-# Create Google Doc safely in async environment
-loop = asyncio.get_event_loop()
-for _ in range(2):  # retry once if it fails
-    try:
-        doc_link = await loop.run_in_executor(
-            None,
-            partial(create_doc, f"Fight Plan – {full_name}", full_plan)
-        )
-        print("✅ Google Doc Created:", doc_link)
-        break
-    except Exception as e:
-        print("❌ Google Docs API Error (Retrying):", e)
-        await asyncio.sleep(2)
-else:
-    doc_link = None
+    # Async-safe Google Doc creation
+    loop = asyncio.get_event_loop()
+    for _ in range(2):  # retry once if it fails
+        try:
+            doc_link = await loop.run_in_executor(
+                None,
+                partial(create_doc, f"Fight Plan – {full_name}", full_plan)
+            )
+            print("✅ Google Doc Created:", doc_link)
+            break
+        except Exception as e:
+            print("❌ Google Docs API Error (Retrying):", e)
+            await asyncio.sleep(2)
+    else:
+        doc_link = None
 
     return {"doc_link": doc_link or "Document creation failed"}
