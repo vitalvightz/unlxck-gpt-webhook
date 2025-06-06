@@ -92,12 +92,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         if penalty == -999:
             continue
 
-        tags = ex.get("tags", [])
+                tags = ex.get("tags", [])
+        method = ex.get("method", "").lower()
+
+        # Phase-specific rehab penalty
+        rehab_penalty_by_phase = {
+            "GPP": -1,
+            "SPP": -3,
+            "TAPER": -2
+        }
+        rehab_penalty = rehab_penalty_by_phase.get(phase.upper(), -2) if method == "rehab" else 0
+
         score = 0
         score += sum(2.5 for tag in tags if tag in (weaknesses or []))
         score += sum(2 for tag in tags if tag in goal_tags)
         score += sum(1 for tag in tags if tag in style_tags)
         score += penalty
+        score += rehab_penalty
 
         if score >= 0:
             weighted_exercises.append((ex, score))
