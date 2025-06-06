@@ -103,8 +103,14 @@ for system_name in ["aerobic", "glycolytic", "alactic"]:
         final_drills.append((system, [d[0] for d in available[:count]]))
         remaining_slots -= count
 
-    # 📤 Output
+        # 📤 Output
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
+
+    # 🔍 Optional diagnostic: flag if any system has zero drills
+    for system_name in ["aerobic", "glycolytic", "alactic"]:
+        if not system_drills[system_name]:
+            output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
+
     for system, drills in final_drills:
         output_lines.append(f"\n📌 **System: {system.upper()}** (scaled by format emphasis)")
         for d in drills:
@@ -120,7 +126,7 @@ for system_name in ["aerobic", "glycolytic", "alactic"]:
             output_lines.append(f"  • Timing: {timing}")
             output_lines.append(f"  • Purpose: {purpose}")
             output_lines.append(f"  • ⚠️ Red Flags: {red_flags}")
-
+    
     if fatigue == "high":
         output_lines.append("\n⚠️ High fatigue detected – conditioning volume reduced.")
     elif fatigue == "moderate":
