@@ -25,7 +25,7 @@ exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 
 def generate_strength_block(*, flags: dict, weaknesses=None):
-    phase = flags.get("phase", "GPP")
+    phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
@@ -65,23 +65,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     weighted_exercises = []
 
-    if phase == "GPP":
-        universal_lifts = [
-            "Push-Up",
-            "Barbell Back Squat",
-            "Trap Bar Deadlift",
-            "Barbell Bench Press",
-            "DB / Barbell Overhead Press",
-            "Dumbbell Split Squat",
-            "Pull-Up / Inverted Row",
-            "Sled Push / Sled Drag",
-            "Trapbar / Dumbbell Shrugs",
-            "Neck Harness Isometrics",
-            "Landmine Rotations",
-            "Pallof Press (Cable or Band)",
-            "Low Hurdle Hop (Rhythm Focus)", 
-        ]
-
     for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
@@ -92,16 +75,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         if penalty == -999:
             continue
 
-                tags = ex.get("tags", [])
+        tags = ex.get("tags", [])
         method = ex.get("method", "").lower()
 
-        # Phase-specific rehab penalty
         rehab_penalty_by_phase = {
             "GPP": -1,
             "SPP": -3,
             "TAPER": -2
         }
-        rehab_penalty = rehab_penalty_by_phase.get(phase.upper(), -2) if method == "rehab" else 0
+        rehab_penalty = rehab_penalty_by_phase.get(phase, 0) if method == "rehab" else 0
 
         score = 0
         score += sum(2.5 for tag in tags if tag in (weaknesses or []))
@@ -150,10 +132,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             for area, subs_list in injury_subs.items():
                 if area in injuries_detected:
                     for sub_ex in subs_list:
-                        if any(
-                            keyword in name.lower()
-                            for keyword in sub_ex.lower().split()
-                        ):
+                        if any(keyword in name.lower() for keyword in sub_ex.lower().split()):
                             modified.append({"name": sub_ex, "tags": ex["tags"]})
                             replaced = True
                             break
