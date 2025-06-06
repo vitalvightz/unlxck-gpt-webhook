@@ -1,8 +1,10 @@
 from pathlib import Path
 import json
 from injury_subs import injury_subs
-from training_context import normalize_equipment_list, known_equipment
+from training_context import normalize_equipment_list, known_equipment, allocate_sessions
 
+days_available = flags.get("days_available", len(training_days))
+num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
@@ -144,7 +146,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     base_exercises = substitute_exercises(top_exercises, injuries)
 
-    used_days = training_days[: min(len(training_days), 3)]
+    used_days = training_days[:num_strength_sessions]
     tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
 
     phase_loads = {
