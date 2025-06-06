@@ -54,14 +54,18 @@ def generate_conditioning_block(flags):
             continue
 
         tags = [t.lower() for t in drill.get("tags", [])]
-        base_score = 0
-        base_score += sum(2.5 for t in tags if t in weak_tags)
-        base_score += sum(2 for t in tags if t in goal_tags)
-        base_score += sum(1 for t in tags if t in style_tags)
+        
+        num_weak = sum(1 for t in tags if t in weak_tags)
+        num_goals = sum(1 for t in tags if t in goal_tags)
+        num_style = sum(1 for t in tags if t in style_tags)
 
-        system_score = energy_weights.get(system, 0) * 5
+        base_score = 2.5 * min(num_weak, 2)  # max 5
+        base_score += 2 * min(num_goals, 2)  # max 4
+        base_score += 1 * min(num_style, 2)  # max 2
+        
+        system_score = energy_weights.get(system, 0) * 3  # was *5
+
         total_score = base_score + system_score
-
         system_drills[system].append((drill, total_score))
 
     session_allocation = allocate_sessions(days_available)
