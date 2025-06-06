@@ -67,7 +67,10 @@ def generate_conditioning_block(flags):
 
         total_score = base_score + system_score
         system_drills[system].append((drill, total_score))
-
+        # 🔍 Optional diagnostic: flag if any system has zero drills
+for system_name in ["aerobic", "glycolytic", "alactic"]:
+    if not system_drills[system_name]:
+        output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
     session_allocation = allocate_sessions(days_available)
     num_conditioning_sessions = session_allocation.get("conditioning", 1)
     drills_per_session = 2 if fatigue == "low" else 1
