@@ -71,7 +71,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             "Barbell Back Squat",
             "Trap Bar Deadlift",
             "Barbell Bench Press",
-            "Barbell Overhead Press",
+            "DB / Barbell Overhead Press",
+            "Dumbbell Split Squat",
+            "Pull-Up / Inverted Row",
+            "Sled Push / Sled Drag",
+            "Trapbar / Dumbbell Shrugs
+            "Neck Harness Isometrics"
+            "Landmine Rotations"
+            "Pallof Press (Cable or Band)",
+            "Low Hurdle Hop (Rhythm Focus)", 
         ]
 
     for ex in exercise_bank:
