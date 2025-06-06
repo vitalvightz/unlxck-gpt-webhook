@@ -3,9 +3,6 @@ import json
 from injury_subs import injury_subs
 from training_context import normalize_equipment_list, known_equipment, allocate_sessions
 
-days_available = flags.get("days_available", len(training_days))
-num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
-
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
     user_equipment = [e.lower().strip() for e in user_equipment]
@@ -35,6 +32,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     style = flags.get("style_tactical", "")
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
+
+    days_available = flags.get("days_available", len(training_days))
+    num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
