@@ -43,37 +43,55 @@ def generate_conditioning_block(flags):
 
     # 🧠 Gather system drills
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
-    for drill in conditioning_bank:
-        if phase.upper() not in drill.get("phases", []):
-            continue
 
-        raw_system = drill.get("system", "").lower()
-        system = SYSTEM_ALIASES.get(raw_system, raw_system)
+for drill in conditioning_bank:
+    if phase.upper() not in drill.get("phases", []):
+        continue
 
-        if system not in system_drills:
-            continue
+    raw_system = drill.get("system", "").lower()
+    system = SYSTEM_ALIASES.get(raw_system, raw_system)
 
-        tags = [t.lower() for t in drill.get("tags", [])]
+    if system not in system_drills:
+        continue
 
-        num_weak = sum(1 for t in tags if t in weak_tags)
-        num_goals = sum(1 for t in tags if t in goal_tags)
-        num_style = sum(1 for t in tags if t in style_tags)
+    tags = [t.lower() for t in drill.get("tags", [])]
 
-        base_score = 2.5 * min(num_weak, 2)  # max 5
-        base_score += 2 * min(num_goals, 2)  # max 4
-        base_score += 1 * min(num_style, 2)  # max 2
+    # Score components
+    num_weak = sum(1 for t in tags if t in weak_tags)
+    num_goals = sum(1 for t in tags if t in goal_tags)
+    num_style = sum(1 for t in tags if t in style_tags)
+    num_format = sum(1 for t in tags if t in flags.get("fight_format_tags", []))
 
-        system_score = energy_weights.get(system, 0) * 3  # was *5
+    base_score = 2.5 * min(num_weak, 2)   # Max 5.0
+    base_score += 2.0 * min(num_goals, 2) # Max 4.0
+    base_score += 1.0 * min(num_style, 2) # Max 2.0
+    base_score += 1.0 * min(num_format, 1) # Optional format match bonus
 
-        total_score = base_score + system_score
-        system_drills[system].append((drill, total_score))
+    # Energy system weighting (normalized)
+    energy_multiplier = energy_weights.get(system, 1.0)
+    system_score = round(energy_multiplier * 2.0, 2)  # Scales 1.0–3.0
 
-    session_allocation = allocate_sessions(days_available)
-    num_conditioning_sessions = session_allocation.get("conditioning", 1)
-    drills_per_session = 2 if fatigue == "low" else 1
-    total_drills = num_conditioning_sessions * drills_per_session
+    total_score = base_score + system_score
 
-    final_drills = []
+    # Fatigue penalty for high CNS drills
+    if fatigue == "high" and "high_cns" in tags:
+        total_score -= 1.5
+    elif fatigue == "moderate" and "high_cns" in tags:
+        total_score -= 0.75
+
+    system_drills[system].append((drill, total_score))
+
+# Sort drills by score within each energy system
+for drills in system_drills.values():
+    drills.sort(key=lambda x: x[1], reverse=True)
+
+# Volume logic
+session_allocation = allocate_sessions(days_available)
+num_conditioning_sessions = session_allocation.get("conditioning", 1)
+drills_per_session = 2 if fatigue == "low" else 1
+total_drills = num_conditioning_sessions * drills_per_session
+
+final_drills = []
 
     # 🛠 Enforce 1 drill per system minimum if available
     enforced = set()
