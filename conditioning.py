@@ -6,7 +6,7 @@ from training_context import allocate_sessions
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
 format_weights = json.loads(Path("format_energy_weights.json").read_text())
 
-# Normalize alternate system labels to canonical ones
+# Normalize alternate system labels
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
     "anaerobic_alactic": "alactic",
@@ -41,59 +41,52 @@ def generate_conditioning_block(flags):
     }
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
 
-    # 🧠 Gather system drills
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
 
-for drill in conditioning_bank:
-    if phase.upper() not in drill.get("phases", []):
-        continue
+    for drill in conditioning_bank:
+        if phase.upper() not in drill.get("phases", []):
+            continue
 
-    raw_system = drill.get("system", "").lower()
-    system = SYSTEM_ALIASES.get(raw_system, raw_system)
+        raw_system = drill.get("system", "").lower()
+        system = SYSTEM_ALIASES.get(raw_system, raw_system)
 
-    if system not in system_drills:
-        continue
+        if system not in system_drills:
+            continue
 
-    tags = [t.lower() for t in drill.get("tags", [])]
+        tags = [t.lower() for t in drill.get("tags", [])]
 
-    # Score components
-    num_weak = sum(1 for t in tags if t in weak_tags)
-    num_goals = sum(1 for t in tags if t in goal_tags)
-    num_style = sum(1 for t in tags if t in style_tags)
-    num_format = sum(1 for t in tags if t in flags.get("fight_format_tags", []))
+        num_weak = sum(1 for t in tags if t in weak_tags)
+        num_goals = sum(1 for t in tags if t in goal_tags)
+        num_style = sum(1 for t in tags if t in style_tags)
+        num_format = sum(1 for t in tags if t in flags.get("fight_format_tags", []))
 
-    base_score = 2.5 * min(num_weak, 2)   # Max 5.0
-    base_score += 2.0 * min(num_goals, 2) # Max 4.0
-    base_score += 1.0 * min(num_style, 2) # Max 2.0
-    base_score += 1.0 * min(num_format, 1) # Optional format match bonus
+        base_score = 2.5 * min(num_weak, 2)
+        base_score += 2.0 * min(num_goals, 2)
+        base_score += 1.0 * min(num_style, 2)
+        base_score += 1.0 * min(num_format, 1)
 
-    # Energy system weighting (normalized)
-    energy_multiplier = energy_weights.get(system, 1.0)
-    system_score = round(energy_multiplier * 2.0, 2)  # Scales 1.0–3.0
+        energy_multiplier = energy_weights.get(system, 1.0)
+        system_score = round(energy_multiplier * 2.0, 2)
 
-    total_score = base_score + system_score
+        total_score = base_score + system_score
 
-    # Fatigue penalty for high CNS drills
-    if fatigue == "high" and "high_cns" in tags:
-        total_score -= 1.5
-    elif fatigue == "moderate" and "high_cns" in tags:
-        total_score -= 0.75
+        if fatigue == "high" and "high_cns" in tags:
+            total_score -= 1.5
+        elif fatigue == "moderate" and "high_cns" in tags:
+            total_score -= 0.75
 
-    system_drills[system].append((drill, total_score))
+        system_drills[system].append((drill, total_score))
 
-# Sort drills by score within each energy system
-for drills in system_drills.values():
-    drills.sort(key=lambda x: x[1], reverse=True)
+    for drills in system_drills.values():
+        drills.sort(key=lambda x: x[1], reverse=True)
 
-# Volume logic
-session_allocation = allocate_sessions(days_available)
-num_conditioning_sessions = session_allocation.get("conditioning", 1)
-drills_per_session = 2 if fatigue == "low" else 1
-total_drills = num_conditioning_sessions * drills_per_session
+    session_allocation = allocate_sessions(days_available)
+    num_conditioning_sessions = session_allocation.get("conditioning", 1)
+    drills_per_session = 2 if fatigue == "low" else 1
+    total_drills = num_conditioning_sessions * drills_per_session
 
-final_drills = []
+    final_drills = []
 
-    # 🛠 Enforce 1 drill per system minimum if available
     enforced = set()
     for system in preferred_order:
         candidates = sorted(system_drills.get(system, []), key=lambda x: x[1], reverse=True)
@@ -101,7 +94,6 @@ final_drills = []
             final_drills.append((system, [candidates[0][0]]))
             enforced.add(system)
 
-    # Fill remaining slots by system weight
     remaining_slots = total_drills - len(final_drills)
     for system in preferred_order:
         if remaining_slots <= 0:
@@ -118,10 +110,8 @@ final_drills = []
         final_drills.append((system, [d[0] for d in available[:count]]))
         remaining_slots -= count
 
-    # 📤 Output
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
 
-    # 🔍 Optional diagnostic: flag if any system has zero drills
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if not system_drills[system_name]:
             output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
