@@ -232,7 +232,7 @@ Athlete Profile:
         return {"error": "Failed to generate plan from OpenAI"}
 
     # Async-safe Google Doc creation
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     for _ in range(2):  # retry once if it fails
         try:
             doc_link = await loop.run_in_executor(
