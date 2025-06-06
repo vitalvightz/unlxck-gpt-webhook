@@ -65,7 +65,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     weighted_exercises = []
 
-    for ex in exercise_bank:
+        for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
 
@@ -83,12 +83,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             "SPP": -3,
             "TAPER": -2
         }
-        rehab_penalty = rehab_penalty_by_phase.get(phase, 0) if method == "rehab" else 0
+        rehab_penalty = rehab_penalty_by_phase.get(phase.upper(), 0) if method == "rehab" else 0
 
         score = 0
-        score += sum(2.5 for tag in tags if tag in (weaknesses or []))
-        score += sum(2 for tag in tags if tag in goal_tags)
-        score += sum(1 for tag in tags if tag in style_tags)
+        weakness_matches = sum(1 for tag in tags if tag in (weaknesses or []))
+        goal_matches = sum(1 for tag in tags if tag in goal_tags)
+        style_matches = sum(1 for tag in tags if tag in style_tags)
+
+        score += weakness_matches * 1.5
+        score += goal_matches * 1.25
+        score += style_matches * 1.0
+
+        if style_matches >= 2:
+            score += 2  # Style bonus
+
+        if (weakness_matches + goal_matches + style_matches) >= 3:
+            score += 1  # Extra synergy bonus
+
         score += penalty
         score += rehab_penalty
 
