@@ -65,7 +65,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     weighted_exercises = []
 
-        for ex in exercise_bank:
+    for ex in exercise_bank:
         if phase not in ex["phases"]:
             continue
 
@@ -156,7 +156,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     base_exercises = substitute_exercises(top_exercises, injuries)
 
     used_days = training_days[:num_strength_sessions]
-    tags_by_day = {day: list(set(ex["tags"])) for day, ex in zip(used_days, base_exercises)}
 
     phase_loads = {
         "GPP": (
