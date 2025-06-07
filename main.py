@@ -183,12 +183,7 @@ async def handle_submission(request: Request):
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
     # Format mindset output
-    mindset_block = ""
-    for block, content in mindset_output.items():
-        mindset_block += f"\n🧠 **{block.upper()}**\n{content['advice']}"
-        if content["activation"]:
-            mindset_block += f"\n🔑 Activation: {content['activation']}"
-
+    mindset_block = get_mindset_by_phase(phase, flags)
     athlete_profile = f"""
 Athlete Profile:
 - Name: {full_name}
