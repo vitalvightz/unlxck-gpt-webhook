@@ -16,16 +16,46 @@ style_tag_map = {
 
 # Goal tags
 goal_tag_map = {
-    "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
-    "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
-    "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
-    "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
-    "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors", "stability"],
-    "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
-    "striking": ["striking", "boxing", "muay_thai", "shoulders", "rate_of_force", "coordination", "visual_processing"],
-    "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
-    "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
-    "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
+    "power": [
+        "explosive", "rate_of_force", "triple_extension", "horizontal_power",
+        "plyometric", "elastic", "lateral_power", "deadlift",
+        "ATP-PCr", "anaerobic_alactic", "speed_strength"
+    ],
+    "strength": [
+        "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
+        "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric"
+    ],
+    "endurance": [
+        "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
+        "conditioning", "improvised", "volume_tolerance"
+    ],
+    "speed": [
+        "speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
+        "visual_processing", "reactive_decision"
+    ],
+    "mobility": [
+        "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
+        "stability", "movement_quality", "range"
+    ],
+    "grappling": [
+        "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+        "manual_resistance", "positioning"
+    ],
+    "striking": [
+        "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
+        "coordination", "visual_processing", "rhythm", "timing"
+    ],
+    "injury prevention": [
+        "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
+        "cns_freshness", "unilateral", "movement_quality", "stability"
+    ],
+    "mental resilience": [
+        "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
+        "focus", "environmental", "pressure_tolerance"
+    ],
+    "skill refinement": [
+        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
+    ]
 }
 
 
