@@ -3,6 +3,13 @@ import json
 from injury_subs import injury_subs
 from training_context import normalize_equipment_list, known_equipment, allocate_sessions
 
+# Optional equipment boosts by training phase
+phase_equipment_boost = {
+    "GPP": {"barbell", "trap_bar", "sled", "pullup_bar"},
+    "SPP": {"landmine", "cable", "medicine_ball", "bands"},
+    "TAPER": {"medicine_ball", "bodyweight", "band", "partner"}
+}
+
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
     user_equipment = [e.lower().strip() for e in user_equipment]
@@ -91,11 +98,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     ]
 }
 
-
-
     style_tags = style_tag_map.get(style.lower(), [])
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
-
+# Phase-aware equipment boost
+if phase:
+    boosted_tools = phase_equipment_boost.get(phase.upper(), set())
+    if any(eq in boosted_tools for eq in exercise.get("equipment", [])):
+        score += 1  # Mild boost for phase-appropriate gear
     weighted_exercises = []
 
     for ex in exercise_bank:
