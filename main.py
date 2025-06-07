@@ -38,11 +38,11 @@ GOAL_NORMALIZER = {
     "Grip Strength": "grip",
     "Posterior Chain": "posterior_chain",
     "Knees": "quad_dominant",
-    "Neck": "neck"
-    "Grappling": "grappling"
-    "Striking": "striking"
-    "Injury Prevention": "injury prevention"
-    "Mental Resilience": "mental resilience"
+    "Neck": "neck",
+    "Grappling": "grappling",
+    "Striking": "striking",
+    "Injury Prevention": "injury prevention",
+    "Mental Resilience": "mental resilience",
     "Skill Refinement": "skill refinement"
 }
 # Auth
