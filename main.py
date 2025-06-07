@@ -174,7 +174,6 @@ async def handle_submission(request: Request):
     }
 
     # Module generation
-    mindset_output = get_mindset_by_phase(phase, training_context)
     mental_strategies = get_mental_protocols(training_context["mental_block"])
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
@@ -183,7 +182,7 @@ async def handle_submission(request: Request):
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
     # Format mindset output
-    mindset_block = get_mindset_by_phase(phase, flags)
+    mindset_block = get_mindset_by_phase(phase, training_context)
     athlete_profile = f"""
 Athlete Profile:
 - Name: {full_name}
