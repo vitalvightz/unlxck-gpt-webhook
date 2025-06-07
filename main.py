@@ -20,6 +20,26 @@ from recovery import generate_recovery_block
 from nutrition import generate_nutrition_block
 from injury_subs import generate_injury_subs
 
+GOAL_NORMALIZER = {
+    "Power & Explosiveness": "explosive",
+    "Conditioning / Endurance": "conditioning",
+    "Maximal Strength": "strength",
+    "Mobility": "mobility",
+    "Speed": "reactive",
+    "Agility": "lateral",
+    "Core Stability": "core",
+    "CNS Fatigue": "cns",
+    "Speed / Reaction": "reactive",
+    "Lateral Movement": "lateral",
+    "Rotation": "rotational",
+    "Balance": "balance",
+    "Shoulders": "shoulders",
+    "Hip Mobility": "hip",
+    "Grip Strength": "grip",
+    "Posterior Chain": "posterior_chain",
+    "Knees": "quad_dominant",
+    "Neck": "neck"
+}
 # Auth
 if os.getenv("GOOGLE_CREDS_B64"):
     with open("clientsecrettallyso.json", "w") as f:
