@@ -30,6 +30,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     style = flags.get("style_tactical", [])
+    style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
 
