@@ -16,6 +16,7 @@ style_tag_map = {
 
 # Goal tags
 goal_tag_map = {
+    goal_tag_map = {
     "power": [
         "explosive", "rate_of_force", "triple_extension", "horizontal_power",
         "plyometric", "elastic", "lateral_power", "deadlift",
@@ -35,7 +36,7 @@ goal_tag_map = {
     ],
     "mobility": [
         "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
-        "stability", "movement_quality", "range"
+        "stability", "movement_quality", "range", "rehab_friendly"
     ],
     "grappling": [
         "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
@@ -47,7 +48,7 @@ goal_tag_map = {
     ],
     "injury prevention": [
         "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
-        "cns_freshness", "unilateral", "movement_quality", "stability"
+        "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
     ],
     "mental resilience": [
         "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
