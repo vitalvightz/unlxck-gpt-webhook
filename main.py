@@ -190,7 +190,7 @@ async def handle_submission(request: Request):
     taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
     taper_block = generate_strength_block(flags=taper_flags, weaknesses=training_context["weaknesses"])
     strength_block = "\n\n".join([gpp_block["block"], spp_block["block"], taper_block["block"]])
-    conditioning_block = generate_conditioning_block(training_context)
+    conditioning_block, _ = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)

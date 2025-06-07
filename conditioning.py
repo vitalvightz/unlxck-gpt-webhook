@@ -137,6 +137,7 @@ def generate_conditioning_block(flags):
     }
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
+    selected_drill_names = []
 
     for drill in conditioning_bank:
         if phase.upper() not in drill.get("phases", []):
@@ -148,6 +149,18 @@ def generate_conditioning_block(flags):
             continue
 
         tags = [t.lower() for t in drill.get("tags", [])]
+
+        # Suppress high CNS drills in TAPER unless criteria met
+        if (
+            phase.upper() == "TAPER"
+            and "high_cns" in tags
+            and not (
+                fatigue == "low"
+                and system == "alactic"
+                and any(t in weak_tags or t in goal_tags for t in tags)
+            )
+        ):
+            continue
 
         num_weak = sum(1 for t in tags if t in weak_tags)
         num_goals = sum(1 for t in tags if t in goal_tags)
@@ -181,6 +194,21 @@ def generate_conditioning_block(flags):
     final_drills = []
     taper_selected = 0
 
+    def pick_drill(system: str):
+        for drill, _ in system_drills.get(system, []):
+            name = drill.get("name")
+            tags = [t.lower() for t in drill.get("tags", [])]
+            allow_repeat = (
+                phase.upper() == "TAPER"
+                and system == "alactic"
+                and any(t in weak_tags for t in tags)
+            )
+            if name in selected_drill_names and not allow_repeat:
+                continue
+            selected_drill_names.append(name)
+            return drill
+        return None
+
     if phase.upper() == "TAPER":
         total_drills = min(total_drills, 3)
         style_list = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
@@ -191,34 +219,60 @@ def generate_conditioning_block(flags):
         )
 
         if system_drills["alactic"]:
-            final_drills.append(("alactic", [system_drills["alactic"][0][0]]))
-            taper_selected += 1
+            d = pick_drill("alactic")
+            if d:
+                final_drills.append(("alactic", [d]))
+                taper_selected += 1
 
         if allow_aerobic and taper_selected < 2 and system_drills["aerobic"]:
-            final_drills.append(("aerobic", [system_drills["aerobic"][0][0]]))
-            taper_selected += 1
+            d = pick_drill("aerobic")
+            if d:
+                final_drills.append(("aerobic", [d]))
+                taper_selected += 1
 
         if allow_glycolytic and taper_selected < 2 and system_drills["glycolytic"]:
-            final_drills.append(("glycolytic", [system_drills["glycolytic"][0][0]]))
-            taper_selected += 1
+            d = pick_drill("glycolytic")
+            if d:
+                final_drills.append(("glycolytic", [d]))
+                taper_selected += 1
     else:
         enforced = set()
         for system in preferred_order:
             candidates = system_drills.get(system, [])
-            if candidates:
-                final_drills.append((system, [candidates[0][0]]))
+            for drill, _ in candidates:
+                name = drill.get("name")
+                tags = [t.lower() for t in drill.get("tags", [])]
+                allow_repeat = (
+                    phase.upper() == "TAPER"
+                    and system == "alactic"
+                    and any(t in weak_tags for t in tags)
+                )
+                if name in selected_drill_names and not allow_repeat:
+                    continue
+                final_drills.append((system, [drill]))
+                selected_drill_names.append(name)
                 enforced.add(system)
+                break
 
-        remaining_slots = total_drills - len(final_drills)
+        remaining_slots = total_drills - len(selected_drill_names)
         for system in preferred_order:
             if remaining_slots <= 0:
                 break
-            available = [d for d in system_drills[system] if d[0] not in [dr[0] for _, drills in final_drills for dr in drills]]
-            if not available:
-                continue
-            count = min(remaining_slots, len(available))
-            final_drills.append((system, [d[0] for d in available[:count]]))
-            remaining_slots -= count
+            for drill, _ in system_drills.get(system, []):
+                name = drill.get("name")
+                tags = [t.lower() for t in drill.get("tags", [])]
+                allow_repeat = (
+                    phase.upper() == "TAPER"
+                    and system == "alactic"
+                    and any(t in weak_tags for t in tags)
+                )
+                if name in selected_drill_names and not allow_repeat:
+                    continue
+                final_drills.append((system, [drill]))
+                selected_drill_names.append(name)
+                remaining_slots -= 1
+                if remaining_slots <= 0:
+                    break
 
     taper_drill_count = sum(len(drills) for _, drills in final_drills) if phase.upper() == "TAPER" else 0
 
@@ -242,8 +296,4 @@ def generate_conditioning_block(flags):
     elif fatigue == "moderate":
         output_lines.append("\n⚠️ Moderate fatigue – monitor recovery and hydration closely.")
 
-    return {
-        "block": "\n".join(output_lines),
-        "num_sessions": len(final_drills),
-        "taper_conditioning_drills": taper_drill_count
-    }
+    return "\n".join(output_lines), selected_drill_names
