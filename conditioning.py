@@ -30,6 +30,16 @@ def generate_conditioning_block(flags):
     fight_format = style_map.get(technical, "mma")
     energy_weights = format_weights.get(fight_format, {})
 
+    format_tag_map = {
+        "mma": ["mma", "bjj", "wrestling"],
+        "boxing": ["boxing"],
+        "kickboxing": ["kickboxing", "muay_thai"],
+        "muay_thai": ["muay_thai"]
+    }
+    fight_format_tags = flags.get("fight_format_tags")
+    if fight_format_tags is None:
+        fight_format_tags = format_tag_map.get(fight_format, [])
+    
     style_tags = [style] if style else []
     goal_tags = [g.lower() for g in goals]
     weak_tags = [w.lower() for w in weaknesses]
@@ -58,8 +68,10 @@ def generate_conditioning_block(flags):
         num_weak = sum(1 for t in tags if t in weak_tags)
         num_goals = sum(1 for t in tags if t in goal_tags)
         num_style = sum(1 for t in tags if t in style_tags)
-        num_format = sum(1 for t in tags if t in flags.get("fight_format_tags", []))
+        num_format = sum(1 for t in tags if t in fight_format_tags)
 
+        # Base scoring weighs weaknesses and goals most heavily
+        # with smaller bonuses for style and fight format matches.
         base_score = 2.5 * min(num_weak, 2)
         base_score += 2.0 * min(num_goals, 2)
         base_score += 1.0 * min(num_style, 2)
