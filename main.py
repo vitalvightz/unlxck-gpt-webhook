@@ -41,9 +41,9 @@ GOAL_NORMALIZER = {
     "Neck": "neck"
     "Grappling": "grappling"
     "Striking": "striking"
-    "Injury Prevention": "injury_prevention"
-    "Mental Resilience": "mental_resilience"
-    "Skill Refinement": "skill_refinement"
+    "Injury Prevention": "injury prevention"
+    "Mental Resilience": "mental resilience"
+    "Skill Refinement": "skill refinement"
 }
 # Auth
 if os.getenv("GOOGLE_CREDS_B64"):
