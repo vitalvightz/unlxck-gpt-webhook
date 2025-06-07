@@ -191,7 +191,7 @@ async def handle_submission(request: Request):
 Avoid training through pain. Prioritize recovery. Emphasize technique.
 
 ## MINDSET
-{mindset_block}
+{mental_block}
 
 ## MENTAL PROTOCOLS
 {mental_strategies}
