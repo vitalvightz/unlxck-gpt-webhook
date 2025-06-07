@@ -178,6 +178,7 @@ async def handle_submission(request: Request):
     flags["mental_block"] = classify_mental_block(mental_block)
 
     mindset_output = get_mindset_by_phase(phase, flags)
+    sections.append(mindset_output)
     formatted = ""
     for block, content in mindset_output.items():
         formatted += f"\n🧠 **{block.upper()}**\n{content['advice']}"
