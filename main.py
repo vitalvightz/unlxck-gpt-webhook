@@ -183,30 +183,7 @@ async def handle_submission(request: Request):
 
     # Format mindset output
     mindset_block = get_mindset_by_phase(phase, training_context)
-    athlete_profile = f"""
-Athlete Profile:
-- Name: {full_name}
-- Age: {age}
-- Weight: {weight}kg
-- Target Weight: {target_weight}kg
-- Height: {height}cm
-- Technical Style: {fighting_style_technical}
-- Tactical Style: {fighting_style_tactical}
-- Stance: {stance}
-- Level: {status}
-- Record: {record}
-- Fight Format: {rounds_format}
-- Fight Date: {next_fight_date}
-- Weeks Out: {weeks_out}
-- Fatigue Level: {fatigue}
-- Injuries: {injuries}
-- Available S&C Days: {available_days}
-- Weaknesses: {weak_areas}
-- Key Goals: {key_goals}
-- Mindset Challenges: {mental_block}
-- Extra Notes: {notes}
-"""
-
+    
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
@@ -236,7 +213,56 @@ Avoid training through pain. Prioritize recovery. Emphasize technique.
 
 ---
 
-{athlete_profile}
+prompt = f"""
+# CONTEXT BLOCKS – Use these to build the plan
+
+## SAFETY
+Avoid training through pain. Prioritize recovery. Emphasize technique.
+
+## MINDSET
+{mindset_block}
+
+## MENTAL PROTOCOLS
+{mental_strategies}
+
+## STRENGTH
+{strength_block["block"]}
+
+## CONDITIONING
+{conditioning_block}
+
+## RECOVERY
+{recovery_block}
+
+## NUTRITION
+{nutrition_block}
+
+## INJURY SUBSTITUTIONS
+{injury_sub_block}
+
+---
+
+Athlete Profile:
+- Name: {full_name}
+- Age: {age}
+- Weight: {weight}kg
+- Target Weight: {target_weight}kg
+- Height: {height}cm
+- Technical Style: {fighting_style_technical}
+- Tactical Style: {fighting_style_tactical}
+- Stance: {stance}
+- Level: {status}
+- Record: {record}
+- Fight Format: {rounds_format}
+- Fight Date: {next_fight_date}
+- Weeks Out: {weeks_out}
+- Fatigue Level: {fatigue}
+- Injuries: {injuries}
+- Available S&C Days: {available_days}
+- Weaknesses: {weak_areas}
+- Key Goals: {key_goals}
+- Mindset Challenges: {mental_block}
+- Extra Notes: {notes}
 """
 
     try:
