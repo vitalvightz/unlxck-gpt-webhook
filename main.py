@@ -181,8 +181,8 @@ async def handle_submission(request: Request):
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
-    
-print("== NUTRITION BLOCK ==\n", nutrition_block)
+
+    print("== NUTRITION BLOCK ==\n", nutrition_block)
 
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
@@ -249,7 +249,7 @@ Athlete Profile:
             temperature=0.3,
             max_tokens=3000,
         )
-        full_plan = response.choices[0].message.content.strip()More actions
+        full_plan = response.choices[0].message.content.strip()
         print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
     except Exception as e:
         print("❌ GPT API Error:", e)
