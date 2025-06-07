@@ -101,6 +101,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     # Equipment boost logic
     boosted_tools = phase_equipment_boost.get(phase.upper(), set())
 
+    phase_tag_boost = {
+        "GPP": {"triphasic": 1, "tempo": 1, "eccentric": 1},
+        "SPP": {"contrast": 1.5, "explosive": 1.5},
+        "TAPER": {"neural_primer": 2, "cluster": 2, "speed": 2},
+    }
+
+    prev_exercises = set(flags.get("prev_exercises", []))
+
     weighted_exercises = []
     for ex in exercise_bank:
         if phase not in ex["phases"]:
@@ -126,6 +134,24 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             score += 2
         if (weakness_matches + goal_matches + style_matches) >= 3:
             score += 1
+
+        # Phase-specific tag boosts
+        for tag in tags:
+            score += phase_tag_boost.get(phase, {}).get(tag, 0)
+
+        # Avoid repeating from previous block
+        if ex.get("name") in prev_exercises:
+            score -= 2
+
+        # Fatigue-aware penalties
+        ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+        if fatigue in {"high", "moderate"}:
+            eq_pen = -1.5 if fatigue == "high" else -0.75
+            tag_pen = -1.0 if fatigue == "high" else -0.5
+            if any(eq in {"barbell", "trap_bar", "sled"} for eq in ex_equipment):
+                score += eq_pen
+            if any(t in {"compound", "axial"} for t in tags):
+                score += tag_pen
 
         # Boost score if phase-relevant equipment is used
         if any(eq in boosted_tools for eq in ex.get("equipment", [])):
