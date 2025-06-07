@@ -68,7 +68,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     ],
     "mobility": [
         "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
-        "stability", "movement_quality", "range"
+        "stability", "movement_quality", "range", "rehab_friendly"
     ],
     "grappling": [
         "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
@@ -80,7 +80,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     ],
     "injury prevention": [
         "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
-        "cns_freshness", "unilateral", "movement_quality", "stability"
+        "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
     ],
     "mental resilience": [
         "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
