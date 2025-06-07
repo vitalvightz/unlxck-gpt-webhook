@@ -177,7 +177,14 @@ async def handle_submission(request: Request):
     flags = training_context.copy()
     flags["mental_block"] = classify_mental_block(mental_block)
 
-    mindset_block = get_mindset_by_phase(phase, flags)
+    mindset_output = get_mindset_by_phase(phase, flags)
+    formatted = ""
+    for block, content in mindset_output.items():
+        formatted += f"\n🧠 **{block.upper()}**\n{content['advice']}"
+        if content["activation"]:
+            formatted += f"\n🔑 Activation: {content['activation']}"
+    
+    mindset_block = formatted
     mental_strategies = get_mental_protocols(flags["mental_block"])
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
