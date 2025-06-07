@@ -16,7 +16,6 @@ style_tag_map = {
 
 # Goal tags
 goal_tag_map = {
-    goal_tag_map = {
     "power": [
         "explosive", "rate_of_force", "triple_extension", "horizontal_power",
         "plyometric", "elastic", "lateral_power", "deadlift",
