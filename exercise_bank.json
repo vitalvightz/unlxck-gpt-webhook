@@ -10,6 +10,227 @@
     "equipment": "trap_bar"
   },
   {
+    {
+    "name": "Trap Bar Deadlift",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "compound"],
+    "equipment": "trap_bar"
+},
+{
+    "name": "Back Squat",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "compound"],
+    "equipment": "barbell"
+},
+{
+    "name": "Bulgarian Split Squat",
+    "category": "lower_body",
+    "phases": ["SPP", "TAPER"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": ["quad_dominant", "balance"],
+    "equipment": "dumbbells"
+},
+{
+    "name": "Romanian Deadlift (RDL)",
+    "category": "lower_body",
+    "phases": ["GPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "hamstring"],
+    "equipment": "barbell"
+},
+{
+    "name": "Front Squat",
+    "category": "lower_body",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["quad_dominant", "core"],
+    "equipment": "barbell"
+},
+{
+    "name": "Trap Bar Jump (Light)",
+    "category": "lower_body",
+    "phases": ["TAPER"],
+    "method": "power",
+    "movement": "squat",
+    "type": "bilateral",
+    "tags": ["neural_primer", "explosive"],
+    "equipment": "trap_bar"
+},
+{
+    "name": "Band-Resisted Sprawl to Sprint",
+    "category": "wrestling",
+    "phases": ["TAPER"],
+    "method": "power",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["neural_primer", "explosive", "reactive"],
+    "equipment": "bands"
+},
+{
+    "name": "Depth Drop → 5m Sprint",
+    "category": "locomotion",
+    "phases": ["TAPER"],
+    "method": "plyometric",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["neural_primer", "reactive", "speed"],
+    "equipment": "box"
+},
+{
+    "name": "Med Ball Scoop Toss",
+    "category": "striking",
+    "phases": ["TAPER"],
+    "method": "power",
+    "movement": "rotational",
+    "type": "bilateral",
+    "tags": ["neural_primer", "rotational", "rate_of_force"],
+    "equipment": "medicine_ball"
+},
+{
+    "name": "Cluster Set Trap Bar Deadlift",
+    "category": "deadlift",
+    "phases": ["TAPER"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["neural_primer", "cluster", "posterior_chain"],
+    "equipment": "trap_bar"
+},
+{
+    "name": "Back Squat → Box Jump",
+    "category": "lower_body",
+    "phases": ["SPP"],
+    "method": "contrast",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["contrast", "explosive", "quad_dominant"],
+    "equipment": "barbell,box"
+},
+{
+    "name": "DB Bench Press → Plyo Push-Up",
+    "category": "upper_body",
+    "phases": ["SPP"],
+    "method": "contrast",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["contrast", "rate_of_force", "chest"],
+    "equipment": "dumbbells"
+},
+{
+    "name": "Heavy RDL → Broad Jump",
+    "category": "lower_body",
+    "phases": ["SPP"],
+    "method": "contrast",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["contrast", "explosive", "posterior_chain"],
+    "equipment": "barbell"
+},
+{
+    "name": "Landmine Press → Med Ball Chest Pass",
+    "category": "upper_body",
+    "phases": ["SPP"],
+    "method": "contrast",
+    "movement": "compound",
+    "type": "unilateral",
+    "tags": ["contrast", "shoulders", "anti_rotation"],
+    "equipment": "landmine,medicine_ball"
+},
+{
+    "name": "Tempo Split Squat (4-0-1)",
+    "category": "lower_body",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": ["triphasic", "eccentric", "unilateral"],
+    "equipment": "dumbbells"
+},
+{
+    "name": "Iso Deadlift Hold",
+    "category": "lower_body",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["isometric", "posterior_chain"],
+    "equipment": "barbell"
+},
+{
+    "name": "Hang Power Clean",
+    "category": "full_body",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "olympic",
+    "type": "bilateral",
+    "tags": ["explosive", "triple_extension"],
+    "equipment": "barbell"
+},
+{
+    "name": "Landmine Rotational Press",
+    "category": "upper_body",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": ["explosive", "anti_rotation"],
+    "equipment": "landmine"
+},
+{
+    "name": "Zercher Squat → Sprawl Jump",
+    "category": "wrestling",
+    "phases": ["SPP"],
+    "method": "contrast",
+    "movement": "compound",
+    "type": "bilateral",
+    "tags": ["explosive", "grappling_transfer"],
+    "equipment": "sandbag"
+},
+{
+    "name": "Band-Resisted Clinch Knee Strike",
+    "category": "muay_thai",
+    "phases": ["SPP"],
+    "method": "power",
+    "movement": "unilateral",
+    "type": "unilateral",
+    "tags": ["rate_of_force", "hip_dominant"],
+    "equipment": "bands"
+},
+{
+    "name": "Anti-Rotation Med Ball Slam",
+    "category": "core",
+    "phases": ["TAPER"],
+    "method": "power",
+    "movement": "core",
+    "type": "bilateral",
+    "tags": ["neural_primer", "anti_rotation", "core"],
+    "equipment": "medicine_ball"
+},
+{
+    "name": "Tempo Chin-Up (5-0-1)",
+    "category": "pull",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["triphasic", "eccentric", "grip"],
+    "equipment": "pullup_bar"
+  },
+  {
     "name": "Back Squat",
     "category": "lower_body",
     "phases": ["GPP", "SPP"],
