@@ -40,6 +40,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     training_days = flags.get("training_days", [])
     days_available = flags.get("days_available", len(training_days))
     num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
+    prev_exercises = flags.get("prev_exercises", [])
 
     # Style and goal tags
     style_tag_map = {
@@ -107,7 +108,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         "TAPER": {"neural_primer": 2, "cluster": 2, "speed": 2},
     }
 
-    prev_exercises = set(flags.get("prev_exercises", []))
 
     weighted_exercises = []
     for ex in exercise_bank:
@@ -141,7 +141,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
         # Avoid repeating from previous block
         if ex.get("name") in prev_exercises:
-            score -= 2
+            score -= 1  # Light penalty for repeat lifts
 
         # Fatigue-aware penalties
         ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
@@ -235,4 +235,5 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         "block": "\n".join(strength_output),
         "num_sessions": len(used_days),
         "preferred_tags": list(set(all_tags)),
+        "exercises": base_exercises,
     }

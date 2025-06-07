@@ -171,12 +171,25 @@ async def handle_submission(request: Request):
         "mental_block": classify_mental_block(mental_block),
         "age": int(age) if age.isdigit() else 0,
         "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
+        "prev_exercises": [],
     }
 
     # Module generation
     mental_block = get_mindset_by_phase(phase, training_context)
     mental_strategies = get_mental_protocols(training_context["mental_block"])
-    strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
+
+    # === Strength blocks per phase with repeat filtering ===
+    gpp_flags = {**training_context, "phase": "GPP"}
+    gpp_block = generate_strength_block(flags=gpp_flags, weaknesses=training_context["weaknesses"])
+    gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
+
+    spp_flags = {**training_context, "phase": "SPP", "prev_exercises": gpp_ex_names}
+    spp_block = generate_strength_block(flags=spp_flags, weaknesses=training_context["weaknesses"])
+    spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
+
+    taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
+    taper_block = generate_strength_block(flags=taper_flags, weaknesses=training_context["weaknesses"])
+    strength_block = "\n\n".join([gpp_block["block"], spp_block["block"], taper_block["block"]])
     conditioning_block = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
@@ -197,7 +210,7 @@ Avoid training through pain. Prioritize recovery. Emphasize technique.
 {mental_strategies}
 
 ## STRENGTH
-{strength_block["block"]}
+{strength_block}
 
 ## CONDITIONING
 {conditioning_block}
