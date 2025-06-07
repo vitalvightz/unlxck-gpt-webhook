@@ -184,40 +184,8 @@ async def handle_submission(request: Request):
     # Format mindset output
     mindset_block = get_mindset_by_phase(phase, training_context)
     
-    prompt = f"""
-# CONTEXT BLOCKS – Use these to build the plan
-
-## SAFETY
-Avoid training through pain. Prioritize recovery. Emphasize technique.
-
-## MINDSET
-{mindset_block}
-
-## MENTAL PROTOCOLS
-{mental_strategies}
-
-## STRENGTH
-{strength_block["block"]}
-
-## CONDITIONING
-{conditioning_block}
-
-## RECOVERY
-{recovery_block}
-
-## NUTRITION
-{nutrition_block}
-
-## INJURY SUBSTITUTIONS
-{injury_sub_block}
-
----
-
 prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
-
-## SAFETY
-Avoid training through pain. Prioritize recovery. Emphasize technique.
 
 ## MINDSET
 {mindset_block}
