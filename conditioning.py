@@ -3,28 +3,28 @@ from pathlib import Path
 from training_context import allocate_sessions
 
 style_tag_map = {
-        "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
-        "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
-        "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
-        "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
-        "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
-        "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
-        "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
-        "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
-    }
+    "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
+    "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
+    "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
+    "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
+    "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
+    "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
+    "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
+    "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
+}
 
-    goal_tag_map = {
-        "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
-        "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
-        "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
-        "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
-        "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors", "stability"],
-        "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
-        "striking": ["striking", "boxing", "muay_thai", "shoulders", "rate_of_force", "coordination", "visual_processing"],
-        "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
-        "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
-        "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
-    }
+goal_tag_map = {
+    "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
+    "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
+    "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
+    "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
+    "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors", "stability"],
+    "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
+    "striking": ["striking", "boxing", "muay_thai", "shoulders", "rate_of_force", "coordination", "visual_processing"],
+    "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
+    "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
+    "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
+}
 
 # Load banks
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
