@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from training_context import allocate_sessions
 
+# Map for tactical styles
 style_tag_map = {
     "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
     "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
@@ -13,10 +14,11 @@ style_tag_map = {
     "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
 }
 
+# Goal tags
 goal_tag_map = {
-    "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
-    "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
-    "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
+    "power & explosiveness": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
+    "maximal strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
+    "conditioning / endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
     "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
     "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors", "stability"],
     "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
@@ -24,6 +26,23 @@ goal_tag_map = {
     "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
     "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
     "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
+}
+
+# Weakness tags (based directly on the form's checkbox labels)
+weakness_tag_map = {
+    "core stability": ["core", "anti_rotation"],
+    "cns fatigue": ["cns_freshness", "parasympathetic"],
+    "speed / reaction": ["speed", "reaction", "reactive", "coordination"],
+    "lateral movement": ["lateral_power", "agility", "balance"],
+    "conditioning": ["aerobic", "glycolytic", "work_capacity"],
+    "rotation": ["rotational", "anti_rotation"],
+    "balance": ["balance", "stability", "unilateral"],
+    "explosiveness": ["explosive", "rate_of_force", "plyometric"],
+    "shoulders": ["shoulders", "upper_body"],
+    "hip mobility": ["hip_dominant", "mobility"],
+    "grip strength": ["grip", "pull"],
+    "posterior chain": ["posterior_chain", "hip_dominant"],
+    "knees": ["quad_dominant", "eccentric"]
 }
 
 # Load banks
@@ -47,16 +66,22 @@ def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     fatigue = flags.get("fatigue", "low")
     style = flags.get("style_tactical", [])
-    technical = flags.get("style_technical", "").lower()
+    technical = flags.get("style_technical", [])
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
     days_available = flags.get("days_available", 3)
+
+    # Handle multiple technical styles
+    if isinstance(technical, list):
+        technical = technical[0].lower()
+    else:
+        technical = technical.lower()
 
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     style_tags = [t for s in style_tags for t in style_tag_map.get(s, [])]
 
     goal_tags = expand_tags(goals, goal_tag_map)
-    weak_tags = expand_tags(weaknesses, goal_tag_map)
+    weak_tags = expand_tags(weaknesses, weakness_tag_map)
 
     style_map = {
         "mma": "mma", "boxer": "boxing", "kickboxer": "kickboxing",
@@ -80,7 +105,6 @@ def generate_conditioning_block(flags):
         "TAPER": ["aerobic", "alactic"]
     }
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
-
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
 
     for drill in conditioning_bank:
@@ -150,18 +174,12 @@ def generate_conditioning_block(flags):
     for system, drills in final_drills:
         output_lines.append(f"\n📌 **System: {system.upper()}** (scaled by format emphasis)")
         for d in drills:
-            name = d.get("name", "Unnamed Drill")
-            load = d.get("load", "—")
-            rest = d.get("rest", "—")
-            timing = d.get("timing", "—")
-            purpose = d.get("purpose", "—")
-            red_flags = d.get("red_flags", "None")
-            output_lines.append(f"- **Drill:** {name}")
-            output_lines.append(f"  • Load: {load}")
-            output_lines.append(f"  • Rest: {rest}")
-            output_lines.append(f"  • Timing: {timing}")
-            output_lines.append(f"  • Purpose: {purpose}")
-            output_lines.append(f"  • ⚠️ Red Flags: {red_flags}")
+            output_lines.append(f"- **Drill:** {d.get('name', 'Unnamed Drill')}")
+            output_lines.append(f"  • Load: {d.get('load', '—')}")
+            output_lines.append(f"  • Rest: {d.get('rest', '—')}")
+            output_lines.append(f"  • Timing: {d.get('timing', '—')}")
+            output_lines.append(f"  • Purpose: {d.get('purpose', '—')}")
+            output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
 
     if fatigue == "high":
         output_lines.append("\n⚠️ High fatigue detected – conditioning volume reduced.")
