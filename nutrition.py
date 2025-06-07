@@ -1,72 +1,87 @@
 def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block = "\n🍽️ **Nutrition Module**\n"
 
-    # Base General Guidelines
-    nutrition_block += "- 3 core meals + 2–3 snacks per day\n"
-    nutrition_block += "- Prioritize whole foods: lean protein, complex carbs, healthy fats\n"
-    nutrition_block += "- Hydration: 30–40 ml/kg bodyweight daily\n"
-
-    weight = flags.get("weight", 70)  # Default 70kg if missing
+    weight = flags.get("weight", 70)  # default fallback
     phase = flags.get("phase", "GPP").upper()
     fatigue = flags.get("fatigue", "low").lower()
     weight_cut_risk = flags.get("weight_cut_risk", False)
-    cut_pct = flags.get("weight_cut_pct", 0)
+    cut_pct = flags.get("weight_cut_pct", 0.0)
+    
+    # General Guidelines
+    nutrition_block += "- 3 core meals + 2–3 snacks daily\n"
+    nutrition_block += "- Whole foods focus: lean protein, complex carbs, healthy fats\n"
+    nutrition_block += f"- Protein intake: 1.7–2.2 g/kg → {round(1.7*weight,1)}–{round(2.2*weight,1)} g/day\n"
+    nutrition_block += f"- Hydration: 30–40 ml/kg → {round(30*weight,0)}–{round(40*weight,0)} ml/day\n"
 
-    # Phase-Based Macronutrient Targets (g/kg)
+    # Phase-specific Macronutrient & Calorie Guidance
     if phase == "GPP":
-        nutrition_block += "\n**GPP Phase (Off-Season/Base Training):**\n"
-        nutrition_block += f"- Carbs: 5–8 g/kg → {weight * 5:.0f}–{weight * 8:.0f} g/day\n"
-        nutrition_block += f"- Protein: 1.6–2.0 g/kg → {weight * 1.6:.0f}–{weight * 2.0:.0f} g/day\n"
-        nutrition_block += f"- Fat: 0.8–1.0 g/kg → {weight * 0.8:.0f}–{weight:.0f} g/day (~20–30% calories)\n"
-        nutrition_block += "- Meal timing: Balanced meal 2–4 h pre-training; optional small carb/protein snack 30–60 min before; sports drinks/gels during long sessions; post-workout carbs 1.0–1.2 g/kg + protein 0.3–0.4 g/kg within 1 h\n"
-        nutrition_block += "- Hydrate ~0.5–1.0 L/hour during training; monitor sweat loss and electrolytes especially in heavy sweat\n"
-
+        nutrition_block += "\n**GPP Phase Focus:**\n"
+        nutrition_block += f"- Caloric intake: slight surplus (+5–10%) to support hypertrophy & repair\n"
+        nutrition_block += f"- Carbohydrates: 5–8 g/kg → {round(5*weight,1)}–{round(8*weight,1)} g/day\n"
+        nutrition_block += f"- Protein: 1.6–2.0 g/kg → {round(1.6*weight,1)}–{round(2.0*weight,1)} g/day\n"
+        nutrition_block += f"- Fats: 0.8–1.0 g/kg (20–30% calories) → {round(0.8*weight,1)}–{round(1.0*weight,1)} g/day\n"
     elif phase == "SPP":
-        nutrition_block += "\n**SPP Phase (Fight Camp):**\n"
-        nutrition_block += f"- Carbs: 3–6 g/kg → {weight * 3:.0f}–{weight * 6:.0f} g/day (higher end on heavy session days)\n"
-        nutrition_block += f"- Protein: 1.6–2.2 g/kg → {weight * 1.6:.0f}–{weight * 2.2:.0f} g/day\n"
-        nutrition_block += f"- Fat: 0.7–1.0 g/kg → {weight * 0.7:.0f}–{weight:.0f} g/day (~20–25% calories)\n"
-        nutrition_block += "- Meal timing: Continue GPP strategy; include carb + protein snacks between double sessions\n"
-        nutrition_block += "- Hydration: Monitor weight daily; maintain electrolytes; avoid dehydration as weight loss method\n"
-
+        nutrition_block += "\n**SPP Phase Focus:**\n"
+        nutrition_block += "- Moderate calorie deficit or maintenance for lean conditioning\n"
+        nutrition_block += f"- Carbohydrates: 3–6 g/kg (focus on 4–6 g/kg around sessions) → {round(3*weight,1)}–{round(6*weight,1)} g/day\n"
+        nutrition_block += f"- Protein: 1.6–2.2 g/kg → {round(1.6*weight,1)}–{round(2.2*weight,1)} g/day\n"
+        nutrition_block += f"- Fats: 0.7–1.0 g/kg (20–25% calories) → {round(0.7*weight,1)}–{round(1.0*weight,1)} g/day\n"
     elif phase == "TAPER":
-        nutrition_block += "\n**Taper Phase (Final Week/Weigh-In):**\n"
-        nutrition_block += f"- Carbs: <5 g/kg to deplete glycogen pre-weigh-in; post-weigh-in refuel 8–12 g/kg if heavy cut, 4–7 g/kg for modest cut\n"
-        nutrition_block += f"- Protein: 1.8–2.5 g/kg to preserve lean mass\n"
-        nutrition_block += f"- Fat: Moderate (~20% calories)\n"
-        nutrition_block += "- Reduce fiber 1–2 days pre-fight\n"
-        nutrition_block += "- Post-weigh-in: distribute high-GI carbs + 0.3–0.4 g/kg protein per feeding; avoid high-fat/fiber initially\n"
-        nutrition_block += "- Hydrate aggressively post-weigh-in (1.5–2 L/kg fluid lost) with sodium-rich fluids\n"
-        nutrition_block += "- Pre-fight: alkaline buffer (sodium bicarbonate ~0.3 g/kg) if tolerated; caffeine 3–6 mg/kg ~60 min pre-fight; carb-rich snack 1–2 g/kg 1–2 h before bout\n"
+        nutrition_block += "\n**Taper Phase Focus:**\n"
+        nutrition_block += "- Reduced training volume, focus on freshness & weight making\n"
+        nutrition_block += f"- Carbohydrates: reduce to <5 g/kg in days before weigh-in → <{round(5*weight,1)} g/day\n"
+        nutrition_block += f"- Protein: maintain high intake 1.8–2.5 g/kg → {round(1.8*weight,1)}–{round(2.5*weight,1)} g/day\n"
+        nutrition_block += "- Moderate fat intake (~20% calories), reduce fiber 1–2 days out\n"
+        nutrition_block += "- Emphasize gut-friendly carbs (white rice, bananas, oats)\n"
 
-    # Fatigue Adaptations — Phase Specific
+    # Fatigue + Phase Interaction
     if fatigue == "high":
         if phase == "GPP":
-            nutrition_block += "\n**High Fatigue (GPP):**\n"
-            nutrition_block += "- Add intra-workout carbs (15–30 g/hr)\n"
-            nutrition_block += "- Increase daily calories by ~10%\n"
-            nutrition_block += "- Magnesium glycinate 300 mg + taurine 1.5 g + electrolyte tablets in evening\n"
+            nutrition_block += "\n**High Fatigue in GPP:**\n"
+            nutrition_block += "- Increase calories by ~10–15% to support recovery\n"
+            nutrition_block += "- Add intra-workout carbs: 30–60 g/hour (sports drinks/gels)\n"
+            nutrition_block += "- Magnesium glycinate 300 mg + taurine 1.5 g (evening)\n"
+            nutrition_block += "- Electrolyte drink with sodium 500–700 mg per serving\n"
         elif phase == "SPP":
-            nutrition_block += "\n**High Fatigue (SPP):**\n"
-            nutrition_block += "- Prioritize post-workout recovery meals\n"
-            nutrition_block += "- Caffeine 3–6 mg/kg before sessions\n"
-            nutrition_block += "- Creatine 3–5 g/day; beta-alanine 3–6 g/day\n"
+            nutrition_block += "\n**High Fatigue in SPP:**\n"
+            nutrition_block += "- Maintain calories at maintenance, prioritize carbs around sessions\n"
+            nutrition_block += "- Continue intra-workout fueling 30–60 g carbs/hour\n"
+            nutrition_block += "- Magnesium glycinate 300 mg + taurine 1.5 g (evening)\n"
+            nutrition_block += "- Electrolytes during and post-training\n"
         elif phase == "TAPER":
-            nutrition_block += "\n**High Fatigue (Taper):**\n"
-            nutrition_block += "- Emphasize gut-friendly carbs (white rice, bananas, oats)\n"
-            nutrition_block += "- Use calming supplements: magnesium + electrolytes with exact dosing\n"
-
+            nutrition_block += "\n**High Fatigue in Taper:**\n"
+            nutrition_block += "- Reduce training volume calories by ~5–10%\n"
+            nutrition_block += "- Focus on easily digestible carbs, hydrate well\n"
+            nutrition_block += "- Magnesium glycinate 200 mg + taurine 1 g\n"
+            nutrition_block += "- Light electrolyte intake only\n"
     elif fatigue == "moderate":
-        nutrition_block += "\n**Moderate Fatigue:**\n"
+        nutrition_block += "\n**Moderate Fatigue Adjustments:**\n"
         nutrition_block += "- Increase post-training carb load\n"
-        nutrition_block += "- Include sleep-promoting foods (cherries, banana, oats)\n"
+        nutrition_block += "- Focus on sleep-promoting foods: cherries, bananas, oats\n"
 
-    # Weight Cut Protocol
+    # Meal Timing by Phase (Pre/Intra/Post Workout)
+    nutrition_block += "\n**Meal Timing Guidelines:**\n"
+    if phase in ["GPP", "SPP"]:
+        nutrition_block += "- Pre-training: 1.5–3h before, balanced meal with 1–2 g/kg carbs + ~0.3 g/kg protein\n"
+        nutrition_block += "- Intra-training (>60 min): 30–60 g carbs/hour (sports drinks/gels), hydration\n"
+        nutrition_block += "- Post-training (within 1h): 1–1.2 g/kg carbs + 0.3–0.4 g/kg protein\n"
+    elif phase == "TAPER":
+        nutrition_block += "- Pre-training: light easily digestible carbs 30–60 min before\n"
+        nutrition_block += "- Intra-training: water or electrolyte drink only\n"
+        nutrition_block += "- Post-training: focus on gut-friendly carbs + protein, avoid heavy fats/fiber\n"
+
+    # Weight Cut Risk Handling
     if weight_cut_risk:
-        nutrition_block += f"\n**⚠️ Weight Cut Protocol Triggered (> {cut_pct} %):**\n"
-        nutrition_block += "- Use refeed post-weigh-in with high-GI carbs and sodium-rich fluids\n"
-        nutrition_block += "- Monitor sleep, hydration, and energy daily\n"
-        if cut_pct >= 6.0:
-            nutrition_block += "- Sodium intake: 10 g/day until 72 h out → 5 g/day → 2 g/day at weigh-in\n"
+        nutrition_block += "\n**⚠️ Weight Cut Protocol Triggered:**\n"
+        nutrition_block += f"- Weight cut > {cut_pct}%: aggressive refeed post-weigh-in\n"
+        nutrition_block += "- Carbs: 8–12 g/kg over recovery period if heavy cut, else 4–7 g/kg\n"
+        nutrition_block += "- Multiple meals/snacks with high-GI carbs (rice, pasta, sports drinks)\n"
+        nutrition_block += "- Protein: 0.3–0.4 g/kg per feeding (lean meat, whey)\n"
+        nutrition_block += "- Avoid high fat/fiber first hours post-weigh-in\n"
+        nutrition_block += "- Hydrate aggressively: initial bolus 0.6–0.9 L + replace 150% fluid lost\n"
+        nutrition_block += "- Sodium intake: 20–50+ mmol/L drinks + salted snacks/broths\n"
+        nutrition_block += "- De-emphasize diuretics (caffeine/alcohol) final 24h pre-fight\n"
+        nutrition_block += "- Alkaline buffer (sodium bicarbonate ~0.3 g/kg) 90–120 min pre-fight if tolerated\n"
+        nutrition_block += "- Final carb snack 1–2 h pre-fight: 1–2 g/kg easily digested carbs\n"
 
     return nutrition_block.strip()
