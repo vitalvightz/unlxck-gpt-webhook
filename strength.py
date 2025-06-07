@@ -1,3 +1,34 @@
+from pathlib import Path
+import json
+from injury_subs import injury_subs
+from training_context import normalize_equipment_list, known_equipment, allocate_sessions
+
+# Optional equipment boosts by training phase
+phase_equipment_boost = {
+    "GPP": {"barbell", "trap_bar", "sled", "pullup_bar"},
+    "SPP": {"landmine", "cable", "medicine_ball", "bands"},
+    "TAPER": {"medicine_ball", "bodyweight", "band", "partner"}
+}
+
+def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
+    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
+    user_equipment = [e.lower().strip() for e in user_equipment]
+    known_equipment = [e.lower() for e in known_equipment]
+
+    if not entry_equip_list or "bodyweight" in entry_equip_list:
+        return 0
+
+    for eq in entry_equip_list:
+        if eq in known_equipment and eq not in user_equipment:
+            return -999
+
+    if any(eq not in known_equipment for eq in entry_equip_list):
+        return -1
+
+    return 0
+
+exercise_bank = json.loads(Path("exercise_bank.json").read_text())
+
 def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
