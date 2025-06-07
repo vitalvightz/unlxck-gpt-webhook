@@ -50,6 +50,7 @@ skill
 sled
 speed
 striking
+triphasic
 triple_extension
 unilateral
 upper_body
