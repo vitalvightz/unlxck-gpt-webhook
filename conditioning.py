@@ -16,9 +16,9 @@ style_tag_map = {
 
 # Goal tags
 goal_tag_map = {
-    "power & explosiveness": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
-    "maximal strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
-    "conditioning / endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
+    "power": ["explosive", "rate_of_force", "triple_extension", "horizontal_power", "plyometric", "elastic", "lateral_power", "deadlift"],
+    "strength": ["posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring", "hip_dominant", "eccentric", "deadlift"],
+    "endurance": ["aerobic", "glycolytic", "work_capacity", "mental_toughness", "conditioning", "improvised"],
     "speed": ["speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic"],
     "mobility": ["mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors", "stability"],
     "grappling": ["wrestling", "bjj", "grip", "rotational", "core", "unilateral"],
@@ -27,6 +27,7 @@ goal_tag_map = {
     "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
     "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
 }
+
 
 # Weakness tags (based directly on the form's checkbox labels)
 weakness_tag_map = {
