@@ -16,7 +16,8 @@ SYSTEM_ALIASES = {
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     fatigue = flags.get("fatigue", "low")
-    style = flags.get("style_tactical", "").lower()
+    style = flags.get("style_tactical", [])
+    style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     technical = flags.get("style_technical", "").lower()
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
