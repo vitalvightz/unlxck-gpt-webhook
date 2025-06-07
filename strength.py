@@ -59,7 +59,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         "injury prevention": ["recovery", "balance", "eccentric", "zero_impact", "parasympathetic", "cns_freshness", "unilateral"],
         "mental resilience": ["mental_toughness", "cognitive", "parasympathetic", "visual_processing", "focus", "environmental"],
         "skill refinement": ["coordination", "skill", "footwork", "cognitive"]
-    }
+}
+
+
 
     style_tags = style_tag_map.get(style.lower(), [])
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
