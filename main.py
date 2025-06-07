@@ -45,7 +45,8 @@ GOAL_NORMALIZER = {
     "Mental Resilience": "mental resilience",
     "Skill Refinement": "skill refinement"
 }
-# Auth
+
+# Auth setup
 if os.getenv("GOOGLE_CREDS_B64"):
     with open("clientsecrettallyso.json", "w") as f:
         decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
@@ -66,9 +67,7 @@ def get_value(label, fields):
             value = field.get("value")
             if isinstance(value, list):
                 if "options" in field:
-                    return ", ".join([
-                        opt["text"] for opt in field["options"] if opt.get("id") in value
-                    ])
+                    return ", ".join([opt["text"] for opt in field["options"] if opt.get("id") in value])
                 return ", ".join(str(v) for v in value)
             return str(value).strip() if value is not None else ""
     return ""
@@ -91,6 +90,10 @@ def create_doc(title, content):
 async def handle_submission(request: Request):
     data = await request.json()
     fields = data["data"]["fields"]
+
+    # Extract and normalize fields
+    def normalize_list(field):
+        return [w.strip().lower() for w in field.split(",")] if field else []
 
     full_name = get_value("Full name", fields)
     age = get_value("Age", fields)
@@ -115,7 +118,7 @@ async def handle_submission(request: Request):
     mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
-    # Phase logic
+    # Determine training phase
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
@@ -135,7 +138,6 @@ async def handle_submission(request: Request):
         phase = "GPP"
         weeks_out = "N/A"
 
-    # Map fighting style to fight format
     style_map = {
         "mma": "mma",
         "boxer": "boxing",
@@ -149,51 +151,67 @@ async def handle_submission(request: Request):
     raw_tech_style = fighting_style_technical.strip().lower()
     mapped_format = style_map.get(raw_tech_style, "mma")
 
+    # Core context
     training_context = {
         "phase": phase,
         "fatigue": fatigue.lower(),
         "days_available": int(frequency),
         "training_days": available_days.split(", "),
-        "injuries": [inj.strip().lower() for inj in injuries.split(",")] if injuries else [],
+        "injuries": normalize_list(injuries),
         "style_technical": raw_tech_style,
         "style_tactical": fighting_style_tactical.strip().lower(),
-        "weaknesses": [w.strip().lower() for w in weak_areas.split(",")] if weak_areas else [],
+        "weaknesses": normalize_list(weak_areas),
         "equipment": normalize_equipment_list(equipment_access),
         "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
         "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
         "fight_format": mapped_format,
         "training_split": allocate_sessions(int(frequency)),
-        "key_goals": [
-    GOAL_NORMALIZER.get(g.strip(), g.strip()).lower()
-    for g in key_goals.split(",")
-    if g.strip()
-] if key_goals else [],
+        "key_goals": [GOAL_NORMALIZER.get(g.strip(), g.strip()).lower() for g in key_goals.split(",") if g.strip()],
         "training_preference": training_preference.strip().lower() if training_preference else "",
         "mental_block": classify_mental_block(mental_block),
         "age": int(age) if age.isdigit() else 0,
         "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
     }
 
-    flags = training_context.copy()
-    flags["mental_block"] = classify_mental_block(mental_block)
-
-    mindset_output = get_mindset_by_phase(phase, flags)
-    sections.append(mindset_output)
-    formatted = ""
-    for block, content in mindset_output.items():
-        formatted += f"\n🧠 **{block.upper()}**\n{content['advice']}"
-        if content["activation"]:
-            formatted += f"\n🔑 Activation: {content['activation']}"
-    
-    mindset_block = formatted
-    mental_strategies = get_mental_protocols(flags["mental_block"])
+    # Module generation
+    mindset_output = get_mindset_by_phase(phase, training_context)
+    mental_strategies = get_mental_protocols(training_context["mental_block"])
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
-    print("== NUTRITION BLOCK ==\n", nutrition_block)
+    # Format mindset output
+    mindset_block = ""
+    for block, content in mindset_output.items():
+        mindset_block += f"\n🧠 **{block.upper()}**\n{content['advice']}"
+        if content["activation"]:
+            mindset_block += f"\n🔑 Activation: {content['activation']}"
+
+    athlete_profile = f"""
+Athlete Profile:
+- Name: {full_name}
+- Age: {age}
+- Weight: {weight}kg
+- Target Weight: {target_weight}kg
+- Height: {height}cm
+- Technical Style: {fighting_style_technical}
+- Tactical Style: {fighting_style_tactical}
+- Stance: {stance}
+- Level: {status}
+- Record: {record}
+- Fight Format: {rounds_format}
+- Fight Date: {next_fight_date}
+- Weeks Out: {weeks_out}
+- Fatigue Level: {fatigue}
+- Injuries: {injuries}
+- Available S&C Days: {available_days}
+- Weaknesses: {weak_areas}
+- Key Goals: {key_goals}
+- Mindset Challenges: {mental_block}
+- Extra Notes: {notes}
+"""
 
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
@@ -224,51 +242,37 @@ Avoid training through pain. Prioritize recovery. Emphasize technique.
 
 ---
 
-You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across UFC, Glory, ONE Championship, and Olympic combat sports.
-
-Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
-
-Use the following blocks as reference – they are pre-analyzed insights from Unlxck’s system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
-
-Athlete Profile:
-- Name: {full_name}
-- Age: {age}
-- Weight: {weight}kg
-- Target Weight: {target_weight}kg
-- Height: {height}cm
-- Technical Style: {fighting_style_technical}
-- Tactical Style: {fighting_style_tactical}
-- Stance: {stance}
-- Level: {status}
-- Record: {record}
-- Fight Format: {rounds_format}
-- Fight Date: {next_fight_date}
-- Weeks Out: {weeks_out}
-- Fatigue Level: {fatigue}
-- Injuries: {injuries}
-- Available S&C Days: {available_days}
-- Weaknesses: {weak_areas}
-- Key Goals: {key_goals}
-- Mindset Challenges: {mental_block}
-- Extra Notes: {notes}
+{athlete_profile}
 """
 
     try:
         response = openai.chat.completions.create(
             model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a world-class strength & conditioning coach (MSc-level) who receives structured modules from Unlxck’s proprietary system. "
+                        "You must synthesize them into a personalized 3-phase fight plan (GPP, SPP, TAPER). Use elite programming logic. Be specific. Prioritize performance, periodization, and realistic tapering."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
             temperature=0.3,
-            max_tokens=2500,
+            max_tokens=3000,
         )
         full_plan = response.choices[0].message.content.strip()
-        print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
+        if response.choices[0].finish_reason != "stop":
+            print("⚠️ GPT output likely truncated.")
     except Exception as e:
         print("❌ GPT API Error:", e)
         return {"error": "Failed to generate plan from OpenAI"}
 
-    # Async-safe Google Doc creation
     loop = asyncio.get_running_loop()
-    for _ in range(2):  # retry once if it fails
+    for _ in range(2):
         try:
             doc_link = await loop.run_in_executor(
                 None,
