@@ -2,1756 +2,2669 @@
   {
     "name": "Trap Bar Deadlift",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["posterior_chain", "glutes", "compound"],
+    "tags": [
+      "posterior_chain",
+      "glutes",
+      "compound"
+    ],
     "equipment": "trap_bar"
   },
   {
-    {
-    "name": "Trap Bar Deadlift",
-    "category": "lower_body",
-    "phases": ["GPP", "SPP"],
-    "method": "strength",
-    "movement": "hinge",
-    "type": "bilateral",
-    "tags": ["posterior_chain", "compound"],
-    "equipment": "trap_bar"
-},
-{
     "name": "Back Squat",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["quad_dominant", "compound"],
+    "tags": [
+      "quad_dominant",
+      "compound"
+    ],
     "equipment": "barbell"
-},
-{
+  },
+  {
     "name": "Bulgarian Split Squat",
     "category": "lower_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "balance"],
+    "tags": [
+      "quad_dominant",
+      "balance"
+    ],
     "equipment": "dumbbells"
-},
-{
+  },
+  {
     "name": "Romanian Deadlift (RDL)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["posterior_chain", "hamstring"],
+    "tags": [
+      "posterior_chain",
+      "hamstring"
+    ],
     "equipment": "barbell"
-},
-{
+  },
+  {
     "name": "Front Squat",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["quad_dominant", "core"],
+    "tags": [
+      "quad_dominant",
+      "core"
+    ],
     "equipment": "barbell"
-},
-{
+  },
+  {
     "name": "Trap Bar Jump (Light)",
     "category": "lower_body",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "power",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["neural_primer", "explosive"],
+    "tags": [
+      "neural_primer",
+      "explosive"
+    ],
     "equipment": "trap_bar"
-},
-{
+  },
+  {
     "name": "Band-Resisted Sprawl to Sprint",
     "category": "wrestling",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["neural_primer", "explosive", "reactive"],
+    "tags": [
+      "neural_primer",
+      "explosive",
+      "reactive"
+    ],
     "equipment": "bands"
-},
-{
+  },
+  {
     "name": "Depth Drop → 5m Sprint",
     "category": "locomotion",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["neural_primer", "reactive", "speed"],
+    "tags": [
+      "neural_primer",
+      "reactive",
+      "speed"
+    ],
     "equipment": "box"
-},
-{
+  },
+  {
     "name": "Med Ball Scoop Toss",
     "category": "striking",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "bilateral",
-    "tags": ["neural_primer", "rotational", "rate_of_force"],
+    "tags": [
+      "neural_primer",
+      "rotational",
+      "rate_of_force"
+    ],
     "equipment": "medicine_ball"
-},
-{
+  },
+  {
     "name": "Cluster Set Trap Bar Deadlift",
     "category": "deadlift",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["neural_primer", "cluster", "posterior_chain"],
+    "tags": [
+      "neural_primer",
+      "cluster",
+      "posterior_chain"
+    ],
     "equipment": "trap_bar"
-},
-{
+  },
+  {
     "name": "Back Squat → Box Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "contrast",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["contrast", "explosive", "quad_dominant"],
+    "tags": [
+      "contrast",
+      "explosive",
+      "quad_dominant"
+    ],
     "equipment": "barbell,box"
-},
-{
+  },
+  {
     "name": "DB Bench Press → Plyo Push-Up",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "contrast",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["contrast", "rate_of_force", "chest"],
+    "tags": [
+      "contrast",
+      "rate_of_force",
+      "chest"
+    ],
     "equipment": "dumbbells"
-},
-{
+  },
+  {
     "name": "Heavy RDL → Broad Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "contrast",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["contrast", "explosive", "posterior_chain"],
+    "tags": [
+      "contrast",
+      "explosive",
+      "posterior_chain"
+    ],
     "equipment": "barbell"
-},
-{
+  },
+  {
     "name": "Landmine Press → Med Ball Chest Pass",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "contrast",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["contrast", "shoulders", "anti_rotation"],
+    "tags": [
+      "contrast",
+      "shoulders",
+      "anti_rotation"
+    ],
     "equipment": "landmine,medicine_ball"
-},
-{
+  },
+  {
     "name": "Tempo Split Squat (4-0-1)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["triphasic", "eccentric", "unilateral"],
+    "tags": [
+      "triphasic",
+      "eccentric",
+      "unilateral"
+    ],
     "equipment": "dumbbells"
-},
-{
+  },
+  {
     "name": "Iso Deadlift Hold",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain"
+    ],
     "equipment": "barbell"
-},
-{
+  },
+  {
     "name": "Hang Power Clean",
     "category": "full_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "olympic",
     "type": "bilateral",
-    "tags": ["explosive", "triple_extension"],
+    "tags": [
+      "explosive",
+      "triple_extension"
+    ],
     "equipment": "barbell"
-},
-{
+  },
+  {
     "name": "Landmine Rotational Press",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["explosive", "anti_rotation"],
+    "tags": [
+      "explosive",
+      "anti_rotation"
+    ],
     "equipment": "landmine"
-},
-{
+  },
+  {
     "name": "Zercher Squat → Sprawl Jump",
     "category": "wrestling",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "contrast",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "grappling_transfer"],
+    "tags": [
+      "explosive",
+      "grappling_transfer"
+    ],
     "equipment": "sandbag"
-},
-{
+  },
+  {
     "name": "Band-Resisted Clinch Knee Strike",
     "category": "muay_thai",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "unilateral",
     "type": "unilateral",
-    "tags": ["rate_of_force", "hip_dominant"],
+    "tags": [
+      "rate_of_force",
+      "hip_dominant"
+    ],
     "equipment": "bands"
-},
-{
+  },
+  {
     "name": "Anti-Rotation Med Ball Slam",
     "category": "core",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "power",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["neural_primer", "anti_rotation", "core"],
+    "tags": [
+      "neural_primer",
+      "anti_rotation",
+      "core"
+    ],
     "equipment": "medicine_ball"
-},
-{
+  },
+  {
     "name": "Tempo Chin-Up (5-0-1)",
     "category": "pull",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["triphasic", "eccentric", "grip"],
+    "tags": [
+      "triphasic",
+      "eccentric",
+      "grip"
+    ],
     "equipment": "pullup_bar"
   },
   {
     "name": "Back Squat",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["quad_dominant", "compound"],
+    "tags": [
+      "quad_dominant",
+      "compound"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Bulgarian Split Squat",
     "category": "lower_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "balance"],
+    "tags": [
+      "quad_dominant",
+      "balance"
+    ],
     "equipment": "dumbbells"
   },
   {
     "name": "Romanian Deadlift (RDL)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["posterior_chain", "hamstrings"],
+    "tags": [
+      "posterior_chain",
+      "hamstrings"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Front Squat",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["quad_dominant", "core"],
+    "tags": [
+      "quad_dominant",
+      "core"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Trap Bar Jump Squat",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["explosive", "power"],
+    "tags": [
+      "explosive",
+      "power"
+    ],
     "equipment": "trap_bar"
   },
   {
     "name": "Box Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["explosive", "power"],
+    "tags": [
+      "explosive",
+      "power"
+    ],
     "equipment": "box"
   },
   {
     "name": "Kettlebell Swing",
     "category": "lower_body",
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "method": "power",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["posterior_chain", "explosive"],
+    "tags": [
+      "posterior_chain",
+      "explosive"
+    ],
     "equipment": "kettlebell"
   },
   {
     "name": "Speed Box Squat",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["explosive", "power"],
+    "tags": [
+      "explosive",
+      "power"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Sled Push",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["posterior_chain", "conditioning"],
+    "tags": [
+      "posterior_chain",
+      "conditioning"
+    ],
     "equipment": "sled"
   },
   {
     "name": "Single-Leg RDL",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "rehab",
     "movement": "hinge",
     "type": "unilateral",
-    "tags": ["posterior_chain", "balance", "rehab_friendly"],
+    "tags": [
+      "posterior_chain",
+      "balance",
+      "rehab_friendly"
+    ],
     "equipment": "kettlebell"
   },
   {
     "name": "Goblet Squat",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["quad_dominant", "rehab_friendly"],
+    "tags": [
+      "quad_dominant",
+      "rehab_friendly"
+    ],
     "equipment": "kettlebell"
   },
   {
     "name": "Step-Up (Bodyweight)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "rehab_friendly"],
+    "tags": [
+      "quad_dominant",
+      "rehab_friendly"
+    ],
     "equipment": "box"
   },
   {
     "name": "Banded Lateral Walk",
     "category": "lower_body",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["glutes", "rehab_friendly"],
+    "tags": [
+      "glutes",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Assisted Pistol Squat",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "balance", "rehab_friendly"],
+    "tags": [
+      "quad_dominant",
+      "balance",
+      "rehab_friendly"
+    ],
     "equipment": "trx"
   },
   {
     "name": "Nordic Hamstring Curl",
     "category": "lower_body",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["hamstrings", "rehab_friendly"],
+    "tags": [
+      "hamstrings",
+      "rehab_friendly"
+    ],
     "equipment": "partner"
   },
   {
     "name": "Reverse Hyperextension",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["posterior_chain", "glutes"],
+    "tags": [
+      "posterior_chain",
+      "glutes"
+    ],
     "equipment": "bench"
   },
   {
     "name": "Cossack Squat",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "mobility"],
+    "tags": [
+      "quad_dominant",
+      "mobility"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Jump Lunge (Alternating)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["explosive", "balance"],
+    "tags": [
+      "explosive",
+      "balance"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Sissy Squat",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "rehab_friendly"],
+    "tags": [
+      "quad_dominant",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Barbell Overhead Press",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "vertical_push",
     "type": "bilateral",
-    "tags": ["shoulders", "compound"],
+    "tags": [
+      "shoulders",
+      "compound"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Push-Up (Weighted)",
     "category": "upper_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["chest", "compound"],
+    "tags": [
+      "chest",
+      "compound"
+    ],
     "equipment": "weight_vest"
   },
   {
     "name": "Landmine Press",
     "category": "upper_body",
-    "phases": ["GPP", "SPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
     "method": "power",
     "movement": "vertical_push",
     "type": "unilateral",
-    "tags": ["shoulders", "anti_rotation"],
+    "tags": [
+      "shoulders",
+      "anti_rotation"
+    ],
     "equipment": "landmine"
   },
   {
     "name": "DB Bench Press",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["chest", "compound"],
+    "tags": [
+      "chest",
+      "compound"
+    ],
     "equipment": "dumbbells"
   },
   {
     "name": "Incline DB Press",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["chest", "shoulders"],
+    "tags": [
+      "chest",
+      "shoulders"
+    ],
     "equipment": "dumbbells"
   },
   {
     "name": "Clap Push-Up",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["explosive", "chest"],
+    "tags": [
+      "explosive",
+      "chest"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Push Press",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "vertical_push",
     "type": "bilateral",
-    "tags": ["explosive", "shoulders"],
+    "tags": [
+      "explosive",
+      "shoulders"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Z Press",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "vertical_push",
     "type": "bilateral",
-    "tags": ["shoulders", "core"],
+    "tags": [
+      "shoulders",
+      "core"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "DB Clean & Press",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "vertical_push",
     "type": "unilateral",
-    "tags": ["explosive", "shoulders"],
+    "tags": [
+      "explosive",
+      "shoulders"
+    ],
     "equipment": "dumbbells"
   },
   {
     "name": "Band-Resisted Push Press",
     "category": "upper_body",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "power",
     "movement": "vertical_push",
     "type": "bilateral",
-    "tags": ["explosive", "shoulders"],
+    "tags": [
+      "explosive",
+      "shoulders"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Bent-Over Row",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["back", "posterior_chain"],
+    "tags": [
+      "back",
+      "posterior_chain"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Weighted Pull-Up",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["back", "grip"],
+    "tags": [
+      "back",
+      "grip"
+    ],
     "equipment": "weight_belt"
   },
   {
     "name": "Towel Pull-Up",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["back", "grip"],
+    "tags": [
+      "back",
+      "grip"
+    ],
     "equipment": "towel"
   },
   {
     "name": "Face Pull",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["shoulders", "rehab_friendly"],
+    "tags": [
+      "shoulders",
+      "rehab_friendly"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Lat Pulldown",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["back", "compound"],
+    "tags": [
+      "back",
+      "compound"
+    ],
     "equipment": "cable"
   },
   {
     "name": "High Pull",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["explosive", "posterior_chain"],
+    "tags": [
+      "explosive",
+      "posterior_chain"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "TRX Row",
     "category": "upper_body",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["back", "rehab_friendly"],
+    "tags": [
+      "back",
+      "rehab_friendly"
+    ],
     "equipment": "trx"
   },
   {
     "name": "Band Face Pull",
     "category": "upper_body",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["shoulders", "rehab_friendly"],
+    "tags": [
+      "shoulders",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Scapular Pull-Up",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["shoulders", "rehab_friendly"],
+    "tags": [
+      "shoulders",
+      "rehab_friendly"
+    ],
     "equipment": "pullup_bar"
   },
   {
     "name": "Banded Row (Speed Focus)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["explosive", "posterior_chain"],
+    "tags": [
+      "explosive",
+      "posterior_chain"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Deadbug",
     "category": "core",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Plank",
     "category": "core",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Side Plank",
     "category": "core",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation", "rehab_friendly"],
+    "tags": [
+      "core",
+      "anti_rotation",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Cable Pallof Press",
     "category": "core",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Anti-Rotation Press",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Bird-Dog",
     "category": "core",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Weighted Side Plank",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "plate"
   },
   {
     "name": "Isometric Pallof Hold",
     "category": "core",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation", "rehab_friendly"],
+    "tags": [
+      "core",
+      "anti_rotation",
+      "rehab_friendly"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Hollow-Body Hold",
     "category": "core",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "anterior_chain"],
+    "tags": [
+      "core",
+      "anterior_chain"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Controlled Bird-Dog",
     "category": "core",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Med-Ball Rotational Slam",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "explosive"],
+    "tags": [
+      "core",
+      "explosive"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Cable Rotations",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Barbell Rollout",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "anterior_chain"],
+    "tags": [
+      "core",
+      "anterior_chain"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Seated Medicine Ball Rotation",
     "category": "core",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Hanging Knee Raise (Twist)",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "pullup_bar"
   },
   {
     "name": "Side Plank (Banded)",
     "category": "core",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "anti_rotation", "rehab_friendly"],
+    "tags": [
+      "core",
+      "anti_rotation",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Deadbug (Band-Resisted)",
     "category": "core",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Woodchopper (Cable)",
     "category": "core",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["core", "explosive"],
+    "tags": [
+      "core",
+      "explosive"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Russian Twist (Weighted)",
     "category": "core",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "anti_rotation"],
+    "tags": [
+      "core",
+      "anti_rotation"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Swiss Ball Press",
     "category": "core",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "swiss_ball"
   },
   {
     "name": "Sprawl-to-Stand (Weighted Vest)",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "conditioning"],
+    "tags": [
+      "explosive",
+      "conditioning"
+    ],
     "equipment": "weighted_vest"
   },
   {
     "name": "Clinch Knee Strike (Band-Resisted)",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "unilateral",
     "type": "unilateral",
-    "tags": ["explosive", "hip"],
+    "tags": [
+      "explosive",
+      "hip"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Takedown Defense Drill",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "balance"],
+    "tags": [
+      "explosive",
+      "balance"
+    ],
     "equipment": "partner/dummy"
   },
   {
     "name": "Thai Pad Round Kick",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "unilateral",
     "type": "unilateral",
-    "tags": ["explosive", "hip"],
+    "tags": [
+      "explosive",
+      "hip"
+    ],
     "equipment": "thai_pads"
   },
   {
     "name": "Band-Resisted Punch",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "unilateral",
-    "tags": ["explosive", "rate_of_force"],
+    "tags": [
+      "explosive",
+      "rate_of_force"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Medicine-Ball Chest Toss",
     "category": "combat",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["explosive", "chest"],
+    "tags": [
+      "explosive",
+      "chest"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Explosive Incline Press",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["explosive", "chest"],
+    "tags": [
+      "explosive",
+      "chest"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Sledgehammer Strikes",
     "category": "combat",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["core", "rotational"],
+    "tags": [
+      "core",
+      "rotational"
+    ],
     "equipment": "sledgehammer"
   },
   {
     "name": "Sandbag Shouldering",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["explosive", "core"],
+    "tags": [
+      "explosive",
+      "core"
+    ],
     "equipment": "sandbag"
   },
   {
     "name": "Battle Rope Slams",
     "category": "combat",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["shoulders", "conditioning"],
+    "tags": [
+      "shoulders",
+      "conditioning"
+    ],
     "equipment": "battle_ropes"
   },
   {
     "name": "Towel Hang",
     "category": "grip_neck",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["grip", "posterior_chain"],
+    "tags": [
+      "grip",
+      "posterior_chain"
+    ],
     "equipment": "towel/bar"
   },
   {
     "name": "Neck Harness Flexion",
     "category": "grip_neck",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["neck", "rehab_friendly"],
+    "tags": [
+      "neck",
+      "rehab_friendly"
+    ],
     "equipment": "neck_harness"
   },
   {
     "name": "Plate Pinch Carry",
     "category": "grip_neck",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "carry",
     "type": "bilateral",
-    "tags": ["grip", "forearm"],
+    "tags": [
+      "grip",
+      "forearm"
+    ],
     "equipment": "plates"
   },
   {
     "name": "Farmers Walk (Fat Grip)",
     "category": "grip_neck",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "carry",
     "type": "bilateral",
-    "tags": ["grip", "core"],
+    "tags": [
+      "grip",
+      "core"
+    ],
     "equipment": "fat_grip"
   },
   {
     "name": "Wrist Roller",
     "category": "grip_neck",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["forearm", "rehab_friendly"],
+    "tags": [
+      "forearm",
+      "rehab_friendly"
+    ],
     "equipment": "wrist_roller"
   },
   {
     "name": "Log Press",
     "category": "unconventional",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "vertical_push",
     "type": "bilateral",
-    "tags": ["shoulders", "grip"],
+    "tags": [
+      "shoulders",
+      "grip"
+    ],
     "equipment": "log"
   },
   {
     "name": "Tire Flip",
     "category": "unconventional",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["posterior_chain", "explosive"],
+    "tags": [
+      "posterior_chain",
+      "explosive"
+    ],
     "equipment": "tire"
   },
   {
     "name": "Atlas Stone Lift",
     "category": "unconventional",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "grip"],
+    "tags": [
+      "explosive",
+      "grip"
+    ],
     "equipment": "atlas_stone"
   },
   {
     "name": "Water Jug Carry",
     "category": "unconventional",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "carry",
     "type": "unilateral",
-    "tags": ["grip", "core"],
+    "tags": [
+      "grip",
+      "core"
+    ],
     "equipment": "water_jug"
   },
   {
     "name": "Bulgarian Bag Swing",
     "category": "unconventional",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["core", "shoulders"],
+    "tags": [
+      "core",
+      "shoulders"
+    ],
     "equipment": "bulgarian_bag"
   },
   {
     "name": "EMOM: 5 Squat Cleans + 5 Burpees",
     "category": "finishers",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "explosive"],
+    "tags": [
+      "endurance",
+      "explosive"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Death by Carry (Sandbag/Sled)",
     "category": "finishers",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "carry",
     "type": "bilateral",
-    "tags": ["grip", "core"],
+    "tags": [
+      "grip",
+      "core"
+    ],
     "equipment": "sandbag/sled"
   },
   {
     "name": "Tabata Sprints (Treadmill/Row)",
     "category": "finishers",
-    "phases": ["TAPER"],
+    "phases": [
+      "TAPER"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "power"],
+    "tags": [
+      "endurance",
+      "power"
+    ],
     "equipment": "treadmill/rower"
   },
   {
     "name": "3-Minute Round (Striking + Takedowns)",
     "category": "finishers",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "core"],
+    "tags": [
+      "endurance",
+      "core"
+    ],
     "equipment": "partner/dummy"
   },
   {
     "name": "5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
     "category": "finishers",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["power", "endurance"],
+    "tags": [
+      "power",
+      "endurance"
+    ],
     "equipment": "box/kettlebell"
   },
   {
     "name": "Banded Hip Flexor Stretch",
     "category": "recovery",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "unilateral",
-    "tags": ["hip", "rehab_friendly"],
+    "tags": [
+      "hip",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Couch Stretch",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "unilateral",
-    "tags": ["quad_dominant", "rehab_friendly"],
+    "tags": [
+      "quad_dominant",
+      "rehab_friendly"
+    ],
     "equipment": "bench"
   },
   {
     "name": "Dead Hang",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["shoulders", "rehab_friendly"],
+    "tags": [
+      "shoulders",
+      "rehab_friendly"
+    ],
     "equipment": "pullup_bar"
   },
   {
     "name": "Brettzel Stretch",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "unilateral",
-    "tags": ["thoracic", "rehab_friendly"],
+    "tags": [
+      "thoracic",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Psoas March (Banded)",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "unilateral",
-    "tags": ["hip", "rehab_friendly"],
+    "tags": [
+      "hip",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Wall Slide (Shoulder Mobility)",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "bilateral",
-    "tags": ["shoulders", "rehab_friendly"],
+    "tags": [
+      "shoulders",
+      "rehab_friendly"
+    ],
     "equipment": "wall"
   },
   {
     "name": "Quadruped Rocking",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "bilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Dynamic Pigeon Stretch",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "unilateral",
-    "tags": ["hip", "rehab_friendly"],
+    "tags": [
+      "hip",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Diaphragmatic Breathing Drills",
     "category": "recovery",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "bilateral",
-    "tags": ["core", "rehab_friendly"],
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Foam Roller Thoracic Extension",
     "category": "recovery",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "mobility",
     "type": "bilateral",
-    "tags": ["thoracic", "rehab_friendly"],
+    "tags": [
+      "thoracic",
+      "rehab_friendly"
+    ],
     "equipment": "foam_roller"
   },
   {
     "name": "Grappler’s Bridge (Weighted)",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["neck", "posterior_chain"],
+    "tags": [
+      "neck",
+      "posterior_chain"
+    ],
     "equipment": "weight_plate"
   },
   {
     "name": "Sprawl-to-Burpee",
     "category": "combat",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "core"],
+    "tags": [
+      "explosive",
+      "core"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Ground-and-Pound Bag Work",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "shoulders"],
+    "tags": [
+      "endurance",
+      "shoulders"
+    ],
     "equipment": "heavy_bag"
   },
   {
     "name": "Wrestling Shot Drill (Repetitive)",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "quad_dominant"],
+    "tags": [
+      "explosive",
+      "quad_dominant"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Judo Throw Simulation (Band-Resisted)",
     "category": "combat",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["core", "rotational"],
+    "tags": [
+      "core",
+      "rotational"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Boxing Shuffle Drill (Ladder)",
     "category": "boxing",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["balance", "endurance"],
+    "tags": [
+      "balance",
+      "endurance"
+    ],
     "equipment": "agility_ladder"
   },
   {
     "name": "Slip Rope Drill (Band-Resisted)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "unilateral",
     "type": "unilateral",
-    "tags": ["anti_rotation", "rate_of_force"],
+    "tags": [
+      "anti_rotation",
+      "rate_of_force"
+    ],
     "equipment": "bands/rope"
   },
   {
     "name": "Defensive Level Change (Weighted Vest)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["explosive", "quad_dominant"],
+    "tags": [
+      "explosive",
+      "quad_dominant"
+    ],
     "equipment": "weighted_vest"
   },
   {
     "name": "Lateral Bound-to-Slip",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "unilateral",
     "type": "unilateral",
-    "tags": ["explosive", "balance"],
+    "tags": [
+      "explosive",
+      "balance"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Pivot-and-Strike (Rotation Focus)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["rotational", "rate_of_force"],
+    "tags": [
+      "rotational",
+      "rate_of_force"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Band-Resisted Straight Punch",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "unilateral",
-    "tags": ["rate_of_force", "explosive"],
+    "tags": [
+      "rate_of_force",
+      "explosive"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Medicine Ball Hook Throw",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["rotational", "shoulders"],
+    "tags": [
+      "rotational",
+      "shoulders"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Explosive Push-Up (Clap-to-Tap)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["rate_of_force", "chest"],
+    "tags": [
+      "rate_of_force",
+      "chest"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Overhead Slam (Rotational)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "bilateral",
-    "tags": ["rotational", "core"],
+    "tags": [
+      "rotational",
+      "core"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Speed Ball Drill (Weighted)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["rate_of_force", "shoulders"],
+    "tags": [
+      "rate_of_force",
+      "shoulders"
+    ],
     "equipment": "weighted_ball"
   },
   {
     "name": "Seated Russian Twist (Band-Resisted)",
     "category": "boxing",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["rotational", "anti_rotation"],
+    "tags": [
+      "rotational",
+      "anti_rotation"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Standing Cable Punch Simulation",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["rotational", "rate_of_force"],
+    "tags": [
+      "rotational",
+      "rate_of_force"
+    ],
     "equipment": "cable"
   },
   {
     "name": "Hanging Leg Raise (Punch Simulation)",
     "category": "boxing",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "core",
     "type": "bilateral",
-    "tags": ["core", "rotational"],
+    "tags": [
+      "core",
+      "rotational"
+    ],
     "equipment": "pullup_bar"
   },
   {
     "name": "Dynamic Plank-to-Punch",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "core",
     "type": "unilateral",
-    "tags": ["anti_rotation", "rate_of_force"],
+    "tags": [
+      "anti_rotation",
+      "rate_of_force"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Rotational Sledgehammer Strike",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["rotational", "grip"],
+    "tags": [
+      "rotational",
+      "grip"
+    ],
     "equipment": "sledgehammer/tire"
   },
   {
     "name": "Neck Harness Lateral Flexion",
     "category": "boxing",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["neck", "rehab_friendly"],
+    "tags": [
+      "neck",
+      "rehab_friendly"
+    ],
     "equipment": "neck_harness"
   },
   {
     "name": "Band-Resisted Neck Extension",
     "category": "boxing",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["neck", "rehab_friendly"],
+    "tags": [
+      "neck",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Plate Pinch Rotations",
     "category": "boxing",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["grip", "rotational"],
+    "tags": [
+      "grip",
+      "rotational"
+    ],
     "equipment": "plates"
   },
   {
     "name": "3-Minute Heavy Bag Interval",
     "category": "boxing",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "shoulders"],
+    "tags": [
+      "endurance",
+      "shoulders"
+    ],
     "equipment": "heavy_bag"
   },
   {
     "name": "Shadow Boxing (Weighted Gloves)",
     "category": "boxing",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["endurance", "rate_of_force"],
+    "tags": [
+      "endurance",
+      "rate_of_force"
+    ],
     "equipment": "weighted_gloves"
   },
   {
     "name": "Burpee-to-Punch (Tabata)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "explosive"],
+    "tags": [
+      "endurance",
+      "explosive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Rope Jumping (Weighted Vest)",
     "category": "boxing",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "balance"],
+    "tags": [
+      "endurance",
+      "balance"
+    ],
     "equipment": "weighted_vest/jump_rope"
   },
   {
     "name": "Combat Rope Waves (30s Sprint)",
     "category": "boxing",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "conditioning",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["endurance", "shoulders"],
+    "tags": [
+      "endurance",
+      "shoulders"
+    ],
     "equipment": "battle_ropes"
   },
   {
     "name": "Sprint Acceleration (10-20m)",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "sprint",
     "type": "bilateral",
-    "tags": ["explosive", "CNS"],
+    "tags": [
+      "explosive",
+      "CNS"
+    ],
     "equipment": "open_space"
   },
   {
     "name": "Lateral Shuffle Sprint",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "CNS"],
+    "tags": [
+      "lateral",
+      "CNS"
+    ],
     "equipment": "open_space"
   },
   {
     "name": "Alternating Skater Hops",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "explosive"],
+    "tags": [
+      "lateral",
+      "explosive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Depth Jump to Sprint",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "bilateral",
-    "tags": ["CNS", "explosive"],
+    "tags": [
+      "CNS",
+      "explosive"
+    ],
     "equipment": "box"
   },
   {
     "name": "Rapid Hurdle Hops (2-foot)",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "bilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "hurdles"
   },
   {
     "name": "Backpedal-to-Sprint Transition",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "sprint",
     "type": "bilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "open_space"
   },
   {
     "name": "Single-Leg Bounding",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "horizontal",
     "type": "unilateral",
-    "tags": ["CNS", "explosive"],
+    "tags": [
+      "CNS",
+      "explosive"
+    ],
     "equipment": "open_space"
   },
   {
     "name": "Jump-in-Place (Max Frequency)",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "bilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Carioca Sprint",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["lateral", "CNS"],
+    "tags": [
+      "lateral",
+      "CNS"
+    ],
     "equipment": "open_space"
   },
   {
     "name": "Drop-Step Lateral Bound",
     "category": "locomotion",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "reactive"],
+    "tags": [
+      "lateral",
+      "reactive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Lateral Lunge (Plyometric)",
     "category": "lateral",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "explosive"],
+    "tags": [
+      "lateral",
+      "explosive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Cossack Squat (Dynamic)",
     "category": "lateral",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "mobility"],
+    "tags": [
+      "lateral",
+      "mobility"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Side Hop-to-Stabilize",
     "category": "lateral",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "reactive"],
+    "tags": [
+      "lateral",
+      "reactive"
+    ],
     "equipment": "line/tape"
   },
   {
     "name": "Lateral Med Ball Slam",
     "category": "lateral",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["lateral", "CNS"],
+    "tags": [
+      "lateral",
+      "CNS"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Defensive Slide Drill (Weighted)",
     "category": "lateral",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "power",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "conditioning"],
+    "tags": [
+      "lateral",
+      "conditioning"
+    ],
     "equipment": "weighted_vest"
   },
   {
     "name": "Lateral Box Push-Off",
     "category": "lateral",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "explosive"],
+    "tags": [
+      "lateral",
+      "explosive"
+    ],
     "equipment": "box"
   },
   {
     "name": "Cross-Step Lunge",
     "category": "lateral",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "rotational",
     "type": "unilateral",
-    "tags": ["lateral", "balance"],
+    "tags": [
+      "lateral",
+      "balance"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Lateral Resisted Band Walk",
     "category": "lateral",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "lateral",
     "type": "unilateral",
-    "tags": ["lateral", "rehab_friendly"],
+    "tags": [
+      "lateral",
+      "rehab_friendly"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Depth Jump (Stick Landing)",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "bilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "box"
   },
   {
     "name": "Reactive Hurdle Hop (Single-Leg)",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "unilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "hurdles"
   },
   {
     "name": "Ballistic Box Jump (Min Ground Contact)",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "bilateral",
-    "tags": ["CNS", "explosive"],
+    "tags": [
+      "CNS",
+      "explosive"
+    ],
     "equipment": "box"
   },
   {
     "name": "Reactive Dot Drills",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "agility_dots"
   },
   {
     "name": "Band-Resisted Reaction Hop",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "horizontal",
     "type": "unilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Plyometric Shadow Boxing",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["CNS", "rate_of_force"],
+    "tags": [
+      "CNS",
+      "rate_of_force"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Staggered-Stance Reactive Jumps",
     "category": "reactive",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "unilateral",
-    "tags": ["CNS", "reactive"],
+    "tags": [
+      "CNS",
+      "reactive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Balance (Eyes Closed)",
     "category": "proprioception",
-    "phases": ["GPP", "TAPER"],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
     "method": "rehab",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["balance", "rehab_friendly"],
+    "tags": [
+      "balance",
+      "rehab_friendly"
+    ],
     "equipment": "bodyweight",
     "notes": "Progress by adding head turns or unstable surface"
   },
   {
     "name": "Tandem Gait Walk (Heel-to-Toe)",
     "category": "proprioception",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "locomotion",
     "type": "unilateral",
-    "tags": ["balance", "rehab_friendly"],
+    "tags": [
+      "balance",
+      "rehab_friendly"
+    ],
     "equipment": "line/tape",
     "notes": "Add backward walking for progression"
   },
   {
     "name": "Bosu Ball Mini-Squats",
     "category": "proprioception",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "squat",
     "type": "bilateral",
-    "tags": ["balance", "rehab_friendly"],
+    "tags": [
+      "balance",
+      "rehab_friendly"
+    ],
     "equipment": "bosu_ball",
     "notes": "Keep squats shallow (30° knee bend)"
   },
   {
     "name": "Foam Pad Alphabet Tracing",
     "category": "proprioception",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "rehab",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["balance", "rehab_friendly"],
+    "tags": [
+      "balance",
+      "rehab_friendly"
+    ],
     "equipment": "foam_pad",
     "notes": "Trace letters with toes while standing on one leg"
   },
   {
     "name": "Reactive Band Taps (Partner)",
     "category": "proprioception",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "rehab",
     "movement": "reactive",
     "type": "unilateral",
-    "tags": ["balance", "rehab_friendly", "CNS"],
+    "tags": [
+      "balance",
+      "rehab_friendly",
+      "CNS"
+    ],
     "equipment": "bands/partner",
     "notes": "Partner gently tugs band in random directions during single-leg stance"
   }
