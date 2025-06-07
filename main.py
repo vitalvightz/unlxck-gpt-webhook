@@ -174,23 +174,22 @@ async def handle_submission(request: Request):
     }
 
     # Module generation
+    mental_block = get_mindset_by_phase(phase, training_context)
     mental_strategies = get_mental_protocols(training_context["mental_block"])
     strength_block = generate_strength_block(flags=training_context, weaknesses=training_context["weaknesses"])
     conditioning_block = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
-
-    # Format mindset output
-    mindset_block = get_mindset_by_phase(phase, training_context)
     
-prompt = f"""
+print("== NUTRITION BLOCK ==\n", nutrition_block)
+
+    prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
-You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across UFC, Glory, ONE Championship, and Olympic combat sports.Add commentMore actions
 
-Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
+## SAFETY
+Avoid training through pain. Prioritize recovery. Emphasize technique.
 
-Use the following blocks as reference – they are pre-analyzed insights from Unlxck’s system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
 ## MINDSET
 {mindset_block}
 
@@ -213,6 +212,12 @@ Use the following blocks as reference – they are pre-analyzed insights from Un
 {injury_sub_block}
 
 ---
+
+You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across UFC, Glory, ONE Championship, and Olympic combat sports.
+
+Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
+
+Use the following blocks as reference – they are pre-analyzed insights from Unlxck’s system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
 
 Athlete Profile:
 - Name: {full_name}
@@ -240,25 +245,12 @@ Athlete Profile:
     try:
         response = openai.chat.completions.create(
             model="gpt-4",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a world-class strength & conditioning coach (MSc-level) who receives structured modules from Unlxck’s proprietary system. "
-                        "You must synthesize them into a personalized 3-phase fight plan (GPP, SPP, TAPER). Use elite programming logic. Be specific. Prioritize performance, periodization, and realistic tapering."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
+            messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
             max_tokens=3000,
         )
-        full_plan = response.choices[0].message.content.strip()
-        if response.choices[0].finish_reason != "stop":
-            print("⚠️ GPT output likely truncated.")
+        full_plan = response.choices[0].message.content.strip()More actions
+        print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
     except Exception as e:
         print("❌ GPT API Error:", e)
         return {"error": "Failed to generate plan from OpenAI"}
