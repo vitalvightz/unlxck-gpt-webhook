@@ -42,8 +42,59 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
 
     # Style and goal tags
-    style_tag_map = {...}  # same as yours
-    goal_tag_map = {...}   # same as yours
+    style_tag_map = {
+        "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
+        "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
+        "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
+        "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
+        "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
+        "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
+        "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
+        "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
+    }
+
+    goal_tag_map = {
+    "power": [
+        "explosive", "rate_of_force", "triple_extension", "horizontal_power",
+        "plyometric", "elastic", "lateral_power", "deadlift",
+        "ATP-PCr", "anaerobic_alactic", "speed_strength"
+    ],
+    "strength": [
+        "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
+        "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric"
+    ],
+    "endurance": [
+        "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
+        "conditioning", "improvised", "volume_tolerance"
+    ],
+    "speed": [
+        "speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
+        "visual_processing", "reactive_decision"
+    ],
+    "mobility": [
+        "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
+        "stability", "movement_quality", "range", "rehab_friendly"
+    ],
+    "grappling": [
+        "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+        "manual_resistance", "positioning"
+    ],
+    "striking": [
+        "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
+        "coordination", "visual_processing", "rhythm", "timing"
+    ],
+    "injury prevention": [
+        "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
+        "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
+    ],
+    "mental resilience": [
+        "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
+        "focus", "environmental", "pressure_tolerance"
+    ],
+    "skill refinement": [
+        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
+    ]
+}
     style_tags = style_tag_map.get(style, [])
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
 
