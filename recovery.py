@@ -69,14 +69,25 @@ def generate_recovery_block(training_context: dict) -> str:
             "- Reset sleep routine"
         ]
 
-    # Weight Cut Risk Trigger
-    if weight_cut_risk and weight_cut_pct >= 6.0:
-        recovery_block.append("\n**⚠️ Weight Cut Recovery Warning:**")
-        recovery_block += [
-            "- Cut >6% → elevate recovery urgency",
-            "- Add 2 float tank or Epsom salt baths in fight week",
-            "- Emphasize post-weigh-in refeed: fluids, high-GI carbs",
-            "- Monitor mood, sleep, and hydration hourly post-weigh-in"
-        ]
+    # Graduated Weight Cut Recovery Guidance
+    if weight_cut_risk:
+        if 3.0 <= weight_cut_pct < 6.0:
+            recovery_block.append("\n**⚠️ Moderate Weight Cut Recovery Recommendations:**")
+            recovery_block += [
+                "- Monitor hydration closely; aim to avoid >2% dehydration",
+                "- Prioritize quality sleep and stress management",
+                "- Incorporate light mobility and stretching",
+                "- Avoid excessive heat exposure or hard training sessions",
+                "- Use electrolyte drinks during training and post-training"
+            ]
+        elif weight_cut_pct >= 6.0:
+            recovery_block.append("\n**⚠️ Severe Weight Cut Recovery Warning:**")
+            recovery_block += [
+                "- Cut >6% → elevate recovery urgency",
+                "- Add 2 float tank or Epsom salt baths in fight week",
+                "- Emphasize post-weigh-in refeed: fluids, high-GI carbs",
+                "- Monitor mood, sleep, and hydration hourly post-weigh-in",
+                "- Consider medical supervision if possible"
+            ]
 
     return "\n".join(recovery_block).strip()
