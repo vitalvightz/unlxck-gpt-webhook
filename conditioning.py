@@ -133,7 +133,7 @@ def generate_conditioning_block(flags):
     phase_priority = {
         "GPP": ["aerobic", "glycolytic", "alactic"],
         "SPP": ["glycolytic", "alactic", "aerobic"],
-        "TAPER": ["aerobic", "alactic"]
+        "TAPER": ["alactic", "aerobic", "glycolytic"]
     }
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
@@ -179,23 +179,48 @@ def generate_conditioning_block(flags):
     total_drills = num_conditioning_sessions * drills_per_session
 
     final_drills = []
-    enforced = set()
-    for system in preferred_order:
-        candidates = system_drills.get(system, [])
-        if candidates:
-            final_drills.append((system, [candidates[0][0]]))
-            enforced.add(system)
+    taper_selected = 0
 
-    remaining_slots = total_drills - len(final_drills)
-    for system in preferred_order:
-        if remaining_slots <= 0:
-            break
-        available = [d for d in system_drills[system] if d[0] not in [dr[0] for _, drills in final_drills for dr in drills]]
-        if not available:
-            continue
-        count = min(remaining_slots, len(available))
-        final_drills.append((system, [d[0] for d in available[:count]]))
-        remaining_slots -= count
+    if phase.upper() == "TAPER":
+        total_drills = min(total_drills, 3)
+        style_list = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
+        combined_focus = [w.lower() for w in weaknesses] + [g.lower() for g in goals]
+        allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
+        allow_glycolytic = (
+            fatigue == "low" and any(s in ["pressure fighter", "scrambler"] for s in style_list)
+        )
+
+        if system_drills["alactic"]:
+            final_drills.append(("alactic", [system_drills["alactic"][0][0]]))
+            taper_selected += 1
+
+        if allow_aerobic and taper_selected < 2 and system_drills["aerobic"]:
+            final_drills.append(("aerobic", [system_drills["aerobic"][0][0]]))
+            taper_selected += 1
+
+        if allow_glycolytic and taper_selected < 2 and system_drills["glycolytic"]:
+            final_drills.append(("glycolytic", [system_drills["glycolytic"][0][0]]))
+            taper_selected += 1
+    else:
+        enforced = set()
+        for system in preferred_order:
+            candidates = system_drills.get(system, [])
+            if candidates:
+                final_drills.append((system, [candidates[0][0]]))
+                enforced.add(system)
+
+        remaining_slots = total_drills - len(final_drills)
+        for system in preferred_order:
+            if remaining_slots <= 0:
+                break
+            available = [d for d in system_drills[system] if d[0] not in [dr[0] for _, drills in final_drills for dr in drills]]
+            if not available:
+                continue
+            count = min(remaining_slots, len(available))
+            final_drills.append((system, [d[0] for d in available[:count]]))
+            remaining_slots -= count
+
+    taper_drill_count = sum(len(drills) for _, drills in final_drills) if phase.upper() == "TAPER" else 0
 
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:
@@ -219,5 +244,6 @@ def generate_conditioning_block(flags):
 
     return {
         "block": "\n".join(output_lines),
-        "num_sessions": len(final_drills)
+        "num_sessions": len(final_drills),
+        "taper_conditioning_drills": taper_drill_count
     }
