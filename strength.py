@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import ast
 from injury_subs import injury_subs
 from training_context import normalize_equipment_list, known_equipment, allocate_sessions
 
@@ -8,6 +9,28 @@ phase_equipment_boost = {
     "GPP": {"barbell", "trap_bar", "sled", "pullup_bar"},
     "SPP": {"landmine", "cable", "medicine_ball", "bands"},
     "TAPER": {"medicine_ball", "bodyweight", "band", "partner"}
+}
+
+# Load style specific exercises (file lacks closing brackets so we patch)
+_style_text = Path("style_specific_exercises").read_text()
+_start = _style_text.find("[")
+_end = _style_text.rfind("}")
+_snippet = _style_text[_start:_end + 1] + "]" if _start != -1 and _end != -1 else "[]"
+try:
+    STYLE_EXERCISES = ast.literal_eval(_snippet)
+except Exception:
+    STYLE_EXERCISES = []
+
+# Mandatory exercises per tactical style
+STYLE_MANDATORY = {
+    "brawler": ["Sledgehammer Slam", "Medicine Ball Slam"],
+    "pressure fighter": ["Weighted Sled Push", "Jumping Lunge"],
+    "clinch fighter": ["Farmer’s Carry", "Weighted Pull-Up"],
+    "distance striker": ["Overhead Med Ball Slam", "Pallof Press"],
+    "counter striker": ["Barbell Landmine Twist", "Pallof Press"],
+    "submission hunter": ["Weighted Pull-Up", "Kettlebell Swing"],
+    "kicker": ["Bulgarian Split Squat", "Walking Lunges"],
+    "scrambler": ["Barbell Thruster", "Turkish Get-Up"],
 }
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
@@ -110,7 +133,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
 
     weighted_exercises = []
+    skip_tags = {"eccentric", "compound", "posterior_chain", "high_volume"}
     for ex in exercise_bank:
+        if phase == "TAPER" and any(t in skip_tags for t in ex.get("tags", [])):
+            continue
         if phase not in ex["phases"]:
             continue
 
@@ -145,6 +171,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
         # Fatigue-aware penalties
         ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+        if phase in {"SPP", "TAPER"} and "barbell" in ex_equipment and "compound" in tags:
+            score -= 1.5
         if fatigue in {"high", "moderate"}:
             eq_pen = -1.5 if fatigue == "high" else -0.75
             tag_pen = -1.0 if fatigue == "high" else -0.5
@@ -178,6 +206,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         weighted_exercises += [(ex, 0) for ex in fallback_exercises]
 
     top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
+
+    # Inject mandatory exercises for tactical style
+    mandatory = STYLE_MANDATORY.get(style, [])[:2]
+    for name in mandatory:
+        ex_obj = next((e for e in STYLE_EXERCISES if e.get("name") == name), None)
+        if not ex_obj:
+            continue
+        if phase not in ex_obj.get("phases", []):
+            continue
+        if all(e.get("name") != name for e in top_exercises):
+            top_exercises.append(ex_obj)
+    if len(top_exercises) > target_exercises:
+        top_exercises = top_exercises[:target_exercises]
 
     def substitute_exercises(exercises, injuries_detected):
         modified = []
