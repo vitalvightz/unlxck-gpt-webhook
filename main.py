@@ -39,6 +39,11 @@ GOAL_NORMALIZER = {
     "Posterior Chain": "posterior_chain",
     "Knees": "quad_dominant",
     "Neck": "neck"
+    "Grappling": "grappling"
+    "Striking": "striking"
+    "Injury Prevention": "injury_prevention"
+    "Mental Resilience": "mental_resilience"
+    "Skill Refinement": "skill_refinement"
 }
 # Auth
 if os.getenv("GOOGLE_CREDS_B64"):
