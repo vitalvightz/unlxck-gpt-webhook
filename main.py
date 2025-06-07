@@ -158,7 +158,11 @@ async def handle_submission(request: Request):
         "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
         "fight_format": mapped_format,
         "training_split": allocate_sessions(int(frequency)),
-        "key_goals": [g.strip().lower() for g in key_goals.split(",")] if key_goals else [],
+        "key_goals": [
+    GOAL_NORMALIZER.get(g.strip(), g.strip()).lower()
+    for g in key_goals.split(",")
+    if g.strip()
+] if key_goals else [],
         "training_preference": training_preference.strip().lower() if training_preference else "",
         "mental_block": classify_mental_block(mental_block),
         "age": int(age) if age.isdigit() else 0,
