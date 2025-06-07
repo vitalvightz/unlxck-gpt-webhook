@@ -186,7 +186,11 @@ async def handle_submission(request: Request):
     
 prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
+You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across UFC, Glory, ONE Championship, and Olympic combat sports.Add commentMore actions
 
+Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
+
+Use the following blocks as reference – they are pre-analyzed insights from Unlxck’s system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
 ## MINDSET
 {mindset_block}
 
