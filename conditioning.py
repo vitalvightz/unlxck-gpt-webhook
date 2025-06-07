@@ -30,22 +30,33 @@ goal_tag_map = {
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
 format_weights = json.loads(Path("format_energy_weights.json").read_text())
 
-# Normalize alternate system labels
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
     "anaerobic_alactic": "alactic",
     "cognitive": "alactic"
 }
 
+def expand_tags(input_list, tag_map):
+    expanded = []
+    for item in input_list:
+        tags = tag_map.get(item.lower(), [])
+        expanded.extend(tags)
+    return [t.lower() for t in expanded]
+
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     fatigue = flags.get("fatigue", "low")
     style = flags.get("style_tactical", [])
-    style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     technical = flags.get("style_technical", "").lower()
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
     days_available = flags.get("days_available", 3)
+
+    style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
+    style_tags = [t for s in style_tags for t in style_tag_map.get(s, [])]
+
+    goal_tags = expand_tags(goals, goal_tag_map)
+    weak_tags = expand_tags(weaknesses, goal_tag_map)
 
     style_map = {
         "mma": "mma", "boxer": "boxing", "kickboxer": "kickboxing",
@@ -61,13 +72,7 @@ def generate_conditioning_block(flags):
         "kickboxing": ["kickboxing", "muay_thai"],
         "muay_thai": ["muay_thai"]
     }
-    fight_format_tags = flags.get("fight_format_tags")
-    if fight_format_tags is None:
-        fight_format_tags = format_tag_map.get(fight_format, [])
-    
-    style_tags = [style] if style else []
-    goal_tags = [g.lower() for g in goals]
-    weak_tags = [w.lower() for w in weaknesses]
+    fight_format_tags = flags.get("fight_format_tags") or format_tag_map.get(fight_format, [])
 
     phase_priority = {
         "GPP": ["aerobic", "glycolytic", "alactic"],
@@ -84,7 +89,6 @@ def generate_conditioning_block(flags):
 
         raw_system = drill.get("system", "").lower()
         system = SYSTEM_ALIASES.get(raw_system, raw_system)
-
         if system not in system_drills:
             continue
 
@@ -95,8 +99,6 @@ def generate_conditioning_block(flags):
         num_style = sum(1 for t in tags if t in style_tags)
         num_format = sum(1 for t in tags if t in fight_format_tags)
 
-        # Base scoring weighs weaknesses and goals most heavily
-        # with smaller bonuses for style and fight format matches.
         base_score = 2.5 * min(num_weak, 2)
         base_score += 2.0 * min(num_goals, 2)
         base_score += 1.0 * min(num_style, 2)
@@ -104,7 +106,6 @@ def generate_conditioning_block(flags):
 
         energy_multiplier = energy_weights.get(system, 1.0)
         system_score = round(energy_multiplier * 2.0, 2)
-
         total_score = base_score + system_score
 
         if fatigue == "high" and "high_cns" in tags:
@@ -123,10 +124,9 @@ def generate_conditioning_block(flags):
     total_drills = num_conditioning_sessions * drills_per_session
 
     final_drills = []
-
     enforced = set()
     for system in preferred_order:
-        candidates = sorted(system_drills.get(system, []), key=lambda x: x[1], reverse=True)
+        candidates = system_drills.get(system, [])
         if candidates:
             final_drills.append((system, [candidates[0][0]]))
             enforced.add(system)
@@ -135,20 +135,14 @@ def generate_conditioning_block(flags):
     for system in preferred_order:
         if remaining_slots <= 0:
             break
-        if system not in system_drills:
-            continue
-
-        available = [d for d in sorted(system_drills[system], key=lambda x: x[1], reverse=True)
-                     if d[0] not in [dr[0] for _, drills in final_drills for dr in drills]]
+        available = [d for d in system_drills[system] if d[0] not in [dr[0] for _, drills in final_drills for dr in drills]]
         if not available:
             continue
-
         count = min(remaining_slots, len(available))
         final_drills.append((system, [d[0] for d in available[:count]]))
         remaining_slots -= count
 
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
-
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if not system_drills[system_name]:
             output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
