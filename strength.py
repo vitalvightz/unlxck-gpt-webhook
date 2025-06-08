@@ -349,3 +349,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "exercises": base_exercises,
     }
     
+    
