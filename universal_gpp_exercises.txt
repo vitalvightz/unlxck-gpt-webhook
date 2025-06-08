@@ -9,63 +9,63 @@
   {
     "phase": "GPP",
     "name": "Trap Bar Deadlift",
-    "tags": ["compound", "hinge", "posterior_chain"],
+    "tags": ["compound", "hip_dominant", "posterior_chain", "deadlift"],
     "prescription": "3x5 @ 75–85% 1RM",
     "notes": "Safe hinge pattern to develop full-body strength and grip."
   },
   {
     "phase": "GPP",
     "name": "Push-Up or Bench Press",
-    "tags": ["push", "upper_body", "chest", "compound"],
+    "tags": ["push", "upper_body", "rate_of_force", "compound"],
     "prescription": "3x8–10 controlled tempo",
     "notes": "Builds pressing strength and midline control."
   },
   {
     "phase": "GPP",
     "name": "Barbell or DB Overhead Press",
-    "tags": ["push", "shoulders", "core", "compound"],
+    "tags": ["upper_body", "shoulders", "core", "overhead"],
     "prescription": "3x5 @ 70–85% 1RM",
     "notes": "Improves posture, overhead strength, and core integration."
   },
   {
     "phase": "GPP",
     "name": "DB Split Squat",
-    "tags": ["unilateral", "glutes", "balance"],
+    "tags": ["unilateral", "posterior_chain", "balance"],
     "prescription": "3x6/leg",
     "notes": "Builds single-leg strength and knee stability."
   },
   {
     "phase": "GPP",
     "name": "Pull-Up or Inverted Row",
-    "tags": ["pull", "upper_body", "grip", "scapular"],
+    "tags": ["pull", "upper_body", "grip"],
     "prescription": "3x5–10 controlled reps",
     "notes": "Develops pulling strength, grip, and scapular control."
   },
   {
     "phase": "GPP",
     "name": "Sled Push or Drag",
-    "tags": ["conditioning", "posterior_chain", "grind"],
+    "tags": ["sled", "posterior_chain", "work_capacity"],
     "prescription": "4x15m heavy, rest 90s",
     "notes": "Concentric-only drill to build force output with low injury risk."
   },
   {
     "phase": "GPP",
     "name": "Trap Bar or DB Shrugs",
-    "tags": ["traps", "grip", "neck_support"],
+    "tags": ["grip", "upper_body"],
     "prescription": "3x10–12 heavy",
     "notes": "Reinforces shrug mechanics and neck support for impact sports."
   },
   {
     "phase": "GPP",
     "name": "Neck Harness Isometrics",
-    "tags": ["neck", "isometric", "resilience"],
+    "tags": ["neck", "cns_freshness", "resilience"],
     "prescription": "3x30s in each direction",
     "notes": "Improves cervical strength and reduces concussion risk."
   },
   {
     "phase": "GPP",
     "name": "Landmine Rotations",
-    "tags": ["rotation", "core", "trunk_control"],
+    "tags": ["rotational", "core", "coordination"],
     "prescription": "3x8/side slow tempo",
     "notes": "Develops rotational strength and trunk transfer efficiency."
   },
@@ -79,7 +79,7 @@
   {
     "phase": "GPP",
     "name": "Low Hurdle Hop (Rhythm Focus)",
-    "tags": ["reactive", "elasticity", "landing_mechanics"],
+    "tags": ["reactive", "elastic", "coordination"],
     "prescription": "3x5 over low hurdles",
     "notes": "Rebuilds bounce, rhythm, and landing coordination."
   }
