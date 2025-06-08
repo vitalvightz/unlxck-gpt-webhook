@@ -13,7 +13,12 @@ exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 # Modules
 from training_context import allocate_sessions, normalize_equipment_list
-from mindset_module import classify_mental_block, get_phase_mindset_cues
+from mindset_module import (
+    classify_mental_block,
+    get_mindset_by_phase,
+    get_mental_protocols,
+    get_phase_mindset_cues,
+)
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
 from recovery import generate_recovery_block
@@ -175,6 +180,8 @@ async def handle_submission(request: Request):
     }
 
     # Module generation
+    mental_block = get_mindset_by_phase(phase, training_context)
+    mental_strategies = get_mental_protocols(training_context["mental_block"])
     phase_mindset_cues = get_phase_mindset_cues(training_context["mental_block"])
 
     # === Strength blocks per phase with repeat filtering ===
@@ -212,6 +219,12 @@ async def handle_submission(request: Request):
 
 ## SAFETY
 Avoid training through pain. Prioritize recovery. Emphasize technique.
+
+## MINDSET
+{mental_block}
+
+## MENTAL PROTOCOLS
+{mental_strategies}
 
 ## STRENGTH
 {strength_block}
