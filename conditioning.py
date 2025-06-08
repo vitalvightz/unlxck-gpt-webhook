@@ -311,6 +311,37 @@ def generate_conditioning_block(flags):
                 if remaining_slots <= 0:
                     break
 
+    # --------- UNIVERSAL CONDITIONING INSERTION ---------
+    if phase == "GPP":
+        try:
+            with open("universal_gpp_conditioning.json", "r") as f:
+                universal_conditioning = json.load(f)
+        except Exception:
+            universal_conditioning = []
+
+        existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
+        goal_tags_set = set(goal_tags or [])
+        weakness_tags_set = set(weaknesses or [])
+
+        high_priority_names = {
+            "Jump Rope Endurance (Footwork Conditioning)",
+            "Steady-State Cardio (Run / Bike / Row)",
+            "Explosive Medicine Ball Throws",
+        }
+
+        injected = 0
+        for drill in universal_conditioning:
+            if injected >= 3:
+                break
+            if drill.get("name") in existing_cond_names:
+                continue
+            drill_tags = set(drill.get("tags", []))
+            if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
+                final_drills.append((drill.get("system", "misc"), [drill]))
+                selected_drill_names.append(drill.get("name"))
+                existing_cond_names.add(drill.get("name"))
+                injected += 1
+
     taper_drill_count = sum(len(drills) for _, drills in final_drills) if phase.upper() == "TAPER" else 0
 
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]

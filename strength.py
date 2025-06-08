@@ -233,6 +233,37 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
     top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
 
+    # --------- UNIVERSAL STRENGTH INSERTION ---------
+    if phase == "GPP":
+        try:
+            with open("universal_gpp_strength.json", "r") as f:
+                universal_strength = json.load(f)
+        except Exception:
+            universal_strength = []
+
+        existing_names = {e["name"] for e in top_exercises}
+        existing_tags = {tag for e in top_exercises for tag in e.get("tags", [])}
+        priority_strength_tags = [
+            ("pull", "upper_body"),
+            ("anti_rotation", "core"),
+            ("unilateral",),
+            ("neck", "traps"),
+        ]
+
+        inserted = 0
+        for drill in universal_strength:
+            if inserted >= 4:
+                break
+            if drill.get("name") in existing_names:
+                continue
+            for group in priority_strength_tags:
+                if any(tag in drill.get("tags", []) for tag in group) and not any(
+                    tag in existing_tags for tag in group
+                ):
+                    top_exercises.append(drill)
+                    inserted += 1
+                    break
+
     # Inject mandatory exercises for tactical style
     mandatory = STYLE_MANDATORY.get(style, [])[:2]
     for name in mandatory:
