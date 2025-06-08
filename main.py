@@ -215,33 +215,40 @@ async def handle_submission(request: Request):
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
 
-    mental_strategies_block = f"""## MENTAL PERFORMANCE STRATEGY
-Use the insights below for phase-specific mindset coaching. Integrate them into each phase’s training logic.
+    # Mental Block Strategy Injection Per Phase
+def build_mindset_prompt(phase_name: str):
+    if training_context["mental_block"] and training_context["mental_block"][0].lower() != "generic":
+        cues = get_phase_mindset_cues(training_context["mental_block"])
+        return f"\n🚫 **Mental Block – {', '.join(training_context['mental_block']).upper()} ({phase_name} Phase)**:\n{cues.get(phase_name, '')}\n"
+    else:
+        return f"\n🧠 **Mental Strategy ({phase_name} Phase)**:\n{get_mindset_by_phase(phase_name, training_context)}\n"
 
-→ Use the `Mindset Cue` provided to address the athlete’s top 1–2 mental blocks.
-→ Each phase (GPP, SPP, TAPER) should include 1 short mindset habit (journal cue, visual drill, recovery ritual, etc).
-→ For example: If the block is **pressure**, GPP might include journaling cues, SPP should introduce pressure simulation drills.
-→ You must include this in each training phase block — do not separate it as a stand-alone mindset section.
-→ If no specific block was detected, fallback to general preparation cues.
-→ Do **not** duplicate cues across phases unless justified.
+# Add block-level mindset cues into each phase manually (this is what GPT actually sees)
+gpp_mindset = build_mindset_prompt("GPP")
+spp_mindset = build_mindset_prompt("SPP")
+taper_mindset = build_mindset_prompt("TAPER")
 
-{mental_strategies}
-"""
-
-    prompt = mental_strategies_block + "\n" + f"""
+prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
 ## SAFETY
 Avoid training through pain. Prioritize recovery. Emphasize technique.
 
 ## MINDSET
-{mental_block}
-
-## MENTAL PROTOCOLS
-{mental_strategies}
+Top Block(s): {', '.join(training_context['mental_block']).title()}
 
 ## STRENGTH
-{strength_block}
+### GPP
+{gpp_mindset}
+{gpp_block["block"]}
+
+### SPP
+{spp_mindset}
+{spp_block["block"]}
+
+### TAPER
+{taper_mindset}
+{taper_block["block"]}
 
 ## CONDITIONING
 {conditioning_block}
