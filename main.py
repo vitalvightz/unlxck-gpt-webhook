@@ -179,8 +179,6 @@ async def handle_submission(request: Request):
     }
 
     # Module generation
-    mental_block = get_mindset_by_phase(phase, training_context)
-    mental_strategies = get_mental_protocols(training_context["mental_block"])
     phase_mindset_cues = get_phase_mindset_cues(training_context["mental_block"])
 
     # === Strength blocks per phase with repeat filtering ===
