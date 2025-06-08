@@ -320,22 +320,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         f"**Prescription:** {base_block}"
     ]
     if mindset_cue:
-    strength_output.append(f"**Mindset Cue:** {mindset_cue}")
+        strength_output.append(f"**Mindset Cue:** {mindset_cue}")
     
     if fatigue_note:
         strength_output.append(f"**Adjustment:** {fatigue_note}")
 
-    all_tags = []
-    for ex in base_exercises:
-        all_tags.extend(ex.get("tags", []))
-
-    return {
-        "block": "\n".join(strength_output),
-        "num_sessions": len(used_days),
-        "preferred_tags": list(set(all_tags)),
-        "exercises": base_exercises,
-    }
-    
     all_tags = []
     for ex in base_exercises:
         all_tags.extend(ex.get("tags", []))
