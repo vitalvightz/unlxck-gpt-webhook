@@ -214,16 +214,14 @@ async def handle_submission(request: Request):
 
     # Mental Block Strategy Injection Per Phase
     def build_mindset_prompt(phase_name: str):
-        if training_context["mental_block"] and training_context["mental_block"][0].lower() != "generic":
-            cues = get_phase_mindset_cues(training_context["mental_block"])
-            return f"\n🚫 **Mental Block – {', '.join(training_context['mental_block']).upper()} ({phase_name} Phase)**:\n{cues.get(phase_name, '')}\n"
-        else:
-            return f"\n🧠 **Mental Strategy ({phase_name} Phase)**:\n{get_mindset_by_phase(phase_name, training_context)}\n"
+    blocks = training_context.get("mental_block", ["generic"])
+    if isinstance(blocks, str):
+        blocks = [blocks]
 
-    # Add block-level mindset cues into each phase manually (this is what GPT actually sees)
-    gpp_mindset = build_mindset_prompt("GPP")
-    spp_mindset = build_mindset_prompt("SPP")
-    taper_mindset = build_mindset_prompt("TAPER")
+    if blocks[0].lower() != "generic":
+        return get_mindset_by_phase(phase_name, training_context)
+    else:
+        return get_mindset_by_phase(phase_name, {"mental_block": ["generic"]})
 
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
