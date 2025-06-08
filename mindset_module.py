@@ -188,3 +188,4 @@ def get_phase_mindset_cues(blocks) -> dict:
             tips.append(f"{block.title()}: {tip}")
         cues[phase] = " | ".join(tips)
     return cues
+    
