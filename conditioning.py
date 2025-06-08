@@ -342,8 +342,6 @@ def generate_conditioning_block(flags):
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
 
-    taper_drill_count = sum(len(drills) for _, drills in final_drills) if phase.upper() == "TAPER" else 0
-
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if not system_drills[system_name]:
