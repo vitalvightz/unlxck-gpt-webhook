@@ -21,7 +21,6 @@ try:
 except Exception:
     STYLE_EXERCISES = []
 
-# Mandatory exercises per tactical style
 STYLE_MANDATORY = {
     "brawler": ["Sledgehammer Slam", "Medicine Ball Slam"],
     "pressure fighter": ["Weighted Sled Push", "Jumping Lunge"],
@@ -52,18 +51,7 @@ def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
 
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
-def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
-    """Create a strength training block for a single phase.
-
-    Args:
-        flags: Training context parameters.
-        weaknesses: List of athlete weaknesses to bias exercise selection.
-        mindset_cue: Short mindset habit or drill to append to the block.
-
-    Returns:
-        Dict with generated block text, session count, preferred tags and
-        chosen exercises.
-    """
+def generate_strength_block(*, flags: dict, weaknesses=None):
     phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
@@ -76,7 +64,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
     prev_exercises = flags.get("prev_exercises", [])
 
-    # Style and goal tags
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
         "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
@@ -89,51 +76,50 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     }
 
     goal_tag_map = {
-    "power": [
-        "explosive", "rate_of_force", "triple_extension", "horizontal_power",
-        "plyometric", "elastic", "lateral_power", "deadlift",
-        "ATP-PCr", "anaerobic_alactic", "speed_strength"
-    ],
-    "strength": [
-        "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
-        "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric"
-    ],
-    "endurance": [
-        "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
-        "conditioning", "improvised", "volume_tolerance"
-    ],
-    "speed": [
-        "speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
-        "visual_processing", "reactive_decision"
-    ],
-    "mobility": [
-        "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
-        "stability", "movement_quality", "range", "rehab_friendly"
-    ],
-    "grappling": [
-        "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
-        "manual_resistance", "positioning"
-    ],
-    "striking": [
-        "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
-        "coordination", "visual_processing", "rhythm", "timing"
-    ],
-    "injury prevention": [
-        "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
-        "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
-    ],
-    "mental resilience": [
-        "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
-        "focus", "environmental", "pressure_tolerance"
-    ],
-    "skill refinement": [
-        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
-    ]
-}
+        "power": [
+            "explosive", "rate_of_force", "triple_extension", "horizontal_power",
+            "plyometric", "elastic", "lateral_power", "deadlift",
+            "ATP-PCr", "anaerobic_alactic", "speed_strength"
+        ],
+        "strength": [
+            "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
+            "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric"
+        ],
+        "endurance": [
+            "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
+            "conditioning", "improvised", "volume_tolerance"
+        ],
+        "speed": [
+            "speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
+            "visual_processing", "reactive_decision"
+        ],
+        "mobility": [
+            "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
+            "stability", "movement_quality", "range", "rehab_friendly"
+        ],
+        "grappling": [
+            "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+            "manual_resistance", "positioning"
+        ],
+        "striking": [
+            "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
+            "coordination", "visual_processing", "rhythm", "timing"
+        ],
+        "injury prevention": [
+            "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
+            "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
+        ],
+        "mental resilience": [
+            "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
+            "focus", "environmental", "pressure_tolerance"
+        ],
+        "skill refinement": [
+            "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
+        ]
+    }
+
     style_tags = style_tag_map.get(style, [])
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
-
-    # Equipment boost logic
     boosted_tools = phase_equipment_boost.get(phase.upper(), set())
 
     phase_tag_boost = {
@@ -335,8 +321,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ]
     if fatigue_note:
         strength_output.append(f"**Adjustment:** {fatigue_note}")
-    if mindset_cue:
-        strength_output.append(f"**Mindset Cue:** {mindset_cue}")
 
     all_tags = []
     for ex in base_exercises:
@@ -348,5 +332,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "preferred_tags": list(set(all_tags)),
         "exercises": base_exercises,
     }
-    
     
