@@ -278,3 +278,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
         "preferred_tags": list(set(all_tags)),
         "exercises": base_exercises,
     }
+    
