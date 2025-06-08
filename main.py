@@ -15,7 +15,6 @@ exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 from training_context import allocate_sessions, normalize_equipment_list
 from mindset_module import (
     classify_mental_block,
-    get_mindset_by_phase,
     get_mental_protocols,
     get_phase_mindset_cues,
 )
