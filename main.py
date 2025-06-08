@@ -189,7 +189,7 @@ async def handle_submission(request: Request):
     gpp_block = generate_strength_block(
         flags=gpp_flags,
         weaknesses=training_context["weaknesses"],
-        mindset_cue=phase_mindset_cues.get("GPP")
+        mindset_cue=phase_mindset_cues.get("GPP"),
     )
     gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
 
@@ -197,7 +197,7 @@ async def handle_submission(request: Request):
     spp_block = generate_strength_block(
         flags=spp_flags,
         weaknesses=training_context["weaknesses"],
-        mindset_cue=phase_mindset_cues.get("SPP")
+        mindset_cue=phase_mindset_cues.get("SPP"),
     )
     spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
 
@@ -205,29 +205,50 @@ async def handle_submission(request: Request):
     taper_block = generate_strength_block(
         flags=taper_flags,
         weaknesses=training_context["weaknesses"],
-        mindset_cue=phase_mindset_cues.get("TAPER")
+        mindset_cue=phase_mindset_cues.get("TAPER"),
     )
     strength_block = "\n\n".join([gpp_block["block"], spp_block["block"], taper_block["block"]])
+
     conditioning_block, _ = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
 
-    prompt = f"""
+    # Mental Block Strategy Injection Per Phase
+def build_mindset_prompt(phase_name: str):
+    if training_context["mental_block"] and training_context["mental_block"][0].lower() != "generic":
+        cues = get_phase_mindset_cues(training_context["mental_block"])
+        return f"\n🚫 **Mental Block – {', '.join(training_context['mental_block']).upper()} ({phase_name} Phase)**:\n{cues.get(phase_name, '')}\n"
+    else:
+        return f"\n🧠 **Mental Strategy ({phase_name} Phase)**:\n{get_mindset_by_phase(phase_name, training_context)}\n"
+
+# Add block-level mindset cues into each phase manually (this is what GPT actually sees)
+gpp_mindset = build_mindset_prompt("GPP")
+spp_mindset = build_mindset_prompt("SPP")
+taper_mindset = build_mindset_prompt("TAPER")
+
+prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
 ## SAFETY
 Avoid training through pain. Prioritize recovery. Emphasize technique.
 
 ## MINDSET
-{mental_block}
-
-## MENTAL PROTOCOLS
-{mental_strategies}
+Top Block(s): {', '.join(training_context['mental_block']).title()}
 
 ## STRENGTH
-{strength_block}
+### GPP
+{gpp_mindset}
+{gpp_block["block"]}
+
+### SPP
+{spp_mindset}
+{spp_block["block"]}
+
+### TAPER
+{taper_mindset}
+{taper_block["block"]}
 
 ## CONDITIONING
 {conditioning_block}
@@ -268,9 +289,10 @@ Athlete Profile:
 - Available S&C Days: {available_days}
 - Weaknesses: {weak_areas}
 - Key Goals: {key_goals}
-- Mindset Challenges: {mental_block}
+- Mindset Challenges: {', '.join(training_context['mental_block'])}
 - Extra Notes: {notes}
 """
+
 
     try:
         response = openai.chat.completions.create(
