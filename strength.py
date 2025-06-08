@@ -52,7 +52,18 @@ def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
 
 exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
-def generate_strength_block(*, flags: dict, weaknesses=None):
+def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
+    """Create a strength training block for a single phase.
+
+    Args:
+        flags: Training context parameters.
+        weaknesses: List of athlete weaknesses to bias exercise selection.
+        mindset_cue: Short mindset habit or drill to append to the block.
+
+    Returns:
+        Dict with generated block text, session count, preferred tags and
+        chosen exercises.
+    """
     phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
@@ -324,6 +335,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     ]
     if fatigue_note:
         strength_output.append(f"**Adjustment:** {fatigue_note}")
+    if mindset_cue:
+        strength_output.append(f"**Mindset Cue:** {mindset_cue}")
 
     all_tags = []
     for ex in base_exercises:

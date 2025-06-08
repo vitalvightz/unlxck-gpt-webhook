@@ -13,7 +13,7 @@ exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 # Modules
 from training_context import allocate_sessions, normalize_equipment_list
-from mindset_module import classify_mental_block, get_mindset_by_phase, get_mental_protocols
+from mindset_module import classify_mental_block, get_phase_mindset_cues
 from strength import generate_strength_block
 from conditioning import generate_conditioning_block
 from recovery import generate_recovery_block
@@ -175,39 +175,43 @@ async def handle_submission(request: Request):
     }
 
     # Module generation
-    mental_block = get_mindset_by_phase(phase, training_context)
-    mental_strategies = get_mental_protocols(training_context["mental_block"])
+    phase_mindset_cues = get_phase_mindset_cues(training_context["mental_block"])
 
     # === Strength blocks per phase with repeat filtering ===
     gpp_flags = {**training_context, "phase": "GPP"}
-    gpp_block = generate_strength_block(flags=gpp_flags, weaknesses=training_context["weaknesses"])
+    gpp_block = generate_strength_block(
+        flags=gpp_flags,
+        weaknesses=training_context["weaknesses"],
+        mindset_cue=phase_mindset_cues.get("GPP")
+    )
     gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
 
     spp_flags = {**training_context, "phase": "SPP", "prev_exercises": gpp_ex_names}
-    spp_block = generate_strength_block(flags=spp_flags, weaknesses=training_context["weaknesses"])
+    spp_block = generate_strength_block(
+        flags=spp_flags,
+        weaknesses=training_context["weaknesses"],
+        mindset_cue=phase_mindset_cues.get("SPP")
+    )
     spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
 
     taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
-    taper_block = generate_strength_block(flags=taper_flags, weaknesses=training_context["weaknesses"])
+    taper_block = generate_strength_block(
+        flags=taper_flags,
+        weaknesses=training_context["weaknesses"],
+        mindset_cue=phase_mindset_cues.get("TAPER")
+    )
     strength_block = "\n\n".join([gpp_block["block"], spp_block["block"], taper_block["block"]])
     conditioning_block, _ = generate_conditioning_block(training_context)
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
-    print("== NUTRITION BLOCK ==\n", nutrition_block)
 
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
 ## SAFETY
 Avoid training through pain. Prioritize recovery. Emphasize technique.
-
-## MINDSET
-{mental_block}
-
-## MENTAL PROTOCOLS
-{mental_strategies}
 
 ## STRENGTH
 {strength_block}
