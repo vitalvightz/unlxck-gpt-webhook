@@ -299,7 +299,7 @@ Athlete Profile:
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=3000,
+            max_tokens=4000,
         )
         full_plan = response.choices[0].message.content.strip()
         print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
