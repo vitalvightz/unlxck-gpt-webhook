@@ -11,7 +11,7 @@ def generate_nutrition_block(*, flags: dict) -> str:
     nutrition_block += "- 3 core meals + 2–3 snacks daily\n"
     nutrition_block += "- Whole foods focus: lean protein, complex carbs, healthy fats\n"
     nutrition_block += f"- Protein intake: 1.7–2.2 g/kg → {round(1.7*weight,1)}–{round(2.2*weight,1)} g/day\n"
-    nutrition_block += f"- Hydration: 30–40 ml/kg → {round(30*weight,0)}–{round(40*weight,0)} ml/day\n"
+    nutrition_block += f"- Hydration: 0.3–0.4 l/kg → {round(30*weight,0)}–{round(40*weight,0)} ml/day\n"
 
     # Phase-specific Macronutrient & Calorie Guidance
     if phase == "GPP":
