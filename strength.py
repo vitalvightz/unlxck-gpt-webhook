@@ -133,18 +133,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
 
 
     weighted_exercises = []
-    skip_tags = {"eccentric", "compound", "posterior_chain", "high_volume"}
+    taper_allowed = {"neural_primer", "speed", "cluster", "explosive", "low_impact", "reactive", "rehab_friendly"}
+    taper_banned = {"eccentric", "compound", "posterior_chain", "high_volume", "barbell", "trap_bar"}
+
     for ex in exercise_bank:
-        if phase == "TAPER" and any(t in skip_tags for t in ex.get("tags", [])):
-            continue
+        tags = ex.get("tags", [])
+        ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+        if phase == "TAPER":
+            if any(t in taper_banned for t in tags) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
+                continue
+            if not any(t in taper_allowed for t in tags):
+                continue
         if phase not in ex["phases"]:
             continue
 
         penalty = equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment)
         if penalty == -999:
             continue
-
-        tags = ex.get("tags", [])
         method = ex.get("method", "").lower()
         rehab_penalty_by_phase = {"GPP": -1, "SPP": -3, "TAPER": -2}
         rehab_penalty = rehab_penalty_by_phase.get(phase.upper(), 0) if method == "rehab" else 0
@@ -162,12 +167,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
             score += 1
 
         # Phase-specific tag boosts
+        phase_tags = phase_tag_boost.get(phase, {})
+        if any(t in phase_tags for t in tags):
+            score += 1
         for tag in tags:
-            score += phase_tag_boost.get(phase, {}).get(tag, 0)
+            score += phase_tags.get(tag, 0)
 
-        # Avoid repeating from previous block
-        if ex.get("name") in prev_exercises:
-            score -= 1  # Light penalty for repeat lifts
+        # Phase-based novelty enforcement
+        if ex.get("name") in prev_exercises and not (
+            phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
+        ):
+            continue
 
         # Fatigue-aware penalties
         ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
@@ -197,12 +207,28 @@ def generate_strength_block(*, flags: dict, weaknesses=None):
     target_exercises = 12
 
     if len(weighted_exercises) < target_exercises:
-        fallback_exercises = [
-            ex for ex in exercise_bank
-            if phase in ex["phases"]
-            and equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment) > -999
-            and ex not in [we[0] for we in weighted_exercises]
-        ][: target_exercises - len(weighted_exercises)]
+        fallback_exercises = []
+        for ex in exercise_bank:
+            if ex in [we[0] for we in weighted_exercises]:
+                continue
+            if phase not in ex["phases"]:
+                continue
+            if equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment) == -999:
+                continue
+            tags = ex.get("tags", [])
+            ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+            if ex.get("name") in prev_exercises and not (
+                phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
+            ):
+                continue
+            if phase == "TAPER":
+                if any(t in taper_banned for t in tags) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
+                    continue
+                if not any(t in taper_allowed for t in tags):
+                    continue
+            fallback_exercises.append(ex)
+            if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
+                break
         weighted_exercises += [(ex, 0) for ex in fallback_exercises]
 
     top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
