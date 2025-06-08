@@ -1,110 +1,101 @@
 [
   {
-    "name": "Steady-State Cardio (Run / Bike / Row)",
     "phase": "GPP",
+    "name": "Steady-State Cardio (Run / Bike / Row)",
     "system": "Aerobic",
     "duration": "30–60 minutes",
     "intensity": "60–70% max HR (Zone 2)",
     "volume": "2–3x/week",
     "equipment": ["road", "treadmill", "bike", "rower"],
-    "tags": ["aerobic", "low_impact", "oxidative", "recovery"],
-    "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions.",
-    "red_flags": []
+    "tags": ["aerobic", "low_impact", "recovery", "conditioning"],
+    "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions."
   },
   {
-    "name": "Jump Rope Endurance (Footwork Conditioning)",
     "phase": "GPP",
+    "name": "Jump Rope Endurance (Footwork Conditioning)",
     "system": "Aerobic + Coordination",
     "duration": "3–5 rounds × 3–5 minutes",
     "intensity": "Moderate steady pace",
     "volume": "2–4x/week",
     "equipment": ["jump rope"],
-    "tags": ["aerobic", "reactive", "coordination", "footwork"],
-    "notes": "Improves foot speed, rhythm, and aerobic fitness. Versatile as warm-up or standalone.",
-    "red_flags": []
+    "tags": ["aerobic", "reactive", "coordination", "footwork", "conditioning"],
+    "notes": "Improves foot speed, rhythm, and aerobic fitness. Versatile as warm-up or standalone."
   },
   {
-    "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
     "phase": "GPP",
+    "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
     "system": "Alactic → Glycolytic",
     "duration": "6–8 × 20–30s max effort",
     "intensity": "Maximal sprint",
     "volume": "1–2x/week",
     "equipment": ["track", "field", "hill", "sled"],
-    "tags": ["alactic", "explosive", "power", "sprint"],
-    "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS.",
-    "red_flags": ["CNS_fresh_only", "no_day_before_max_lower"]
+    "tags": ["explosive", "posterior_chain", "glycolytic", "acceleration", "conditioning", "cns_freshness"],
+    "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS."
   },
   {
-    "name": "Battle Rope Circuits",
     "phase": "GPP",
+    "name": "Battle Rope Circuits",
     "system": "Glycolytic",
     "duration": "4–6 rounds × 30s work",
     "intensity": "High effort",
     "volume": "1–2x/week",
     "equipment": ["battle rope"],
-    "tags": ["glycolytic", "shoulders", "core", "power_endurance"],
-    "notes": "Builds shoulder endurance, core control, and lactic threshold. Safe option for upper-body dominant day.",
-    "red_flags": []
+    "tags": ["glycolytic", "shoulders", "core", "work_capacity", "conditioning"],
+    "notes": "Builds shoulder endurance, core control, and lactic threshold. Safe option for upper-body dominant day."
   },
   {
-    "name": "Bodyweight MetCon Circuit",
     "phase": "GPP",
+    "name": "Bodyweight MetCon Circuit",
     "system": "Glycolytic",
     "duration": "3–4 rounds of 3–5 exercises × 30s each",
     "intensity": "High tempo",
     "volume": "1–2x/week",
     "equipment": ["bodyweight"],
-    "tags": ["glycolytic", "metcon", "work_capacity", "scramble_sim"],
-    "notes": "Full-body circuit mimicking MMA scramble effort. Effective as conditioning block or session finisher.",
-    "red_flags": ["no_back_to_back"]
+    "tags": ["glycolytic", "work_capacity", "conditioning", "mobility", "mental_toughness"],
+    "notes": "Full-body circuit mimicking MMA scramble effort. Effective as conditioning block or session finisher."
   },
   {
-    "name": "Explosive Medicine Ball Throws",
     "phase": "GPP",
+    "name": "Explosive Medicine Ball Throws",
     "system": "Alactic",
     "duration": "5–8 sets × 3–5 throws",
     "intensity": "Maximal power",
     "volume": "1–2x/week",
     "equipment": ["medicine ball"],
-    "tags": ["alactic", "upper_body", "rotational_power", "core"],
-    "notes": "Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days.",
-    "red_flags": ["CNS_fresh_only"]
+    "tags": ["explosive", "upper_body", "rotational", "core", "plyometric"],
+    "notes": "Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days."
   },
   {
-    "name": "Plyometric Depth Jumps",
     "phase": "GPP",
+    "name": "Plyometric Depth Jumps",
     "system": "Alactic",
     "duration": "6–10 × 3–5 jumps",
     "intensity": "Maximal rebound",
     "volume": "1x/week",
     "equipment": ["plyo box"],
-    "tags": ["alactic", "reactive", "lower_body", "stretch_shortening"],
-    "notes": "Drop-jump rebounds for ground reaction power. Critical for sprawls/shot defense. Rest 2min+ between sets.",
-    "red_flags": ["CNS_fresh_only", "no_day_after_heavy_squat"]
+    "tags": ["plyometric", "reactive", "posterior_chain", "elastic", "cns_freshness"],
+    "notes": "Drop-jump rebounds for ground reaction power. Critical for sprawls/shot defense. Rest 2min+ between sets."
   },
   {
-    "name": "Band-Resisted Takedown Explosions",
     "phase": "GPP",
+    "name": "Band-Resisted Takedown Explosions",
     "system": "Alactic",
     "duration": "8–10 × 3–5s bursts",
     "intensity": "Max acceleration",
     "volume": "1–2x/week",
     "equipment": ["resistance band", "partner"],
-    "tags": ["alactic", "wrestling_specific", "level_change", "resisted"],
-    "notes": "Sport-specific shots against band resistance. <10s efforts w/ 1:5 work:rest ratio. Enhances first-step quickness.",
-    "red_flags": ["no_day_after_heavy_deadlift"]
+    "tags": ["explosive", "wrestling", "rate_of_force", "reactive", "conditioning"],
+    "notes": "Sport-specific shots against band resistance. <10s efforts w/ 1:5 work:rest ratio. Enhances first-step quickness."
   },
   {
-    "name": "Clap Push-Up Sprints",
     "phase": "GPP",
+    "name": "Clap Push-Up Sprints",
     "system": "Alactic",
     "duration": "5–8 × 3–5 reps",
     "intensity": "Max velocity",
     "volume": "1x/week",
     "equipment": ["bodyweight"],
-    "tags": ["alactic", "upper_body", "pushing_power", "plyometric"],
-    "notes": "Explosive push-ups with flight phase. Builds punching/striking power. Rest 90s between sets. Avoid after heavy bench sessions.",
-    "red_flags": ["no_same_day_as_bench"]
+    "tags": ["explosive", "upper_body", "plyometric", "rate_of_force", "conditioning"],
+    "notes": "Explosive push-ups with flight phase. Builds punching/striking power. Rest 90s between sets."
   }
 ]
