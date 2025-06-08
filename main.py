@@ -213,20 +213,20 @@ async def handle_submission(request: Request):
 
 
 # Mental Block Strategy Injection Per Phase
-def build_mindset_prompt(phase_name: str):
-    blocks = training_context.get("mental_block", ["generic"])
-    if isinstance(blocks, str):
-        blocks = [blocks]
+    def build_mindset_prompt(phase_name: str):
+        blocks = training_context.get("mental_block", ["generic"])
+        if isinstance(blocks, str):
+            blocks = [blocks]
 
-    if blocks[0].lower() != "generic":
-        return get_mindset_by_phase(phase_name, training_context)
-    else:
-        return get_mindset_by_phase(phase_name, {"mental_block": ["generic"]})
+        if blocks[0].lower() != "generic":
+            return get_mindset_by_phase(phase_name, training_context)
+        else:
+            return get_mindset_by_phase(phase_name, {"mental_block": ["generic"]})
 
-gpp_mindset = build_mindset_prompt("GPP")
-spp_mindset = build_mindset_prompt("SPP")
-taper_mindset = build_mindset_prompt("TAPER")
-prompt = f"""
+    gpp_mindset = build_mindset_prompt("GPP")
+    spp_mindset = build_mindset_prompt("SPP")
+    taper_mindset = build_mindset_prompt("TAPER")
+    prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
 ## SAFETY
