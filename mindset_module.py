@@ -173,3 +173,18 @@ def get_mental_protocols(blocks: list) -> str:
         sections.append("\n".join(phase_lines))
 
     return "\n\n".join(sections)
+
+def get_phase_mindset_cues(blocks) -> dict:
+    """Return a short cue per phase based on top mental blocks."""
+    if isinstance(blocks, str):
+        blocks = [blocks]
+    blocks = blocks[:2] if blocks else ["generic"]
+
+    cues = {}
+    for phase in ["GPP", "SPP", "TAPER"]:
+        tips = []
+        for block in blocks:
+            tip = mindset_bank.get(phase, {}).get(block, mindset_bank[phase]["generic"])
+            tips.append(f"{block.title()}: {tip}")
+        cues[phase] = " | ".join(tips)
+    return cues
