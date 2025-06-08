@@ -93,6 +93,13 @@ SYSTEM_ALIASES = {
     "cognitive": "alactic"
 }
 
+# Relative emphasis of each energy system by training phase
+PHASE_SYSTEM_RATIOS = {
+    "GPP": {"aerobic": 0.5, "glycolytic": 0.3, "alactic": 0.2},
+    "SPP": {"glycolytic": 0.5, "alactic": 0.3, "aerobic": 0.2},
+    "TAPER": {"alactic": 0.5, "aerobic": 0.35, "glycolytic": 0.15},
+}
+
 def expand_tags(input_list, tag_map):
     expanded = []
     for item in input_list:
@@ -202,10 +209,22 @@ def generate_conditioning_block(flags):
     for drills in system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
 
-    session_allocation = allocate_sessions(days_available)
-    num_conditioning_sessions = session_allocation.get("conditioning", 1)
+    if days_available >= 6:
+        num_conditioning_sessions = 3
+    elif days_available >= 4:
+        num_conditioning_sessions = 2
+    elif days_available >= 2:
+        num_conditioning_sessions = 1
+    else:
+        num_conditioning_sessions = 0
+
     drills_per_session = 2 if fatigue == "low" else 1
     total_drills = num_conditioning_sessions * drills_per_session
+
+    system_quota = {
+        k: max(1 if v > 0 else 0, round(total_drills * v))
+        for k, v in PHASE_SYSTEM_RATIOS.get(phase.upper(), {}).items()
+    }
 
     final_drills = []
     taper_selected = 0
@@ -252,10 +271,11 @@ def generate_conditioning_block(flags):
                 final_drills.append(("glycolytic", [d]))
                 taper_selected += 1
     else:
-        enforced = set()
         for system in preferred_order:
-            candidates = system_drills.get(system, [])
-            for drill, _ in candidates:
+            quota = system_quota.get(system, 0)
+            if quota <= 0:
+                continue
+            for drill, _ in system_drills.get(system, []):
                 name = drill.get("name")
                 tags = [t.lower() for t in drill.get("tags", [])]
                 allow_repeat = (
@@ -267,8 +287,9 @@ def generate_conditioning_block(flags):
                     continue
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(name)
-                enforced.add(system)
-                break
+                quota -= 1
+                if quota <= 0:
+                    break
 
         remaining_slots = total_drills - len(selected_drill_names)
         for system in preferred_order:
