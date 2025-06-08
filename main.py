@@ -296,7 +296,7 @@ Athlete Profile:
         response = openai.chat.completions.create(
             model="gpt-4",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
+            temperature=0.2,
             max_tokens=4000,
         )
         full_plan = response.choices[0].message.content.strip()
