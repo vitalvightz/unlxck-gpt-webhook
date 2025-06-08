@@ -14,6 +14,13 @@ style_tag_map = {
     "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
 }
 
+# Extra explosive or high-load tags to avoid during TAPER when fatigue isn't low
+TAPER_AVOID_TAGS = {
+    "plyometric", "rate_of_force", "contrast_pairing", "horizontal_power",
+    "triple_extension", "overhead", "elastic", "compound", "mental_toughness",
+    "work_capacity", "eccentric", "footwork",
+}
+
 # Goal tags
 goal_tag_map = {
     "power": [
@@ -159,6 +166,15 @@ def generate_conditioning_block(flags):
                 and system == "alactic"
                 and any(t in weak_tags or t in goal_tags for t in tags)
             )
+        ):
+            continue
+
+        # Additional tag suppression in TAPER for moderate/high fatigue
+        if (
+            phase.upper() == "TAPER"
+            and fatigue != "low"
+            and any(t in TAPER_AVOID_TAGS for t in tags)
+            and not any(t in goal_tags or t in weak_tags for t in tags)
         ):
             continue
 
