@@ -13,6 +13,7 @@ exercise_bank = json.loads(Path("exercise_bank.json").read_text())
 
 # Modules
 from training_context import allocate_sessions, normalize_equipment_list
+from camp_phases import calculate_phase_weeks
 from mindset_module import (
     classify_mental_block,
     get_mental_protocols,
@@ -156,6 +157,19 @@ async def handle_submission(request: Request):
     raw_tech_style = fighting_style_technical.strip().lower()
     mapped_format = style_map.get(raw_tech_style, "mma")
 
+    if isinstance(weeks_out, int):
+        phase_weeks = calculate_phase_weeks(
+            weeks_out,
+            mapped_format,
+            fighting_style_tactical.strip().lower(),
+        )
+    else:
+        phase_weeks = calculate_phase_weeks(
+            8,
+            mapped_format,
+            fighting_style_tactical.strip().lower(),
+        )
+
     # Core context
     training_context = {
         "phase": phase,
@@ -177,6 +191,7 @@ async def handle_submission(request: Request):
         "age": int(age) if age.isdigit() else 0,
         "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
         "prev_exercises": [],
+        "phase_weeks": phase_weeks,
     }
 
     # Module generation
@@ -283,6 +298,7 @@ Athlete Profile:
 - Fight Format: {rounds_format}
 - Fight Date: {next_fight_date}
 - Weeks Out: {weeks_out}
+- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper
 - Fatigue Level: {fatigue}
 - Injuries: {injuries}
 - Available S&C Days: {available_days}
