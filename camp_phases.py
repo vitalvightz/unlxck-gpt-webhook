@@ -129,15 +129,28 @@ STYLE_RULES = {
 }
 
 
-def calculate_phase_weeks(camp_length: int, sport: str, style: str | None = None) -> dict:
+def _normalize_styles(style: str | list[str] | None) -> list[str]:
+    if style is None:
+        return []
+    if isinstance(style, str):
+        return [s.strip().lower() for s in style.split(',') if s.strip()]
+    return [s.strip().lower() for s in style if s.strip()]
+
+
+def calculate_phase_weeks(
+    camp_length: int, sport: str, style: str | list[str] | None = None
+) -> dict:
     """Return the number of weeks per phase for a fight camp."""
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs(x - camp_length))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
-    if style in STYLE_ADJUSTMENTS:
-        for phase, delta in STYLE_ADJUSTMENTS[style].items():
-            if phase in ratios:
-                ratios[phase] = max(0.05, ratios[phase] + delta)
+    for s in _normalize_styles(style):
+        if s == "striker" and sport in {"boxing", "muay_thai", "kickboxing"}:
+            continue
+        if s in STYLE_ADJUSTMENTS:
+            for phase, delta in STYLE_ADJUSTMENTS[s].items():
+                if phase in ratios:
+                    ratios[phase] = max(0.05, ratios[phase] + delta)
 
     weeks = {
         "GPP": round(ratios["GPP"] * camp_length),
@@ -145,26 +158,27 @@ def calculate_phase_weeks(camp_length: int, sport: str, style: str | None = None
         "TAPER": round(ratios["TAPER"] * camp_length),
     }
 
-    if style in STYLE_RULES:
-        rules = STYLE_RULES[style]
-        if "SPP_MIN_PERCENT" in rules:
-            min_spp = int(camp_length * rules["SPP_MIN_PERCENT"])
-            if weeks["SPP"] < min_spp:
-                diff = min_spp - weeks["SPP"]
-                weeks["SPP"] = min_spp
-                weeks["GPP"] = max(1, weeks["GPP"] - diff)
-        if "MAX_TAPER" in rules:
-            max_taper = int(camp_length * rules["MAX_TAPER"])
-            if weeks["TAPER"] > max_taper:
-                excess = weeks["TAPER"] - max_taper
-                weeks["TAPER"] = max_taper
-                weeks["SPP"] += excess
-        if "TAPER_MAX_DAYS" in rules:
-            max_taper_weeks = max(1, rules["TAPER_MAX_DAYS"] // 7)
-            if weeks["TAPER"] > max_taper_weeks:
-                delta = weeks["TAPER"] - max_taper_weeks
-                weeks["TAPER"] = max_taper_weeks
-                weeks["SPP"] += delta
+    for s in _normalize_styles(style):
+        if s in STYLE_RULES:
+            rules = STYLE_RULES[s]
+            if "SPP_MIN_PERCENT" in rules:
+                min_spp = int(camp_length * rules["SPP_MIN_PERCENT"])
+                if weeks["SPP"] < min_spp:
+                    diff = min_spp - weeks["SPP"]
+                    weeks["SPP"] = min_spp
+                    weeks["GPP"] = max(1, weeks["GPP"] - diff)
+            if "MAX_TAPER" in rules:
+                max_taper = int(camp_length * rules["MAX_TAPER"])
+                if weeks["TAPER"] > max_taper:
+                    excess = weeks["TAPER"] - max_taper
+                    weeks["TAPER"] = max_taper
+                    weeks["SPP"] += excess
+            if "TAPER_MAX_DAYS" in rules:
+                max_taper_weeks = max(1, rules["TAPER_MAX_DAYS"] // 7)
+                if weeks["TAPER"] > max_taper_weeks:
+                    delta = weeks["TAPER"] - max_taper_weeks
+                    weeks["TAPER"] = max_taper_weeks
+                    weeks["SPP"] += delta
 
     weeks = {k: max(1, v) for k, v in weeks.items()}
     weeks["TAPER"] = min(2, weeks["TAPER"])

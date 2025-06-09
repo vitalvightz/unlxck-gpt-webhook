@@ -156,18 +156,19 @@ async def handle_submission(request: Request):
     }
     raw_tech_style = fighting_style_technical.strip().lower()
     mapped_format = style_map.get(raw_tech_style, "mma")
+    tactical_styles = normalize_list(fighting_style_tactical)
 
     if isinstance(weeks_out, int):
         phase_weeks = calculate_phase_weeks(
             weeks_out,
             mapped_format,
-            fighting_style_tactical.strip().lower(),
+            tactical_styles,
         )
     else:
         phase_weeks = calculate_phase_weeks(
             8,
             mapped_format,
-            fighting_style_tactical.strip().lower(),
+            tactical_styles,
         )
 
     # Core context
@@ -178,7 +179,7 @@ async def handle_submission(request: Request):
         "training_days": available_days.split(", "),
         "injuries": normalize_list(injuries),
         "style_technical": raw_tech_style,
-        "style_tactical": fighting_style_tactical.strip().lower(),
+        "style_tactical": tactical_styles,
         "weaknesses": normalize_list(weak_areas),
         "equipment": normalize_equipment_list(equipment_access),
         "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
