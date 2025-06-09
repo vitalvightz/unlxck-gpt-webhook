@@ -1,22 +1,22 @@
 BASE_PHASE_RATIOS = {
     # Ultra-short phases (1-3 weeks) - Minimal GPP, mostly SPP with quick taper
     1: {
-        "boxing": {"GPP": 0.10, "SPP": 0.80, "TAPER": 0.10},
-        "muay_thai": {"GPP": 0.15, "SPP": 0.75, "TAPER": 0.10},
-        "mma": {"GPP": 0.20, "SPP": 0.70, "TAPER": 0.10},
-        "kickboxing": {"GPP": 0.10, "SPP": 0.80, "TAPER": 0.10},
+        "boxing": {"GPP": 0.0, "SPP": 0.25, "TAPER": 0.75},
+        "muay_thai": {"GPP": 0.05, "SPP": 0.25, "TAPER": 0.70},
+        "mma": {"GPP": 0.10, "SPP": 0.25, "TAPER": 0.65},
+        "kickboxing": {"GPP": 0.0, "SPP": 0.25, "TAPER": 0.75},
     },
     2: {
-        "boxing": {"GPP": 0.15, "SPP": 0.70, "TAPER": 0.15},
-        "muay_thai": {"GPP": 0.20, "SPP": 0.65, "TAPER": 0.15},
-        "mma": {"GPP": 0.25, "SPP": 0.60, "TAPER": 0.15},
-        "kickboxing": {"GPP": 0.15, "SPP": 0.70, "TAPER": 0.15},
+        "boxing": {"GPP": 0.0, "SPP": 0.35, "TAPER": 0.65},
+        "muay_thai": {"GPP": 0.10, "SPP": 0.35, "TAPER": 0.55},
+        "mma": {"GPP": 0.15, "SPP": 0.35, "TAPER": 0.50},
+        "kickboxing": {"GPP": 0.0, "SPP": 0.35, "TAPER": 0.65},
     },
     3: {
-        "boxing": {"GPP": 0.20, "SPP": 0.65, "TAPER": 0.15},
-        "muay_thai": {"GPP": 0.25, "SPP": 0.60, "TAPER": 0.15},
-        "mma": {"GPP": 0.25, "SPP": 0.60, "TAPER": 0.15},
-        "kickboxing": {"GPP": 0.20, "SPP": 0.65, "TAPER": 0.15},
+        "boxing": {"GPP": 0.10, "SPP": 0.50, "TAPER": 0.40},
+        "muay_thai": {"GPP": 0.15, "SPP": 0.50, "TAPER": 0.35},
+        "mma": {"GPP": 0.20, "SPP": 0.50, "TAPER": 0.30},
+        "kickboxing": {"GPP": 0.10, "SPP": 0.50, "TAPER": 0.40},
     },
     # Standard short phases (4-6 weeks) - Balanced GPP/SPP, moderate taper
     4: {
