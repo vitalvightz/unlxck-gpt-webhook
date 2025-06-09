@@ -56,8 +56,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
-    style = flags.get("style_tactical", [])
-    style = style.lower() if isinstance(style, str) else style[0].lower() if style else ""
+    style_input = flags.get("style_tactical", [])
+    if isinstance(style_input, str):
+        style_list = [style_input.lower()]
+    elif isinstance(style_input, list):
+        style_list = [s.lower() for s in style_input]
+    else:
+        style_list = []
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
     days_available = flags.get("days_available", len(training_days))
@@ -118,7 +123,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ]
     }
 
-    style_tags = style_tag_map.get(style, [])
+    style_tags = [t for s in style_list for t in style_tag_map.get(s, [])]
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
     boosted_tools = phase_equipment_boost.get(phase.upper(), set())
 
@@ -261,8 +266,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     inserted += 1
                     break
 
-    # Inject mandatory exercises for tactical style
-    mandatory = STYLE_MANDATORY.get(style, [])[:2]
+    # Inject mandatory exercises for each tactical style
+    mandatory = []
+    for st in style_list:
+        mandatory.extend(STYLE_MANDATORY.get(st, [])[:2])
+    # remove duplicates while preserving order
+    seen = set()
+    mandatory = [m for m in mandatory if not (m in seen or seen.add(m))]
     for name in mandatory:
         ex_obj = next((e for e in STYLE_EXERCISES if e.get("name") == name), None)
         if not ex_obj:
