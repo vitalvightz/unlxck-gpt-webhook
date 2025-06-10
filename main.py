@@ -195,7 +195,7 @@ async def handle_submission(request: Request):
     spp_block = None
     taper_block = None
 
-    if phase_weeks["GPP"] > 0:
+    if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         gpp_flags = {**training_context, "phase": "GPP"}
         gpp_block = generate_strength_block(
             flags=gpp_flags,
@@ -205,7 +205,7 @@ async def handle_submission(request: Request):
         gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
         strength_blocks.append(gpp_block["block"])
 
-    if phase_weeks["SPP"] > 0:
+    if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         spp_flags = {**training_context, "phase": "SPP", "prev_exercises": gpp_ex_names}
         spp_block = generate_strength_block(
             flags=spp_flags,
@@ -215,7 +215,7 @@ async def handle_submission(request: Request):
         spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
         strength_blocks.append(spp_block["block"])
 
-    if phase_weeks["TAPER"] > 0:
+    if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
         taper_block = generate_strength_block(
             flags=taper_flags,
@@ -231,15 +231,18 @@ async def handle_submission(request: Request):
     spp_cond_block = ""
     taper_cond_block = ""
 
-    if phase_weeks["GPP"] > 0:
+    if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         gpp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "GPP"})
 
-    if phase_weeks["SPP"] > 0:
+    if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         spp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "SPP"})
 
-    if phase_weeks["TAPER"] > 0:
+    if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_cond_block, _ = generate_conditioning_block({**training_context, "phase": "TAPER"})
-    current_phase = next((p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0), "GPP")
+    current_phase = next(
+        (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
+        "GPP",
+    )
     recovery_block = generate_recovery_block({**training_context, "phase": current_phase})
     nutrition_block = generate_nutrition_block(flags={**training_context, "phase": current_phase})
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
@@ -263,7 +266,7 @@ async def handle_submission(request: Request):
     fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_num = 1
 
-    if phase_weeks["GPP"] > 0:
+    if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         fight_plan_lines += [
             f"## PHASE {phase_num}: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
             "",
@@ -279,7 +282,7 @@ async def handle_submission(request: Request):
         ]
         phase_num += 1
 
-    if phase_weeks["SPP"] > 0:
+    if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         fight_plan_lines += [
             f"## PHASE {phase_num}: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
             "",
@@ -295,7 +298,7 @@ async def handle_submission(request: Request):
         ]
         phase_num += 1
 
-    if phase_weeks["TAPER"] > 0:
+    if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         fight_plan_lines += [
             f"## PHASE {phase_num}: TAPER – {phase_weeks['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
             "",
