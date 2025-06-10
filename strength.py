@@ -110,15 +110,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
             "coordination", "visual_processing", "rhythm", "timing"
         ],
-        "injury prevention": [
+        "injury_prevention": [
             "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
             "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
         ],
-        "mental resilience": [
+        "mental_resilience": [
             "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
             "focus", "environmental", "pressure_tolerance"
         ],
-        "skill refinement": [
+        "skill_refinement": [
             "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
         ]
     }
