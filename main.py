@@ -267,46 +267,61 @@ async def handle_submission(request: Request):
     gpp_mindset = build_mindset_prompt("GPP")
     spp_mindset = build_mindset_prompt("SPP")
     taper_mindset = build_mindset_prompt("TAPER")
-    prompt = f"""
-# CONTEXT BLOCKS – Use these to build the plan
+    fight_plan_text = f"""# FIGHT CAMP PLAN
 
-## STRENGTH
-### GPP
+## PHASE 1: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS
+
+### Mindset Focus
 {gpp_mindset}
+
+### Strength & Power
 {gpp_block["block"]}
 
-### SPP
+### Conditioning
+{conditioning_block.get('GPP', '')}
+
+
+## PHASE 2: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS
+
+### Mindset Focus
 {spp_mindset}
+
+### Strength & Power
 {spp_block["block"]}
 
-### TAPER
+### Conditioning
+{conditioning_block.get('SPP', '')}
+
+
+## PHASE 3: TAPER – {phase_weeks['TAPER']} WEEKS
+
+### Mindset Focus
 {taper_mindset}
+
+### Strength & Power
 {taper_block["block"]}
 
-## CONDITIONING
-{conditioning_block}
+### Conditioning
+{conditioning_block.get('TAPER', '')}
 
-## RECOVERY
-{recovery_block}
 
 ## NUTRITION
 {nutrition_block}
 
-## MINDSET
-Top Block(s): {', '.join(training_context['mental_block']).title()}
+
+## RECOVERY
+{recovery_block}
+
 
 ## INJURY SUBSTITUTIONS
 {injury_sub_block}
 
----
 
-You are an elite strength & conditioning coach (MSc-level) who has trained 100+ world-class fighters across UFC, Glory, ONE Championship, and Olympic combat sports.
+## MINDSET OVERVIEW
+Primary Block(s): {', '.join(training_context['mental_block']).title()}
 
-Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
 
-Use the following blocks as reference – they are pre-analyzed insights from a professional system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
-
-Athlete Profile:
+## ATHLETE PROFILE
 - Name: {full_name}
 - Age: {age}
 - Weight: {weight}kg
@@ -315,7 +330,7 @@ Athlete Profile:
 - Technical Style: {fighting_style_technical}
 - Tactical Style: {fighting_style_tactical}
 - Stance: {stance}
-- Level: {status}
+- Status: {status}
 - Record: {record}
 - Fight Format: {rounds_format}
 - Fight Date: {next_fight_date}
@@ -323,13 +338,12 @@ Athlete Profile:
 - Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper
 - Fatigue Level: {fatigue}
 - Injuries: {injuries}
-- Available S&C Days: {available_days}
+- Training Availability: {available_days}
 - Weaknesses: {weak_areas}
 - Key Goals: {key_goals}
 - Mindset Challenges: {', '.join(training_context['mental_block'])}
-- Extra Notes: {notes}
-    """
-
+- Notes: {notes}
+"""
 
     full_plan = prompt
     print("✅ Plan generated locally (First 500 chars):\n", full_plan[:500])
