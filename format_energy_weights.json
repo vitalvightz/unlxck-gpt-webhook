@@ -9,11 +9,6 @@
     "glycolytic": 0.15,
     "alactic": 0.2
   },
-  "amateur_boxing": {
-    "aerobic": 0.6,
-    "glycolytic": 0.2,
-    "alactic": 0.2
-  },
   "kickboxing": {
     "aerobic": 0.45,
     "glycolytic": 0.35,
