@@ -274,12 +274,6 @@ async def handle_submission(request: Request):
     prompt = f"""
 # CONTEXT BLOCKS – Use these to build the plan
 
-## SAFETY
-Avoid training through pain. Prioritize recovery. Emphasize technique.
-
-## MINDSET
-Top Block(s): {', '.join(training_context['mental_block']).title()}
-
 ## STRENGTH
 ### GPP
 {gpp_mindset}
@@ -302,6 +296,9 @@ Top Block(s): {', '.join(training_context['mental_block']).title()}
 ## NUTRITION
 {nutrition_block}
 
+## MINDSET
+Top Block(s): {', '.join(training_context['mental_block']).title()}
+
 ## INJURY SUBSTITUTIONS
 {injury_sub_block}
 
@@ -311,7 +308,7 @@ You are an elite strength & conditioning coach (MSc-level) who has trained 100+ 
 
 Use the above **modules as source material** to create a **3-phase fight camp** (GPP, SPP, Taper).
 
-Use the following blocks as reference – they are pre-analyzed insights from Unlxck’s system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
+Use the following blocks as reference – they are pre-analyzed insights from a professional system. As an elite coach, you may evolve, modify, or improve them based on logic, athlete style, and fight phase. Prioritize specificity, realism, and performance logic. Do not repeat exercises across phases unless clearly justified by tapering or periodization. Be **practical and specific, include exercises and number of sets**.
 
 Athlete Profile:
 - Name: {full_name}
