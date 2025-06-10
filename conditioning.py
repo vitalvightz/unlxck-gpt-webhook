@@ -133,11 +133,13 @@ def generate_conditioning_block(flags):
     # preserve tactical style names for style drill filtering
     if isinstance(style, list):
         style_names = [s.lower().replace(" ", "_") for s in style]
-    elif isinstance(style, str):
+    elif isinstance(style, str) and style:
         style_names = [style.lower().replace(" ", "_")]
     else:
         style_names = []
     tech_style_tag = technical.lower().replace(" ", "_")
+    if not style_names:
+        style_names = [tech_style_tag]
 
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     style_tags = [t for s in style_tags for t in style_tag_map.get(s, [])]
@@ -169,6 +171,10 @@ def generate_conditioning_block(flags):
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
     style_system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
+    # Track drills per individual style for even distribution
+    style_drills_by_style = {
+        s: {"aerobic": [], "glycolytic": [], "alactic": []} for s in style_names
+    }
     selected_drill_names = []
 
     for drill in conditioning_bank:
@@ -271,11 +277,17 @@ def generate_conditioning_block(flags):
         score += 0.5  # unique name incentive
 
         style_system_drills[system].append((drill, score))
+        for st in style_names:
+            if st in tags:
+                style_drills_by_style[st][system].append((drill, score))
 
     for drills in system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
     for drills in style_system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
+    for style_lists in style_drills_by_style.values():
+        for drills in style_lists.values():
+            drills.sort(key=lambda x: x[1], reverse=True)
 
     if days_available >= 6:
         num_conditioning_sessions = 3
@@ -297,6 +309,8 @@ def generate_conditioning_block(flags):
     final_drills = []
     taper_selected = 0
 
+    style_counts = {s: 0 for s in style_names}
+
     def pop_drill(source: dict, system: str):
         drills = source.get(system, [])
         for idx, (drill, _) in enumerate(drills):
@@ -315,6 +329,26 @@ def generate_conditioning_block(flags):
             return drill
         return None
 
+    def pop_style_drill(system: str):
+        for style in sorted(style_counts, key=style_counts.get):
+            drills = style_drills_by_style.get(style, {}).get(system, [])
+            for idx, (drill, _) in enumerate(drills):
+                name = drill.get("name")
+                tags = [t.lower() for t in drill.get("tags", [])]
+                allow_repeat = (
+                    phase.upper() == "TAPER"
+                    and system == "alactic"
+                    and any(t in weak_tags for t in tags)
+                )
+                if name in selected_drill_names and not allow_repeat:
+                    continue
+                selected_drill_names.append(name)
+                del drills[idx]
+                style_drills_by_style[style][system] = drills
+                style_counts[style] += 1
+                return drill
+        return None
+
     style_target = round(total_drills * STYLE_CONDITIONING_RATIO.get(phase.upper(), 0))
     style_remaining = min(style_target, sum(len(v) for v in style_system_drills.values()))
     general_remaining = total_drills - style_remaining
@@ -323,7 +357,7 @@ def generate_conditioning_block(flags):
         nonlocal style_remaining, general_remaining
         drill = None
         if style_remaining > 0:
-            drill = pop_drill(style_system_drills, system)
+            drill = pop_style_drill(system)
             if drill:
                 style_remaining -= 1
                 return drill
@@ -439,6 +473,8 @@ def generate_conditioning_block(flags):
             output_lines.append(f"  • Rest: {rest}")
             output_lines.append(f"  • Timing: {timing}")
             output_lines.append(f"  • Purpose: {purpose}")
+            if d.get("equipment_note"):
+                output_lines.append(f"- notes: {d['equipment_note']}")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
 
     if fatigue == "high":
