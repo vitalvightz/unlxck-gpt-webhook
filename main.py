@@ -182,6 +182,8 @@ async def handle_submission(request: Request):
     raw_tech_style = fighting_style_technical.strip().lower()
     mapped_format = style_map.get(raw_tech_style, "mma")
     tactical_styles = normalize_list(fighting_style_tactical)
+    if stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:
+        tactical_styles.append("hybrid")
 
     if isinstance(weeks_out, int):
         phase_weeks = calculate_phase_weeks(
