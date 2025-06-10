@@ -234,6 +234,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         weighted_exercises += [(ex, 0) for ex in fallback_exercises]
 
     top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
+    # Remove any duplicate exercise names that slipped through scoring
+    seen_exercises = set()
+    top_exercises = [ex for ex in top_exercises if not (ex["name"] in seen_exercises or seen_exercises.add(ex["name"]))]
 
     # --------- UNIVERSAL STRENGTH INSERTION ---------
     if phase == "GPP":
@@ -303,6 +306,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         return modified
 
     base_exercises = substitute_exercises(top_exercises, injuries)
+    # Final safety deduplication in case database contained repeats
+    seen_exercises = set()
+    base_exercises = [ex for ex in base_exercises if not (ex["name"] in seen_exercises or seen_exercises.add(ex["name"]))]
     used_days = training_days[:num_strength_sessions]
 
     phase_loads = {
