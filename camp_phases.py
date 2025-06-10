@@ -107,7 +107,7 @@ STYLE_ADJUSTMENTS = {
     "grappler": {"GPP": +0.06, "TAPER": -0.06},
     "striker": {"SPP": +0.08, "GPP": -0.08},
     "muay_thai": {"SPP": +0.03, "GPP": -0.03},
-    "hybrid stance": {"SPP": +0.04, "TAPER": -0.04},
+    "hybrid": {"SPP": +0.04, "TAPER": -0.04},
     "clinch fighter": {"GPP": +0.05, "SPP": -0.05},
 }
 
@@ -137,6 +137,36 @@ def _normalize_styles(style: str | list[str] | None) -> list[str]:
     return [s.strip().lower() for s in style if s.strip()]
 
 
+def _apply_style_rules(rules: dict, camp_length: int, weeks: dict) -> None:
+    """Adjust phase weeks according to style rules."""
+    if "SPP_MIN_PERCENT" in rules:
+        min_spp = int(camp_length * rules["SPP_MIN_PERCENT"])
+        if weeks["SPP"] < min_spp:
+            diff = min_spp - weeks["SPP"]
+            weeks["SPP"] = min_spp
+            weeks["GPP"] = max(1, weeks["GPP"] - diff)
+    if "MAX_TAPER" in rules:
+        max_taper = int(camp_length * rules["MAX_TAPER"])
+        if weeks["TAPER"] > max_taper:
+            excess = weeks["TAPER"] - max_taper
+            weeks["TAPER"] = max_taper
+            weeks["SPP"] += excess
+    if "TAPER_MAX_DAYS" in rules:
+        max_taper_weeks = max(1, rules["TAPER_MAX_DAYS"] // 7)
+        if weeks["TAPER"] > max_taper_weeks:
+            delta = weeks["TAPER"] - max_taper_weeks
+            weeks["TAPER"] = max_taper_weeks
+            weeks["SPP"] += delta
+    if "SPP_CLINCH_RATIO" in rules:
+        target = round(camp_length * rules["SPP_CLINCH_RATIO"])
+        weeks["SPP"] = max(1, target)
+        remaining = camp_length - weeks["SPP"] - weeks["TAPER"]
+        weeks["GPP"] = max(1, remaining)
+    if "SPP_BOXING_RATIO" in rules:
+        target = round(camp_length * rules["SPP_BOXING_RATIO"])
+        weeks["SPP"] = max(1, target)
+        remaining = camp_length - weeks["SPP"] - weeks["TAPER"]
+        weeks["GPP"] = max(1, remaining)
 def calculate_phase_weeks(
     camp_length: int, sport: str, style: str | list[str] | None = None
 ) -> dict:
@@ -160,25 +190,10 @@ def calculate_phase_weeks(
 
     for s in _normalize_styles(style):
         if s in STYLE_RULES:
-            rules = STYLE_RULES[s]
-            if "SPP_MIN_PERCENT" in rules:
-                min_spp = int(camp_length * rules["SPP_MIN_PERCENT"])
-                if weeks["SPP"] < min_spp:
-                    diff = min_spp - weeks["SPP"]
-                    weeks["SPP"] = min_spp
-                    weeks["GPP"] = max(1, weeks["GPP"] - diff)
-            if "MAX_TAPER" in rules:
-                max_taper = int(camp_length * rules["MAX_TAPER"])
-                if weeks["TAPER"] > max_taper:
-                    excess = weeks["TAPER"] - max_taper
-                    weeks["TAPER"] = max_taper
-                    weeks["SPP"] += excess
-            if "TAPER_MAX_DAYS" in rules:
-                max_taper_weeks = max(1, rules["TAPER_MAX_DAYS"] // 7)
-                if weeks["TAPER"] > max_taper_weeks:
-                    delta = weeks["TAPER"] - max_taper_weeks
-                    weeks["TAPER"] = max_taper_weeks
-                    weeks["SPP"] += delta
+            _apply_style_rules(STYLE_RULES[s], camp_length, weeks)
+
+    if sport in STYLE_RULES:
+        _apply_style_rules(STYLE_RULES[sport], camp_length, weeks)
 
     weeks = {k: max(1, v) for k, v in weeks.items()}
     weeks["TAPER"] = min(2, weeks["TAPER"])
