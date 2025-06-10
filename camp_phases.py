@@ -123,9 +123,6 @@ STYLE_RULES = {
     "grappler": {
         "GPP_MIN_PERCENT": 0.35,
     },
-    "boxing": {
-        "SPP_BOXING_RATIO": 0.50,
-    },
 }
 
 
@@ -158,19 +155,19 @@ def _apply_style_rules(rules: dict, camp_length: int, weeks: dict) -> None:
             weeks["TAPER"] = max_taper_weeks
             weeks["SPP"] += delta
     if "SPP_CLINCH_RATIO" in rules:
-        target = round(camp_length * rules["SPP_CLINCH_RATIO"])
-        weeks["SPP"] = max(1, target)
-        remaining = camp_length - weeks["SPP"] - weeks["TAPER"]
-        weeks["GPP"] = max(1, remaining)
-    if "SPP_BOXING_RATIO" in rules:
-        target = round(camp_length * rules["SPP_BOXING_RATIO"])
-        weeks["SPP"] = max(1, target)
-        remaining = camp_length - weeks["SPP"] - weeks["TAPER"]
-        weeks["GPP"] = max(1, remaining)
+        min_spp = int(camp_length * rules["SPP_CLINCH_RATIO"])
+        if weeks["SPP"] < min_spp:
+            diff = min_spp - weeks["SPP"]
+            weeks["SPP"] = min_spp
+            weeks["GPP"] = max(1, weeks["GPP"] - diff)
 def calculate_phase_weeks(
     camp_length: int, sport: str, style: str | list[str] | None = None
 ) -> dict:
-    """Return the number of weeks per phase for a fight camp."""
+    """Return the number of weeks per phase for a fight camp.
+
+    ``camp_length`` is clamped to 1-16 weeks to match our base tables.
+    """
+    camp_length = max(1, min(16, camp_length))
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs(x - camp_length))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
