@@ -239,5 +239,11 @@ def calculate_phase_weeks(
     # Ensure totals still sum to camp_length after adjustments
     _rebalance(weeks)
 
-    # 7. Return dictionary
-    return weeks
+    # 7. Also calculate exact days per phase
+    days = {phase: weeks[phase] * 7 for phase in weeks}
+
+    # 8. Return dictionary with both weeks and days
+    return {
+        **weeks,
+        "days": days,
+    }

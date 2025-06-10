@@ -265,7 +265,7 @@ async def handle_submission(request: Request):
 
     if phase_weeks["GPP"] > 0:
         fight_plan_lines += [
-            f"## PHASE {phase_num}: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS",
+            f"## PHASE {phase_num}: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
             "",
             "### Mindset Focus",
             gpp_mindset,
@@ -281,7 +281,7 @@ async def handle_submission(request: Request):
 
     if phase_weeks["SPP"] > 0:
         fight_plan_lines += [
-            f"## PHASE {phase_num}: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS",
+            f"## PHASE {phase_num}: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
             "",
             "### Mindset Focus",
             spp_mindset,
@@ -297,7 +297,7 @@ async def handle_submission(request: Request):
 
     if phase_weeks["TAPER"] > 0:
         fight_plan_lines += [
-            f"## PHASE {phase_num}: TAPER – {phase_weeks['TAPER']} WEEKS",
+            f"## PHASE {phase_num}: TAPER – {phase_weeks['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
             "",
             "### Mindset Focus",
             taper_mindset,
@@ -338,6 +338,7 @@ async def handle_submission(request: Request):
         f"- Fight Date: {next_fight_date}",
         f"- Weeks Out: {weeks_out}",
         f"- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper",
+        f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries}",
         f"- Training Availability: {available_days}",
