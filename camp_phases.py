@@ -105,7 +105,6 @@ STYLE_ADJUSTMENTS = {
     "pressure fighter": {"SPP": +0.05, "GPP": -0.05},
     "counter striker": {"GPP": +0.04, "SPP": -0.04},
     "grappler": {"GPP": +0.06, "TAPER": -0.06},
-    "striker": {"SPP": +0.08, "GPP": -0.08},
     "muay_thai": {"SPP": +0.03, "GPP": -0.03},
     "hybrid": {"SPP": +0.04, "TAPER": -0.04},
     "clinch fighter": {"GPP": +0.05, "SPP": -0.05},
@@ -177,8 +176,6 @@ def calculate_phase_weeks(
 
     # 2. Apply style adjustments
     for s in _normalize_styles(style):
-        if s == "striker" and sport in {"boxing", "muay_thai", "kickboxing"}:
-            continue
         if s in STYLE_ADJUSTMENTS:
             for phase, delta in STYLE_ADJUSTMENTS[s].items():
                 if phase in ratios:
