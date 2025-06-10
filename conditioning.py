@@ -218,7 +218,7 @@ def generate_conditioning_block(flags):
     else:
         num_conditioning_sessions = 0
 
-    drills_per_session = 2 if fatigue == "low" else 1
+    drills_per_session = 3 if fatigue == "low" else 2
     total_drills = num_conditioning_sessions * drills_per_session
 
     system_quota = {
