@@ -203,20 +203,41 @@ def calculate_phase_weeks(
     total = ratios["GPP"] + ratios["SPP"] + ratios["TAPER"]
     ratios = {k: v / total for k, v in ratios.items()}
 
-    # 5. Convert ratios to weeks
-    spp_w = round(ratios["SPP"] * camp_length)
-    taper_w = min(2, round(ratios["TAPER"] * camp_length))
-    gpp_w = camp_length - spp_w - taper_w
+    # 5. Convert ratios to week counts
+    weeks = {
+        "GPP": max(0, round(ratios["GPP"] * camp_length)),
+        "SPP": max(0, round(ratios["SPP"] * camp_length)),
+        "TAPER": max(0, min(2, round(ratios["TAPER"] * camp_length))),
+    }
 
-    # 6. Clamp to at least one week where possible
-    gpp_w = max(1, gpp_w)
-    spp_w = max(1, spp_w)
-    total_weeks = gpp_w + spp_w + taper_w
-    if total_weeks < camp_length:
-        spp_w += camp_length - total_weeks
-    elif total_weeks > camp_length:
-        reduce_by = total_weeks - camp_length
-        gpp_w = max(1, gpp_w - reduce_by)
+    def _rebalance(weeks_dict: dict) -> None:
+        total = weeks_dict["GPP"] + weeks_dict["SPP"] + weeks_dict["TAPER"]
+        if total < camp_length:
+            weeks_dict["SPP"] += camp_length - total
+        elif total > camp_length:
+            excess = total - camp_length
+            for phase in ("TAPER", "GPP", "SPP"):
+                if excess <= 0:
+                    break
+                cut = min(weeks_dict[phase], excess)
+                weeks_dict[phase] -= cut
+                excess -= cut
+
+    _rebalance(weeks)
+
+    if camp_length >= 3:
+        weeks["GPP"] = max(1, weeks["GPP"])
+        weeks["SPP"] = max(1, weeks["SPP"])
+        _rebalance(weeks)
+
+    # 6. Apply post-conversion style rules when relevant
+    for s in all_styles:
+        rules = STYLE_RULES.get(s)
+        if rules:
+            _apply_style_rules(rules, camp_length, weeks)
+
+    # Ensure totals still sum to camp_length after adjustments
+    _rebalance(weeks)
 
     # 7. Return dictionary
-    return {"GPP": gpp_w, "SPP": spp_w, "TAPER": taper_w}
+    return weeks
