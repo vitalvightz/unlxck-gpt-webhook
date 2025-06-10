@@ -196,13 +196,13 @@ def generate_conditioning_block(flags):
         base_score += 1.0 * min(num_format, 1)
 
         energy_multiplier = energy_weights.get(system, 1.0)
-        system_score = round(energy_multiplier * 2.0, 2)
+        system_score = round(energy_multiplier * 1.0, 2)
         total_score = base_score + system_score
 
         if fatigue == "high" and "high_cns" in tags:
-            total_score -= 1.5
+            total_score -= 2.0
         elif fatigue == "moderate" and "high_cns" in tags:
-            total_score -= 0.75
+            total_score -= 1.0
 
         system_drills[system].append((drill, total_score))
 
