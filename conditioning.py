@@ -419,13 +419,26 @@ def generate_conditioning_block(flags):
             output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
 
     for system, drills in final_drills:
-        output_lines.append(f"\n📌 **System: {system.upper()}** (scaled by format emphasis)")
+        output_lines.append(
+            f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
+        )
         for d in drills:
-            output_lines.append(f"- **Drill:** {d.get('name', 'Unnamed Drill')}")
-            output_lines.append(f"  • Load: {d.get('load', '—')}")
-            output_lines.append(f"  • Rest: {d.get('rest', '—')}")
-            output_lines.append(f"  • Timing: {d.get('timing', '—')}")
-            output_lines.append(f"  • Purpose: {d.get('purpose', '—')}")
+            name = d.get("name", "Unnamed Drill")
+            equipment = d.get("equipment", [])
+            extra_eq = [e for e in equipment if e.lower() not in name.lower()]
+            if extra_eq:
+                name = f"{name} ({', '.join(extra_eq)})"
+
+            timing = d.get("timing") or d.get("duration") or "—"
+            load = d.get("load") or d.get("intensity") or "—"
+            purpose = d.get("purpose") or d.get("notes") or "—"
+            rest = d.get("rest", "—")
+
+            output_lines.append(f"- **Drill:** {name}")
+            output_lines.append(f"  • Load: {load}")
+            output_lines.append(f"  • Rest: {rest}")
+            output_lines.append(f"  • Timing: {timing}")
+            output_lines.append(f"  • Purpose: {purpose}")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
 
     if fatigue == "high":
