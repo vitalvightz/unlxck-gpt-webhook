@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from training_context import allocate_sessions
+from training_context import allocate_sessions, normalize_equipment_list
 
 # Map for tactical styles
 style_tag_map = {
@@ -85,7 +85,14 @@ weakness_tag_map = {
 
 # Load banks
 conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
+style_conditioning_bank = json.loads(Path("style_conditioning_bank.json").read_text())
 format_weights = json.loads(Path("format_energy_weights.json").read_text())
+
+STYLE_CONDITIONING_RATIO = {
+    "GPP": 0.15,
+    "SPP": 0.55,
+    "TAPER": 0.05,
+}
 
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
@@ -115,12 +122,22 @@ def generate_conditioning_block(flags):
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
     days_available = flags.get("days_available", 3)
+    equipment_access = normalize_equipment_list(flags.get("equipment", []))
 
     # Handle multiple technical styles
     if isinstance(technical, list):
         technical = technical[0].lower()
     else:
         technical = technical.lower()
+
+    # preserve tactical style names for style drill filtering
+    if isinstance(style, list):
+        style_names = [s.lower().replace(" ", "_") for s in style]
+    elif isinstance(style, str):
+        style_names = [style.lower().replace(" ", "_")]
+    else:
+        style_names = []
+    tech_style_tag = technical.lower().replace(" ", "_")
 
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     style_tags = [t for s in style_tags for t in style_tag_map.get(s, [])]
@@ -151,6 +168,7 @@ def generate_conditioning_block(flags):
     }
     preferred_order = phase_priority.get(phase.upper(), ["aerobic", "glycolytic", "alactic"])
     system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
+    style_system_drills = {"aerobic": [], "glycolytic": [], "alactic": []}
     selected_drill_names = []
 
     for drill in conditioning_bank:
@@ -206,7 +224,57 @@ def generate_conditioning_block(flags):
 
         system_drills[system].append((drill, total_score))
 
+    # ---- Style specific conditioning ----
+    target_style_tags = set(style_names + [tech_style_tag])
+    for drill in style_conditioning_bank:
+        tags = [t.lower() for t in drill.get("tags", [])]
+        if not target_style_tags.intersection(tags):
+            continue
+        if phase.upper() not in drill.get("phases", []):
+            continue
+
+        raw_system = drill.get("system", "").lower()
+        system = SYSTEM_ALIASES.get(raw_system, raw_system)
+        if system not in style_system_drills:
+            continue
+
+        # Apply same fatigue/CNS suppression rules
+        if (
+            phase.upper() == "TAPER"
+            and "high_cns" in tags
+            and not (
+                fatigue == "low"
+                and system == "alactic"
+                and any(t in weak_tags or t in goal_tags for t in tags)
+            )
+        ):
+            continue
+        if (
+            phase.upper() == "TAPER"
+            and fatigue != "low"
+            and any(t in TAPER_AVOID_TAGS for t in tags)
+            and not any(t in goal_tags or t in weak_tags for t in tags)
+        ):
+            continue
+
+        equip_bonus = 0.0
+        for eq in drill.get("equipment", []):
+            if eq.lower() in equipment_access:
+                equip_bonus = 1.0
+                break
+
+        score = 0.0
+        score += 3.0  # style tag match (already filtered)
+        score += 1.5  # phase match
+        score += 1.0  # energy system match
+        score += equip_bonus
+        score += 0.5  # unique name incentive
+
+        style_system_drills[system].append((drill, score))
+
     for drills in system_drills.values():
+        drills.sort(key=lambda x: x[1], reverse=True)
+    for drills in style_system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
 
     if days_available >= 6:
@@ -229,8 +297,9 @@ def generate_conditioning_block(flags):
     final_drills = []
     taper_selected = 0
 
-    def pick_drill(system: str):
-        for drill, _ in system_drills.get(system, []):
+    def pop_drill(source: dict, system: str):
+        drills = source.get(system, [])
+        for idx, (drill, _) in enumerate(drills):
             name = drill.get("name")
             tags = [t.lower() for t in drill.get("tags", [])]
             allow_repeat = (
@@ -241,7 +310,28 @@ def generate_conditioning_block(flags):
             if name in selected_drill_names and not allow_repeat:
                 continue
             selected_drill_names.append(name)
+            del drills[idx]
+            source[system] = drills
             return drill
+        return None
+
+    style_target = round(total_drills * STYLE_CONDITIONING_RATIO.get(phase.upper(), 0))
+    style_remaining = min(style_target, sum(len(v) for v in style_system_drills.values()))
+    general_remaining = total_drills - style_remaining
+
+    def blended_pick(system: str):
+        nonlocal style_remaining, general_remaining
+        drill = None
+        if style_remaining > 0:
+            drill = pop_drill(style_system_drills, system)
+            if drill:
+                style_remaining -= 1
+                return drill
+        if general_remaining > 0:
+            drill = pop_drill(system_drills, system)
+            if drill:
+                general_remaining -= 1
+                return drill
         return None
 
     if phase.upper() == "TAPER":
@@ -253,20 +343,19 @@ def generate_conditioning_block(flags):
             fatigue == "low" and any(s in ["pressure fighter", "scrambler"] for s in style_list)
         )
 
-        if system_drills["alactic"]:
-            d = pick_drill("alactic")
-            if d:
-                final_drills.append(("alactic", [d]))
-                taper_selected += 1
+        d = blended_pick("alactic")
+        if d:
+            final_drills.append(("alactic", [d]))
+            taper_selected += 1
 
-        if allow_aerobic and taper_selected < 2 and system_drills["aerobic"]:
-            d = pick_drill("aerobic")
+        if allow_aerobic and taper_selected < 2:
+            d = blended_pick("aerobic")
             if d:
                 final_drills.append(("aerobic", [d]))
                 taper_selected += 1
 
-        if allow_glycolytic and taper_selected < 2 and system_drills["glycolytic"]:
-            d = pick_drill("glycolytic")
+        if allow_glycolytic and taper_selected < 2:
+            d = blended_pick("glycolytic")
             if d:
                 final_drills.append(("glycolytic", [d]))
                 taper_selected += 1
@@ -275,41 +364,23 @@ def generate_conditioning_block(flags):
             quota = system_quota.get(system, 0)
             if quota <= 0:
                 continue
-            for drill, _ in system_drills.get(system, []):
-                name = drill.get("name")
-                tags = [t.lower() for t in drill.get("tags", [])]
-                allow_repeat = (
-                    phase.upper() == "TAPER"
-                    and system == "alactic"
-                    and any(t in weak_tags for t in tags)
-                )
-                if name in selected_drill_names and not allow_repeat:
-                    continue
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(name)
-                quota -= 1
-                if quota <= 0:
+            while quota > 0:
+                d = blended_pick(system)
+                if not d:
                     break
+                final_drills.append((system, [d]))
+                quota -= 1
 
         remaining_slots = total_drills - len(selected_drill_names)
         for system in preferred_order:
             if remaining_slots <= 0:
                 break
-            for drill, _ in system_drills.get(system, []):
-                name = drill.get("name")
-                tags = [t.lower() for t in drill.get("tags", [])]
-                allow_repeat = (
-                    phase.upper() == "TAPER"
-                    and system == "alactic"
-                    and any(t in weak_tags for t in tags)
-                )
-                if name in selected_drill_names and not allow_repeat:
-                    continue
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(name)
-                remaining_slots -= 1
-                if remaining_slots <= 0:
+            while remaining_slots > 0:
+                d = blended_pick(system)
+                if not d:
                     break
+                final_drills.append((system, [d]))
+                remaining_slots -= 1
 
     # --------- UNIVERSAL CONDITIONING INSERTION ---------
     if phase == "GPP":
