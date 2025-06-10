@@ -47,9 +47,9 @@ GOAL_NORMALIZER = {
     "Neck": "neck",
     "Grappling": "grappling",
     "Striking": "striking",
-    "Injury Prevention": "injury prevention",
-    "Mental Resilience": "mental resilience",
-    "Skill Refinement": "skill refinement"
+    "Injury Prevention": "injury_prevention",
+    "Mental Resilience": "mental_resilience",
+    "Skill Refinement": "skill_refinement"
 }
 
 # Auth setup
