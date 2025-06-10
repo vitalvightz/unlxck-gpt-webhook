@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import FastAPI, Request
 import os, json, base64
 import openai
@@ -92,6 +92,29 @@ def create_doc(title, content):
     docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}).execute()
     return f"https://docs.google.com/document/d/{doc_id}"
 
+def check_recent_submission(athlete_name: str) -> bool:
+    """Return True if a doc for `athlete_name` was created in the last 24 hours."""
+    query = (
+        "mimeType='application/vnd.google-apps.document' "
+        f"and name contains '{athlete_name}'"
+    )
+    response = drive_service.files().list(
+        q=query,
+        spaces="drive",
+        fields="files(id, name, createdTime)",
+    ).execute()
+    for file in response.get("files", []):
+        created = file.get("createdTime")
+        if not created:
+            continue
+        try:
+            created_dt = datetime.strptime(created, "%Y-%m-%dT%H:%M:%S.%fZ")
+        except ValueError:
+            created_dt = datetime.strptime(created, "%Y-%m-%dT%H:%M:%SZ")
+        if datetime.utcnow() - created_dt < timedelta(hours=24):
+            return True
+    return False
+
 @app.post("/webhook")
 async def handle_submission(request: Request):
     data = await request.json()
@@ -102,6 +125,8 @@ async def handle_submission(request: Request):
         return [w.strip().lower() for w in field.split(",")] if field else []
 
     full_name = get_value("Full name", fields)
+    if full_name and check_recent_submission(full_name):
+        return {"doc_link": "Plan already created recently"}
     age = get_value("Age", fields)
     weight = get_value("Weight (kg)", fields)
     target_weight = get_value("Target Weight (kg)", fields)
