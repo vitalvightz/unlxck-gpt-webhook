@@ -163,14 +163,19 @@ def _apply_style_rules(rules: dict, camp_length: int, weeks: dict) -> None:
 def calculate_phase_weeks(
     camp_length: int, sport: str, style: str | list[str] | None = None
 ) -> dict:
-    """Return the number of weeks per phase for a fight camp.
+    """Return weeks per phase for a fight camp.
 
-    ``camp_length`` is clamped to 1-16 weeks to match our base tables.
+    The calculation prioritizes the base ratios for 1–16 week camps, then
+    applies any style adjustments followed by min/max rules.  Output weeks
+    always sum to ``camp_length`` and taper is limited to two weeks.
     """
+
+    # 1. Clamp camp_length and fetch base ratios
     camp_length = max(1, min(16, camp_length))
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs(x - camp_length))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
+    # 2. Apply style adjustments
     for s in _normalize_styles(style):
         if s == "striker" and sport in {"boxing", "muay_thai", "kickboxing"}:
             continue
@@ -179,19 +184,42 @@ def calculate_phase_weeks(
                 if phase in ratios:
                     ratios[phase] = max(0.05, ratios[phase] + delta)
 
-    weeks = {
-        "GPP": round(ratios["GPP"] * camp_length),
-        "SPP": round(ratios["SPP"] * camp_length),
-        "TAPER": round(ratios["TAPER"] * camp_length),
-    }
-
-    for s in _normalize_styles(style):
-        if s in STYLE_RULES:
-            _apply_style_rules(STYLE_RULES[s], camp_length, weeks)
-
+    # 3. Apply style rules for min/max enforcement on ratios
+    all_styles = _normalize_styles(style)
     if sport in STYLE_RULES:
-        _apply_style_rules(STYLE_RULES[sport], camp_length, weeks)
+        all_styles.append(sport)
+    for s in all_styles:
+        rules = STYLE_RULES.get(s, {})
+        if "SPP_MIN_PERCENT" in rules:
+            ratios["SPP"] = max(ratios["SPP"], rules["SPP_MIN_PERCENT"])
+        if "MAX_TAPER" in rules:
+            ratios["TAPER"] = min(ratios["TAPER"], rules["MAX_TAPER"])
+        if "TAPER_MAX_DAYS" in rules:
+            max_taper_ratio = max(1, rules["TAPER_MAX_DAYS"] // 7) / camp_length
+            ratios["TAPER"] = min(ratios["TAPER"], max_taper_ratio)
+        if "SPP_CLINCH_RATIO" in rules:
+            ratios["SPP"] = max(ratios["SPP"], rules["SPP_CLINCH_RATIO"])
+        if "GPP_MIN_PERCENT" in rules:
+            ratios["GPP"] = max(ratios["GPP"], rules["GPP_MIN_PERCENT"])
 
-    weeks = {k: max(1, v) for k, v in weeks.items()}
-    weeks["TAPER"] = min(2, weeks["TAPER"])
-    return weeks
+    # 4. Re-normalize so GPP + SPP + TAPER == 1.0
+    total = ratios["GPP"] + ratios["SPP"] + ratios["TAPER"]
+    ratios = {k: v / total for k, v in ratios.items()}
+
+    # 5. Convert ratios to weeks
+    spp_w = round(ratios["SPP"] * camp_length)
+    taper_w = min(2, round(ratios["TAPER"] * camp_length))
+    gpp_w = camp_length - spp_w - taper_w
+
+    # 6. Clamp to at least one week where possible
+    gpp_w = max(1, gpp_w)
+    spp_w = max(1, spp_w)
+    total_weeks = gpp_w + spp_w + taper_w
+    if total_weeks < camp_length:
+        spp_w += camp_length - total_weeks
+    elif total_weeks > camp_length:
+        reduce_by = total_weeks - camp_length
+        gpp_w = max(1, gpp_w - reduce_by)
+
+    # 7. Return dictionary
+    return {"GPP": gpp_w, "SPP": spp_w, "TAPER": taper_w}
