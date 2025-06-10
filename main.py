@@ -247,7 +247,10 @@ async def handle_submission(request: Request):
     )
     strength_block = "\n\n".join([gpp_block["block"], spp_block["block"], taper_block["block"]])
 
-    conditioning_block, _ = generate_conditioning_block(training_context)
+    # Generate conditioning blocks per phase
+    gpp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "GPP"})
+    spp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "SPP"})
+    taper_cond_block, _ = generate_conditioning_block({**training_context, "phase": "TAPER"})
     recovery_block = generate_recovery_block(training_context)
     nutrition_block = generate_nutrition_block(flags=training_context)
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
@@ -278,7 +281,7 @@ async def handle_submission(request: Request):
 {gpp_block["block"]}
 
 ### Conditioning
-{conditioning_block.get('GPP', '')}
+{gpp_cond_block}
 
 
 ## PHASE 2: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS
@@ -290,7 +293,7 @@ async def handle_submission(request: Request):
 {spp_block["block"]}
 
 ### Conditioning
-{conditioning_block.get('SPP', '')}
+{spp_cond_block}
 
 
 ## PHASE 3: TAPER – {phase_weeks['TAPER']} WEEKS
@@ -302,7 +305,7 @@ async def handle_submission(request: Request):
 {taper_block["block"]}
 
 ### Conditioning
-{conditioning_block.get('TAPER', '')}
+{taper_cond_block}
 
 
 ## NUTRITION
@@ -345,7 +348,7 @@ Primary Block(s): {', '.join(training_context['mental_block']).title()}
 - Notes: {notes}
 """
 
-    full_plan = prompt
+    full_plan = fight_plan_text
     print("✅ Plan generated locally (First 500 chars):\n", full_plan[:500])
 
     loop = asyncio.get_running_loop()
