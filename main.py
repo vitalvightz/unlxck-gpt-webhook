@@ -215,7 +215,7 @@ async def handle_submission(request: Request):
         "training_split": allocate_sessions(int(frequency)),
         "key_goals": [GOAL_NORMALIZER.get(g.strip(), g.strip()).lower() for g in key_goals.split(",") if g.strip()],
         "training_preference": training_preference.strip().lower() if training_preference else "",
-        "mental_block": classify_mental_block(mental_block),
+        "mental_block": classify_mental_block(mental_block or ""),
         "age": int(age) if age.isdigit() else 0,
         "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
         "prev_exercises": [],
