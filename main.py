@@ -145,24 +145,14 @@ async def handle_submission(request: Request):
     mental_block = get_value("Do you struggle with any mental blockers or mindset challenges?", fields)
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
-    # Determine training phase
+    # Calculate weeks out from fight date
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
             weeks_out = max(1, (fight_date - datetime.now()).days // 7)
-            if weeks_out > 10:
-                phase = "GPP"
-            elif 6 <= weeks_out <= 10:
-                phase = "SPP"
-            elif 3 <= weeks_out < 6:
-                phase = "SPP"
-            else:
-                phase = "TAPER"
         except Exception:
-            phase = "GPP"
             weeks_out = "N/A"
     else:
-        phase = "GPP"
         weeks_out = "N/A"
 
     style_map = {
@@ -197,7 +187,6 @@ async def handle_submission(request: Request):
 
     # Core context
     training_context = {
-        "phase": phase,
         "fatigue": fatigue.lower(),
         "days_available": int(frequency),
         "training_days": available_days.split(", "),
@@ -223,36 +212,60 @@ async def handle_submission(request: Request):
     phase_mindset_cues = get_phase_mindset_cues(training_context["mental_block"])
 
     # === Strength blocks per phase with repeat filtering ===
-    gpp_flags = {**training_context, "phase": "GPP"}
-    gpp_block = generate_strength_block(
-        flags=gpp_flags,
-        weaknesses=training_context["weaknesses"],
-        mindset_cue=phase_mindset_cues.get("GPP"),
-    )
-    gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
+    strength_blocks = []
+    gpp_ex_names = []
+    spp_ex_names = []
+    gpp_block = None
+    spp_block = None
+    taper_block = None
 
-    spp_flags = {**training_context, "phase": "SPP", "prev_exercises": gpp_ex_names}
-    spp_block = generate_strength_block(
-        flags=spp_flags,
-        weaknesses=training_context["weaknesses"],
-        mindset_cue=phase_mindset_cues.get("SPP"),
-    )
-    spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
+    if phase_weeks["GPP"] > 0:
+        gpp_flags = {**training_context, "phase": "GPP"}
+        gpp_block = generate_strength_block(
+            flags=gpp_flags,
+            weaknesses=training_context["weaknesses"],
+            mindset_cue=phase_mindset_cues.get("GPP"),
+        )
+        gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
+        strength_blocks.append(gpp_block["block"])
 
-    taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
-    taper_block = generate_strength_block(
-        flags=taper_flags,
-        weaknesses=training_context["weaknesses"],
-        mindset_cue=phase_mindset_cues.get("TAPER"),
-    )
-    strength_block = "\n\n".join([gpp_block["block"], spp_block["block"], taper_block["block"]])
+    if phase_weeks["SPP"] > 0:
+        spp_flags = {**training_context, "phase": "SPP", "prev_exercises": gpp_ex_names}
+        spp_block = generate_strength_block(
+            flags=spp_flags,
+            weaknesses=training_context["weaknesses"],
+            mindset_cue=phase_mindset_cues.get("SPP"),
+        )
+        spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
+        strength_blocks.append(spp_block["block"])
+
+    if phase_weeks["TAPER"] > 0:
+        taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
+        taper_block = generate_strength_block(
+            flags=taper_flags,
+            weaknesses=training_context["weaknesses"],
+            mindset_cue=phase_mindset_cues.get("TAPER"),
+        )
+        strength_blocks.append(taper_block["block"])
+
+    strength_block = "\n\n".join(strength_blocks)
 
     # Generate conditioning blocks per phase
-    gpp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "GPP"})
-    spp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "SPP"})
-    taper_cond_block, _ = generate_conditioning_block({**training_context, "phase": "TAPER"})
-    recovery_block = generate_recovery_block(training_context)
-    nutrition_block = generate_nutrition_block(flags=training_context)
+    gpp_cond_block = ""
+    spp_cond_block = ""
+    taper_cond_block = ""
+
+    if phase_weeks["GPP"] > 0:
+        gpp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "GPP"})
+
+    if phase_weeks["SPP"] > 0:
+        spp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "SPP"})
+
+    if phase_weeks["TAPER"] > 0:
+        taper_cond_block, _ = generate_conditioning_block({**training_context, "phase": "TAPER"})
+    current_phase = next((p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0), "GPP")
+    recovery_block = generate_recovery_block({**training_context, "phase": current_phase})
+    nutrition_block = generate_nutrition_block(flags={**training_context, "phase": current_phase})
     injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
 
@@ -270,83 +283,95 @@ async def handle_submission(request: Request):
     gpp_mindset = build_mindset_prompt("GPP")
     spp_mindset = build_mindset_prompt("SPP")
     taper_mindset = build_mindset_prompt("TAPER")
-    fight_plan_text = f"""# FIGHT CAMP PLAN
 
-## PHASE 1: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS
+    fight_plan_lines = ["# FIGHT CAMP PLAN"]
+    phase_num = 1
 
-### Mindset Focus
-{gpp_mindset}
+    if phase_weeks["GPP"] > 0:
+        fight_plan_lines += [
+            f"## PHASE {phase_num}: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS",
+            "",
+            "### Mindset Focus",
+            gpp_mindset,
+            "",
+            "### Strength & Power",
+            gpp_block["block"] if gpp_block else "",
+            "",
+            "### Conditioning",
+            gpp_cond_block,
+            "",
+        ]
+        phase_num += 1
 
-### Strength & Power
-{gpp_block["block"]}
+    if phase_weeks["SPP"] > 0:
+        fight_plan_lines += [
+            f"## PHASE {phase_num}: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS",
+            "",
+            "### Mindset Focus",
+            spp_mindset,
+            "",
+            "### Strength & Power",
+            spp_block["block"] if spp_block else "",
+            "",
+            "### Conditioning",
+            spp_cond_block,
+            "",
+        ]
+        phase_num += 1
 
-### Conditioning
-{gpp_cond_block}
+    if phase_weeks["TAPER"] > 0:
+        fight_plan_lines += [
+            f"## PHASE {phase_num}: TAPER – {phase_weeks['TAPER']} WEEKS",
+            "",
+            "### Mindset Focus",
+            taper_mindset,
+            "",
+            "### Strength & Power",
+            taper_block["block"] if taper_block else "",
+            "",
+            "### Conditioning",
+            taper_cond_block,
+            "",
+        ]
 
+    fight_plan_lines += [
+        "## NUTRITION",
+        nutrition_block,
+        "",
+        "## RECOVERY",
+        recovery_block,
+        "",
+        "## INJURY SUBSTITUTIONS",
+        injury_sub_block,
+        "",
+        "## MINDSET OVERVIEW",
+        f"Primary Block(s): {', '.join(training_context['mental_block']).title()}",
+        "",
+        "## ATHLETE PROFILE",
+        f"- Name: {full_name}",
+        f"- Age: {age}",
+        f"- Weight: {weight}kg",
+        f"- Target Weight: {target_weight}kg",
+        f"- Height: {height}cm",
+        f"- Technical Style: {fighting_style_technical}",
+        f"- Tactical Style: {fighting_style_tactical}",
+        f"- Stance: {stance}",
+        f"- Status: {status}",
+        f"- Record: {record}",
+        f"- Fight Format: {rounds_format}",
+        f"- Fight Date: {next_fight_date}",
+        f"- Weeks Out: {weeks_out}",
+        f"- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper",
+        f"- Fatigue Level: {fatigue}",
+        f"- Injuries: {injuries}",
+        f"- Training Availability: {available_days}",
+        f"- Weaknesses: {weak_areas}",
+        f"- Key Goals: {key_goals}",
+        f"- Mindset Challenges: {', '.join(training_context['mental_block'])}",
+        f"- Notes: {notes}",
+    ]
 
-## PHASE 2: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS
-
-### Mindset Focus
-{spp_mindset}
-
-### Strength & Power
-{spp_block["block"]}
-
-### Conditioning
-{spp_cond_block}
-
-
-## PHASE 3: TAPER – {phase_weeks['TAPER']} WEEKS
-
-### Mindset Focus
-{taper_mindset}
-
-### Strength & Power
-{taper_block["block"]}
-
-### Conditioning
-{taper_cond_block}
-
-
-## NUTRITION
-{nutrition_block}
-
-
-## RECOVERY
-{recovery_block}
-
-
-## INJURY SUBSTITUTIONS
-{injury_sub_block}
-
-
-## MINDSET OVERVIEW
-Primary Block(s): {', '.join(training_context['mental_block']).title()}
-
-
-## ATHLETE PROFILE
-- Name: {full_name}
-- Age: {age}
-- Weight: {weight}kg
-- Target Weight: {target_weight}kg
-- Height: {height}cm
-- Technical Style: {fighting_style_technical}
-- Tactical Style: {fighting_style_tactical}
-- Stance: {stance}
-- Status: {status}
-- Record: {record}
-- Fight Format: {rounds_format}
-- Fight Date: {next_fight_date}
-- Weeks Out: {weeks_out}
-- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper
-- Fatigue Level: {fatigue}
-- Injuries: {injuries}
-- Training Availability: {available_days}
-- Weaknesses: {weak_areas}
-- Key Goals: {key_goals}
-- Mindset Challenges: {', '.join(training_context['mental_block'])}
-- Notes: {notes}
-"""
+    fight_plan_text = "\n".join(fight_plan_lines)
 
     full_plan = fight_plan_text
     print("✅ Plan generated locally (First 500 chars):\n", full_plan[:500])
