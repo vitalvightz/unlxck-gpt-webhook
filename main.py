@@ -172,6 +172,7 @@ async def handle_submission(request: Request):
     style_map = {
         "mma": "mma",
         "boxer": "boxing",
+        "boxing": "boxing",
         "kickboxer": "kickboxing",
         "muay thai": "muay_thai",
         "bjj": "mma",
