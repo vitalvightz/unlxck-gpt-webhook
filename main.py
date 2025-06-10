@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from fastapi import FastAPI, Request
 import os, json, base64
-import openai
 import asyncio
 from functools import partial
 from google.oauth2 import service_account
@@ -16,7 +15,6 @@ from training_context import allocate_sessions, normalize_equipment_list
 from camp_phases import calculate_phase_weeks
 from mindset_module import (
     classify_mental_block,
-    get_mental_protocols,
     get_phase_mindset_cues,
     get_mindset_by_phase,
 )
@@ -57,8 +55,6 @@ if os.getenv("GOOGLE_CREDS_B64"):
     with open("clientsecrettallyso.json", "w") as f:
         decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
         f.write(decoded.decode("utf-8"))
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
 SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
 SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
 creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
@@ -335,18 +331,8 @@ Athlete Profile:
     """
 
 
-    try:
-        response = openai.chat.completions.create(
-            model="gpt-4",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.27,
-            max_tokens=3500,
-        )
-        full_plan = response.choices[0].message.content.strip()
-        print("✅ GPT Response (First 500 chars):\n", full_plan[:500])
-    except Exception as e:
-        print("❌ GPT API Error:", e)
-        return {"error": "Failed to generate plan from OpenAI"}
+    full_plan = prompt
+    print("✅ Plan generated locally (First 500 chars):\n", full_plan[:500])
 
     loop = asyncio.get_running_loop()
     for _ in range(2):
