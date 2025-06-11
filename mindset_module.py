@@ -40,14 +40,14 @@ mindset_bank = {
 
 mental_blocks = {
     "confidence": [
-        "confid", "doubt", "belie", "imposter", "insecure", "hesita", 
+        "confid", "doubt", "belie", "impost", "insecure", "hesita", 
         "unsure", "timid", "shak", "unworthy", "sabotage", "incapable", 
         "inferior", "fraud", "fragile", "phony", "uncertain", "cautious", 
         "wavering", "crash", "pretend", "fail", "inadequate", "edge", "depth"
     ],
     "gas tank": [
         "gas", "cardi", "tire", "fade", "gassed", "condition", "exhaust", 
-        "wind", "burn", "empty", "stamina", "breath", "heavy", "energy", 
+        "wind", "burn", "empty", "stamin", "breath", "heavy", "energ", 
         "wall", "drain", "spent", "weary", "fatigue", "zap", "unfit", 
         "overtrain", "dehydrate", "muscle", "sustain", "collapse", "pace"
     ],
@@ -60,14 +60,14 @@ mental_blocks = {
     ],
     "pressure": [
         "pressure", "nerve", "stress", "expect", "choke", "stage", 
-        "overwhelm", "burden", "spotlight", "heat", "frozen", "tight", 
+        "overwhelm", "burden", "spotlight", "heat", "froze", "tight", 
         "analysis", "overthink", "crack", "fold", "moment", "disappoint", 
         "terror", "stake", "clutch", "failure", "judgment", "perfect", 
-        "anxiety", "freeze", "exposure", "shaky", "audience", "legacy", 
+        "anxiety", "freez", "exposure", "shaky", "audience", "legacy", 
         "contract", "rank", "title", "break", "perform", "count", "blank"
     ],
     "attention": [
-        "focus", "distract", "adhd", "concentrate", "lapse", "zone", 
+        "focus", "distract", "adhd", "concentrat", "lapse", "zone", 
         "wander", "scatter", "overstim", "crowd", "noise", "trash", 
         "personal", "emotional", "overload", "indecisive", "slow", 
         "forget", "space", "deficit", "sensory", "thought", "lock", 
