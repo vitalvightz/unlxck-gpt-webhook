@@ -3,7 +3,12 @@ import json
 import ast
 import random
 from .injury_subs import injury_subs
-from .training_context import normalize_equipment_list, known_equipment, allocate_sessions
+from .training_context import (
+    normalize_equipment_list,
+    known_equipment,
+    allocate_sessions,
+    calculate_exercise_numbers,
+)
 
 # Optional equipment boosts by training phase
 phase_equipment_boost = {
@@ -126,6 +131,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "training_frequency", flags.get("days_available", len(training_days))
     )
     num_strength_sessions = allocate_sessions(training_frequency, phase).get("strength", 2)
+    exercise_counts = calculate_exercise_numbers(training_frequency, phase)
+    target_exercises = exercise_counts.get("strength", 0)
     prev_exercises = flags.get("prev_exercises", [])
 
     style_tag_map = {
@@ -256,8 +263,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     days_count = len(training_days) if isinstance(training_days, list) else training_days
     if not isinstance(days_count, int):
         days_count = 3
-    # Use 8 drills per detected strength session
-    target_exercises = 8 * num_strength_sessions
+    # Target exercise count determined by phase multipliers
 
     if len(weighted_exercises) < target_exercises:
         fallback_exercises = []
@@ -384,7 +390,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         f"**Primary Focus:** {focus}",
         "**Top Exercises:**",
     ] + [f"- {ex['name']}" for ex in base_exercises] + [
-        f"**Prescription:** {base_block}"
+        f"**Prescription:** {base_block}",
+        f"**Total Exercises:** {target_exercises}",
     ]
     if mindset_cue:
         strength_output.append(f"**Mindset Cue:** {mindset_cue}")
