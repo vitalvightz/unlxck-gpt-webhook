@@ -61,14 +61,39 @@ Keyword counts determine the top mental blocks. The two highest scoring blocks f
 
 **Training context** (`training_context.py`)
 
-The helper `allocate_sessions()` assigns weekly sessions based on the
-numeric **training frequency** it receives:
+The helper `allocate_sessions()` now takes a phase and returns the split for
+strength, conditioning and recovery. The schedule adapts across phases:
 
 ```
-≤3 days  → {'strength': 1, 'conditioning': 1, 'recovery': 1}
-4 days   → {'strength': 2, 'conditioning': 1, 'recovery': 1}
-5 days   → {'strength': 2, 'conditioning': 2, 'recovery': 1}
->5 days  → {'strength': 3, 'conditioning': 2, 'recovery': 1}
+1 session/week
+  GPP   → 1 Strength
+  SPP   → 1 Conditioning
+  Taper → 1 Conditioning
+
+2 sessions/week
+  GPP   → 1 Strength, 1 Conditioning
+  SPP   → 1 Strength, 1 Conditioning
+  Taper → 1 Conditioning, 1 Recovery
+
+3 sessions/week
+  GPP   → 1 Strength, 1 Conditioning, 1 Recovery
+  SPP   → 1 Strength, 2 Conditioning
+  Taper → 1 Strength, 1 Conditioning, 1 Recovery
+
+4 sessions/week
+  GPP   → 2 Strength, 1 Conditioning, 1 Recovery
+  SPP   → 1 Strength, 2 Conditioning, 1 Recovery
+  Taper → 1 Strength, 1 Conditioning, 2 Recovery
+
+5 sessions/week
+  GPP   → 2 Strength, 2 Conditioning, 1 Recovery
+  SPP   → 2 Strength, 2 Conditioning, 1 Recovery
+  Taper → 1 Strength, 1 Conditioning, 3 Recovery
+
+6 sessions/week
+  GPP   → 2 Strength, 3 Conditioning, 1 Recovery
+  SPP   → 2 Strength, 3 Conditioning, 1 Recovery
+  Taper → 1 Strength, 1 Conditioning, 4 Recovery
 ```
 
 `Weekly Training Frequency` is the number of sessions the athlete plans to
