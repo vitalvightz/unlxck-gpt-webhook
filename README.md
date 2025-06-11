@@ -51,6 +51,27 @@ The generator ranks drills and exercises based on a simple heuristic score. Each
 
 Energy system emphasis per phase is set by `PHASE_SYSTEM_RATIOS` and the ratio of style‑specific to general drills uses `STYLE_CONDITIONING_RATIO`.
 
+#### Style Matching in Conditioning
+
+Two banks feed the conditioning generator:
+
+1. `conditioning_bank.json` – general drills for any athlete.
+2. `style_conditioning_bank.json` – drills written for specific fighting styles.
+
+`STYLE_CONDITIONING_RATIO` sets how many style drills appear in each phase:
+
+```
+GPP   → 20% style drills
+SPP   → 60% style drills
+TAPER → 5%  style drills
+```
+
+In the **general bank**, style tags simply add `+1.0` each to a drill’s score. A drill can still be chosen without them because ranking, not filtering, determines selection.
+
+In the **style bank**, every drill already matches a tactical style. Tag overlap is used only to rank which style drills are pulled first.
+
+The style-match score never changes the bank ratio above—it just sorts the options within each bank.
+
 **Phase calculation** (`camp_phases.py`)
 
 Phase weeks come from `BASE_PHASE_RATIOS` with style adjustments. Professional athletes shift 5% from GPP to SPP. Ratios are rebalanced so the weeks always sum to the camp length and taper is capped at two weeks.
