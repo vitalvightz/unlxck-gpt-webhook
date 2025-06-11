@@ -100,8 +100,8 @@ style_conditioning_bank = json.loads((DATA_DIR / "style_conditioning_bank.json")
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
 STYLE_CONDITIONING_RATIO = {
-    "GPP": 0.15,
-    "SPP": 0.55,
+    "GPP": 0.20,
+    "SPP": 0.60,
     "TAPER": 0.05,
 }
 
