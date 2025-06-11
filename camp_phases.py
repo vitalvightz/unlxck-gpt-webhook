@@ -164,7 +164,10 @@ def _apply_style_rules(rules: dict, camp_length: int, weeks: dict) -> None:
             weeks["SPP"] = min_spp
             weeks["GPP"] = max(1, weeks["GPP"] - diff)
 def calculate_phase_weeks(
-    camp_length: int, sport: str, style: str | list[str] | None = None
+    camp_length: int,
+    sport: str,
+    style: str | list[str] | None = None,
+    status: str | None = None,
 ) -> dict:
     """Return weeks per phase for a fight camp.
 
@@ -202,6 +205,15 @@ def calculate_phase_weeks(
             ratios["SPP"] = max(ratios["SPP"], rules["SPP_CLINCH_RATIO"])
         if "GPP_MIN_PERCENT" in rules:
             ratios["GPP"] = max(ratios["GPP"], rules["GPP_MIN_PERCENT"])
+
+    # 3b. Professional adjustment: shift 5% from GPP to SPP
+    if status and status.strip().lower() == "professional" and camp_length >= 4:
+        ratios["SPP"] += 0.05
+        ratios["GPP"] -= 0.05
+        if ratios["GPP"] < 0.15:
+            diff = 0.15 - ratios["GPP"]
+            ratios["GPP"] = 0.15
+            ratios["SPP"] = max(0.05, ratios["SPP"] - diff)
 
     # 4. Re-normalize so GPP + SPP + TAPER == 1.0
     total = ratios["GPP"] + ratios["SPP"] + ratios["TAPER"]

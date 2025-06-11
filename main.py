@@ -153,12 +153,14 @@ async def handle_submission(request: Request):
             weeks_out,
             mapped_format,
             tactical_styles,
+            status,
         )
     else:
         phase_weeks = calculate_phase_weeks(
             8,
             mapped_format,
             tactical_styles,
+            status,
         )
 
     # Core context
