@@ -60,3 +60,25 @@ def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
     }
 
     return plan.get(freq, plan[6]).get(phase, {"strength": 1, "conditioning": 1, "recovery": 1})
+
+
+def calculate_exercise_numbers(training_frequency: int, phase: str) -> dict:
+    """Return recommended exercise counts for each block type.
+
+    The result multiplies allocated session counts from ``allocate_sessions`` by
+    phase-specific exercise targets. Recovery days are implied by sessions not
+    scheduled for strength or conditioning.
+    """
+
+    sessions = allocate_sessions(training_frequency, phase)
+    phase = phase.upper()
+
+    strength_per_day = {"GPP": 7, "SPP": 6, "TAPER": 4}
+    conditioning_per_day = {"GPP": 4, "SPP": 3, "TAPER": 2}
+
+    return {
+        "strength": strength_per_day.get(phase, 0) * sessions.get("strength", 0),
+        "conditioning": conditioning_per_day.get(phase, 0) * sessions.get(
+            "conditioning", 0
+        ),
+    }
