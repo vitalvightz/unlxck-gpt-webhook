@@ -8,9 +8,9 @@ Recent updates removed the OpenAI dependency and now build plans entirely from t
 
 Setting the **Professional Status** field to `pro` or `professional` adjusts the camp ratios when the camp is four weeks or longer. The shift from GPP to SPP depends on fatigue, weight cutting and mindset:
 
-- **Clean athlete** – low fatigue, no weight cut and a generic mindset block: **+10%** SPP
-- **Reliable athlete** – low/moderate fatigue, cutting ≤5% bodyweight and no burnout/overthinking blocks: **+7.5%** SPP
-- **Normal pro** – all other cases: **+5%** SPP
+- **Elite Tier 3** – low fatigue, no weight cut and mindset blocks only `generic` or `confidence`: **+10%** SPP
+- **Tier 2** – low/moderate fatigue, cutting ≤5% bodyweight and no `motivation`, `gas tank` or `injury fear` blocks: **+7.5%** SPP
+- **Tier 1** – all other pros: **+5%** SPP
 
 GPP is reduced by the same amount but never drops below 15% of the total camp.
 
