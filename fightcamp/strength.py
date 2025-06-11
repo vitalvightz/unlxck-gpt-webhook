@@ -1,8 +1,8 @@
 from pathlib import Path
 import json
 import ast
-from injury_subs import injury_subs
-from training_context import normalize_equipment_list, known_equipment, allocate_sessions
+from .injury_subs import injury_subs
+from .training_context import normalize_equipment_list, known_equipment, allocate_sessions
 
 # Optional equipment boosts by training phase
 phase_equipment_boost = {
@@ -12,7 +12,8 @@ phase_equipment_boost = {
 }
 
 # Load style specific exercises (file lacks closing brackets so we patch)
-_style_text = Path("style_specific_exercises").read_text()
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+_style_text = (DATA_DIR / "style_specific_exercises").read_text()
 _start = _style_text.find("[")
 _end = _style_text.rfind("}")
 _snippet = _style_text[_start:_end + 1] + "]" if _start != -1 and _end != -1 else "[]"
@@ -49,7 +50,7 @@ def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
 
     return 0
 
-exercise_bank = json.loads(Path("exercise_bank.json").read_text())
+exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
@@ -259,7 +260,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # --------- UNIVERSAL STRENGTH INSERTION ---------
     if phase == "GPP":
         try:
-            with open("universal_gpp_strength.json", "r") as f:
+            with open(DATA_DIR / "universal_gpp_strength.json", "r") as f:
                 universal_strength = json.load(f)
         except Exception:
             universal_strength = []

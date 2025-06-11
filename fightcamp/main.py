@@ -7,22 +7,24 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from pathlib import Path
 
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+
 # Load exercise bank
-exercise_bank = json.loads(Path("exercise_bank.json").read_text())
+exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 
 # Modules
-from training_context import allocate_sessions, normalize_equipment_list
-from camp_phases import calculate_phase_weeks
-from mindset_module import (
+from .training_context import allocate_sessions, normalize_equipment_list
+from .camp_phases import calculate_phase_weeks
+from .mindset_module import (
     classify_mental_block,
     get_phase_mindset_cues,
     get_mindset_by_phase,
 )
-from strength import generate_strength_block
-from conditioning import generate_conditioning_block
-from recovery import generate_recovery_block
-from nutrition import generate_nutrition_block
-from injury_subs import generate_injury_subs
+from .strength import generate_strength_block
+from .conditioning import generate_conditioning_block
+from .recovery import generate_recovery_block
+from .nutrition import generate_nutrition_block
+from .injury_subs import generate_injury_subs
 
 GOAL_NORMALIZER = {
     "Power & Explosiveness": "explosive",
