@@ -101,13 +101,14 @@ Every module looks at how many of its tags match your goals, weaknesses and figh
 - Rehab exercise penalty: **-0.5** in GPP, **-1.0** in SPP, **-0.75** in TAPER
 
 ### Conditioning Module
-- Weakness tag match: **+2.5** each (max two)
-- Goal tag match: **+2.0** each (max two)
-- Style tag match: **+1.0** each (max two)
-- Fight format tag: **+1.0** (max one)
-- Energy system multiplier from `format_energy_weights.json`
-- High CNS drills: **-1.0** or **-2.0** penalty if you're fatigued
-- Style‑specific drills: **+3.0** for style, **+1.5** for phase, **+1.0** for matching energy system and **+1.0** if you have the right equipment
+- Style match (exact): **+1.5**
+- Phase match: **+1.0**
+- Energy system match: **+0.75**
+- Equipment match: **+0.5**
+- Weakness tag match: **+0.6** each (max one)
+- Goal tag match: **+0.5** each (max one)
+- Fatigue penalty: **-1.0** (high) or **-0.5** (moderate) if the drill has `high_cns`
+- Random noise: **±0.2**
 
 ### Mindset and Phase Calculation
 - Mindset keywords are counted and the top two become your focus cues
@@ -141,10 +142,14 @@ The file `notes/format_round_templates.json` sets default round and rest times f
 `style_conditioning_bank.json` collects drills written for specific fighting styles like brawler or counter striker. The program mixes them in using `STYLE_CONDITIONING_RATIO` so more style drills appear in SPP than in GPP or TAPER.
 
 **How style drills score**
-- **+3.0** if the tags match your tactical style
-- **+1.5** if they fit the current phase
-- **+1.0** when the energy system lines up
-- **+1.0** if you own the right equipment
-- **+0.5** bonus just for variety
+
+- **+1.5** style match (exact)
+- **+1.0** phase match
+- **+0.75** energy system match
+- **+0.5** equipment match
+- **+0.6** weakness tag (max one)
+- **+0.5** goal tag (max one)
+- **-1.0** or **-0.5** if `high_cns` and you're fatigued
+- **±0.2** random noise
 
 The higher the score, the more likely that drill shows up in your plan.

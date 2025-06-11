@@ -41,13 +41,14 @@ The generator ranks drills and exercises based on a simple heuristic score. Each
 
 **Conditioning module** (`conditioning.py`)
 
-- Weakness tags: `+2.5` each (max two)
-- Goal tags: `+2.0` each (max two)
-- Style tags: `+1.0` each (max two)
-- Fight-format tags: `+1.0` (max one)
-- Energy system weight from `format_energy_weights.json` multiplies the base score
-- High CNS drills are penalized `-2.0` (high fatigue) or `-1.0` (moderate fatigue)
-- Style‑specific drills score `+3.0` for style, `+1.5` for phase, `+1.0` for matching energy system and `+1.0` for accessible equipment
+- Style match (exact): `+1.5`
+- Phase match: `+1.0`
+- Energy system match: `+0.75`
+- Equipment match: `+0.5`
+- Weakness tag match: `+0.6` each (max one)
+- Goal tag match: `+0.5` each (max one)
+- Fatigue penalty: `-1.0` (high) or `-0.5` (moderate) if the drill has `high_cns`
+- Random noise: `±0.2`
 
 Energy system emphasis per phase is set by `PHASE_SYSTEM_RATIOS` and the ratio of style‑specific to general drills uses `STYLE_CONDITIONING_RATIO`.
 

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import random
 from .training_context import (
     allocate_sessions,
     normalize_equipment_list,
@@ -273,18 +274,27 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        equip_bonus = 0.0
-        for eq in drill.get("equipment", []):
-            if eq.lower() in equipment_access:
-                equip_bonus = 1.0
-                break
+        equip_bonus = 0.5 if any(
+            eq.lower() in equipment_access for eq in drill.get("equipment", [])
+        ) else 0.0
 
         score = 0.0
-        score += 3.0  # style tag match (already filtered)
-        score += 1.5  # phase match
-        score += 1.0  # energy system match
+        score += 1.5  # style match already guaranteed by filter
+        score += 1.0  # phase match
+        top_system = preferred_order[0]
+        if system == top_system:
+            score += 0.75
         score += equip_bonus
-        score += 0.5  # unique name incentive
+        weak_matches = sum(1 for t in tags if t in weak_tags)
+        goal_matches = sum(1 for t in tags if t in goal_tags)
+        score += 0.6 * min(weak_matches, 1)
+        score += 0.5 * min(goal_matches, 1)
+        if "high_cns" in tags:
+            if fatigue == "high":
+                score -= 1.0
+            elif fatigue == "moderate":
+                score -= 0.5
+        score += random.uniform(-0.2, 0.2)
 
         style_system_drills[system].append((drill, score))
         for st in style_names:
