@@ -16,9 +16,19 @@ style_tag_map = {
 
 # Extra explosive or high-load tags to avoid during TAPER when fatigue isn't low
 TAPER_AVOID_TAGS = {
-    "plyometric", "rate_of_force", "contrast_pairing", "horizontal_power",
-    "triple_extension", "overhead", "elastic", "compound", "mental_toughness",
-    "work_capacity", "eccentric", "footwork",
+    "plyometric",
+    "rate_of_force",
+    "contrast_pairing",
+    "horizontal_power",
+    "triple_extension",
+    "overhead",
+    "elastic",
+    "compound",
+    "mental_toughness",
+    "work_capacity",
+    "eccentric",
+    "footwork",
+    "lunge_pattern",
 }
 
 # Goal tags

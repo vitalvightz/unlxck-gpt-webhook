@@ -136,7 +136,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     weighted_exercises = []
     taper_allowed = {"neural_primer", "speed", "cluster", "explosive", "low_impact", "reactive", "rehab_friendly"}
-    taper_banned = {"eccentric", "compound", "posterior_chain", "high_volume", "barbell", "trap_bar"}
+    taper_banned = {
+        "eccentric",
+        "lunge_pattern",
+        "compound",
+        "horizontal_power",
+        "triple_extension",
+        "overhead",
+        "contrast_pairing",
+        "rate_of_force",
+        "plyometric",
+        "elastic",
+        "mental_toughness",
+        "posterior_chain",
+        "high_volume",
+        "barbell",
+        "trap_bar",
+    }
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
