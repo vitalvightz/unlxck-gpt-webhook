@@ -30,14 +30,14 @@ The generator ranks drills and exercises based on a simple heuristic score. Each
 
 **Strength module** (`strength.py`)
 
-- Weakness tags: `+1.5` each
-- Goal tags: `+1.25` each
-- Style tags: `+1.0` each, plus an extra `+2` when two style tags match
-- Additional `+1` when three or more total tags match
-- Phase tag boosts (e.g. triphasic or contrast) add `+1` or more per tag
-- Fatigue penalties: `-1.5` (high) or `-0.75` (moderate) for heavy equipment or compound lifts
-- Missing equipment removes the exercise (`-999`)
-- Rehab exercises carry a phase penalty (`-1` GPP, `-3` SPP, `-2` TAPER)
+- Weakness tags: `+0.6` each
+- Goal tags: `+0.5` each
+- Style tags: `+0.3` each with a small synergy bonus (`+0.2` for two matches, `+0.1` for three or more)
+- When three or more total tags match, add `+0.2`
+- Phase tag matches add `+0.4` each
+- Fatigue penalties: `-0.75` (high) or `-0.35` (moderate)
+- Missing required equipment removes the exercise (`-999`)
+- Rehab exercises incur `-0.5` in GPP, `-1.0` in SPP and `-0.75` in TAPER
 
 **Conditioning module** (`conditioning.py`)
 
