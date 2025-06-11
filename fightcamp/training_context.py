@@ -21,13 +21,42 @@ known_equipment = [
     "elliptical", "bodyweight", "med_balls", "battle_rope", "kettlebells"
 ]
 
-def allocate_sessions(training_frequency: int) -> dict:
-    """Return weekly session counts based on training frequency."""
-    if training_frequency <= 3:
-        return {'strength': 1, 'conditioning': 1, 'recovery': 1}
-    elif training_frequency == 4:
-        return {'strength': 2, 'conditioning': 1, 'recovery': 1}
-    elif training_frequency == 5:
-        return {'strength': 2, 'conditioning': 2, 'recovery': 1}
-    else:
-        return {'strength': 3, 'conditioning': 2, 'recovery': 1}
+def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
+    """Return weekly session counts based on frequency and phase."""
+    freq = max(1, min(int(training_frequency), 6))
+    phase = phase.upper()
+
+    plan = {
+        1: {
+            "GPP": {"strength": 1, "conditioning": 0, "recovery": 0},
+            "SPP": {"strength": 0, "conditioning": 1, "recovery": 0},
+            "TAPER": {"strength": 0, "conditioning": 1, "recovery": 0},
+        },
+        2: {
+            "GPP": {"strength": 1, "conditioning": 1, "recovery": 0},
+            "SPP": {"strength": 1, "conditioning": 1, "recovery": 0},
+            "TAPER": {"strength": 0, "conditioning": 1, "recovery": 1},
+        },
+        3: {
+            "GPP": {"strength": 1, "conditioning": 1, "recovery": 1},
+            "SPP": {"strength": 1, "conditioning": 2, "recovery": 0},
+            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 1},
+        },
+        4: {
+            "GPP": {"strength": 2, "conditioning": 1, "recovery": 1},
+            "SPP": {"strength": 1, "conditioning": 2, "recovery": 1},
+            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 2},
+        },
+        5: {
+            "GPP": {"strength": 2, "conditioning": 2, "recovery": 1},
+            "SPP": {"strength": 2, "conditioning": 2, "recovery": 1},
+            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 3},
+        },
+        6: {
+            "GPP": {"strength": 2, "conditioning": 3, "recovery": 1},
+            "SPP": {"strength": 2, "conditioning": 3, "recovery": 1},
+            "TAPER": {"strength": 1, "conditioning": 1, "recovery": 4},
+        },
+    }
+
+    return plan.get(freq, plan[6]).get(phase, {"strength": 1, "conditioning": 1, "recovery": 1})
