@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
-from .training_context import allocate_sessions, normalize_equipment_list
+from .training_context import (
+    allocate_sessions,
+    normalize_equipment_list,
+    calculate_exercise_numbers,
+)
 
 # Map for tactical styles
 style_tag_map = {
@@ -298,9 +302,10 @@ def generate_conditioning_block(flags):
     num_conditioning_sessions = allocate_sessions(training_frequency, phase).get(
         "conditioning", 0
     )
+    exercise_counts = calculate_exercise_numbers(training_frequency, phase)
 
-    # Use 8 drills per detected conditioning session
-    total_drills = 8 * num_conditioning_sessions
+    # Use recommended drill count based on phase multipliers
+    total_drills = exercise_counts.get("conditioning", 0)
 
     system_quota = {
         k: max(1 if v > 0 else 0, round(total_drills * v))
@@ -476,6 +481,8 @@ def generate_conditioning_block(flags):
             if d.get("equipment_note"):
                 output_lines.append(f"- notes: {d['equipment_note']}")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
+
+    output_lines.append(f"**Total Drills:** {total_drills}")
 
     if fatigue == "high":
         output_lines.append("\n⚠️ High fatigue detected – conditioning volume reduced.")
