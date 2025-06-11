@@ -309,8 +309,8 @@ def generate_conditioning_block(flags):
     else:
         num_conditioning_sessions = 0
 
-    drills_per_session = 3 if fatigue == "low" else 2
-    total_drills = num_conditioning_sessions * drills_per_session
+    # Use 8 drills per detected conditioning session
+    total_drills = 8 * num_conditioning_sessions
 
     system_quota = {
         k: max(1 if v > 0 else 0, round(total_drills * v))
