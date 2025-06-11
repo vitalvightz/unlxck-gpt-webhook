@@ -158,3 +158,5 @@ style_specific_exercises = [
         "type": "ballistic",
         "tags": ["explosive", "cognitive", "style_brawler"],
         "equipment": "medicine_ball"
+    }
+]
