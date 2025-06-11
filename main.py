@@ -110,10 +110,17 @@ async def handle_submission(request: Request):
     record = get_value("Current Record", fields)
     next_fight_date = get_value("When is your next fight?", fields)
     rounds_format = get_value("Rounds x Minutes", fields)
-    frequency = get_value("Weekly Training Frequency", fields)
+    frequency_raw = get_value("Weekly Training Frequency", fields)
     fatigue = get_value("Fatigue Level", fields)
     equipment_access = get_value("Equipment Access", fields)
     available_days = get_value("Time Availability for Training", fields)
+
+    # Normalize schedule info
+    training_days = [d.strip() for d in available_days.split(',') if d.strip()]
+    try:
+        training_frequency = int(frequency_raw)
+    except (TypeError, ValueError):
+        training_frequency = len(training_days)
     injuries = get_value("Any injuries or areas you need to work around?", fields)
     key_goals = get_value("What are your key performance goals?", fields)
     weak_areas = get_value("Where do you feel weakest right now?", fields)
@@ -169,8 +176,9 @@ async def handle_submission(request: Request):
     # Core context
     training_context = {
         "fatigue": fatigue.lower(),
-        "days_available": int(frequency),
-        "training_days": available_days.split(", "),
+        "training_frequency": training_frequency,
+        "days_available": len(training_days),
+        "training_days": training_days,
         "injuries": normalize_list(injuries),
         "style_technical": raw_tech_style,
         "style_tactical": tactical_styles,
@@ -179,7 +187,7 @@ async def handle_submission(request: Request):
         "weight_cut_risk": weight_cut_risk_flag,
         "weight_cut_pct": weight_cut_pct_val,
         "fight_format": mapped_format,
-        "training_split": allocate_sessions(int(frequency)),
+        "training_split": allocate_sessions(training_frequency),
         "key_goals": [GOAL_NORMALIZER.get(g.strip(), g.strip()).lower() for g in key_goals.split(",") if g.strip()],
         "training_preference": training_preference.strip().lower() if training_preference else "",
         "mental_block": mental_block_class,

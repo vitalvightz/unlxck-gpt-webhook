@@ -131,7 +131,7 @@ def generate_conditioning_block(flags):
     technical = flags.get("style_technical", [])
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
-    days_available = flags.get("days_available", 3)
+    training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
 
     # Handle multiple technical styles
@@ -299,11 +299,11 @@ def generate_conditioning_block(flags):
         for drills in style_lists.values():
             drills.sort(key=lambda x: x[1], reverse=True)
 
-    if days_available >= 6:
+    if training_frequency >= 6:
         num_conditioning_sessions = 3
-    elif days_available >= 4:
+    elif training_frequency >= 4:
         num_conditioning_sessions = 2
-    elif days_available >= 2:
+    elif training_frequency >= 2:
         num_conditioning_sessions = 1
     else:
         num_conditioning_sessions = 0
