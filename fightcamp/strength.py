@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import ast
+import random
 from .injury_subs import injury_subs
 from .training_context import normalize_equipment_list, known_equipment, allocate_sessions
 
@@ -49,6 +50,61 @@ def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
         return -1
 
     return 0
+
+
+def score_exercise(
+    exercise_tags,
+    weakness_tags,
+    goal_tags,
+    style_tags,
+    phase_tags,
+    current_phase,
+    fatigue_level,
+    available_equipment,
+    required_equipment,
+    is_rehab,
+):
+    """Return a weighted score for a candidate exercise."""
+    score = 0.0
+
+    weakness_matches = len(set(exercise_tags) & set(weakness_tags))
+    score += weakness_matches * 0.6
+
+    goal_matches = len(set(exercise_tags) & set(goal_tags))
+    score += goal_matches * 0.5
+
+    matched_style_tags = list(set(exercise_tags) & set(style_tags))
+    score += len(matched_style_tags) * 0.3
+
+    if len(matched_style_tags) == 2:
+        score += 0.2
+    elif len(matched_style_tags) >= 3:
+        score += 0.1
+
+    total_matches = len(
+        set(exercise_tags) & set(weakness_tags + goal_tags + style_tags)
+    )
+    if total_matches >= 3:
+        score += 0.2
+
+    phase_matches = len(set(exercise_tags) & set(phase_tags))
+    score += phase_matches * 0.4
+
+    if fatigue_level == "high":
+        score -= 0.75
+    elif fatigue_level == "moderate":
+        score -= 0.35
+
+    if not set(required_equipment).issubset(set(available_equipment)):
+        return -999
+
+    if is_rehab:
+        phase_penalties = {"GPP": -0.5, "SPP": -1.0, "TAPER": -0.75}
+        score += phase_penalties.get(current_phase, -0.75)
+
+    score += random.uniform(-0.15, 0.15)
+
+    return round(score, 4)
 
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 
@@ -128,7 +184,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     style_tags = [t for s in style_list for t in style_tag_map.get(s, [])]
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
-    boosted_tools = phase_equipment_boost.get(phase.upper(), set())
 
     phase_tag_boost = {
         "GPP": {"triphasic": 1, "tempo": 1, "eccentric": 1},
@@ -168,31 +223,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if phase not in ex["phases"]:
             continue
 
-        penalty = equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment)
-        if penalty == -999:
-            continue
+        phase_tags = list(phase_tag_boost.get(phase, {}).keys())
         method = ex.get("method", "").lower()
-        rehab_penalty_by_phase = {"GPP": -1, "SPP": -3, "TAPER": -2}
-        rehab_penalty = rehab_penalty_by_phase.get(phase.upper(), 0) if method == "rehab" else 0
 
-        score = 0
-        weakness_matches = sum(1 for tag in tags if tag in (weaknesses or []))
-        goal_matches = sum(1 for tag in tags if tag in goal_tags)
-        style_matches = sum(1 for tag in tags if tag in style_tags)
-        score += weakness_matches * 1.5
-        score += goal_matches * 1.25
-        score += style_matches * 1.0
-        if style_matches >= 2:
-            score += 2
-        if (weakness_matches + goal_matches + style_matches) >= 3:
-            score += 1
-
-        # Phase-specific tag boosts
-        phase_tags = phase_tag_boost.get(phase, {})
-        if any(t in phase_tags for t in tags):
-            score += 1
-        for tag in tags:
-            score += phase_tags.get(tag, 0)
+        score = score_exercise(
+            exercise_tags=tags,
+            weakness_tags=weaknesses or [],
+            goal_tags=goal_tags,
+            style_tags=style_tags,
+            phase_tags=phase_tags,
+            current_phase=phase,
+            fatigue_level=fatigue,
+            available_equipment=equipment_access,
+            required_equipment=ex_equipment,
+            is_rehab=method == "rehab",
+        )
+        if score == -999:
+            continue
 
         # Phase-based novelty enforcement
         if ex.get("name") in prev_exercises and not (
@@ -200,23 +247,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ):
             continue
 
-        # Fatigue-aware penalties
-        ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
-        if phase in {"SPP", "TAPER"} and "barbell" in ex_equipment and "compound" in tags:
-            score -= 1.5
-        if fatigue in {"high", "moderate"}:
-            eq_pen = -1.5 if fatigue == "high" else -0.75
-            tag_pen = -1.0 if fatigue == "high" else -0.5
-            if any(eq in {"barbell", "trap_bar", "sled"} for eq in ex_equipment):
-                score += eq_pen
-            if any(t in {"compound", "axial"} for t in tags):
-                score += tag_pen
-
-        # Boost score if phase-relevant equipment is used
-        if any(eq in boosted_tools for eq in ex.get("equipment", [])):
-            score += 1
-
-        score += penalty + rehab_penalty
+        # No additional fatigue or equipment adjustments; handled in score_exercise
 
         if score >= 0:
             weighted_exercises.append((ex, score))
@@ -234,10 +265,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
             if phase not in ex["phases"]:
                 continue
-            if equipment_score_adjust(ex.get("equipment", ""), equipment_access, known_equipment) == -999:
+            ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+            if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])
-            ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
             if ex.get("name") in prev_exercises and not (
                 phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
             ):
