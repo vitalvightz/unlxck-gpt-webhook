@@ -256,7 +256,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     days_count = len(training_days) if isinstance(training_days, list) else training_days
     if not isinstance(days_count, int):
         days_count = 3
-    target_exercises = 12
+    # Use 8 drills per detected strength session
+    target_exercises = 8 * num_strength_sessions
 
     if len(weighted_exercises) < target_exercises:
         fallback_exercises = []
