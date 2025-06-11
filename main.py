@@ -148,20 +148,23 @@ async def handle_submission(request: Request):
     if stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:
         tactical_styles.append("hybrid")
 
-    if isinstance(weeks_out, int):
-        phase_weeks = calculate_phase_weeks(
-            weeks_out,
-            mapped_format,
-            tactical_styles,
-            status,
-        )
-    else:
-        phase_weeks = calculate_phase_weeks(
-            8,
-            mapped_format,
-            tactical_styles,
-            status,
-        )
+    weight_val = float(weight) if weight.replace('.', '', 1).isdigit() else 0.0
+    target_val = float(target_weight) if target_weight.replace('.', '', 1).isdigit() else 0.0
+    weight_cut_risk_flag = weight_val - target_val >= 0.05 * target_val if target_val else False
+    weight_cut_pct_val = round((weight_val - target_val) / target_val * 100, 1) if target_val else 0.0
+    mental_block_class = classify_mental_block(mental_block or "")
+
+    camp_len = weeks_out if isinstance(weeks_out, int) else 8
+    phase_weeks = calculate_phase_weeks(
+        camp_len,
+        mapped_format,
+        tactical_styles,
+        status,
+        fatigue,
+        weight_cut_risk_flag,
+        mental_block_class,
+        weight_cut_pct_val,
+    )
 
     # Core context
     training_context = {
@@ -173,13 +176,13 @@ async def handle_submission(request: Request):
         "style_tactical": tactical_styles,
         "weaknesses": normalize_list(weak_areas),
         "equipment": normalize_equipment_list(equipment_access),
-        "weight_cut_risk": float(weight) - float(target_weight) >= 0.05 * float(target_weight),
-        "weight_cut_pct": round((float(weight) - float(target_weight)) / float(target_weight) * 100, 1),
+        "weight_cut_risk": weight_cut_risk_flag,
+        "weight_cut_pct": weight_cut_pct_val,
         "fight_format": mapped_format,
         "training_split": allocate_sessions(int(frequency)),
         "key_goals": [GOAL_NORMALIZER.get(g.strip(), g.strip()).lower() for g in key_goals.split(",") if g.strip()],
         "training_preference": training_preference.strip().lower() if training_preference else "",
-        "mental_block": classify_mental_block(mental_block or ""),
+        "mental_block": mental_block_class,
         "age": int(age) if age.isdigit() else 0,
         "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
         "prev_exercises": [],
