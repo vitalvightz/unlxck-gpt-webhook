@@ -21,12 +21,13 @@ known_equipment = [
     "elliptical", "bodyweight", "med_balls", "battle_rope", "kettlebells"
 ]
 
-def allocate_sessions(days_available: int) -> dict:
-    if days_available <= 3:
+def allocate_sessions(training_frequency: int) -> dict:
+    """Return weekly session counts based on training frequency."""
+    if training_frequency <= 3:
         return {'strength': 1, 'conditioning': 1, 'recovery': 1}
-    elif days_available == 4:
+    elif training_frequency == 4:
         return {'strength': 2, 'conditioning': 1, 'recovery': 1}
-    elif days_available == 5:
+    elif training_frequency == 5:
         return {'strength': 2, 'conditioning': 2, 'recovery': 1}
     else:
         return {'strength': 3, 'conditioning': 2, 'recovery': 1}
