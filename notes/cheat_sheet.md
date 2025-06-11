@@ -126,3 +126,21 @@ The helper `allocate_sessions()` in `training_context.py` decides how many stren
 
 The days you actually have available just tell the program which slots to fill. If you list seven free days but pick a frequency of five, you'll only get five sessions.
 
+
+## Format Templates
+The file `notes/format_round_templates.json` sets default round and rest times for each sport. Boxing rounds are 3 minutes with a minute break, while MMA rounds last 5 minutes. These templates help the workouts follow the same rhythm as a real match.
+
+## Base Phase Ratios
+`BASE_PHASE_RATIOS` in `camp_phases.py` shows how much of a fight camp belongs to GPP (general prep), SPP (sport prep) and TAPER. An 8‑week camp starts around **40%** GPP, **45%** SPP and **15%** taper before style tweaks or pro bonuses.
+
+## Style Conditioning Bank
+`style_conditioning_bank.json` collects drills written for specific fighting styles like brawler or counter striker. The program mixes them in using `STYLE_CONDITIONING_RATIO` so more style drills appear in SPP than in GPP or TAPER.
+
+**How style drills score**
+- **+3.0** if the tags match your tactical style
+- **+1.5** if they fit the current phase
+- **+1.0** when the energy system lines up
+- **+1.0** if you own the right equipment
+- **+0.5** bonus just for variety
+
+The higher the score, the more likely that drill shows up in your plan.
