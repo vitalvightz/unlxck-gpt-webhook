@@ -6,7 +6,20 @@ Recent updates removed the OpenAI dependency and now build plans entirely from t
 
 ### Professional Status
 
-Setting the **Professional Status** field to `professional` shifts 5% of the camp length from GPP to SPP when the camp is at least four weeks long. GPP will never drop below 15% of total weeks.
+Setting the **Professional Status** field to `pro` or `professional` adjusts the camp ratios when the camp is four weeks or longer. The shift from GPP to SPP depends on fatigue, weight cutting and mindset:
+
+- **Clean athlete** – low fatigue, no weight cut and an approved mindset block ("confidence" or "generic"): **+10%** SPP
+- **Reliable athlete** – low/moderate fatigue, cutting ≤5% bodyweight and no burnout/overthinking blocks: **+7.5%** SPP
+- **Normal pro** – all other cases: **+5%** SPP
+
+GPP is reduced by the same amount but never drops below 15% of the total camp.
+The valid mindset blocks for the clean-pro check are listed in
+`APPROVED_TIER3_BLOCKS` inside `camp_phases.py`.
+
+#### Approved mental blocks for Tier 3 (+10% SPP)
+
+Only `confidence` and `generic` keep intensity, resilience and volume high enough
+to qualify a professional athlete for the full bonus.
 
 ### Module Weightings & Scoring
 
@@ -37,7 +50,7 @@ Energy system emphasis per phase is set by `PHASE_SYSTEM_RATIOS` and the ratio o
 
 **Phase calculation** (`camp_phases.py`)
 
-Phase weeks come from `BASE_PHASE_RATIOS` with style adjustments. Professional athletes shift 5% from GPP to SPP. Ratios are rebalanced so the weeks always sum to the camp length and taper is capped at two weeks.
+Phase weeks come from `BASE_PHASE_RATIOS` with style adjustments. When the camp is at least four weeks and the athlete is pro, GPP time shifts to SPP based on fatigue, weight cut and mindset, never letting GPP fall below 15%. Ratios are rebalanced so the weeks always sum to the camp length and taper is capped at two weeks.
 
 **Mindset module** (`mindset_module.py`)
 
