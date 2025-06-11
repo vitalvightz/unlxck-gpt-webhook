@@ -215,16 +215,19 @@ def calculate_phase_weeks(
 
     # 3b. Professional adjustment based on fatigue, cut and mindset
     if status and status.strip().lower() in {"professional", "pro"} and camp_length >= 4:
-        mb = mental_block[0] if isinstance(mental_block, list) else mental_block
-        mb = mb.lower() if isinstance(mb, str) else ""
         fat = (fatigue or "").strip().lower()
         cut_pct = weight_cut_pct if weight_cut_pct is not None else 0.0
         cut_flag = bool(weight_cut_risk)
+        blocks: list[str] = []
+        if isinstance(mental_block, str):
+            blocks = [mental_block.lower()]
+        elif isinstance(mental_block, list):
+            blocks = [b.lower() for b in mental_block]
 
-        if fat == "low" and not cut_flag and mb == "generic":
+        if fat == "low" and not cut_flag and all(b in {"generic", "confidence"} for b in blocks):
             ratios["SPP"] += 0.10
             ratios["GPP"] -= 0.10
-        elif fat in ["low", "moderate"] and cut_pct <= 5 and mb not in ["burnout", "overthinking"]:
+        elif fat in ["low", "moderate"] and cut_pct <= 5 and not any(b in {"motivation", "gas tank", "injury fear"} for b in blocks):
             ratios["SPP"] += 0.075
             ratios["GPP"] -= 0.075
         else:
