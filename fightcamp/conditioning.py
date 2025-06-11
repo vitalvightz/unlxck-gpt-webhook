@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from training_context import allocate_sessions, normalize_equipment_list
+from .training_context import allocate_sessions, normalize_equipment_list
 
 # Map for tactical styles
 style_tag_map = {
@@ -94,9 +94,10 @@ weakness_tag_map = {
 }
 
 # Load banks
-conditioning_bank = json.loads(Path("conditioning_bank.json").read_text())
-style_conditioning_bank = json.loads(Path("style_conditioning_bank.json").read_text())
-format_weights = json.loads(Path("format_energy_weights.json").read_text())
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+conditioning_bank = json.loads((DATA_DIR / "conditioning_bank.json").read_text())
+style_conditioning_bank = json.loads((DATA_DIR / "style_conditioning_bank.json").read_text())
+format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
 STYLE_CONDITIONING_RATIO = {
     "GPP": 0.15,
@@ -429,7 +430,7 @@ def generate_conditioning_block(flags):
     # --------- UNIVERSAL CONDITIONING INSERTION ---------
     if phase == "GPP":
         try:
-            with open("universal_gpp_conditioning.json", "r") as f:
+            with open(DATA_DIR / "universal_gpp_conditioning.json", "r") as f:
                 universal_conditioning = json.load(f)
         except Exception:
             universal_conditioning = []
