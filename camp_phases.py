@@ -108,6 +108,7 @@ STYLE_ADJUSTMENTS = {
     "muay_thai": {"SPP": +0.03, "GPP": -0.03},
     "hybrid": {"SPP": +0.04, "TAPER": -0.04},
     "clinch fighter": {"GPP": +0.05, "SPP": -0.05},
+    "scrambler": {"GPP": +0.03, "TAPER": -0.03},
 }
 
 STYLE_RULES = {
