@@ -2,6 +2,18 @@
 
 This repository generates fight camp programs by combining local training modules. The main script reads athlete data, assembles strength, conditioning, recovery and other blocks, then exports the result directly to Google Docs.
 
+### Repository Structure
+
+```
+data/      → JSON banks and other static assets
+fightcamp/ → Python package with all modules and API entrypoint
+notes/     → Reference JSON and tag documentation
+```
+
+Run the application with `python -m fightcamp.main` from the project root.
+When serving the API with Uvicorn (e.g. on Render), point to the package
+module: `uvicorn fightcamp.main:app --host=0.0.0.0 --port=10000`.
+
 Recent updates removed the OpenAI dependency and now build plans entirely from the module outputs. Short-camp handling and style-specific rules still adjust the phase weeks correctly via the helper `_apply_style_rules()`.
 
 ### Professional Status
