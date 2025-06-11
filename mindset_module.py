@@ -141,7 +141,7 @@ def get_mindset_by_phase(phase: str, flags: dict) -> str:
         blocks = [blocks]
 
     phase = phase.upper()
-    output_lines = [f"## Mindset Strategy ({phase})"]
+    output_lines = []
 
     for block in blocks:
         tip = mindset_bank.get(phase, {}).get(block, mindset_bank[phase].get("generic", "Stay focused."))
