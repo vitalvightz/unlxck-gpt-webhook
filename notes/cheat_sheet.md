@@ -115,13 +115,17 @@ Every module looks at how many of its tags match your goals, weaknesses and figh
 
 ## How Sessions Are Scheduled
 
-The helper `allocate_sessions()` in `training_context.py` decides how many strength, conditioning and recovery days you get each week. It only cares about your chosen **training frequency**:
+The helper `allocate_sessions()` in `training_context.py` now uses both the
+weekly training frequency **and** the phase to return a split. Below is the new
+schedule (Strength : Conditioning : Recovery):
 
 ```
-≤3 days  → {'strength': 1, 'conditioning': 1, 'recovery': 1}
-4 days   → {'strength': 2, 'conditioning': 1, 'recovery': 1}
-5 days   → {'strength': 2, 'conditioning': 2, 'recovery': 1}
->5 days  → {'strength': 3, 'conditioning': 2, 'recovery': 1}
+1 day  → GPP 1:0:0 | SPP 0:1:0 | Taper 0:1:0
+2 days → GPP 1:1:0 | SPP 1:1:0 | Taper 0:1:1
+3 days → GPP 1:1:1 | SPP 1:2:0 | Taper 1:1:1
+4 days → GPP 2:1:1 | SPP 1:2:1 | Taper 1:1:2
+5 days → GPP 2:2:1 | SPP 2:2:1 | Taper 1:1:3
+6 days → GPP 2:3:1 | SPP 2:3:1 | Taper 1:1:4
 ```
 
 The days you actually have available just tell the program which slots to fill. If you list seven free days but pick a frequency of five, you'll only get five sessions.

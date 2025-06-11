@@ -295,14 +295,9 @@ def generate_conditioning_block(flags):
         for drills in style_lists.values():
             drills.sort(key=lambda x: x[1], reverse=True)
 
-    if training_frequency >= 6:
-        num_conditioning_sessions = 3
-    elif training_frequency >= 4:
-        num_conditioning_sessions = 2
-    elif training_frequency >= 2:
-        num_conditioning_sessions = 1
-    else:
-        num_conditioning_sessions = 0
+    num_conditioning_sessions = allocate_sessions(training_frequency, phase).get(
+        "conditioning", 0
+    )
 
     # Use 8 drills per detected conditioning session
     total_drills = 8 * num_conditioning_sessions
@@ -375,7 +370,6 @@ def generate_conditioning_block(flags):
         return None
 
     if phase.upper() == "TAPER":
-        total_drills = min(total_drills, 3)
         style_list = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
         combined_focus = [w.lower() for w in weaknesses] + [g.lower() for g in goals]
         allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
