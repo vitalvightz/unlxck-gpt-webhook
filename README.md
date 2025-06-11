@@ -51,7 +51,8 @@ Keyword counts determine the top mental blocks. The two highest scoring blocks f
 
 **Training context** (`training_context.py`)
 
-The helper `allocate_sessions()` assigns weekly sessions based on available days:
+The helper `allocate_sessions()` assigns weekly sessions based on the
+numeric **training frequency** it receives:
 
 ```
 ≤3 days  → {'strength': 1, 'conditioning': 1, 'recovery': 1}
@@ -59,3 +60,10 @@ The helper `allocate_sessions()` assigns weekly sessions based on available days
 5 days   → {'strength': 2, 'conditioning': 2, 'recovery': 1}
 >5 days  → {'strength': 3, 'conditioning': 2, 'recovery': 1}
 ```
+
+`Weekly Training Frequency` is the number of sessions the athlete plans to
+complete each week. The `Time Availability for Training` field simply lists
+which days are open. Frequency does **not** automatically equal the count of
+available days—a fighter might have seven days free but only train five times
+per week. The program schedules sessions based on the provided frequency and
+assigns them to the supplied training days.

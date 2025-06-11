@@ -65,8 +65,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         style_list = []
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
-    days_available = flags.get("days_available", len(training_days))
-    num_strength_sessions = allocate_sessions(days_available).get("strength", 2)
+    training_frequency = flags.get(
+        "training_frequency", flags.get("days_available", len(training_days))
+    )
+    num_strength_sessions = allocate_sessions(training_frequency).get("strength", 2)
     prev_exercises = flags.get("prev_exercises", [])
 
     style_tag_map = {
