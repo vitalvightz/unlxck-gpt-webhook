@@ -11,7 +11,6 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "glutes",
       "compound"
     ],
     "equipment": "trap_bar"
@@ -185,7 +184,7 @@
     "tags": [
       "contrast",
       "rate_of_force",
-      "chest"
+      "upper_body"
     ],
     "equipment": "dumbbells"
   },
@@ -293,7 +292,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "grappling_transfer"
+      "tactical"
     ],
     "equipment": "sandbag"
   },
@@ -387,7 +386,7 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "hamstrings"
+      "hamstring"
     ],
     "equipment": "barbell"
   },
@@ -541,7 +540,7 @@
     "movement": "squat",
     "type": "unilateral",
     "tags": [
-      "glutes",
+      "posterior_chain",
       "rehab_friendly"
     ],
     "equipment": "bands"
@@ -573,7 +572,7 @@
     "movement": "hinge",
     "type": "bilateral",
     "tags": [
-      "hamstrings",
+      "hamstring",
       "rehab_friendly"
     ],
     "equipment": "partner"
@@ -588,8 +587,7 @@
     "movement": "hinge",
     "type": "bilateral",
     "tags": [
-      "posterior_chain",
-      "glutes"
+      "posterior_chain"
     ],
     "equipment": "bench"
   },
@@ -664,7 +662,7 @@
     "movement": "horizontal_push",
     "type": "bilateral",
     "tags": [
-      "chest",
+      "upper_body",
       "compound"
     ],
     "equipment": "weight_vest"
@@ -696,7 +694,7 @@
     "movement": "horizontal_push",
     "type": "bilateral",
     "tags": [
-      "chest",
+      "upper_body",
       "compound"
     ],
     "equipment": "dumbbells"
@@ -711,7 +709,7 @@
     "movement": "horizontal_push",
     "type": "bilateral",
     "tags": [
-      "chest",
+      "upper_body",
       "shoulders"
     ],
     "equipment": "dumbbells"
@@ -727,7 +725,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "chest"
+      "upper_body"
     ],
     "equipment": "bodyweight"
   },
@@ -801,7 +799,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "back",
+      "pull",
       "posterior_chain"
     ],
     "equipment": "barbell"
@@ -816,7 +814,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "back",
+      "pull",
       "grip"
     ],
     "equipment": "weight_belt"
@@ -831,7 +829,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "back",
+      "pull",
       "grip"
     ],
     "equipment": "towel"
@@ -861,7 +859,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "back",
+      "pull",
       "compound"
     ],
     "equipment": "cable"
@@ -892,7 +890,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "back",
+      "pull",
       "rehab_friendly"
     ],
     "equipment": "trx"
@@ -1076,8 +1074,7 @@
     "movement": "core",
     "type": "bilateral",
     "tags": [
-      "core",
-      "anterior_chain"
+      "core"
     ],
     "equipment": "bodyweight"
   },
@@ -1136,8 +1133,7 @@
     "movement": "core",
     "type": "bilateral",
     "tags": [
-      "core",
-      "anterior_chain"
+      "core"
     ],
     "equipment": "barbell"
   },
@@ -1276,7 +1272,7 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "hip"
+      "hip_dominant"
     ],
     "equipment": "bands"
   },
@@ -1306,7 +1302,7 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "hip"
+      "hip_dominant"
     ],
     "equipment": "thai_pads"
   },
@@ -1336,7 +1332,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "chest"
+      "upper_body"
     ],
     "equipment": "medicine_ball"
   },
@@ -1351,7 +1347,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "chest"
+      "upper_body"
     ],
     "equipment": "barbell"
   },
@@ -1443,8 +1439,7 @@
     "movement": "carry",
     "type": "bilateral",
     "tags": [
-      "grip",
-      "forearm"
+      "grip"
     ],
     "equipment": "plates"
   },
@@ -1473,7 +1468,7 @@
     "movement": "isometric",
     "type": "unilateral",
     "tags": [
-      "forearm",
+      "grip",
       "rehab_friendly"
     ],
     "equipment": "wrist_roller"
@@ -1640,7 +1635,7 @@
     "movement": "mobility",
     "type": "unilateral",
     "tags": [
-      "hip",
+      "hip_dominant",
       "rehab_friendly"
     ],
     "equipment": "bands"
@@ -1685,7 +1680,7 @@
     "movement": "mobility",
     "type": "unilateral",
     "tags": [
-      "thoracic",
+      "mobility",
       "rehab_friendly"
     ],
     "equipment": "bodyweight"
@@ -1700,7 +1695,7 @@
     "movement": "mobility",
     "type": "unilateral",
     "tags": [
-      "hip",
+      "hip_dominant",
       "rehab_friendly"
     ],
     "equipment": "bands"
@@ -1745,7 +1740,7 @@
     "movement": "mobility",
     "type": "unilateral",
     "tags": [
-      "hip",
+      "hip_dominant",
       "rehab_friendly"
     ],
     "equipment": "bodyweight"
@@ -1776,7 +1771,7 @@
     "movement": "mobility",
     "type": "bilateral",
     "tags": [
-      "thoracic",
+      "mobility",
       "rehab_friendly"
     ],
     "equipment": "foam_roller"
@@ -1974,7 +1969,7 @@
     "type": "bilateral",
     "tags": [
       "rate_of_force",
-      "chest"
+      "upper_body"
     ],
     "equipment": "bodyweight"
   },
@@ -2219,7 +2214,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "CNS"
+      "high_cns"
     ],
     "equipment": "open_space"
   },
@@ -2233,8 +2228,8 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
-      "CNS"
+      "agility",
+      "high_cns"
     ],
     "equipment": "open_space"
   },
@@ -2248,7 +2243,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "explosive"
     ],
     "equipment": "bodyweight"
@@ -2263,7 +2258,7 @@
     "movement": "compound",
     "type": "bilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "explosive"
     ],
     "equipment": "box"
@@ -2278,7 +2273,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "hurdles"
@@ -2293,7 +2288,7 @@
     "movement": "sprint",
     "type": "bilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "open_space"
@@ -2308,7 +2303,7 @@
     "movement": "horizontal",
     "type": "unilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "explosive"
     ],
     "equipment": "open_space"
@@ -2323,7 +2318,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "bodyweight"
@@ -2338,8 +2333,8 @@
     "movement": "rotational",
     "type": "unilateral",
     "tags": [
-      "lateral",
-      "CNS"
+      "agility",
+      "high_cns"
     ],
     "equipment": "open_space"
   },
@@ -2353,7 +2348,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "reactive"
     ],
     "equipment": "bodyweight"
@@ -2368,7 +2363,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "explosive"
     ],
     "equipment": "bodyweight"
@@ -2384,7 +2379,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "mobility"
     ],
     "equipment": "bodyweight"
@@ -2399,7 +2394,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "reactive"
     ],
     "equipment": "line/tape"
@@ -2414,8 +2409,8 @@
     "movement": "rotational",
     "type": "unilateral",
     "tags": [
-      "lateral",
-      "CNS"
+      "agility",
+      "high_cns"
     ],
     "equipment": "medicine_ball"
   },
@@ -2429,7 +2424,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "conditioning"
     ],
     "equipment": "weighted_vest"
@@ -2444,7 +2439,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "explosive"
     ],
     "equipment": "box"
@@ -2460,7 +2455,7 @@
     "movement": "rotational",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "balance"
     ],
     "equipment": "bodyweight"
@@ -2475,7 +2470,7 @@
     "movement": "lateral",
     "type": "unilateral",
     "tags": [
-      "lateral",
+      "agility",
       "rehab_friendly"
     ],
     "equipment": "bands"
@@ -2490,7 +2485,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "box"
@@ -2505,7 +2500,7 @@
     "movement": "vertical",
     "type": "unilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "hurdles"
@@ -2520,7 +2515,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "explosive"
     ],
     "equipment": "box"
@@ -2535,7 +2530,7 @@
     "movement": "compound",
     "type": "unilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "agility_dots"
@@ -2550,7 +2545,7 @@
     "movement": "horizontal",
     "type": "unilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "bands"
@@ -2565,7 +2560,7 @@
     "movement": "compound",
     "type": "unilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "rate_of_force"
     ],
     "equipment": "bodyweight"
@@ -2580,7 +2575,7 @@
     "movement": "vertical",
     "type": "unilateral",
     "tags": [
-      "CNS",
+      "high_cns",
       "reactive"
     ],
     "equipment": "bodyweight"
@@ -2663,7 +2658,7 @@
     "tags": [
       "balance",
       "rehab_friendly",
-      "CNS"
+      "high_cns"
     ],
     "equipment": "bands/partner",
     "notes": "Partner gently tugs band in random directions during single-leg stance"
