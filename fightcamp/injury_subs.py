@@ -1,7 +1,7 @@
 INJURY_TYPES = [
   "sprain", "strain", "tightness", "contusion", "swelling",
   "tendonitis", "impingement", "instability", "stiffness",
-  "pain", "soreness", "unspecified"
+  "pain", "soreness", "hyperextension", "unspecified"
 ]
 
 injury_subs = {
