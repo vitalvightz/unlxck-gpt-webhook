@@ -5114,7 +5114,7 @@
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "counter_striker"],
+    "tags": ["boxing", "counter_striker", "skill_refinement"],
     "notes": "Backstep while maintaining defensive shell.",
     "equipment_note": "Mark distance with tape."
   },
@@ -5186,7 +5186,7 @@
     "modality": "isometric",
     "duration": "3min rounds",
     "intensity": "low",
-    "tags": ["muay_thai", "clinch_fighter"],
+    "tags": ["muay_thai", "clinch_fighter", "skill_refinement"],
     "notes": "Maintain plum position against light resistance.",
     "equipment_note": "Partner varies pull direction."
   },
@@ -5404,6 +5404,126 @@
     "intensity": "30% speed",
     "tags": ["boxing", "clinch_fighter"],
     "notes": "Drills clinch as defensive response",
-    "equipment_note": "Focus mitts for partner"
+  "equipment_note": "Focus mitts for partner"
+  },
+  {
+    "name": "Reaction Jab Matrix",
+    "equipment": ["Reaction Ball", "Partner"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "visual processing",
+    "duration": "3min random ball toss → jab/parry response → x4 rounds",
+    "intensity": "70% speed",
+    "tags": ["boxing", "counter_striker"],
+    "notes": "Partner throws ball unpredictably; react with jab or parry",
+    "equipment_note": "Uneven bounce ball required"
+  },
+  {
+    "name": "Clinch Auditory Triggers",
+    "equipment": ["Bluetooth Speaker"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "auditory reaction",
+    "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
+    "intensity": "50% effort",
+    "tags": ["muay_thai", "clinch_fighter"],
+    "notes": "Pre-recorded beeps signal underhook/overhook switches",
+    "equipment_note": "Random interval timer (5-15s)"
+  },
+  {
+    "name": "Wrestling Chess",
+    "equipment": ["Chess Clock", "Partner"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "decision fatigue",
+    "duration": "3min live wrestling → 30s chess move → x5 rounds",
+    "intensity": "60% effort",
+    "tags": ["wrestling", "scrambler", "skill_refinement"],
+    "notes": "Alternate wrestling rounds with chess moves to drain mental stamina",
+    "equipment_note": "Portable chess set"
+  },
+  {
+    "name": "Kick Pattern Recall",
+    "equipment": ["Flashcards"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "memory challenge",
+    "duration": "3min execute kick combos from flashed cards → x4 rounds",
+    "intensity": "40% power",
+    "tags": ["kickboxing", "kicker", "skill_refinement"],
+    "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo",
+    "equipment_note": "Pre-printed kick codes"
+  },
+  {
+    "name": "Takedown Dilemma",
+    "equipment": ["Colored Cones"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "choice reaction",
+    "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
+    "intensity": "50% speed",
+    "tags": ["mma", "hybrid", "skill_refinement"],
+    "notes": "Random cone colors force adaptive takedown chains",
+    "equipment_note": "2+ cone colors"
+  },
+  {
+    "name": "Brawler's Puzzle Defense",
+    "equipment": ["Puzzle Mat"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "pattern recognition",
+    "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
+    "intensity": "60% power",
+    "tags": ["boxing", "brawler", "skill_refinement"],
+    "notes": "Disrupts rhythm to simulate in-fight chaos",
+    "equipment_note": "4-piece jigsaw"
+  },
+  {
+    "name": "Distance Striker's Math Dodge",
+    "equipment": ["Whiteboard"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "dual-task loading",
+    "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
+    "intensity": "50% effort",
+    "tags": ["muay_thai", "distance_striker", "skill_refinement"],
+    "notes": "Example: 'Teep → solve 7x8 → pivot'",
+    "equipment_note": "Whiteboard markers"
+  },
+  {
+    "name": "Grappler's Blindfold Pummeling",
+    "equipment": ["Blindfold"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "tactile sensitivity",
+    "duration": "3min pummeling blindfolded → x4 rounds",
+    "intensity": "30% effort",
+    "tags": ["grappling", "submission_hunter", "skill_refinement"],
+    "notes": "Forces reliance on grip/body feel over sight",
+    "equipment_note": "Non-slip mat"
+  },
+  {
+    "name": "Pressure Fighter's Shadowboxing Riddle",
+    "equipment": ["Earbuds"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "audio distraction",
+    "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
+    "intensity": "50% power",
+    "tags": ["mma", "pressure_fighter", "skill_refinement"],
+    "notes": "Coach whispers riddles through earbuds",
+    "equipment_note": "Wireless mic for coach"
+  },
+  {
+    "name": "Hybrid's Stance-Switch Reaction",
+    "equipment": ["Colored Lights"],
+    "phases": ["SPP", "Taper"],
+    "system": "Cognitive",
+    "modality": "visual cueing",
+    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
+    "intensity": "60% speed",
+    "tags": ["mma", "hybrid", "skill_refinement"],
+    "notes": "Forces stance switches under fatigue",
+    "equipment_note": "Traffic light system"
   }
 ]

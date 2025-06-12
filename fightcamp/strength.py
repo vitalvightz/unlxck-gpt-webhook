@@ -185,7 +185,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             "focus", "environmental", "pressure_tolerance"
         ],
         "skill_refinement": [
-            "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
+            "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
         ]
     }
 
