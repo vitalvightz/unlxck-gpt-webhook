@@ -114,6 +114,9 @@ STYLE_ADJUSTMENTS = {
     "scrambler": {"GPP": +0.03, "TAPER": -0.03},
 }
 
+# Cap for combined deltas when multiple styles push the same phase
+STYLE_ADJUSTMENT_CAP = 0.07
+
 STYLE_RULES = {
     "pressure fighter": {
         "SPP_MIN_PERCENT": 0.45,
@@ -188,12 +191,21 @@ def calculate_phase_weeks(
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs(x - camp_length))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
-    # 2. Apply style adjustments
+    # 2. Apply style adjustments with cap when multiple styles stack
+    accumulated = {"GPP": 0.0, "SPP": 0.0, "TAPER": 0.0}
     for s in _normalize_styles(style):
         if s in STYLE_ADJUSTMENTS:
             for phase, delta in STYLE_ADJUSTMENTS[s].items():
-                if phase in ratios:
-                    ratios[phase] = max(0.05, ratios[phase] + delta)
+                if phase in accumulated:
+                    accumulated[phase] += delta
+
+    for phase, delta in accumulated.items():
+        if delta > 0:
+            delta = min(delta, STYLE_ADJUSTMENT_CAP)
+        else:
+            delta = max(delta, -STYLE_ADJUSTMENT_CAP)
+        if phase in ratios:
+            ratios[phase] = max(0.05, ratios[phase] + delta)
 
     # 3. Apply style rules for min/max enforcement on ratios
     all_styles = _normalize_styles(style)
