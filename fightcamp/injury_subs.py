@@ -1,3 +1,9 @@
+INJURY_TYPES = [
+  "sprain", "strain", "tightness", "contusion", "swelling",
+  "tendonitis", "impingement", "instability", "stiffness",
+  "pain", "soreness", "unspecified"
+]
+
 injury_subs = {
     # ===== LOWER BODY ===== #
     "feet": ["Sled Push", "Sled Drag (Forward)", "Reverse Lunge"],
