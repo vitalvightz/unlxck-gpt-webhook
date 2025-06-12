@@ -1296,4 +1296,337 @@
   "tags": ["grip", "reactive"],
   "notes": "Partner drills only. No live sparring"
 }
+[
+  {
+    "name": "Tempo Shadowboxing (Aerobic)",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "20-30min continuous",
+    "intensity": "zone 2 (50-60% effort)",
+    "tags": ["aerobic", "recovery", "striking", "footwork", "low_cns", "skill"],
+    "notes": "Focus on breathing/technique; no power output"
+  },
+  {
+    "name": "Recovery Cycling (Nasal Breathing)",
+    "equipment": ["Stationary Bike"],
+    "phases": ["SPP", "TAPER"],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "30-45min",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "low_impact", "parasympathetic", "recovery"],
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Stationary Bike"
+  },
+  {
+    "name": "Swimming (Freestyle Laps)",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "swim",
+    "duration": "20-30min continuous",
+    "intensity": "low",
+    "tags": ["aerobic", "zero_impact", "upper_body", "rehab_friendly"],
+    "notes": "Ideal for shoulder recovery post-sparring"
+  },
+  {
+    "name": "Incline Walk (Posture Focus)",
+    "equipment": ["Treadmill"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "walk",
+    "duration": "20min",
+    "intensity": "zone 1-2",
+    "tags": ["aerobic", "low_impact", "recovery", "posterior_chain"],
+    "notes": "15% incline, hands behind head to reinforce posture"
+  },
+  {
+    "name": "Rowing (Steady State)",
+    "equipment": ["Rower"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "row",
+    "duration": "20min",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "posterior_chain", "low_cns"],
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Rower"
+  },
+  {
+    "name": "Footwork Ladder (Continuous Flow)",
+    "equipment": ["Agility Ladder"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "footwork",
+    "duration": "10min continuous",
+    "intensity": "low-moderate",
+    "tags": ["aerobic", "footwork", "coordination", "skill"],
+    "notes": "No rest; focus on smooth transitions"
+  },
+  {
+    "name": "Light Heavy Bag (Pacing Drill)",
+    "equipment": ["Heavy Bag"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "striking",
+    "duration": "5 x 5min rounds, 30s rest",
+    "intensity": "30% power",
+    "tags": ["aerobic", "striking", "conditioning", "low_cns"],
+    "notes": "Emphasize volume over power"
+  },
+  {
+    "name": "Defensive Movement Drills",
+    "equipment": ["Slip Rope"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "defense",
+    "duration": "15min continuous",
+    "intensity": "low",
+    "tags": ["aerobic", "footwork", "reactive", "skill"],
+    "notes": "Slips, pivots, rolls at conversational pace"
+  },
+  {
+    "name": "Wall Drill Sparring (Light Tap)",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "sparring",
+    "duration": "3 x 5min rounds",
+    "intensity": "30% effort",
+    "tags": ["aerobic", "striking", "mma", "recovery"],
+    "notes": "No power shots; pure technique"
+  },
+  {
+    "name": "Thai Clinch Walk (Light Resistance)",
+    "equipment": ["Partner"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "clinch",
+    "duration": "10min continuous",
+    "intensity": "low",
+    "tags": ["aerobic", "clinch", "muay_thai", "low_impact"],
+    "notes": "Focus on balance/positioning, not strength"
+  },
+  {
+    "name": "3-Min Round Intervals (Bag/Pads)",
+    "equipment": ["Pads"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "striking",
+    "duration": "5 rounds, 30s rest",
+    "intensity": "50% effort",
+    "tags": ["aerobic", "glycolytic", "striking", "work_capacity"],
+    "notes": "Pace like a fight, but lower output"
+  },
+  {
+    "name": "EMOM Jab-Cross (Aerobic)",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "striking",
+    "duration": "10min (20 strikes/min)",
+    "intensity": "light",
+    "tags": ["aerobic", "striking", "shoulders", "skill"],
+    "notes": "Focus on crisp technique, not speed/power"
+  },
+  {
+    "name": "Dynamic Yoga for Fighters",
+    "equipment": ["Mat"],
+    "phases": ["SPP", "TAPER"],
+    "system": "aerobic",
+    "modality": "mobility",
+    "duration": "30min",
+    "intensity": "low",
+    "tags": ["aerobic", "mobility", "recovery", "parasympathetic"],
+    "notes": "Hip/shoulder focus for combat athletes"
+  },
+  {
+    "name": "Breathwork + Slow Shadowboxing",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "breathing",
+    "duration": "15min",
+    "intensity": "nasal only",
+    "tags": ["aerobic", "recovery", "cognitive", "mental_toughness"],
+    "notes": "Nasal breathing only; no mouth"
+  },
+  {
+    "name": "Pool Running (No Impact)",
+    "equipment": ["Pool"],
+    "phases": ["SPP", "TAPER"],
+    "system": "aerobic",
+    "modality": "run",
+    "duration": "20min",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "zero_impact", "rehab_friendly"],
+    "notes": "Weight belt optional for buoyancy"
+  }
+[
+  {
+    "name": "Prowler Push (Light, Continuous)",
+    "equipment": ["Prowler"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "10min continuous",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "posterior_chain", "low_impact", "mma"],
+    "notes": "Forward/backward alternating; no spikes in effort",
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Prowler"
+  },
+  {
+    "name": "Sandbag Carry (Bearhug)",
+    "equipment": ["Sandbag"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "carry",
+    "duration": "10min continuous",
+    "intensity": "light",
+    "tags": ["aerobic", "grip", "core", "work_capacity"],
+    "notes": "Grappler-specific grip endurance"
+  },
+  {
+    "name": "Ruck March (20-30lbs)",
+    "equipment": ["Ruck"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "walk",
+    "duration": "30min",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "low_cns", "mental_toughness", "environmental"],
+    "notes": "Outdoors only; nasal breathing encouraged"
+  },
+  {
+    "name": "Breath-Hold Shadowboxing Intervals",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "breathing",
+    "duration": "5 x 3min rounds",
+    "intensity": "50% effort",
+    "tags": ["aerobic", "cognitive", "mental_toughness", "striking"],
+    "notes": "Exhale fully before rounds; recover between"
+  },
+  {
+    "name": "Kettlebell Swings (EMOM Aerobic)",
+    "equipment": ["Kettlebell"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "swing",
+    "duration": "10min (8-10 swings/min)",
+    "intensity": "light",
+    "tags": ["aerobic", "hip_dominant", "low_cns", "recovery"],
+    "notes": "Focus on hip snap, not power"
+  },
+  {
+    "name": "Sled Drag (Light, RPE 4)",
+    "equipment": ["Sled"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "10min continuous",
+    "intensity": "zone 2",
+    "tags": ["aerobic", "posterior_chain", "low_impact"],
+    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+  },
+  {
+    "name": "Meditative Jump Rope (Eyes Closed)",
+    "equipment": ["Jump Rope"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "jump_rope",
+    "duration": "10min",
+    "intensity": "low",
+    "tags": ["aerobic", "coordination", "cognitive", "recovery"],
+    "notes": "Eyes closed for 10-20sec intervals"
+  },
+  {
+    "name": "Striking Combos @ 20% Effort",
+    "equipment": [],
+    "phases": ["SPP", "TAPER"],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "15min continuous",
+    "intensity": "very low",
+    "tags": ["aerobic", "skill", "striking", "parasympathetic"],
+    "notes": "Cooldown flow; zero fatigue"
+  },
+  {
+    "name": "BJJ Flow Rolling (No Submissions)",
+    "equipment": ["Partner"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "grappling",
+    "duration": "20min continuous",
+    "intensity": "30% effort",
+    "tags": ["aerobic", "bjj", "recovery", "transition"],
+    "notes": "No grinding; pure movement"
+  },
+  {
+    "name": "Lateral Shuffle + Strike Drills",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "footwork",
+    "duration": "3 x 5min rounds",
+    "intensity": "light",
+    "tags": ["aerobic", "lateral_power", "striking", "footwork"],
+    "notes": "Emphasize angles, not explosiveness"
+  },
+  {
+    "name": "Wrestling Chain Drills (50% Effort)",
+    "equipment": ["Partner"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "wrestling",
+    "duration": "15min continuous",
+    "intensity": "low",
+    "tags": ["aerobic", "wrestling", "transition", "skill"],
+    "notes": "No resistance; technique only"
+  },
+  {
+    "name": "Muay Thai Skip Rope (Rhythm Focus)",
+    "equipment": ["Jump Rope"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "jump_rope",
+    "duration": "15min",
+    "intensity": "moderate",
+    "tags": ["aerobic", "muay_thai", "coordination", "light_impact"],
+    "notes": "Alternate foot patterns (e.g., skip-kick)"
+  },
+  {
+    "name": "Band-Resisted Jab/Cross (Slow Tempo)",
+    "equipment": ["Bands"],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "striking",
+    "duration": "3 x 5min rounds",
+    "intensity": "40% effort",
+    "tags": ["aerobic", "shoulders", "striking", "rehab_friendly"],
+    "notes": "Bands anchored at chest height"
+  },
+  {
+    "name": "Calf Raise Walk (Aerobic)",
+    "equipment": [],
+    "phases": ["SPP"],
+    "system": "aerobic",
+    "modality": "walk",
+    "duration": "10min continuous",
+    "intensity": "low",
+    "tags": ["aerobic", "unilateral", "rehab_friendly", "low_impact"],
+    "notes": "Tibialis/calf endurance for kick defense"
+  },
+  {
+    "name": "Cooldown Flow (Striking + Mobility)",
+    "equipment": [],
+    "phases": ["SPP", "TAPER"],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "15min",
+    "intensity": "RPE 2",
+    "tags": ["aerobic", "mobility", "recovery", "parasympathetic"],
+    "notes": "Post-training flush only"
+  }
 ]
