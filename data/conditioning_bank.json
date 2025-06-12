@@ -1295,8 +1295,7 @@
   "intensity": "RPE 8",
   "tags": ["grip", "reactive"],
   "notes": "Partner drills only. No live sparring"
-}
-[
+},
   {
     "name": "Tempo Shadowboxing (Aerobic)",
     "equipment": [],
@@ -1461,8 +1460,7 @@
     "intensity": "zone 2",
     "tags": ["aerobic", "zero_impact", "rehab_friendly"],
     "notes": "Weight belt optional for buoyancy"
-  }
-[
+  },
   {
     "name": "Prowler Push (Light, Continuous)",
     "equipment": ["Prowler"],
