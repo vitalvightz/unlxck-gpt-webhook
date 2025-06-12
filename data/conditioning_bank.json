@@ -1296,4 +1296,215 @@
   "tags": ["grip", "reactive"],
   "notes": "Partner drills only. No live sparring"
 }
-]
+[
+  {
+    "name": "Clinch Knee Storm Intervals",
+    "equipment": ["clinching dummy", "wall"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "45s on / 60s off",
+    "intensity": "high",
+    "tags": ["muay_thai", "clinch_fighter", "mma"],
+    "notes": "Non-stop knee strikes from plum position. Drive hips through dummy.",
+    "equipment_note": "Anchor dummy to wall if needed."
+  },
+  {
+    "name": "Forward-Blast Heavy Bag Intervals",
+    "equipment": ["heavy bag"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "20s on / 40s off",
+    "intensity": "max",
+    "tags": ["pressure_fighter", "brawler","mma", "boxing"],
+    "notes": "Advance relentlessly while throwing power hooks. No backpedaling.",
+    "equipment_note": "Bag should swing minimally."
+  },
+  {
+    "name": "Wall-Wrestling Pummel Rounds",
+    "equipment": ["wall", "mma gloves"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "30s on / 45s off",
+    "intensity": "high",
+    "tags": ["mma", "scrambler"],
+    "notes": "Pummel for underhooks while pressed against wall. Simulates cage work.",
+    "equipment_note": "Use padded wall if available."
+  },
+  {
+    "name": "Switch-Kick Endurance Drill",
+    "equipment": ["thai pads"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "40s on / 50s off",
+    "intensity": "high",
+    "tags": ["muay_thai", kicker", "distance_striker","mma"],
+    "notes": "Alternate roundhouse kicks every 2 seconds. Focus on hip turnover.",
+    "equipment_note": "Pad holder calls sides randomly."
+  },
+  {
+    "name": "Brawler's Body Shot Barrage",
+    "equipment": ["heavy bag"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "25s on / 35s off",
+    "intensity": "max",
+    "tags": ["brawler", "boxing"],
+    "notes": "Digging hooks to the body. Exhale sharply with each shot.",
+    "equipment_note": "Wear bag gloves for knuckle protection."
+  },
+  {
+    "name": "Clinch-to-Strike Transition Drill",
+    "equipment": ["partner", "focus mitts"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "45s on / 60s off",
+    "intensity": "high",
+    "tags": ["clich_fighter", "muay_thai","mma","boxing"],
+    "notes": "Break clinch into 3-punch combos. Reset immediately.",
+    "equipment_note": "Partner wears belly pad for body shots."
+  },
+  {
+    "name": "Sprawl-to-Strike Intervals",
+    "equipment": ["mat"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "30s on / 45s off",
+    "intensity": "high",
+    "tags": ["mma", "scrambler"],
+    "notes": "Sprawl, then spring up into 2 knees + 2 elbows.",
+    "equipment_note": "Use wrestling mat for knee protection."
+  },
+  {
+    "name": "Counter Striker's Shell Defense Drill",
+    "equipment": ["partner", "focus mitts"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "1min on / 1min off",
+    "intensity": "mod-high",
+    "tags": ["counter_striker", "boxing"],
+    "notes": "Block/parry flurries, then counter with 3-punch combos.",
+    "equipment_note": "Partner varies attack angles."
+  },
+  {
+    "name": "Submission Chain Fatigue Drill",
+    "equipment": ["grappling dummy"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "40s on / 50s off",
+    "intensity": "high",
+    "tags": ["submission_hunter", "mma"],
+    "notes": "Cycle through 3 submission attempts without pausing.",
+    "equipment_note": "Focus on grip transitions."
+  },
+  {
+    "name": "Teep-and-Clinch Gauntlet",
+    "equipment": ["partner", "thai pads"],
+    "phases": ["gpp"],
+    "system": "glycolytic",
+    "modality": "interval",
+    "duration": "45s on / 60s off",
+    "intensity": "high",
+    "tags": ["muay_thai", "distance_striker","kicker"],
+    "notes": "3 teeps followed by clinch knee series. Repeat.",
+    "equipment_note": "Pad holder provides light resistance."
+  },
+
+  // =================== ATP-PCr (30) =================== //
+  {
+    "name": "Sprawl-to-Takedown Reaction Drill",
+    "equipment": ["partner", "mat"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "sprint",
+    "duration": "5s effort / 55s rest",
+    "intensity": "max",
+    "tags": ["scrambler", "mma"],
+    "notes": "Partner signals shot randomly. React with sprawl then immediate takedown.",
+    "equipment_note": "Use wrestling shoes if available."
+  },
+  {
+    "name": "Lateral Escape Plyo Pushoffs",
+    "equipment": ["plyo box"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "jump",
+    "duration": "8x per side / 60s rest",
+    "intensity": "max",
+    "tags": ["counter_striker", "boxing", "mma"],
+    "notes": "Explode off back foot to evade imaginary strike. Land in stance.",
+    "equipment_note": "12-18 inch box height."
+  },
+  {
+    "name": "Guillotine Shot Sprints",
+    "equipment": ["open space"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "sprint",
+    "duration": "10s max effort / 50s rest",
+    "intensity": "max",
+    "tags": ["submission_hunter", "hybrid", "bjj", "mma"],
+    "notes": "Sprint 10m, drop to guillotine grip, reset. Repeat.",
+    "equipment_note": "Mark distance with cones."
+  },
+  {
+    "name": "Switch-Kick Power Bursts",
+    "equipment": ["heavy bag"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "strike",
+    "duration": "8x per leg / 60s rest",
+    "intensity": "max",
+    "tags": ["kicker", "muay_thai", "mma"],
+    "notes": "Max-power roundhouse kicks with full hip rotation.",
+    "equipment_note": "Secure bag to prevent swing."
+  },
+  {
+    "name": "Takedown Shot Reaction Drill",
+    "equipment": ["partner"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "reactive",
+    "duration": "5s effort / 55s rest",
+    "intensity": "max",
+    "tags": ["wrestler", "mma"],
+    "notes": "Partner points direction; shooter explodes that way.",
+    "equipment_note": "Grass or mat surface only."
+  },
+  {
+    "name": "Cross-Counter Plyo Pushups",
+    "equipment": ["plyo box"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "jump",
+    "duration": "6x per side / 60s rest",
+    "intensity": "max",
+    "tags": ["counter_striker", "boxing", "mma"],
+    "notes": "Explode up from pushup to cross stance. Mimics counter weight transfer.",
+    "equipment_note": "Use 12-inch box."
+  },
+  {
+    "name": "Thai Plum Explosion Drill",
+    "equipment": ["partner"],
+    "phases": ["gpp"],
+    "system": "atp-pcr",
+    "modality": "isometric",
+    "duration": "5s max pull / 55s rest",
+    "intensity": "max",
+    "tags": ["clinch_fighter", "muay_thai"],
+    "notes": "Yank partner's neck down with full power from plum position.",
+    "equipment_note": "Partner wears neck protector."
+  },
+  {
+    "name": "Spinning Backfist Acceleration",
+    "equipment": ["focus mitts"],
+    "phases": ["gpp"],
+    "
