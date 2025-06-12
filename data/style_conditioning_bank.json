@@ -5333,7 +5333,7 @@
     "tags": ["muay_thai", "distance_striker"],
     "notes": "1 teep every 10 seconds. Reset completely.",
     "equipment_note": "Mark optimal range on floor."
-  }
+  },
 {
   "name": "Shadow Flow Rounds",
   "equipment": ["Bodyweight"],
@@ -5345,7 +5345,7 @@
   "tags": ["boxing", "counter_striker", "kickboxing"],
   "notes": "Emphasize footwork pivots and defensive slips between combos",
   "equipment_note": "Mirror for self-correction"
-}[
+},
   {
     "name": "Rope Clinch Frames",
     "equipment": ["Heavy Bag"],
