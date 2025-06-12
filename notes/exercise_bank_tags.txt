@@ -25,6 +25,7 @@ glycolytic
 grip
 hamstring
 hip_dominant
+high_cns
 horizontal_power
 improvised
 intensity
