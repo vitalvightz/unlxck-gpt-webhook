@@ -22,6 +22,7 @@ Below is a list of all tags found in the banks. The descriptions are brief so yo
 - **boxing** – striking specific.
 - **clinch** – general tag for clinch.
 - **cns_freshness** – general tag for cns freshness.
+- **high_cns** – taxes the nervous system heavily.
 - **cognitive** – adds decision making or brain work.
 - **compound** – general tag for compound.
 - **conditioning** – improves conditioning.
