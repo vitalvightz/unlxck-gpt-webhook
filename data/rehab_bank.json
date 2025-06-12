@@ -1,191 +1,1377 @@
 [
   {
-    "location": "knee",
-    "type": "",
-    "phase": "GPP",
-    "name": "Step-Up (Bodyweight)",
-    "notes": ""
-  },
-  {
-    "location": "knee",
-    "type": "",
-    "phase": "GPP → TAPER",
-    "name": "Banded Lateral Walk",
-    "notes": ""
-  },
-  {
-    "location": "shoulder",
-    "type": "",
-    "phase": "GPP",
-    "name": "Scapular Pull-Up",
-    "notes": ""
-  },
-  {
-    "location": "shoulder",
-    "type": "",
-    "phase": "GPP",
-    "name": "Wall Slide (Shoulder Mobility)",
-    "notes": ""
-  },
-  {
-    "location": "lower back",
-    "type": "",
-    "phase": "GPP → TAPER",
-    "name": "Deadbug (Band-Resisted)",
-    "notes": ""
-  },
-  {
-    "location": "lower back",
-    "type": "",
-    "phase": "GPP",
-    "name": "Quadruped Rocking",
-    "notes": ""
-  },
-  {
     "location": "ankle",
     "type": "sprain",
-    "phase": "GPP",
-    "name": "Banded Ankle Inversions",
-    "notes": "Restore active range with low-load movement"
-  },
-  {
-    "location": "ankle",
-    "type": "sprain",
-    "phase": "GPP → SPP",
-    "name": "Single-Leg Balance on Foam Pad",
-    "notes": "GPP: Rebuild basic ankle stability → SPP: Advance to dynamic balance under fatigue"
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Balance on Foam Pad",
+        "notes": "GPP: Rebuild proprioception → SPP: Progress to dynamic balance under fatigue"
+      },
+      {
+        "name": "Banded Ankle Circles",
+        "notes": "GPP: Restore multi-directional control → SPP: Add resistance for joint reactivity"
+      }
+    ]
   },
   {
     "location": "toe",
     "type": "hyperextension",
-    "phase": "GPP → SPP",
-    "name": "Towel Scrunches (Toe Curls)",
-    "notes": "GPP: Activate toe flexors and arch → SPP: Add resistance or longer holds for strength"
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Towel Scrunches (Toe Curls)",
+        "notes": "GPP: Activate toe flexors and arch → SPP: Add towel weight or reps"
+      },
+      {
+        "name": "Bottom-Up Kettlebell Hold (Toe Loaded)",
+        "notes": "GPP: Restore control → SPP: Reinforce toe stability in loaded posture"
+      }
+    ]
   },
   {
     "location": "toe",
     "type": "sprain",
-    "phase": "SPP → TAPER",
-    "name": "Double-Leg Pogo Jumps",
-    "notes": "SPP: Rebuild spring through toe-off → TAPER: Maintain stiffness without fatigue"
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Double-Leg Pogo Jumps",
+        "notes": "SPP: Rebuild spring and rebound → TAPER: Maintain SSC sharpness with low volume"
+      },
+      {
+        "name": "Toe Off Isometric Presses",
+        "notes": "SPP: Load toe under static extension → TAPER: Use short bursts pre-fight"
+      }
+    ]
   },
   {
     "location": "foot",
     "type": "metatarsal pain",
-    "phase": "GPP → SPP",
-    "name": "Short Foot Doming",
-    "notes": "GPP: Relearn foot activation → SPP: Apply to single-leg or loaded stances"
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Short Foot Doming",
+        "notes": "GPP: Rebuild arch activation → SPP: Progress to standing or loaded stances"
+      },
+      {
+        "name": "Toe Spreads with Band",
+        "notes": "GPP: Mobilize transverse arch → SPP: Add tempo or band tension"
+      }
+    ]
   },
   {
     "location": "foot",
     "type": "plantar fasciitis",
-    "phase": "GPP → SPP → TAPER",
-    "name": "Knee-Locked Calf Stretch",
-    "notes": "GPP: Reduce fascia tightness → SPP: Maintain range under load → TAPER: Keep mobility without CNS stress"
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Knee-Locked Calf Stretch",
+        "notes": "GPP: Restore length to fascia line → SPP: Maintain under load → TAPER: Use short holds post-session"
+      },
+      {
+        "name": "Massage Gun Sweep – Arch to Heel",
+        "notes": "GPP: Break up tension points → SPP: Post-drill flush → TAPER: Morning priming tool"
+      }
+    ]
   },
   {
     "location": "heel",
     "type": "bruise",
-    "phase": "GPP",
-    "name": "Heel Taps on Soft Mat",
-    "notes": "GPP: Reintroduce heel contact and tolerance"
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Heel Taps on Soft Mat",
+        "notes": "GPP: Rebuild sensory tolerance → GPP: Light progression to walking load"
+      },
+      {
+        "name": "Foam Pad Heel Rolls",
+        "notes": "GPP: Improve pressure dispersion → GPP: Advance to barefoot load steps"
+      }
+    ]
   },
   {
     "location": "heel",
     "type": "plantar fasciitis",
-    "phase": "SPP",
-    "name": "Toe-Elevated Calf Raises",
-    "notes": "SPP: Build fascia strength with loaded stretch"
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Toe-Elevated Calf Raises",
+        "notes": "SPP: Strengthen fascia in stretch → SPP: Add slow eccentric tempo"
+      },
+      {
+        "name": "Toe Pulls with Band",
+        "notes": "SPP: Train fascia end-range → SPP: Build foot tolerance during strikes"
+      }
+    ]
   },
   {
     "location": "heel",
     "type": "swelling",
-    "phase": "TAPER",
-    "name": "Wall Calf Stretch (Straight Leg)",
-    "notes": "TAPER: Flush tension and swelling without load"
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Wall Calf Stretch (Straight Leg)",
+        "notes": "TAPER: Drain posterior tightness → TAPER: Restore range pre-fight"
+      },
+      {
+        "name": "Elevated Heel Pumps",
+        "notes": "TAPER: Promote circulation → TAPER: Use between drills or post-session"
+      }
+    ]
   },
   {
     "location": "foot",
     "type": "instability",
-    "phase": "SPP → TAPER",
-    "name": "Single-Leg RDL with Reach",
-    "notes": "SPP: Test control under movement → TAPER: Maintain balance skill under deload"
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Single-Leg RDL with Reach",
+        "notes": "SPP: Build control under movement → TAPER: Keep pattern with low load"
+      },
+      {
+        "name": "Barefoot Lateral Hops",
+        "notes": "SPP: Test quick contact control → TAPER: Reduce distance but keep speed"
+      }
+    ]
   },
   {
     "location": "foot",
     "type": "tightness",
-    "phase": "GPP → TAPER",
-    "name": "Toe Spreading with Resistance Band",
-    "notes": "GPP: Restore mid-foot mobility → TAPER: Maintain range before comp"
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Toe Spreading with Resistance Band",
+        "notes": "GPP: Loosen foot structures → TAPER: Maintain mobility for balance"
+      },
+      {
+        "name": "Lacrosse Ball Roll – Arch to Base",
+        "notes": "GPP: Break up adhesions → TAPER: Use daily pre-warmup"
+      }
+    ]
   },
   {
     "location": "foot",
     "type": "soreness",
-    "phase": "TAPER",
-    "name": "Foot Massage with Lacrosse Ball",
-    "notes": "TAPER: Reduce DOMS and keep blood flow in taper week"
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Foot Massage with Lacrosse Ball",
+        "notes": "TAPER: Decrease residual tension → TAPER: Use nightly or post-conditioning"
+      },
+      {
+        "name": "Pedal Flush – Reverse Bike Low Intensity",
+        "notes": "TAPER: Light recovery flush → TAPER: Maintain oxygen to tissue"
+      }
+    ]
   },
   {
     "location": "ankle",
     "type": "impingement",
-    "phase": "GPP → SPP",
-    "name": "Banded Ankle Distraction",
-    "notes": "GPP: Open anterior joint space → SPP: Maintain pain-free dorsiflexion under load"
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Ankle Distraction",
+        "notes": "GPP: Create space in front joint → SPP: Use pre-lift to clear pinch"
+      },
+      {
+        "name": "Loaded Knee-Over-Toe Lunge",
+        "notes": "GPP: Control dorsiflexion → SPP: Increase ROM through full range"
+      }
+    ]
   },
   {
     "location": "ankle",
     "type": "tightness",
-    "phase": "SPP → TAPER",
-    "name": "Loaded Dorsiflexion Rocks (Barbell Front Foot)",
-    "notes": "SPP: Build loaded range into ankle → TAPER: Preserve joint glide under low fatigue"
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Loaded Dorsiflexion Rocks (Barbell Front Foot)",
+        "notes": "SPP: Open ankle range → TAPER: Use in taper for glide maintenance"
+      },
+      {
+        "name": "Massage Gun – Anterior Line",
+        "notes": "SPP: Release tight tibialis → TAPER: Short bursts pre-drill"
+      }
+    ]
   },
   {
     "location": "ankle",
     "type": "swelling",
-    "phase": "TAPER",
-    "name": "Elevated Ankle Pumps",
-    "notes": "TAPER: Pump fluid and reduce ankle pressure"
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Elevated Ankle Pumps",
+        "notes": "TAPER: Pump lymphatic fluid → TAPER: Use in cooldown to reduce flare"
+      },
+      {
+        "name": "Wall Ankle Circles (No Load)",
+        "notes": "TAPER: Gentle ROM recovery → TAPER: Keep joint active under zero stress"
+      }
+    ]
   },
   {
     "location": "toe",
     "type": "stiffness",
-    "phase": "GPP → TAPER",
-    "name": "Toe CARs (Controlled Articular Rotations)",
-    "notes": "GPP: Restore capsule control → TAPER: Maintain joint health pre-fight"
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Toe CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Rebuild capsule range → TAPER: Maintain full ROM pre-fight"
+      },
+      {
+        "name": "Band Toe Pulls – End Range",
+        "notes": "GPP: Control full motion → TAPER: Reinforce control under fatigue"
+      }
+    ]
   },
   {
     "location": "toe",
     "type": "pain",
-    "phase": "SPP → TAPER",
-    "name": "Isometric Big Toe Press into Ground",
-    "notes": "SPP: Tolerate load without movement → TAPER: Sustain tension with no added strain"
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Big Toe Press into Ground",
+        "notes": "SPP: Load without movement → TAPER: Use light holds to retain signal"
+      },
+      {
+        "name": "Toe Flexor Resistance Band Pulls",
+        "notes": "SPP: Rebuild control → TAPER: Low fatigue, low movement"
+      }
+    ]
   },
   {
     "location": "toe",
     "type": "strain",
-    "phase": "GPP → SPP",
-    "name": "Toe Towel Slides (Loaded Variant)",
-    "notes": "GPP: Restore toe flexor range → SPP: Add resistance and control"
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Toe Towel Slides (Loaded Variant)",
+        "notes": "GPP: Restore flexor glide → SPP: Increase tempo or pause"
+      },
+      {
+        "name": "Manual Toe Flexor Resistance (Band)",
+        "notes": "GPP: Build isolated tension → SPP: Add continuous reps"
+      }
+    ]
   },
   {
     "location": "toe",
     "type": "tightness",
-    "phase": "TAPER",
-    "name": "Toe Extensor Stretch (Wall Dorsiflex)",
-    "notes": "TAPER: Downregulate tension across toe and dorsal foot"
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Toe Extensor Stretch (Wall Dorsiflex)",
+        "notes": "TAPER: Downregulate toe tension → TAPER: Use post-session or AM"
+      },
+      {
+        "name": "Band-Assisted Toe Extension Hold",
+        "notes": "TAPER: Maintain smooth end range → TAPER: Low load activation"
+      }
+    ]
   },
   {
     "location": "ankle",
     "type": "instability",
-    "phase": "SPP → TAPER",
-    "name": "Lateral Hop-Stick Drill",
-    "notes": "SPP: Develop reactive ankle control → TAPER: Sharpen footwork under deload"
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Lateral Hop-Stick Drill",
+        "notes": "SPP: Train reactive ankle control → TAPER: Maintain sharpness with short sets"
+      },
+      {
+        "name": "Foam Pad Jump-Stick",
+        "notes": "SPP: Improve soft landing control → TAPER: Use as CNS primer pre-comp"
+      }
+    ]
   },
   {
     "location": "foot",
     "type": "strain",
-    "phase": "GPP → SPP",
-    "name": "Resisted Toe Pulls with Band",
-    "notes": "GPP: Isolate toe flexors → SPP: Integrate into push-off strength"
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Resisted Toe Pulls with Band",
+        "notes": "GPP: Load toe flexors → SPP: Tie into sprint or strike mechanics"
+      },
+      {
+        "name": "Mid-Foot Isometric Holds (Band Loop)",
+        "notes": "GPP: Tension through arch → SPP: Progress to timed holds or anti-rotation"
+      }
+      [
+  {
+    "location": "shin",
+    "type": "splints",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Toe Raises",
+        "notes": "GPP: Activate anterior tibialis → SPP: Increase reps + tempo for foot strike endurance"
+      },
+      {
+        "name": "Massage Gun Sweep – Tibialis Line",
+        "notes": "GPP: Reduce inflammation and tension → SPP: Use post-run to limit re-flare"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Foam Roller Circles – Mid-Shin",
+        "notes": "GPP: Restore tissue tolerance → SPP: Progress to kneeling or pad contact drills"
+      },
+      {
+        "name": "Tap-Drill with Soft Stick",
+        "notes": "GPP: Gradually reintroduce impact → SPP: Mimic striking contact progression"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Seated Anterior Shin Stretch",
+        "notes": "GPP: Loosen tibialis tension → TAPER: Maintain front chain length post-training"
+      },
+      {
+        "name": "Lacrosse Ball Glide – Tibialis",
+        "notes": "GPP: Break up tight adhesions → TAPER: Use short sessions pre-spar"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Heel Walks",
+        "notes": "SPP: Train anterior chain under low impact → TAPER: Maintain foot strike tolerance"
+      },
+      {
+        "name": "Isometric Toe Lift Holds",
+        "notes": "SPP: Load without range → TAPER: Quick tension cues pre-sprint or drill"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "bruising",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Light Shin Percussion",
+        "notes": "GPP: Rebuild contact tolerance → GPP: Use daily to desensitize tissue"
+      },
+      {
+        "name": "Wall Shin Slides",
+        "notes": "GPP: Improve joint mobility → GPP: Add tempo or light band once contact is tolerated"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Double-Leg Calf Raises",
+        "notes": "GPP: Rebuild full range control → SPP: Progress to single-leg tempo loading"
+      },
+      {
+        "name": "Isometric Wall Push Hold",
+        "notes": "GPP: Tension without movement → SPP: Add band resistance or hold under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Calf Stretch (Bent Knee)",
+        "notes": "GPP: Target deep soleus tension → TAPER: Maintain length without CNS cost"
+      },
+      {
+        "name": "Massage Gun Sweep – Soleus Line",
+        "notes": "GPP: Reduce posterior tightness → TAPER: Use after sparring or jumps"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "cramp",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Tip-Toe Wall Press",
+        "notes": "SPP: Improve endurance under tension → TAPER: Maintain contraction without volume"
+      },
+      {
+        "name": "Active Band Calf Pumps",
+        "notes": "SPP: Stimulate blood flow cycles → TAPER: Low-fatigue use in cooldown"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Calf Drops on Step",
+        "notes": "GPP: Build tendon load capacity → SPP: Increase depth or tempo → TAPER: Maintain function"
+      },
+      {
+        "name": "Massage Gun – Achilles Line",
+        "notes": "GPP: Decrease stiffness → SPP: Use daily post-loading → TAPER: Maintain glide pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Holds in Tip-Toe",
+        "notes": "SPP: Load tendon without movement → TAPER: Pre-drill activation"
+      },
+      {
+        "name": "Banded Heel Push with Hold",
+        "notes": "SPP: Strengthen in shortened position → TAPER: Use as low-fade neural primer"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "patellar pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Terminal Knee Extensions (TKEs)",
+        "notes": "GPP: Target VMO → SPP: Increase band load or reps"
+      },
+      {
+        "name": "Massage Gun – Quad Sweep to Patella",
+        "notes": "GPP: Reduce tracking tension → SPP: Use after TKE or compound lifts"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Quad & Hip Flexor Stretch",
+        "notes": "GPP: Loosen anterior chain → TAPER: Maintain extension without CNS load"
+      },
+      {
+        "name": "Massage Gun – Rectus Line",
+        "notes": "GPP: Clear quad tone → TAPER: Use 30s glides before skill drills"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "meniscus sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Sit (Short Arc)",
+        "notes": "GPP: Low flexion quad load → SPP: Increase depth or add ball squeeze"
+      },
+      {
+        "name": "Mini-Band Lateral Walks",
+        "notes": "GPP: Stabilize tracking → SPP: Progress to dynamic tempo sets"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "MCL sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Lateral Step-Downs",
+        "notes": "GPP: Train valgus control → SPP: Add range or load with dumbbell"
+      },
+      {
+        "name": "Band-Assisted Lateral Lunges",
+        "notes": "GPP: Keep range safe → SPP: Remove band or increase tempo"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Mini-Band Lateral Walks",
+        "notes": "SPP: Reinforce lateral control → TAPER: Keep pattern sharp pre-fight"
+      },
+      {
+        "name": "Reactive Knee Bounces (Foam Pad)",
+        "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper"
+      }
+    ]
   }
-]
+][
+  {
+    "location": "shin",
+    "type": "splints",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Toe Raises",
+        "notes": "GPP: Activate anterior tibialis → SPP: Increase reps + tempo for foot strike endurance"
+      },
+      {
+        "name": "Massage Gun Sweep – Tibialis Line",
+        "notes": "GPP: Reduce inflammation and tension → SPP: Use post-run to limit re-flare"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Foam Roller Circles – Mid-Shin",
+        "notes": "GPP: Restore tissue tolerance → SPP: Progress to kneeling or pad contact drills"
+      },
+      {
+        "name": "Tap-Drill with Soft Stick",
+        "notes": "GPP: Gradually reintroduce impact → SPP: Mimic striking contact progression"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Seated Anterior Shin Stretch",
+        "notes": "GPP: Loosen tibialis tension → TAPER: Maintain front chain length post-training"
+      },
+      {
+        "name": "Lacrosse Ball Glide – Tibialis",
+        "notes": "GPP: Break up tight adhesions → TAPER: Use short sessions pre-spar"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Heel Walks",
+        "notes": "SPP: Train anterior chain under low impact → TAPER: Maintain foot strike tolerance"
+      },
+      {
+        "name": "Isometric Toe Lift Holds",
+        "notes": "SPP: Load without range → TAPER: Quick tension cues pre-sprint or drill"
+      }
+    ]
+  },
+  {
+    "location": "shin",
+    "type": "bruising",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Light Shin Percussion",
+        "notes": "GPP: Rebuild contact tolerance → GPP: Use daily to desensitize tissue"
+      },
+      {
+        "name": "Wall Shin Slides",
+        "notes": "GPP: Improve joint mobility → GPP: Add tempo or light band once contact is tolerated"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Double-Leg Calf Raises",
+        "notes": "GPP: Rebuild full range control → SPP: Progress to single-leg tempo loading"
+      },
+      {
+        "name": "Isometric Wall Push Hold",
+        "notes": "GPP: Tension without movement → SPP: Add band resistance or hold under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Calf Stretch (Bent Knee)",
+        "notes": "GPP: Target deep soleus tension → TAPER: Maintain length without CNS cost"
+      },
+      {
+        "name": "Massage Gun Sweep – Soleus Line",
+        "notes": "GPP: Reduce posterior tightness → TAPER: Use after sparring or jumps"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "cramp",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Tip-Toe Wall Press",
+        "notes": "SPP: Improve endurance under tension → TAPER: Maintain contraction without volume"
+      },
+      {
+        "name": "Active Band Calf Pumps",
+        "notes": "SPP: Stimulate blood flow cycles → TAPER: Low-fatigue use in cooldown"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Calf Drops on Step",
+        "notes": "GPP: Build tendon load capacity → SPP: Increase depth or tempo → TAPER: Maintain function"
+      },
+      {
+        "name": "Massage Gun – Achilles Line",
+        "notes": "GPP: Decrease stiffness → SPP: Use daily post-loading → TAPER: Maintain glide pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Holds in Tip-Toe",
+        "notes": "SPP: Load tendon without movement → TAPER: Pre-drill activation"
+      },
+      {
+        "name": "Banded Heel Push with Hold",
+        "notes": "SPP: Strengthen in shortened position → TAPER: Use as low-fade neural primer"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "patellar pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Terminal Knee Extensions (TKEs)",
+        "notes": "GPP: Target VMO → SPP: Increase band load or reps"
+      },
+      {
+        "name": "Massage Gun – Quad Sweep to Patella",
+        "notes": "GPP: Reduce tracking tension → SPP: Use after TKE or compound lifts"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Quad & Hip Flexor Stretch",
+        "notes": "GPP: Loosen anterior chain → TAPER: Maintain extension without CNS load"
+      },
+      {
+        "name": "Massage Gun – Rectus Line",
+        "notes": "GPP: Clear quad tone → TAPER: Use 30s glides before skill drills"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "meniscus sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Sit (Short Arc)",
+        "notes": "GPP: Low flexion quad load → SPP: Increase depth or add ball squeeze"
+      },
+      {
+        "name": "Mini-Band Lateral Walks",
+        "notes": "GPP: Stabilize tracking → SPP: Progress to dynamic tempo sets"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "MCL sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Lateral Step-Downs",
+        "notes": "GPP: Train valgus control → SPP: Add range or load with dumbbell"
+      },
+      {
+        "name": "Band-Assisted Lateral Lunges",
+        "notes": "GPP: Keep range safe → SPP: Remove band or increase tempo"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Mini-Band Lateral Walks",
+        "notes": "SPP: Reinforce lateral control → TAPER: Keep pattern sharp pre-fight"
+      },
+      {
+        "name": "Reactive Knee Bounces (Foam Pad)",
+        "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper"
+      }
+    ]
+  }
+][
+  {
+    "location": "hip",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Hip Flexor Stretch on Wall",
+        "notes": "GPP: Open front hip chain → TAPER: Maintain range with 30s holds post-spar"
+      },
+      {
+        "name": "Massage Gun – TFL to Hip Line",
+        "notes": "GPP: Release lateral tightness → TAPER: Use pre-drill to clear anterior restriction"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Hip Distraction (Lateral)",
+        "notes": "GPP: Create space in joint capsule → SPP: Use pre-lift or striking to clear impingement"
+      },
+      {
+        "name": "90/90 Hip Switches",
+        "notes": "GPP: Rebuild rotation range → SPP: Add tempo or band to integrate control"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Banded Monster Walks",
+        "notes": "SPP: Strengthen hip stabilizers → TAPER: Use low reps for activation pre-session"
+      },
+      {
+        "name": "Single-Leg Hip Bridge Hold",
+        "notes": "SPP: Rebuild unilateral hip control → TAPER: Maintain glute engagement without volume"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Standing Hip CARs",
+        "notes": "GPP: Control hip through full pain-free ROM → SPP: Add tension or hold at end ranges"
+      },
+      {
+        "name": "Massage Gun – Deep Glute Line",
+        "notes": "GPP: Loosen surrounding tissue → SPP: Use post-drill to avoid flare-up"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Glute Foam Roll – Slow Sweep",
+        "notes": "TAPER: Reduce DOMS and promote recovery"
+      },
+      {
+        "name": "Mini-Band Standing Hip Abduction",
+        "notes": "TAPER: Keep activation without triggering fatigue"
+      }
+    ]
+  },
+  {
+    "location": "glutes",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Pigeon Pose Glute Stretch",
+        "notes": "GPP: Open up posterior hip → TAPER: Hold 20–30s post-sparring or kicking"
+      },
+      {
+        "name": "Lacrosse Ball – Glute Med Sweep",
+        "notes": "GPP: Release bound-up tissue → TAPER: Use short bursts to maintain hip mobility"
+      }
+    ]
+  },
+  {
+    "location": "glutes",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Glute Bridge Iso Holds",
+        "notes": "GPP: Tension without lengthening → SPP: Add reps or bands for fatigue tolerance"
+      },
+      {
+        "name": "Massage Gun – Glute Max Line",
+        "notes": "GPP: Flush tight area → SPP: Use post-lift or sprint session"
+      }
+    ]
+  },
+  {
+    "location": "glutes",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Banded Clamshells",
+        "notes": "SPP: Local glute activation → TAPER: Short sets pre-training to prevent under-recruitment"
+      },
+      {
+        "name": "Foam Roll – Side Glute Sweep",
+        "notes": "SPP: Release lateral glute line → TAPER: Decrease soreness before fight night"
+      }
+    ]
+  },
+  {
+    "location": "glutes",
+    "type": "weakness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Hip Thrusts",
+        "notes": "GPP: Rebuild unilateral power → SPP: Load with tempo or add pause at top"
+      },
+      {
+        "name": "Mini-Band Glute Kickbacks",
+        "notes": "GPP: Focus on contraction → SPP: Progress to continuous sets"
+      }
+    ]
+  },
+  {
+    "location": "glutes",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun – Glute Sweep (30s)",
+        "notes": "TAPER: Improve circulation + reduce stiffness on fight week"
+      },
+      {
+        "name": "Isometric Glute Hold in Bridge",
+        "notes": "TAPER: Reinforce tension without adding fatigue"
+      }
+    ]
+  },
+  {
+    "location": "quads",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Quad Stretch (Knee to Wall)",
+        "notes": "GPP: Improve anterior chain mobility → TAPER: Use daily to maintain stride/kick length"
+      },
+      {
+        "name": "Massage Gun – Rectus Sweep",
+        "notes": "GPP: Loosen quad belly → TAPER: Use short bursts pre-drill"
+      }
+    ]
+  },
+  {
+    "location": "quads",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Wall Sit (Mid-Range)",
+        "notes": "GPP: Safe tension under no movement → SPP: Add reps or instability (ball squeeze)"
+      },
+      {
+        "name": "Foam Roller – Quad Sweep",
+        "notes": "GPP: Prep for active rehab → SPP: Post-load flush"
+      }
+    ]
+  },
+  {
+    "location": "quads",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun – Sweep (VL to VM)",
+        "notes": "TAPER: Reset tone without overstimulating CNS"
+      },
+      {
+        "name": "Slow Cycling or AirBike",
+        "notes": "TAPER: Light flush to reduce DOMS and stiffness"
+      }
+    ]
+  },
+  {
+    "location": "quads",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Mini-Band TKEs (Terminal Knee Extensions)",
+        "notes": "SPP: Activate quad without overload → TAPER: Maintain pattern without fatigue"
+      },
+      {
+        "name": "Isometric Quad Flex (Straight Leg)",
+        "notes": "SPP: Rebuild control through tension → TAPER: Use between sets to keep motor pattern sharp"
+      }
+    ]
+  },
+  {
+    "location": "quads",
+    "type": "bruising",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Light Quad Percussion – Massage Gun",
+        "notes": "GPP: Desensitize soft tissue → SPP: Add sweep post-session"
+      },
+      {
+        "name": "Partial-Range Wall Sit",
+        "notes": "GPP: Low-load isometric return → SPP: Increase depth gradually"
+      }
+    ]
+  },
+  {
+    "location": "hamstrings",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Hamstring Bridge",
+        "notes": "GPP: Mid-range contraction → SPP: Add reps or eccentric control"
+      },
+      {
+        "name": "Massage Gun – Biceps Femoris Sweep",
+        "notes": "GPP: Reduce tension → SPP: Use after sprint or kick days"
+      }
+    ]
+  },
+  {
+    "location": "hamstrings",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Active Hamstring Kicks (Banded)",
+        "notes": "GPP: Mobilize + contract → TAPER: Use during warm-up to maintain speed range"
+      },
+      {
+        "name": "Lacrosse Ball Under Hamstring",
+        "notes": "GPP: Release trigger points → TAPER: Use short passes pre-drill"
+      }
+    ]
+  },
+  {
+    "location": "hamstrings",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Short-Range Nordic Drops (Assisted)",
+        "notes": "SPP: Controlled exposure → TAPER: Reduce ROM, keep tension sharp"
+      },
+      {
+        "name": "Foam Roll – Full Hamstring Sweep",
+        "notes": "SPP: Post-load recovery → TAPER: Reset tone pre-comp"
+      }
+    ]
+  },
+  {
+    "location": "hamstrings",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun – Hamstring Line",
+        "notes": "TAPER: Clear stiffness from sprint/kick load"
+      },
+      {
+        "name": "Reverse AirBike Pedal (Low Intensity)",
+        "notes": "TAPER: Restore blood flow without adding fatigue"
+      }
+    ]
+  },
+  {
+    "location": "hamstrings",
+    "type": "weakness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Slider Hamstring Curls",
+        "notes": "GPP: Controlled curl pattern → SPP: Increase range or eccentric tempo"
+      },
+      {
+        "name": "Single-Leg Hamstring Bridge",
+        "notes": "GPP: Unilateral strength → SPP: Add reps or instability"
+      }
+    {
+  "location": "core",
+  "type": "strain",
+  "phase_progression": "GPP → SPP",
+  "drills": [
+    {
+      "name": "Dead Bug with Band Resistance",
+      "notes": "GPP: Reinforce bracing under low tension → SPP: Add speed or overhead band angle"
+    },
+    {
+      "name": "Forearm Plank – Eccentric Reaches",
+      "notes": "GPP: Build tension under control → SPP: Increase time under tension or add movement"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "tightness",
+  "phase_progression": "GPP → TAPER",
+  "drills": [
+    {
+      "name": "Cat-Cow Pelvic Tilts",
+      "notes": "GPP: Improve anterior-posterior control → TAPER: Use as warmup to downregulate tone"
+    },
+    {
+      "name": "Massage Gun – Abdominals Sweep",
+      "notes": "GPP: Release fascial tightness → TAPER: Use 30s pulse pre-sparring"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "pain",
+  "phase_progression": "SPP → TAPER",
+  "drills": [
+    {
+      "name": "Isometric Hollow Hold",
+      "notes": "SPP: Maximize midline tension → TAPER: Short holds to maintain readiness"
+    },
+    {
+      "name": "Glute Bridge March (Heel Loaded)",
+      "notes": "SPP: Support lumbar offload → TAPER: Retain cross-chain firing"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "instability",
+  "phase_progression": "GPP → SPP",
+  "drills": [
+    {
+      "name": "Dead Bug – Anti-Rotation Focus",
+      "notes": "GPP: Reinforce unilateral control → SPP: Progress to cable or band offset load"
+    },
+    {
+      "name": "Side Plank with Reach Under",
+      "notes": "GPP: Add rotation safely → SPP: Control twist under fatigue"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "soreness",
+  "phase_progression": "TAPER",
+  "drills": [
+    {
+      "name": "Belly Breathing + 90/90 Reset",
+      "notes": "TAPER: Reduce trunk tone → Improve diaphragm/core synergy"
+    },
+    {
+      "name": "Massage Gun – Diagonal Core Sweep",
+      "notes": "TAPER: Use short blasts across oblique chain"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "bruising",
+  "phase_progression": "GPP",
+  "drills": [
+    {
+      "name": "Wall Breathing + Arm Reach",
+      "notes": "GPP: Maintain deep core activity with minimal pressure"
+    },
+    {
+      "name": "Lacrosse Ball – Ab Wall Desensitization",
+      "notes": "GPP: Light contact to rebuild tolerance"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "fatigue",
+  "phase_progression": "SPP → TAPER",
+  "drills": [
+    {
+      "name": "Banded Anti-Extension Pressouts",
+      "notes": "SPP: Reinforce trunk under fatigue → TAPER: Use short sets to keep tension sharp"
+    },
+    {
+      "name": "Bird Dog Reaches",
+      "notes": "SPP: Control midline with breath → TAPER: Integrate pre-drill for trunk priming"
+    }
+  ]
+},
+{
+  "location": "core",
+  "type": "post-surgery",
+  "phase_progression": "GPP",
+  "drills": [
+    {
+      "name": "Supine Breathing with Band Pull-Apart",
+      "notes": "GPP: Reconnect neuromuscular control with breath"
+    },
+    {
+      "name": "Wall Dead Bug Iso-Hold",
+      "notes": "GPP: Maintain tension with joint safety"
+    }
+    {
+  "location": "obliques",
+  "type": "strain",
+  "phase_progression": "GPP → SPP",
+  "drills": [
+    {
+      "name": "Side Plank with Band Row",
+      "notes": "GPP: Light tension control → SPP: Add rotation and longer holds"
+    },
+    {
+      "name": "Rotational Med Ball Toss (Seated)",
+      "notes": "GPP: Start low-impact → SPP: Progress to standing power variation"
+    }
+  ]
+},
+{
+  "location": "obliques",
+  "type": "tightness",
+  "phase_progression": "GPP → TAPER",
+  "drills": [
+    {
+      "name": "Standing Side Stretch",
+      "notes": "GPP: Regain side-chain length → TAPER: Maintain mobility pre-fight"
+    },
+    {
+      "name": "Massage Gun – External Obliques Sweep",
+      "notes": "GPP: Release superficial tension → TAPER: Fast glide post-training"
+    }
+  ]
+},
+{
+  "location": "obliques",
+  "type": "pain",
+  "phase_progression": "SPP → TAPER",
+  "drills": [
+    {
+      "name": "Isometric Side Plank – Short Repeats",
+      "notes": "SPP: Maintain engagement under control → TAPER: Preserve tone with low volume"
+    },
+    {
+      "name": "Pallof Press (Light Band)",
+      "notes": "SPP: Reinforce anti-rotation → TAPER: Keep transverse activation sharp"
+    }
+  ]
+},
+{
+  "location": "obliques",
+  "type": "instability",
+  "phase_progression": "GPP → SPP",
+  "drills": [
+    {
+      "name": "Kneeling Pallof ISO",
+      "notes": "GPP: Build control → SPP: Add split stance or arm drive"
+    },
+    {
+      "name": "Side Dead Bug (Offset Load)",
+      "notes": "GPP: Train side dominance → SPP: Progress toward power drills"
+    }
+  ]
+},
+{
+  "location": "obliques",
+  "type": "soreness",
+  "phase_progression": "TAPER",
+  "drills": [
+    {
+      "name": "Crocodile Breathing",
+      "notes": "TAPER: Reduce lateral wall tone"
+    },
+    {
+      "name": "Ball Rolling on Oblique Chain",
+      "notes": "TAPER: Gentle tissue flush to improve comfort"
+    }
+  ]
+},
+{
+  "location": "obliques",
+  "type": "fatigue",
+  "phase_progression": "SPP → TAPER",
+  "drills": [
+    {
+      "name": "Side Bridge with Top Leg Lift",
+      "notes": "SPP: Add complexity → TAPER: Reduce hold time, keep activation"
+    },
+    {
+      "name": "Seated Banded Twists",
+      "notes": "SPP: Train low-velocity control → TAPER: Use quick sets pre-workout"
+    }
+  ]{
+  "location": "lower back",
+  "type": "tightness",
+  "phase_progression": "GPP → TAPER",
+  "drills": [
+    {
+      "name": "Child’s Pose with Side Reach",
+      "notes": "GPP: Decompress posterior chain → TAPER: Light reset between drills"
+    },
+    {
+      "name": "Massage Gun – Lumbar Sweep",
+      "notes": "GPP: Reduce deep fascial tension → TAPER: 30s pre-bed or post-sparring"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "strain",
+  "phase_progression": "GPP → SPP",
+  "drills": [
+    {
+      "name": "Glute Bridge Walkout",
+      "notes": "GPP: Train trunk support via glutes → SPP: Add tempo for endurance"
+    },
+    {
+      "name": "Quadruped Rock Backs",
+      "notes": "GPP: Explore safe range → SPP: Add band tension or pause"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "instability",
+  "phase_progression": "SPP → TAPER",
+  "drills": [
+    {
+      "name": "Bird Dog with Band Tension",
+      "notes": "SPP: Add reactive core control → TAPER: Short reps, tight form"
+    },
+    {
+      "name": "Side Plank + Hip Taps",
+      "notes": "SPP: Control frontal plane → TAPER: Maintain side-chain coordination"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "pain",
+  "phase_progression": "GPP → SPP",
+  "drills": [
+    {
+      "name": "Supine 90/90 Breathing",
+      "notes": "GPP: Reduce spinal tone → SPP: Integrate with trunk movement"
+    },
+    {
+      "name": "Wall Dead Bug with Iso Hold",
+      "notes": "GPP: Teach bracing → SPP: Extend hold or add band reach"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "soreness",
+  "phase_progression": "TAPER",
+  "drills": [
+    {
+      "name": "Foam Roller Sweep – Lumbar",
+      "notes": "TAPER: Restore blood flow without CNS load"
+    },
+    {
+      "name": "Wall Sit with Neutral Pelvis",
+      "notes": "TAPER: Maintain posture while letting soreness downregulate"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "disc irritation",
+  "phase_progression": "GPP",
+  "drills": [
+    {
+      "name": "Supine Pelvic Tilts",
+      "notes": "GPP: Reintroduce control with no load"
+    },
+    {
+      "name": "Bird Dog (Hold Only)",
+      "notes": "GPP: Low-stress spinal engagement"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "fatigue",
+  "phase_progression": "SPP → TAPER",
+  "drills": [
+    {
+      "name": "Glute Wall Press (Iso)",
+      "notes": "SPP: Rebuild posterior chain → TAPER: Prime activation"
+    },
+    {
+      "name": "Standing Band Pull-Throughs",
+      "notes": "SPP: Load hip hinge → TAPER: Keep low volume"
+    }
+  ]
+},
+{
+  "location": "lower back",
+  "type": "post-surgery",
+  "phase_progression": "GPP",
+  "drills": [
+    {
+      "name": "Wall Support March",
+      "notes": "GPP: Control spinal rhythm during step pattern"
+    },
+    {
+      "name": "90/90 Hip Lift + Breathing",
+      "notes": "GPP: Reactivate core-trunk link safely"
+    }
+  ]
+}
+}
