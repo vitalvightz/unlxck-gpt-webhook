@@ -476,6 +476,30 @@ def generate_conditioning_block(flags):
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
 
+    # --------- STYLE TAPER CONDITIONING INSERTION ---------
+    if phase == "TAPER":
+        try:
+            with open(DATA_DIR / "style_taper_conditioning.json", "r") as f:
+                style_taper_bank = json.load(f)
+        except Exception:
+            style_taper_bank = []
+
+        existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
+        style_set = set(style_names)
+        taper_candidates = [
+            d for d in style_taper_bank
+            if style_set.intersection({t.lower() for t in d.get("tags", [])})
+        ]
+        if not taper_candidates:
+            taper_candidates = style_taper_bank
+
+        if taper_candidates:
+            drill = random.choice(taper_candidates)
+            if drill.get("name") not in existing_cond_names:
+                system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
+                final_drills.append((system, [drill]))
+                selected_drill_names.append(drill.get("name"))
+
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if not system_drills[system_name]:
