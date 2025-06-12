@@ -57,5 +57,5 @@ unilateral
 upper_body
 visual_processing
 work_capacity
-wrestling
+wrestler
 zero_impact

@@ -260,7 +260,7 @@
     "duration": "20m sled push → 5 sprawls, 6 rounds",
     "intensity": "Bodyweight load",
     "tags": ["pressure_fighter", "mma"],
-    "notes": "Mimics cage cutting and wrestling recovery.",
+    "notes": "Mimics cage cutting and wrestler recovery.",
     "equipment_note": "Low sled for MMA posture"
   },
   {
@@ -380,7 +380,7 @@
     "duration": "10 sprawls → 10 burpee jumps, 6 rounds",
     "intensity": "No rest",
     "tags": ["pressure_fighter", "mma"],
-    "notes": "Simulates scrambles in grappling exchanges.",
+    "notes": "Simulates scrambles in grappler exchanges.",
     "equipment_note": "Concrete floor ideal"
   },
   {

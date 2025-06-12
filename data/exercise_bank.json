@@ -94,7 +94,7 @@
   },
   {
     "name": "Band-Resisted Sprawl to Sprint",
-    "category": "wrestling",
+    "category": "wrestler",
     "phases": [
       "TAPER"
     ],
@@ -283,7 +283,7 @@
   },
   {
     "name": "Zercher Squat → Sprawl Jump",
-    "category": "wrestling",
+    "category": "wrestler",
     "phases": [
       "SPP"
     ],
@@ -1823,7 +1823,7 @@
     "equipment": "heavy_bag"
   },
   {
-    "name": "Wrestling Shot Drill (Repetitive)",
+    "name": "Wrestler Shot Drill (Repetitive)",
     "category": "combat",
     "phases": [
       "SPP"

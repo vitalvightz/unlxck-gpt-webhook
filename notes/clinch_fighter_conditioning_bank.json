@@ -56,7 +56,7 @@
     "duration": "30s pummeling drills → 10 bodylock lifts → x5 rounds",
     "intensity": "85% effort",
     "tags": ["clinch_fighter", "mma", "boxing"],
-    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestling-based clinch.",
+    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch.",
     "equipment_note": "50-70lb sandbag"
   },
   {
@@ -140,7 +140,7 @@
     "duration": "10 KB snatches → 10 sprawls → x5 rounds",
     "intensity": "90% effort",
     "tags": ["clinch_fighter", "mma"],
-    "notes": "Snatches mimic explosive head control adjustments for cage wrestling.",
+    "notes": "Snatches mimic explosive head control adjustments for cage wrestler.",
     "equipment_note": "16-24kg KB"
   },
   {
@@ -271,7 +271,7 @@
     "modality": "defensive endurance",
     "duration": "30s band-resisted whizzers → 5 sprawls → x5 rounds",
     "intensity": "90% effort",
-    "tags": ["clinch_fighter", "mma", "wrestling"],
+    "tags": ["clinch_fighter", "mma", "wrestler"],
     "notes": "Develops late-round takedown defense from overhook positions.",
     "equipment_note": "Bands anchored at shoulder height"
   },
