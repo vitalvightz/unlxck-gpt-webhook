@@ -160,3 +160,7 @@ weekly session split into actual exercise counts.  Strength days output `7`,
 `6` or `4` exercises per session in `GPP`, `SPP` and `TAPER` respectively while
 conditioning days use `4`, `3` and `2`.  Recovery is implied by days without
 strength or conditioning work.
+
+### Performance Goals
+
+The Tally intake form includes optional key performance goals. Selecting **Skill Refinement** maps to the internal tag `skill_refinement`. The strength and conditioning modules define this goal with tags like `coordination`, `skill`, `footwork`, `cognitive`, `focus`, `reactive` and `decision_speed`. Exercises containing these tags score higher when the plan is built, so drills that refine technique are prioritized across all phases.
