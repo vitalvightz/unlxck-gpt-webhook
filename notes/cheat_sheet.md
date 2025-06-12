@@ -37,6 +37,7 @@ Below is a list of all tags found in the banks. The descriptions are brief so yo
 - **explosive** – general tag for explosive.
 - **footwork** – general tag for footwork.
 - **glycolytic** – trains high intensity energy systems.
+- **grappler** – general tag for grappling style work.
 - **grip** – strengthens grip.
 - **hamstring** – general tag for hamstring.
 - **hip_dominant** – targets posterior chain.
@@ -82,7 +83,7 @@ Below is a list of all tags found in the banks. The descriptions are brief so yo
 - **upper_body** – upper body work.
 - **visual_processing** – trains eyes and coordination.
 - **work_capacity** – general tag for work capacity.
-- **wrestler** – grappler related.
+ - **wrestler** – shorthand for drills focused on wrestling or grappling.
 - **zero_impact** – general tag for zero impact.
 
 ## Scoring Basics
