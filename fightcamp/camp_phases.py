@@ -116,11 +116,11 @@ STYLE_ADJUSTMENTS = {
 
 STYLE_RULES = {
     "pressure fighter": {
-        "SPP_MIN_PERCENT": 0.50,
+        "SPP_MIN_PERCENT": 0.45,
         "MAX_TAPER": 0.10,
     },
     "clinch fighter": {
-        "TAPER_MAX_DAYS": 7,
+        "TAPER_MAX_DAYS": 9,
         "SPP_CLINCH_RATIO": 0.40,
     },
     "grappler": {
