@@ -92,21 +92,6 @@ Certain tactical styles impose hard minimums or maximums on the camp phases. The
 
 These constraints ensure fighters with those styles emphasize the most relevant phases even after other adjustments.
 
-### Style-Specific Phase Rules
-
-Certain tactical styles impose hard minimums or maximums on the camp phases. These rules come from `STYLE_RULES` in `camp_phases.py` and are enforced both when the ratios are first calculated and again after the weeks are rounded:
-
-- **Pressure fighter**
-  - `SPP_MIN_PERCENT: 0.45` – at least 45% of the schedule must be SPP. Weeks are pulled from GPP if needed.
-  - `MAX_TAPER: 0.10` – taper can be no more than 10% of the camp. Excess taper weeks go back into SPP.
-- **Clinch fighter**
-  - `TAPER_MAX_DAYS: 9` – taper tops out at nine days (roughly 1–1.5 weeks). Extra days shift to SPP.
-  - `SPP_CLINCH_RATIO: 0.40` – requires at least 40% of the camp in SPP.
-- **Grappler**
-  - `GPP_MIN_PERCENT: 0.35` – guarantees at least 35% of the camp in GPP. SPP is reduced if necessary.
-
-These constraints ensure fighters with those styles emphasize the most relevant phases even after other adjustments.
-
 **Mindset module** (`mindset_module.py`)
 
 Keyword counts determine the top mental blocks. The two highest scoring blocks feed into the phase mindset cues.
