@@ -7,7 +7,7 @@
     "modality": "reactive timing",
     "duration": "4x3 ankle hops (quick ground contact)",
     "intensity": "50% effort",
-    "tags": ["boxing", "counter_striker"],
+    "tags": ["boxing", "mma", counter_striker"],
     "notes": "Trains quick reset after defensive moves",
     "equipment_note": "Mat or grass surface"
   },
@@ -19,7 +19,7 @@
     "modality": "upper-body explosiveness",
     "duration": "5x med ball chest throws (6lb)",
     "intensity": "60% power",
-    "tags": ["muay_thai", "clinch_fighter"],
+    "tags": ["muay_thai", "mma", clinch_fighter"],
     "notes": "Simulates framing explosiveness in clinch",
     "equipment_note": "Wall target at chest height"
   },
@@ -31,7 +31,7 @@
     "modality": "hip switch power",
     "duration": "3x5 lateral bounds (sub-max distance)",
     "intensity": "50% effort",
-    "tags": ["wrestling", "scrambler"],
+    "tags": ["wrestler", "mma", "scrambler"],
     "notes": "Mimics shot recovery movements",
     "equipment_note": "Mark landing zones 3ft apart"
   },
@@ -43,7 +43,7 @@
     "modality": "leg recoil",
     "duration": "4x3 step-back bounces (off lead leg)",
     "intensity": "40% effort",
-    "tags": ["kickboxing", "kicker"],
+    "tags": ["kickboxing", "kicker", "mma"],
     "notes": "Primes teep/kick retraction speed",
     "equipment_note": "Flat surface only"
   },
@@ -53,7 +53,7 @@
     "phases": ["Taper"],
     "duration": "3x4 box step-ups (explosive drive)",
     "intensity": "50% height",
-    "tags": ["boxing", "pressure_fighter"],
+    "tags": ["boxing", "mma", "kickboxing", "muay thai", "pressure_fighter"],
     "notes": "Develops forward knee drive for cutting off ring",
     "equipment_note": "12\" box height"
   },
@@ -63,7 +63,7 @@
     "phases": ["Taper"],
     "duration": "3x5 seated hip pops (from guard)",
     "intensity": "Light explosiveness",
-    "tags": ["grappling", "submission_hunter"],
+    "tags": ["grappling", "mma", submission_hunter"],
     "notes": "Trains explosive hip elevation for subs",
     "equipment_note": "Mat surface required"
   },
@@ -73,7 +73,7 @@
     "phases": ["Taper"],
     "duration": "4x3 stance switches (with arm swing)",
     "intensity": "60% speed",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma", "boxing", "muay thai", "kickboxing", hybrid"],
     "notes": "Sharpens stance transition reflexes",
     "equipment_note": "Ladder optional"
   },
@@ -93,7 +93,7 @@
     "phases": ["Taper"],
     "duration": "4x3 backward skips (quick toe-off)",
     "intensity": "50% effort",
-    "tags": ["kickboxing", "distance_striker"],
+    "tags": ["kickboxing", "mma", "boxing", distance_striker"],
     "notes": "Trains defensive footwork elasticity",
     "equipment_note": "Grass/turf preferred"
   },
@@ -103,7 +103,7 @@
     "phases": ["Taper"],
     "duration": "3x4 level-change jumps",
     "intensity": "40% explosion",
-    "tags": ["wrestling", "grappling"],
+    "tags": ["wrestler", "grappler", "mma"],
     "notes": "Primes shot explosiveness",
     "equipment_note": "Knee sleeves optional"
   },
@@ -133,7 +133,7 @@
     "phases": ["Taper"],
     "duration": "3x4 slip-to-vertical jumps",
     "intensity": "50% height",
-    "tags": ["boxing", "counter_striker"],
+    "tags": ["boxing", "mma", counter_striker"],
     "notes": "Links head movement to counter explosiveness",
     "equipment_note": "Soft surface"
   },
@@ -153,7 +153,7 @@
     "phases": ["Taper"],
     "duration": "4x3 stance-switch hops",
     "intensity": "40% effort",
-    "tags": ["muay_thai", "kicker"],
+    "tags": ["muay_thai", "mma", kicker"],
     "notes": "Trains kick setup footwork",
     "equipment_note": "Mark stance width"
   },
@@ -163,7 +163,7 @@
     "phases": ["Taper"],
     "duration": "3x3 bridge-to-hip lifts",
     "intensity": "Light explosiveness",
-    "tags": ["grappling", "submission_hunter"],
+    "tags": ["grappling", "mma", submission_hunter"],
     "notes": "Maintains explosive bridging for subs",
     "equipment_note": "Mat required"
   },
@@ -173,7 +173,7 @@
     "phases": ["Taper"],
     "duration": "3x4 sprawl-to-vertical jumps",
     "intensity": "50% height",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma", "distance_fighter"],
     "notes": "Links TDD to stand-up explosiveness",
     "equipment_note": "Grass/turf"
   },
@@ -193,7 +193,7 @@
     "phases": ["Taper"],
     "duration": "4x3 lead-leg drive pops",
     "intensity": "40% effort",
-    "tags": ["muay_thai", "distance_striker"],
+    "tags": ["muay_thai", "kicker", "mma", distance_striker"],
     "notes": "Primes teep retraction speed",
     "equipment_note": "Wall for balance"
   },
@@ -203,7 +203,7 @@
     "phases": ["Taper"],
     "duration": "3x3 Granby pop-ups",
     "intensity": "Light explosiveness",
-    "tags": ["wrestling", "grappling"],
+    "tags": ["wrestling", "mma", grappling"],
     "notes": "Sharpens rolling explosiveness",
     "equipment_note": "BJJ mat"
   },
@@ -253,7 +253,7 @@
     "phases": ["Taper"],
     "duration": "4x3 switch-kick footwork pops",
     "intensity": "40% effort",
-    "tags": ["kickboxing", "kicker"],
+    "tags": ["kickboxing", "mma", kicker"],
     "notes": "Primes southpaw-orthodox kick transitions",
     "equipment_note": "Wall support"
   },
@@ -263,7 +263,7 @@
     "phases": ["Taper"],
     "duration": "3x4 sit-out to stand jumps",
     "intensity": "Light explosiveness",
-    "tags": ["grappling", "submission_hunter"],
+    "tags": ["grappling", "mma", submission_hunter"],
     "notes": "Maintains explosive stand-ups",
     "equipment_note": "Mat required"
   },
@@ -273,7 +273,7 @@
     "phases": ["Taper"],
     "duration": "3x5 shot-entry hops",
     "intensity": "50% distance",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma", "wrestler", grappler"],
     "notes": "Sharpens level-change timing",
     "equipment_note": "Mark 3ft target"
   },
@@ -283,7 +283,7 @@
     "phases": ["Taper"],
     "duration": "5x3 med ball body drops",
     "intensity": "60% power",
-    "tags": ["boxing", "brawler"],
+    "tags": ["boxing", "mma", brawler"],
     "notes": "Mimics body shot absorption/recovery",
     "equipment_note": "20lb ball to floor"
   },
@@ -303,7 +303,7 @@
     "phases": ["Taper"],
     "duration": "3x4 hip heist pops",
     "intensity": "Light explosiveness",
-    "tags": ["wrestling", "grappling"],
+    "tags": ["wrestling", "mma", grappling"],
     "notes": "Maintains mat return explosiveness",
     "equipment_note": "Mat required"
   },
@@ -338,22 +338,12 @@
     "equipment_note": "Mirror for form"
   },
   {
-    "name": "Pressure Fighter Stomp-Kick",
-    "equipment": ["Tire"],
-    "phases": ["Taper"],
-    "duration": "3x5 stomp-to-front kick",
-    "intensity": "50% power",
-    "tags": ["mma", "pressure_fighter"],
-    "notes": "Trains forward pressure combos",
-    "equipment_note": "200lb tire"
-  },
-  {
     "name": "Kicker Roundhouse Pop",
     "equipment": ["Bodyweight"],
     "phases": ["Taper"],
     "duration": "4x3 pivot hops",
     "intensity": "40% effort",
-    "tags": ["kickboxing", "kicker"],
+    "tags": ["kickboxing", "mma", kicker"],
     "notes": "Maintains kick torque mechanics",
     "equipment_note": "Wall support"
   },
@@ -363,7 +353,7 @@
     "phases": ["Taper"],
     "duration": "3x4 arm drag to jump",
     "intensity": "Light explosiveness",
-    "tags": ["grappling", "submission_hunter"],
+    "tags": ["grappling", "mma", submission_hunter"],
     "notes": "Sharpens explosive entries to subs",
     "equipment_note": "Mat required"
   },
@@ -373,7 +363,7 @@
     "phases": ["Taper"],
     "duration": "3x5 sprawl-to-spin jumps",
     "intensity": "40% rotation",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma"],
     "notes": "Trains TDD to back-take transitions",
     "equipment_note": "Open space"
   },
@@ -403,7 +393,7 @@
     "phases": ["Taper"],
     "duration": "3x4 knee cut drives",
     "intensity": "Light explosiveness",
-    "tags": ["wrestling", "grappling"],
+    "tags": ["wrestling", "mma", grappling"],
     "notes": "Sharpens guard pass entries",
     "equipment_note": "Mat required"
   },
@@ -463,17 +453,17 @@
     "phases": ["Taper"],
     "duration": "3x3 bridge to stand jumps",
     "intensity": "Light explosiveness",
-    "tags": ["grappling", "submission_hunter"],
+    "tags": ["grappling", "mma", submission_hunter"],
     "notes": "Sharpens explosive stand-ups from guard",
     "equipment_note": "Mat required"
   },
   {
-    "name": "Hybrid Shot-Jump",
+    "name": Shot-Jump",
     "equipment": ["Bodyweight"],
     "phases": ["Taper"],
     "duration": "3x5 shot to jump transitions",
     "intensity": "50% height",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma"],
     "notes": "Links takedowns to stand-up bursts",
     "equipment_note": "Mark 3ft target"
   }
