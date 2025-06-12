@@ -30,7 +30,7 @@
   "low_cns",
   "clinch",
   "muay_thai",
-  "wrestling",
+  "wrestler",
   "eccentric",
   "striking",
   "bjj",

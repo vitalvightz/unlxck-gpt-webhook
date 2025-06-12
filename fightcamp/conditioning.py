@@ -54,8 +54,8 @@ goal_tag_map = {
         "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
         "stability", "movement_quality", "range", "rehab_friendly"
     ],
-    "grappling": [
-        "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+    "grappler": [
+        "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
         "manual_resistance", "positioning"
     ],
     "striking": [
@@ -159,15 +159,22 @@ def generate_conditioning_block(flags):
     weak_tags = expand_tags(weaknesses, weakness_tag_map)
 
     style_map = {
-        "mma": "mma", "boxer": "boxing", "kickboxer": "kickboxing",
-        "muay thai": "muay_thai", "bjj": "mma", "wrestler": "mma",
-        "grappler": "mma", "karate": "kickboxing"
+        "mma": "mma",
+        "boxer": "boxing",
+        "kickboxer": "kickboxing",
+        "muay thai": "muay_thai",
+        "bjj": "mma",
+        "wrestler": "mma",
+        "wrestling": "wrestler",
+        "grappler": "mma",
+        "grappling": "grappler",
+        "karate": "kickboxing",
     }
     fight_format = style_map.get(technical, "mma")
     energy_weights = format_weights.get(fight_format, {})
 
     format_tag_map = {
-        "mma": ["mma", "bjj", "wrestling"],
+        "mma": ["mma", "bjj", "wrestler"],
         "boxing": ["boxing"],
         "kickboxing": ["kickboxing", "muay_thai"],
         "muay_thai": ["muay_thai"]

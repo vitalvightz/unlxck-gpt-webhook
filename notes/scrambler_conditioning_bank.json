@@ -7,7 +7,7 @@
     "modality": "live reaction",
     "duration": "3min rounds, 1min rest x 5",
     "intensity": "90% explosiveness",
-    "tags": ["scrambler", "mma", "wrestling", "grappling"],
+    "tags": ["scrambler", "mma", "wrestler", "grappler"],
     "notes": "Partner counters takedown – you must immediately transition to back control.",
     "equipment_note": "Use crash pads for throws"
   },
@@ -19,7 +19,7 @@
     "modality": "defensive scrambling",
     "duration": "10 sprawl → spin sequences, 5 rounds",
     "intensity": "Max speed",
-    "tags": ["scrambler", "mma", "wrestling"],
+    "tags": ["scrambler", "mma", "wrestler"],
     "notes": "Bands on hips to resist sprawl recovery.",
     "equipment_note": "Heavy bands only"
   },
@@ -55,7 +55,7 @@
     "modality": "failed shot recovery",
     "duration": "15 shot → roll sequences, 5 rounds",
     "intensity": "85% effort",
-    "tags": ["scrambler", "mma", "wrestling"],
+    "tags": ["scrambler", "mma", "wrestler"],
     "notes": "Emphasize smooth hip movement.",
     "equipment_note": "Use soft mats"
   },
@@ -67,13 +67,13 @@
     "modality": "explosive standups",
     "duration": "20 stand-ups/min, 4 rounds",
     "intensity": "Max explosion",
-    "tags": ["scrambler", "mma", "wrestling"],
+    "tags": ["scrambler", "mma", "wrestler"],
     "notes": "Bands around waist for resistance.",
     "equipment_note": "Partner applies light pressure"
   },
   {
     "name": "Submission to Sweep Chain",
-    "equipment": ["Grappling Dummy"],
+    "equipment": ["Grappler Dummy"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "transitional awareness",
@@ -91,7 +91,7 @@
     "modality": "live clinch work",
     "duration": "3min rounds, 1min rest x 5",
     "intensity": "90% effort",
-    "tags": ["scrambler", "mma", "muay_thai", "wrestling"],
+    "tags": ["scrambler", "mma", "muay_thai", "wrestler"],
     "notes": "Partner resists – you must chain takedowns.",
     "equipment_note": "Wear rash guards"
   },
@@ -115,7 +115,7 @@
     "modality": "mixed reactions",
     "duration": "3min rounds: 1-2 → shot, 1min rest x 4",
     "intensity": "85% speed",
-    "tags": ["scrambler", "mma", "striking", "wrestling"],
+    "tags": ["scrambler", "mma", "striking", "wrestler"],
     "notes": "Coach signals shot after random strikes.",
     "equipment_note": "MMA gloves on"
   },
@@ -139,7 +139,7 @@
     "modality": "defensive urgency",
     "duration": "15 escapes → 5 shots, 5 rounds",
     "intensity": "90% effort",
-    "tags": ["scrambler", "mma", "wrestling"],
+    "tags": ["scrambler", "mma", "wrestler"],
     "notes": "Partner starts in tight front headlock.",
     "equipment_note": "Sprawl shorts recommended"
   },
@@ -169,7 +169,7 @@
   },
   {
     "name": "Strike to Submission Chain",
-    "equipment": ["Punching Bag", "Grappling Dummy"],
+    "equipment": ["Punching Bag", "Grappler Dummy"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "hybrid transitions",
@@ -187,13 +187,13 @@
     "modality": "ground to stand",
     "duration": "10 granby rolls → 5 shots, 5 rounds",
     "intensity": "Explosive",
-    "tags": ["scrambler", "mma", "wrestling"],
+    "tags": ["scrambler", "mma", "wrestler"],
     "notes": "Partner provides light resistance.",
-    "equipment_note": "Wrestling shoes optional"
+    "equipment_note": "Wrestler shoes optional"
   },
   {
     "name": "Flying Sub Scramble",
-    "equipment": ["Grappling Dummy"],
+    "equipment": ["Grappler Dummy"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "aerial transitions",
@@ -235,7 +235,7 @@
     "modality": "live reaction",
     "duration": "10 standing backtakes, 5 rounds",
     "intensity": "85% control",
-    "tags": ["scrambler", "mma", "wrestling"],
+    "tags": ["scrambler", "mma", "wrestler"],
     "notes": "Partner defends first 3 seconds.",
     "equipment_note": "Rash guards recommended"
   }

@@ -504,7 +504,7 @@
       "SPP"
     ],
     "system": "Glycolytic",
-    "modality": "cage wrestling",
+    "modality": "cage wrestler",
     "duration": "20m sled push → 10 KB swings → x5 rounds",
     "intensity": "90% effort",
     "tags": [
@@ -543,7 +543,7 @@
       "SPP"
     ],
     "system": "Glycolytic",
-    "modality": "dirty grappling",
+    "modality": "dirty grappler",
     "duration": "30s bear hug carry → 10 knees → x6 rounds",
     "intensity": "Violent intent",
     "tags": [
@@ -786,7 +786,7 @@
       "brawler",
       "mma"
     ],
-    "notes": "Golden era catch wrestling conditioning",
+    "notes": "Golden era catch wrestler conditioning",
     "equipment_note": "95lb barbell, no gloves"
   },
   {
@@ -984,7 +984,7 @@
       "mma",
       "boxing"
     ],
-    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestling-based clinch.",
+    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch.",
     "equipment_note": "50-70lb sandbag"
   },
   {
@@ -1122,7 +1122,7 @@
       "clinch_fighter",
       "mma"
     ],
-    "notes": "Snatches mimic explosive head control adjustments for cage wrestling.",
+    "notes": "Snatches mimic explosive head control adjustments for cage wrestler.",
     "equipment_note": "16-24kg KB"
   },
   {
@@ -1343,7 +1343,7 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Develops late-round takedown defense from overhook positions.",
     "equipment_note": "Bands anchored at shoulder height"
@@ -2480,7 +2480,7 @@
   {
     "name": "Clinch Knee Devastation",
     "equipment": [
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -3114,7 +3114,7 @@
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Mimics cage cutting and wrestling recovery.",
+    "notes": "Mimics cage cutting and wrestler recovery.",
     "equipment_note": "Low sled for MMA posture"
   },
   {
@@ -3311,7 +3311,7 @@
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Simulates scrambles in grappling exchanges.",
+    "notes": "Simulates scrambles in grappler exchanges.",
     "equipment_note": "Concrete floor ideal"
   },
   {
@@ -3492,8 +3492,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling",
-      "grappling"
+      "wrestler",
+      "grappler"
     ],
     "notes": "Partner counters takedown – you must immediately transition to back control.",
     "equipment_note": "Use crash pads for throws"
@@ -3514,7 +3514,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Bands on hips to resist sprawl recovery.",
     "equipment_note": "Heavy bands only"
@@ -3575,7 +3575,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Emphasize smooth hip movement.",
     "equipment_note": "Use soft mats"
@@ -3596,7 +3596,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Bands around waist for resistance.",
     "equipment_note": "Partner applies light pressure"
@@ -3604,7 +3604,7 @@
   {
     "name": "Submission to Sweep Chain",
     "equipment": [
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -3637,7 +3637,7 @@
       "scrambler",
       "mma",
       "muay_thai",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Partner resists – you must chain takedowns.",
     "equipment_note": "Wear rash guards"
@@ -3679,7 +3679,7 @@
       "scrambler",
       "mma",
       "striking",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Coach signals shot after random strikes.",
     "equipment_note": "MMA gloves on"
@@ -3719,7 +3719,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Partner starts in tight front headlock.",
     "equipment_note": "Sprawl shorts recommended"
@@ -3770,7 +3770,7 @@
     "name": "Strike to Submission Chain",
     "equipment": [
       "Punching Bag",
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -3803,15 +3803,15 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Partner provides light resistance.",
-    "equipment_note": "Wrestling shoes optional"
+    "equipment_note": "Wrestler shoes optional"
   },
   {
     "name": "Flying Sub Scramble",
     "equipment": [
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -3883,7 +3883,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestling"
+      "wrestler"
     ],
     "notes": "Partner defends first 3 seconds.",
     "equipment_note": "Rash guards recommended"
@@ -3891,7 +3891,7 @@
   {
     "name": "Mat Shark",
     "equipment": [
-      "Grappling Dummy",
+      "Grappler Dummy",
       "Bands"
     ],
     "phases": [
@@ -3996,7 +3996,7 @@
   {
     "name": "Twister Protocol",
     "equipment": [
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -4138,7 +4138,7 @@
   {
     "name": "Peruvian Necktie Drill",
     "equipment": [
-      "Grappling Dummy",
+      "Grappler Dummy",
       "Bands"
     ],
     "phases": [
@@ -4280,7 +4280,7 @@
   {
     "name": "Ezekiel from Hell",
     "equipment": [
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -4380,7 +4380,7 @@
   {
     "name": "Japanese Necktie Drill",
     "equipment": [
-      "Grappling Dummy"
+      "Grappler Dummy"
     ],
     "phases": [
       "SPP"
@@ -4422,7 +4422,7 @@
     "equipment_note": "Bag should swing minimally."
   },
   {
-    "name": "Wall-Wrestling Pummel Rounds",
+    "name": "Wall-Wrestler Pummel Rounds",
     "equipment": ["wall", "mma gloves"],
     "phases": ["gpp"],
     "system": "glycolytic",
@@ -4479,7 +4479,7 @@
     "intensity": "high",
     "tags": ["mma", "scrambler"],
     "notes": "Sprawl, then spring up into 2 knees + 2 elbows.",
-    "equipment_note": "Use wrestling mat for knee protection."
+    "equipment_note": "Use wrestler mat for knee protection."
   },
   {
     "name": "Counter Striker's Shell Defense Drill",
@@ -4495,7 +4495,7 @@
   },
   {
     "name": "Submission Chain Fatigue Drill",
-    "equipment": ["grappling dummy"],
+    "equipment": ["grappler dummy"],
     "phases": ["gpp"],
     "system": "glycolytic",
     "modality": "interval",
@@ -4528,7 +4528,7 @@
     "intensity": "max",
     "tags": ["scrambler", "mma"],
     "notes": "Partner signals shot randomly. React with sprawl then immediate takedown.",
-    "equipment_note": "Use wrestling shoes if available."
+    "equipment_note": "Use wrestler shoes if available."
   },
   {
     "name": "Lateral Escape Plyo Pushoffs",
@@ -4612,7 +4612,7 @@
     "intensity": "max",
     "tags": ["mma", "scrambler", "wrestler"],
     "notes": "Sprawl, then explode into double-leg shot. Full recovery between reps.",
-    "equipment_note": "Use wrestling mat for knee protection."
+    "equipment_note": "Use wrestler mat for knee protection."
   },
   {
     "name": "Lateral Plyo Pushoffs",
@@ -4916,7 +4916,7 @@
   },
   {
     "name": "Ground-and-Pound Bursts",
-    "equipment": ["grappling dummy"],
+    "equipment": ["grappler dummy"],
     "phases": ["gpp"],
     "system": "atp-pcr",
     "modality": "strike",
@@ -5320,7 +5320,7 @@
     "intensity": "moderate",
     "tags": ["mma", "scrambler"],
     "notes": "Continuous hip escapes down mat length.",
-    "equipment_note": "Use wrestling shoes."
+    "equipment_note": "Use wrestler shoes."
   },
   {
     "name": "Distance Striker's Teep Maintenance",

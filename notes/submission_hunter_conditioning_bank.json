@@ -1,7 +1,7 @@
 [
   {
     "name": "Mat Shark",
-    "equipment": ["Grappling Dummy", "Bands"],
+    "equipment": ["Grappler Dummy", "Bands"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "transition chains",
@@ -61,7 +61,7 @@
   },
   {
     "name": "Twister Protocol",
-    "equipment": ["Grappling Dummy"],
+    "equipment": ["Grappler Dummy"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "back control",
@@ -145,7 +145,7 @@
   },
   {
     "name": "Peruvian Necktie Drill",
-    "equipment": ["Grappling Dummy", "Bands"],
+    "equipment": ["Grappler Dummy", "Bands"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "modality": "entry timing",
@@ -229,7 +229,7 @@
   },
   {
     "name": "Ezekiel from Hell",
-    "equipment": ["Grappling Dummy"],
+    "equipment": ["Grappler Dummy"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "sleeve control",
@@ -289,7 +289,7 @@
   },
   {
     "name": "Japanese Necktie Drill",
-    "equipment": ["Grappling Dummy"],
+    "equipment": ["Grappler Dummy"],
     "phases": ["SPP"],
     "system": "ATP-PCr",
     "modality": "angle creation",

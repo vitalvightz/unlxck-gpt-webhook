@@ -4,7 +4,7 @@ This document is a quick reference for the tags used throughout the fight camp b
 
 ## What Are Tags?
 
-Tags are short keywords attached to every drill or exercise. They describe what the movement trains (for example `core` or `explosive`) or who it suits (like `wrestling` or `muay_thai`). When the program builds your plan it looks at your goals, weaknesses and fighting style and then picks moves with the best matching tags.
+Tags are short keywords attached to every drill or exercise. They describe what the movement trains (for example `core` or `explosive`) or who it suits (like `wrestler` or `muay_thai`). When the program builds your plan it looks at your goals, weaknesses and fighting style and then picks moves with the best matching tags.
 
 Below is a list of all tags found in the banks. The descriptions are brief so you have a general idea of what each tag means.
 
@@ -18,7 +18,7 @@ Below is a list of all tags found in the banks. The descriptions are brief so yo
 - **arm_dominant** – general tag for arm dominant.
 - **athletic** – general tag for athletic.
 - **balance** – challenges balance.
-- **bjj** – grappling related.
+- **bjj** – grappler related.
 - **boxing** – striking specific.
 - **clinch** – general tag for clinch.
 - **cns_freshness** – general tag for cns freshness.
@@ -51,7 +51,7 @@ Below is a list of all tags found in the banks. The descriptions are brief so yo
 - **low_volume** – general tag for low volume.
 - **lunge_pattern** – general tag for lunge pattern.
 - **mental_toughness** – general tag for mental toughness.
-- **mma** – grappling related.
+- **mma** – grappler related.
 - **mobility** – improves joint mobility.
 - **muay_thai** – striking specific.
 - **overhead** – general tag for overhead.
@@ -82,7 +82,7 @@ Below is a list of all tags found in the banks. The descriptions are brief so yo
 - **upper_body** – upper body work.
 - **visual_processing** – trains eyes and coordination.
 - **work_capacity** – general tag for work capacity.
-- **wrestling** – grappling related.
+- **wrestler** – grappler related.
 - **zero_impact** – general tag for zero impact.
 
 ## Scoring Basics

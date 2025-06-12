@@ -45,7 +45,7 @@ GOAL_NORMALIZER = {
     "Posterior Chain": "posterior_chain",
     "Knees": "quad_dominant",
     "Neck": "neck",
-    "Grappling": "grappling",
+    "Grappler": "grappler",
     "Striking": "striking",
     "Injury Prevention": "injury_prevention",
     "Mental Resilience": "mental_resilience",
