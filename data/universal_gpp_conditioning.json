@@ -57,7 +57,7 @@
   {
     "phase": "GPP",
     "name": "Explosive Medicine Ball Throws",
-    "system": "Alactic",
+    "system": "ATP-PCr",
     "duration": "5–8 sets × 3–5 throws",
     "intensity": "Maximal power",
     "volume": "1–2x/week",
@@ -68,7 +68,7 @@
   {
     "phase": "GPP",
     "name": "Plyometric Depth Jumps",
-    "system": "Alactic",
+    "system": "ATP-PCr",
     "duration": "6–10 × 3–5 jumps",
     "intensity": "Maximal rebound",
     "volume": "1x/week",
@@ -79,7 +79,7 @@
   {
     "phase": "GPP",
     "name": "Band-Resisted Takedown Explosions",
-    "system": "Alactic",
+    "system": "ATP-PCr",
     "duration": "8–10 × 3–5s bursts",
     "intensity": "Max acceleration",
     "volume": "1–2x/week",
@@ -90,7 +90,7 @@
   {
     "phase": "GPP",
     "name": "Clap Push-Up Sprints",
-    "system": "Alactic",
+    "system": "ATP-PCr",
     "duration": "5–8 × 3–5 reps",
     "intensity": "Max velocity",
     "volume": "1x/week",
