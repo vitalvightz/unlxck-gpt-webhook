@@ -4,7 +4,7 @@ import json
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text())
 
-INJURY_TYPES = ["sprain", "strain", "tightness", "contusion", "swelling", "tendonitis", "impingement", "instability", "stiffness", "pain", "soreness", "unspecified"]
+INJURY_TYPES = ["sprain", "strain", "tightness", "contusion", "swelling", "tendonitis", "impingement", "instability", "stiffness", "pain", "soreness", "hyperextension", "unspecified"]
 RED_FLAG_TYPES = [
     "fracture",
     "rupture",
