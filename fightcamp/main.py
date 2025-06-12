@@ -264,18 +264,22 @@ async def handle_submission(request: Request):
             exercise_data=exercise_bank,
             current_phase="GPP",
         )
-    if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
-        spp_rehab_block = generate_rehab_protocols(
-            injury_string=injuries,
-            exercise_data=exercise_bank,
-            current_phase="SPP",
-        )
-    if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
-        taper_rehab_block = generate_rehab_protocols(
-            injury_string=injuries,
-            exercise_data=exercise_bank,
-            current_phase="TAPER",
-        )
+        if gpp_rehab_block.strip().startswith("**Red Flag Detected**"):
+            spp_rehab_block = gpp_rehab_block
+            taper_rehab_block = gpp_rehab_block
+    if not gpp_rehab_block.strip().startswith("**Red Flag Detected**"):
+        if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
+            spp_rehab_block = generate_rehab_protocols(
+                injury_string=injuries,
+                exercise_data=exercise_bank,
+                current_phase="SPP",
+            )
+        if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
+            taper_rehab_block = generate_rehab_protocols(
+                injury_string=injuries,
+                exercise_data=exercise_bank,
+                current_phase="TAPER",
+            )
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
         "GPP",
