@@ -1,0 +1,14 @@
+{
+  "knee": [
+    {"name": "Step-Up (Bodyweight)", "phases": ["GPP"]},
+    {"name": "Banded Lateral Walk", "phases": ["GPP", "TAPER"]}
+  ],
+  "shoulder": [
+    {"name": "Scapular Pull-Up", "phases": ["GPP"]},
+    {"name": "Wall Slide (Shoulder Mobility)", "phases": ["GPP"]}
+  ],
+  "lower back": [
+    {"name": "Deadbug (Band-Resisted)", "phases": ["GPP", "TAPER"]},
+    {"name": "Quadruped Rocking", "phases": ["GPP"]}
+  ]
+}

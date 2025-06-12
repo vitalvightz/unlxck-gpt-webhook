@@ -2,7 +2,6 @@ from pathlib import Path
 import json
 import ast
 import random
-from .injury_subs import injury_subs
 from .training_context import (
     normalize_equipment_list,
     known_equipment,
@@ -344,25 +343,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     if len(top_exercises) > target_exercises:
         top_exercises = top_exercises[:target_exercises]
 
-    def substitute_exercises(exercises, injuries_detected):
-        modified = []
-        for ex in exercises:
-            name = ex["name"]
-            replaced = False
-            for area, subs_list in injury_subs.items():
-                if area in injuries_detected:
-                    for sub_ex in subs_list:
-                        if any(keyword in name.lower() for keyword in sub_ex.lower().split()):
-                            modified.append({"name": sub_ex, "tags": ex["tags"]})
-                            replaced = True
-                            break
-                if replaced:
-                    break
-            if not replaced:
-                modified.append(ex)
-        return modified
-
-    base_exercises = substitute_exercises(top_exercises, injuries)
+    base_exercises = top_exercises
     # Final safety deduplication in case database contained repeats
     seen_exercises = set()
     base_exercises = [ex for ex in base_exercises if not (ex["name"] in seen_exercises or seen_exercises.add(ex["name"]))]

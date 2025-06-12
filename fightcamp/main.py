@@ -24,7 +24,7 @@ from .strength import generate_strength_block
 from .conditioning import generate_conditioning_block
 from .recovery import generate_recovery_block
 from .nutrition import generate_nutrition_block
-from .injury_subs import generate_injury_subs
+from .rehab_protocols import generate_rehab_protocols
 
 GOAL_NORMALIZER = {
     "Power & Explosiveness": "explosive",
@@ -254,13 +254,34 @@ async def handle_submission(request: Request):
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_cond_block, _ = generate_conditioning_block({**training_context, "phase": "TAPER"})
+
+    gpp_rehab_block = ""
+    spp_rehab_block = ""
+    taper_rehab_block = ""
+    if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
+        gpp_rehab_block = generate_rehab_protocols(
+            injury_string=injuries,
+            exercise_data=exercise_bank,
+            current_phase="GPP",
+        )
+    if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
+        spp_rehab_block = generate_rehab_protocols(
+            injury_string=injuries,
+            exercise_data=exercise_bank,
+            current_phase="SPP",
+        )
+    if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
+        taper_rehab_block = generate_rehab_protocols(
+            injury_string=injuries,
+            exercise_data=exercise_bank,
+            current_phase="TAPER",
+        )
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
         "GPP",
     )
     recovery_block = generate_recovery_block({**training_context, "phase": current_phase})
     nutrition_block = generate_nutrition_block(flags={**training_context, "phase": current_phase})
-    injury_sub_block = generate_injury_subs(injury_string=injuries, exercise_data=exercise_bank)
 
 
 # Mental Block Strategy Injection Per Phase
@@ -294,6 +315,9 @@ async def handle_submission(request: Request):
             "### Conditioning",
             gpp_cond_block,
             "",
+            "### Rehab",
+            gpp_rehab_block,
+            "",
         ]
         phase_num += 1
 
@@ -309,6 +333,9 @@ async def handle_submission(request: Request):
             "",
             "### Conditioning",
             spp_cond_block,
+            "",
+            "### Rehab",
+            spp_rehab_block,
             "",
         ]
         phase_num += 1
@@ -326,6 +353,9 @@ async def handle_submission(request: Request):
             "### Conditioning",
             taper_cond_block,
             "",
+            "### Rehab",
+            taper_rehab_block,
+            "",
         ]
 
     fight_plan_lines += [
@@ -334,9 +364,6 @@ async def handle_submission(request: Request):
         "",
         "## RECOVERY",
         recovery_block,
-        "",
-        "## INJURY SUBSTITUTIONS",
-        injury_sub_block,
         "",
         "## MINDSET OVERVIEW",
         f"Primary Block(s): {', '.join(training_context['mental_block']).title()}",
