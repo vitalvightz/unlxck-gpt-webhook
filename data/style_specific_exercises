@@ -16,7 +16,7 @@ style_specific_exercises = [
         "method": "strength",
         "movement": "wrist_extension",
         "type": "isolation",
-        "tags": ["grip", "forearm", "style_grappler", "style_wrestler"],
+        "tags": ["grip", "style_grappler", "style_wrestler"],
         "equipment": "wrist_roller"
     },
     {
