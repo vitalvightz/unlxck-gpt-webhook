@@ -324,6 +324,7 @@ def generate_conditioning_block(flags):
 
     final_drills = []
     taper_selected = 0
+    selected_counts = {"aerobic": 0, "glycolytic": 0, "alactic": 0}
 
     style_counts = {s: 0 for s in style_names}
 
@@ -395,18 +396,21 @@ def generate_conditioning_block(flags):
         d = blended_pick("alactic")
         if d:
             final_drills.append(("alactic", [d]))
+            selected_counts["alactic"] += 1
             taper_selected += 1
 
         if allow_aerobic and taper_selected < 2:
             d = blended_pick("aerobic")
             if d:
                 final_drills.append(("aerobic", [d]))
+                selected_counts["aerobic"] += 1
                 taper_selected += 1
 
         if allow_glycolytic and taper_selected < 2:
             d = blended_pick("glycolytic")
             if d:
                 final_drills.append(("glycolytic", [d]))
+                selected_counts["glycolytic"] += 1
                 taper_selected += 1
     else:
         for system in preferred_order:
@@ -418,18 +422,26 @@ def generate_conditioning_block(flags):
                 if not d:
                     break
                 final_drills.append((system, [d]))
+                selected_counts[system] += 1
                 quota -= 1
 
         remaining_slots = total_drills - len(selected_drill_names)
-        for system in preferred_order:
-            if remaining_slots <= 0:
+        deficits = {
+            s: max(0, system_quota.get(s, 0) - selected_counts.get(s, 0))
+            for s in system_quota
+        }
+        while remaining_slots > 0 and any(deficits.values()):
+            system = max(deficits, key=deficits.get)
+            if deficits[system] <= 0:
                 break
-            while remaining_slots > 0:
-                d = blended_pick(system)
-                if not d:
-                    break
-                final_drills.append((system, [d]))
-                remaining_slots -= 1
+            d = blended_pick(system)
+            if not d:
+                deficits[system] = 0
+                continue
+            final_drills.append((system, [d]))
+            selected_counts[system] += 1
+            deficits[system] = max(0, deficits[system] - 1)
+            remaining_slots -= 1
 
     # --------- UNIVERSAL CONDITIONING INSERTION ---------
     if phase == "GPP":
@@ -449,15 +461,17 @@ def generate_conditioning_block(flags):
             "Explosive Medicine Ball Throws",
         }
 
+        injected_target = 2
         injected = 0
         for drill in universal_conditioning:
-            if injected >= 3:
+            if injected >= injected_target:
                 break
             if drill.get("name") in existing_cond_names:
                 continue
+            system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
             drill_tags = set(drill.get("tags", []))
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
-                final_drills.append((drill.get("system", "misc"), [drill]))
+                final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
