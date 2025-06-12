@@ -5334,4 +5334,76 @@
     "notes": "1 teep every 10 seconds. Reset completely.",
     "equipment_note": "Mark optimal range on floor."
   }
+{
+  "name": "Shadow Flow Rounds",
+  "equipment": ["Bodyweight"],
+  "phases": ["SPP"],
+  "system": "Aerobic",
+  "modality": "technical endurance",
+  "duration": "3min shadowboxing → 1min rest → x5 rounds",
+  "intensity": "60-70% effort",
+  "tags": ["boxing", "counter_striker", "kickboxing"],
+  "notes": "Emphasize footwork pivots and defensive slips between combos",
+  "equipment_note": "Mirror for self-correction"
+}[
+  {
+    "name": "Rope Clinch Frames",
+    "equipment": ["Heavy Bag"],
+    "phases": ["SPP"],
+    "system": "Aerobic",
+    "modality": "fatigue resistance",
+    "duration": "30s rope lean → 30s active framing → x8 rounds",
+    "intensity": "RPE 5",
+    "tags": ["boxing", "clinch_fighter"],
+    "notes": "Simulates late-round clinch against ropes",
+    "equipment_note": "Bag must touch ropes/wall"
+  },
+  {
+    "name": "Referee Break Counters",
+    "equipment": ["Partner"],
+    "phases": ["SPP"],
+    "system": "Aerobic",
+    "modality": "rulebook exploitation",
+    "duration": "10s clinch → 2s break → immediate jab → x20 rounds",
+    "intensity": "50% speed",
+    "tags": ["boxing", "clinch_fighter"],
+    "notes": "Trains quick strikes after forced breaks",
+    "equipment_note": "Headgear for partner"
+  },
+  {
+    "name": "Overhook Uppercut Drill",
+    "equipment": ["Double-End Bag"],
+    "phases": ["SPP"],
+    "system": "Aerobic",
+    "modality": "infighting transitions",
+    "duration": "20s overhook control → 10s uppercuts → x10 rounds",
+    "intensity": "40% power",
+    "tags": ["boxing", "clinch_fighter"],
+    "notes": "Links framing to punch entries",
+    "equipment_note": "Low-hanging bag"
+  },
+  {
+    "name": "Corner Mauling Circuit",
+    "equipment": ["Punching Bag", "Wall"],
+    "phases": ["SPP"],
+    "system": "Aerobic",
+    "modality": "positional dominance",
+    "duration": "45s bag pinned to wall → 15s frame adjustments → x6 rounds",
+    "intensity": "RPE 4",
+    "tags": ["boxing", "clinch_fighter"],
+    "notes": "Conditions forearm stamina for corner control",
+    "equipment_note": "Angled bag required"
+  },
+  {
+    "name": "Slip-Clinch Reaction",
+    "equipment": ["Partner"],
+    "phases": ["SPP"],
+    "system": "Aerobic",
+    "modality": "defensive clinching",
+    "duration": "Partner jabs → slip → clinch → x50 reps",
+    "intensity": "30% speed",
+    "tags": ["boxing", "clinch_fighter"],
+    "notes": "Drills clinch as defensive response",
+    "equipment_note": "Focus mitts for partner"
+  }
 ]
