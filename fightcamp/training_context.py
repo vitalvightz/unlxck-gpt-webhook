@@ -74,7 +74,7 @@ def calculate_exercise_numbers(training_frequency: int, phase: str) -> dict:
     phase = phase.upper()
 
     strength_per_day = {"GPP": 7, "SPP": 6, "TAPER": 4}
-    conditioning_per_day = {"GPP": 4, "SPP": 3, "TAPER": 2}
+    conditioning_per_day = {"GPP": 4, "SPP": 3, "TAPER": 3}
 
     return {
         "strength": strength_per_day.get(phase, 0) * sessions.get("strength", 0),
