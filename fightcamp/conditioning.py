@@ -71,7 +71,7 @@ goal_tag_map = {
         "focus", "environmental", "pressure_tolerance"
     ],
     "skill_refinement": [
-        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed"
+        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
     ]
 }
 
@@ -506,6 +506,25 @@ def generate_conditioning_block(flags):
                 system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
+
+    # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
+    goal_set = {g.lower() for g in goals}
+    if "skill_refinement" in goal_set:
+        existing_names = {d.get("name") for _, drills in final_drills for d in drills}
+        skill_drills = [
+            d for d in style_conditioning_bank
+            if "skill_refinement" in {t.lower() for t in d.get("tags", [])}
+            and phase.upper() in d.get("phases", [])
+        ]
+        random.shuffle(skill_drills)
+        for drill in skill_drills:
+            if drill.get("name") not in existing_names:
+                system = SYSTEM_ALIASES.get(
+                    drill.get("system", "").lower(), drill.get("system", "misc")
+                )
+                final_drills.append((system, [drill]))
+                selected_drill_names.append(drill.get("name"))
+                break
 
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:
