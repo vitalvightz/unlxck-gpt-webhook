@@ -2214,7 +2214,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "cns_freshness"
+      "high_cns"
     ],
     "equipment": "open_space"
   },
@@ -2229,7 +2229,7 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "cns_freshness"
+      "high_cns"
     ],
     "equipment": "open_space"
   },
@@ -2258,7 +2258,7 @@
     "movement": "compound",
     "type": "bilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "explosive"
     ],
     "equipment": "box"
@@ -2273,7 +2273,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "hurdles"
@@ -2288,7 +2288,7 @@
     "movement": "sprint",
     "type": "bilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "open_space"
@@ -2303,7 +2303,7 @@
     "movement": "horizontal",
     "type": "unilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "explosive"
     ],
     "equipment": "open_space"
@@ -2318,7 +2318,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "bodyweight"
@@ -2334,7 +2334,7 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "cns_freshness"
+      "high_cns"
     ],
     "equipment": "open_space"
   },
@@ -2410,7 +2410,7 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "cns_freshness"
+      "high_cns"
     ],
     "equipment": "medicine_ball"
   },
@@ -2485,7 +2485,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "box"
@@ -2500,7 +2500,7 @@
     "movement": "vertical",
     "type": "unilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "hurdles"
@@ -2515,7 +2515,7 @@
     "movement": "vertical",
     "type": "bilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "explosive"
     ],
     "equipment": "box"
@@ -2530,7 +2530,7 @@
     "movement": "compound",
     "type": "unilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "agility_dots"
@@ -2545,7 +2545,7 @@
     "movement": "horizontal",
     "type": "unilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "bands"
@@ -2560,7 +2560,7 @@
     "movement": "compound",
     "type": "unilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "rate_of_force"
     ],
     "equipment": "bodyweight"
@@ -2575,7 +2575,7 @@
     "movement": "vertical",
     "type": "unilateral",
     "tags": [
-      "cns_freshness",
+      "high_cns",
       "reactive"
     ],
     "equipment": "bodyweight"

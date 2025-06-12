@@ -29,7 +29,7 @@
     "intensity": "Maximal sprint",
     "volume": "1–2x/week",
     "equipment": ["track", "field", "hill", "sled"],
-    "tags": ["explosive", "posterior_chain", "glycolytic", "acceleration", "conditioning", "cns_freshness"],
+    "tags": ["explosive", "posterior_chain", "glycolytic", "acceleration", "conditioning", "high_cns"],
     "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS."
   },
   {
@@ -73,7 +73,7 @@
     "intensity": "Maximal rebound",
     "volume": "1x/week",
     "equipment": ["plyo box"],
-    "tags": ["plyometric", "reactive", "posterior_chain", "elastic", "cns_freshness"],
+    "tags": ["plyometric", "reactive", "posterior_chain", "elastic", "high_cns"],
     "notes": "Drop-jump rebounds for ground reaction power. Critical for sprawls/shot defense. Rest 2min+ between sets."
   },
   {
