@@ -1,14 +1,191 @@
-{
-  "knee": [
-    {"name": "Step-Up (Bodyweight)", "phases": ["GPP"]},
-    {"name": "Banded Lateral Walk", "phases": ["GPP", "TAPER"]}
-  ],
-  "shoulder": [
-    {"name": "Scapular Pull-Up", "phases": ["GPP"]},
-    {"name": "Wall Slide (Shoulder Mobility)", "phases": ["GPP"]}
-  ],
-  "lower back": [
-    {"name": "Deadbug (Band-Resisted)", "phases": ["GPP", "TAPER"]},
-    {"name": "Quadruped Rocking", "phases": ["GPP"]}
-  ]
-}
+[
+  {
+    "location": "knee",
+    "type": "",
+    "phase": "GPP",
+    "name": "Step-Up (Bodyweight)",
+    "notes": ""
+  },
+  {
+    "location": "knee",
+    "type": "",
+    "phase": "GPP → TAPER",
+    "name": "Banded Lateral Walk",
+    "notes": ""
+  },
+  {
+    "location": "shoulder",
+    "type": "",
+    "phase": "GPP",
+    "name": "Scapular Pull-Up",
+    "notes": ""
+  },
+  {
+    "location": "shoulder",
+    "type": "",
+    "phase": "GPP",
+    "name": "Wall Slide (Shoulder Mobility)",
+    "notes": ""
+  },
+  {
+    "location": "lower back",
+    "type": "",
+    "phase": "GPP → TAPER",
+    "name": "Deadbug (Band-Resisted)",
+    "notes": ""
+  },
+  {
+    "location": "lower back",
+    "type": "",
+    "phase": "GPP",
+    "name": "Quadruped Rocking",
+    "notes": ""
+  },
+  {
+    "location": "ankle",
+    "type": "sprain",
+    "phase": "GPP",
+    "name": "Banded Ankle Inversions",
+    "notes": "Restore active range with low-load movement"
+  },
+  {
+    "location": "ankle",
+    "type": "sprain",
+    "phase": "GPP → SPP",
+    "name": "Single-Leg Balance on Foam Pad",
+    "notes": "GPP: Rebuild basic ankle stability → SPP: Advance to dynamic balance under fatigue"
+  },
+  {
+    "location": "toe",
+    "type": "hyperextension",
+    "phase": "GPP → SPP",
+    "name": "Towel Scrunches (Toe Curls)",
+    "notes": "GPP: Activate toe flexors and arch → SPP: Add resistance or longer holds for strength"
+  },
+  {
+    "location": "toe",
+    "type": "sprain",
+    "phase": "SPP → TAPER",
+    "name": "Double-Leg Pogo Jumps",
+    "notes": "SPP: Rebuild spring through toe-off → TAPER: Maintain stiffness without fatigue"
+  },
+  {
+    "location": "foot",
+    "type": "metatarsal pain",
+    "phase": "GPP → SPP",
+    "name": "Short Foot Doming",
+    "notes": "GPP: Relearn foot activation → SPP: Apply to single-leg or loaded stances"
+  },
+  {
+    "location": "foot",
+    "type": "plantar fasciitis",
+    "phase": "GPP → SPP → TAPER",
+    "name": "Knee-Locked Calf Stretch",
+    "notes": "GPP: Reduce fascia tightness → SPP: Maintain range under load → TAPER: Keep mobility without CNS stress"
+  },
+  {
+    "location": "heel",
+    "type": "bruise",
+    "phase": "GPP",
+    "name": "Heel Taps on Soft Mat",
+    "notes": "GPP: Reintroduce heel contact and tolerance"
+  },
+  {
+    "location": "heel",
+    "type": "plantar fasciitis",
+    "phase": "SPP",
+    "name": "Toe-Elevated Calf Raises",
+    "notes": "SPP: Build fascia strength with loaded stretch"
+  },
+  {
+    "location": "heel",
+    "type": "swelling",
+    "phase": "TAPER",
+    "name": "Wall Calf Stretch (Straight Leg)",
+    "notes": "TAPER: Flush tension and swelling without load"
+  },
+  {
+    "location": "foot",
+    "type": "instability",
+    "phase": "SPP → TAPER",
+    "name": "Single-Leg RDL with Reach",
+    "notes": "SPP: Test control under movement → TAPER: Maintain balance skill under deload"
+  },
+  {
+    "location": "foot",
+    "type": "tightness",
+    "phase": "GPP → TAPER",
+    "name": "Toe Spreading with Resistance Band",
+    "notes": "GPP: Restore mid-foot mobility → TAPER: Maintain range before comp"
+  },
+  {
+    "location": "foot",
+    "type": "soreness",
+    "phase": "TAPER",
+    "name": "Foot Massage with Lacrosse Ball",
+    "notes": "TAPER: Reduce DOMS and keep blood flow in taper week"
+  },
+  {
+    "location": "ankle",
+    "type": "impingement",
+    "phase": "GPP → SPP",
+    "name": "Banded Ankle Distraction",
+    "notes": "GPP: Open anterior joint space → SPP: Maintain pain-free dorsiflexion under load"
+  },
+  {
+    "location": "ankle",
+    "type": "tightness",
+    "phase": "SPP → TAPER",
+    "name": "Loaded Dorsiflexion Rocks (Barbell Front Foot)",
+    "notes": "SPP: Build loaded range into ankle → TAPER: Preserve joint glide under low fatigue"
+  },
+  {
+    "location": "ankle",
+    "type": "swelling",
+    "phase": "TAPER",
+    "name": "Elevated Ankle Pumps",
+    "notes": "TAPER: Pump fluid and reduce ankle pressure"
+  },
+  {
+    "location": "toe",
+    "type": "stiffness",
+    "phase": "GPP → TAPER",
+    "name": "Toe CARs (Controlled Articular Rotations)",
+    "notes": "GPP: Restore capsule control → TAPER: Maintain joint health pre-fight"
+  },
+  {
+    "location": "toe",
+    "type": "pain",
+    "phase": "SPP → TAPER",
+    "name": "Isometric Big Toe Press into Ground",
+    "notes": "SPP: Tolerate load without movement → TAPER: Sustain tension with no added strain"
+  },
+  {
+    "location": "toe",
+    "type": "strain",
+    "phase": "GPP → SPP",
+    "name": "Toe Towel Slides (Loaded Variant)",
+    "notes": "GPP: Restore toe flexor range → SPP: Add resistance and control"
+  },
+  {
+    "location": "toe",
+    "type": "tightness",
+    "phase": "TAPER",
+    "name": "Toe Extensor Stretch (Wall Dorsiflex)",
+    "notes": "TAPER: Downregulate tension across toe and dorsal foot"
+  },
+  {
+    "location": "ankle",
+    "type": "instability",
+    "phase": "SPP → TAPER",
+    "name": "Lateral Hop-Stick Drill",
+    "notes": "SPP: Develop reactive ankle control → TAPER: Sharpen footwork under deload"
+  },
+  {
+    "location": "foot",
+    "type": "strain",
+    "phase": "GPP → SPP",
+    "name": "Resisted Toe Pulls with Band",
+    "notes": "GPP: Isolate toe flexors → SPP: Integrate into push-off strength"
+  }
+]
