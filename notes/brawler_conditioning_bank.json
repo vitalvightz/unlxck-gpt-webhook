@@ -303,7 +303,7 @@
     "equipment": ["Sled", "Kettlebell"],
     "phases": ["SPP"],
     "system": "Glycolytic",
-    "modality": "cage wrestling",
+    "modality": "cage wrestler",
     "duration": "20m sled push → 10 KB swings → x5 rounds",
     "intensity": "90% effort",
     "tags": ["brawler", "mma"],
@@ -327,7 +327,7 @@
     "equipment": ["Sandbag"],
     "phases": ["SPP"],
     "system": "Glycolytic",
-    "modality": "dirty grappling",
+    "modality": "dirty grappler",
     "duration": "30s bear hug carry → 10 knees → x6 rounds",
     "intensity": "Violent intent",
     "tags": ["brawler", "mma"],
@@ -475,7 +475,7 @@
     "duration": "20min: 5 cleans → 5 push presses → 5 squats",
     "intensity": "60% 1RM",
     "tags": ["brawler", "mma"],
-    "notes": "Golden era catch wrestling conditioning",
+    "notes": "Golden era catch wrestler conditioning",
     "equipment_note": "95lb barbell, no gloves"
   },
   {

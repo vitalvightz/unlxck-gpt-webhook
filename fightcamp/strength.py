@@ -168,8 +168,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
             "stability", "movement_quality", "range", "rehab_friendly"
         ],
-        "grappling": [
-            "wrestling", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+        "grappler": [
+            "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
             "manual_resistance", "positioning"
         ],
         "striking": [

@@ -181,7 +181,7 @@
   },
   {
     "name": "Clinch Knee Devastation",
-    "equipment": ["Grappling Dummy"],
+    "equipment": ["Grappler Dummy"],
     "phases": ["SPP"],
     "system": "Glycolytic",
     "modality": "muay thai clinch",

@@ -6,7 +6,7 @@ style_specific_exercises = [
         "method": "strength",
         "movement": "static_hold",
         "type": "isometric",
-        "tags": ["grip", "wrestling", "bjj", "style_grappler", "style_wrestler"],
+        "tags": ["grip", "wrestler", "bjj", "style_grappler", "style_wrestler"],
         "equipment": "plates"
     },
     {

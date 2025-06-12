@@ -61,7 +61,7 @@
     "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
-    "modality": "grappling",
+    "modality": "grappler",
     "duration": "5x4min w/30s rest",
     "intensity": "high",
     "tags": ["grip", "core", "conditioning"],
@@ -497,7 +497,7 @@
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "5x30s max reps, 90s rest",
-    "tags": ["wrestling", "eccentric"],
+    "tags": ["wrestler", "eccentric"],
     "notes": "POSTERIOR CHAIN: 72h after deadlifts. GPP: Limit to 3 sets"
   },
   {
@@ -510,7 +510,7 @@
     "notes": "SHOULDER RECOVERY: Reduce volume if bench press >85% 1RM that week"
   },
   {
-    "name": "Grappling Escape Chains",
+    "name": "Grappler Escape Chains",
     "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
@@ -614,7 +614,7 @@
     "notes": "HAMSTRING ALERT: Replace with bike sprints if tight. GRADE: 15-20% incline"
   },
   {
-    "name": "Wrestling Shot Series",
+    "name": "Wrestler Shot Series",
     "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
@@ -769,7 +769,7 @@
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "10x20s max reps, 40s rest",
-    "tags": ["wrestling", "eccentric"],
+    "tags": ["wrestler", "eccentric"],
     "notes": "QUAD LOAD: Must pass bodyweight squat depth test first"
   },
   {
@@ -872,12 +872,12 @@
     "notes": "SIMULATION: Begin rounds already at 70% fatigue"
   },
   {
-    "name": "Wrestling Chain Reaction Sparring",
+    "name": "Wrestler Chain Reaction Sparring",
     "equipment": [],
     "phases": ["SPP"],
     "system": "glycolytic",
     "duration": "8x90s (live transitions)",
-    "tags": ["wrestling", "reactive"],
+    "tags": ["wrestler", "reactive"],
     "notes": "PARTNER REQUIRED: Switch attacker/defender every round"
   },
   {
@@ -1165,7 +1165,7 @@
   "equipment": [],
   "phases": ["GPP"],
   "system": "glycolytic",
-  "modality": "wrestling",
+  "modality": "wrestler",
   "duration": "8x20s on/1:40 off",
   "intensity": "RPE 8",
   "tags": ["eccentric", "reactive"],
@@ -1290,7 +1290,7 @@
   "equipment": [],
   "phases": ["GPP"],
   "system": "glycolytic",
-  "modality": "grappling",
+  "modality": "grappler",
   "duration": "5x45s on/1:15 off",
   "intensity": "RPE 8",
   "tags": ["grip", "reactive"],
@@ -1555,7 +1555,7 @@
     "equipment": ["Partner"],
     "phases": ["SPP"],
     "system": "aerobic",
-    "modality": "grappling",
+    "modality": "grappler",
     "duration": "20min continuous",
     "intensity": "30% effort",
     "tags": ["aerobic", "bjj", "recovery", "transition"],
@@ -1573,14 +1573,14 @@
     "notes": "Emphasize angles, not explosiveness"
   },
   {
-    "name": "Wrestling Chain Drills (50% Effort)",
+    "name": "Wrestler Chain Drills (50% Effort)",
     "equipment": ["Partner"],
     "phases": ["SPP"],
     "system": "aerobic",
-    "modality": "wrestling",
+    "modality": "wrestler",
     "duration": "15min continuous",
     "intensity": "low",
-    "tags": ["aerobic", "wrestling", "transition", "skill"],
+    "tags": ["aerobic", "wrestler", "transition", "skill"],
     "notes": "No resistance; technique only"
   },
   {
