@@ -1,4 +1,4 @@
-from .rehab_protocols import REHAB_BANK
+from .rehab_protocols import REHAB_BANK, INJURY_SUPPORT_NOTES
 from .injury_synonyms import (
     parse_injury_phrase,
     canonicalize_location,
@@ -101,14 +101,24 @@ def generate_recovery_block(training_context: dict) -> str:
         "- Mobility circuits/light recovery work daily"
     ]
 
+    injuries = training_context.get("injuries", [])
     injury_drills = _fetch_injury_drills(
-        training_context.get("injuries", []),
+        injuries,
         training_context.get("injury_location", ""),
         phase,
     )
     if injury_drills:
         recovery_block.append("\n**Injury-Specific Drills:**")
         recovery_block += [f"- {d}" for d in injury_drills]
+
+    # Add injury-specific support tips
+    done_types = set()
+    for desc in injuries:
+        itype, _ = parse_injury_phrase(desc)
+        if itype and itype in INJURY_SUPPORT_NOTES and itype not in done_types:
+            done_types.add(itype)
+            recovery_block.append(f"\n**{itype.title()} Support Notes:**")
+            recovery_block += [f"- {t}" for t in INJURY_SUPPORT_NOTES[itype]]
 
     # Age-based Adjustments
     if age_risk:
