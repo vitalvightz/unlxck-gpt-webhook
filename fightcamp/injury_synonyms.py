@@ -205,5 +205,43 @@ LOCATION_MAP = {
     "eye": "eye",
     "cheek": "face",
     "cheeks": "face",
-    "cheekbone": "face",
+"cheekbone": "face",
 }
+
+
+def canonicalize_injury_type(text: str) -> str | None:
+    """Return the canonical injury type for the given text.
+
+    The function searches ``INJURY_SYNONYM_MAP`` for any phrase found in
+    ``text`` and returns the corresponding key. If no match is found the
+    function returns ``None``.
+    """
+    text = text.lower()
+    for canonical, synonyms in INJURY_SYNONYM_MAP.items():
+        if canonical in text:
+            return canonical
+        for phrase in synonyms:
+            if phrase in text:
+                return canonical
+    return None
+
+
+def canonicalize_location(text: str) -> str | None:
+    """Return the canonical body part for the provided text.
+
+    ``LOCATION_MAP`` holds a mapping of keywords to the bank location. The
+    function searches the input text for those keywords and returns the
+    matching location. If no match is found ``None`` is returned.
+    """
+    text = text.lower()
+    for key, canonical in LOCATION_MAP.items():
+        if key in text:
+            return canonical
+    return None
+
+
+def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
+    """Extract canonical injury type and location from an injury phrase."""
+    injury_type = canonicalize_injury_type(phrase)
+    location = canonicalize_location(phrase)
+    return injury_type, location
