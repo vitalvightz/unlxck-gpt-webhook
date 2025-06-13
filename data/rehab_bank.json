@@ -46,7 +46,7 @@
   },
   {
     "location": "foot",
-    "type": "metatarsal pain",
+    "type": "pain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -61,7 +61,7 @@
   },
   {
     "location": "foot",
-    "type": "plantar fasciitis",
+    "type": "tendonitis",
     "phase_progression": "GPP → SPP → TAPER",
     "drills": [
       {
@@ -76,7 +76,7 @@
   },
   {
     "location": "heel",
-    "type": "bruise",
+    "type": "contusion",
     "phase_progression": "GPP",
     "drills": [
       {
@@ -91,7 +91,7 @@
   },
   {
     "location": "heel",
-    "type": "plantar fasciitis",
+    "type": "tendonitis",
     "phase_progression": "SPP",
     "drills": [
       {
@@ -301,7 +301,7 @@
   },
   {
     "location": "shin",
-    "type": "splints",
+    "type": "tendonitis",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -361,7 +361,7 @@
   },
   {
     "location": "shin",
-    "type": "bruising",
+    "type": "contusion",
     "phase_progression": "GPP",
     "drills": [
       {
@@ -406,7 +406,7 @@
   },
   {
     "location": "calf",
-    "type": "cramp",
+    "type": "strain",
     "phase_progression": "SPP → TAPER",
     "drills": [
       {
@@ -451,7 +451,7 @@
   },
   {
     "location": "knee",
-    "type": "patellar pain",
+    "type": "pain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -481,7 +481,7 @@
   },
   {
     "location": "knee",
-    "type": "meniscus sprain",
+    "type": "strain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -496,7 +496,7 @@
   },
   {
     "location": "knee",
-    "type": "MCL sprain",
+    "type": "strain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -526,7 +526,7 @@
   },
   {
     "location": "shin",
-    "type": "splints",
+    "type": "tendonitis",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -586,7 +586,7 @@
   },
   {
     "location": "shin",
-    "type": "bruising",
+    "type": "contusion",
     "phase_progression": "GPP",
     "drills": [
       {
@@ -631,7 +631,7 @@
   },
   {
     "location": "calf",
-    "type": "cramp",
+    "type": "strain",
     "phase_progression": "SPP → TAPER",
     "drills": [
       {
@@ -676,7 +676,7 @@
   },
   {
     "location": "knee",
-    "type": "patellar pain",
+    "type": "pain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -706,7 +706,7 @@
   },
   {
     "location": "knee",
-    "type": "meniscus sprain",
+    "type": "strain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -721,7 +721,7 @@
   },
   {
     "location": "knee",
-    "type": "MCL sprain",
+    "type": "strain",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -871,7 +871,7 @@
   },
   {
     "location": "glutes",
-    "type": "weakness",
+    "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -961,7 +961,7 @@
   },
   {
     "location": "quads",
-    "type": "bruising",
+    "type": "contusion",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -1036,7 +1036,7 @@
   },
   {
     "location": "hamstrings",
-    "type": "weakness",
+    "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -1411,1055 +1411,1055 @@
   },
   {
     "location": "core",
-  "type": "strain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Dead Bug with Band Resistance",
-      "notes": "GPP: Reinforce bracing under low tension → SPP: Add speed or overhead band angle"
-    },
-    {
-      "name": "Forearm Plank – Eccentric Reaches",
-      "notes": "GPP: Build tension under control → SPP: Increase time under tension or add movement"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "tightness",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Cat-Cow Pelvic Tilts",
-      "notes": "GPP: Improve anterior-posterior control → TAPER: Use as warmup to downregulate tone"
-    },
-    {
-      "name": "Massage Gun – Abdominals Sweep",
-      "notes": "GPP: Release fascial tightness → TAPER: Use 30s pulse pre-sparring"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "pain",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Isometric Hollow Hold",
-      "notes": "SPP: Maximize midline tension → TAPER: Short holds to maintain readiness"
-    },
-    {
-      "name": "Glute Bridge March (Heel Loaded)",
-      "notes": "SPP: Support lumbar offload → TAPER: Retain cross-chain firing"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "instability",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Dead Bug – Anti-Rotation Focus",
-      "notes": "GPP: Reinforce unilateral control → SPP: Progress to cable or band offset load"
-    },
-    {
-      "name": "Side Plank with Reach Under",
-      "notes": "GPP: Add rotation safely → SPP: Control twist under fatigue"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "soreness",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Belly Breathing + 90/90 Reset",
-      "notes": "TAPER: Reduce trunk tone → Improve diaphragm/core synergy"
-    },
-    {
-      "name": "Massage Gun – Diagonal Core Sweep",
-      "notes": "TAPER: Use short blasts across oblique chain"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "bruising",
-  "phase_progression": "GPP",
-  "drills": [
-    {
-      "name": "Wall Breathing + Arm Reach",
-      "notes": "GPP: Maintain deep core activity with minimal pressure"
-    },
-    {
-      "name": "Lacrosse Ball – Ab Wall Desensitization",
-      "notes": "GPP: Light contact to rebuild tolerance"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "fatigue",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Banded Anti-Extension Pressouts",
-      "notes": "SPP: Reinforce trunk under fatigue → TAPER: Use short sets to keep tension sharp"
-    },
-    {
-      "name": "Bird Dog Reaches",
-      "notes": "SPP: Control midline with breath → TAPER: Integrate pre-drill for trunk priming"
-    }
-  ]
-},
-{
-  "location": "core",
-  "type": "post-surgery",
-  "phase_progression": "GPP",
-  "drills": [
-    {
-      "name": "Supine Breathing with Band Pull-Apart",
-      "notes": "GPP: Reconnect neuromuscular control with breath"
-    },
-    {
-      "name": "Wall Dead Bug Iso-Hold",
-      "notes": "GPP: Maintain tension with joint safety"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "strain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Side Plank with Band Row",
-      "notes": "GPP: Light tension control → SPP: Add rotation and longer holds"
-    },
-    {
-      "name": "Rotational Med Ball Toss (Seated)",
-      "notes": "GPP: Start low-impact → SPP: Progress to standing power variation"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "tightness",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Standing Side Stretch",
-      "notes": "GPP: Regain side-chain length → TAPER: Maintain mobility pre-fight"
-    },
-    {
-      "name": "Massage Gun – External Obliques Sweep",
-      "notes": "GPP: Release superficial tension → TAPER: Fast glide post-training"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "pain",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Isometric Side Plank – Short Repeats",
-      "notes": "SPP: Maintain engagement under control → TAPER: Preserve tone with low volume"
-    },
-    {
-      "name": "Pallof Press (Light Band)",
-      "notes": "SPP: Reinforce anti-rotation → TAPER: Keep transverse activation sharp"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "instability",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Kneeling Pallof ISO",
-      "notes": "GPP: Build control → SPP: Add split stance or arm drive"
-    },
-    {
-      "name": "Side Dead Bug (Offset Load)",
-      "notes": "GPP: Train side dominance → SPP: Progress toward power drills"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "soreness",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Crocodile Breathing",
-      "notes": "TAPER: Reduce lateral wall tone"
-    },
-    {
-      "name": "Ball Rolling on Oblique Chain",
-      "notes": "TAPER: Gentle tissue flush to improve comfort"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "stiffness",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Side Bridge with Top Leg Lift",
-      "notes": "SPP: Add complexity → TAPER: Reduce hold time, keep activation"
-    },
-    {
-      "name": "Seated Banded Twists",
-      "notes": "SPP: Train low-velocity control → TAPER: Use quick sets pre-workout"
-    }
-  ]
-},
-{
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug with Band Resistance",
+        "notes": "GPP: Reinforce bracing under low tension → SPP: Add speed or overhead band angle"
+      },
+      {
+        "name": "Forearm Plank – Eccentric Reaches",
+        "notes": "GPP: Build tension under control → SPP: Increase time under tension or add movement"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Cat-Cow Pelvic Tilts",
+        "notes": "GPP: Improve anterior-posterior control → TAPER: Use as warmup to downregulate tone"
+      },
+      {
+        "name": "Massage Gun – Abdominals Sweep",
+        "notes": "GPP: Release fascial tightness → TAPER: Use 30s pulse pre-sparring"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Hollow Hold",
+        "notes": "SPP: Maximize midline tension → TAPER: Short holds to maintain readiness"
+      },
+      {
+        "name": "Glute Bridge March (Heel Loaded)",
+        "notes": "SPP: Support lumbar offload → TAPER: Retain cross-chain firing"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug – Anti-Rotation Focus",
+        "notes": "GPP: Reinforce unilateral control → SPP: Progress to cable or band offset load"
+      },
+      {
+        "name": "Side Plank with Reach Under",
+        "notes": "GPP: Add rotation safely → SPP: Control twist under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Belly Breathing + 90/90 Reset",
+        "notes": "TAPER: Reduce trunk tone → Improve diaphragm/core synergy"
+      },
+      {
+        "name": "Massage Gun – Diagonal Core Sweep",
+        "notes": "TAPER: Use short blasts across oblique chain"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "contusion",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Wall Breathing + Arm Reach",
+        "notes": "GPP: Maintain deep core activity with minimal pressure"
+      },
+      {
+        "name": "Lacrosse Ball – Ab Wall Desensitization",
+        "notes": "GPP: Light contact to rebuild tolerance"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "soreness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Banded Anti-Extension Pressouts",
+        "notes": "SPP: Reinforce trunk under fatigue → TAPER: Use short sets to keep tension sharp"
+      },
+      {
+        "name": "Bird Dog Reaches",
+        "notes": "SPP: Control midline with breath → TAPER: Integrate pre-drill for trunk priming"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Supine Breathing with Band Pull-Apart",
+        "notes": "GPP: Reconnect neuromuscular control with breath"
+      },
+      {
+        "name": "Wall Dead Bug Iso-Hold",
+        "notes": "GPP: Maintain tension with joint safety"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Side Plank with Band Row",
+        "notes": "GPP: Light tension control → SPP: Add rotation and longer holds"
+      },
+      {
+        "name": "Rotational Med Ball Toss (Seated)",
+        "notes": "GPP: Start low-impact → SPP: Progress to standing power variation"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Standing Side Stretch",
+        "notes": "GPP: Regain side-chain length → TAPER: Maintain mobility pre-fight"
+      },
+      {
+        "name": "Massage Gun – External Obliques Sweep",
+        "notes": "GPP: Release superficial tension → TAPER: Fast glide post-training"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Side Plank – Short Repeats",
+        "notes": "SPP: Maintain engagement under control → TAPER: Preserve tone with low volume"
+      },
+      {
+        "name": "Pallof Press (Light Band)",
+        "notes": "SPP: Reinforce anti-rotation → TAPER: Keep transverse activation sharp"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Kneeling Pallof ISO",
+        "notes": "GPP: Build control → SPP: Add split stance or arm drive"
+      },
+      {
+        "name": "Side Dead Bug (Offset Load)",
+        "notes": "GPP: Train side dominance → SPP: Progress toward power drills"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Crocodile Breathing",
+        "notes": "TAPER: Reduce lateral wall tone"
+      },
+      {
+        "name": "Ball Rolling on Oblique Chain",
+        "notes": "TAPER: Gentle tissue flush to improve comfort"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Side Bridge with Top Leg Lift",
+        "notes": "SPP: Add complexity → TAPER: Reduce hold time, keep activation"
+      },
+      {
+        "name": "Seated Banded Twists",
+        "notes": "SPP: Train low-velocity control → TAPER: Use quick sets pre-workout"
+      }
+    ]
+  },
+  {
     "location": "lower back",
-  "type": "tightness",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Child’s Pose with Side Reach",
-      "notes": "GPP: Decompress posterior chain → TAPER: Light reset between drills"
-    },
-    {
-      "name": "Massage Gun – Lumbar Sweep",
-      "notes": "GPP: Reduce deep fascial tension → TAPER: 30s pre-bed or post-sparring"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "strain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Glute Bridge Walkout",
-      "notes": "GPP: Train trunk support via glutes → SPP: Add tempo for endurance"
-    },
-    {
-      "name": "Quadruped Rock Backs",
-      "notes": "GPP: Explore safe range → SPP: Add band tension or pause"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "instability",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Bird Dog with Band Tension",
-      "notes": "SPP: Add reactive core control → TAPER: Short reps, tight form"
-    },
-    {
-      "name": "Side Plank + Hip Taps",
-      "notes": "SPP: Control frontal plane → TAPER: Maintain side-chain coordination"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "pain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Supine 90/90 Breathing",
-      "notes": "GPP: Reduce spinal tone → SPP: Integrate with trunk movement"
-    },
-    {
-      "name": "Wall Dead Bug with Iso Hold",
-      "notes": "GPP: Teach bracing → SPP: Extend hold or add band reach"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "soreness",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Foam Roller Sweep – Lumbar",
-      "notes": "TAPER: Restore blood flow without CNS load"
-    },
-    {
-      "name": "Wall Sit with Neutral Pelvis",
-      "notes": "TAPER: Maintain posture while letting soreness downregulate"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "pain",
-  "phase_progression": "GPP",
-  "drills": [
-    {
-      "name": "Supine Pelvic Tilts",
-      "notes": "GPP: Reintroduce control with no load"
-    },
-    {
-      "name": "Bird Dog (Hold Only)",
-      "notes": "GPP: Low-stress spinal engagement"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "stiff",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Glute Wall Press (Iso)",
-      "notes": "SPP: Rebuild posterior chain → TAPER: Prime activation"
-    },
-    {
-      "name": "Standing Band Pull-Throughs",
-      "notes": "SPP: Load hip hinge → TAPER: Keep low volume"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "soreness",
-  "phase_progression": "GPP",
-  "drills": [
-    {
-      "name": "Wall Support March",
-      "notes": "GPP: Control spinal rhythm during step pattern"
-    },
-    {
-      "name": "90/90 Hip Lift + Breathing",
-      "notes": "GPP: Reactivate core-trunk link safely"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "strain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Side Plank with Reach Under",
-      "notes": "GPP: Rebuild trunk rotation → SPP: Add tempo or load"
-    },
-    {
-      "name": "Dead Bug with Banded Chop",
-      "notes": "GPP: Train oblique tension → SPP: Add anti-rotation complexity"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "tightness",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Side-Lying Open Book Stretch",
-      "notes": "GPP: Restore side-line rotation → TAPER: Use as cooldown reset"
-    },
-    {
-      "name": "Massage Gun Sweep (Oblique Ridge)",
-      "notes": "GPP: Break up fascial tension → TAPER: Quick flush pre-spar"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "soreness",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Standing Side Bends (Bodyweight)",
-      "notes": "TAPER: Mobilize trunk gently without added strain"
-    },
-    {
-      "name": "Wall Slide Iso (Side Hold)",
-      "notes": "TAPER: Light activation for postural balance"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "stiffness",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Seated Lateral Flexion Holds",
-      "notes": "GPP: Restore lateral range → SPP: Increase hold duration under band load"
-    },
-    {
-      "name": "Banded Lateral Step + Trunk Rotation",
-      "notes": "GPP: Reintegrate motion pattern → SPP: Load diagonal plane safely"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "strain",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Half-Kneeling Cable Chop",
-      "notes": "SPP: Controlled explosive rotation → TAPER: Lighter resistance for speed"
-    },
-    {
-      "name": "Rotational Med Ball Toss (Wall)",
-      "notes": "SPP: Dynamic force output → TAPER: Focus on sharpness, low fatigue"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "tightness",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Foam Roll – Oblique Line",
-      "notes": "GPP: Target fascial knots → SPP: Maintain mobility with control"
-    },
-    {
-      "name": "Side Plank March",
-      "notes": "GPP: Reset pelvic control → SPP: Advance to dynamic marching"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "pain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Isometric Side Plank on Elbow",
-      "notes": "GPP: Safe reintroduction to load → SPP: Progress with reach or band"
-    },
-    {
-      "name": "Wall Cable Isometric Hold (Lateral)",
-      "notes": "GPP: Minimal-movement tension → SPP: Add diagonal force"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "impingement",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Trunk CARs (Controlled Articular Rotations)",
-      "notes": "GPP: Reestablish capsule mobility → SPP: Control under tension"
-    },
-    {
-      "name": "Seated Banded Rotation",
-      "notes": "GPP: Reintroduce end-range tension → SPP: Add banded velocity"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "sprain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Kneeling Cable Hold + Rotate",
-      "notes": "GPP: Control movement in neutral range → SPP: Add rotation under load"
-    },
-    {
-      "name": "Side-Lying Leg Lifts (Anti-Rotation Focus)",
-      "notes": "GPP: Rebuild baseline control → SPP: Layer in tempo"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "contusion",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Handheld Vibration Over Lateral Core",
-      "notes": "GPP: Ease bruised site → TAPER: Use light percussion pre-fight"
-    },
-    {
-      "name": "Quadruped Reach-Through Stretch",
-      "notes": "GPP: Mobilize gently through pain-free range → TAPER: Restore movement fluency"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "swelling",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "90/90 Breathing with Lateral Expansion",
-      "notes": "TAPER: Encourage oblique drainage and reset breathing"
-    },
-    {
-      "name": "Copenhagen Iso (Short Lever)",
-      "notes": "TAPER: Light trunk bracing without full trunk strain"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "tendonitis",
-  "phase_progression": "GPP → SPP → TAPER",
-  "drills": [
-    {
-      "name": "Side Plank Eccentrics",
-      "notes": "GPP: Control descent and regain tissue load → SPP: Add banded rotation → TAPER: Maintain tone, low fatigue"
-    },
-    {
-      "name": "Cable Chop + Return",
-      "notes": "GPP: Reinforce contractile tension → SPP: Build output under load → TAPER: Back off for speed"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "instability",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Standing Band Hold + Walkout",
-      "notes": "SPP: Reinforce anti-rotation under displacement → TAPER: Reduce range, keep tension"
-    },
-    {
-      "name": "Split Stance Press with Rotation",
-      "notes": "SPP: Add dynamic rotation under control → TAPER: Reduce load, sharpen movement"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "stiffness",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Wall Lat + Oblique Opener",
-      "notes": "SPP: Restore range in side lines → TAPER: Use as pre-session opener"
-    },
-    {
-      "name": "Seated Banded Overhead Reach",
-      "notes": "SPP: Isolate lateral lines safely → TAPER: Maintain length under fatigue"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "hyperextension",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Side Plank with Banded Reach",
-      "notes": "GPP: Control trunk range → SPP: Add diagonal tension under load"
-    },
-    {
-      "name": "Med Ball Side Wall Toss (Short Range)",
-      "notes": "GPP: Reinforce safe return → SPP: Rebuild explosive output"
-    }
-  ]
-},
-{
-  "location": "obliques",
-  "type": "unspecified",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Half-Kneeling Band Press (Diagonal)",
-      "notes": "GPP: Cover all ranges with low load → TAPER: Lock in posture under light tension"
-    },
-    {
-      "name": "Rotational Pulse Lifts",
-      "notes": "GPP: Global control → TAPER: Maintain readiness without volume"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "tightness",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Child’s Pose with Side Reach",
-      "notes": "GPP: Decompress posterior chain → TAPER: Reset tension during taper week"
-    },
-    {
-      "name": "Massage Gun – Lumbar Sweep",
-      "notes": "GPP: Flush fascial tightness → TAPER: Light pulse post-session"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "strain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Glute Bridge Walkouts",
-      "notes": "GPP: Restore posterior chain rhythm → SPP: Add tempo or resistance band"
-    },
-    {
-      "name": "Bird Dog with Reach",
-      "notes": "GPP: Train trunk-limb sync → SPP: Introduce slow reps or banded drag"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "instability",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Quadruped Hover Holds",
-      "notes": "SPP: Build midline integrity → TAPER: Short holds for CNS freshness"
-    },
-    {
-      "name": "Side Plank with Posterior Reach",
-      "notes": "SPP: Anchor oblique/back interface → TAPER: Maintain under fatigue"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "pain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Supine 90/90 Breathing",
-      "notes": "GPP: Downregulate spinal tone → SPP: Tie into movement bracing"
-    },
-    {
-      "name": "Wall Dead Bug Iso Hold",
-      "notes": "GPP: Lock lumbar control → SPP: Add reach or band tension"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "soreness",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Lying Knee to Chest Hold",
-      "notes": "TAPER: Flush lower back tension gently"
-    },
-    {
-      "name": "Foam Roll – Low Spine Sweep",
-      "notes": "TAPER: Reset post-training stiffness"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "stiffness",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Cat-Cow with Deep Breathing",
-      "notes": "GPP: Restore spinal rhythm → SPP: Improve active control"
-    },
-    {
-      "name": "Jefferson Curl (Light DB)",
-      "notes": "GPP: Train loaded articulation → SPP: Extend ROM with tempo"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "tendonitis",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Reverse Hyperextensions (Banded)",
-      "notes": "GPP: Increase glute/hamstring firing → SPP: Add load for trunk reactivity"
-    },
-    {
-      "name": "Banded Hip Hinge Reps",
-      "notes": "GPP: Pattern hinge without stress → SPP: Load into resistance"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "contusion",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Percussion Gun – Lumbar Focus",
-      "notes": "GPP: Desensitize bruised area → TAPER: Light flush"
-    },
-    {
-      "name": "Bridge Iso Hold on Pad",
-      "notes": "GPP: Rebuild safe base tension → TAPER: Maintain control without movement"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "sprain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Pelvic Tilts (Supine)",
-      "notes": "GPP: Rebuild lumbar control → SPP: Advance to standing hinge patterns"
-    },
-    {
-      "name": "Bird Dog Iso Hold",
-      "notes": "GPP: Stabilize posterior chain → SPP: Add tempo and reach"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "contusion",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Foam Roll Sweep (Erector Zone)",
-      "notes": "GPP: Reset surface tension → TAPER: Gentle flush only"
-    },
-    {
-      "name": "Glute Bridge with Arm Reach",
-      "notes": "GPP: Offload pressure → TAPER: Maintain posterior chain activation"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "swelling",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "90/90 Breathing with Feet Elevated",
-      "notes": "TAPER: Drain pressure via parasympathetic tilt"
-    },
-    {
-      "name": "Cat-Cow Flow (Slow Tempo)",
-      "notes": "TAPER: Restore motion with low CNS load"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "tendonitis",
-  "phase_progression": "GPP → SPP → TAPER",
-  "drills": [
-    {
-      "name": "Eccentric Good Morning (Banded)",
-      "notes": "GPP: Reinforce controlled hinge → SPP: Add load or tempo → TAPER: Maintain range"
-    },
-    {
-      "name": "Reverse Hypers (Bodyweight or Band)",
-      "notes": "GPP: Restore spinal extension → SPP: Add light weight → TAPER: Keep activation only"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "impingement",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Dead Bug Hold with Heel Tap",
-      "notes": "GPP: Reconnect core-to-spine control → SPP: Add band for anti-extension stress"
-    },
-    {
-      "name": "Quadruped Rock Back with Reach",
-      "notes": "GPP: Mobilize hips without lumbar load → SPP: Integrate deep core brace"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "instability",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Side Plank March",
-      "notes": "SPP: Reinforce lateral stability → TAPER: Maintain engagement without fatigue"
-    },
-    {
-      "name": "Stir the Pot (Swiss Ball)",
-      "notes": "SPP: Load global core → TAPER: Reduce volume, maintain control"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "hyperextension",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Isometric Hip Hinge Hold",
-      "notes": "GPP: Prevent overextension under load → SPP: Add banded glute drive"
-    },
-    {
-      "name": "Wall Deadlift Patterning (Back Flat)",
-      "notes": "GPP: Teach safe hinge form → SPP: Add resistance or tempo"
-    }
-  ]
-},
-{
-  "location": "lower back",
-  "type": "unspecified",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Supine March with Band",
-      "notes": "GPP: Safe posterior chain control → TAPER: Light tension only"
-    },
-    {
-      "name": "Standing Anti-Rotation Press",
-      "notes": "GPP: Train brace under load → TAPER: Reduce fatigue, keep pattern sharp"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "tightness",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Foam Roll Thoracic Extension",
-      "notes": "GPP: Restore upper spine mobility → TAPER: Maintain posture prep"
-    },
-    {
-      "name": "Wall Slides with Chin Tuck",
-      "notes": "GPP: Improve scapular rhythm → TAPER: Use pre-warmup"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "strain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Prone Swimmers",
-      "notes": "GPP: Activate scapular rotation → SPP: Add tempo or resistance"
-    },
-    {
-      "name": "Scapular Push-Ups",
-      "notes": "GPP: Restore control → SPP: Integrate tempo or unstable surface"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "pain",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Wall Angels",
-      "notes": "SPP: Improve scapular glide → TAPER: Retain postural awareness"
-    },
-    {
-      "name": "Massage Gun – T-Spine Sweep",
-      "notes": "SPP: Reduce local tone → TAPER: Flush tension post-spar"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "soreness",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Band Pull-Aparts (High Rep)",
-      "notes": "TAPER: Maintain blood flow and rhythm"
-    },
-    {
-      "name": "Foam Roll – T-Spine Sweep",
-      "notes": "TAPER: Reset tightness before drills"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "impingement",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Wall Slides with Band Overhead",
-      "notes": "GPP: Open shoulder blade pathway → SPP: Integrate vertical motion with control"
-    },
-    {
-      "name": "Thoracic Rotation on All Fours",
-      "notes": "GPP: Unlock thoracic joints → SPP: Add resistance band for challenge"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "tightness",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Active Thread the Needle",
-      "notes": "SPP: Mobilize spine actively → TAPER: Maintain with low CNS drain"
-    },
-    {
-      "name": "Band-Assisted Overhead Reach",
-      "notes": "SPP: Lengthen lat and upper back tissue → TAPER: Short reps only"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "stiffness",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Wall-Leaning Thoracic Opener",
-      "notes": "GPP: Isolate T-spine articulation → SPP: Add controlled deep breath holds"
-    },
-    {
-      "name": "Quadruped Rockbacks with Rotation",
-      "notes": "GPP: Restore lateral rotation → SPP: Add pause or band tension"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "sprain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Scapular Wall Hold with Band",
-      "notes": "GPP: Re-engage scapular base → SPP: Add pull tension and reach"
-    },
-    {
-      "name": "Y-T-W Isometric Holds",
-      "notes": "GPP: Lock shoulder blade in multiple angles → SPP: Load with tempo reps"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "strain",
-  "phase_progression": "SPP → TAPER",
-  "drills": [
-    {
-      "name": "Suspended Row (TRX or Rings)",
-      "notes": "SPP: Train controlled pulling under fatigue → TAPER: Reduce angle for flush volume"
-    },
-    {
-      "name": "Resistance Band Reverse Flys",
-      "notes": "SPP: Focus scapular control → TAPER: Light pump sets"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "instability",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Wall-Supported Face Pulls",
-      "notes": "GPP: Reinforce scapular retraction → SPP: Add slow eccentric or unstable stance"
-    },
-    {
-      "name": "One-Arm Band Row with Rotation",
-      "notes": "GPP: Restore cross-body tension → SPP: Load rotation into pulling"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "tendonitis",
-  "phase_progression": "GPP → SPP → TAPER",
-  "drills": [
-    {
-      "name": "Eccentric Band Pull-Aparts",
-      "notes": "GPP: Start with slow eccentric → SPP: Increase reps and resistance → TAPER: Maintain frequency, reduce volume"
-    },
-    {
-      "name": "Scap Push-Ups with Pause",
-      "notes": "GPP: Build control in press path → SPP: Add reps or band tension → TAPER: Maintain activation"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "contusion",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Lacrosse Ball Wall Roll (T-Spine)",
-      "notes": "GPP: Tolerate local pressure → TAPER: Reset small knots before training"
-    },
-    {
-      "name": "Band Assisted Lateral Reach",
-      "notes": "GPP: Restore end-range reach → TAPER: Light mobility for freedom"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "hyperextension",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Incline Bench Retraction Holds",
-      "notes": "GPP: Reinforce end-range safety → SPP: Build control under slow reps"
-    },
-    {
-      "name": "Wall Reverse Shrugs",
-      "notes": "GPP: Low-risk scap activation → SPP: Add load or isometric squeeze"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "swelling",
-  "phase_progression": "TAPER",
-  "drills": [
-    {
-      "name": "Arm Elevation Wall Slides",
-      "notes": "TAPER: Promote lymphatic flow post-spar"
-    },
-    {
-      "name": "Foam Rolling – Vertical Sweep",
-      "notes": "TAPER: Reset inflammation without pressure"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "pain",
-  "phase_progression": "GPP → SPP",
-  "drills": [
-    {
-      "name": "Band Lat Stretch (Underhand Grip)",
-      "notes": "GPP: Offload posterior tension → SPP: Blend into active range"
-    },
-    {
-      "name": "Kneeling Band Row to External Rotation",
-      "notes": "GPP: Introduce scapular control → SPP: Build external rotator strength"
-    }
-  ]
-},
-{
-  "location": "upper back",
-  "type": "unspecified",
-  "phase_progression": "GPP → TAPER",
-  "drills": [
-    {
-      "name": "Wall Slide + Posterior Tilt",
-      "notes": "GPP: Restore scapular slide pattern → TAPER: Maintain CNS awareness with short holds"
-    },
-    {
-      "name": "Overhead Band Pull-Throughs",
-      "notes": "GPP: Engage full back chain safely → TAPER: Low resistance pre-activation"
-    }
-  ]
-},
-{
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Child’s Pose with Side Reach",
+        "notes": "GPP: Decompress posterior chain → TAPER: Light reset between drills"
+      },
+      {
+        "name": "Massage Gun – Lumbar Sweep",
+        "notes": "GPP: Reduce deep fascial tension → TAPER: 30s pre-bed or post-sparring"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Glute Bridge Walkout",
+        "notes": "GPP: Train trunk support via glutes → SPP: Add tempo for endurance"
+      },
+      {
+        "name": "Quadruped Rock Backs",
+        "notes": "GPP: Explore safe range → SPP: Add band tension or pause"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Bird Dog with Band Tension",
+        "notes": "SPP: Add reactive core control → TAPER: Short reps, tight form"
+      },
+      {
+        "name": "Side Plank + Hip Taps",
+        "notes": "SPP: Control frontal plane → TAPER: Maintain side-chain coordination"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Supine 90/90 Breathing",
+        "notes": "GPP: Reduce spinal tone → SPP: Integrate with trunk movement"
+      },
+      {
+        "name": "Wall Dead Bug with Iso Hold",
+        "notes": "GPP: Teach bracing → SPP: Extend hold or add band reach"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller Sweep – Lumbar",
+        "notes": "TAPER: Restore blood flow without CNS load"
+      },
+      {
+        "name": "Wall Sit with Neutral Pelvis",
+        "notes": "TAPER: Maintain posture while letting soreness downregulate"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "pain",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Supine Pelvic Tilts",
+        "notes": "GPP: Reintroduce control with no load"
+      },
+      {
+        "name": "Bird Dog (Hold Only)",
+        "notes": "GPP: Low-stress spinal engagement"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Glute Wall Press (Iso)",
+        "notes": "SPP: Rebuild posterior chain → TAPER: Prime activation"
+      },
+      {
+        "name": "Standing Band Pull-Throughs",
+        "notes": "SPP: Load hip hinge → TAPER: Keep low volume"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "soreness",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Wall Support March",
+        "notes": "GPP: Control spinal rhythm during step pattern"
+      },
+      {
+        "name": "90/90 Hip Lift + Breathing",
+        "notes": "GPP: Reactivate core-trunk link safely"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Side Plank with Reach Under",
+        "notes": "GPP: Rebuild trunk rotation → SPP: Add tempo or load"
+      },
+      {
+        "name": "Dead Bug with Banded Chop",
+        "notes": "GPP: Train oblique tension → SPP: Add anti-rotation complexity"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Side-Lying Open Book Stretch",
+        "notes": "GPP: Restore side-line rotation → TAPER: Use as cooldown reset"
+      },
+      {
+        "name": "Massage Gun Sweep (Oblique Ridge)",
+        "notes": "GPP: Break up fascial tension → TAPER: Quick flush pre-spar"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Standing Side Bends (Bodyweight)",
+        "notes": "TAPER: Mobilize trunk gently without added strain"
+      },
+      {
+        "name": "Wall Slide Iso (Side Hold)",
+        "notes": "TAPER: Light activation for postural balance"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Lateral Flexion Holds",
+        "notes": "GPP: Restore lateral range → SPP: Increase hold duration under band load"
+      },
+      {
+        "name": "Banded Lateral Step + Trunk Rotation",
+        "notes": "GPP: Reintegrate motion pattern → SPP: Load diagonal plane safely"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Half-Kneeling Cable Chop",
+        "notes": "SPP: Controlled explosive rotation → TAPER: Lighter resistance for speed"
+      },
+      {
+        "name": "Rotational Med Ball Toss (Wall)",
+        "notes": "SPP: Dynamic force output → TAPER: Focus on sharpness, low fatigue"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "tightness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Foam Roll – Oblique Line",
+        "notes": "GPP: Target fascial knots → SPP: Maintain mobility with control"
+      },
+      {
+        "name": "Side Plank March",
+        "notes": "GPP: Reset pelvic control → SPP: Advance to dynamic marching"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Side Plank on Elbow",
+        "notes": "GPP: Safe reintroduction to load → SPP: Progress with reach or band"
+      },
+      {
+        "name": "Wall Cable Isometric Hold (Lateral)",
+        "notes": "GPP: Minimal-movement tension → SPP: Add diagonal force"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Trunk CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Reestablish capsule mobility → SPP: Control under tension"
+      },
+      {
+        "name": "Seated Banded Rotation",
+        "notes": "GPP: Reintroduce end-range tension → SPP: Add banded velocity"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Kneeling Cable Hold + Rotate",
+        "notes": "GPP: Control movement in neutral range → SPP: Add rotation under load"
+      },
+      {
+        "name": "Side-Lying Leg Lifts (Anti-Rotation Focus)",
+        "notes": "GPP: Rebuild baseline control → SPP: Layer in tempo"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "contusion",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Handheld Vibration Over Lateral Core",
+        "notes": "GPP: Ease bruised site → TAPER: Use light percussion pre-fight"
+      },
+      {
+        "name": "Quadruped Reach-Through Stretch",
+        "notes": "GPP: Mobilize gently through pain-free range → TAPER: Restore movement fluency"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "90/90 Breathing with Lateral Expansion",
+        "notes": "TAPER: Encourage oblique drainage and reset breathing"
+      },
+      {
+        "name": "Copenhagen Iso (Short Lever)",
+        "notes": "TAPER: Light trunk bracing without full trunk strain"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Side Plank Eccentrics",
+        "notes": "GPP: Control descent and regain tissue load → SPP: Add banded rotation → TAPER: Maintain tone, low fatigue"
+      },
+      {
+        "name": "Cable Chop + Return",
+        "notes": "GPP: Reinforce contractile tension → SPP: Build output under load → TAPER: Back off for speed"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Standing Band Hold + Walkout",
+        "notes": "SPP: Reinforce anti-rotation under displacement → TAPER: Reduce range, keep tension"
+      },
+      {
+        "name": "Split Stance Press with Rotation",
+        "notes": "SPP: Add dynamic rotation under control → TAPER: Reduce load, sharpen movement"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Lat + Oblique Opener",
+        "notes": "SPP: Restore range in side lines → TAPER: Use as pre-session opener"
+      },
+      {
+        "name": "Seated Banded Overhead Reach",
+        "notes": "SPP: Isolate lateral lines safely → TAPER: Maintain length under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Side Plank with Banded Reach",
+        "notes": "GPP: Control trunk range → SPP: Add diagonal tension under load"
+      },
+      {
+        "name": "Med Ball Side Wall Toss (Short Range)",
+        "notes": "GPP: Reinforce safe return → SPP: Rebuild explosive output"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Half-Kneeling Band Press (Diagonal)",
+        "notes": "GPP: Cover all ranges with low load → TAPER: Lock in posture under light tension"
+      },
+      {
+        "name": "Rotational Pulse Lifts",
+        "notes": "GPP: Global control → TAPER: Maintain readiness without volume"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Child’s Pose with Side Reach",
+        "notes": "GPP: Decompress posterior chain → TAPER: Reset tension during taper week"
+      },
+      {
+        "name": "Massage Gun – Lumbar Sweep",
+        "notes": "GPP: Flush fascial tightness → TAPER: Light pulse post-session"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Glute Bridge Walkouts",
+        "notes": "GPP: Restore posterior chain rhythm → SPP: Add tempo or resistance band"
+      },
+      {
+        "name": "Bird Dog with Reach",
+        "notes": "GPP: Train trunk-limb sync → SPP: Introduce slow reps or banded drag"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Quadruped Hover Holds",
+        "notes": "SPP: Build midline integrity → TAPER: Short holds for CNS freshness"
+      },
+      {
+        "name": "Side Plank with Posterior Reach",
+        "notes": "SPP: Anchor oblique/back interface → TAPER: Maintain under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Supine 90/90 Breathing",
+        "notes": "GPP: Downregulate spinal tone → SPP: Tie into movement bracing"
+      },
+      {
+        "name": "Wall Dead Bug Iso Hold",
+        "notes": "GPP: Lock lumbar control → SPP: Add reach or band tension"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Lying Knee to Chest Hold",
+        "notes": "TAPER: Flush lower back tension gently"
+      },
+      {
+        "name": "Foam Roll – Low Spine Sweep",
+        "notes": "TAPER: Reset post-training stiffness"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Cat-Cow with Deep Breathing",
+        "notes": "GPP: Restore spinal rhythm → SPP: Improve active control"
+      },
+      {
+        "name": "Jefferson Curl (Light DB)",
+        "notes": "GPP: Train loaded articulation → SPP: Extend ROM with tempo"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Reverse Hyperextensions (Banded)",
+        "notes": "GPP: Increase glute/hamstring firing → SPP: Add load for trunk reactivity"
+      },
+      {
+        "name": "Banded Hip Hinge Reps",
+        "notes": "GPP: Pattern hinge without stress → SPP: Load into resistance"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "contusion",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Percussion Gun – Lumbar Focus",
+        "notes": "GPP: Desensitize bruised area → TAPER: Light flush"
+      },
+      {
+        "name": "Bridge Iso Hold on Pad",
+        "notes": "GPP: Rebuild safe base tension → TAPER: Maintain control without movement"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Pelvic Tilts (Supine)",
+        "notes": "GPP: Rebuild lumbar control → SPP: Advance to standing hinge patterns"
+      },
+      {
+        "name": "Bird Dog Iso Hold",
+        "notes": "GPP: Stabilize posterior chain → SPP: Add tempo and reach"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "contusion",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Foam Roll Sweep (Erector Zone)",
+        "notes": "GPP: Reset surface tension → TAPER: Gentle flush only"
+      },
+      {
+        "name": "Glute Bridge with Arm Reach",
+        "notes": "GPP: Offload pressure → TAPER: Maintain posterior chain activation"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "90/90 Breathing with Feet Elevated",
+        "notes": "TAPER: Drain pressure via parasympathetic tilt"
+      },
+      {
+        "name": "Cat-Cow Flow (Slow Tempo)",
+        "notes": "TAPER: Restore motion with low CNS load"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Good Morning (Banded)",
+        "notes": "GPP: Reinforce controlled hinge → SPP: Add load or tempo → TAPER: Maintain range"
+      },
+      {
+        "name": "Reverse Hypers (Bodyweight or Band)",
+        "notes": "GPP: Restore spinal extension → SPP: Add light weight → TAPER: Keep activation only"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug Hold with Heel Tap",
+        "notes": "GPP: Reconnect core-to-spine control → SPP: Add band for anti-extension stress"
+      },
+      {
+        "name": "Quadruped Rock Back with Reach",
+        "notes": "GPP: Mobilize hips without lumbar load → SPP: Integrate deep core brace"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Side Plank March",
+        "notes": "SPP: Reinforce lateral stability → TAPER: Maintain engagement without fatigue"
+      },
+      {
+        "name": "Stir the Pot (Swiss Ball)",
+        "notes": "SPP: Load global core → TAPER: Reduce volume, maintain control"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Hip Hinge Hold",
+        "notes": "GPP: Prevent overextension under load → SPP: Add banded glute drive"
+      },
+      {
+        "name": "Wall Deadlift Patterning (Back Flat)",
+        "notes": "GPP: Teach safe hinge form → SPP: Add resistance or tempo"
+      }
+    ]
+  },
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Supine March with Band",
+        "notes": "GPP: Safe posterior chain control → TAPER: Light tension only"
+      },
+      {
+        "name": "Standing Anti-Rotation Press",
+        "notes": "GPP: Train brace under load → TAPER: Reduce fatigue, keep pattern sharp"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Foam Roll Thoracic Extension",
+        "notes": "GPP: Restore upper spine mobility → TAPER: Maintain posture prep"
+      },
+      {
+        "name": "Wall Slides with Chin Tuck",
+        "notes": "GPP: Improve scapular rhythm → TAPER: Use pre-warmup"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Prone Swimmers",
+        "notes": "GPP: Activate scapular rotation → SPP: Add tempo or resistance"
+      },
+      {
+        "name": "Scapular Push-Ups",
+        "notes": "GPP: Restore control → SPP: Integrate tempo or unstable surface"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Angels",
+        "notes": "SPP: Improve scapular glide → TAPER: Retain postural awareness"
+      },
+      {
+        "name": "Massage Gun – T-Spine Sweep",
+        "notes": "SPP: Reduce local tone → TAPER: Flush tension post-spar"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Band Pull-Aparts (High Rep)",
+        "notes": "TAPER: Maintain blood flow and rhythm"
+      },
+      {
+        "name": "Foam Roll – T-Spine Sweep",
+        "notes": "TAPER: Reset tightness before drills"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Slides with Band Overhead",
+        "notes": "GPP: Open shoulder blade pathway → SPP: Integrate vertical motion with control"
+      },
+      {
+        "name": "Thoracic Rotation on All Fours",
+        "notes": "GPP: Unlock thoracic joints → SPP: Add resistance band for challenge"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "tightness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Active Thread the Needle",
+        "notes": "SPP: Mobilize spine actively → TAPER: Maintain with low CNS drain"
+      },
+      {
+        "name": "Band-Assisted Overhead Reach",
+        "notes": "SPP: Lengthen lat and upper back tissue → TAPER: Short reps only"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall-Leaning Thoracic Opener",
+        "notes": "GPP: Isolate T-spine articulation → SPP: Add controlled deep breath holds"
+      },
+      {
+        "name": "Quadruped Rockbacks with Rotation",
+        "notes": "GPP: Restore lateral rotation → SPP: Add pause or band tension"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Scapular Wall Hold with Band",
+        "notes": "GPP: Re-engage scapular base → SPP: Add pull tension and reach"
+      },
+      {
+        "name": "Y-T-W Isometric Holds",
+        "notes": "GPP: Lock shoulder blade in multiple angles → SPP: Load with tempo reps"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Suspended Row (TRX or Rings)",
+        "notes": "SPP: Train controlled pulling under fatigue → TAPER: Reduce angle for flush volume"
+      },
+      {
+        "name": "Resistance Band Reverse Flys",
+        "notes": "SPP: Focus scapular control → TAPER: Light pump sets"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall-Supported Face Pulls",
+        "notes": "GPP: Reinforce scapular retraction → SPP: Add slow eccentric or unstable stance"
+      },
+      {
+        "name": "One-Arm Band Row with Rotation",
+        "notes": "GPP: Restore cross-body tension → SPP: Load rotation into pulling"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Band Pull-Aparts",
+        "notes": "GPP: Start with slow eccentric → SPP: Increase reps and resistance → TAPER: Maintain frequency, reduce volume"
+      },
+      {
+        "name": "Scap Push-Ups with Pause",
+        "notes": "GPP: Build control in press path → SPP: Add reps or band tension → TAPER: Maintain activation"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "contusion",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Lacrosse Ball Wall Roll (T-Spine)",
+        "notes": "GPP: Tolerate local pressure → TAPER: Reset small knots before training"
+      },
+      {
+        "name": "Band Assisted Lateral Reach",
+        "notes": "GPP: Restore end-range reach → TAPER: Light mobility for freedom"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Incline Bench Retraction Holds",
+        "notes": "GPP: Reinforce end-range safety → SPP: Build control under slow reps"
+      },
+      {
+        "name": "Wall Reverse Shrugs",
+        "notes": "GPP: Low-risk scap activation → SPP: Add load or isometric squeeze"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Arm Elevation Wall Slides",
+        "notes": "TAPER: Promote lymphatic flow post-spar"
+      },
+      {
+        "name": "Foam Rolling – Vertical Sweep",
+        "notes": "TAPER: Reset inflammation without pressure"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Band Lat Stretch (Underhand Grip)",
+        "notes": "GPP: Offload posterior tension → SPP: Blend into active range"
+      },
+      {
+        "name": "Kneeling Band Row to External Rotation",
+        "notes": "GPP: Introduce scapular control → SPP: Build external rotator strength"
+      }
+    ]
+  },
+  {
+    "location": "upper back",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Slide + Posterior Tilt",
+        "notes": "GPP: Restore scapular slide pattern → TAPER: Maintain CNS awareness with short holds"
+      },
+      {
+        "name": "Overhead Band Pull-Throughs",
+        "notes": "GPP: Engage full back chain safely → TAPER: Low resistance pre-activation"
+      }
+    ]
+  },
+  {
     "location": "chest",
     "type": "strain",
     "phase_progression": "GPP → SPP",
@@ -5626,7 +5626,7 @@
   },
   {
     "location": "face",
-    "type": "bruise",
+    "type": "contusion",
     "phase_progression": "GPP → SPP",
     "drills": [
       {
@@ -5728,268 +5728,266 @@
         "notes": "GPP: Reset face and breath links → TAPER: Prime CNS clarity"
       }
     ]
-  }
-,
-    {
-        "location": "unspecified",
-        "type": "strain",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "General Isometric Holds (5-position circuit)",
-                "notes": "Engage large muscle groups without load; avoid pain. Hold 15\u201330s x 3 rounds."
-            },
-            {
-                "name": "Foam Rolling + Tempo Eccentrics",
-                "notes": "Roll full body + slow eccentrics to recondition tissue under control."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "sprain",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Joint Stability Circuit (ankle, knee, wrist)",
-                "notes": "Use bands, BOSU, or unstable surfaces. Controlled tempo x 3 sets."
-            },
-            {
-                "name": "Isometric Joint Compression Holds",
-                "notes": "Mid-range holds for joint stiffness without movement. Build neuromuscular confidence."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "tightness",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Global Mobility Flow (Full Body)",
-                "notes": "12\u201315 mins of dynamic stretching, PNF holds, and breath-led movement."
-            },
-            {
-                "name": "Contrast Showers + Deep Tissue Tooling",
-                "notes": "1 min hot / 1 min cold x5 + lacrosse ball on most restricted areas."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "soreness",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Recovery Circuit (Airdyne, Row, Band Mobility)",
-                "notes": "Low RPE movement with mobility and breath pacing. 3\u20134 rounds."
-            },
-            {
-                "name": "Epsom Salt Bath + Active ROM Post-Soak",
-                "notes": "20 mins hot soak + unloaded movement to promote circulation and recovery."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "tendonitis",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Isometric Pain-Free Loading (Top/Bottom Range)",
-                "notes": "Isometric tension at pain-free end ranges, hold 30s. 3\u20134 sets daily."
-            },
-            {
-                "name": "Slow Tempo Eccentrics on Major Lifts",
-                "notes": "3\u20134s lowering phase. Reinforces tendon capacity. Start unloaded."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "pain",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Breathwork + Parasympathetic Ground Flow",
-                "notes": "Releases tension. 4s inhale / 8s exhale, paired with gentle mobility."
-            },
-            {
-                "name": "Neuro-Friendly Band Activation",
-                "notes": "Band retraction, extension, rotation drills. 3 sets light resistance."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "stiffness",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Loaded CARs (Controlled Articular Rotations)",
-                "notes": "Strengthen joint control. 3 reps per direction, per joint."
-            },
-            {
-                "name": "Breath-Guided Dynamic Stretch Flow",
-                "notes": "Mobility tied to exhale. Repeat sequence x3 rounds full body."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "hyperextension",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Active Range Isometrics (Antagonist Focus)",
-                "notes": "Contract opposing muscles near end range to protect joint integrity."
-            },
-            {
-                "name": "Proprioceptive Loading on Sliders or Bands",
-                "notes": "Adds joint awareness while avoiding terminal ROM."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "tightness",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Global Foam Roll + PNF Stretch (target problem area)",
-                "notes": "Start with 60\u201390s foam roll across main tension zones, then add 3x15s PNF contract-relax sets. \u2192 SPP: progress to dynamic end-range mobility drills (e.g. CARS, banded openers)."
-            },
-            {
-                "name": "Full-Body Mobility Circuit",
-                "notes": "Include inchworms, world\u2019s greatest stretch, deep lunge opens. 2\u20133 rounds. \u2192 SPP: add mild loaded mobility (e.g. goblet squat hold, elevated Cossack stretch)."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "tendonitis",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Isometric Holds (target tendon path)",
-                "notes": "5x45s holds at mid-range (e.g. Spanish squat, wall sit, mid-dip hold) depending on limb. \u2192 SPP: progress to slow eccentrics (e.g. heel drops, tempo pushups)."
-            },
-            {
-                "name": "Banded Flossing + Elevation",
-                "notes": "Wrap a light compression band around joint/muscle belly, move through ROM for 30s bouts. \u2192 SPP: drop band, add slow ROM + high bloodflow pump work."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "instability",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Isometric Stability Holds on Unstable Surface",
-                "notes": "Hold split stance, tall plank, or single leg positions on foam pad or BOSU. 3x20\u201330s. \u2192 SPP: Add light perturbation (e.g. partner taps, ball tosses)."
-            },
-            {
-                "name": "Banded Stability Reps",
-                "notes": "Use bands to pull joint into slight instability during slow reps (e.g. banded wall squats). \u2192 SPP: progress to reactive reps or light load with control."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "tendonitis",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Heavy Slow Resistance Protocol",
-                "notes": "3x8\u201310 slow tempo reps (e.g. 3-0-3) for target tendon line. Emphasize full control. \u2192 SPP: shift to sport-mimicking movement patterns under tempo."
-            },
-            {
-                "name": "Contrast Therapy + Active ROM",
-                "notes": "Ice/heat alternated 3\u20135x per area, then slow joint circles or band ROM drills. \u2192 SPP: remove passive input, use self-mobilizing drills only."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "stiffness",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Active Range Expansion with Isometrics",
-                "notes": "Contract-relax against resistance (e.g. doorway press, glute bridge hold). 3x20s. \u2192 SPP: build into controlled eccentrics or flowing mobility reps."
-            },
-            {
-                "name": "Loaded Mobility Toolwork",
-                "notes": "Massage gun or lacrosse ball across the stuck tissue pre-movement. \u2192 SPP: replace with movement-based mobility under low load."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "contusion",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Elevation + Compression (10\u201315 min post)",
-                "notes": "Advise athlete to elevate the area above heart and wrap with compression sleeve. \u2192 SPP: remove if bruising fades, switch to pump/flush circuits."
-            },
-            {
-                "name": "Low Tension Mobility & Lymph Flow",
-                "notes": "Air squats, light swings, or open chain movement to keep blood moving without stress. \u2192 SPP: increase ROM and tempo gradually as pain subsides."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "hyperextension",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Joint-Specific Controlled Eccentrics",
-                "notes": "Apply slow lowering to regain ROM (e.g. leg lowers, tempo dips, etc). 3x6 reps. \u2192 SPP: layer in anti-extension isometrics (e.g. plank drag)."
-            },
-            {
-                "name": "Wrap Support + ROM Reset",
-                "notes": "Use elastic wrap during movement if needed. Add unloaded full-ROM circles pre-training. \u2192 SPP: taper wrap use unless re-aggravation risk is present."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "soreness",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Light Aerobic Flow + Stretch",
-                "notes": "5\u201310 mins of cyclical movement (e.g. bike, jog) into a 3-round mobility flow. \u2192 SPP: taper flow to 1\u20132 rounds and reduce aerobic duration if recovery improves."
-            },
-            {
-                "name": "Epsom Salt Soak or Contrast Shower",
-                "notes": "Passive recovery aid to flush DOMS. 15\u201320 mins soak or 5 cycles of hot/cold shower. \u2192 SPP: reserve for high soreness or poor sleep."
-            }
-        ]
-    },
-    {
-        "location": "unspecified",
-        "type": "pain",
-        "phase_progression": "GPP \u2192 SPP",
-        "drills": [
-            {
-                "name": "Breath-Guided Joint Mobilization",
-                "notes": "Focus on 3\u20134 joint circles or controlled articulations paired with slow nasal breathing. \u2192 SPP: convert to low-load tempo exercises for the affected region."
-            },
-            {
-                "name": "Elevate + Wrap Protocol",
-                "notes": "Advise light compression wrap and elevation above heart for 10\u201315 min post-training. \u2192 SPP: if pain subsides, begin reintroducing low RPE movement."
-            }
-        ]
-    }
-,
+  },
+  {
+    "location": "unspecified",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "General Isometric Holds (5-position circuit)",
+        "notes": "Engage large muscle groups without load; avoid pain. Hold 15–30s x 3 rounds."
+      },
+      {
+        "name": "Foam Rolling + Tempo Eccentrics",
+        "notes": "Roll full body + slow eccentrics to recondition tissue under control."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Joint Stability Circuit (ankle, knee, wrist)",
+        "notes": "Use bands, BOSU, or unstable surfaces. Controlled tempo x 3 sets."
+      },
+      {
+        "name": "Isometric Joint Compression Holds",
+        "notes": "Mid-range holds for joint stiffness without movement. Build neuromuscular confidence."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "tightness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Global Mobility Flow (Full Body)",
+        "notes": "12–15 mins of dynamic stretching, PNF holds, and breath-led movement."
+      },
+      {
+        "name": "Contrast Showers + Deep Tissue Tooling",
+        "notes": "1 min hot / 1 min cold x5 + lacrosse ball on most restricted areas."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "soreness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Recovery Circuit (Airdyne, Row, Band Mobility)",
+        "notes": "Low RPE movement with mobility and breath pacing. 3–4 rounds."
+      },
+      {
+        "name": "Epsom Salt Bath + Active ROM Post-Soak",
+        "notes": "20 mins hot soak + unloaded movement to promote circulation and recovery."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Pain-Free Loading (Top/Bottom Range)",
+        "notes": "Isometric tension at pain-free end ranges, hold 30s. 3–4 sets daily."
+      },
+      {
+        "name": "Slow Tempo Eccentrics on Major Lifts",
+        "notes": "3–4s lowering phase. Reinforces tendon capacity. Start unloaded."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Breathwork + Parasympathetic Ground Flow",
+        "notes": "Releases tension. 4s inhale / 8s exhale, paired with gentle mobility."
+      },
+      {
+        "name": "Neuro-Friendly Band Activation",
+        "notes": "Band retraction, extension, rotation drills. 3 sets light resistance."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Loaded CARs (Controlled Articular Rotations)",
+        "notes": "Strengthen joint control. 3 reps per direction, per joint."
+      },
+      {
+        "name": "Breath-Guided Dynamic Stretch Flow",
+        "notes": "Mobility tied to exhale. Repeat sequence x3 rounds full body."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Active Range Isometrics (Antagonist Focus)",
+        "notes": "Contract opposing muscles near end range to protect joint integrity."
+      },
+      {
+        "name": "Proprioceptive Loading on Sliders or Bands",
+        "notes": "Adds joint awareness while avoiding terminal ROM."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "tightness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Global Foam Roll + PNF Stretch (target problem area)",
+        "notes": "Start with 60–90s foam roll across main tension zones, then add 3x15s PNF contract-relax sets. → SPP: progress to dynamic end-range mobility drills (e.g. CARS, banded openers)."
+      },
+      {
+        "name": "Full-Body Mobility Circuit",
+        "notes": "Include inchworms, world’s greatest stretch, deep lunge opens. 2–3 rounds. → SPP: add mild loaded mobility (e.g. goblet squat hold, elevated Cossack stretch)."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Holds (target tendon path)",
+        "notes": "5x45s holds at mid-range (e.g. Spanish squat, wall sit, mid-dip hold) depending on limb. → SPP: progress to slow eccentrics (e.g. heel drops, tempo pushups)."
+      },
+      {
+        "name": "Banded Flossing + Elevation",
+        "notes": "Wrap a light compression band around joint/muscle belly, move through ROM for 30s bouts. → SPP: drop band, add slow ROM + high bloodflow pump work."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Stability Holds on Unstable Surface",
+        "notes": "Hold split stance, tall plank, or single leg positions on foam pad or BOSU. 3x20–30s. → SPP: Add light perturbation (e.g. partner taps, ball tosses)."
+      },
+      {
+        "name": "Banded Stability Reps",
+        "notes": "Use bands to pull joint into slight instability during slow reps (e.g. banded wall squats). → SPP: progress to reactive reps or light load with control."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Heavy Slow Resistance Protocol",
+        "notes": "3x8–10 slow tempo reps (e.g. 3-0-3) for target tendon line. Emphasize full control. → SPP: shift to sport-mimicking movement patterns under tempo."
+      },
+      {
+        "name": "Contrast Therapy + Active ROM",
+        "notes": "Ice/heat alternated 3–5x per area, then slow joint circles or band ROM drills. → SPP: remove passive input, use self-mobilizing drills only."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Active Range Expansion with Isometrics",
+        "notes": "Contract-relax against resistance (e.g. doorway press, glute bridge hold). 3x20s. → SPP: build into controlled eccentrics or flowing mobility reps."
+      },
+      {
+        "name": "Loaded Mobility Toolwork",
+        "notes": "Massage gun or lacrosse ball across the stuck tissue pre-movement. → SPP: replace with movement-based mobility under low load."
+      }
+    ]
+  },
   {
     "location": "unspecified",
     "type": "contusion",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Elevation + Compression (10–15 min post)",
+        "notes": "Advise athlete to elevate the area above heart and wrap with compression sleeve. → SPP: remove if bruising fades, switch to pump/flush circuits."
+      },
+      {
+        "name": "Low Tension Mobility & Lymph Flow",
+        "notes": "Air squats, light swings, or open chain movement to keep blood moving without stress. → SPP: increase ROM and tempo gradually as pain subsides."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Joint-Specific Controlled Eccentrics",
+        "notes": "Apply slow lowering to regain ROM (e.g. leg lowers, tempo dips, etc). 3x6 reps. → SPP: layer in anti-extension isometrics (e.g. plank drag)."
+      },
+      {
+        "name": "Wrap Support + ROM Reset",
+        "notes": "Use elastic wrap during movement if needed. Add unloaded full-ROM circles pre-training. → SPP: taper wrap use unless re-aggravation risk is present."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "soreness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Light Aerobic Flow + Stretch",
+        "notes": "5–10 mins of cyclical movement (e.g. bike, jog) into a 3-round mobility flow. → SPP: taper flow to 1–2 rounds and reduce aerobic duration if recovery improves."
+      },
+      {
+        "name": "Epsom Salt Soak or Contrast Shower",
+        "notes": "Passive recovery aid to flush DOMS. 15–20 mins soak or 5 cycles of hot/cold shower. → SPP: reserve for high soreness or poor sleep."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Breath-Guided Joint Mobilization",
+        "notes": "Focus on 3–4 joint circles or controlled articulations paired with slow nasal breathing. → SPP: convert to low-load tempo exercises for the affected region."
+      },
+      {
+        "name": "Elevate + Wrap Protocol",
+        "notes": "Advise light compression wrap and elevation above heart for 10–15 min post-training. → SPP: if pain subsides, begin reintroducing low RPE movement."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Soft Tissue Flushing (Foam Roller or Ball)",
@@ -6004,7 +6002,7 @@
   {
     "location": "unspecified",
     "type": "swelling",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Compression Wrap with Mobility Flow",
@@ -6019,7 +6017,7 @@
   {
     "location": "unspecified",
     "type": "tendonitis",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Slow Eccentric Resistance with Band",
@@ -6034,7 +6032,7 @@
   {
     "location": "unspecified",
     "type": "impingement",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Controlled Joint CARs (Controlled Articular Rotations)",
@@ -6049,7 +6047,7 @@
   {
     "location": "unspecified",
     "type": "instability",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Reactive Stability Drills (Eyes Closed or Band Perturbation)",
@@ -6064,7 +6062,7 @@
   {
     "location": "unspecified",
     "type": "stiffness",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Active Mobility Circuits (Full Body or Region-Specific)",
@@ -6079,7 +6077,7 @@
   {
     "location": "unspecified",
     "type": "hyperextension",
-    "phase_progression": "GPP \u2192 SPP",
+    "phase_progression": "GPP → SPP",
     "drills": [
       {
         "name": "Joint Guarding Isometrics",
