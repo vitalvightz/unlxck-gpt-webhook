@@ -45,11 +45,19 @@ GOAL_NORMALIZER = {
     "Posterior Chain": "posterior_chain",
     "Knees": "quad_dominant",
     "Neck": "neck",
+    "Coordination / Proprioception": "coordination",
+    "Coordination/Proprioception": "coordination",
     "Grappling": "grappler",
     "Striking": "striking",
     "Injury Prevention": "injury_prevention",
     "Mental Resilience": "mental_resilience",
     "Skill Refinement": "skill_refinement"
+}
+
+# Map uncommon weakness labels to internal tags
+WEAKNESS_NORMALIZER = {
+    "coordination / proprioception": ["coordination", "proprioception"],
+    "coordination/proprioception": ["coordination", "proprioception"],
 }
 
 # Auth setup
@@ -184,7 +192,11 @@ async def handle_submission(request: Request):
         "injuries": normalize_list(injuries),
         "style_technical": raw_tech_style,
         "style_tactical": tactical_styles,
-        "weaknesses": normalize_list(weak_areas),
+        "weaknesses": [
+            tag
+            for item in normalize_list(weak_areas)
+            for tag in WEAKNESS_NORMALIZER.get(item.lower(), [item.lower()])
+        ],
         "equipment": normalize_equipment_list(equipment_access),
         "weight_cut_risk": weight_cut_risk_flag,
         "weight_cut_pct": weight_cut_pct_val,
