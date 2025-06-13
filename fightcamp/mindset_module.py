@@ -10,7 +10,7 @@ mindset_bank = {
         "motivation": "Start 'why log' (3x/week). Reconnect with deeper reasons to train.",
         "fear of losing": "Record 3 worst-case outcomes and evidence how you'd recover. Reduce emotional weight.",
         "fear of striking": "Shadowbox with relaxed breath for 3 rounds daily. Gradually build intent and aggression.",
-        "fear of takedowns": "Integrate wall wrsstling reps with fixed grip/entry drills. Isolate fear with control.",
+        "fear of takedowns": "Integrate wall wrestling reps with fixed grip/entry drills. Isolate fear with control.",
         "generic": "Establish AM mental warm-up (1 min breathe, 3 affirmations, 1 visualization rep)."
     },
     "SPP": {
