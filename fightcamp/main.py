@@ -124,7 +124,6 @@ async def handle_submission(request: Request):
     except (TypeError, ValueError):
         training_frequency = len(training_days)
     injuries = get_value("Any injuries or areas you need to work around?", fields)
-    injury_location = get_value("Injury Location", fields).lower()
     key_goals = get_value("What are your key performance goals?", fields)
     weak_areas = get_value("Where do you feel weakest right now?", fields)
     training_preference = get_value("Do you prefer certain training styles?", fields)
@@ -183,7 +182,6 @@ async def handle_submission(request: Request):
         "days_available": len(training_days),
         "training_days": training_days,
         "injuries": normalize_list(injuries),
-        "injury_location": injury_location,
         "style_technical": raw_tech_style,
         "style_tactical": tactical_styles,
         "weaknesses": normalize_list(weak_areas),
@@ -392,7 +390,6 @@ async def handle_submission(request: Request):
         f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries}",
-        f"- Injury Location: {injury_location}",
         f"- Training Availability: {available_days}",
         f"- Weaknesses: {weak_areas}",
         f"- Key Goals: {key_goals}",
