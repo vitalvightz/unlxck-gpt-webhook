@@ -424,33 +424,36 @@ LOCATION_MAP = {
 }
 
 
-def canonicalize_injury_type(text: str) -> str | None:
-    """Return the canonical injury type for the given text.
+from rapidfuzz import fuzz
 
-    The function searches ``INJURY_SYNONYM_MAP`` for any phrase found in
-    ``text`` and returns the corresponding key. If no match is found the
-    function returns ``None``.
+def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
+    """Return the canonical injury type for the given text using fuzzy matching.
+
+    The function searches ``INJURY_SYNONYM_MAP`` for any phrase in ``text`` with
+    a similarity score of at least ``threshold`` and returns the corresponding
+    key. If no match is found the function returns ``None``.
     """
     text = text.lower()
     for canonical, synonyms in INJURY_SYNONYM_MAP.items():
-        if canonical in text:
+        if canonical in text or fuzz.partial_ratio(canonical, text) >= threshold:
             return canonical
         for phrase in synonyms:
-            if phrase in text:
+            if phrase in text or fuzz.partial_ratio(phrase, text) >= threshold:
                 return canonical
     return None
 
 
-def canonicalize_location(text: str) -> str | None:
-    """Return the canonical body part for the provided text.
+def canonicalize_location(text: str, threshold: int = 85) -> str | None:
+    """Return the canonical body part for the provided text using fuzzy matching.
 
     ``LOCATION_MAP`` holds a mapping of keywords to the bank location. The
-    function searches the input text for those keywords and returns the
-    matching location. If no match is found ``None`` is returned.
+    function searches the input text for those keywords with a similarity score
+    of at least ``threshold`` and returns the matching location. If no match is
+    found ``None`` is returned.
     """
     text = text.lower()
     for key, canonical in LOCATION_MAP.items():
-        if key in text:
+        if key in text or fuzz.partial_ratio(key, text) >= threshold:
             return canonical
     return None
 
