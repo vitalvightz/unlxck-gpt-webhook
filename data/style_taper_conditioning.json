@@ -914,7 +914,7 @@
     "modality": "choice reaction",
     "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
     "intensity": "50% speed",
-    "tags": ["mma", "hybrid", "skill_refinement"],
+    "tags": ["mma", "skill_refinement"],
     "notes": "Random cone colors force adaptive takedown chains",
     "equipment_note": "2+ cone colors"
   },

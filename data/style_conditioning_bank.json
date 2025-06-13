@@ -2351,7 +2351,8 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "switch_kick"
+      "switch_kick",
+      "hybrid"
     ],
     "notes": "Bag movement simulates opponent retreat.",
     "equipment_note": "High tension on bag"
@@ -2512,7 +2513,8 @@
     "tags": [
       "kicker",
       "mma",
-      "switch_kick"
+      "switch_kick",
+      "hybrid"
     ],
     "notes": "Cones mark pivot points.",
     "equipment_note": "5-cone star pattern"
@@ -3781,8 +3783,7 @@
     "intensity": "85% effort",
     "tags": [
       "scrambler",
-      "mma",
-      "hybrid"
+      "mma"
     ],
     "notes": "Simulates fight-ending sequences.",
     "equipment_note": "Bag must be near mats"
@@ -4441,7 +4442,7 @@
     "modality": "interval",
     "duration": "40s on / 50s off",
     "intensity": "high",
-    "tags": ["muay_thai", "kicker", "distance_striker","mma"],
+    "tags": ["muay_thai", "kicker", "distance_striker", "mma", "hybrid"],
     "notes": "Alternate roundhouse kicks every 2 seconds. Focus on hip turnover.",
     "equipment_note": "Pad holder calls sides randomly."
   },
@@ -4550,7 +4551,7 @@
     "modality": "sprint",
     "duration": "10s max effort / 50s rest",
     "intensity": "max",
-    "tags": ["submission_hunter", "hybrid", "bjj", "mma"],
+    "tags": ["submission_hunter", "bjj", "mma"],
     "notes": "Sprint 10m, drop to guillotine grip, reset. Repeat.",
     "equipment_note": "Mark distance with cones."
   },
@@ -4562,7 +4563,7 @@
     "modality": "strike",
     "duration": "8x per leg / 60s rest",
     "intensity": "max",
-    "tags": ["kicker", "muay_thai", "mma"],
+    "tags": ["kicker", "muay_thai", "mma", "hybrid"],
     "notes": "Max-power roundhouse kicks with full hip rotation.",
     "equipment_note": "Secure bag to prevent swing."
   },
@@ -4646,7 +4647,7 @@
     "modality": "strike",
     "duration": "10x per leg / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "kicker", "distance_striker"],
+    "tags": ["muay_thai", "kicker", "distance_striker", "hybrid"],
     "notes": "Max-power round kicks with full hip rotation.",
     "equipment_note": "Secure bag to prevent swing."
   },
@@ -4694,7 +4695,7 @@
     "modality": "reactive",
     "duration": "5s effort / 55s rest",
     "intensity": "max",
-    "tags": ["mma", "submission_hunter", "hybrid"],
+    "tags": ["mma", "submission_hunter"],
     "notes": "Partner signals shot direction; shooter reacts with guillotine grip.",
     "equipment_note": "Grass or mat surface only."
   },
@@ -4766,7 +4767,7 @@
     "modality": "jump",
     "duration": "6x per side / 60s rest",
     "intensity": "max",
-    "tags": ["kickboxing", "mma", "kicker", "distance_striker"],
+    "tags": ["kickboxing", "mma", "kicker", "distance_striker", "hybrid"],
     "notes": "Simulate weight transfer for switch kicks.",
     "equipment_note": "18-inch box height."
   },
@@ -4886,7 +4887,7 @@
     "modality": "compound",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["clinch_fighter", "mma", "hybrid", "muay_thai"],
+    "tags": ["clinch_fighter", "mma", "muay_thai"],
     "notes": "3-punch combo > clinch entry. Explosive transitions.",
     "equipment_note": "Pad holder simulates opponent frame."
   },
@@ -5234,7 +5235,7 @@
     "modality": "interval",
     "duration": "45s on / 15s off",
     "intensity": "moderate",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma"],
     "notes": "Stand back up from seated position using cage.",
     "equipment_note": "Wear fight shorts."
   },
@@ -5258,7 +5259,7 @@
     "modality": "continuous",
     "duration": "5min",
     "intensity": "low-moderate",
-    "tags": ["muay_thai", "kicker"],
+    "tags": ["muay_thai", "kicker", "hybrid"],
     "notes": "Switch stances every 10 steps with teep feints.",
     "equipment_note": "Focus on balance."
   },
@@ -5306,7 +5307,7 @@
     "modality": "continuous",
     "duration": "5min",
     "intensity": "moderate",
-    "tags": ["mma", "hybrid"],
+    "tags": ["mma"],
     "notes": "Alternate between striking and shot feints.",
     "equipment_note": "Mark 3 engagement zones."
   },
@@ -5462,7 +5463,7 @@
     "modality": "choice reaction",
     "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
     "intensity": "50% speed",
-    "tags": ["mma", "hybrid", "skill_refinement"],
+    "tags": ["mma", "skill_refinement"],
     "notes": "Random cone colors force adaptive takedown chains",
     "equipment_note": "2+ cone colors"
   },
