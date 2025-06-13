@@ -3,10 +3,19 @@
     {
       "name": "Integrated Footwork Shadowboxing",
       "category": "footwork",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "dynamic_stance_transitions",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "boxing", "distance_striker", "counter_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "boxing",
+        "distance_striker",
+        "counter_striker"
+      ],
       "equipment": "None",
       "equipment_notes": "Ensure adequate space for lateral movement.",
       "description": "Move through striking combinations with constant angle changes and stance resets. Focuses on smooth weight shifts, avoiding crossed feet, and reactive repositioning for fight-specific balance."
@@ -14,10 +23,17 @@
     {
       "name": "Single-Leg Cross-Body Punch",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "upper_body_isolation",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "mma", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "counter_striker"
+      ],
       "equipment": "None or Light Dumbbell",
       "equipment_notes": "Dumbbell (optional) for added resistance; keep weight light to avoid compromising balance.",
       "description": "Balance on one leg while throwing slow, controlled crosses. Emphasizes knee stability (avoid hyperextension) and trunk-punch alignment for precision under instability."
@@ -25,21 +41,35 @@
     {
       "name": "Kick-and-Stick",
       "category": "kicking",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "dynamic_balance",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "mma",
+        "kicker"
+      ],
       "equipment": "None",
       "equipment_notes": "Use a wall for support if needed during initial progression.",
-      "description": "Throw a roundhouse or front kick and freeze the leg fully extended for 2–3 seconds. Engages glutes for hip stabilization and trains control in kicking mechanics."
+      "description": "Throw a roundhouse or front kick and freeze the leg fully extended for 2\u20133 seconds. Engages glutes for hip stabilization and trains control in kicking mechanics."
     },
     {
       "name": "Banded Triplanar Tap",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "proprioception",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Resistance Band",
       "equipment_notes": "Use light-moderate band tension anchored below knees.",
       "description": "Single-leg stance with band around knees; tap opposite foot forward/side/back without losing base. Prevents knee valgus and trains reactive stability for takedown defense."
@@ -47,10 +77,17 @@
     {
       "name": "Plank with Punch",
       "category": "core",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "anti-rotation",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Optional: Place hands on sliders to increase difficulty.",
       "description": "From a high plank, shift weight and punch alternately while keeping hips level. Builds core-limb timing and simulates striking under fatigue."
@@ -58,58 +95,92 @@
     {
       "name": "Rotational Med Ball Shotput",
       "category": "power",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "rotational",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "brawler", "clinch_fighter"],
-      "equipment": "Medicine Ball (4–6kg)",
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler",
+        "clinch_fighter"
+      ],
+      "equipment": "Medicine Ball (4\u20136kg)",
       "equipment_notes": "Throw against a wall or to a partner for rebounding.",
       "description": "Lateral throw from a loaded stance, initiating power from the back foot. Reinforces hip-shoulder sequencing for hooks/clinch strikes."
     },
     {
       "name": "Depth Drop to Stabilize",
       "category": "plyometrics",
-      "phases": ["SPP", "TAPER"],
+      "phases": [
+        "SPP",
+        "TAPER"
+      ],
       "movement": "eccentric_control",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "scrambler"],
-      "equipment": "12–18\" Box",
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
+      "equipment": "12\u201318\" Box",
       "equipment_notes": "Start low; progress height only with mastery.",
       "description": "Step off box and stick landing softly, absorbing impact through hips/knees. Trains fight-ready stabilization after level changes."
     },
     {
       "name": "Sprawl to Quick Strikes",
       "category": "transition",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "defense_to_offense",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "wrestling", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "wrestling",
+        "pressure_fighter"
+      ],
       "equipment": "None or Light Gloves",
       "equipment_notes": "Gloves optional to simulate fight conditions.",
       "description": "Drop into a sprawl, then explosively pop up into a combo. Sharpens defensive-offensive transitions under fatigue."
     }
-    {
+  ],
   "brawler_coordination_drills": [
     {
       "name": "Overhand Rush with Head Slip",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "forward_pressure",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "mma", "brawler"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "brawler"
+      ],
       "equipment": "Focus Mitts or Partner",
       "equipment_notes": "Partner throws light jabs to cue slips during entry.",
       "description": "Charge forward behind a high guard while throwing overhand rights, incorporating reactive head slips. Trains closing distance aggressively while maintaining defensive responsibility."
     },
     {
-  "brawler_coordination_drills": [
-    {
       "name": "Blindfolded Heavy Bag Chaos",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "reactive_striking",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "mma", "brawler", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "brawler",
+        "pressure_fighter"
+      ],
       "equipment": "Heavy Bag, Blindfold",
       "equipment_notes": "Use wraps to protect hands; partner cues angle changes.",
       "description": "Strike a heavy bag blindfolded while a partner randomly pushes/shakes it. Forces reliance on proprioceptive feedback to adjust punches and footwork mid-combo, simulating crowded brawling exchanges."
@@ -117,10 +188,17 @@
     {
       "name": "Slip Rope with Counter Hooks",
       "category": "defense",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "head_movement",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "brawler"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "brawler"
+      ],
       "equipment": "Elastic Rope (Chest Height)",
       "equipment_notes": "Anchor rope to create zigzag path for lateral slips.",
       "description": "Weave under a bungee rope while throwing hooks to body/head after each slip. Trains head movement-to-power shot transitions under spatial constraints, critical for infighting."
@@ -128,67 +206,105 @@
     {
       "name": "Medicine Ball Clinch Knees",
       "category": "clinch",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "knee_striking",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "brawler", "clinch_fighter"],
-      "equipment": "Medicine Ball (4–6kg), Partner",
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler",
+        "clinch_fighter"
+      ],
+      "equipment": "Medicine Ball (4\u20136kg), Partner",
       "equipment_notes": "Partner holds ball against abdomen to resist knee drives.",
       "description": "From double-collar tie, drive knees upward while partner resists with med ball. Develops explosive hip extension and balance recovery after each knee, mimicking dirty boxing energy drains."
     },
     {
       "name": "Reactive Sprawl-to-Overhand",
       "category": "transition",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "defense_to_offense",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "brawler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler"
+      ],
       "equipment": "Partner (Random Cues)",
       "equipment_notes": "Partner mimics takedown attempts with verbal/striking cues.",
-      "description": "React to partner’s takedown feints by sprawling, then immediately exploding into an overhand right. Sharpens proprioceptive reactions to level changes and scrambles."
+      "description": "React to partner\u2019s takedown feints by sprawling, then immediately exploding into an overhand right. Sharpens proprioceptive reactions to level changes and scrambles."
     },
     {
       "name": "Unstable Surface Hook Combinations",
       "category": "striking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "upper_body_chain",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "brawler"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "brawler"
+      ],
       "equipment": "Bosu Ball or Balance Disc",
       "equipment_notes": "Stand on Bosu dome-side down for advanced instability.",
-      "description": "Throw 3–5 hook combos while balancing on unstable surface. Forces core engagement and compensational adjustments to maintain power generation—key for off-balance brawling."
+      "description": "Throw 3\u20135 hook combos while balancing on unstable surface. Forces core engagement and compensational adjustments to maintain power generation\u2014key for off-balance brawling."
     },
     {
       "name": "Tire Flip to Swarming Combo",
       "category": "power_transfer",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "full_body_kinetic_chain",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "brawler"],
-      "equipment": "Tire (50–70% Bodyweight)",
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler"
+      ],
+      "equipment": "Tire (50\u201370% Bodyweight)",
       "equipment_notes": "Focus on explosive hip drive during flip.",
       "description": "Flip tire, then immediately swarm forward with punches (e.g., 1-2-3-2 combo). Links lower-body power to rapid upper-body coordination under fatigue, replicating fight-ending flurries."
-    }
-  {
-  "brawler_coordination_drills": [
+    },
     {
       "name": "Chaos Angle Change Pivot",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "pivot_recovery",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "mma", "brawler", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "brawler",
+        "pressure_fighter"
+      ],
       "equipment": "Agility Ladder or Tape Marks",
       "equipment_notes": "Partner randomly calls direction changes during drill.",
-      "description": "Pivot off front foot at 45/90-degree angles while throwing hooks, reacting to partner's verbal cues. Trains rapid directional changes mid-combo—critical for cutting off the cage or cornering opponents."
+      "description": "Pivot off front foot at 45/90-degree angles while throwing hooks, reacting to partner's verbal cues. Trains rapid directional changes mid-combo\u2014critical for cutting off the cage or cornering opponents."
     },
     {
       "name": "Blind Clinch Entry to Underhooks",
       "category": "clinch",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "tactile_awareness",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "brawler", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler",
+        "clinch_fighter"
+      ],
       "equipment": "Blindfold, Partner",
       "equipment_notes": "Partner wears MMA gloves to simulate realistic grips.",
       "description": "With vision blocked, use hand-fighting to secure underhooks against a resisting partner. Sharpens proprioceptive sensitivity to upper-body positioning in tight spaces."
@@ -196,10 +312,16 @@
     {
       "name": "Slip-Block-Counter Sandbag Drill",
       "category": "defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "reactive_striking",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "brawler"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "brawler"
+      ],
       "equipment": "Sandbag (20-30lbs), Partner",
       "equipment_notes": "Partner holds bag at shoulder height for body shots.",
       "description": "Slip imaginary jabs, block body hooks (partner taps sandbag to your ribs), then counter with overhands. Integrates defensive reactions with offensive responses under tactile stimuli."
@@ -207,10 +329,16 @@
     {
       "name": "Tumbling to Swarm",
       "category": "transition",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "ground_recovery",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "brawler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler"
+      ],
       "equipment": "Crash Mat",
       "equipment_notes": "Practice forward/backward rolls without using hands.",
       "description": "Execute a forward roll, pop up immediately into a 3-punch combo. Mimics recovering from trips or failed takedowns while maintaining offensive pressure."
@@ -218,35 +346,53 @@
     {
       "name": "Resistance Band Phone Booth Hooks",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "torque_control",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "brawler"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "brawler"
+      ],
       "equipment": "Heavy Resistance Band (Anchored Waist Height)",
       "equipment_notes": "Band tension should allow full rotation but force control.",
-      "description": "Throw hooks against band resistance while maintaining perfect form. Teaches controlled power generation in tight spaces—prevents wild swinging when fatigued."
+      "description": "Throw hooks against band resistance while maintaining perfect form. Teaches controlled power generation in tight spaces\u2014prevents wild swinging when fatigued."
     },
     {
       "name": "Reactive Wall Drill",
       "category": "striking",
-      "phases": ["SPP", "TAPER"],
+      "phases": [
+        "SPP",
+        "TAPER"
+      ],
       "movement": "upper_body_chain",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "brawler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "brawler"
+      ],
       "equipment": "Wall Pad or Heavy Bag",
-      "equipment_notes": "Stand 6-12" from wall to enforce compact mechanics.",
+      "equipment_notes": "Stand 6-12\" from wall to enforce compact mechanics.",
       "description": "Partner calls random punch numbers (1-6) while you strike the wall pad without resetting stance. Develops combo fluidity and adaptability in pocket exchanges."
     }
-  ]
-}{
+  ],
   "clinch_coordination_drills": [
     {
       "name": "Blindfolded Collar Tie Pummeling",
       "category": "grip_fighting",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "tactile_grip_transitions",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Blindfold, Partner",
       "equipment_notes": "Partner wears gi or rashguard for realistic friction",
       "description": "With vision blocked, alternate between collar ties and underhooks based solely on tactile feedback. Develops instinctive grip recognition in chaotic clinch battles."
@@ -254,21 +400,33 @@
     {
       "name": "Thai Plum Knee-to-Sweep Chain",
       "category": "clinch_striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "offensive_transitions",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "clinch_fighter"
+      ],
       "equipment": "Partner, Thai Pads",
       "equipment_notes": "Partner holds pads for knee targets",
-      "description": "From double collar tie: 3 knees → immediate inside trip. Trains the signature Muay Thai strike-to-takedown sequence while maintaining balance."
+      "description": "From double collar tie: 3 knees \u2192 immediate inside trip. Trains the signature Muay Thai strike-to-takedown sequence while maintaining balance."
     },
     {
       "name": "Rotational Judo Throw Recovery",
       "category": "takedown_defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "hip_awareness",
       "type": "rotational",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Judo Belt, Partner",
       "equipment_notes": "Belt around waist for grip simulation",
       "description": "As partner attempts hip throws, use whizzer and hip positioning to counterbalance. Focuses on proprioceptive hip alignment during defensive rotations."
@@ -276,10 +434,16 @@
     {
       "name": "Wall Clinch Weight Shift Drill",
       "category": "cage_work",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "pressure_application",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Cage Wall, Partner",
       "equipment_notes": "Use MMA gloves for realistic framing",
       "description": "Against cage, alternate between cross-face pressure and underhook attacks. Teaches micro-adjustments in weight distribution for control."
@@ -287,10 +451,16 @@
     {
       "name": "Medicine Ball Clinch Frame",
       "category": "upper_body_strength",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "isometric_control",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Medicine Ball (4-6kg)",
       "equipment_notes": "Press ball against wall at shoulder height",
       "description": "Simulate framing against opponent's neck while maintaining active shoulder pressure. Builds endurance in key clinch control positions."
@@ -298,10 +468,16 @@
     {
       "name": "Reactive Underhook Switch",
       "category": "grip_fighting",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "defensive_transitions",
       "type": "bilateral",
-      "tags": ["coordination", "wrestling", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "wrestling",
+        "clinch_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Partner randomly pummels every 3-5 seconds",
       "description": "React to partner's pummeling attempts by switching between overhooks, underhooks, and whizzers. Sharpens grip transition speed."
@@ -309,10 +485,16 @@
     {
       "name": "Knee Tap Balance Drill",
       "category": "single_leg_defense",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "base_maintenance",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Balance Disc",
       "equipment_notes": "Stand on disc while drilling",
       "description": "Practice defending single legs while balancing on unstable surface. Forces proper hip positioning through proprioceptive feedback."
@@ -320,10 +502,16 @@
     {
       "name": "Clinch to Suplex Transition",
       "category": "takedown_offense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "explosive_transitions",
       "type": "bilateral",
-      "tags": ["coordination", "wrestling", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "wrestling",
+        "clinch_fighter"
+      ],
       "equipment": "Crash Mat, Partner",
       "equipment_notes": "Partner wears protective gear",
       "description": "From over-under position, chain attempts between body locks and suplexes. Trains seamless offensive transitions."
@@ -331,10 +519,16 @@
     {
       "name": "Neck Tie Level Changes",
       "category": "striking_defense",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "head_control",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "clinch_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Partner throws light uppercuts during drill",
       "description": "Maintain collar tie while ducking under imaginary strikes. Develops defensive head movement within clinch range."
@@ -342,10 +536,16 @@
     {
       "name": "Resistance Band Pummeling",
       "category": "grip_endurance",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "shoulder_stability",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Resistance Bands",
       "equipment_notes": "Bands anchored behind at shoulder height",
       "description": "Perform pummeling drills against band resistance. Builds endurance for prolonged clinch battles."
@@ -353,10 +553,16 @@
     {
       "name": "Fence Walking with Strikes",
       "category": "cage_work",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "wall_navigation",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Cage Wall, Partner",
       "equipment_notes": "Partner applies 30% resistance",
       "description": "Move laterally along cage while maintaining underhooks and throwing short strikes. Simulates cage-cutting sequences."
@@ -364,10 +570,16 @@
     {
       "name": "Plum Clinch Knee Variations",
       "category": "clinch_striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "striking_balance",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "clinch_fighter"
+      ],
       "equipment": "Partner, Thai Pads",
       "equipment_notes": "Partner calls out knee targets (high/low)",
       "description": "Alternate between straight, diagonal, and roundhouse knee trajectories without breaking clinch. Develops offensive versatility."
@@ -375,10 +587,16 @@
     {
       "name": "Tactile Grip Fighting",
       "category": "grip_fighting",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "reactive_grips",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Partner, MMA Gloves",
       "equipment_notes": "Both partners wear gloves",
       "description": "Eyes closed, identify and counter partner's grips within 2 seconds. Sharpens instant grip recognition."
@@ -386,21 +604,33 @@
     {
       "name": "Sprawl to Front Headlock",
       "category": "takedown_defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "defensive_chaining",
       "type": "bilateral",
-      "tags": ["coordination", "wrestling", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "wrestling",
+        "clinch_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Partner shoots at 50% speed initially",
-      "description": "Sprawl → immediately transition to front headlock position. Trains defensive sequences against shot attempts."
+      "description": "Sprawl \u2192 immediately transition to front headlock position. Trains defensive sequences against shot attempts."
     },
     {
       "name": "Clinch Exit Striking",
       "category": "striking_transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "disengagement",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "clinch_fighter"
+      ],
       "equipment": "Partner, Focus Mitts",
       "equipment_notes": "Partner holds mitts at break distance",
       "description": "Break from clinch into 3-punch combinations. Perfects the strike-on-break timing."
@@ -408,10 +638,16 @@
     {
       "name": "Sandbag Clinch Carry",
       "category": "strength_endurance",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "full_body_control",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Sandbag (50-70lbs)",
       "equipment_notes": "Bear hug grip position",
       "description": "Maintain clinch position while walking laterally. Builds isometric endurance for control positions."
@@ -419,10 +655,16 @@
     {
       "name": "Reactive Whizzer Counters",
       "category": "takedown_defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "defensive_offense",
       "type": "unilateral",
-      "tags": ["coordination", "wrestling", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "wrestling",
+        "clinch_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Partner attempts singles/doubles randomly",
       "description": "Use whizzer to counter takedowns into knee strikes. Links defensive wrestling to offensive Muay Thai."
@@ -430,10 +672,16 @@
     {
       "name": "Clinch Stance Hopping",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "base_adjustment",
       "type": "bilateral",
-      "tags": ["coordination", "muay_thai", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "clinch_fighter"
+      ],
       "equipment": "Agility Ladder",
       "equipment_notes": "Maintain plum position throughout",
       "description": "Hop through ladder while maintaining clinch stance. Improves footwork without breaking upper-body control."
@@ -441,10 +689,16 @@
     {
       "name": "Over-Under Switch Drill",
       "category": "positional_transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "grip_chaining",
       "type": "bilateral",
-      "tags": ["coordination", "wrestling", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "wrestling",
+        "clinch_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Partner provides moderate resistance",
       "description": "Cycle between over-under, double underhooks, and body lock positions. Develops fluidity between control positions."
@@ -452,23 +706,36 @@
     {
       "name": "Clinch to Guillotine Chain",
       "category": "submission_transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "offensive_chaining",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "clinch_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "clinch_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Partner initiates level changes",
       "description": "From collar tie, transition to guillotine attempts as partner ducks. Trains submission awareness in clinch exchanges."
     }
-    {
+  ],
   "pressure_fighter_coordination_drills": [
     {
       "name": "Sliding L-Step Jab",
       "category": "footwork",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "linear_to_lateral",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Agility Ladder",
       "equipment_notes": "Ladder flat on ground or taped lines",
       "description": "Step forward with jab, then slide lead foot laterally along ladder rung while keeping weight centered. Trains forward pressure with sudden angle changes."
@@ -476,10 +743,17 @@
     {
       "name": "Band-Resisted Marching Guard",
       "category": "posture",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "forward_lean_control",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Resistance Band (waist)",
       "equipment_notes": "Band anchored behind at hip height",
       "description": "March forward against band tension while maintaining high guard. Develops posture integrity when cutting off the cage."
@@ -487,21 +761,33 @@
     {
       "name": "Pivot-Reset Shadowboxing",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "circular_pressure",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Mark 4 cardinal directions with tape",
-      "description": "Throw 3-punch combo, pivot 45° off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet."
+      "description": "Throw 3-punch combo, pivot 45\u00b0 off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet."
     },
     {
       "name": "Med Ball Chest Pass Recoil",
       "category": "upper_body",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "reciprocal_inhibition",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Medicine Ball (4-6kg)",
       "equipment_notes": "Wall or partner for rebounds",
       "description": "Throw ball forward explosively, immediately retract hands to guard position. Trains punch retraction during forward motion."
@@ -509,21 +795,34 @@
     {
       "name": "Stagger-Stance Level Change",
       "category": "defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "knee_proprioception",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Optional: Hold light weight for instability",
-      "description": "From staggered stance, drop rear knee 1" to the floor and rise without losing balance. Mimics defensive dips during advances."
+      "description": "From staggered stance, drop rear knee 1\" to the floor and rise without losing balance. Mimics defensive dips during advances."
     },
     {
       "name": "Reactive Rope Maze",
       "category": "chaos",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "visual_proprioception",
       "type": "multidirectional",
-      "tags": ["coordination", "mma", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Elastic Ropes (head/waist height)",
       "equipment_notes": "Crisscross ropes in zigzag pattern",
       "description": "Move forward through ropes while partner randomly tugs to disrupt balance. Simulates crowded forward pressure in fights."
@@ -531,10 +830,16 @@
     {
       "name": "Slip-Roll-Step",
       "category": "head_movement",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "directional_shifting",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Double-End Bag",
       "equipment_notes": "Set bag to swing at cheek height",
       "description": "Slip left, roll under right, step forward while bag resets. Chains defensive movements into forward motion."
@@ -542,10 +847,16 @@
     {
       "name": "Towel Tug Stance Hops",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "resisted_balance",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Towel (or Resistance Band)",
       "equipment_notes": "Partner holds towel at waist height",
       "description": "Hop forward in stance while partner provides irregular resistance. Trains weight distribution under pressure."
@@ -553,10 +864,16 @@
     {
       "name": "Wall-Walk Shoulder Tap",
       "category": "posture",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "tactile_proprioception",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Wall",
       "equipment_notes": "Stand 12\" from wall",
       "description": "Walk hands along wall at shoulder height while maintaining fight stance. Reinforces upright posture during cage cuts."
@@ -564,21 +881,33 @@
     {
       "name": "Blindfolded Pivot Drills",
       "category": "proprioception",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "vestibular_training",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Blindfold",
       "equipment_notes": "Partner guides initially",
-      "description": "Pivot 90° on command without visual cues. Sharpens spatial awareness during exchanges."
+      "description": "Pivot 90\u00b0 on command without visual cues. Sharpens spatial awareness during exchanges."
     },
     {
       "name": "Karaoke Step with Strikes",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "cross_lateral",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Add lateral slides for complexity",
       "description": "Karaoke step (cross-behind) while throwing jabs. Trains hip-shoulder disassociation for cutting angles."
@@ -586,10 +915,16 @@
     {
       "name": "Strike-Break-Strike",
       "category": "rhythm",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tempo_disruption",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Partner (w/ Focus Mitts)",
       "equipment_notes": "Partner varies rhythm unpredictably",
       "description": "Throw 2 punches, pause mid-combo, then resume. Conditions adaptive timing under pressure."
@@ -597,10 +932,16 @@
     {
       "name": "Uneven Surface Guard Work",
       "category": "balance",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "unstable_base",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Balance Pad or Bosu Ball",
       "equipment_notes": "Start with single-leg stands",
       "description": "Maintain high guard while standing on unstable surface. Improves compensatory adjustments during forward motion."
@@ -608,10 +949,16 @@
     {
       "name": "Shadow Cut-Offs",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "ring_generalship",
       "type": "multidirectional",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Open Space",
       "equipment_notes": "Imagine opponent circling",
       "description": "Mirror imaginary opponent's lateral movement while cutting off angles. Develops cage/ring cutting proprioception."
@@ -619,10 +966,16 @@
     {
       "name": "Balloon Tracking",
       "category": "visual_motor",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "reactive_tracking",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Balloons (3-5)",
       "equipment_notes": "Partner taps balloons randomly",
       "description": "Slip/block balloons while advancing forward. Trains visual processing during pressure sequences."
@@ -630,10 +983,16 @@
     {
       "name": "Step-Drag Punch",
       "category": "weight_transfer",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "pendulum_step",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Exaggerate drag motion initially",
       "description": "Step lead foot forward, drag rear foot while punching. Conditions proper weight distribution in forward attacks."
@@ -641,10 +1000,16 @@
     {
       "name": "Clap Push-Up to Guard",
       "category": "reactive_strength",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "plyometric_recovery",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Land softly on fingertips",
       "description": "Explosive clap push-up, immediately return to high guard. Trains arm recovery during swarming attacks."
@@ -652,10 +1017,16 @@
     {
       "name": "Partner Hand-Fight Walk",
       "category": "tactile",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "framing_under_pressure",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Start slow, increase resistance",
       "description": "Advance forward while battling for wrist/elbow control. Develops framing proprioception in the pocket."
@@ -663,34 +1034,51 @@
     {
       "name": "Staggered Stance Medicine Ball Rotations",
       "category": "core_linking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "dissociated_rotation",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Medicine Ball (2-4kg)",
       "equipment_notes": "Keep hips square during rotations",
-      "description": "Hold ball at chest in staggered stance, rotate shoulders 90° without hip movement. Trains upper/lower body separation for cutting punches."
+      "description": "Hold ball at chest in staggered stance, rotate shoulders 90\u00b0 without hip movement. Trains upper/lower body separation for cutting punches."
     },
     {
       "name": "Backward Roll to Sprint",
       "category": "fall_recovery",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "ground_to_stand",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Mat (optional)",
       "equipment_notes": "Use wall for assisted roll if needed",
       "description": "Execute backward roll, immediately spring up and sprint forward. Conditions rapid recovery during aggressive advances."
-    }
-  {
-  "pressure_fighter_coordination_drills": [
+    },
     {
       "name": "Sliding L-Step Jab",
       "category": "footwork",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "linear_to_lateral",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Agility Ladder",
       "equipment_notes": "Ladder flat on ground or taped lines",
       "description": "Step forward with jab, then slide lead foot laterally along ladder rung while keeping weight centered. Trains forward pressure with sudden angle changes."
@@ -698,10 +1086,17 @@
     {
       "name": "Band-Resisted Marching Guard",
       "category": "posture",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "forward_lean_control",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Resistance Band (waist)",
       "equipment_notes": "Band anchored behind at hip height",
       "description": "March forward against band tension while maintaining high guard. Develops posture integrity when cutting off the cage."
@@ -709,21 +1104,33 @@
     {
       "name": "Pivot-Reset Shadowboxing",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "circular_pressure",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Mark 4 cardinal directions with tape",
-      "description": "Throw 3-punch combo, pivot 45° off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet."
+      "description": "Throw 3-punch combo, pivot 45\u00b0 off centerline, reset stance. Conditions footwork to maintain cutting angles without crossing feet."
     },
     {
       "name": "Med Ball Chest Pass Recoil",
       "category": "upper_body",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "reciprocal_inhibition",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Medicine Ball (4-6kg)",
       "equipment_notes": "Wall or partner for rebounds",
       "description": "Throw ball forward explosively, immediately retract hands to guard position. Trains punch retraction during forward motion."
@@ -731,21 +1138,34 @@
     {
       "name": "Stagger-Stance Level Change",
       "category": "defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "knee_proprioception",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Optional: Hold light weight for instability",
-      "description": "From staggered stance, drop rear knee 1" to the floor and rise without losing balance. Mimics defensive dips during advances."
+      "description": "From staggered stance, drop rear knee 1\" to the floor and rise without losing balance. Mimics defensive dips during advances."
     },
     {
       "name": "Reactive Rope Maze",
       "category": "chaos",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "visual_proprioception",
       "type": "multidirectional",
-      "tags": ["coordination", "mma", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Elastic Ropes (head/waist height)",
       "equipment_notes": "Crisscross ropes in zigzag pattern",
       "description": "Move forward through ropes while partner randomly tugs to disrupt balance. Simulates crowded forward pressure in fights."
@@ -753,10 +1173,16 @@
     {
       "name": "Slip-Roll-Step",
       "category": "head_movement",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "directional_shifting",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Double-End Bag",
       "equipment_notes": "Set bag to swing at cheek height",
       "description": "Slip left, roll under right, step forward while bag resets. Chains defensive movements into forward motion."
@@ -764,10 +1190,16 @@
     {
       "name": "Towel Tug Stance Hops",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "resisted_balance",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Towel (or Resistance Band)",
       "equipment_notes": "Partner holds towel at waist height",
       "description": "Hop forward in stance while partner provides irregular resistance. Trains weight distribution under pressure."
@@ -775,10 +1207,16 @@
     {
       "name": "Wall-Walk Shoulder Tap",
       "category": "posture",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "tactile_proprioception",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Wall",
       "equipment_notes": "Stand 12\" from wall",
       "description": "Walk hands along wall at shoulder height while maintaining fight stance. Reinforces upright posture during cage cuts."
@@ -786,21 +1224,33 @@
     {
       "name": "Blindfolded Pivot Drills",
       "category": "proprioception",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "vestibular_training",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Blindfold",
       "equipment_notes": "Partner guides initially",
-      "description": "Pivot 90° on command without visual cues. Sharpens spatial awareness during exchanges."
+      "description": "Pivot 90\u00b0 on command without visual cues. Sharpens spatial awareness during exchanges."
     },
     {
       "name": "Karaoke Step with Strikes",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "cross_lateral",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Add lateral slides for complexity",
       "description": "Karaoke step (cross-behind) while throwing jabs. Trains hip-shoulder disassociation for cutting angles."
@@ -808,10 +1258,16 @@
     {
       "name": "Strike-Break-Strike",
       "category": "rhythm",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tempo_disruption",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Partner (w/ Focus Mitts)",
       "equipment_notes": "Partner varies rhythm unpredictably",
       "description": "Throw 2 punches, pause mid-combo, then resume. Conditions adaptive timing under pressure."
@@ -819,10 +1275,16 @@
     {
       "name": "Uneven Surface Guard Work",
       "category": "balance",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "unstable_base",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Balance Pad or Bosu Ball",
       "equipment_notes": "Start with single-leg stands",
       "description": "Maintain high guard while standing on unstable surface. Improves compensatory adjustments during forward motion."
@@ -830,10 +1292,16 @@
     {
       "name": "Shadow Cut-Offs",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "ring_generalship",
       "type": "multidirectional",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Open Space",
       "equipment_notes": "Imagine opponent circling",
       "description": "Mirror imaginary opponent's lateral movement while cutting off angles. Develops cage/ring cutting proprioception."
@@ -841,10 +1309,16 @@
     {
       "name": "Balloon Tracking",
       "category": "visual_motor",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "reactive_tracking",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Balloons (3-5)",
       "equipment_notes": "Partner taps balloons randomly",
       "description": "Slip/block balloons while advancing forward. Trains visual processing during pressure sequences."
@@ -852,10 +1326,16 @@
     {
       "name": "Step-Drag Punch",
       "category": "weight_transfer",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "pendulum_step",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Exaggerate drag motion initially",
       "description": "Step lead foot forward, drag rear foot while punching. Conditions proper weight distribution in forward attacks."
@@ -863,10 +1343,16 @@
     {
       "name": "Clap Push-Up to Guard",
       "category": "reactive_strength",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "plyometric_recovery",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "None",
       "equipment_notes": "Land softly on fingertips",
       "description": "Explosive clap push-up, immediately return to high guard. Trains arm recovery during swarming attacks."
@@ -874,10 +1360,16 @@
     {
       "name": "Partner Hand-Fight Walk",
       "category": "tactile",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "framing_under_pressure",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Start slow, increase resistance",
       "description": "Advance forward while battling for wrist/elbow control. Develops framing proprioception in the pocket."
@@ -885,34 +1377,53 @@
     {
       "name": "Staggered Stance Medicine Ball Rotations",
       "category": "core_linking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "dissociated_rotation",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter"
+      ],
       "equipment": "Medicine Ball (2-4kg)",
       "equipment_notes": "Keep hips square during rotations",
-      "description": "Hold ball at chest in staggered stance, rotate shoulders 90° without hip movement. Trains upper/lower body separation for cutting punches."
+      "description": "Hold ball at chest in staggered stance, rotate shoulders 90\u00b0 without hip movement. Trains upper/lower body separation for cutting punches."
     },
     {
       "name": "Backward Roll to Sprint",
       "category": "fall_recovery",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "ground_to_stand",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "pressure_fighter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "pressure_fighter"
+      ],
       "equipment": "Mat (optional)",
       "equipment_notes": "Use wall for assisted roll if needed",
       "description": "Execute backward roll, immediately spring up and sprint forward. Conditions rapid recovery during aggressive advances."
     }
-  {
+  ],
   "counter_striker_coordination_drills": [
     {
       "name": "Slip-Catch-Return",
       "category": "defense",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "head_movement",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Reaction Ball",
       "equipment_notes": "Use uneven-surface ball for unpredictable bounces",
       "description": "Slip randomly bounced ball, catch after first bounce, immediately return throw while resetting stance. Trains reactive head movement + reset coordination."
@@ -920,32 +1431,52 @@
     {
       "name": "Pivot-Stick Landing",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "angular_movement",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "kickboxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "kickboxing",
+        "counter_striker"
+      ],
       "equipment": "Balance Pad",
       "equipment_notes": "2\" thick foam pad for instability",
-      "description": "Pivot 45° off lead leg onto balance pad, freeze for 2 seconds. Develops precise weight transfer for counter-angle creation."
+      "description": "Pivot 45\u00b0 off lead leg onto balance pad, freeze for 2 seconds. Develops precise weight transfer for counter-angle creation."
     },
     {
       "name": "Feint-Parry-Cross",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "upper_lower_disassociation",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Double-End Bag",
       "equipment_notes": "Set bag at jaw height",
-      "description": "Feint jab → parry imaginary cross → fire real cross as bag rebounds. Synchronizes upper/lower body timing for interceptive counters."
+      "description": "Feint jab \u2192 parry imaginary cross \u2192 fire real cross as bag rebounds. Synchronizes upper/lower body timing for interceptive counters."
     },
     {
       "name": "Blindfolded Partner Taps",
       "category": "proprioception",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "tactile_reaction",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Blindfold",
       "equipment_notes": "Partner wears mitts for safe tapping",
       "description": "Blindfolded athlete detects light shoulder/hip taps to initiate specific counters (e.g., rear tap = pull-counter). Heightens spatial awareness."
@@ -953,21 +1484,33 @@
     {
       "name": "Slope Backstep Counters",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "eccentric_control",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
-      "equipment": "Decline Treadmill (10° angle)",
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
+      "equipment": "Decline Treadmill (10\u00b0 angle)",
       "equipment_notes": "Set to 1.5mph speed",
       "description": "Walk backward on decline, reacting to partner's visual cues to plant and counter. Trains balance during defensive retreats."
     },
     {
       "name": "Reactive Hoop Circles",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "direction_changes",
       "type": "multidirectional",
-      "tags": ["coordination", "kickboxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "counter_striker"
+      ],
       "equipment": "Agility Hoop (6' diameter)",
       "equipment_notes": "Hoop can be taped on floor",
       "description": "Move around hoop's perimeter, changing direction on partner's clap. Develops edge awareness for ring/cage cutting."
@@ -975,10 +1518,16 @@
     {
       "name": "Medicine Ball Catch-Counter",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "object_tracking",
       "type": "rotational",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "2kg Medicine Ball",
       "equipment_notes": "Partner throws from 3m distance",
       "description": "Catch ball mid-chest while pivoting, immediately throw back into rear-hand counter. Trains weight transfer under external load."
@@ -986,10 +1535,16 @@
     {
       "name": "Strobe Light Sparring",
       "category": "reaction",
-      "phases": ["TAPER"],
+      "phases": [
+        "TAPER"
+      ],
       "movement": "visual_processing",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "counter_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "counter_striker"
+      ],
       "equipment": "Strobe Glasses",
       "equipment_notes": "Set to 8Hz frequency",
       "description": "Light technical sparring with strobe glasses forcing intermittent vision. Sharpens anticipatory timing between visual gaps."
@@ -997,10 +1552,16 @@
     {
       "name": "Uneven Surface Check-Hooks",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "dynamic_balance",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Bosu Ball",
       "equipment_notes": "Flat side down for instability",
       "description": "Throw check hooks while standing on Bosu, maintaining shoulder-hip alignment. Conditions off-balance counters."
@@ -1008,10 +1569,16 @@
     {
       "name": "Mirror Footwork Drills",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "shadow_matching",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Full-Length Mirror",
       "equipment_notes": "Minimum 2m x 1m mirror",
       "description": "Mirror a partner's footwork patterns in real-time, reversing roles every 30sec. Enhances predictive footwork reading."
@@ -1019,10 +1586,16 @@
     {
       "name": "Band-Resisted Pull Counters",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tension_control",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Resistance Band (Light)",
       "equipment_notes": "Anchor band behind at head height",
       "description": "Throw pull counters against band tension, emphasizing crisp torso rotation without over-committing."
@@ -1030,10 +1603,16 @@
     {
       "name": "Reactive Ladder Check Kicks",
       "category": "kicking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "interceptive_timing",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "counter_striker"
+      ],
       "equipment": "Agility Ladder",
       "equipment_notes": "Partner stands at ladder end",
       "description": "Move through ladder, throwing teeps when partner raises mitts. Trains kick timing during footwork transitions."
@@ -1041,10 +1620,16 @@
     {
       "name": "Plyo-Clap Parry Drills",
       "category": "defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "auditory_reaction",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Clap Board",
       "equipment_notes": "Partner varies clap rhythm",
       "description": "Parry imaginary jabs on each clap, countering on double-clap cues. Develops rhythm disruption skills."
@@ -1052,10 +1637,16 @@
     {
       "name": "Weight-Shift Knee Blocks",
       "category": "defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "weight_distribution",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "counter_striker"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "counter_striker"
+      ],
       "equipment": "Pool Noodle (as knee proxy)",
       "equipment_notes": "Partner sweeps noodle at 50% speed",
       "description": "Shift weight to rear leg while raising lead leg to block, immediately returning to stance. Trains defensive balance for low-kick counters."
@@ -1063,21 +1654,33 @@
     {
       "name": "Sliding Counter Combo",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "linear_defense",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Socks (on hardwood) or Slide Board",
-      "equipment_notes": "3-5° incline if using slide board",
+      "equipment_notes": "3-5\u00b0 incline if using slide board",
       "description": "Slip outside while sliding back, then explode forward with 1-2-counter. Mimics Mayweather's shoulder roll counters."
     },
     {
       "name": "Reactive Star Drill",
       "category": "proprioception",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "multidirectional_awareness",
       "type": "multidirectional",
-      "tags": ["coordination", "mma", "counter_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "counter_striker"
+      ],
       "equipment": "5 Cones (star pattern)",
       "equipment_notes": "3m between each cone",
       "description": "Move to randomly called cones, throwing specific counters at each (e.g., cone 1 = check hook). Develops spatial strike mapping."
@@ -1085,10 +1688,16 @@
     {
       "name": "Balloon Tracking",
       "category": "visual_tracking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "ocular_motor",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Helium Balloon",
       "equipment_notes": "Anchor with 2m string",
       "description": "Track drifting balloon while maintaining stance, striking when it crosses target line. Improves focus under visual distraction."
@@ -1096,21 +1705,33 @@
     {
       "name": "Wobble Board Counters",
       "category": "balance",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "perturbation_training",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "counter_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "counter_striker"
+      ],
       "equipment": "Wobble Board",
-      "equipment_notes": "Start with 10° tilt range",
+      "equipment_notes": "Start with 10\u00b0 tilt range",
       "description": "Throw straight counters while maintaining balance on wobble board. Conditions stable striking under platform shifts."
     },
     {
       "name": "Delayed Audio Counters",
       "category": "reaction",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "temporal_disassociation",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Bluetooth Speaker (300ms delay)",
       "equipment_notes": "Use audio delay app",
       "description": "Counter mitt work with delayed audio feedback. Forces reliance on proprioception rather than auditory timing."
@@ -1118,23 +1739,37 @@
     {
       "name": "Inverse Shadowboxing",
       "category": "cognitive",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "mirror_imaging",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "None",
       "equipment_notes": "Requires 2m x 2m space",
       "description": "Shadowbox while reversing all footwork directions (e.g., step left when intending right). Rewires neural pathways for adaptive counters."
     }
-  {
+  ],
   "kicker_coordination_drills": [
     {
       "name": "Blindfolded Roundhouse Balance",
       "category": "dynamic_balance",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "kicking_control",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "mma",
+        "kicker"
+      ],
       "equipment": "Blindfold",
       "equipment_notes": "Use a sleep mask or scarf",
       "description": "Throw slow roundhouse kicks blindfolded, holding extension for 3 seconds. Forces reliance on proprioception rather than visual cues for balance."
@@ -1142,10 +1777,16 @@
     {
       "name": "Swiss Ball Teep Control",
       "category": "unstable_platform",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "push_kick",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "kicker"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "kicker"
+      ],
       "equipment": "Swiss Ball",
       "equipment_notes": "Lean back against ball against wall",
       "description": "From seated Swiss ball position, throw teep kicks while maintaining ball stability. Trains core-kick integration under instability."
@@ -1153,21 +1794,33 @@
     {
       "name": "Pivot-and-Catch Drill",
       "category": "rotational_awareness",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "kicking_recovery",
       "type": "unilateral",
-      "tags": ["coordination", "taekwondo", "kicker"],
+      "tags": [
+        "coordination",
+        "taekwondo",
+        "kicker"
+      ],
       "equipment": "Small Ball or Coin",
       "equipment_notes": "Object should fit in palm",
-      "description": "After throwing a kick, pivot 360° and catch the ball mid-spin. Enhances spatial orientation during kicking combinations."
+      "description": "After throwing a kick, pivot 360\u00b0 and catch the ball mid-spin. Enhances spatial orientation during kicking combinations."
     },
     {
       "name": "Slackline Switch Kicks",
       "category": "extreme_balance",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "weight_transfer",
       "type": "alternating",
-      "tags": ["coordination", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "kicker"
+      ],
       "equipment": "Slackline or Low Balance Beam",
       "equipment_notes": "Start with feet on line, progress to kicks",
       "description": "Throw alternating switch kicks while balanced on a slackline. Drills micro-adjustments for kick transitions under instability."
@@ -1175,10 +1828,16 @@
     {
       "name": "Band-Resisted Knee Chamber",
       "category": "kinesthetic_control",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "knee_drive",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "kicker"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "kicker"
+      ],
       "equipment": "Resistance Band",
       "equipment_notes": "Anchor band to ankle, pull backward",
       "description": "Slowly chamber knees against band resistance, focusing on hip flexor control and precise retraction."
@@ -1186,10 +1845,16 @@
     {
       "name": "Obstacle Course Kicking",
       "category": "environmental_adaptation",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "adaptive_striking",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "kicker"
+      ],
       "equipment": "Cones, Hurdles, Pads",
       "equipment_notes": "Create 3-5 station course",
       "description": "Navigate obstacles (e.g., step over hurdles, circle cones) before delivering accurate kicks to pads. Trains kick timing in chaotic environments."
@@ -1197,10 +1862,16 @@
     {
       "name": "Eyes-Closed Axe Kick",
       "category": "proprioceptive_striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "vertical_targeting",
       "type": "unilateral",
-      "tags": ["coordination", "karate", "kicker"],
+      "tags": [
+        "coordination",
+        "karate",
+        "kicker"
+      ],
       "equipment": "Hanging Pool Noodle",
       "equipment_notes": "Suspend at shoulder height",
       "description": "With eyes closed, throw axe kicks to lightly touch (not strike) the noodle. Sharpens distance perception without visual feedback."
@@ -1208,10 +1879,16 @@
     {
       "name": "Single-Leg Hop to Head Kick",
       "category": "reactive_balance",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "power_transfer",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "kicker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "kicker"
+      ],
       "equipment": "None",
       "equipment_notes": "Use chalk mark for hop target",
       "description": "Hop laterally on one leg, then immediately throw a head kick. Trains kick setup from unbalanced positions."
@@ -1219,10 +1896,16 @@
     {
       "name": "Moving Target Side Kick",
       "category": "dynamic_targeting",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tracking_strikes",
       "type": "unilateral",
-      "tags": ["coordination", "taekwondo", "kicker"],
+      "tags": [
+        "coordination",
+        "taekwondo",
+        "kicker"
+      ],
       "equipment": "Swinging Tennis Ball",
       "equipment_notes": "Hang ball from string at knee height",
       "description": "Strike a swinging ball with side kicks, adjusting timing to moving targets. Improves real-time distance calculation."
@@ -1230,10 +1913,16 @@
     {
       "name": "Wobble Board Crescent Kick",
       "category": "unstable_platform",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "rotational_balance",
       "type": "unilateral",
-      "tags": ["coordination", "karate", "kicker"],
+      "tags": [
+        "coordination",
+        "karate",
+        "kicker"
+      ],
       "equipment": "Wobble Board or Bosu",
       "equipment_notes": "Stand on board's center",
       "description": "Throw crescent kicks while balancing on a wobble board. Forces ankle/hip stabilization during rotational kicks."
@@ -1241,32 +1930,50 @@
     {
       "name": "Backward Roll to Spin Kick",
       "category": "ground_to_kick",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tumbling_transition",
       "type": "unilateral",
-      "tags": ["coordination", "capoeira", "kicker"],
+      "tags": [
+        "coordination",
+        "capoeira",
+        "kicker"
+      ],
       "equipment": "Mat",
-      "equipment_notes": "Use 2" thick judo or gymnastics mat",
+      "equipment_notes": "Use 2\" thick judo or gymnastics mat",
       "description": "Perform a backward roll, then immediately stand into a spinning back kick. Develops kick recovery from compromised positions."
     },
     {
       "name": "Partner Blind Angle Kick",
       "category": "spatial_awareness",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "peripheral_targeting",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "kicker"
+      ],
       "equipment": "Partner (w/ Body Protector)",
-      "equipment_notes": "Partner stands at 45° angles",
+      "equipment_notes": "Partner stands at 45\u00b0 angles",
       "description": "With eyes fixed forward, kick toward partners positioned peripherally using only auditory cues. Trains non-visual angle striking."
     },
     {
       "name": "Plyo Box Level Change Kick",
       "category": "altitude_adjustment",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "height_transition",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "kicker"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "kicker"
+      ],
       "equipment": "12\" Plyo Box",
       "equipment_notes": "Step down, don't jump",
       "description": "Step off box and immediately throw a body kick mid-descent. Conditions proper weight transfer during elevation changes."
@@ -1274,10 +1981,16 @@
     {
       "name": "Sliding Surface Front Kick",
       "category": "unstable_footing",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "sliding_balance",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "kicker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "kicker"
+      ],
       "equipment": "Socks or Furniture Sliders",
       "equipment_notes": "Use on hardwood or linoleum",
       "description": "Throw front kicks while standing on sliders, controlling slide momentum. Mimics kicking on slippery surfaces."
@@ -1285,10 +1998,16 @@
     {
       "name": "Reactive Band-Resisted Roundhouse",
       "category": "resisted_control",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "deceleration_training",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "kicker"
+      ],
       "equipment": "Resistance Band + Partner",
       "equipment_notes": "Partner provides variable tension",
       "description": "Throw roundhouses against unpredictable band resistance, focusing on smooth deceleration and retraction."
@@ -1296,10 +2015,16 @@
     {
       "name": "Water Depth Kicking",
       "category": "environmental_resistance",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "fluid_dynamics",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "kicker"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "kicker"
+      ],
       "equipment": "Waist-Deep Water",
       "equipment_notes": "Pool or ocean",
       "description": "Execute kicks underwater at varying depths. Water resistance enhances proprioceptive feedback through full range of motion."
@@ -1307,10 +2032,16 @@
     {
       "name": "Obstacle Dodge to Counter Kick",
       "category": "evasive_striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "defensive_transitions",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "kicker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "kicker"
+      ],
       "equipment": "Hanging Pool Noodles or Bags",
       "equipment_notes": "Suspend obstacles at head/body height",
       "description": "Duck/weave through obstacles, then immediately counter with kicks. Trains kick setups from defensive movements."
@@ -1318,10 +2049,16 @@
     {
       "name": "Trampoline Switch Kick",
       "category": "aerial_control",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "airborne_adjustment",
       "type": "alternating",
-      "tags": ["coordination", "taekwondo", "kicker"],
+      "tags": [
+        "coordination",
+        "taekwondo",
+        "kicker"
+      ],
       "equipment": "Trampoline",
       "equipment_notes": "Low bounce focus",
       "description": "Throw alternating switch kicks mid-bounce, maintaining balance during aerial transitions."
@@ -1329,34 +2066,53 @@
     {
       "name": "Sloped Surface Roundhouse",
       "category": "uneven_terrain",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "gradient_adaptation",
       "type": "unilateral",
-      "tags": ["coordination", "muay_thai", "kicker"],
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "kicker"
+      ],
       "equipment": "Hill or Incline Bench",
-      "equipment_notes": "10-15° slope",
+      "equipment_notes": "10-15\u00b0 slope",
       "description": "Throw roundhouse kicks while standing on a slope (facing up/down/sidehill). Adapts mechanics to uneven ground."
     },
     {
       "name": "Mirror Drill - Shadow Kicking",
       "category": "kinesthetic_mirroring",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "symmetric_control",
       "type": "bilateral",
-      "tags": ["coordination", "karate", "kicker"],
+      "tags": [
+        "coordination",
+        "karate",
+        "kicker"
+      ],
       "equipment": "Full-Length Mirror",
       "equipment_notes": "Stand 2-3 feet away",
       "description": "Throw kicks while matching mirror-image movements with a partner. Enhances bilateral coordination and technique symmetry."
     }
-  {
+  ],
   "scrambler_coordination_drills": [
     {
       "name": "Hip Heist Mirror Drill",
       "category": "ground_transitions",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "hip_awareness",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Start seated back-to-back",
       "description": "Partners mirror hip heist movements without visual cues, relying on tactile feedback. Develops proprioceptive hip control for standups."
@@ -1364,21 +2120,33 @@
     {
       "name": "Blindfolded Turtle Spin",
       "category": "ground_awareness",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "spatial_orientation",
       "type": "rotational",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Blindfold",
       "equipment_notes": "Use jiu-jitsu belt as blindfold",
-      "description": "From turtle position, rotate 360° while maintaining base, then explode to standing. Trains body awareness without visual reference."
+      "description": "From turtle position, rotate 360\u00b0 while maintaining base, then explode to standing. Trains body awareness without visual reference."
     },
     {
       "name": "Reactive Knee-on-Belly Escape",
       "category": "ground_transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tactile_reaction",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Partner + Tennis Balls",
       "equipment_notes": "Partner randomly tosses balls during escapes",
       "description": "Escape knee-on-belly while catching tennis balls tossed unpredictably. Forces adaptive weight distribution."
@@ -1386,10 +2154,16 @@
     {
       "name": "Band-Resisted Granby Rolls",
       "category": "ground_movement",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "inverted_awareness",
       "type": "rotational",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Resistance Band (Hip Level)",
       "equipment_notes": "Anchor band to waist",
       "description": "Perform Granby rolls with band tension, maintaining tight rotation. Enhances kinesthetic sense in inverted positions."
@@ -1397,21 +2171,33 @@
     {
       "name": "Plyo Mat Level Changes",
       "category": "standing_transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "depth_perception",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "scrambler"],
-      "equipment": "Varying Height Mats (6-12”)",
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
+      "equipment": "Varying Height Mats (6-12\u201d)",
       "equipment_notes": "Arrange mats in random pattern",
       "description": "Step/jump between mats of different heights, immediately defending takedowns from partner. Trains adaptive level changes."
     },
     {
       "name": "Sliding Shield Get-Up",
       "category": "ground_transitions",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "limb_independence",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Sliders (or Towels on Hardwood)",
       "equipment_notes": "Place one foot on slider",
       "description": "Perform technical stand-up with one foot sliding unpredictably. Forces compensatory core engagement."
@@ -1419,10 +2205,16 @@
     {
       "name": "Reactionary Sprawl Matrix",
       "category": "takedown_defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "auditory_reaction",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Reaction Ball + Partner",
       "equipment_notes": "Partner shouts commands during ball bounces",
       "description": "Sprawl/react to ball bounces while processing verbal takedown cues. Trains divided attention scrambling."
@@ -1430,10 +2222,16 @@
     {
       "name": "Uneven Surface Hip Switch",
       "category": "ground_movement",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "unstable_base",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Balance Cushion or Bosu",
       "equipment_notes": "Place under hips during drills",
       "description": "Switch hips in guard/recovery positions on unstable surface. Sharpens micro-adjustments."
@@ -1441,10 +2239,16 @@
     {
       "name": "Blind Mat Returns",
       "category": "spatial_awareness",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "orientation_recovery",
       "type": "rotational",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Blindfold + Wrestling Mat",
       "equipment_notes": "Start in center of mat",
       "description": "Roll/turn randomly, then locate mat edge without vision. Develops cage/wall awareness when grounded."
@@ -1452,10 +2256,16 @@
     {
       "name": "Tactile Stand-Up Chain",
       "category": "ground_transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "contact_reaction",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Partner w/ Grab Defense Mitts",
       "equipment_notes": "Partner grips randomly during stand-up",
       "description": "Technical stand-up while partner disrupts with unpredictable grips. Trains adaptive stand-up mechanics."
@@ -1463,10 +2273,16 @@
     {
       "name": "Directional Scramble Reaction",
       "category": "transitions",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "impulse_control",
       "type": "multidirectional",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Agility Ladder + Partner",
       "equipment_notes": "Partner points directions during scrambles",
       "description": "Scramble through ladder rungs while reacting to partner's directional cues. Combines footwork with chaotic reorientation."
@@ -1474,10 +2290,16 @@
     {
       "name": "Falling Base Recovery",
       "category": "ground_awareness",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "impact_proprioception",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Crash Pad",
       "equipment_notes": "Fall from kneeling position first",
       "description": "Deliberately fall backward/sideways, immediately recovering base. Trains automatic limb placement on impact."
@@ -1485,10 +2307,16 @@
     {
       "name": "Obstacle Guard Retention",
       "category": "ground_movement",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "obstacle_navigation",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Cones or Small Hurdles",
       "equipment_notes": "Place around training area",
       "description": "Maintain guard while partner pushes legs toward obstacles. Forces precise limb redirection."
@@ -1496,10 +2324,16 @@
     {
       "name": "Weighted Limb Isolation",
       "category": "limb_independence",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "asymmetric_control",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "Ankle/Wrist Weights (1-2lbs)",
       "equipment_notes": "Weight only one limb",
       "description": "Perform technical stand-ups/hip escapes with uneven weighting. Enhances compensatory coordination."
@@ -1507,35 +2341,53 @@
     {
       "name": "Shadow Scramble Flow",
       "category": "transition_fluidity",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "kinesthetic_chain",
       "type": "multidirectional",
-      "tags": ["coordination", "mma", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "scrambler"
+      ],
       "equipment": "None",
       "equipment_notes": "Use smooth surface",
-      "description": "Fluidly chain: shot → sprawl → stand-up → pivot → shot. Trains seamless transition proprioception without resistance."
+      "description": "Fluidly chain: shot \u2192 sprawl \u2192 stand-up \u2192 pivot \u2192 shot. Trains seamless transition proprioception without resistance."
     }
-  ]
-}{
+  ],
   "distance_striker_coordination_drills": [
     {
       "name": "Pivot-and-Stick Landing",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "angular_rotation",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Tape X on floor",
       "equipment_notes": "Mark pivot point for consistency",
-      "description": "Throw rear straight, pivot 45° on lead foot, and freeze. Checks weight distribution during rotational exits from exchanges."
+      "description": "Throw rear straight, pivot 45\u00b0 on lead foot, and freeze. Checks weight distribution during rotational exits from exchanges."
     },
     {
       "name": "Blindfolded Teep Range Finding",
       "category": "kicking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "proprioceptive_calibration",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "distance_striker"
+      ],
       "equipment": "Blindfold + partner",
       "equipment_notes": "Partner holds palm at varying distances",
       "description": "Eyes closed, throw front kicks to lightly touch partner's palm. Sharpens spatial mapping without visual cues."
@@ -1543,10 +2395,17 @@
     {
       "name": "Sliding Lateral Jab",
       "category": "striking",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "dissociated_footwork",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Smooth surface (or socks)",
       "equipment_notes": "Requires slippery floor for optimal slide",
       "description": "Slide lead foot laterally while jabbing, keeping rear foot planted. Trains independent upper/lower body control."
@@ -1554,10 +2413,16 @@
     {
       "name": "BOSU Ball Straight Blast",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "unstable_platform",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "BOSU ball (flat side down)",
       "equipment_notes": "Start with 30% power, focus on balance",
       "description": "Throw 1-2 combinations on BOSU ball. Forces micro-adjustments to maintain upright posture during strikes."
@@ -1565,10 +2430,16 @@
     {
       "name": "Reactive Step-Back Counter",
       "category": "countering",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "synchronized_retreat",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "counter_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker"
+      ],
       "equipment": "Partner (barehanded)",
       "equipment_notes": "Partner advances at 70% speed initially",
       "description": "Time step-back with counter cross as partner moves forward. Drills distance reset timing under pressure."
@@ -1576,21 +2447,33 @@
     {
       "name": "Band-Resisted Angle Creation",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "loaded_directional_change",
       "type": "rotational",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "Hip resistance band",
       "equipment_notes": "Anchor band to simulate opponent pressure",
-      "description": "Step offline at 45° while throwing check hook against band resistance. Trains angle generation against forward pressure."
+      "description": "Step offline at 45\u00b0 while throwing check hook against band resistance. Trains angle generation against forward pressure."
     },
     {
       "name": "Swiss Ball Kneeling Strikes",
       "category": "striking",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "extreme_balance",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "Swiss ball",
       "equipment_notes": "Kneel on ball, maintain upright posture",
       "description": "Throw elbows/palm strikes while kneeling on Swiss ball. Challenges micro-adjustments in unstable positions."
@@ -1598,10 +2481,16 @@
     {
       "name": "Tandem Stance Switch Kick",
       "category": "kicking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "narrow_base_transfer",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "distance_striker"
+      ],
       "equipment": "None",
       "equipment_notes": "Heel-to-toe stance width",
       "description": "Switch stance while throwing roundhouse from tandem stance. Tests precise weight transfer in restricted base."
@@ -1609,10 +2498,16 @@
     {
       "name": "Reactive Hoop Drills",
       "category": "accuracy",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "dynamic_targeting",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Hula hoop + partner",
       "equipment_notes": "Partner moves hoop randomly",
       "description": "Strike through moving hula hoop without touching edges. Develops visual-motor targeting under unpredictability."
@@ -1620,10 +2515,16 @@
     {
       "name": "Slackline Jab Game",
       "category": "balance",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "gait_integration",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Slackline (12\" off ground)",
       "equipment_notes": "Start with static jabs, progress to combos",
       "description": "Throw jabs while walking slackline. Ultimate integration of striking and dynamic balance."
@@ -1631,10 +2532,16 @@
     {
       "name": "Fencing Lunge Jab",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "linear_precision",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "None",
       "equipment_notes": "Lead knee must track over toes",
       "description": "Lunge forward from en garde stance to jab, emphasizing proper knee alignment and sudden distance closing."
@@ -1642,10 +2549,16 @@
     {
       "name": "Plyo Push-Up to Cross",
       "category": "transition",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "ground_to_standing",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "None",
       "equipment_notes": "Explosive push-up required",
       "description": "Perform plyometric push-up, immediately transition to standing rear cross. Trains rapid posture recovery for counter opportunities."
@@ -1653,10 +2566,16 @@
     {
       "name": "Wobble Board Teep Timing",
       "category": "kicking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "unstable_platform_kicking",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "distance_striker"
+      ],
       "equipment": "Wobble board",
       "equipment_notes": "Start with single-leg balance before adding kicks",
       "description": "Throw front kicks while balancing on wobble board. Enhances hip stability during linear kicks."
@@ -1664,21 +2583,34 @@
     {
       "name": "Blind Angle Cutting",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "proprioceptive_pivoting",
       "type": "rotational",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "Blindfold",
       "equipment_notes": "Requires prior footwork mastery",
-      "description": "Eyes closed, throw combo then pivot exactly 90°. Develops internal awareness of ring geography."
+      "description": "Eyes closed, throw combo then pivot exactly 90\u00b0. Develops internal awareness of ring geography."
     },
     {
       "name": "Sliding Defensive Shell",
       "category": "defense",
-      "phases": ["GPP", "SPP"],
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
       "movement": "lateral_guard_maintenance",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Smooth floor",
       "equipment_notes": "Socks recommended for slide",
       "description": "Slide laterally while maintaining peek-a-boo guard. Trains defensive posture during lateral movement."
@@ -1686,21 +2618,33 @@
     {
       "name": "Medicine Ball Catch-Strike",
       "category": "power_transfer",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "kinetic_linking",
       "type": "rotational",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "Medicine ball (4-6kg)",
-      "equipment_notes": "Partner throws from 45° angle",
+      "equipment_notes": "Partner throws from 45\u00b0 angle",
       "description": "Catch tossed med ball, immediately transfer momentum into hook. Reinforces kinetic chains from catch to strike."
     },
     {
       "name": "Uneven Surface Stance Dance",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "asymmetrical_balance",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Balance pads (2 different densities)",
       "equipment_notes": "Softer pad for rear foot",
       "description": "Switch stances while standing on uneven surfaces. Forces adaptive weight distribution."
@@ -1708,10 +2652,16 @@
     {
       "name": "Reactive Ladder In-Outs",
       "category": "footwork",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "auditory_cueing",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "Agility ladder + partner",
       "equipment_notes": "Partner calls direction changes",
       "description": "Perform ladder drills reacting to random 'in/out' verbal cues. Trains footwork adaptability under cognitive load."
@@ -1719,10 +2669,16 @@
     {
       "name": "Towel Snap Reflex",
       "category": "defense",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "tactile_reaction",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Towel + partner",
       "equipment_notes": "Partner snaps towel at varying rhythms",
       "description": "Avoid snapping towel while countering. Develops flinch-resistant defensive reactions."
@@ -1730,10 +2686,16 @@
     {
       "name": "Single-Leg Roundhouse Hold",
       "category": "kicking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "isometric_balance",
       "type": "unilateral",
-      "tags": ["coordination", "kickboxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "kickboxing",
+        "distance_striker"
+      ],
       "equipment": "Wall (optional for support)",
       "equipment_notes": "Freeze at full extension for 5s",
       "description": "Throw roundhouse, hold leg extended for time. Builds hip stabilizer endurance for kicking balance."
@@ -1741,10 +2703,16 @@
     {
       "name": "Mirror Footwork",
       "category": "footwork",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "synchronized_movement",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Partner",
       "equipment_notes": "Leader changes directions randomly",
       "description": "Mirror partner's lateral movements exactly. Enhances spatial mirroring for cage/corner management."
@@ -1752,10 +2720,16 @@
     {
       "name": "Punching Metronome",
       "category": "striking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "temporal_accuracy",
       "type": "bilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Metronome app",
       "equipment_notes": "Start at 60BPM, progress to 120BPM",
       "description": "Strike in rhythm with tempo changes. Trains punch timing under paced variations."
@@ -1763,10 +2737,16 @@
     {
       "name": "Obstacle Course Combos",
       "category": "integration",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "environmental_adaptation",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "Hurdles + pads",
       "equipment_notes": "12-18\" hurdle height",
       "description": "Weave through hurdles, striking pads at intervals. Simulates in-fight obstacle navigation."
@@ -1774,10 +2754,16 @@
     {
       "name": "Water Bag Striking",
       "category": "striking",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "unpredictable_resistance",
       "type": "unilateral",
-      "tags": ["coordination", "boxing", "distance_striker"],
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker"
+      ],
       "equipment": "Aquatic training bag",
       "equipment_notes": "Bag floats in water trough",
       "description": "Punch/kick floating water bag. Unstable target forces precision adjustments mid-strike."
@@ -1785,23 +2771,35 @@
     {
       "name": "Shadowboxing with Ankle Weights",
       "category": "proprioception",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "weighted_awareness",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "distance_striker"],
+      "tags": [
+        "coordination",
+        "mma",
+        "distance_striker"
+      ],
       "equipment": "1-2lb ankle weights",
       "equipment_notes": "Max 3 rounds to avoid form breakdown",
       "description": "Shadowbox with light ankle weights. Exaggerates proprioceptive feedback for technique refinement."
     }
-  {
+  ],
   "submission_hunter_coordination_drills": [
     {
       "name": "Blindfolded Gripping Sequences",
       "category": "proprioception",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "grip_transitions",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Blindfold, Gi or No-Gi Partner",
       "equipment_notes": "Partner provides minimal resistance during transitions.",
       "description": "With vision blocked, cycle through 5 grip combinations (e.g., collar-sleeve to wrist control) using touch alone. Develops tactile sensitivity for submission setups."
@@ -1809,10 +2807,17 @@
     {
       "name": "Knee-Cut Ankle Pick",
       "category": "transition",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "level_change",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter", "scrambler"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter",
+        "scrambler"
+      ],
       "equipment": "Partner (Barefoot)",
       "equipment_notes": "Partner stands on one leg to exaggerate balance disruption.",
       "description": "From standing, cut knee across partner's thigh while simultaneously scooping their ankle. Trains coordinated upper/lower body attacks for leg entanglements."
@@ -1820,10 +2825,16 @@
     {
       "name": "Rolling Omoplata Entry",
       "category": "dynamic_balance",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "inversion",
       "type": "rotational",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Crash Pad",
       "equipment_notes": "Use padded surface for repeated reps.",
       "description": "Initiate forward roll while trapping an arm, landing in omoplata position. Enhances spatial awareness during rotational submissions."
@@ -1831,10 +2842,16 @@
     {
       "name": "Single-Leg Spider Guard Transitions",
       "category": "guard_retention",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "hip_lift",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Resistance Band (Ankle)",
       "equipment_notes": "Band around one ankle to simulate opponent pressure.",
       "description": "Maintain spider guard while switching grips and lifting hips against band tension. Isolates leg control coordination under resistance."
@@ -1842,10 +2859,16 @@
     {
       "name": "Tactical Stand-Up to Guillotine",
       "category": "reactive",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "hip_escape",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Partner (With Rash Guard)",
       "equipment_notes": "Partner provides 30% resistance during stand-up.",
       "description": "Technical stand-up while simultaneously trapping head for guillotine. Links defensive frames to opportunistic submissions."
@@ -1853,10 +2876,16 @@
     {
       "name": "Inverted Triangle Spin",
       "category": "inversion",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "rotational_control",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Yoga Ball",
       "equipment_notes": "Ball supports hips during initial learning phase.",
       "description": "From inverted guard, spin 180 degrees while locking triangle legs. Trains rotational control during advanced submissions."
@@ -1864,10 +2893,16 @@
     {
       "name": "Saddle Entry from Turtle",
       "category": "leg_entanglement",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "knee_slide",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Partner in Turtle Position",
       "equipment_notes": "Partner offers minimal movement initially.",
       "description": "From turtle, slide knee across partner's hip while capturing far leg. Coordinates upper body grips with lower body entanglement."
@@ -1875,10 +2910,16 @@
     {
       "name": "Flopping Armbars",
       "category": "transition",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "back_step",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Crash Pad",
       "equipment_notes": "Focus on controlled falls.",
       "description": "Step back over partner's arm while maintaining extension, landing in armbar position. Teaches submission finishing during positional shifts."
@@ -1886,10 +2927,16 @@
     {
       "name": "Standing Kimura Chain",
       "category": "grip_flow",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "wrist_control",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Partner (With Grips)",
       "equipment_notes": "Partner alternates between neutral and defensive grips.",
       "description": "Cycle through 3 kimura grip variations (palm-up/palm-down/behind-back) without breaking contact. Enhances grip transition fluidity."
@@ -1897,10 +2944,16 @@
     {
       "name": "Rolling Bow-and-Arrow Entry",
       "category": "dynamic_balance",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "forward_roll",
       "type": "rotational",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Mat Space",
       "equipment_notes": "Initiate roll at 45-degree angle.",
       "description": "Forward roll while maintaining back control, transitioning directly into bow-and-arrow choke setup. Links movement to submission opportunities."
@@ -1908,10 +2961,16 @@
     {
       "name": "Blindfolded Ankle Lock Defense",
       "category": "proprioception",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "leg_pummeling",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Blindfold, Partner",
       "equipment_notes": "Partner applies slow, controlled ankle locks.",
       "description": "With vision blocked, defend ankle locks using only foot/hip awareness. Sharpens defensive coordination under sensory deprivation."
@@ -1919,10 +2978,16 @@
     {
       "name": "Flying Armbar from Combat Base",
       "category": "aerial_control",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "hip_extension",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Crash Pad, Partner",
       "equipment_notes": "Partner stands in controlled stance.",
       "description": "From combat base, launch into armbar while maintaining shoulder control throughout flight. Trains whole-body coordination during aerial submissions."
@@ -1930,10 +2995,16 @@
     {
       "name": "Reverse De La Riva to Heel Hook",
       "category": "leg_entanglement",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "inversion",
       "type": "rotational",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Partner in Standing Guard",
       "equipment_notes": "Partner maintains light base.",
       "description": "From reverse DLR, invert while capturing heel across hip line. Coordinates off-balancing with precise leg attacks."
@@ -1941,10 +3012,16 @@
     {
       "name": "Tornado Guard Spin",
       "category": "rotational_control",
-      "phases": ["SPP"],
+      "phases": [
+        "SPP"
+      ],
       "movement": "hip_switch",
       "type": "unilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Partner in Open Guard",
       "equipment_notes": "Use slow rotations initially.",
       "description": "360-degree spin while maintaining tornado guard hooks. Develops orientation control during complex guard transitions."
@@ -1952,12 +3029,19 @@
     {
       "name": "Wall-Walk Rear Naked",
       "category": "positional_awareness",
-      "phases": ["GPP"],
+      "phases": [
+        "GPP"
+      ],
       "movement": "back_control",
       "type": "bilateral",
-      "tags": ["coordination", "mma", "submission_hunter"],
+      "tags": [
+        "coordination",
+        "mma",
+        "submission_hunter"
+      ],
       "equipment": "Wall Space, Partner",
       "equipment_notes": "Partner provides light resistance.",
       "description": "Walk feet up wall while maintaining rear naked choke grips. Trains submission retention during positional scrambling."
     }
   ]
+}
