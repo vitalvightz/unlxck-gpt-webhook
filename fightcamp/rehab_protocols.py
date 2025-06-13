@@ -128,6 +128,13 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
         if itype and loc:
             parsed_entries.append((itype, loc))
 
+    seen_pairs = set()
+    unique_entries = []
+    for pair in parsed_entries:
+        if pair not in seen_pairs:
+            seen_pairs.add(pair)
+            unique_entries.append(pair)
+
     flagged = []
     for injury in injury_phrases:
         for flag in RED_FLAG_TYPES:
@@ -145,7 +152,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
         progress = entry.get("phase_progression", "")
         return [p.strip().upper() for p in progress.split("→") if p.strip()]
 
-    for itype, loc in parsed_entries:
+    for itype, loc in unique_entries:
         matches = [
             entry for entry in REHAB_BANK
             if entry.get("type") == itype
@@ -153,7 +160,13 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
             and current_phase.upper() in _phases(entry)
         ]
         if matches:
-            drills = [d["name"] for m in matches for d in m.get("drills", [])][:2]
+            drills = []
+            for m in matches:
+                for d in m.get("drills", []):
+                    name = d.get("name")
+                    if name and name not in drills:
+                        drills.append(name)
+            drills = drills[:2]
             if drills:
                 lines.append(f"- {loc.title()} ({itype.title()}): {', '.join(drills)}")
     if not lines:
