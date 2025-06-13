@@ -147,7 +147,7 @@ assigns them to the supplied training days.
 The function `calculate_exercise_numbers()` expands on this by converting the
 weekly session split into actual exercise counts.  Strength days output `7`,
 `6` or `4` exercises per session in `GPP`, `SPP` and `TAPER` respectively while
-conditioning days use `4`, `3` and `2`.  Recovery is implied by days without
+conditioning days use `4`, `3` and `3`.  Recovery is implied by days without
 strength or conditioning work.
 
 ### Performance Goals
