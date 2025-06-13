@@ -2,13 +2,15 @@ from pathlib import Path
 import json
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-# Rehab bank stores entries with fields:
+# Rehab bank stores entries with fields like:
 # {
 #     "location": "ankle",
 #     "type": "sprain",
-#     "phase": "GPP → SPP",
-#     "name": "...",
-#     "notes": "..."
+#     "phase_progression": "GPP → SPP",
+#     "drills": [
+#         {"name": "...", "notes": "..."},
+#         {"name": "...", "notes": "..."}
+#     ]
 # }
 REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text())
 
@@ -44,7 +46,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
         )
     lines = []
     def _phases(entry):
-        progress = entry.get("phase") or ""
+        progress = entry.get("phase_progression", "")
         return [p.strip().upper() for p in progress.split("→") if p.strip()]
 
     for injury in injuries:
@@ -55,14 +57,13 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
             and entry.get("location", "") in injury
             and (not entry.get("type") or entry.get("type") in injury)
         ]
-        entry_names = [m["name"] for m in matches]
-        valid = [
-            ex["name"]
-            for ex in exercise_data
-            if ex["name"] in entry_names and "rehab_friendly" in ex.get("tags", [])
+        drill_names = [
+            drill["name"]
+            for m in matches
+            for drill in m.get("drills", [])
         ]
-        if valid:
-            lines.append(f"- {injury.title()}: {valid[0]}")
+        if drill_names:
+            lines.append(f"- {injury.title()}: {', '.join(drill_names)}")
     if not lines:
         return "\n⚠️ No rehab options for this phase."
     return "\n**Rehab Protocols**\n" + "\n".join(lines)
