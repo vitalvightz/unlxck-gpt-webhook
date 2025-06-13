@@ -3017,4 +3017,2683 @@
         "name": "Band Resisted Horizontal Pressouts",
         "notes": "SPP: Increase anterior chain control post-extension"
       }
-    
+    [
+  {
+    "location": "bicep",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Bicep Curl Hold (Mid-Range)",
+        "notes": "GPP: Reinforce tendon tension at shortened length → SPP: Transition into dynamic curl variations"
+      },
+      {
+        "name": "Band-Resisted Eccentric Curl",
+        "notes": "GPP: Control elongation under low load → SPP: Add reps or tempo drag"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Bicep Isometric (Straight Arm)",
+        "notes": "SPP: Reduce tendon sensitivity → TAPER: Maintain readiness with minimal load"
+      },
+      {
+        "name": "Triceps Stretch with Shoulder Extension",
+        "notes": "SPP: Offload anterior shoulder tension → TAPER: Balance flexor–extensor tension"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "tightness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Foam Roll – Bicep Line",
+        "notes": "GPP: Release fascial knots → SPP: Use pre-session for mobility prep"
+      },
+      {
+        "name": "Banded Arm Extension Stretch",
+        "notes": "GPP: Open long head → SPP: Load into extension before dynamic drills"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Lacrosse Ball Compression (Distal Bicep)",
+        "notes": "TAPER: Flush DOMS and restore elbow mobility"
+      },
+      {
+        "name": "Active Supination + Elbow Flexion",
+        "notes": "TAPER: Retain contractile control with minimal load"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Gentle Arm Swings (Neutral Grip)",
+        "notes": "GPP: Restore blood flow with low strain → SPP: Add ROM speed to test tolerance"
+      },
+      {
+        "name": "Massage Gun Sweep – Bicep Belly",
+        "notes": "GPP: Target contact desensitization → SPP: Prep tissue pre-load"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Incline DB Curl (Eccentric Focus)",
+        "notes": "GPP: Emphasize controlled stretch → SPP: Add volume load → TAPER: Reduce load, maintain ROM"
+      },
+      {
+        "name": "Banded Shoulder Flexion with Supination",
+        "notes": "GPP: Train full-line tension → SPP: Reinforce shoulder-elbow control → TAPER: Maintain coordination"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Light Zottman Curl (Band)",
+        "notes": "GPP: Train elbow under rotation → SPP: Increase control under pronation stress"
+      },
+      {
+        "name": "Grip Trainer Squeeze + Hold",
+        "notes": "GPP: Isolate elbow stabilizers → SPP: Integrate forearm with bicep recoil"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Slides with Band Pull-Apart",
+        "notes": "GPP: Reinforce scapular mechanics → SPP: Load bicep safely in clean range"
+      },
+      {
+        "name": "Bottom-Up Kettlebell Curl",
+        "notes": "GPP: Enforce joint control through wrist/elbow → SPP: Add tempo for eccentric integrity"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Chaos Band Curl",
+        "notes": "SPP: Build reactive elbow control → TAPER: Sharpen tension in unstable angles"
+      },
+      {
+        "name": "Hammer Curl Isometric Pulse",
+        "notes": "SPP: Maintain mid-range tension → TAPER: Preserve CNS tone with no joint threat"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Arm Elevation with Active Wrist Pumps",
+        "notes": "TAPER: Promote drainage via venous return"
+      },
+      {
+        "name": "Forearm Supination–Pronation Waves",
+        "notes": "TAPER: Gentle flush through elbow–bicep track"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "stiffness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Stick Shoulder Dislocates",
+        "notes": "GPP: Restore anterior line range → TAPER: Maintain freedom under no load"
+      },
+      {
+        "name": "Standing Arm Opener (Wall Anchor)",
+        "notes": "GPP: Reset capsule glide → TAPER: Use for daily ROM preservation"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Band-Controlled Elbow Extension",
+        "notes": "GPP: Teach terminal control → SPP: Add volume under slow decel"
+      },
+      {
+        "name": "Wall Push-Up Iso (Soft Elbow Lock)",
+        "notes": "GPP: Load joint gradually → SPP: Tolerate speed in extension"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Bicep Wall Stretch (Wrist Supinated)",
+        "notes": "GPP: Open anterior chain safely → SPP: Transition into active ROM drills"
+      },
+      {
+        "name": "Suspension Curl (TRX or Rings)",
+        "notes": "GPP: Adjust difficulty via angle → SPP: Add holds at weak points"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Gentle Arm Circles (Neutral)",
+        "notes": "TAPER: Restore mobility and blood flow"
+      },
+      {
+        "name": "Soft Tissue Glide – Massage Stick",
+        "notes": "TAPER: Downregulate tension pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Cable Curl with Fat Grip",
+        "notes": "SPP: Load eccentric under control → TAPER: Drop volume but keep tension sharp"
+      },
+      {
+        "name": "Supinated Isometric Elbow Hold",
+        "notes": "SPP: Hold mid-flexion tension → TAPER: Maintain capacity without fatigue"
+      }
+    [
+  {
+    "location": "triceps",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Wall Triceps Press",
+        "notes": "GPP: Rebuild base triceps tension → SPP: Increase time under tension to restore punch extension"
+      },
+      {
+        "name": "Overhead Band Triceps Extensions",
+        "notes": "GPP: Light end-range loading → SPP: Progress to controlled eccentric"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Triceps Wall Stretch",
+        "notes": "GPP: Open up posterior shoulder line → TAPER: Use post-session to reduce neural tension"
+      },
+      {
+        "name": "Foam Roll – Long Head Sweep",
+        "notes": "GPP: Loosen fascial chain → TAPER: Target lateral head for lockout fluidity"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Band Pushdowns",
+        "notes": "GPP: Reload tendon at low intensity → SPP: Add volume to rebuild durability → TAPER: Reduce to isometrics only"
+      },
+      {
+        "name": "Kneeling Cable Extensions (Single Arm)",
+        "notes": "GPP: Reinforce control → SPP: Scale tension safely → TAPER: Maintain pain-free output"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Shoulder Flexion Slide",
+        "notes": "GPP: Re-establish triceps clearance through flexion → SPP: Add tension to replicate extension path"
+      },
+      {
+        "name": "Wall Clock Mobility (Straight Arm)",
+        "notes": "GPP: Mobilize long head at overhead range → SPP: Anchor scapular control"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "swelling",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Elevated Arm Pulses (Palm Down)",
+        "notes": "GPP: Pump lymph through posterior arm → TAPER: Maintain tone with minimal CNS load"
+      },
+      {
+        "name": "Massage Gun Sweep – Posterior Arm",
+        "notes": "GPP: Flush congestion from distal insertion → TAPER: Target medial head flare"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Light Band Kickbacks",
+        "notes": "TAPER: Flow triceps through low-resistance reps"
+      },
+      {
+        "name": "Straight Arm Downward Swings",
+        "notes": "TAPER: Pump blood flow and prep extension pattern"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Assisted Straight-Arm Plank",
+        "notes": "GPP: Static brace → SPP: Load under shoulder extension safely"
+      },
+      {
+        "name": "Overhead Dumbbell Triceps Extensions",
+        "notes": "GPP: Rebuild stretch tolerance → SPP: Increase tempo under control"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Neutral-Grip Cable Extensions",
+        "notes": "SPP: Mid-range output with low strain → TAPER: Maintain groove without locking out"
+      },
+      {
+        "name": "Isometric Triceps Bridge (Wall Hold)",
+        "notes": "SPP: Rebuild stability → TAPER: Sustain tone under zero motion"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Triceps Band Oscillations",
+        "notes": "SPP: Train reflex control → TAPER: Reduce amplitude for activation"
+      },
+      {
+        "name": "Wall Triceps Press in Split Stance",
+        "notes": "SPP: Anchor full-chain control → TAPER: Lock pattern into warmup flow"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Soft Tissue Vibration (Ball)",
+        "notes": "GPP: Reduce tenderness post-contact → SPP: Integrate with stretch hold"
+      },
+      {
+        "name": "Wall Assisted Arm Circles",
+        "notes": "GPP: Reintroduce motion safely → SPP: Add overhead control"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Triceps Band Recoil Drill",
+        "notes": "GPP: Limit ROM to protect elbow → SPP: Add reflex control"
+      },
+      {
+        "name": "TRX Elbow Press Downs",
+        "notes": "GPP: Anchor eccentric finish → SPP: Advance with tempo"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Press with Band",
+        "notes": "GPP: Light press activation → SPP: Add horizontal load"
+      },
+      {
+        "name": "Floor Triceps Push (Controlled)",
+        "notes": "GPP: Limit strain at top range → SPP: Add volume for tolerance"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "stiffness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Slides (Overhead Elbow Flexed)",
+        "notes": "GPP: Mobilize long head → TAPER: Maintain overhead position"
+      },
+      {
+        "name": "Band Elbow Opener",
+        "notes": "GPP: Target posterior arm length → TAPER: Keep end range"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Push-Up to Tabletop Flow",
+        "notes": "SPP: Blend flexion-extension under rhythm → TAPER: Reduce to tension resets"
+      },
+      {
+        "name": "Kettlebell Crush Press (Light)",
+        "notes": "SPP: Load medial head under control → TAPER: Maintain groove"
+      }
+    ]
+  },
+  {
+    "location": "triceps",
+    "type": "tightness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Overhead Rope Stretch",
+        "notes": "SPP: Open line through lat and triceps → TAPER: Maintain end range"
+      },
+      {
+        "name": "Stick Triceps Opener (Elbow Up)",
+        "notes": "SPP: Target fascia through arm path → TAPER: Use for recovery"
+      }
+    [
+  {
+    "location": "forearm",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Curls (Slow Tempo)",
+        "notes": "GPP: Restore concentric strength → SPP: Add eccentric tempo for durability"
+      },
+      {
+        "name": "Finger Extension Band Flicks",
+        "notes": "GPP: Target extensors gently → SPP: Integrate into grip reset"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Forearm Flexor Stretch (Wall)",
+        "notes": "GPP: Restore anterior line length → TAPER: Use pre-comp to free wrist glide"
+      },
+      {
+        "name": "Massage Gun Sweep (Flexor Mass)",
+        "notes": "GPP: Downregulate tension → TAPER: Flush local tissue pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "soreness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Passive Wrist Circles (Tabletop Support)",
+        "notes": "SPP: Maintain range without loading → TAPER: Gentle recovery"
+      },
+      {
+        "name": "Rice Bucket Twists",
+        "notes": "SPP: Light endurance stimulus → TAPER: Maintain mobility + heat"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Wrist Neutral Hold (Dumbbell)",
+        "notes": "GPP: Avoid joint motion → SPP: Add time under tension for grip"
+      },
+      {
+        "name": "Towel Twists (Isometric)",
+        "notes": "GPP: Isolate torsion safely → SPP: Build tolerance gradually"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Controlled Wrist CARs",
+        "notes": "GPP: Restore capsule glide → SPP: Add banded distraction or control"
+      },
+      {
+        "name": "Wrist Wave Mobility (Stick Roll)",
+        "notes": "GPP: Coordinate full wrist path → SPP: Add tempo or pause"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "contusion",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Soft Tissue Circles (Forearm Ball)",
+        "notes": "GPP: Desensitize bruised muscle belly"
+      },
+      {
+        "name": "Wrist Extensor Light Activation (Theraband)",
+        "notes": "GPP: Restore light contractile flow post-contact"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Flexion Stretch (Palm Down, Elbow Extended)",
+        "notes": "GPP: Light stretch for ligaments → SPP: Add control or resisted holds"
+      },
+      {
+        "name": "Forearm Pronation/Supination Isos",
+        "notes": "GPP: Rebuild joint range → SPP: Advance control under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Wrist Extensions",
+        "notes": "GPP: Load extensors eccentrically → SPP: Tolerate light reps → TAPER: Maintain grip pain-free"
+      },
+      {
+        "name": "Reverse Curls (Light Load)",
+        "notes": "GPP: Isolate extensor-brachioradialis → SPP: Build volume safely"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Hammer Grip Wrist Holds (Bottom-Up KB)",
+        "notes": "SPP: Rebuild joint stability → TAPER: Maintain control in fast motions"
+      },
+      {
+        "name": "Wrist Roller (Over/Underhand Alternation)",
+        "notes": "SPP: Dynamic grip challenge → TAPER: Use shorter reps for control"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Band-Assisted Wrist Traction",
+        "notes": "GPP: Restore joint space and glide → SPP: Maintain with light activation"
+      },
+      {
+        "name": "Isometric Wrist Holds (End-Range Flex/Ext)",
+        "notes": "GPP: Control end-range tension → SPP: Use angles under light load"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Elevated Wrist Pumps",
+        "notes": "TAPER: Flush residual fluid with elevation and pulse"
+      },
+      {
+        "name": "Gentle Finger Flicks",
+        "notes": "TAPER: Promote drainage while keeping grip awake"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Stability Drill on BOSU Ball",
+        "notes": "GPP: Restore proprioceptive tolerance → SPP: Progress to loaded plank positions"
+      },
+      {
+        "name": "Palm-Down Crawls",
+        "notes": "GPP: Light extension loading → SPP: Integrate across kinetic chain"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Open-Close Grip Endurance Drill",
+        "notes": "GPP: Light activation across forearm groups → TAPER: Maintain responsiveness"
+      },
+      {
+        "name": "Stick Rotations (Forearm Twist)",
+        "notes": "GPP: General mobility and endurance → TAPER: Sharpness with no load"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun on Flexors/Extensors",
+        "notes": "TAPER: Loosen up post-grip volume"
+      },
+      {
+        "name": "Light Squeeze Ball Reps",
+        "notes": "TAPER: Wake up forearm tone without tension"
+      }
+    ]
+  },
+  {
+    "location": "forearm",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Forearm Floss",
+        "notes": "GPP: Restore soft tissue glide → SPP: Maintain pliability under stress"
+      },
+      {
+        "name": "Forearm Twists with Light Plate",
+        "notes": "GPP: Mobilize grip rotation → SPP: Add duration and load"
+      }
+    [
+  {
+    "location": "elbow",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Elbow Flexion Hold (90°)",
+        "notes": "GPP: Restore safe contractile tension → SPP: Add banded resistance or hold under load"
+      },
+      {
+        "name": "Pronation/Supination with Light Dumbbell",
+        "notes": "GPP: Restore rotational control → SPP: Integrate into speed under resistance"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Wall Slides (Elbow Straight)",
+        "notes": "GPP: Activate stabilizers without load → SPP: Advance to cable tricep or bicep reintroduction"
+      },
+      {
+        "name": "Overhead Band Triceps Extension",
+        "notes": "GPP: Rebuild overhead stability → SPP: Add tempo for load tolerance"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Forearm Wall Slides",
+        "notes": "GPP: Mobilize flexor tendon line → TAPER: Maintain capsule glide without stress"
+      },
+      {
+        "name": "Massage Gun Sweep (Medial Elbow)",
+        "notes": "GPP: Reduce fascial restriction → TAPER: Use before sparring for fluid range"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Neutral Grip DB Curls (Isometric)",
+        "notes": "SPP: Minimize joint strain while restoring load → TAPER: Maintain activation under low fatigue"
+      },
+      {
+        "name": "Wall Press Iso at 90° Elbow Flexion",
+        "notes": "SPP: Static control with low irritation → TAPER: CNS-safe tension before fight"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Reverse Wrist Curls",
+        "notes": "GPP: Load tendon with slow eccentrics → SPP: Increase load and speed → TAPER: Drop volume, retain range"
+      },
+      {
+        "name": "Banded Tricep Extensions",
+        "notes": "GPP: Reintroduce tendon tension safely → SPP: Sharpen with explosive finish → TAPER: Maintain groove with minimal load"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Overhead Elbow Pumps (Band-Assisted)",
+        "notes": "TAPER: Flush inflammation with passive motion"
+      },
+      {
+        "name": "Compression Wrap + Elevation Drill",
+        "notes": "TAPER: Reduce pooling and boost blood flow pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Elbow CARs",
+        "notes": "GPP: Restore end-range control → SPP: Integrate with loaded control"
+      },
+      {
+        "name": "Banded Elbow Distraction",
+        "notes": "GPP: Open joint space → SPP: Maintain mobility under banded control"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Closed-Chain Rock-Backs (Elbow Under Shoulder)",
+        "notes": "SPP: Rebuild stable joint under light motion → TAPER: Maintain control in neutral zones"
+      },
+      {
+        "name": "Mini Band Triceps Kickbacks",
+        "notes": "SPP: Reintegrate elbow extension control → TAPER: Sharpen light punch follow-through"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Lacrosse Ball Forearm/Elbow Floss",
+        "notes": "TAPER: Clear tight tissue pre-spar"
+      },
+      {
+        "name": "Cable Low-Tension Curls (Long ROM)",
+        "notes": "TAPER: Mobilize and activate without overload"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Active Elbow Flexion/Extension with Dowel",
+        "notes": "GPP: Restore joint rhythm → SPP: Reinforce ROM under light resistance"
+      },
+      {
+        "name": "Wrist-to-Shoulder Slides on Wall",
+        "notes": "GPP: Coordinate upper limb motion → SPP: Add tempo or band"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Elbow Stop Holds (Band Behind Elbow)",
+        "notes": "GPP: Train end-range defense → SPP: Build reflex and endurance"
+      },
+      {
+        "name": "Wall Press Partial Range Extensions",
+        "notes": "GPP: Restore controlled ROM → SPP: Add depth gradually"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Gentle Elbow Slides on Wall",
+        "notes": "GPP: Rebuild contact tolerance → SPP: Reintegrate into pushing mechanics"
+      },
+      {
+        "name": "Massage Gun Pass (Lateral Elbow)",
+        "notes": "GPP: Break up surface inflammation → SPP: Layer into isometric prep"
+      }
+    ]
+  },
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Neutral Grip Isometric Holds",
+        "notes": "GPP: Non-irritating load entry → TAPER: Safe retention of movement pattern"
+      },
+      {
+        "name": "Arm Bar Stretch (Modified)",
+        "notes": "GPP: Light capsule opening → TAPER: Calm passive mobility"
+      }
+      [
+  {
+    "location": "wrist",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Wall Wrist Press",
+        "notes": "GPP: Load ligament gently → SPP: Add slight range to simulate punch guard"
+      },
+      {
+        "name": "Band-Assisted Wrist Flexion Hold",
+        "notes": "GPP: Safe end-range control → SPP: Add time-under-tension for guard resilience"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Curl (Light Dumbbell)",
+        "notes": "GPP: Rebuild flexor strength → SPP: Add eccentric load to increase durability"
+      },
+      {
+        "name": "Reverse Wrist Curl",
+        "notes": "GPP: Activate extensors → SPP: Add control under impact posture"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Wrist Extensor Drops",
+        "notes": "GPP: Begin tendon loading → SPP: Increase reps → TAPER: Maintain tone pre-fight"
+      },
+      {
+        "name": "Theraband Forearm Waves",
+        "notes": "GPP: Stimulate tendon glide → SPP: Build endurance → TAPER: Short reps for prep"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Flexor Stretch (Palm Up, Wall)",
+        "notes": "GPP: Open anterior wrist line → TAPER: Maintain mobility pre-session"
+      },
+      {
+        "name": "Extensor Stretch (Palm Down)",
+        "notes": "GPP: Release posterior chain → TAPER: Keep free before sparring"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Radial/Ulnar Deviation Isos",
+        "notes": "GPP: Restore joint space → SPP: Load under function"
+      },
+      {
+        "name": "Wrist Distraction with Band",
+        "notes": "GPP: Unload joint → SPP: Maintain glide under compression"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "instability",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wrist Push-Ups (Knees → Full)",
+        "notes": "GPP: Proprioceptive loading → SPP: Increase load → TAPER: Maintain readiness"
+      },
+      {
+        "name": "Knuckle Push-Ups",
+        "notes": "GPP: Rebuild strike alignment → SPP: Add depth → TAPER: Low-volume reactivator"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Elevated Wrist Pumps",
+        "notes": "TAPER: Drain inflammation pre-fight"
+      },
+      {
+        "name": "Gentle Wrist Circles (Slow)",
+        "notes": "TAPER: Maintain mobility without strain"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun Sweep Along Wrist",
+        "notes": "TAPER: Flush DOMS post-heavy gripping"
+      },
+      {
+        "name": "Soft Rice Bucket Twists",
+        "notes": "TAPER: Release tension while working grip"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist CARs",
+        "notes": "GPP: Restore capsule glide → SPP: Add band for resistance"
+      },
+      {
+        "name": "Stick Roll Wrist Flex/Ext",
+        "notes": "GPP: Mobilize fascial line → SPP: Train control under load"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Palmar Wrist Push",
+        "notes": "GPP: Defend end-range → SPP: Add reflex under perturbation"
+      },
+      {
+        "name": "Wall-Assisted Knuckle Press",
+        "notes": "GPP: Anchor alignment → SPP: Reflex load for impact prep"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Soft Tissue Glide with Ball",
+        "notes": "GPP: Desensitize contact site → SPP: Reintroduce light load"
+      },
+      {
+        "name": "Wrist Flexion Extension Passes",
+        "notes": "GPP: Restore motion → SPP: Integrate joint into function"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Open-Close Grip Ball",
+        "notes": "GPP: General activation → TAPER: Maintain tension readiness"
+      },
+      {
+        "name": "Wrist Roller Hold",
+        "notes": "GPP: Load endurance → TAPER: Short sets for prep"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Dumbbell Wrist Hold (Neutral)",
+        "notes": "SPP: Controlled tension → TAPER: Light prepare prior to session"
+      },
+      {
+        "name": "Forearm Supination/Pronation Paused",
+        "notes": "SPP: Reload torsion control → TAPER: Retain mid-range readiness"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Cable Reverse Curl (Eccentric)",
+        "notes": "SPP: Train controlled load → TAPER: Maintain quality reps"
+      },
+      {
+        "name": "Wrist Flexion Bear Hug Iso",
+        "notes": "SPP: Engage pistoning reflex → TAPER: Retain control under tension"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "sprain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wrist Stability Drill with Dynamometer",
+        "notes": "SPP: Test joint under load → TAPER: Maintain refined control"
+      },
+      {
+        "name": "Band Stabilization Circles",
+        "notes": "SPP: Load end-range tension → TAPER: Flash mobility without overdrive"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "tendonitis",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Pronation/Supination Twists",
+        "notes": "SPP: Build torsion tolerance → TAPER: Short pulses for refresh"
+      },
+      {
+        "name": "Light Thumb Opposition Drill",
+        "notes": "SPP: Engage decoupled tendon lines → TAPER: Maintain mobility"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "instability",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wobble Board Wrist Balances",
+        "notes": "GPP: Proprioceptive reprogram → TAPER: Quick sharpeners"
+      },
+      {
+        "name": "Therapy Putty Grip Twists",
+        "notes": "GPP: Rebuild joint control → TAPER: Maintain activation under low load"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "tightness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Finger Extension Stretch (Elastic)",
+        "notes": "SPP: Restore finger-wrist glide → TAPER: Short holds pre-session"
+      },
+      {
+        "name": "Resisted Wrist Flexor Sweep",
+        "notes": "SPP: Maintain open tissue → TAPER: Light activation before fight"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Theraband Wrist Abduction/Adduction",
+        "notes": "SPP: Load rarely used axes → TAPER: Short reps priming"
+      },
+      {
+        "name": "Palm-March Wrist Stretch",
+        "notes": "SPP: Enhance flexor-chain glide → TAPER: Reset under no stress"
+      }
+  },
+  {
+    "location": "wrist",
+    "type": "hyperextension",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Knuckle Push-Up to Partial Extension",
+        "notes": "SPP: Build guard reflex → TAPER: Maintain for spar readiness"
+      },
+      {
+        "name": "Isometric Dorsal Wrist Hold",
+        "notes": "SPP: Defend overextension → TAPER: Sustain under control"
+      }
+  [
+  {
+    "location": "wrist",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wrist Roller (Light Plate)",
+        "notes": "SPP: Restore controlled flexion/extension → TAPER: Use low load for coordination retention"
+      },
+      {
+        "name": "Farmer’s Hold with Wrist Control",
+        "notes": "SPP: Build isometric grip → TAPER: Maintain under time constraints"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Wrist Flexion with Dumbbell",
+        "notes": "GPP: Control tendon loading → SPP: Increase load tempo → TAPER: Maintain under time"
+      },
+      {
+        "name": "Wrist Extensor Stretch (Palm Down)",
+        "notes": "GPP: Restore passive length → SPP: Hold under active load → TAPER: Reset range pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Four-Point Rock Backs (Wrist Extension)",
+        "notes": "GPP: Open anterior wrist → TAPER: Maintain contact tolerance"
+      },
+      {
+        "name": "Massage Ball Wrist Sweep",
+        "notes": "GPP: Release fascia tension → TAPER: Short bursts for neural calm"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Contrast Wrist Baths",
+        "notes": "TAPER: Flush soreness and inflammation through temperature modulation"
+      },
+      {
+        "name": "Light Grip Iso Hold (Towel Squeeze)",
+        "notes": "TAPER: Maintain neuromuscular firing without joint load"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Pronation/Supination with Band",
+        "notes": "SPP: Controlled rotation under tension → TAPER: Reduce amplitude, sharpen reflex"
+      },
+      {
+        "name": "Grip Trainer – Soft Ball Pulse",
+        "notes": "SPP: Low-resistance endurance → TAPER: CNS-friendly activation"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Reinforce capsule control → SPP: Add tempo to fluid motion"
+      },
+      {
+        "name": "Wrist Slides on Wall",
+        "notes": "GPP: Train straight-line control → SPP: Add band or incline"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "contusion",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Tactile Tapping (Finger to Wrist)",
+        "notes": "GPP: Desensitize contact zone → Progress with glove/impact layering"
+      },
+      {
+        "name": "Friction Roll with Tennis Ball",
+        "notes": "GPP: Mobilize tissue while reintroducing low-friction load"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Distraction with Band",
+        "notes": "GPP: Open joint space → SPP: Load into new range"
+      },
+      {
+        "name": "Push-Up on Parallettes",
+        "notes": "GPP: Reduce wrist angle stress → SPP: Introduce compression tolerance"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Weighted Carry (Wrist Supinated)",
+        "notes": "SPP: Stability under supinated load → TAPER: Maintain reflex control"
+      },
+      {
+        "name": "Wrist Rotation Iso Holds (Plate Hold)",
+        "notes": "SPP: Reinforce rotational stability → TAPER: Short durations for CNS clarity"
+      }
+    ]
+  },
+  {
+    "location": "wrist",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Wrist Holds (Various Angles)",
+        "notes": "GPP: Build foundational load tolerance → SPP: Expand angle range with resistance"
+      },
+      {
+        "name": "Plank to Palm Rockbacks",
+        "notes": "GPP: Joint loading in safe pattern → SPP: Introduce speed and range"
+      }
+    [
+  {
+    "location": "hand",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Finger Band Extensions",
+        "notes": "GPP: Restore finger abduction strength → SPP: Increase reps and band tension"
+      },
+      {
+        "name": "Palm Squeeze with Soft Ball",
+        "notes": "GPP: Gentle reactivation → SPP: Increase duration for deep tissue loading"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wrist Flexor Isometric Press (Palm Down)",
+        "notes": "GPP: Controlled low-level force → SPP: Add tension through loaded stretch"
+      },
+      {
+        "name": "Finger Walks on Wall",
+        "notes": "GPP: Rebuild motor control → SPP: Increase ROM and vertical reach"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Finger Flossing with Band",
+        "notes": "GPP: Mobilize connective tissue → TAPER: Maintain glide without CNS drain"
+      },
+      {
+        "name": "Manual Stretch (Wrist Extension + Finger Spread)",
+        "notes": "GPP: Release palmar tension → TAPER: Maintain soft tissue readiness"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "contusion",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Contrast Bath (Warm → Cold)",
+        "notes": "GPP: Manage bruising and blood flow"
+      },
+      {
+        "name": "Gentle Grip Ball Squeeze",
+        "notes": "GPP: Reinforce soft contact tolerance"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "swelling",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Wrist Elevation with Passive Opens",
+        "notes": "GPP: Drain fluid while restoring motion → TAPER: Keep inflammation low under travel/fight prep"
+      },
+      {
+        "name": "Open-Close Fists (Elevated)",
+        "notes": "GPP: Pump lymph manually → TAPER: Maintain circulation"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Eccentric Finger Tip Drops Off Table",
+        "notes": "GPP: Rebuild tendon load → SPP: Add reps → TAPER: Maintain tissue health"
+      },
+      {
+        "name": "Isometric Palm Press Against Wall",
+        "notes": "GPP: Build static load tolerance → SPP: Combine with ballistic grip → TAPER: Light holds only"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Pinch Plate Carry (Thick Plate)",
+        "notes": "SPP: Train grip control → TAPER: Reduce load, increase hold precision"
+      },
+      {
+        "name": "Finger Spread with Putty",
+        "notes": "SPP: Reinforce dynamic tension → TAPER: Keep CNS low while maintaining skill"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Joint Glide Mobilization (Finger Pull)",
+        "notes": "GPP: Restore passive range → SPP: Add active ROM"
+      },
+      {
+        "name": "Grip Reset with Banded Distraction",
+        "notes": "GPP: Reduce capsular block → SPP: Layer in isometric activation"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Tendon Gliding Series (Hook, Straight, Fist)",
+        "notes": "GPP: Free tendon sheaths → SPP: Add volume and banded resistance"
+      },
+      {
+        "name": "Ball Rolling Under Palm",
+        "notes": "GPP: Stimulate fascia release → SPP: Control slow reps under pressure"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Hand Iso Hold Around Grip Trainer",
+        "notes": "SPP: Low-motion tension → TAPER: Retain isometric control with low CNS cost"
+      },
+      {
+        "name": "Fingertip Holds on Wall",
+        "notes": "SPP: Stimulate contact point control → TAPER: Taper down intensity, not precision"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Cold Ball Palm Roll",
+        "notes": "TAPER: Flush DOMS and reduce nerve tension"
+      },
+      {
+        "name": "Gentle Webbing Massage",
+        "notes": "TAPER: Reduce soft tissue fatigue in high-load weeks"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Finger Pull-Back Holds (Isometric)",
+        "notes": "GPP: Restore extension control → SPP: Add reps and grip resistance"
+      },
+      {
+        "name": "Wall Crawls (Backhand Contact)",
+        "notes": "GPP: Slow control in pain-free range → SPP: Layer return to punching function"
+      }
+    [
+  {
+    "location": "hand",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Band-Resisted Finger Abduction",
+        "notes": "GPP: Isolate lateral joint activation → SPP: Increase resistance and range"
+      },
+      {
+        "name": "Hook Grip Plate Pinches",
+        "notes": "GPP: Restore tendon-line coordination → SPP: Progress to full ROM and fatigue"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "strain",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Loaded Palm Extensions (Rubber Band)",
+        "notes": "GPP: Rebuild extensors safely → TAPER: Maintain high-rep tolerance"
+      },
+      {
+        "name": "Isometric Grip on Towel",
+        "notes": "GPP: Low-level tissue loading → TAPER: Sustain force capacity under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Hand Wave Mobilization (Palm Up/Down)",
+        "notes": "GPP: Restore joint glide control → SPP: Progress to band-assisted flow"
+      },
+      {
+        "name": "Finger Fan-Outs on Table",
+        "notes": "GPP: Improve soft tissue glide → SPP: Add tempo + finger spread control"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Band-Pull Finger Decompression",
+        "notes": "GPP: Reduce capsule compression → SPP: Integrate active extension"
+      },
+      {
+        "name": "Manual Metacarpal Glide (Therapist or Self)",
+        "notes": "GPP: Target precise joint blockages → SPP: Reinforce with neuromuscular control"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Fat Grip Farmer’s Hold (Timed)",
+        "notes": "SPP: Develop crush grip stability → TAPER: Drop load, maintain duration"
+      },
+      {
+        "name": "Finger Squeeze Iso on Sandbag",
+        "notes": "SPP: Build variable surface control → TAPER: Refine sharpness with light load"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Friction Ball Circles (Palm + Fingers)",
+        "notes": "GPP: Desensitize contact zones → SPP: Maintain mobility under neural tension"
+      },
+      {
+        "name": "Hand Floss + Shake-Outs",
+        "notes": "GPP: Clear neural irritation → SPP: Maintain input through light reactive drills"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "tendonitis",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Gripper Iso Squeeze (Mid-Range)",
+        "notes": "SPP: Load the tendon under control → TAPER: Cut volume, preserve tension"
+      },
+      {
+        "name": "Elastic Band Finger Walks",
+        "notes": "SPP: Improve coordination under stress → TAPER: Strip to patterning only"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Ball Squeeze → Band Spread Pair",
+        "notes": "GPP: Rebuild both sides of grip chain → TAPER: Alternate for balance + prep"
+      },
+      {
+        "name": "Open-Close Grip Cycles with Metronome",
+        "notes": "GPP: Build neural rhythm → TAPER: Maintain readiness without fatigue"
+      }
+    [
+  {
+    "location": "fingers",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Finger Band Expansions",
+        "notes": "GPP: Rebuild extensor activation → SPP: Increase tension and hold duration"
+      },
+      {
+        "name": "Finger Taps on Hard Surface",
+        "notes": "GPP: Light impact reintroduction → SPP: Increase frequency to simulate grip release"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Rubber Band Finger Extensions",
+        "notes": "GPP: Strengthen extensors to rebalance tension → SPP: Increase reps for contractile capacity"
+      },
+      {
+        "name": "Isometric Finger Pinch (Plate or Towel)",
+        "notes": "GPP: Load grip safely → SPP: Add hold duration for endurance"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Finger CARs",
+        "notes": "GPP: Restore joint articulation → TAPER: Maintain capsule glide pre-fight"
+      },
+      {
+        "name": "Ball Squeeze with Pause",
+        "notes": "GPP: Encourage full ROM and control → TAPER: Add tempo holds without fatigue"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Warm Water Finger Mobility",
+        "notes": "SPP: Loosen before drill → TAPER: Use pre-fight as warm-up primer"
+      },
+      {
+        "name": "Finger Slide Along Table Edge",
+        "notes": "SPP: Gentle full-range extension → TAPER: Maintain motion with control"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Finger Traction",
+        "notes": "GPP: Reduce joint compression symptoms → SPP: Add slow ROM reintegration"
+      },
+      {
+        "name": "Tendon Glides (Straight–Hook–Fist)",
+        "notes": "GPP: Sequence finger movement → SPP: Speed up reps with precision"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Finger Isometrics Against Resistance Band",
+        "notes": "SPP: Build tolerance in neutral grip → TAPER: Maintain output with no irritation"
+      },
+      {
+        "name": "Ice Massage Rolling (Small Ball)",
+        "notes": "SPP: Control inflammation post-training → TAPER: Use as pre-session reset"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Finger Curls with Putty",
+        "notes": "GPP: Reset tendon load tolerance → SPP: Build controlled eccentric strength"
+      },
+      {
+        "name": "Isometric Grip on Soft Ball",
+        "notes": "GPP: Safely activate grip muscles → SPP: Extend holds under tension"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Elevated Finger Pumps",
+        "notes": "TAPER: Drain excess fluid → Repeat in between spar rounds"
+      },
+      {
+        "name": "Cold-Water Soak with Active Motion",
+        "notes": "TAPER: Reduce swelling while preserving dexterity"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Active Finger Flicks",
+        "notes": "TAPER: Flush light DOMS → Can pair with hand warm-up drills"
+      },
+      {
+        "name": "Mini Massage Gun Sweep (Finger Extensors)",
+        "notes": "TAPER: Reset tone post-padwork or grappling"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Partner Resistance Finger Push",
+        "notes": "GPP: Reinforce joint tracking → SPP: Add controlled chaos"
+      },
+      {
+        "name": "TheraBand Finger Spider Press",
+        "notes": "GPP: Stimulate stabilizers → SPP: Progress to fatigue-endurance"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "contusion",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Gentle Finger Taps on Pad",
+        "notes": "GPP: Reintroduce contact with low impact"
+      },
+      {
+        "name": "Cold Ball Grip + Roll",
+        "notes": "GPP: Soothe tissue and maintain motion"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Flexed Finger Hold",
+        "notes": "GPP: Prevent excessive joint opening → SPP: Load safely with grip tools"
+      },
+      {
+        "name": "Flexor Stretch with Passive Assist",
+        "notes": "GPP: Restore balance → SPP: Introduce loaded control"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Putty Squeeze Variations",
+        "notes": "GPP: Explore safe ROM → SPP: Build strength in all ranges"
+      },
+      {
+        "name": "Wrist + Finger Extension Combo",
+        "notes": "GPP: Restore chain mobility → SPP: Transition to integrated drills"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Finger Flossing (Rubber Band + Curl)",
+        "notes": "SPP: Mobilize soft tissue glide → TAPER: Light warmup integration"
+      },
+      {
+        "name": "Open-Close Rapid Cycles",
+        "notes": "SPP: Sharpen neural speed → TAPER: Light pulse drills before mitts"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Digit-Specific Flexion Holds (Putty or Band)",
+        "notes": "GPP: Isolate healing finger → SPP: Add duration and compound grip"
+      },
+      {
+        "name": "Elastic Finger Push-Press",
+        "notes": "GPP: Controlled activation → SPP: Increase push velocity"
+      }
+    ]
+  },
+  {
+    "location": "fingers",
+    "type": "sprain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Tape-Assisted Plyo Taps",
+        "notes": "SPP: Explosive but protected taps → TAPER: Transition to tap speed under load"
+      },
+      {
+        "name": "Mini Band Finger Spread-Hold",
+        "notes": "SPP: Stabilize joints under stretch → TAPER: Maintain control with low tension"
+      }
+    [
+  {
+    "location": "neck",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Neck Flexion (Wall)",
+        "notes": "GPP: Build static front-line control → SPP: Increase duration or reps under fatigue"
+      },
+      {
+        "name": "Neck Retraction with Band",
+        "notes": "GPP: Re-educate deep neck stabilizers → SPP: Layer resistance for endurance"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Seated Neck Circles (Slow Tempo)",
+        "notes": "GPP: Restore capsule mobility → TAPER: Maintain movement prep pre-fight"
+      },
+      {
+        "name": "Lacrosse Ball SCM Release",
+        "notes": "GPP: Break up fascial restriction → TAPER: Downregulate before comp"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Neck CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Expand multi-directional range → SPP: Integrate slow resistance patterns"
+      },
+      {
+        "name": "Partner-Assisted Neck Mobility",
+        "notes": "GPP: Restore safety in end ranges → SPP: Add light resistance or timed holds"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall-Supported Neck Isometrics",
+        "notes": "SPP: Build low-risk tolerance → TAPER: Retain tension pre-comp without fatigue"
+      },
+      {
+        "name": "Neck Extension with Towel Resistance",
+        "notes": "SPP: Develop concentric control → TAPER: Reduce load, maintain range"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Self-Massage (Traps & Cervical)",
+        "notes": "TAPER: Reduce postural overload and restore blood flow"
+      },
+      {
+        "name": "Gentle Neck Tilts (Assisted)",
+        "notes": "TAPER: Maintain low-stress mobility without stimulating CNS"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Neck Glide with Chin Tucks",
+        "notes": "GPP: Clear anterior compression → SPP: Reinforce posture under load"
+      },
+      {
+        "name": "Quadruped Neck Extension",
+        "notes": "GPP: Explore range with body support → SPP: Add time under tension"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Reactive Partner Pushes (Neck)",
+        "notes": "SPP: Train reactive stabilizers → TAPER: Short bursts for sharpness"
+      },
+      {
+        "name": "Neck Holds Against Swiss Ball (Wall)",
+        "notes": "SPP: Control unpredictable angles → TAPER: Deload while maintaining reflex"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Finger-Pad Circles on Affected Site",
+        "notes": "GPP: Restore contact tolerance → SPP: Build tissue density and blood flow"
+      },
+      {
+        "name": "Seated Weighted Shrugs",
+        "notes": "GPP: Light concentric reintroduction → SPP: Progress to tempo holds"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "sprain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Neck Isometrics (4-Way)",
+        "notes": "GPP: Strengthen deep stabilizers in neutral → SPP: Add band variability for dynamic tension"
+      },
+      {
+        "name": "Neck Stability on Stability Ball",
+        "notes": "GPP: Introduce reactive challenge → SPP: Add longer duration with reps"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Chin Retraction Holds",
+        "notes": "GPP: Prevent repeated extension strain → SPP: Add hold duration with band assistance"
+      },
+      {
+        "name": "Prone Neck Lifts (Nose Hover)",
+        "notes": "GPP: Start unloaded in controlled range → SPP: Add reps or band tension"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "swelling",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Elevated Neck Drainage Positioning",
+        "notes": "GPP: Passive drain setup → TAPER: Combine with light tilts to reduce fluid"
+      },
+      {
+        "name": "Neck Massage with Ball (Cervical Line)",
+        "notes": "GPP: Stimulate lymphatic flow → TAPER: Maintain fluid clearance"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Neck Eccentric Nods (Band)",
+        "notes": "GPP: Rebuild load tolerance → SPP: Increase tempo + reps → TAPER: Sustain with low tension"
+      },
+      {
+        "name": "Manual Resistance Lateral Flexion",
+        "notes": "GPP: Activate with external guidance → SPP: Add self-resistance → TAPER: Reduce volume"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Multi-Plane Neck Holds",
+        "notes": "GPP: Rebuild 3D positional strength → SPP: Add reps or tempo → TAPER: Maintain sharpness"
+      },
+      {
+        "name": "Scap-Neck Coordination Drill",
+        "notes": "GPP: Reinforce cervical-scapular link → SPP: Add load → TAPER: Keep coordination cues"
+      }
+    [
+  {
+    "location": "neck",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Supine Band-Resisted Neck Flexion",
+        "notes": "SPP: Strengthen anterior chain with load → TAPER: Reduce tension to maintain activation"
+      },
+      {
+        "name": "Neck Clock Isometrics",
+        "notes": "SPP: Hit multiple vectors under control → TAPER: Shorten sets for freshness"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "stiffness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Gentle Neck Side Tilts (Passive Stretch)",
+        "notes": "TAPER: Restore lateral mobility with zero CNS cost"
+      },
+      {
+        "name": "Trap Bar Hang & Neck Relaxation",
+        "notes": "TAPER: Passive lengthening of cervical chain under light traction"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "impingement",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Wall Slide Chin Glide",
+        "notes": "SPP: Restore alignment mid-load → TAPER: Maintain neck posture pre-fight"
+      },
+      {
+        "name": "TheraBand Diagonal Pulls",
+        "notes": "SPP: Controlled joint motion in arc → TAPER: Flush motion without overactivation"
+      }
+    ]
+  },
+  {
+    "location": "neck",
+    "type": "soreness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Neck Towel Oscillation Drill",
+        "notes": "GPP: Promote blood flow safely → TAPER: Use as flush in taper days"
+      },
+      {
+        "name": "Gentle Isometric Hold (Forehead Press)",
+        "notes": "GPP: Initiate low-grade motor unit work → TAPER: Retain activation for posture"
+      }
+    [
+  {
+    "location": "jaw",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Jaw Clench (Mouthguard In)",
+        "notes": "GPP: Restore isometric bite control → SPP: Simulate pressure during clinch/guard scenarios"
+      },
+      {
+        "name": "Lateral Jaw Pushes (Finger Resistance)",
+        "notes": "GPP: Reinforce lateral jaw control → SPP: Add tempo for resilience under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "TMJ Release (Massage Ball Under Cheekbone)",
+        "notes": "GPP: Break up muscular tension and trigger points → TAPER: Maintain jaw relaxation before high-pressure sessions"
+      },
+      {
+        "name": "Open-Close Control Drill (Slow Tempo)",
+        "notes": "GPP: Retrain smooth TMJ motion → TAPER: Use for cooldown neuromuscular reset"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Jaw Taps (Knuckle Percussion)",
+        "notes": "SPP: Desensitize superficial jaw pain → TAPER: Maintain contact tolerance during deload"
+      },
+      {
+        "name": "Mouthguard Clench Holds (Short Bursts)",
+        "notes": "SPP: Simulate real-fight biting effort → TAPER: Sharpen reflex under CNS constraint"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Jaw Circles (Controlled Articulation)",
+        "notes": "TAPER: Restore capsule glide and reduce DOMS post-spar"
+      },
+      {
+        "name": "Soft Tissue Sweep (Massage Gun – Mandible Line)",
+        "notes": "TAPER: Clear inflammation from high-contact areas without overstim"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Jaw Glide with Tongue Stabilization",
+        "notes": "GPP: Unlock joint restriction via tongue-brain coordination → SPP: Reinforce movement path under light resistance"
+      },
+      {
+        "name": "Isometric Front Bite (Stick or Towel Hold)",
+        "notes": "GPP: Train anterior bite engagement → SPP: Sustain isometric endurance for clinch defense"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "instability",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Side-to-Side Jaw Slide (Resisted)",
+        "notes": "SPP: Train control across mandible path → TAPER: Preserve smooth tracking at low tension"
+      },
+      {
+        "name": "Chin Strap Isometric Pull",
+        "notes": "SPP: Build jaw positioning control against force → TAPER: Use light tension for neuromuscular readiness"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "swelling",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Cold Jaw Glide with Finger Guide",
+        "notes": "TAPER: Reduce inflammation through cold-assisted tracking"
+      },
+      {
+        "name": "Gentle Manual Drainage (Lymph Sweep Down Jawline)",
+        "notes": "TAPER: Clear residual fluid and minimize puffiness pre-fight"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Cheek Tap Drill (Fingertip Percussion)",
+        "notes": "GPP: Gradual reintroduction to contact → SPP: Normalize pressure for future striking"
+      },
+      {
+        "name": "Soft Jaw Holds (Finger Placement Support)",
+        "notes": "GPP: Restore muscular tone without stress → SPP: Add duration for structural reconditioning"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "stiffness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Passive Jaw Drops (Guided with Hand)",
+        "notes": "GPP: Restore range into opening → SPP: Build slow eccentric return control"
+      },
+      {
+        "name": "Mirror-Controlled Chewing Motion Drill",
+        "notes": "GPP: Reinforce symmetrical control → SPP: Apply in guard scenarios with tension"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "tendonitis",
+    "phase_progression": "GPP → SPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Lateral Bite (Tongue Depressor)",
+        "notes": "GPP: Load tendon path with low strain → SPP: Progress to resisted isometrics → TAPER: Light pre-fight activation"
+      },
+      {
+        "name": "TMJ Pulse Drill (5s Squeeze / 5s Relax)",
+        "notes": "GPP: Cycle tension/rest for tendon health → SPP: Sharpen bite readiness"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Tongue-to-Palate Hold",
+        "notes": "GPP: Reset jaw-head-cervical coordination → TAPER: Prime neuromuscular path pre-competition"
+      },
+      {
+        "name": "Soft Jaw Stretch with Finger Under Chin",
+        "notes": "GPP: Gentle open with support → TAPER: Maintain glide and tone"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "sprain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Resisted Jaw Opening with Band",
+        "notes": "SPP: Stimulate joint capsule with control → TAPER: Reduce band tension for low-load groove work"
+      },
+      {
+        "name": "Side Clench Isometrics (Mouthguard)",
+        "notes": "SPP: Emulate off-angle pressure during sparring → TAPER: Short bursts for CNS reset"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "hyperextension",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Guided Jaw Clench with Chin Support",
+        "notes": "GPP: Rebuild jaw line control after overstretch → SPP: Apply time-under-tension method"
+      },
+      {
+        "name": "Isometric Front Pull (Towel Grip)",
+        "notes": "GPP: Train anterior resistance safely → SPP: Increase duration and complexity"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "stiffness",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Open-Hold-Release Protocol",
+        "notes": "SPP: Challenge end-range with hold → TAPER: Reduce effort, maintain pattern"
+      },
+      {
+        "name": "Tongue Circle Control (Against Palate)",
+        "notes": "SPP: Guide mandible path with tongue pressure → TAPER: Maintain control while minimizing fatigue"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "soreness",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Manual Jaw Glide (Clinician Support Sim)",
+        "notes": "TAPER: Promote mobility and pain-free control for final prep"
+      },
+      {
+        "name": "Ice + Vibration Combo (Massage Wand)",
+        "notes": "TAPER: Calm surface tissue while reducing delayed soreness"
+      }
+    [
+  {
+    "location": "eye",
+    "type": "strain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Near-Far Focal Shifts",
+        "notes": "GPP: Reset accommodative strain → SPP: Integrate rapid gaze transitions during movement"
+      },
+      {
+        "name": "Pencil Push-Ups",
+        "notes": "GPP: Reinforce convergence → SPP: Add dynamic movement to sharpen reflex"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "tightness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Eye Circles (Clockwise & Counter)",
+        "notes": "GPP: Restore extraocular mobility → TAPER: Maintain smooth gaze range under low arousal"
+      },
+      {
+        "name": "Palming + Breath Reset",
+        "notes": "GPP: Downregulate eye tension → TAPER: Use as parasympathetic reset post-spar"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Saccadic Eye Jumps (Horizontal/Vertical)",
+        "notes": "SPP: Rebuild rapid gaze redirection with intent → TAPER: Reduce rep count for light CNS prep"
+      },
+      {
+        "name": "Blink Tolerance Training",
+        "notes": "SPP: Condition discomfort threshold → TAPER: Integrate fast flinch control"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "soreness",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "Cool Compress (Post-Contact)",
+        "notes": "GPP: Reduce superficial orbital tension post-strike"
+      },
+      {
+        "name": "Visual Meditation (Gaze Anchor)",
+        "notes": "GPP: Reset focus and pressure via visual stillness"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Head-Eye Coordination Drills",
+        "notes": "GPP: Stabilize gaze during neck movement → SPP: Progress to reactive direction changes"
+      },
+      {
+        "name": "Laser Pointer Target Tracing",
+        "notes": "GPP: Track controlled paths → SPP: Add irregular movement under duress"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Gentle Orbital Massage (Around Socket)",
+        "notes": "GPP: Restore tissue mobility post-impact → SPP: Rebuild pressure tolerance under shadow boxing"
+      },
+      {
+        "name": "Tactile Reflex Training (Hand Sways)",
+        "notes": "GPP: Reinforce blink reflex and tracking → SPP: Pair with head movement for striking simulation"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "stiffness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Eye Tracking: Figure 8 Pattern",
+        "notes": "GPP: Improve orbital fluidity → TAPER: Use as low-CNS warmup"
+      },
+      {
+        "name": "360° Gaze Anchor Drill",
+        "notes": "GPP: Expand peripheral control → TAPER: Maintain range without visual strain"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Reaction Ball Catch (Unpredictable Bounce)",
+        "notes": "SPP: Train rapid eye-hand response → TAPER: Keep CNS alert under low volume"
+      },
+      {
+        "name": "Light Board Tracking (e.g. FitLight)",
+        "notes": "SPP: Optimize reaction time → TAPER: Sharpen visual reflex before competition"
+      }
+    [
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Ball Drop Reaction Catch",
+        "notes": "SPP: Train instant visual-motor sync → TAPER: Reduce volume, emphasize reflex sharpness"
+      },
+      {
+        "name": "Partner Flash Cue (Coloured Gloves)",
+        "notes": "SPP: React to color-coded hand triggers → TAPER: Refine accuracy under cognitive load"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Laser Pointer Rapid Switch (Left–Right–Center)",
+        "notes": "GPP: Restore speed without load → SPP: Layer in head movement and light footwork"
+      },
+      {
+        "name": "Peripheral Light Tap Drill",
+        "notes": "GPP: Boost visual span awareness → SPP: React to lateral cues with limb coordination"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "strain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "FitLight Reflex Matrix",
+        "notes": "SPP: Develop rapid gaze-fix-react sequencing → TAPER: Use short bursts to spike CNS sharpness"
+      },
+      {
+        "name": "Multi-Task Gaze + Balance",
+        "notes": "SPP: Combine unstable surface with gaze shifting → TAPER: Downscale duration, maintain complexity"
+      }
+    ]
+  },
+  {
+    "location": "eye",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Vertical Ball Toss with Gaze Lock",
+        "notes": "GPP: Train stable vertical gaze during dynamic movement → SPP: Progress to split-focus dual-task"
+      },
+      {
+        "name": "Colored Cue Shadow Boxing",
+        "notes": "GPP: React to visual stimulus with motor response → SPP: Execute selective combinations per cue"
+      }
+    [
+  {
+    "location": "face",
+    "type": "contusion",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Facial Ice Massage (Circular Motion)",
+        "notes": "GPP: Reduce initial trauma response → SPP: Local desensitization for glove recontact"
+      },
+      {
+        "name": "Soft Ball Pressure Roll (Zygomatic Area)",
+        "notes": "GPP: Restore pressure tolerance → SPP: Mobilize soft tissue around cheekbone"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "swelling",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Lymphatic Drainage Sweep (Jaw to Temple)",
+        "notes": "GPP: Promote drainage and facial decompression → TAPER: Keep fluid balance pre-weigh-in"
+      },
+      {
+        "name": "Cold Compression Wrap (Full Face)",
+        "notes": "GPP: Reduce acute swelling → TAPER: Flush inflammation without nervous system drag"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "pain",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Low-Frequency TENS (Infraorbital Region)",
+        "notes": "SPP: Dull local sensitivity → TAPER: Retain contact tolerance before competition"
+      },
+      {
+        "name": "Facial Percussion Taps (Forehead, Cheeks)",
+        "notes": "SPP: Normalize contact sensation → TAPER: Final prep for glove impact"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "soreness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Manual Facial Tension Release (Temporalis)",
+        "notes": "GPP: Release global face tension → TAPER: Keep relaxation pre-fight"
+      },
+      {
+        "name": "Jaw-to-Face Gentle Pulses",
+        "notes": "GPP: Reset jaw-to-face tension chain → TAPER: Downregulate threat reflex"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "tightness",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Facial Yoga – Cheek Lift Holds",
+        "notes": "GPP: Restore motor control and mobility → SPP: Add duration or jaw load"
+      },
+      {
+        "name": "Diagonal Facial Slide (Forehead to Jaw)",
+        "notes": "GPP: Break up tension planes → SPP: Integrate with neck rotation"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "bruise",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Cold Spoon Press (Under Eye / Cheek)",
+        "notes": "GPP: Calm capillary bruising → SPP: Adapt to mask pressure during sparring"
+      },
+      {
+        "name": "Facial Tap Drill with Fingers",
+        "notes": "GPP: Reduce sensory threat response → SPP: Normalize glove-pressure contact"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "impingement",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Neuro-Fascial Release – Zygomatic Pull",
+        "notes": "GPP: Restore glide of facial fascia → SPP: Integrate with neck and jaw control"
+      },
+      {
+        "name": "Ball Glide Under Zygomatic Arch",
+        "notes": "GPP: Mobilize trapped fascial pathways → SPP: Relieve contact-triggered restrictions"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "stiffness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Re-engage multi-directional facial motor control → TAPER: Sharpen awareness pre-fight"
+      },
+      {
+        "name": "Resistance Band Jaw-Pull + Facial Hold",
+        "notes": "GPP: Activate jaw-to-face chain → TAPER: Integrate under light spar stress"
+      }
+    [
+  {
+    "location": "face",
+    "type": "pain",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Topical Desensitization Tap + Hold",
+        "notes": "GPP: Reduce nociceptive sensitivity → SPP: Sustain pressure threshold during glove drills"
+      },
+      {
+        "name": "Trigger Point Press (TMJ and Cheekbone)",
+        "notes": "GPP: Release referred facial tension → SPP: Combine with head movement patterns"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "swelling",
+    "phase_progression": "SPP → TAPER",
+    "drills": [
+      {
+        "name": "Facial Gua Sha Scrape (Jaw to Orbital)",
+        "notes": "SPP: Promote fluid clearance with contour → TAPER: Flush pre-fight congestion"
+      },
+      {
+        "name": "Alternating Ice + Heat (Face Wraps)",
+        "notes": "SPP: Stimulate circulation and reset nerves → TAPER: Prevent chronic inflammation"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "instability",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Stability Drill – Head Shake + Facial Iso",
+        "notes": "GPP: Lock face/jaw position under perturbation → SPP: Pair with slip bag or spar flinch"
+      },
+      {
+        "name": "Resistance Band Pull – Face to Neck Anchors",
+        "notes": "GPP: Rebuild kinetic link → SPP: Tie to reactive defense cues"
+      }
+    ]
+  },
+  {
+    "location": "face",
+    "type": "soreness",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Face-Focused Box Breathing",
+        "notes": "GPP: Downregulate facial tone → TAPER: Anchor parasympathetic state pre-fight"
+      },
+      {
+        "name": "Facial Stretch Flow (Eyes Closed Guided)",
+        "notes": "GPP: Reset face and breath links → TAPER: Prime CNS clarity"
+      }
+    ]
+  }
+]
