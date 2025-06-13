@@ -216,9 +216,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "skill_refinement": [
             "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
         ],
-        "coordination": [
-            "coordination", "proprioception", "balance", "footwork", "reactive"
-        ]
+        "coordination": ["coordination"]
     }
 
     style_tags = [t for s in style_list for t in style_tag_map.get(s, [])]
