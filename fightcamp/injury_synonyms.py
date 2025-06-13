@@ -468,3 +468,10 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     injury_type = canonicalize_injury_type(cleaned)
     location = canonicalize_location(cleaned)
     return injury_type, location
+
+
+def split_injury_text(raw_text: str) -> list[str]:
+    """Normalize free-form injury text into a list of phrases."""
+    text = raw_text.lower()
+    phrases = re.split(r"(?:,|\.|;|\band\b|\bbut\b|\bthen\b|\balso\b)+", text)
+    return [p.strip() for p in phrases if p.strip()]
