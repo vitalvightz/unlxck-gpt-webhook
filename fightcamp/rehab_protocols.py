@@ -1,6 +1,8 @@
 from pathlib import Path
 import json
 
+from .injury_synonyms import parse_injury_phrase
+
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 # Rehab bank stores entries with fields like:
 # {
@@ -30,10 +32,18 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
     if not injury_string:
         return "\n✅ No rehab work required."
 
-    injuries = [i.strip().lower() for i in injury_string.split(',') if i.strip()]
+    import re
+    phrases = re.split(r'[,.;&]|(?:\band\b)|(?:\bbut\b)|(?:\balso\b)', injury_string.lower())
+    injury_phrases = [p.strip() for p in phrases if p.strip()]
+
+    parsed_entries = []
+    for phrase in injury_phrases:
+        itype, loc = parse_injury_phrase(phrase)
+        if itype and loc:
+            parsed_entries.append((itype, loc))
 
     flagged = []
-    for injury in injuries:
+    for injury in injury_phrases:
         for flag in RED_FLAG_TYPES:
             if flag in injury:
                 flagged.append(injury)
@@ -49,21 +59,17 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
         progress = entry.get("phase_progression", "")
         return [p.strip().upper() for p in progress.split("→") if p.strip()]
 
-    for injury in injuries:
+    for itype, loc in parsed_entries:
         matches = [
-            entry
-            for entry in REHAB_BANK
-            if current_phase.upper() in _phases(entry)
-            and entry.get("location", "") in injury
-            and (not entry.get("type") or entry.get("type") in injury)
+            entry for entry in REHAB_BANK
+            if entry.get("type") == itype
+            and entry.get("location") == loc
+            and current_phase.upper() in _phases(entry)
         ]
-        drill_names = [
-            drill["name"]
-            for m in matches
-            for drill in m.get("drills", [])
-        ]
-        if drill_names:
-            lines.append(f"- {injury.title()}: {', '.join(drill_names)}")
+        if matches:
+            drills = [d["name"] for m in matches for d in m.get("drills", [])][:2]
+            if drills:
+                lines.append(f"- {loc.title()} ({itype.title()}): {', '.join(drills)}")
     if not lines:
         return "\n⚠️ No rehab options for this phase."
     return "\n**Rehab Protocols**\n" + "\n".join(lines)
