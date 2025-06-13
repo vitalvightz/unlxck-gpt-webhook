@@ -5729,4 +5729,366 @@
       }
     ]
   }
+,
+    {
+        "location": "unspecified",
+        "type": "strain",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "General Isometric Holds (5-position circuit)",
+                "notes": "Engage large muscle groups without load; avoid pain. Hold 15\u201330s x 3 rounds."
+            },
+            {
+                "name": "Foam Rolling + Tempo Eccentrics",
+                "notes": "Roll full body + slow eccentrics to recondition tissue under control."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "sprain",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Joint Stability Circuit (ankle, knee, wrist)",
+                "notes": "Use bands, BOSU, or unstable surfaces. Controlled tempo x 3 sets."
+            },
+            {
+                "name": "Isometric Joint Compression Holds",
+                "notes": "Mid-range holds for joint stiffness without movement. Build neuromuscular confidence."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "tightness",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Global Mobility Flow (Full Body)",
+                "notes": "12\u201315 mins of dynamic stretching, PNF holds, and breath-led movement."
+            },
+            {
+                "name": "Contrast Showers + Deep Tissue Tooling",
+                "notes": "1 min hot / 1 min cold x5 + lacrosse ball on most restricted areas."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "soreness",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Recovery Circuit (Airdyne, Row, Band Mobility)",
+                "notes": "Low RPE movement with mobility and breath pacing. 3\u20134 rounds."
+            },
+            {
+                "name": "Epsom Salt Bath + Active ROM Post-Soak",
+                "notes": "20 mins hot soak + unloaded movement to promote circulation and recovery."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "tendonitis",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Isometric Pain-Free Loading (Top/Bottom Range)",
+                "notes": "Isometric tension at pain-free end ranges, hold 30s. 3\u20134 sets daily."
+            },
+            {
+                "name": "Slow Tempo Eccentrics on Major Lifts",
+                "notes": "3\u20134s lowering phase. Reinforces tendon capacity. Start unloaded."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "pain",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Breathwork + Parasympathetic Ground Flow",
+                "notes": "Releases tension. 4s inhale / 8s exhale, paired with gentle mobility."
+            },
+            {
+                "name": "Neuro-Friendly Band Activation",
+                "notes": "Band retraction, extension, rotation drills. 3 sets light resistance."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "stiffness",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Loaded CARs (Controlled Articular Rotations)",
+                "notes": "Strengthen joint control. 3 reps per direction, per joint."
+            },
+            {
+                "name": "Breath-Guided Dynamic Stretch Flow",
+                "notes": "Mobility tied to exhale. Repeat sequence x3 rounds full body."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "hyperextension",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Active Range Isometrics (Antagonist Focus)",
+                "notes": "Contract opposing muscles near end range to protect joint integrity."
+            },
+            {
+                "name": "Proprioceptive Loading on Sliders or Bands",
+                "notes": "Adds joint awareness while avoiding terminal ROM."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "tightness",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Global Foam Roll + PNF Stretch (target problem area)",
+                "notes": "Start with 60\u201390s foam roll across main tension zones, then add 3x15s PNF contract-relax sets. \u2192 SPP: progress to dynamic end-range mobility drills (e.g. CARS, banded openers)."
+            },
+            {
+                "name": "Full-Body Mobility Circuit",
+                "notes": "Include inchworms, world\u2019s greatest stretch, deep lunge opens. 2\u20133 rounds. \u2192 SPP: add mild loaded mobility (e.g. goblet squat hold, elevated Cossack stretch)."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "tendonitis",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Isometric Holds (target tendon path)",
+                "notes": "5x45s holds at mid-range (e.g. Spanish squat, wall sit, mid-dip hold) depending on limb. \u2192 SPP: progress to slow eccentrics (e.g. heel drops, tempo pushups)."
+            },
+            {
+                "name": "Banded Flossing + Elevation",
+                "notes": "Wrap a light compression band around joint/muscle belly, move through ROM for 30s bouts. \u2192 SPP: drop band, add slow ROM + high bloodflow pump work."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "instability",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Isometric Stability Holds on Unstable Surface",
+                "notes": "Hold split stance, tall plank, or single leg positions on foam pad or BOSU. 3x20\u201330s. \u2192 SPP: Add light perturbation (e.g. partner taps, ball tosses)."
+            },
+            {
+                "name": "Banded Stability Reps",
+                "notes": "Use bands to pull joint into slight instability during slow reps (e.g. banded wall squats). \u2192 SPP: progress to reactive reps or light load with control."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "tendonitis",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Heavy Slow Resistance Protocol",
+                "notes": "3x8\u201310 slow tempo reps (e.g. 3-0-3) for target tendon line. Emphasize full control. \u2192 SPP: shift to sport-mimicking movement patterns under tempo."
+            },
+            {
+                "name": "Contrast Therapy + Active ROM",
+                "notes": "Ice/heat alternated 3\u20135x per area, then slow joint circles or band ROM drills. \u2192 SPP: remove passive input, use self-mobilizing drills only."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "stiffness",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Active Range Expansion with Isometrics",
+                "notes": "Contract-relax against resistance (e.g. doorway press, glute bridge hold). 3x20s. \u2192 SPP: build into controlled eccentrics or flowing mobility reps."
+            },
+            {
+                "name": "Loaded Mobility Toolwork",
+                "notes": "Massage gun or lacrosse ball across the stuck tissue pre-movement. \u2192 SPP: replace with movement-based mobility under low load."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "contusion",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Elevation + Compression (10\u201315 min post)",
+                "notes": "Advise athlete to elevate the area above heart and wrap with compression sleeve. \u2192 SPP: remove if bruising fades, switch to pump/flush circuits."
+            },
+            {
+                "name": "Low Tension Mobility & Lymph Flow",
+                "notes": "Air squats, light swings, or open chain movement to keep blood moving without stress. \u2192 SPP: increase ROM and tempo gradually as pain subsides."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "hyperextension",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Joint-Specific Controlled Eccentrics",
+                "notes": "Apply slow lowering to regain ROM (e.g. leg lowers, tempo dips, etc). 3x6 reps. \u2192 SPP: layer in anti-extension isometrics (e.g. plank drag)."
+            },
+            {
+                "name": "Wrap Support + ROM Reset",
+                "notes": "Use elastic wrap during movement if needed. Add unloaded full-ROM circles pre-training. \u2192 SPP: taper wrap use unless re-aggravation risk is present."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "soreness",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Light Aerobic Flow + Stretch",
+                "notes": "5\u201310 mins of cyclical movement (e.g. bike, jog) into a 3-round mobility flow. \u2192 SPP: taper flow to 1\u20132 rounds and reduce aerobic duration if recovery improves."
+            },
+            {
+                "name": "Epsom Salt Soak or Contrast Shower",
+                "notes": "Passive recovery aid to flush DOMS. 15\u201320 mins soak or 5 cycles of hot/cold shower. \u2192 SPP: reserve for high soreness or poor sleep."
+            }
+        ]
+    },
+    {
+        "location": "unspecified",
+        "type": "pain",
+        "phase_progression": "GPP \u2192 SPP",
+        "drills": [
+            {
+                "name": "Breath-Guided Joint Mobilization",
+                "notes": "Focus on 3\u20134 joint circles or controlled articulations paired with slow nasal breathing. \u2192 SPP: convert to low-load tempo exercises for the affected region."
+            },
+            {
+                "name": "Elevate + Wrap Protocol",
+                "notes": "Advise light compression wrap and elevation above heart for 10\u201315 min post-training. \u2192 SPP: if pain subsides, begin reintroducing low RPE movement."
+            }
+        ]
+    }
+,
+  {
+    "location": "unspecified",
+    "type": "contusion",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Soft Tissue Flushing (Foam Roller or Ball)",
+        "notes": "Target surrounding areas without pressing directly on the bruise. Aids lymphatic drainage."
+      },
+      {
+        "name": "Elevated Leg or Arm Pulses",
+        "notes": "Lie down and elevate the bruised limb. Perform light flexion/extension to improve circulation and reduce pooling."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "swelling",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Compression Wrap with Mobility Flow",
+        "notes": "Apply compression bandage, then perform gentle mobility drills to reduce swelling without provoking flare-up."
+      },
+      {
+        "name": "Limb Elevation + Isometric Squeeze",
+        "notes": "Elevate the limb above heart level. Perform light squeezes or quad/glute sets to stimulate fluid return."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "tendonitis",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Slow Eccentric Resistance with Band",
+        "notes": "Controlled lengthening under band tension to stimulate tendon healing without overload."
+      },
+      {
+        "name": "Isometric Holds at Pain-Free Angle",
+        "notes": "Hold static contractions near the range of irritation to reinforce tendon capacity and reduce pain sensitivity."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "impingement",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Controlled Joint CARs (Controlled Articular Rotations)",
+        "notes": "Move through safe ranges under tension. Avoid painful arcs, build capsule space."
+      },
+      {
+        "name": "Banded Joint Distraction (Light Tension)",
+        "notes": "Use light band tension to open joint space while moving through low-load range of motion."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "instability",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Reactive Stability Drills (Eyes Closed or Band Perturbation)",
+        "notes": "Use bands or unstable surfaces to challenge joint control and proprioception under minimal load."
+      },
+      {
+        "name": "Isometric Holds with Joint Alignment Cueing",
+        "notes": "Reinforce motor control and safe joint positions through static holds in vulnerable ranges."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "stiffness",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Active Mobility Circuits (Full Body or Region-Specific)",
+        "notes": "Mobilize through dynamic movement. Emphasize rhythmic motion, not static stretching."
+      },
+      {
+        "name": "Heat-then-Move Protocol (e.g., Hot Pack + Flow)",
+        "notes": "Apply localized heat for 10 min, then transition into controlled movement or CARs to expand usable range."
+      }
+    ]
+  },
+  {
+    "location": "unspecified",
+    "type": "hyperextension",
+    "phase_progression": "GPP \u2192 SPP",
+    "drills": [
+      {
+        "name": "Joint Guarding Isometrics",
+        "notes": "Hold positions just short of lockout to train tissue safety and reinforce control at terminal ranges."
+      },
+      {
+        "name": "Partial ROM Strength Drills (Reverse Range)",
+        "notes": "Train in shortened range away from end-range stretch. Focus on deceleration and reverse control."
+      }
+    ]
+  }
 ]
