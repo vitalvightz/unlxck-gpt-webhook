@@ -374,8 +374,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         f"**Prescription:** {base_block}",
         f"**Total Exercises:** {target_exercises}",
     ]
-    if mindset_cue:
-        strength_output.append(f"**Mindset Cue:** {mindset_cue}")
     
     if fatigue_note:
         strength_output.append(f"**Adjustment:** {fatigue_note}")
