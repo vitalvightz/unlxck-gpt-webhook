@@ -417,6 +417,18 @@ LOCATION_MAP = {
 
 
 from rapidfuzz import fuzz
+import re
+
+NEGATION_PATTERNS = [
+    r"\bnot\s+\w+", r"\bisn[’']?t\s+\w+", r"\bwasn[’']?t\s+\w+",
+    r"\bain[’']?t\s+\w+", r"\bdidn[’']?t\s+\w+", r"\bno\s+\w+"
+]
+
+def remove_negated_phrases(text: str) -> str:
+    """Strip phrases where injury keywords are negated, to avoid false matches."""
+    for pattern in NEGATION_PATTERNS:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+    return text.strip()
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     """Return the canonical injury type for the given text using fuzzy matching.
@@ -452,6 +464,7 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
 
 def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     """Extract canonical injury type and location from an injury phrase."""
-    injury_type = canonicalize_injury_type(phrase)
-    location = canonicalize_location(phrase)
+    cleaned = remove_negated_phrases(phrase)
+    injury_type = canonicalize_injury_type(cleaned)
+    location = canonicalize_location(cleaned)
     return injury_type, location
