@@ -92,6 +92,10 @@ Certain tactical styles impose hard minimums or maximums on the camp phases. The
 
 These constraints ensure fighters with those styles emphasize the most relevant phases even after other adjustments.
 
+### Hybrid Tactical Style
+
+The `hybrid` style tag refers to stance-switching ability rather than mixing multiple sports. Drills labeled with this tag focus on unilateral movements, footwork or rapid transitions between orthodox and southpaw. Exercises that simply blend striking and grappling no longer carry `hybrid`.
+
 **Mindset module** (`mindset_module.py`)
 
 Keyword counts determine the top mental blocks. The two highest scoring blocks feed into the phase mindset cues.
