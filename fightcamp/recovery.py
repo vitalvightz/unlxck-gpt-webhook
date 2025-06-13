@@ -1,24 +1,72 @@
 from .rehab_protocols import REHAB_BANK
+from .injury_synonyms import (
+    parse_injury_phrase,
+    canonicalize_location,
+)
 
 
 def _fetch_injury_drills(injuries: list, location: str, phase: str) -> list:
-    """Return up to two rehab drills matching the injury info."""
+    """Return up to two rehab drills matching the injury info.
+
+    Parameters
+    ----------
+    injuries:
+        List of free-form injury descriptions from the intake form.
+    location:
+        Comma separated location string from the dropdown field.
+    phase:
+        Current training phase (``GPP``, ``SPP`` or ``TAPER``).
+
+    Injury phrases are normalized using ``INJURY_SYNONYM_MAP`` so text like
+    ``"twisted wrist"`` correctly maps to the ``sprain`` type and ``wrist``
+    location when filtering the rehab bank.
+    """
     injuries = [i.lower() for i in injuries if i]
-    location = location.lower().strip()
     phase = phase.upper()
+
+    # Build sets of canonical types and locations from all sources
+    injury_types = set()
+    locations = set()
+
+    if location:
+        for loc in location.split(','):
+            loc = loc.strip()
+            if not loc:
+                continue
+            canonical = canonicalize_location(loc)
+            locations.add(canonical or loc)
+
+    for desc in injuries:
+        itype, loc = parse_injury_phrase(desc)
+        if itype:
+            injury_types.add(itype)
+        if loc:
+            locations.add(loc)
+
     drills = []
 
     for entry in REHAB_BANK:
-        entry_phases = [p.strip().upper() for p in entry.get("phase_progression", "").split("→") if p.strip()]
+        entry_phases = [
+            p.strip().upper()
+            for p in entry.get("phase_progression", "").split("→")
+            if p.strip()
+        ]
         if phase not in entry_phases:
             continue
+
         entry_loc = entry.get("location", "").lower()
         entry_type = entry.get("type", "").lower()
 
-        loc_match = location and entry_loc == location or any(entry_loc in inj for inj in injuries)
-        type_match = entry_type and any(entry_type in inj for inj in injuries)
+        loc_match = (
+            (entry_loc and entry_loc in locations)
+            or any(entry_loc in inj for inj in injuries)
+        )
+        type_match = (
+            (entry_type and entry_type in injury_types)
+            or any(entry_type in inj for inj in injuries)
+        )
 
-        if not loc_match or not type_match:
+        if not (loc_match and type_match):
             continue
 
         for drill in entry.get("drills", []):
