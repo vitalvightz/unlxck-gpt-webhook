@@ -1,3 +1,5 @@
+from rapidfuzz import fuzz
+
 mindset_bank = {
     "GPP": {
         "confidence": "Use future-self visualization and complete 1 small, measurable success daily to rebuild belief.",
@@ -112,8 +114,8 @@ mental_blocks = {
     ]
 }
 
-def classify_mental_block(text: str, top_n: int = 2) -> list:
-    """Classify the mental block based on input text, return top N likely matches."""
+def classify_mental_block(text: str, top_n: int = 2, threshold: int = 85) -> list:
+    """Classify the mental block using fuzzy matching and return top N likely matches."""
     if not text or not isinstance(text, str):
         return ["generic"]
 
@@ -123,7 +125,10 @@ def classify_mental_block(text: str, top_n: int = 2) -> list:
 
     scores = {}
     for block, keywords in mental_blocks.items():
-        match_count = sum(1 for kw in keywords if kw in text)
+        match_count = 0
+        for kw in keywords:
+            if kw in text or fuzz.partial_ratio(kw, text) >= threshold:
+                match_count += 1
         if match_count:
             scores[block] = match_count
 
