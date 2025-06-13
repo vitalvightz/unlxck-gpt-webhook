@@ -73,7 +73,9 @@ goal_tag_map = {
     "skill_refinement": [
         "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
     ],
-    "coordination": ["coordination"]
+    "coordination": [
+        "coordination", "proprioception", "balance", "footwork", "reactive"
+    ]
 }
 
 
@@ -92,8 +94,8 @@ weakness_tag_map = {
     "grip strength": ["grip", "pull"],
     "posterior chain": ["posterior_chain", "hip_dominant"],
     "knees": ["quad_dominant", "eccentric"],
-    "coordination / proprioception": ["coordination"],
-    "coordination/proprioception": ["coordination"]
+    "coordination / proprioception": ["coordination", "proprioception", "balance"],
+    "coordination/proprioception": ["coordination", "proprioception", "balance"]
 }
 
 # Load banks
@@ -101,6 +103,20 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 conditioning_bank = json.loads((DATA_DIR / "conditioning_bank.json").read_text())
 style_conditioning_bank = json.loads((DATA_DIR / "style_conditioning_bank.json").read_text())
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
+
+# Load coordination bank and flatten drills
+try:
+    _coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text())
+except Exception:
+    _coord_data = []
+
+coordination_bank = []
+if isinstance(_coord_data, list):
+    coordination_bank.extend(_coord_data)
+elif isinstance(_coord_data, dict):
+    for val in _coord_data.values():
+        if isinstance(val, list):
+            coordination_bank.extend(val)
 
 STYLE_CONDITIONING_RATIO = {
     "GPP": 0.20,
@@ -156,6 +172,31 @@ def is_banned_drill(name: str, tags: list[str], fight_format: str) -> bool:
                 return True
 
     return False
+
+
+def select_coordination_drill(flags, existing_names: set[str]):
+    """Return a coordination drill matching the current phase if needed."""
+    goals = [g.lower() for g in flags.get("key_goals", [])]
+    weaknesses = [w.lower() for w in flags.get("weaknesses", [])]
+    coord_keys = {
+        "coordination",
+        "coordination / proprioception",
+        "coordination/proprioception",
+        "proprioception",
+    }
+    if not set(goals + weaknesses).intersection(coord_keys):
+        return None
+
+    phase = flags.get("phase", "GPP").upper()
+    candidates = [
+        d
+        for d in coordination_bank
+        if phase in [p.upper() for p in d.get("phases", [])]
+        and d.get("placement", "conditioning").lower() == "conditioning"
+        and d.get("name") not in existing_names
+    ]
+
+    return random.choice(candidates) if candidates else None
 
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
@@ -561,6 +602,14 @@ def generate_conditioning_block(flags):
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 break
+
+    # --------- OPTIONAL COORDINATION DRILL INSERTION ---------
+    existing_names = {d.get("name") for _, drills in final_drills for d in drills}
+    coord_drill = select_coordination_drill(flags, existing_names)
+    if coord_drill:
+        system = SYSTEM_ALIASES.get(coord_drill.get("system", "").lower(), coord_drill.get("system", "misc"))
+        final_drills.append((system, [coord_drill]))
+        selected_drill_names.append(coord_drill.get("name"))
 
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:

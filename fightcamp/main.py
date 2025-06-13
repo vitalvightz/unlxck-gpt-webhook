@@ -56,8 +56,8 @@ GOAL_NORMALIZER = {
 
 # Map uncommon weakness labels to internal tags
 WEAKNESS_NORMALIZER = {
-    "coordination / proprioception": ["coordination"],
-    "coordination/proprioception": ["coordination"],
+    "coordination / proprioception": ["coordination", "proprioception"],
+    "coordination/proprioception": ["coordination", "proprioception"],
 }
 
 # Auth setup
