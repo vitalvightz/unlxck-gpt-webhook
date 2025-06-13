@@ -125,6 +125,31 @@ def expand_tags(input_list, tag_map):
         expanded.extend(tags)
     return [t.lower() for t in expanded]
 
+def is_banned_drill(name: str, tags: list[str], fight_format: str) -> bool:
+    """Return True if the drill should be removed for the given sport."""
+    name = name.lower()
+    tags = [t.lower() for t in tags]
+
+    grappling_terms = {
+        "wrestling",
+        "wrestle",
+        "grappling",
+        "grapple",
+        "sprawl",
+    }
+
+    if fight_format in {"boxing", "kickboxing"}:
+        for term in grappling_terms:
+            if term in name or term in tags:
+                return True
+
+    if fight_format == "boxing":
+        for term in ["kick", "knee", "clinch knee strike"]:
+            if term in name or term in tags:
+                return True
+
+    return False
+
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     fatigue = flags.get("fatigue", "low")
@@ -205,6 +230,8 @@ def generate_conditioning_block(flags):
             continue
 
         tags = [t.lower() for t in drill.get("tags", [])]
+        if is_banned_drill(drill.get("name", ""), tags, fight_format):
+            continue
 
         # Suppress high CNS drills in TAPER unless criteria met
         if (
@@ -252,6 +279,8 @@ def generate_conditioning_block(flags):
     target_style_tags = set(style_names + [tech_style_tag])
     for drill in style_conditioning_bank:
         tags = [t.lower() for t in drill.get("tags", [])]
+        if is_banned_drill(drill.get("name", ""), tags, fight_format):
+            continue
         if not target_style_tags.intersection(tags):
             continue
         if phase.upper() not in drill.get("phases", []):

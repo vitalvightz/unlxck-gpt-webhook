@@ -110,6 +110,31 @@ def score_exercise(
 
     return round(score, 4)
 
+def is_banned_exercise(name: str, tags: list[str], fight_format: str) -> bool:
+    """Return True if the exercise should be removed for the given sport."""
+    name = name.lower()
+    tags = [t.lower() for t in tags]
+
+    grappling_terms = {
+        "wrestling",
+        "wrestle",
+        "grappling",
+        "grapple",
+        "sprawl",
+    }
+
+    if fight_format in {"boxing", "kickboxing"}:
+        for term in grappling_terms:
+            if term in name or term in tags:
+                return True
+
+    if fight_format == "boxing":
+        for term in ["kick", "knee", "clinch knee strike"]:
+            if term in name or term in tags:
+                return True
+
+    return False
+
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
@@ -117,6 +142,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
+    fight_format = flags.get("fight_format", "mma")
     style_input = flags.get("style_tactical", [])
     if isinstance(style_input, str):
         style_list = [style_input.lower()]
@@ -220,6 +246,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
+        if is_banned_exercise(ex.get("name", ""), tags, fight_format):
+            continue
         ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
         if phase == "TAPER":
             if any(t in taper_banned for t in tags) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
@@ -275,6 +303,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])
+            if is_banned_exercise(ex.get("name", ""), tags, fight_format):
+                continue
             if ex.get("name") in prev_exercises and not (
                 phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
             ):
