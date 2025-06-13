@@ -1,3 +1,34 @@
+from .rehab_protocols import REHAB_BANK
+
+
+def _fetch_injury_drills(injuries: list, location: str, phase: str) -> list:
+    """Return up to two rehab drills matching the injury info."""
+    injuries = [i.lower() for i in injuries if i]
+    location = location.lower().strip()
+    phase = phase.upper()
+    drills = []
+
+    for entry in REHAB_BANK:
+        entry_phases = [p.strip().upper() for p in entry.get("phase_progression", "").split("→") if p.strip()]
+        if phase not in entry_phases:
+            continue
+        entry_loc = entry.get("location", "").lower()
+        entry_type = entry.get("type", "").lower()
+
+        loc_match = location and entry_loc == location or any(entry_loc in inj for inj in injuries)
+        type_match = entry_type and any(entry_type in inj for inj in injuries)
+
+        if not loc_match or not type_match:
+            continue
+
+        for drill in entry.get("drills", []):
+            drills.append(drill.get("name"))
+            if len(drills) >= 2:
+                return drills
+
+    return drills
+
+
 def generate_recovery_block(training_context: dict) -> str:
     phase = training_context["phase"]
     fatigue = training_context["fatigue"]
@@ -21,6 +52,15 @@ def generate_recovery_block(training_context: dict) -> str:
         "- Cold exposure 2–3x/week (if needed)",
         "- Mobility circuits/light recovery work daily"
     ]
+
+    injury_drills = _fetch_injury_drills(
+        training_context.get("injuries", []),
+        training_context.get("injury_location", ""),
+        phase,
+    )
+    if injury_drills:
+        recovery_block.append("\n**Injury-Specific Drills:**")
+        recovery_block += [f"- {d}" for d in injury_drills]
 
     # Age-based Adjustments
     if age_risk:
