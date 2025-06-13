@@ -118,9 +118,13 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str) -> bool:
     grappling_terms = {
         "wrestling",
         "wrestle",
+        "wrestler",
+        "bjj",
         "grappling",
         "grapple",
+        "grappler",
         "sprawl",
+        "sprawling",
     }
 
     if fight_format in {"boxing", "kickboxing"}:
