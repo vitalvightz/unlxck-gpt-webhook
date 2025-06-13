@@ -1,19 +1,16 @@
 from .rehab_protocols import REHAB_BANK, INJURY_SUPPORT_NOTES
 from .injury_synonyms import (
     parse_injury_phrase,
-    canonicalize_location,
 )
 
 
-def _fetch_injury_drills(injuries: list, location: str, phase: str) -> list:
+def _fetch_injury_drills(injuries: list, phase: str) -> list:
     """Return up to two rehab drills matching the injury info.
 
     Parameters
     ----------
     injuries:
         List of free-form injury descriptions from the intake form.
-    location:
-        Comma separated location string from the dropdown field.
     phase:
         Current training phase (``GPP``, ``SPP`` or ``TAPER``).
 
@@ -27,14 +24,6 @@ def _fetch_injury_drills(injuries: list, location: str, phase: str) -> list:
     # Build sets of canonical types and locations from all sources
     injury_types = set()
     locations = set()
-
-    if location:
-        for loc in location.split(','):
-            loc = loc.strip()
-            if not loc:
-                continue
-            canonical = canonicalize_location(loc)
-            locations.add(canonical or loc)
 
     for desc in injuries:
         itype, loc = parse_injury_phrase(desc)
@@ -104,7 +93,6 @@ def generate_recovery_block(training_context: dict) -> str:
     injuries = training_context.get("injuries", [])
     injury_drills = _fetch_injury_drills(
         injuries,
-        training_context.get("injury_location", ""),
         phase,
     )
     if injury_drills:
