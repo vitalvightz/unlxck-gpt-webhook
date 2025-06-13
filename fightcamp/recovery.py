@@ -1,3 +1,60 @@
+from .rehab_protocols import REHAB_BANK
+from .injury_synonyms import INJURY_SYNONYM_MAP, LOCATION_MAP
+
+
+def _map_injury_types(injuries: list) -> set:
+    """Return canonical injury types found within the text snippets."""
+    types = set()
+    for text in injuries:
+        t = text.lower()
+        for base, synonyms in INJURY_SYNONYM_MAP.items():
+            if base in t or any(s in t for s in synonyms):
+                types.add(base)
+    return types
+
+
+def _normalize_location(loc: str) -> str:
+    """Map a user-provided body part to the canonical location string."""
+    return LOCATION_MAP.get(loc.lower().strip(), loc.lower().strip())
+
+
+def _fetch_injury_drills(injuries: list, location: str, phase: str) -> list:
+    """Return up to two rehab drills that match the injury location and type."""
+    injuries = [i.lower() for i in injuries if i]
+    injury_types = _map_injury_types(injuries)
+    location = _normalize_location(location)
+    phase = phase.upper()
+    drills = []
+
+    for entry in REHAB_BANK:
+        entry_phases = [
+            p.strip().upper()
+            for p in entry.get("phase_progression", "").split("→")
+            if p.strip()
+        ]
+        if phase not in entry_phases:
+            continue
+        entry_loc = entry.get("location", "").lower()
+        entry_type = entry.get("type", "").lower()
+
+        loc_match = False
+        if location:
+            loc_match = entry_loc == location
+        else:
+            loc_match = any(entry_loc in inj for inj in injuries)
+        type_match = entry_type in injury_types
+
+        if not loc_match or not type_match:
+            continue
+
+        for drill in entry.get("drills", []):
+            drills.append(drill.get("name"))
+            if len(drills) >= 2:
+                return drills
+
+    return drills
+
+
 def generate_recovery_block(training_context: dict) -> str:
     phase = training_context["phase"]
     fatigue = training_context["fatigue"]
@@ -19,8 +76,17 @@ def generate_recovery_block(training_context: dict) -> str:
         "- Post-session constant showers (1 min hot/1min cold 5x)",
         "- 8–9 hours of sleep/night + 90-min blue light cutoff",
         "- Cold exposure 2–3x/week (if needed)",
-        "- Mobility circuits/light recovery work daily"
+        "- Mobility circuits/light recovery work daily",
     ]
+
+    injury_drills = _fetch_injury_drills(
+        training_context.get("injuries", []),
+        training_context.get("injury_location", ""),
+        phase,
+    )
+    if injury_drills:
+        recovery_block.append("\n**Injury-Specific Drills:**")
+        recovery_block += [f"- {d}" for d in injury_drills]
 
     # Age-based Adjustments
     if age_risk:
@@ -28,7 +94,7 @@ def generate_recovery_block(training_context: dict) -> str:
         recovery_block += [
             "- 72h muscle group rotation",
             "- Weekly float tank or sauna session",
-            "- Collagen + vitamin C pre-training"
+            "- Collagen + vitamin C pre-training",
         ]
 
     # Fatigue Score Flags
@@ -38,13 +104,13 @@ def generate_recovery_block(training_context: dict) -> str:
             "- Drop 1 session if sleep < 6.5hrs for 3+ days",
             "- Cut weekly volume by 25–40%",
             "- Replace eccentrics with isometrics if DOMS >72hrs",
-            "- Monitor for appetite/mood dips (cortisol/motivation risk)"
+            "- Monitor for appetite/mood dips (cortisol/motivation risk)",
         ]
     elif fatigue == "moderate":
         recovery_block.append("\n**Moderate Fatigue Notes:**")
         recovery_block += [
             "- Add 1 full rest day",
-            "- Prioritize post-session nutrition & breathwork"
+            "- Prioritize post-session nutrition & breathwork",
         ]
 
     # Phase-Based Adjustments
@@ -54,31 +120,33 @@ def generate_recovery_block(training_context: dict) -> str:
             "- Reduce volume to 30–40% of taper week",
             "- Final hard session = Tue/Wed",
             "- No soreness-inducing lifts after Wed",
-            "- Final 2 days = breathwork, float tank, shadow drills"
+            "- Final 2 days = breathwork, float tank, shadow drills",
         ]
     elif phase == "SPP":
         recovery_block.append("\n**SPP Recovery Focus:**")
         recovery_block += [
             "- Manage CNS load and alactic fatigue",
-            "- Introduce 1–2 full recovery days"
+            "- Introduce 1–2 full recovery days",
         ]
     elif phase == "GPP":
         recovery_block.append("\n**GPP Recovery Focus:**")
         recovery_block += [
             "- Focus on tissue prep, joint mobility",
-            "- Reset sleep routine"
+            "- Reset sleep routine",
         ]
 
     # Graduated Weight Cut Recovery Guidance
     if weight_cut_risk:
         if 3.0 <= weight_cut_pct < 6.0:
-            recovery_block.append("\n**⚠️ Moderate Weight Cut Recovery Recommendations:**")
+            recovery_block.append(
+                "\n**⚠️ Moderate Weight Cut Recovery Recommendations:**"
+            )
             recovery_block += [
                 "- Monitor hydration closely; aim to avoid >2% dehydration",
                 "- Prioritize quality sleep and stress management",
                 "- Incorporate light mobility and stretching",
                 "- Avoid excessive heat exposure or hard training sessions",
-                "- Use electrolyte drinks during training and post-training"
+                "- Use electrolyte drinks during training and post-training",
             ]
         elif weight_cut_pct >= 6.0:
             recovery_block.append("\n**⚠️ Severe Weight Cut Recovery Warning:**")
@@ -87,7 +155,7 @@ def generate_recovery_block(training_context: dict) -> str:
                 "- Add 2 float tank or Epsom salt baths in fight week",
                 "- Emphasize post-weigh-in refeed: fluids, high-GI carbs",
                 "- Monitor mood, sleep, and hydration hourly post-weigh-in",
-                "- Consider medical supervision if possible"
+                "- Consider medical supervision if possible",
             ]
 
     return "\n".join(recovery_block).strip()
