@@ -297,7 +297,8 @@
         "name": "Mid-Foot Isometric Holds (Band Loop)",
         "notes": "GPP: Tension through arch → SPP: Progress to timed holds or anti-rotation"
       }
-      [
+    ]
+  },
   {
     "location": "shin",
     "type": "splints",
@@ -522,8 +523,7 @@
         "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper"
       }
     ]
-  }
-][
+  },
   {
     "location": "shin",
     "type": "splints",
@@ -748,8 +748,7 @@
         "notes": "SPP: Improve balance under contact → TAPER: Use for CNS reactivity in taper"
       }
     ]
-  }
-][
+  },
   {
     "location": "hip",
     "type": "tightness",
@@ -1048,7 +1047,8 @@
         "name": "Single-Leg Hamstring Bridge",
         "notes": "GPP: Unilateral strength → SPP: Add reps or instability"
       }
-    [
+    ]
+  },
   {
     "location": "groin",
     "type": "strain",
@@ -1288,9 +1288,7 @@
         "notes": "GPP: Activate under guidance → SPP: Reinforce joint position"
       }
     ]
-  }
-]
-[
+  },
   {
     "location": "glutes",
     "type": "strain",
@@ -1410,10 +1408,9 @@
         "notes": "TAPER: Maintain slight tension without CNS load"
       }
     ]
-  }
-]
-    
-  "location": "core",
+  },
+  {
+    "location": "core",
   "type": "strain",
   "phase_progression": "GPP → SPP",
   "drills": [
@@ -1530,7 +1527,9 @@
       "name": "Wall Dead Bug Iso-Hold",
       "notes": "GPP: Maintain tension with joint safety"
     }
-    {
+  ]
+},
+{
   "location": "obliques",
   "type": "strain",
   "phase_progression": "GPP → SPP",
@@ -1618,8 +1617,10 @@
       "name": "Seated Banded Twists",
       "notes": "SPP: Train low-velocity control → TAPER: Use quick sets pre-workout"
     }
-  ]{
-  "location": "lower back",
+  ]
+},
+{
+    "location": "lower back",
   "type": "tightness",
   "phase_progression": "GPP → TAPER",
   "drills": [
@@ -1736,7 +1737,9 @@
       "name": "90/90 Hip Lift + Breathing",
       "notes": "GPP: Reactivate core-trunk link safely"
     }
-  ]{
+  ]
+},
+{
   "location": "obliques",
   "type": "strain",
   "phase_progression": "GPP → SPP",
@@ -1854,7 +1857,9 @@
       "name": "Seated Banded Rotation",
       "notes": "GPP: Reintroduce end-range tension → SPP: Add banded velocity"
     }
-   {
+  ]
+},
+{
   "location": "obliques",
   "type": "sprain",
   "phase_progression": "GPP → SPP",
@@ -1973,8 +1978,8 @@
       "notes": "GPP: Global control → TAPER: Maintain readiness without volume"
     }
   ]
-}
-}{
+},
+{
   "location": "lower back",
   "type": "tightness",
   "phase_progression": "GPP → TAPER",
@@ -2092,7 +2097,9 @@
       "name": "Bridge Iso Hold on Pad",
       "notes": "GPP: Rebuild safe base tension → TAPER: Maintain control without movement"
     }
-  ]{
+  ]
+},
+{
   "location": "lower back",
   "type": "sprain",
   "phase_progression": "GPP → SPP",
@@ -2211,8 +2218,8 @@
       "notes": "GPP: Train brace under load → TAPER: Reduce fatigue, keep pattern sharp"
     }
   ]
-}
-}{
+},
+{
   "location": "upper back",
   "type": "tightness",
   "phase_progression": "GPP → TAPER",
@@ -2450,8 +2457,9 @@
       "name": "Overhead Band Pull-Throughs",
       "notes": "GPP: Engage full back chain safely → TAPER: Low resistance pre-activation"
     }
-  [
-  {
+  ]
+},
+{
     "location": "chest",
     "type": "strain",
     "phase_progression": "GPP → SPP",
@@ -2644,7 +2652,8 @@
         "name": "Pec-Focused Plyo Push-Off (Low Intensity)",
         "notes": "GPP: Dynamic return to load → TAPER: Maintain reactivity"
       }
-    [
+    ]
+  },
   {
     "location": "shoulder",
     "type": "strain",
@@ -2838,7 +2847,8 @@
         "name": "Isometric Overhead Wall Push",
         "notes": "GPP: Vertical tolerance → TAPER: Maintain overhead readiness"
       }
-    ][
+    ]
+  },
   {
     "location": "shoulder",
     "type": "stiffness",
@@ -3017,7 +3027,8 @@
         "name": "Band Resisted Horizontal Pressouts",
         "notes": "SPP: Increase anterior chain control post-extension"
       }
-    [
+    ]
+  },
   {
     "location": "bicep",
     "type": "strain",
@@ -3241,7 +3252,8 @@
         "name": "Supinated Isometric Elbow Hold",
         "notes": "SPP: Hold mid-flexion tension → TAPER: Maintain capacity without fatigue"
       }
-    [
+    ]
+  },
   {
     "location": "triceps",
     "type": "strain",
@@ -3465,7 +3477,8 @@
         "name": "Stick Triceps Opener (Elbow Up)",
         "notes": "SPP: Target fascia through arm path → TAPER: Use for recovery"
       }
-    [
+    ]
+  },
   {
     "location": "forearm",
     "type": "strain",
@@ -3689,7 +3702,8 @@
         "name": "Forearm Twists with Light Plate",
         "notes": "GPP: Mobilize grip rotation → SPP: Add duration and load"
       }
-    [
+    ]
+  },
   {
     "location": "elbow",
     "type": "strain",
@@ -3883,7 +3897,8 @@
         "name": "Arm Bar Stretch (Modified)",
         "notes": "GPP: Light capsule opening → TAPER: Calm passive mobility"
       }
-      [
+    ]
+  },
   {
     "location": "wrist",
     "type": "sprain",
@@ -4077,6 +4092,7 @@
         "name": "Forearm Supination/Pronation Paused",
         "notes": "SPP: Reload torsion control → TAPER: Retain mid-range readiness"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4091,6 +4107,7 @@
         "name": "Wrist Flexion Bear Hug Iso",
         "notes": "SPP: Engage pistoning reflex → TAPER: Retain control under tension"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4105,6 +4122,7 @@
         "name": "Band Stabilization Circles",
         "notes": "SPP: Load end-range tension → TAPER: Flash mobility without overdrive"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4119,6 +4137,7 @@
         "name": "Light Thumb Opposition Drill",
         "notes": "SPP: Engage decoupled tendon lines → TAPER: Maintain mobility"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4133,6 +4152,7 @@
         "name": "Therapy Putty Grip Twists",
         "notes": "GPP: Rebuild joint control → TAPER: Maintain activation under low load"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4147,6 +4167,7 @@
         "name": "Resisted Wrist Flexor Sweep",
         "notes": "SPP: Maintain open tissue → TAPER: Light activation before fight"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4161,6 +4182,7 @@
         "name": "Palm-March Wrist Stretch",
         "notes": "SPP: Enhance flexor-chain glide → TAPER: Reset under no stress"
       }
+    ]
   },
   {
     "location": "wrist",
@@ -4175,7 +4197,8 @@
         "name": "Isometric Dorsal Wrist Hold",
         "notes": "SPP: Defend overextension → TAPER: Sustain under control"
       }
-  [
+    ]
+  },
   {
     "location": "wrist",
     "type": "strain",
@@ -4324,7 +4347,8 @@
         "name": "Plank to Palm Rockbacks",
         "notes": "GPP: Joint loading in safe pattern → SPP: Introduce speed and range"
       }
-    [
+    ]
+  },
   {
     "location": "hand",
     "type": "sprain",
@@ -4503,7 +4527,8 @@
         "name": "Wall Crawls (Backhand Contact)",
         "notes": "GPP: Slow control in pain-free range → SPP: Layer return to punching function"
       }
-    [
+    ]
+  },
   {
     "location": "hand",
     "type": "sprain",
@@ -4622,7 +4647,8 @@
         "name": "Open-Close Grip Cycles with Metronome",
         "notes": "GPP: Build neural rhythm → TAPER: Maintain readiness without fatigue"
       }
-    [
+    ]
+  },
   {
     "location": "fingers",
     "type": "sprain",
@@ -4861,7 +4887,8 @@
         "name": "Mini Band Finger Spread-Hold",
         "notes": "SPP: Stabilize joints under stretch → TAPER: Maintain control with low tension"
       }
-    [
+    ]
+  },
   {
     "location": "neck",
     "type": "strain",
@@ -5055,7 +5082,8 @@
         "name": "Scap-Neck Coordination Drill",
         "notes": "GPP: Reinforce cervical-scapular link → SPP: Add load → TAPER: Keep coordination cues"
       }
-    [
+    ]
+  },
   {
     "location": "neck",
     "type": "strain",
@@ -5114,7 +5142,8 @@
         "name": "Gentle Isometric Hold (Forehead Press)",
         "notes": "GPP: Initiate low-grade motor unit work → TAPER: Retain activation for posture"
       }
-    [
+    ]
+  },
   {
     "location": "jaw",
     "type": "strain",
@@ -5338,7 +5367,8 @@
         "name": "Ice + Vibration Combo (Massage Wand)",
         "notes": "TAPER: Calm surface tissue while reducing delayed soreness"
       }
-    [
+    ]
+  },
   {
     "location": "eye",
     "type": "strain",
@@ -5457,7 +5487,8 @@
         "name": "Light Board Tracking (e.g. FitLight)",
         "notes": "SPP: Optimize reaction time → TAPER: Sharpen visual reflex before competition"
       }
-    [
+    ]
+  },
   {
     "location": "eye",
     "type": "unspecified",
@@ -5516,7 +5547,8 @@
         "name": "Colored Cue Shadow Boxing",
         "notes": "GPP: React to visual stimulus with motor response → SPP: Execute selective combinations per cue"
       }
-    [
+    ]
+  },
   {
     "location": "face",
     "type": "contusion",
@@ -5635,7 +5667,8 @@
         "name": "Resistance Band Jaw-Pull + Facial Hold",
         "notes": "GPP: Activate jaw-to-face chain → TAPER: Integrate under light spar stress"
       }
-    [
+    ]
+  },
   {
     "location": "face",
     "type": "pain",
