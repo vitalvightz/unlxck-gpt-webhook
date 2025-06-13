@@ -362,6 +362,20 @@ async def handle_submission(request: Request):
             "",
         ]
 
+   "",
+        "| \"Technical sparring today\"      | Keep S&C but **cut volume by 30%**.         |",
+        "| \"No sparring this week\"         | Add an **extra glycolytic conditioning session** (e.g., 5x3min bag rounds). |",
+        "",
+        "---",
+        "",
+        "### **5. Nutrition Adjustments for Unknown Sparring Load**",
+        "- **On Expected Hard Sparring Days:**",
+        "  - Increase intra-workout carbs (e.g., 30g HBCD during session).",
+        "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.",
+        "- **If Sparring Was Unexpectedly Hard:**",
+        "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
+    ]
+
     fight_plan_lines += [
         "## NUTRITION",
         nutrition_block,
@@ -395,20 +409,7 @@ async def handle_submission(request: Request):
         f"- Key Goals: {key_goals}",
         f"- Mindset Challenges: {', '.join(training_context['mental_block'])}",
         f"- Notes: {notes}",
-        "",
-        "| \"Technical sparring today\"      | Keep S&C but **cut volume by 30%**.         |",
-        "| \"No sparring this week\"         | Add an **extra glycolytic conditioning session** (e.g., 5x3min bag rounds). |",
-        "",
-        "---",
-        "",
-        "### **5. Nutrition Adjustments for Unknown Sparring Load**",
-        "- **On Expected Hard Sparring Days:**",
-        "  - Increase intra-workout carbs (e.g., 30g HBCD during session).",
-        "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.",
-        "- **If Sparring Was Unexpectedly Hard:**",
-        "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
-    ]
-
+     
     fight_plan_text = "\n".join(fight_plan_lines)
 
     full_plan = fight_plan_text
