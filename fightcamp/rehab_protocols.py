@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-from .injury_synonyms import parse_injury_phrase
+from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 # Rehab bank stores entries with fields like:
@@ -117,9 +117,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
     if not injury_string:
         return "\n✅ No rehab work required."
 
-    import re
-    phrases = re.split(r'[,.;&]|(?:\band\b)|(?:\bbut\b)|(?:\balso\b)', injury_string.lower())
-    injury_phrases = [p.strip() for p in phrases if p.strip()]
+    injury_phrases = split_injury_text(injury_string)
 
     parsed_entries = []
     parsed_types = []
