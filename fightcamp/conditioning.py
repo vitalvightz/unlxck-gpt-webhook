@@ -72,6 +72,9 @@ goal_tag_map = {
     ],
     "skill_refinement": [
         "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
+    ],
+    "coordination": [
+        "coordination", "proprioception", "balance", "footwork", "reactive"
     ]
 }
 
@@ -90,7 +93,9 @@ weakness_tag_map = {
     "hip mobility": ["hip_dominant", "mobility"],
     "grip strength": ["grip", "pull"],
     "posterior chain": ["posterior_chain", "hip_dominant"],
-    "knees": ["quad_dominant", "eccentric"]
+    "knees": ["quad_dominant", "eccentric"],
+    "coordination / proprioception": ["coordination", "proprioception", "balance"],
+    "coordination/proprioception": ["coordination", "proprioception", "balance"]
 }
 
 # Load banks
