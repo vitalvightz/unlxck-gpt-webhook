@@ -473,7 +473,14 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
 
 
 def split_injury_text(raw_text: str) -> list[str]:
-    """Normalize free-form injury text into a list of phrases."""
+    """Normalize free-form injury text into a list of phrases.
+
+    The parser splits on punctuation, common conjunctions, newlines and spaced
+    dashes so that each injury description can be processed separately.
+    """
     text = raw_text.lower()
-    phrases = re.split(r"(?:,|\.|;|\band\b|\bbut\b|\bthen\b|\balso\b)+", text)
+    phrases = re.split(
+        r"(?:,|\.|;|\n|\s[-–—]\s|\band\b|\bbut\b|\bthen\b|\balso\b)+",
+        text,
+    )
     return [p.strip() for p in phrases if p.strip()]
