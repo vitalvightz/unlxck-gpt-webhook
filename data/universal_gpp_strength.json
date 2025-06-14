@@ -71,11 +71,11 @@
   },
   {
     "phase": "GPP",
-    "name": "Pallof Press (Cable or Band)",
-    "tags": ["anti_rotation", "core", "stability"],
-    "prescription": "3x10/side, hold for 3s",
-    "notes": "Trains anti-rotation control under low load."
-  },
+    "name": "90/90 Banded Shoulder CARs (Controlled Articular Rotations)",
+    "tags": ["mobility", "stability", "shoulders"],
+    "prescription": "2x8/side, slow tempo",
+    "notes": "Improves glenohumeral rhythm and scapulohumeral coordination without load."
+  }
   {
     "phase": "GPP",
     "name": "Low Hurdle Hop (Rhythm Focus)",
