@@ -1,4 +1,28 @@
-from rapidfuzz import fuzz
+"""Mindset classification tools with fuzzy matching helpers."""
+
+try:  # RapidFuzz provides efficient fuzzy matching when installed
+    from rapidfuzz import fuzz  # type: ignore
+except ModuleNotFoundError:  # Use difflib as a lightweight fallback
+    from difflib import SequenceMatcher
+
+    def _partial_ratio(a: str, b: str) -> int:
+        if not a or not b:
+            return 0
+        shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+        max_ratio = 0.0
+        for i in range(len(longer) - len(shorter) + 1):
+            segment = longer[i : i + len(shorter)]
+            ratio = SequenceMatcher(None, segment, shorter).ratio()
+            if ratio > max_ratio:
+                max_ratio = ratio
+        return int(round(100 * max_ratio))
+
+    class _Fuzz:
+        @staticmethod
+        def partial_ratio(a: str, b: str) -> int:
+            return _partial_ratio(a, b)
+
+    fuzz = _Fuzz()
 
 mindset_bank = {
     "GPP": {

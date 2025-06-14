@@ -133,6 +133,14 @@ INJURY_SYNONYM_MAP = {
         "went too hard", "over trained", "over worked", "over reached"
     ],
 
+    # Surgical - descriptions indicating recent procedures or repairs
+    "post-surgery": [
+        "surgery", "surgical", "surgically", "operation", "operative",
+        "post op", "post-op", "post operation", "post-operation",
+        "repair", "repaired", "reconstruction", "reconstructed",
+        "arthroscopy", "arthroscopic", "procedure"
+    ],
+
     # Hyperextension - every overstretched phrase
     "hyperextension": [
         "hyperextend", "hyperextended", "hyperextension", "overextend", "overextended",
@@ -418,7 +426,33 @@ LOCATION_MAP = {
 }
 
 
-from rapidfuzz import fuzz
+"""Injury synonym utilities with fuzzy matching helpers."""
+
+try:  # RapidFuzz offers fast fuzzy matching but may not be installed
+    from rapidfuzz import fuzz  # type: ignore
+except ModuleNotFoundError:  # Fallback to difflib for offline environments
+    from difflib import SequenceMatcher
+
+    def _partial_ratio(a: str, b: str) -> int:
+        """Simplified partial ratio used if rapidfuzz is unavailable."""
+        if not a or not b:
+            return 0
+        shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+        max_ratio = 0.0
+        for i in range(len(longer) - len(shorter) + 1):
+            segment = longer[i : i + len(shorter)]
+            ratio = SequenceMatcher(None, segment, shorter).ratio()
+            if ratio > max_ratio:
+                max_ratio = ratio
+        return int(round(100 * max_ratio))
+
+    class _Fuzz:
+        @staticmethod
+        def partial_ratio(a: str, b: str) -> int:
+            return _partial_ratio(a, b)
+
+    fuzz = _Fuzz()
+
 import re
 
 NEGATION_PATTERNS = [
@@ -473,7 +507,15 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
 
 
 def split_injury_text(raw_text: str) -> list[str]:
-    """Normalize free-form injury text into a list of phrases."""
+    """Normalize free-form injury text into a list of phrases.
+
+    The parser splits on punctuation (including colons), common conjunctions,
+    newlines and spaced dashes so that each injury description can be processed
+    separately.
+    """
     text = raw_text.lower()
-    phrases = re.split(r"(?:,|\.|;|\band\b|\bbut\b|\bthen\b|\balso\b)+", text)
+    phrases = re.split(
+        r"(?:,|\.|;|:|\n|\s[-–—]\s|\band\b|\bbut\b|\bthen\b|\balso\b)+",
+        text,
+    )
     return [p.strip() for p in phrases if p.strip()]
