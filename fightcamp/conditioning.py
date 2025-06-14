@@ -640,7 +640,6 @@ def generate_conditioning_block(flags):
             output_lines.append(f"  • Purpose: {purpose}")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
 
-    output_lines.append(f"**Total Drills:** {total_drills}")
 
     if fatigue == "high":
         output_lines.append("\n⚠️ High fatigue detected – conditioning volume reduced.")
