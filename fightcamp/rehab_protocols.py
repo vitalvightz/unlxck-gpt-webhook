@@ -144,11 +144,17 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
             parsed_entries.append((itype, loc))
 
     seen_pairs = set()
+    seen_locations = set()
     unique_entries = []
     for pair in parsed_entries:
-        if pair not in seen_pairs:
-            seen_pairs.add(pair)
-            unique_entries.append(pair)
+        itype, loc = pair
+        if pair in seen_pairs:
+            continue
+        if loc in seen_locations:
+            continue
+        seen_pairs.add(pair)
+        seen_locations.add(loc)
+        unique_entries.append(pair)
 
     flagged = []
     for injury in injury_phrases:
