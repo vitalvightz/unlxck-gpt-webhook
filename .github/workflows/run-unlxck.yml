@@ -6,6 +6,8 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
 
     steps:
       - uses: actions/checkout@v3
