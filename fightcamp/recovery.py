@@ -47,11 +47,13 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
         entry_type = entry.get("type", "").lower()
 
         loc_match = (
-            (entry_loc and entry_loc in locations)
+            entry_loc == "unspecified"
+            or (entry_loc and entry_loc in locations)
             or any(entry_loc in inj for inj in injuries)
         )
         type_match = (
-            (entry_type and entry_type in injury_types)
+            entry_type == "unspecified"
+            or (entry_type and entry_type in injury_types)
             or any(entry_type in inj for inj in injuries)
         )
 
