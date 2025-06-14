@@ -621,7 +621,16 @@ def generate_conditioning_block(flags):
 
             timing = d.get("timing") or d.get("duration") or "—"
             load = d.get("load") or d.get("intensity") or "—"
-            purpose = d.get("purpose") or d.get("notes") or "—"
+            equip_note = d.get("equipment_note") or d.get("equipment_notes")
+            if equip_note:
+                load = f"{load} ({equip_note})" if load != "—" else equip_note
+
+            purpose = (
+                d.get("purpose")
+                or d.get("notes")
+                or d.get("description")
+                or "—"
+            )
             rest = d.get("rest", "—")
 
             output_lines.append(f"- **Drill:** {name}")
@@ -629,8 +638,6 @@ def generate_conditioning_block(flags):
             output_lines.append(f"  • Rest: {rest}")
             output_lines.append(f"  • Timing: {timing}")
             output_lines.append(f"  • Purpose: {purpose}")
-            if d.get("equipment_note"):
-                output_lines.append(f"- notes: {d['equipment_note']}")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
 
     output_lines.append(f"**Total Drills:** {total_drills}")
