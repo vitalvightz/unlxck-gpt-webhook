@@ -5,7 +5,10 @@ from .injury_synonyms import (
 
 
 def _fetch_injury_drills(injuries: list, phase: str) -> list:
-    """Return up to two rehab drills matching the injury info.
+"""Return up to three rehab drills matching the injury info.
+
+If the injury type or location is unspecified the list is capped at two drills
+to avoid overly generic suggestions.
 
     Parameters
     ----------
@@ -62,7 +65,10 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
 
         for drill in entry.get("drills", []):
             drills.append(drill.get("name"))
-            if len(drills) >= 2:
+            limit = 3
+            if entry_type == "unspecified" or entry_loc == "unspecified":
+                limit = 2
+            if len(drills) >= limit:
                 return drills
 
     return drills
