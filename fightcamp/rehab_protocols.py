@@ -173,8 +173,13 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
             for m in matches:
                 for d in m.get("drills", []):
                     name = d.get("name")
-                    if name and name not in drills:
-                        drills.append(name)
+                    notes = d.get("notes")
+                    if name:
+                        entry = name
+                        if notes:
+                            entry = f"{name} – {notes}"
+                        if entry not in drills:
+                            drills.append(entry)
             drills = drills[:2]
             if drills:
                 lines.append(f"- {loc.title()} ({itype.title()}): {', '.join(drills)}")
