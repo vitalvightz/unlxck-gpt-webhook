@@ -485,7 +485,7 @@ def main():
     with open(data_file, "r") as f:
         data = json.load(f)
     result = asyncio.run(generate_plan(data))
-    print("\nPlan link:", result.get("doc_link"))
+    print(f"::notice title=Google Doc::Plan link: {result.get('doc_link')}")
 
 
 if __name__ == "__main__":
