@@ -40,7 +40,7 @@ INJURY_SYNONYM_MAP = {
 
     # Bruise - every impact description
     "contusion": [
-        "bruise", "bruised", "black", "blue", "black and blue", "purple",
+        "bruise", "bruised", "abrase", "abrasion", "graze", "grazed" black", "blue", "black and blue", "purple",
         "discoloration", "discolored", "kicked", "knee", "kneed", "elbow",
         "elbowed", "dead leg", "corked", "cork", "impact", "swollen",
         "dent", "dented", "indent", "indentation", "mark", "marked",
