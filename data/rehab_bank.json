@@ -510,8 +510,6 @@
     ]
   },
   {
-  [
-  {
     "location": "knee",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
@@ -584,7 +582,8 @@
         "name": "Low-Load Blood Flow Restriction (BFR) Leg Extensions",
         "notes": "TAPER: 20% 1RM, high reps (30-15-15-15) to maintain tissue resilience"
       }
-    [
+    ]
+  },
   {
     "location": "knee",
     "type": "unspecified",
@@ -658,9 +657,9 @@
         "name": "Single-Leg Balance with Eyes Closed",
         "notes": "TAPER: Reinforce neural pathways pre-competition"
       }
-    
-    
-    
+    ]
+  },
+  {
     "location": "knee",
     "type": "instability",
     "phase_progression": "SPP → TAPER",
@@ -1771,7 +1770,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "tightness",
     "phase_progression": "GPP → TAPER",
     "drills": [
@@ -1786,7 +1785,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "strain",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -1801,7 +1800,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "instability",
     "phase_progression": "SPP → TAPER",
     "drills": [
@@ -1816,7 +1815,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "pain",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -1831,7 +1830,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "soreness",
     "phase_progression": "TAPER",
     "drills": [
@@ -1846,7 +1845,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "pain",
     "phase_progression": "GPP",
     "drills": [
@@ -1861,7 +1860,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "stiffness",
     "phase_progression": "SPP → TAPER",
     "drills": [
@@ -1876,7 +1875,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "soreness",
     "phase_progression": "GPP",
     "drills": [
@@ -2131,7 +2130,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "tightness",
     "phase_progression": "GPP → TAPER",
     "drills": [
@@ -2146,7 +2145,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "strain",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2161,7 +2160,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "instability",
     "phase_progression": "SPP → TAPER",
     "drills": [
@@ -2176,7 +2175,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "pain",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2191,7 +2190,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "soreness",
     "phase_progression": "TAPER",
     "drills": [
@@ -2206,7 +2205,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "stiffness",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2221,7 +2220,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "tendonitis",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2236,7 +2235,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "contusion",
     "phase_progression": "GPP → TAPER",
     "drills": [
@@ -2251,7 +2250,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "sprain",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2266,7 +2265,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "contusion",
     "phase_progression": "GPP → TAPER",
     "drills": [
@@ -2281,7 +2280,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "swelling",
     "phase_progression": "TAPER",
     "drills": [
@@ -2296,7 +2295,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "tendonitis",
     "phase_progression": "GPP → SPP → TAPER",
     "drills": [
@@ -2311,7 +2310,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "impingement",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2326,7 +2325,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "instability",
     "phase_progression": "SPP → TAPER",
     "drills": [
@@ -2341,7 +2340,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "hyperextension",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -2356,7 +2355,7 @@
     ]
   },
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → TAPER",
     "drills": [
@@ -6238,7 +6237,8 @@
         "name": "Partial ROM Strength Drills (Reverse Range)",
         "notes": "Train in shortened range away from end-range stretch. Focus on deceleration and reverse control."
       }
-    [
+    ]
+  },
   {
     "location": "achilles",
     "type": "unspecified",
@@ -6312,7 +6312,8 @@
         "name": "Night Splint-Assisted Calf Stretch",
         "notes": "TAPER: Passive ROM maintenance during sleep cycles"
       }
-    [
+    ]
+  },
   {
     "location": "achilles",
     "type": "unspecified",
@@ -6386,7 +6387,8 @@
         "name": "Foam Roller Calf Flossing (Band-Assisted)",
         "notes": "GPP: Improve sliding surfaces → SPP: Pre-activity mobilization"
       }
-    ][
+      ]
+  },
   {
     "location": "ankle",
     "type": "unspecified",
@@ -6610,7 +6612,8 @@
         "name": "Compression Sleeve + Ankle CARs",
         "notes": "TAPER: Maintain mobility under compression"
       }
-  [
+  ]
+  },
   {
     "location": "bicep",
     "type": "unspecified",
@@ -6834,7 +6837,8 @@
         "name": "Dynamic Twisting Towel Wring",
         "notes": "TAPER: Maintain supination/pronation control"
       }
-    [
+    ]
+  },
   {
     "location": "calf",
     "type": "unspecified",
@@ -7058,7 +7062,8 @@
         "name": "Vibrating Foam Roller Flush",
         "notes": "TAPER: Reduce tone pre-competition (2x30s)"
       }
-    [
+    ]
+  },
   {
     "location": "core",
     "type": "unspecified",
@@ -7282,8 +7287,8 @@
         "name": "Standing Banded Anti-Extension Press",
         "notes": "TAPER: Light neural priming"
       }
-    [
-  // 1. General Mobility
+    ]
+  },
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7450,7 +7455,8 @@
         "name": "Low-Load Blood Flow Restriction (BFR) Wrist Curls",
         "notes": "GPP: 20% 1RM for metabolic stimulus → TAPER: Eliminate"
       }
-    [
+    ]
+  },
   // 1. Baseline Visual Acuity
   {
     "location": "eye",
@@ -7584,7 +7590,8 @@
         "name": "Sticky Fixation Drills",
         "notes": "GPP: Maintain gaze under distraction → SPP: Add motion"
       }
-    [
+    ]
+  },
   // 1. TMJ Basic Mobility
   {
     "location": "face",
@@ -7752,7 +7759,8 @@
         "name": "Cold Spoon Ocular Cooldown",
         "notes": "TAPER: Reduce post-fight puffiness"
       }
-    [
+    ]
+  },
   {
     "location": "foot",
     "type": "unspecified",
@@ -7901,7 +7909,8 @@
         "name": "Nighttime Splinting (Neutral Position)",
         "notes": "GPP: Chronic stiffness → TAPER: Discontinue 2 days pre-comp"
       }
-    [
+    ]
+  },
   // 1. Wrist Isometrics
   {
     "location": "forearm",
@@ -8069,7 +8078,8 @@
         "name": "Plate Pinch Rotations",
         "notes": "SPP: Combined grip/forearm challenge"
       }
-    [
+    ]
+  },
   // 1. Hip Extension Basics
   {
     "location": "glutes",
@@ -8237,7 +8247,8 @@
         "name": "Standing Glute Squeeze with Breath Hold",
         "notes": "TAPER: Pre-activity priming"
       }
-    [
+    ]
+  },
   // 1. Adductor Strength
   {
     "location": "groin",
@@ -8365,7 +8376,7 @@
         "notes": "GPP: Maintain hip flexor-adductor coordination"
       }
     ]
-    [
+  },
   {
     "location": "hamstring",
     "type": "unspecified",
@@ -8515,7 +8526,7 @@
         "notes": "GPP: Non-impact conditioning → TAPER: Reduce volume"
       }
     ]
-  [
+  },
   // 1. Grip Foundations
   {
     "location": "hand",
@@ -8723,7 +8734,7 @@
         "notes": "SPP: Gi-grip simulation"
       }
     ]
-  [
+  },
   {
     "location": "heel",
     "type": "unspecified",
@@ -8798,7 +8809,7 @@
         "notes": "TAPER: Maintain mobility without load"
       }
     ]
-  [
+  },
   {
     "location": "hip",
     "type": "unspecified",
@@ -8948,7 +8959,7 @@
         "notes": "GPP: Combined mobility → TAPER: Reduce range pre-comp"
       }
     ]
-  [
+  },
   {
     "location": "jaw",
     "type": "unspecified",
@@ -9022,10 +9033,11 @@
         "name": "Diaphragmatic Breathing with Jaw Relaxation",
         "notes": "GPP: Reduce parafunctional habits → SPP: Integrate with movement"
       }
-    [
+    ]
+  },
   // 1. Isometric Core Stabilization
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9042,7 +9054,7 @@
 
   // 2. Hip-Lumbar Dissociation
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9059,7 +9071,7 @@
 
   // 3. Eccentric Control
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9076,7 +9088,7 @@
 
   // 4. Multidirectional Stability
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9093,7 +9105,7 @@
 
   // 5. Taper-Specific
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "TAPER",
     "drills": [
@@ -9110,7 +9122,7 @@
 
   // 6. Neural Mobility
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9127,7 +9139,7 @@
 
   // 7. Load Transition
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9144,7 +9156,7 @@
 
   // 8. Anti-Flexion
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → SPP",
     "drills": [
@@ -9161,7 +9173,7 @@
 
   // 9. Bedside Mobility
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "GPP → TAPER",
     "drills": [
@@ -9178,7 +9190,7 @@
 
   // 10. Bracing Integration
   {
-    "location": "lower back",
+    "location": "lower_back",
     "type": "unspecified",
     "phase_progression": "SPP",
     "drills": [
@@ -9190,7 +9202,8 @@
         "name": "Rotational Medicine Ball Throws",
         "notes": "SPP: Develop power with maintained neutral spine"
       }
-      [
+      ]
+  },
   {
     "location": "obliques",
     "type": "unspecified",
@@ -9265,7 +9278,7 @@
         "notes": "TAPER: Reset oblique-rib cage relationship"
       }
     ]
-  [
+  },
   // 1. Isometric Foundations
   {
     "location": "neck",
@@ -9409,7 +9422,7 @@
     "phase_progression": "GPP → SPP",
     "drills": [
       {
-        "name": "Supine Head Float (2" Off Surface)",
+        "name": "Supine Head Float (2\" Off Surface)",
         "notes": "GPP: Anterior chain endurance → SPP: Add nodding motions"
       },
       {
@@ -9433,7 +9446,8 @@
         "name": "Cervical Traction (Over Bed Edge)",
         "notes": "TAPER: Gentle decompression pre-competition"
       }
-    [
+    ]
+  },
   {
     "location": "quads",
     "type": "unspecified",
@@ -9582,7 +9596,8 @@
         "name": "Assisted Deep Squat Holds",
         "notes": "TAPER: Maintain ROM without loading"
       }
-    [
+    ]
+  },
   // 1. Basic Anterior Tibialis Strengthening
   {
     "location": "shin",
@@ -9750,7 +9765,8 @@
         "name": "Elevation + Ice Gel Pack (Post-Load)",
         "notes": "GPP: Acute inflammation → TAPER: Replace with warmth"
       }
-    [
+    ]
+  },
   // 1. Punch-Specific Rehab
   {
     "location": "shoulder",
@@ -9940,7 +9956,8 @@
         "name": "Blackburn Banded Series (Prone)",
         "notes": "GPP: Endurance in retraction → SPP: Add unstable surface"
       }
-    [
+    ]
+  },
   // 1. Thoracic Integration
   {
     "location": "shoulder",
@@ -10024,7 +10041,7 @@
         "notes": "TAPER: Pre-competition ROM maintenance"
       }
     ]
-    [
+  },
   {
     "location": "toe",
     "type": "unspecified",
@@ -10173,7 +10190,8 @@
         "name": "Contrast Baths (Toes Only)",
         "notes": "GPP: Inflammation control → TAPER: Pre-event"
       }
-    [
+    ]
+  },
   // 1. Isometric Foundations
   {
     "location": "triceps",
@@ -10341,7 +10359,7 @@
         "name": "Compression Sleeve Wear (Recovery Days)",
         "notes": "TAPER: Reduce DOMS between sessions"
       }
-    [
+    ]
   {
     "location": "upper_back",
     "type": "unspecified",
@@ -10490,7 +10508,7 @@
         "name": "Standing Scapular Clock Drills (No Weight)",
         "notes": "GPP: Neuromuscular control → TAPER: Maintenance mode"
       }
-    [
+    ]
   // 16. Wrist Proprioception
   {
     "location": "wrist",
@@ -10743,7 +10761,7 @@
         "name": "Qigong Wrist Waves",
         "notes": "TAPER: Pre-fight energy flow"
       }
-    [
+    ]
   // 1. Fundamental Mobility
   {
     "location": "wrist",
@@ -10996,5 +11014,6 @@
         "name": "Vibration Plate Wrist Loading",
         "notes": "GPP: Potential osteogenic stimulus → SPP: Reduce frequency"
       }
-    
-  
+    ]
+  }
+]
