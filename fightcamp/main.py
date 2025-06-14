@@ -1,10 +1,13 @@
 from datetime import datetime
-from fastapi import FastAPI, Request
 import os, json, base64
 import asyncio
 from functools import partial
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
+try:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+except ImportError:  # Google libraries may be missing in minimal environments
+    service_account = None
+    build = None
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -66,13 +69,25 @@ if b64_creds:
     with open("clientsecrettallyso.json", "w") as f:
         decoded = base64.b64decode(b64_creds)
         f.write(decoded.decode("utf-8"))
-SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
-SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
-creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-docs_service = build('docs', 'v1', credentials=creds)
-drive_service = build('drive', 'v3', credentials=creds)
+SERVICE_ACCOUNT_FILE = "clientsecrettallyso.json"
+SCOPES = [
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+]
 
-app = FastAPI()
+if service_account and build:
+    try:
+        creds = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES
+        )
+        docs_service = build("docs", "v1", credentials=creds)
+        drive_service = build("drive", "v3", credentials=creds)
+    except Exception as e:
+        docs_service = drive_service = None
+        print("⚠️  Google credentials not found; docs export disabled.", e)
+else:
+    docs_service = drive_service = None
+    print("⚠️  Google libraries missing; docs export disabled.")
 
 def get_value(label, fields):
     for field in fields:
@@ -86,23 +101,33 @@ def get_value(label, fields):
     return ""
 
 def get_folder_id(folder_name):
-    response = drive_service.files().list(q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'", spaces='drive').execute()
-    folders = response.get('files', [])
-    return folders[0]['id'] if folders else None
+    if not drive_service:
+        return None
+    response = drive_service.files().list(
+        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
+        spaces="drive",
+    ).execute()
+    folders = response.get("files", [])
+    return folders[0]["id"] if folders else None
 
 def create_doc(title, content):
+    if not docs_service or not drive_service:
+        return None
     folder_id = get_folder_id("Unlxck Auto Docs")
     doc = docs_service.documents().create(body={"title": title}).execute()
     doc_id = doc["documentId"]
     if folder_id:
-        drive_service.files().update(fileId=doc_id, addParents=folder_id, removeParents='root').execute()
-    docs_service.documents().batchUpdate(documentId=doc_id, body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]}).execute()
+        drive_service.files().update(
+            fileId=doc_id, addParents=folder_id, removeParents="root"
+        ).execute()
+    docs_service.documents().batchUpdate(
+        documentId=doc_id,
+        body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]},
+    ).execute()
     return f"https://docs.google.com/document/d/{doc_id}"
 
 
-@app.post("/webhook")
-async def handle_submission(request: Request):
-    data = await request.json()
+async def generate_plan(data: dict):
     fields = data["data"]["fields"]
 
     # Extract and normalize fields
@@ -449,3 +474,18 @@ async def handle_submission(request: Request):
         doc_link = None
 
     return {"doc_link": doc_link or "Document creation failed"}
+
+
+def main():
+    root = Path(__file__).resolve().parents[1]
+    data_file = root / "test_data.json"
+    if not data_file.exists():
+        raise FileNotFoundError(f"Test data file not found: {data_file}")
+    with open(data_file, "r") as f:
+        data = json.load(f)
+    result = asyncio.run(generate_plan(data))
+    print("\nPlan link:", result.get("doc_link"))
+
+
+if __name__ == "__main__":
+    main()
