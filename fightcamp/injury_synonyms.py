@@ -40,7 +40,7 @@ INJURY_SYNONYM_MAP = {
 
     # Bruise - every impact description
     "contusion": [
-        "bruise", "bruised", "abrase", "abrasion", "graze", "grazed" black", "blue", "black and blue", "purple",
+        "bruise", "bruised", "abrase", "abrasion", "black", "blue", "black and blue", "purple",
         "discoloration", "discolored", "kicked", "knee", "kneed", "elbow",
         "elbowed", "dead leg", "corked", "cork", "impact", "swollen",
         "dent", "dented", "indent", "indentation", "mark", "marked",
@@ -114,7 +114,7 @@ INJURY_SYNONYM_MAP = {
         "pain", "painful", "hurt", "hurting", "ache", "aching", "sore",
         "soring", "sharp", "sharper", "stabbing", "sting", "stinging",
         "throb", "throbbing", "pulse", "pulsing", "burn", "burning",
-        "nag", "nagging", "constant", "persistent", "ongoing", "chronic",
+        "nag", "nagging", "graze", "grazed", "constant", "persistent", "ongoing", "chronic",
         "acute", "radiating", "radiate", "shooting", "traveling", "moving",
         "deep", "superficial", "surface", "internal", "external", "localized",
         "diffuse", "spread", "spreading", "widespread", "focused", "focal",
