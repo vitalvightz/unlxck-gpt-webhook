@@ -127,8 +127,24 @@ RED_FLAG_TYPES = [
     "infection/inflammatory",
 ]
 
-def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current_phase: str) -> str:
-    """Return rehab exercise suggestions for the given injuries and phase."""
+def generate_rehab_protocols(
+    *, injury_string: str, exercise_data: list, current_phase: str, seen_drills: set | None = None
+) -> tuple[str, set]:
+    """Return rehab exercise suggestions for the given injuries and phase.
+
+    Parameters
+    ----------
+    injury_string:
+        Raw injury description text.
+    exercise_data:
+        Loaded exercise bank.
+    current_phase:
+        Phase name (``GPP``/``SPP``/``TAPER``).
+    seen_drills:
+        Set used to track drills already listed in earlier phases.
+    """
+    if seen_drills is None:
+        seen_drills = set()
     if not injury_string:
         return "\n✅ No rehab work required."
 
@@ -166,7 +182,8 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
         return (
             "\n**Red Flag Detected**\n"
             f"• {', '.join(flagged).title()} – Do not train until cleared by clinician.\n"
-            "• All strength/conditioning recommendations must be manually adjusted."
+            "• All strength/conditioning recommendations must be manually adjusted.",
+            seen_drills,
         )
     lines = []
     def _phases(entry):
@@ -199,8 +216,9 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
                         entry = name
                         if notes:
                             entry = f"{name} – {notes}"
-                        if entry not in drills:
+                        if entry not in seen_drills:
                             drills.append(entry)
+                            seen_drills.add(entry)
             drills = drills[:3]
             if drills:
                 loc_title = loc.title() if loc else "Unspecified"
@@ -208,17 +226,9 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
                 lines.append(f"- {loc_title} ({type_title}):")
                 lines.extend([f"  • {d}" for d in drills])
     if not lines:
-        return "\n⚠️ No rehab options for this phase."
+        return "\n⚠️ No rehab options for this phase.", seen_drills
 
-    # Inject injury-specific support notes
-    done_types = set()
-    for itype in parsed_types:
-        if itype in INJURY_SUPPORT_NOTES and itype not in done_types:
-            done_types.add(itype)
-            lines.append(f"\n*{itype.title()} Support Advice:*")
-            lines.extend([f"- {n}" for n in INJURY_SUPPORT_NOTES[itype]])
-
-    return "\n**Rehab Protocols**\n" + "\n".join(lines)
+    return "\n**Rehab Protocols**\n" + "\n".join(lines), seen_drills
 
 
 def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
@@ -253,3 +263,24 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
     if all(phases.values()):
         return [phases["GPP"], phases["SPP"], phases["TAPER"]]
     return []
+
+
+def generate_support_notes(injury_string: str) -> str:
+    """Return injury support notes consolidated for all phases."""
+    phrases = split_injury_text(injury_string)
+    parsed_types = set()
+    for p in phrases:
+        itype, _ = parse_injury_phrase(p)
+        if itype and itype in INJURY_SUPPORT_NOTES:
+            parsed_types.add(itype)
+
+    if not parsed_types:
+        return ""
+
+    lines = ["## General Injury Support Notes"]
+    for itype in parsed_types:
+        lines.append(f"*{itype.title()} Support Advice:*")
+        lines.extend([f"- {n}" for n in INJURY_SUPPORT_NOTES[itype]])
+        lines.append("")
+
+    return "\n".join(lines).strip()
