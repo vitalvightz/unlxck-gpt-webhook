@@ -68,7 +68,7 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
                 if notes:
                     entry_str = f"{name} – {notes}"
                 drills.append(entry_str)
-                if len(drills) >= 2:
+                if len(drills) >= 4:
                     return drills
 
     return drills
