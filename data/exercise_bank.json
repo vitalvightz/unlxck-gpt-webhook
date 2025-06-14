@@ -972,7 +972,7 @@
     "equipment": "bodyweight"
   },
   {
-    "name": "Side Plank",
+    "name": "Suitcase Carry (Heavy)",
     "category": "core",
     "phases": [
       "GPP"
@@ -1034,7 +1034,7 @@
     "equipment": "bodyweight"
   },
   {
-    "name": "Weighted Side Plank",
+    "name": "Copenhagen Side Plank",
     "category": "core",
     "phases": [
       "SPP"
@@ -1046,7 +1046,7 @@
       "core",
       "anti_rotation"
     ],
-    "equipment": "plate"
+    "equipment": "bodyweight"
   },
   {
     "name": "Isometric Pallof Hold",
@@ -1169,7 +1169,7 @@
     "equipment": "pullup_bar"
   },
   {
-    "name": "Side Plank (Banded)",
+    "name": "Side Plank Row(Band or DB)",
     "category": "core",
     "phases": [
       "GPP"
@@ -1182,7 +1182,7 @@
       "anti_rotation",
       "rehab_friendly"
     ],
-    "equipment": "bands"
+    "equipment": "bodyweight"
   },
   {
     "name": "Deadbug (Band-Resisted)",
