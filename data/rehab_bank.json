@@ -6238,6 +6238,3200 @@
         "name": "Partial ROM Strength Drills (Reverse Range)",
         "notes": "Train in shortened range away from end-range stretch. Focus on deceleration and reverse control."
       }
+    [
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Double-Leg Eccentric Heel Raises (3s Lower)",
+        "notes": "GPP: Build tendon resilience → SPP: Progress to single-leg or add weight"
+      },
+      {
+        "name": "Isometric Heel Hold (Knee Extended)",
+        "notes": "GPP: 30s holds at mid-range → SPP: Increase angle difficulty (stair edge)"
+      }
     ]
-  }
-]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Balance on Foam Pad",
+        "notes": "GPP: Improve proprioception → SPP: Add catch/throw perturbations"
+      },
+      {
+        "name": "Banded Ankle Dorsiflexion Mobilization",
+        "notes": "GPP: Restore ankle ROM → SPP: Integrate into calf stretch position"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Seated Calf Isometric Press (5s Holds)",
+        "notes": "GPP: Pain-modulating tension → TAPER: Reduce hold duration pre-comp"
+      },
+      {
+        "name": "Walking Ankle ROM Drills (Heel-Toe Rolls)",
+        "notes": "GPP: Dynamic mobility → TAPER: Use as warmup primer"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Bent-Knee Heel Drops",
+        "notes": "GPP: Target soleus → SPP: Add rotation (internal/external hip bias)"
+      },
+      {
+        "name": "Unilateral Pogo Hops (Low Amplitude)",
+        "notes": "GPP: Reintroduce elasticity → SPP: Increase height/speed"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Towel Scrunches (Isometric Holds)",
+        "notes": "TAPER: Maintain intrinsic foot strength without load"
+      },
+      {
+        "name": "Night Splint-Assisted Calf Stretch",
+        "notes": "TAPER: Passive ROM maintenance during sleep cycles"
+      }
+    [
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Heel Drop Over Edge (Knee Bent)",
+        "notes": "GPP: Soleus-targeted tension → SPP: Add weight vest + rotation challenge"
+      },
+      {
+        "name": "Unilateral Eccentric Step-Overs (3s Lower)",
+        "notes": "GPP: Functional deceleration → SPP: Increase step height + speed"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Towel Stretch with Isometric Activation",
+        "notes": "GPP: Combine passive ROM + active tension → TAPER: Reduce hold duration"
+      },
+      {
+        "name": "Seated Ankle Alphabet (Weighted)",
+        "notes": "GPP: Improve arthrokinematics → TAPER: Lighten resistance, focus on control"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Bilateral Pogo Jumps → Unilateral Transition",
+        "notes": "GPP: Rebuild elastic capacity → SPP: Progress to directional hops"
+      },
+      {
+        "name": "Downhill Walking Eccentrics",
+        "notes": "GPP: Controlled loading → SPP: Increase grade/speed"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Night-Time Compression Sleeve + Dorsiflexion",
+        "notes": "TAPER: Maintain vascular flow + ROM during sleep"
+      },
+      {
+        "name": "Isometric Toe Presses Against Wall",
+        "notes": "TAPER: 5s holds to prime neural drive pre-competition"
+      }
+    ]
+  },
+  {
+    "location": "achilles",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Heel Raise with Tibial Rotation",
+        "notes": "GPP: 3D control → SPP: Add unstable surface (balance pad)"
+      },
+      {
+        "name": "Foam Roller Calf Flossing (Band-Assisted)",
+        "notes": "GPP: Improve sliding surfaces → SPP: Pre-activity mobilization"
+      }
+    ][
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Isometric Heel Holds (30s)",
+        "notes": "GPP: Pain modulation → SPP: Add unstable surface (foam pad)"
+      },
+      {
+        "name": "Eccentric Inversion Walks (3s Lowering)",
+        "notes": "GPP: Strengthen medial chain → SPP: Add resistance band"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Weighted Dorsiflexion Mobilization (Knee Over Toe)",
+        "notes": "GPP: Improve closed-chain ROM → SPP: Add lateral movement component"
+      },
+      {
+        "name": "Unilateral Alphabet Tracing (Toe Writing)",
+        "notes": "GPP: Restore fine motor control → SPP: Progress to dynamic patterns"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Banded Eversion-Isometric Hold (10s On/Off)",
+        "notes": "GPP: Peroneal activation → TAPER: Reduce volume, maintain tension"
+      },
+      {
+        "name": "Seated Calf Isometric Press (Wall Resistance)",
+        "notes": "GPP: Load without movement → TAPER: Short-duration holds"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Heel Walks (3-5s Lower)",
+        "notes": "GPP: Tibialis anterior focus → SPP: Add incline surface"
+      },
+      {
+        "name": "Single-Leg Clock Reaches (12-Point)",
+        "notes": "GPP: Dynamic stability → SPP: Add catch/throw component"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Plantarflexion Hold (Wall Lean)",
+        "notes": "GPP: 45s holds → SPP: Add single-leg pulses"
+      },
+      {
+        "name": "Lateral Mini-Band Shuffles (Partial Squat)",
+        "notes": "GPP: Glute-ankle coupling → SPP: Add directional changes"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Tibial Rotation Mobilization (Band-Assisted)",
+        "notes": "GPP: Improve joint play → SPP: Integrate with squat patterns"
+      },
+      {
+        "name": "Single-Leg Eccentric Step Downs (3s Lower)",
+        "notes": "GPP: Control deceleration → SPP: Add rotational component"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Ankle CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Maintain full ROM → TAPER: Daily mobility primer"
+      },
+      {
+        "name": "Low-Load Calf Pump BFR (30-15-15-15)",
+        "notes": "GPP: Stimulate tissue remodeling → TAPER: Reduce to 1x/week"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Night Splint-Assisted Dorsiflexion Stretch",
+        "notes": "TAPER: Passive ROM maintenance during sleep"
+      },
+      {
+        "name": "Isometric Ankle Lock Holds (Pre-Activation)",
+        "notes": "TAPER: 10s holds before competition drills"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Unilateral Pogo Hops (Submaximal Height)",
+        "notes": "GPP: Rebuild elasticity → SPP: Increase directional variance"
+      },
+      {
+        "name": "Eccentric Plantarflexion Walks (Heel-Toe)",
+        "notes": "GPP: Control foot strike → SPP: Progress to uneven terrain"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Ankle Distraction Mobilization",
+        "notes": "GPP: Reduce joint stiffness → SPP: Pair with dynamic movements"
+      },
+      {
+        "name": "Single-Leg Balance with Eyes Closed",
+        "notes": "GPP: Challenge proprioception → SPP: Add head turns"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Towel Scrunches (Isometric Toe Curls)",
+        "notes": "GPP: Intrinsic foot strength → TAPER: Reduce volume"
+      },
+      {
+        "name": "Marble Pickups with Toes",
+        "notes": "GPP: Fine motor control → TAPER: Maintenance only"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun - Peroneal Sweep (30s)",
+        "notes": "TAPER: Reduce stiffness pre-competition"
+      },
+      {
+        "name": "Dynamic Calf Stretch with Tibial Rotation",
+        "notes": "TAPER: Active ROM before events"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Lateral Bound to Stick Landing",
+        "notes": "GPP: Eccentric control → SPP: Increase distance/speed"
+      },
+      {
+        "name": "Single-Leg Heel Raise with Knee Bend",
+        "notes": "GPP: Soleus focus → SPP: Add weight vest"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Ankle Rocker Board Circles",
+        "notes": "GPP: Multiplanar stability → SPP: Add resistance"
+      },
+      {
+        "name": "Eccentric Toe Drags (Posterior Chain)",
+        "notes": "GPP: Hamstring-ankle coupling → SPP: Add sled drag"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Ice Cup Ankle Circumduction",
+        "notes": "TAPER: Pain modulation + ROM (acute flare-ups)"
+      },
+      {
+        "name": "Compression Sleeve + Ankle CARs",
+        "notes": "TAPER: Maintain mobility under compression"
+      }
+  [
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Towel Curl Hold (90° Flexion)",
+        "notes": "GPP: Pain modulation → SPP: Add shoulder abduction"
+      },
+      {
+        "name": "Eccentric Band Curl (3s Lower)",
+        "notes": "GPP: Tendon reloading → SPP: Increase band resistance"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Unilateral Hammer Curl (Pronated Grip)",
+        "notes": "GPP: Address asymmetries → SPP: Add rotational finish"
+      },
+      {
+        "name": "Supination ROM with Dowel",
+        "notes": "GPP: Restore rotation → SPP: Load with mini-band"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Isometric Chin-Up Hold (90°)",
+        "notes": "GPP: Functional angle carryover → TAPER: Reduce hold time"
+      },
+      {
+        "name": "Wall Slide Bicep CARs",
+        "notes": "GPP: Maintain full ROM → TAPER: Active recovery use"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Rope Curl (3-5s Lower)",
+        "notes": "GPP: Brachialis focus → SPP: Add unstable stance"
+      },
+      {
+        "name": "Single-Arm Cable Isometric Hold (Mid-Range)",
+        "notes": "GPP: Time under tension → SPP: Integrate step/lunge"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Prone Incline Curl (Slow Eccentric)",
+        "notes": "GPP: Isolate long head → SPP: Add tempo variations"
+      },
+      {
+        "name": "Banded Bicep Stretch with Pronation",
+        "notes": "GPP: Improve extensibility → SPP: Pair with concentric work"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Unilateral Zottman Curl",
+        "notes": "GPP: Eccentric overload → SPP: Increase supination speed"
+      },
+      {
+        "name": "Isometric Door Frame Hold (Flexed Elbow)",
+        "notes": "GPP: Home-accessible → SPP: Add shoulder internal rotation"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "BFR Bicep Curl (30-15-15-15)",
+        "notes": "GPP: Low-load remodeling → TAPER: Reduce to 1x/week"
+      },
+      {
+        "name": "Dynamic Bicep Stretch with Band",
+        "notes": "GPP: Active mobility → TAPER: Pre-competition primer"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Massage Gun - Distal Bicep Tendon Glide",
+        "notes": "TAPER: Reduce stiffness pre-event"
+      },
+      {
+        "name": "Isometric Flexion Against Wall (10s On/Off)",
+        "notes": "TAPER: Neuromuscular priming"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Chin-Up Lowering (3s)",
+        "notes": "GPP: Compound movement focus → SPP: Add weight vest"
+      },
+      {
+        "name": "Unilateral Cable Rotation Curl",
+        "notes": "GPP: Rotational control → SPP: Increase cable angle"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Isometric Bicep Hold (Overhead)",
+        "notes": "GPP: End-range strength → SPP: Add shoulder flexion"
+      },
+      {
+        "name": "Banded Bicep CARs (Continuous Motion)",
+        "notes": "GPP: Joint mobility → SPP: Loaded carryover"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Towel Resisted Curl (Isometric Mid-Range)",
+        "notes": "GPP: No equipment needed → TAPER: Reduce intensity"
+      },
+      {
+        "name": "Supine Bicep Stretch with Pronation",
+        "notes": "GPP: Passive ROM → TAPER: Maintenance only"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Compression Sleeve + Active Flexion",
+        "notes": "TAPER: Maintain circulation under compression"
+      },
+      {
+        "name": "Ice Cup Tendon Glides (Acute Flare-Ups)",
+        "notes": "TAPER: Pain modulation post-training"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Unilateral Reverse Curl Eccentric (3s Lower)",
+        "notes": "GPP: Brachioradialis focus → SPP: Add rotation"
+      },
+      {
+        "name": "Isometric Rope Clutch Hold",
+        "notes": "GPP: Grip-bicep integration → SPP: Add body sway"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Prone Suspension Trainer Curl (Eccentric Focus)",
+        "notes": "GPP: Core-bicep coupling → SPP: Increase incline"
+      },
+      {
+        "name": "Wall-Assisted Bicep Lengthening",
+        "notes": "GPP: Controlled eccentric overload → SPP: Add pulse"
+      }
+    ]
+  },
+  {
+    "location": "bicep",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Vibration Plate Bicep Flush (30s On/Off)",
+        "notes": "TAPER: Enhance recovery between bouts"
+      },
+      {
+        "name": "Dynamic Twisting Towel Wring",
+        "notes": "TAPER: Maintain supination/pronation control"
+      }
+    [
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Double-Leg Eccentric Calf Raise (4s Lower)",
+        "notes": "GPP: Tendon reloading → SPP: Progress to single-leg"
+      },
+      {
+        "name": "Isometric Calf Hold (Straight Knee)",
+        "notes": "GPP: 30s holds at peak contraction → SPP: Add external load"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Bent-Knee Calf Raise (Soleus Focus)",
+        "notes": "GPP: Isolate soleus → SPP: Add tempo (2-up, 4-down)"
+      },
+      {
+        "name": "Single-Leg Balance on BOSU Ball",
+        "notes": "GPP: Ankle proprioception → SPP: Add catch/throw"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Seated Calf Isometric Press (5s On/Off)",
+        "notes": "GPP: Pain modulation → TAPER: Reduce to maintenance volume"
+      },
+      {
+        "name": "Foam Roller Calf Sweeps",
+        "notes": "GPP: Tissue mobilization → TAPER: Pre-competition flush"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Jump Rope (Low Amplitude)",
+        "notes": "GPP: Reintroduce elasticity → SPP: Increase height/speed"
+      },
+      {
+        "name": "Single-Leg Heel Walk (Anterior Tib Focus)",
+        "notes": "GPP: Address antagonist weakness → SPP: Add incline"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Ankle Plantarflexion (Slow Release)",
+        "notes": "GPP: Control end-range → SPP: Add pulses at peak"
+      },
+      {
+        "name": "Single-Leg Calf Raise Off Step (Full ROM)",
+        "notes": "GPP: Strengthen stretched position → SPP: Add weight vest"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Pogo Hops (Submaximal Effort)",
+        "notes": "GPP: Rebuild spring stiffness → SPP: Add lateral component"
+      },
+      {
+        "name": "Isometric Toe Press (Wall Resistance)",
+        "notes": "GPP: 45s holds → SPP: Integrate into lunge position"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Night Splint-Assisted Calf Stretch",
+        "notes": "GPP: Passive ROM → TAPER: Wear 2-4 hours pre-competition"
+      },
+      {
+        "name": "Massage Gun - Gastrocnemius Cross-Fiber",
+        "notes": "GPP: Release knots → TAPER: 30s pre-activation"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Compression Sleeve + Ankle Pumps",
+        "notes": "TAPER: Maintain circulation without load"
+      },
+      {
+        "name": "Low-Load BFR Calf Raises (20% 1RM)",
+        "notes": "TAPER: High-rep metabolic stimulus (15-15-15)"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Calf Raise with Rotation",
+        "notes": "GPP: Multiplanar control → SPP: Add unstable surface"
+      },
+      {
+        "name": "Single-Leg Balance with Eyes Closed",
+        "notes": "GPP: Challenge proprioception → SPP: Add head turns"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Tibialis Anterior Isometric Hold (Toe Lift)",
+        "notes": "GPP: Antagonist activation → SPP: Add band resistance"
+      },
+      {
+        "name": "Depth Drop to Calf Raise (6-inch Box)",
+        "notes": "GPP: Eccentric absorption → SPP: Increase height"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Dynamic Calf Stretch with Tibial Rotation",
+        "notes": "GPP: Active mobility → TAPER: Pre-competition primer"
+      },
+      {
+        "name": "Marble Pickups with Toes",
+        "notes": "GPP: Intrinsic foot strength → TAPER: Maintenance only"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Ice Cup Gastrocnemius Stroking",
+        "notes": "TAPER: Pain modulation for acute flare-ups"
+      },
+      {
+        "name": "Isometric Heel Tap Holds (Pre-Activation)",
+        "notes": "TAPER: 10s holds before explosive movements"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Sled Push with Toe Focus",
+        "notes": "GPP: Build concentric power → SPP: Increase load/speed"
+      },
+      {
+        "name": "Single-Leg Eccentric Step Downs (Calf Emphasis)",
+        "notes": "GPP: Control deceleration → SPP: Add rotation"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Soleus Mobilization (Seated)",
+        "notes": "GPP: Improve ankle dorsiflexion → SPP: Integrate into squat"
+      },
+      {
+        "name": "Unilateral Pogo Hops (Linear → Lateral)",
+        "notes": "GPP: Rebuild elasticity → SPP: Sport-specific directions"
+      }
+    ]
+  },
+  {
+    "location": "calf",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Towel Stretch with Isometric Hold",
+        "notes": "TAPER: Passive-Active ROM combo"
+      },
+      {
+        "name": "Vibrating Foam Roller Flush",
+        "notes": "TAPER: Reduce tone pre-competition (2x30s)"
+      }
+    [
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug Isometric Hold (90/90 Position)",
+        "notes": "GPP: Maintain rib-pelvis alignment → SPP: Add band resistance to limbs"
+      },
+      {
+        "name": "Pallof Press Isometric (Kneeling)",
+        "notes": "GPP: 20s holds → SPP: Progress to half-kneeling/staggered stance"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Stir-the-Pot (Forearms on Swiss Ball)",
+        "notes": "GPP: Small circles → SPP: Larger dynamic patterns"
+      },
+      {
+        "name": "Belt-Assisted Hollow Body Hold",
+        "notes": "GPP: Reduce lumbar strain → SPP: Remove belt, add rocking"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Diaphragmatic Breathing with Pelvic Floor Activation",
+        "notes": "GPP: Reset intra-abdominal pressure → TAPER: Use pre-competition"
+      },
+      {
+        "name": "Supine Marches (Heel Slides)",
+        "notes": "GPP: Disassociation training → TAPER: Reduce volume"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Bear Crawl Isometric (3-Point Hold)",
+        "notes": "GPP: 15s holds → SPP: Add contralateral limb lifts"
+      },
+      {
+        "name": "Weighted Plank (Plate on Back)",
+        "notes": "GPP: Time under tension → SPP: Add instability (Rings/TRX)"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Medicine Ball Rollbacks",
+        "notes": "GPP: Eccentric control → SPP: Add catch/throw component"
+      },
+      {
+        "name": "Standing Cable Anti-Rotation Press",
+        "notes": "GPP: Bilateral stance → SPP: Single-leg stance"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Hanging Scapular Retraction Holds",
+        "notes": "GPP: Upper core integration → SPP: Add leg raises (knees bent)"
+      },
+      {
+        "name": "Suitcase Carry (Kettlebell)",
+        "notes": "GPP: Loaded anti-lateral flexion → SPP: Increase distance/speed"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Quadruped Belly Drawing",
+        "notes": "GPP: TVA activation → TAPER: Reduce to maintenance sets"
+      },
+      {
+        "name": "Foam Roller Dead Bug (Roller Under Pelvis)",
+        "notes": "GPP: Feedback for pelvic stability → TAPER: Short-duration holds"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "90/90 Breathing with Leg Lowering",
+        "notes": "TAPER: Maintain diaphragm-core connection"
+      },
+      {
+        "name": "Banded Resisted Supine Toe Taps",
+        "notes": "TAPER: Light neural activation"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Half-Kneeling Landmine Press",
+        "notes": "GPP: Anti-rotation focus → SPP: Add pulse at end range"
+      },
+      {
+        "name": "Reverse Hyperextension (Isometric Hold at Top)",
+        "notes": "GPP: Posterior chain-core coupling → SPP: Add rotation"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug with Resistance Band (Hands/Knees)",
+        "notes": "GPP: Synchronized limb loading → SPP: Add contralateral reaches"
+      },
+      {
+        "name": "Standing Banded Anti-Flexion Press",
+        "notes": "GPP: Resist forward collapse → SPP: Single-arm press"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Supine Pelvic Tilts with Balloon Breathing",
+        "notes": "GPP: Reset lumbar-pelvic position → TAPER: Daily mobility"
+      },
+      {
+        "name": "Wall Plank Shoulder Taps",
+        "notes": "GPP: Core-shoulder integration → TAPER: Reduce reps"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Compression Breath Holds (5s On/Off)",
+        "notes": "TAPER: Intra-abdominal pressure maintenance"
+      },
+      {
+        "name": "Seated Stability Ball Circles",
+        "notes": "TAPER: Active recovery focus"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Kneeling Rollout (Ab Wheel/Sliders)",
+        "notes": "GPP: Controlled eccentric → SPP: Standing rollout"
+      },
+      {
+        "name": "Standing Cable Chop (Low to High)",
+        "notes": "GPP: Bilateral stance → SPP: Split stance"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Prone Cobra with Scapular Retraction",
+        "notes": "GPP: Posterior core endurance → SPP: Add arm/leg lifts"
+      },
+      {
+        "name": "Farmer's Carry (Neutral Spine Focus)",
+        "notes": "GPP: Loaded stability → SPP: Uneven loads"
+      }
+    ]
+  },
+  {
+    "location": "core",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller Prone Breathing",
+        "notes": "TAPER: Diaphragm release pre-competition"
+      },
+      {
+        "name": "Standing Banded Anti-Extension Press",
+        "notes": "TAPER: Light neural priming"
+      }
+    [
+  // 1. General Mobility
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Band-Assisted Elbow Extension Mobilization",
+        "notes": "GPP: Improve end-range extension → SPP: Pair with weighted carries"
+      },
+      {
+        "name": "Pronation/Supination with Dowel",
+        "notes": "GPP: Restore rotational ROM → SPP: Add resistance band"
+      }
+    ]
+  },
+
+  // 2. Isometric Stability
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Wrist Flexion (Against Wall)",
+        "notes": "GPP: 30s holds at 50% effort → SPP: Increase angle variability"
+      },
+      {
+        "name": "Forearm Plank on Knees (Elbow Angle Control)",
+        "notes": "GPP: Core-elbow integration → SPP: Progress to full plank"
+      }
+    ]
+  },
+
+  // 3. Eccentric Focus
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Wrist Curls (3s Lowering)",
+        "notes": "GPP: Light weight, high reps → SPP: Increase load"
+      },
+      {
+        "name": "Reverse Tyler Twist (Flexbar)",
+        "notes": "GPP: Tendon reloading → SPP: Speed progressions"
+      }
+    ]
+  },
+
+  // 4. Unilateral Control
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Arm Bottle Pour (Water Weight Shifts)",
+        "notes": "GPP: Dynamic stability → SPP: Add movement complexity"
+      },
+      {
+        "name": "Unilateral Wall Ball Catch (Soft Ball)",
+        "notes": "GPP: Reactive loading → SPP: Increase ball weight"
+      }
+    ]
+  },
+
+  // 5. Taper-Specific
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Heat + Passive Extension Stretch",
+        "notes": "TAPER: Pre-competition stiffness reduction"
+      },
+      {
+        "name": "Very Light Flexbar Oscillations",
+        "notes": "TAPER: Neural activation without fatigue"
+      }
+    ]
+  },
+
+  // 6. Grip Integration
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Towel Grip Isometric Holds",
+        "notes": "GPP: 15s holds → SPP: Add twists"
+      },
+      {
+        "name": "Rice Bucket Finger Extensions",
+        "notes": "GPP: Balance flexor/extensor strength → SPP: Speed drills"
+      }
+    ]
+  },
+
+  // 7. Overhead Stability
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Overhead Elbow Press (Partial ROM)",
+        "notes": "GPP: Scapulo-humeral rhythm → SPP: Full ROM"
+      },
+      {
+        "name": "Wall-Assisted Triceps Extension Isometric",
+        "notes": "GPP: Mid-range control → SPP: Eccentric overload"
+      }
+    ]
+  },
+
+  // 8. Nerve Glides
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Median Nerve Sliders",
+        "notes": "GPP: 2x/day → TAPER: Maintenance pre-comp"
+      },
+      {
+        "name": "Radial Nerve Mobilization with Wrist Flexion",
+        "notes": "GPP: Improve neural mobility → TAPER: Lighten intensity"
+      }
+    ]
+  },
+
+  // 9. Rotational Power
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Plyometric Ball Wall Toss (Underhand)",
+        "notes": "SPP: Develop reactive strength"
+      },
+      {
+        "name": "Band-Resisted Rotary Stability Holds",
+        "notes": "SPP: Anti-rotation endurance"
+      }
+    ]
+  },
+
+  // 10. Bone Stress Management
+  {
+    "location": "elbow",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Vibration Plate Forearm Stimulation",
+        "notes": "GPP: Potential bone density support → TAPER: Reduce frequency"
+      },
+      {
+        "name": "Low-Load Blood Flow Restriction (BFR) Wrist Curls",
+        "notes": "GPP: 20% 1RM for metabolic stimulus → TAPER: Eliminate"
+      }
+    [
+  // 1. Baseline Visual Acuity
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Snellen Chart Pursuits (Horizontal/Vertical)",
+        "notes": "GPP: Baseline tracking → SPP: Add sport-specific background noise"
+      },
+      {
+        "name": "Diplopia (Double Vision) Correction Drills",
+        "notes": "GPP: Prism adaptation if needed → SPP: Integrate with head turns"
+      }
+    ]
+  },
+
+  // 2. Saccadic Training  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Ballistic Saccades (Dot-to-Dot)",
+        "notes": "GPP: Improve rapid refocusing → SPP: Add unpredictable patterns"
+      },
+      {
+        "name": "Stroop Test with Peripheral Awareness",
+        "notes": "GPP: Color-word conflict → SPP: Add sport cues (e.g., coach signals)"
+      }
+    ]
+  },
+
+  // 3. Convergence/Divergence  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Brock String Convergence",
+        "notes": "GPP: 3-bead focus → SPP: Add head movement"
+      },
+      {
+        "name": "Virtual Reality Depth Perception Drills",
+        "notes": "GPP: Static depth → SPP: Dynamic object tracking"
+      }
+    ]
+  },
+
+  // 4. Light Sensitivity  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Photophobia Desensitization (Controlled LED Exposure)",
+        "notes": "GPP: Gradual intensity → TAPER: Pre-comp light adaptation"
+      },
+      {
+        "name": "Pupillary Response Drills (Penlight)",
+        "notes": "GPP: Reflex latency → TAPER: Maintain with reduced volume"
+      }
+    ]
+  },
+
+  // 5. Sport-Specific  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Reaction Ball Wall Ties (Multi-Color)",
+        "notes": "SPP: Color-coded reactions"
+      },
+      {
+        "name": "Peripheral Number Recognition (While Dribbling)",
+        "notes": "SPP: Basketball-specific"
+      }
+    ]
+  },
+
+  // 6. Post-Concussion  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "King-Devick Test Practice",
+        "notes": "GPP: Baseline → TAPER: Re-test pre-return"
+      },
+      {
+        "name": "Smooth Pursuit with Cognitive Load",
+        "notes": "GPP: Single-task → TAPER: Dual-task (sport-specific)"
+      }
+    ]
+  },
+
+  // 7. Dry Eye Management  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Blink Rate Reminders (Timer)",
+        "notes": "GPP: 20/min baseline → TAPER: Competition reminders"
+      },
+      {
+        "name": "Warm Compress + Lid Massage",
+        "notes": "GPP: Meibomian gland function → TAPER: Pre-event"
+      }
+    ]
+  },
+
+  // 8. Anti-Saccade Training  
+  {
+    "location": "eye",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Inhibitory Saccades (Look Away from Cue)",
+        "notes": "GPP: Lab setting → SPP: Sport environment"
+      },
+      {
+        "name": "Sticky Fixation Drills",
+        "notes": "GPP: Maintain gaze under distraction → SPP: Add motion"
+      }
+    [
+  // 1. TMJ Basic Mobility
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Goldfish Exercises (Partial Opening)",
+        "notes": "GPP: Improve jaw tracking → SPP: Add resistance with fingers"
+      },
+      {
+        "name": "Tongue-to-Palate Isometric Holds",
+        "notes": "GPP: 10s holds → SPP: Combine with head nods"
+      }
+    ]
+  },
+
+  // 2. Ocular Motor
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Smooth Pursuit Tracking (Pen Tracking)",
+        "notes": "GPP: Basic eye movements → SPP: Add head movements"
+      },
+      {
+        "name": "Convergence/Divergence Drills (Pencil Push-Ups)",
+        "notes": "GPP: Binocular coordination → SPP: Dynamic environments"
+      }
+    ]
+  },
+
+  // 3. Facial Symmetry
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Mirror-Assisted Brow Raises",
+        "notes": "GPP: Isolate forehead muscles → SPP: Add resistance"
+      },
+      {
+        "name": "Cheek Puff Holds with Alternating Sides",
+        "notes": "GPP: Buccinator activation → SPP: Add phonation"
+      }
+    ]
+  },
+
+  // 4. Postural Integration
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Chin Tucks with Jaw Relaxation",
+        "notes": "GPP: Cervical-face connection → SPP: Add rotation"
+      },
+      {
+        "name": "Tongue Rest Position Drills",
+        "notes": "GPP: Habit retraining → SPP: Combine with breathing"
+      }
+    ]
+  },
+
+  // 5. Taper-Specific
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Warm Compress + Gentle Masseter Stretch",
+        "notes": "TAPER: Pre-competition relaxation"
+      },
+      {
+        "name": "5-Minute Eye Palming",
+        "notes": "TAPER: Visual reset"
+      }
+    ]
+  },
+
+  // 6. Neural Glides
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Trigeminal Nerve Flossing (Jaw Side Glides)",
+        "notes": "GPP: 2x/day → SPP: Combine with cervical movements"
+      },
+      {
+        "name": "Facial Nerve Activation (Whistle-Sip Straw)",
+        "notes": "GPP: Oral motor control → SPP: Complex patterns"
+      }
+    ]
+  },
+
+  // 7. Impact Protection
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Blink Reflex Training (Feather Touches)",
+        "notes": "GPP: Protective responses → SPP: Unexpected stimuli"
+      },
+      {
+        "name": "Mouthguard Bite Pressure Grading",
+        "notes": "GPP: Even force distribution → SPP: Sport-specific fits"
+      }
+    ]
+  },
+
+  // 8. Breathing Integration
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Nasal Dilator Stretches (Before Training)",
+        "notes": "GPP: Improve nasal breathing → TAPER: Maintenance"
+      },
+      {
+        "name": "Zygomatic Breathing Cues (Smile-Breathe)",
+        "notes": "GPP: Reduce grimacing → TAPER: Competition priming"
+      }
+    ]
+  },
+
+  // 9. Vestibular-Facial
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Gaze Stabilization with Head Turns",
+        "notes": "SPP: Combine eye/head movements"
+      },
+      {
+        "name": "Jaw Clench Grading During Balance Drills",
+        "notes": "SPP: Reduce bruxism under load"
+      }
+    ]
+  },
+
+  // 10. Recovery Modalities
+  {
+    "location": "face",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Facial Cupping (Cheekbone Drainage)",
+        "notes": "TAPER: Post-competition fluid movement"
+      },
+      {
+        "name": "Cold Spoon Ocular Cooldown",
+        "notes": "TAPER: Reduce post-fight puffiness"
+      }
+    [
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Toe Press (Against Wall)",
+        "notes": "GPP: 10s holds at varying angles → SPP: Add unilateral progressions"
+      },
+      {
+        "name": "Seated Ankle Alphabet Tracing",
+        "notes": "GPP: Restore full ROM → SPP: Add light band resistance"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Heel Drops (Straight Knee)",
+        "notes": "GPP: 3s lowering phase → SPP: Increase range/depth"
+      },
+      {
+        "name": "Towel Scrunches with Toes",
+        "notes": "GPP: Intrinsic foot activation → SPP: Add weight to towel"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Balance on Foam Pad",
+        "notes": "GPP: 30s holds → SPP: Add head turns or arm movements"
+      },
+      {
+        "name": "Banded Dorsiflexion Mobilizations",
+        "notes": "GPP: Improve anterior glide → SPP: Integrate into squat patterns"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Plantar Fascia Rolling (Golf Ball)",
+        "notes": "GPP: Daily mobility → TAPER: Reduce pressure pre-competition"
+      },
+      {
+        "name": "Calf Stretch with Extended Toes",
+        "notes": "GPP: 30s holds → TAPER: Shorten duration, increase frequency"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Toe Yoga (Isolated Lifts)",
+        "notes": "GPP: Improve toe independence → SPP: Add dynamic movements"
+      },
+      {
+        "name": "Standing Tibialis Anterior Holds",
+        "notes": "GPP: Isometric at mid-range → SPP: Add heel raise transitions"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Sliding Arch Activation (Towel Under Midfoot)",
+        "notes": "GPP: Controlled arch engagement → SPP: Add unilateral stance"
+      },
+      {
+        "name": "Step-Over Toe Touch Drills",
+        "notes": "GPP: Improve toe extension → SPP: Increase speed"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Bilateral Heel Walks",
+        "notes": "GPP: Tibialis anterior endurance → SPP: Progress to uneven surfaces"
+      },
+      {
+        "name": "Posterior Tibialis Isometrics (Band-Resisted)",
+        "notes": "GPP: Midfoot stability → SPP: Integrate with single-leg balance"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Contrast Baths (Cold/Warm)",
+        "notes": "TAPER: Reduce inflammation without overstimulation"
+      },
+      {
+        "name": "Gentle Ankle Circles (Non-Weight Bearing)",
+        "notes": "TAPER: Maintain mobility with minimal fatigue"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Toe Spreader Holds (With Rubber Band)",
+        "notes": "GPP: Improve splay endurance → SPP: Add weight shifts"
+      },
+      {
+        "name": "Inversion/Eversion Band Resisted Drills",
+        "notes": "GPP: Coronal plane control → SPP: Add unstable surfaces"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Self-Massage (Arch Release with Thumb)",
+        "notes": "GPP: Daily tissue work → TAPER: Lighten pressure"
+      },
+      {
+        "name": "Nighttime Splinting (Neutral Position)",
+        "notes": "GPP: Chronic stiffness → TAPER: Discontinue 2 days pre-comp"
+      }
+    [
+  // 1. Wrist Isometrics
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Wall Press Isometric Wrist Extension",
+        "notes": "GPP: 10s holds at multiple angles → SPP: Add unstable surface"
+      },
+      {
+        "name": "Seated Flexion Isometric (Against Knee)",
+        "notes": "GPP: Submaximal holds → SPP: Incorporate grip variations"
+      }
+    ]
+  },
+
+  // 2. Eccentric Loading
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Wrist Curls (3s Lowering)",
+        "notes": "GPP: Light weight → SPP: Increase load with controlled tempo"
+      },
+      {
+        "name": "Reverse Tyler Twist (Flexbar)",
+        "notes": "GPP: Tendon reloading → SPP: Speed progressions"
+      }
+    ]
+  },
+
+  // 3. Nerve Mobility
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Median Nerve Glides (Wrist Oscillations)",
+        "notes": "GPP: 2x/day → TAPER: Reduce volume pre-comp"
+      },
+      {
+        "name": "Ulnar Nerve Tensioners (Shamrock Pattern)",
+        "notes": "GPP: Gentle mobility → TAPER: Eliminate if irritable"
+      }
+    ]
+  },
+
+  // 4. Grip Integration
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Rice Bucket Pronation/Supination",
+        "notes": "GPP: Endurance focus → SPP: Add resistance"
+      },
+      {
+        "name": "Towel Wringing Isometric Holds",
+        "notes": "GPP: 15s holds → SPP: Add weight to towel"
+      }
+    ]
+  },
+
+  // 5. Taper-Specific
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Paraffin Wax Therapy",
+        "notes": "TAPER: Reduce stiffness without loading"
+      },
+      {
+        "name": "Very Light Flexbar Oscillations",
+        "notes": "TAPER: Maintain neural activation"
+      }
+    ]
+  },
+
+  // 6. Blood Flow Restriction
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "BFR Wrist Extensions (20% 1RM)",
+        "notes": "GPP: Metabolic stimulus → SPP: Progressive occlusion"
+      },
+      {
+        "name": "BFR Finger Flexor Holds",
+        "notes": "GPP: Ischemic conditioning → SPP: Reduce frequency"
+      }
+    ]
+  },
+
+  // 7. Functional ROM
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Weighted Pronation/Supination (Hammer Grip)",
+        "notes": "GPP: Controlled ROM → SPP: Add catch/release"
+      },
+      {
+        "name": "Wall Walking (Fingers to Wrist)",
+        "notes": "GPP: Combined mobility → SPP: Increase speed"
+      }
+    ]
+  },
+
+  // 8. Extensor Focus
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Rubber Band Finger Extensions",
+        "notes": "GPP: High reps → SPP: Add rotational component"
+      },
+      {
+        "name": "Dowel Radial/Ulnar Deviation Holds",
+        "notes": "GPP: Mid-range stability → SPP: Add perturbations"
+      }
+    ]
+  },
+
+  // 9. Recovery Modalities
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Compression Sleeve Flushes",
+        "notes": "TAPER: Post-training fluid movement"
+      },
+      {
+        "name": "Contrast Bath Forearm Rolls",
+        "notes": "TAPER: Pre-competition circulation boost"
+      }
+    ]
+  },
+
+  // 10. Integrated Loading
+  {
+    "location": "forearm",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Dead Hang Grip Endurance",
+        "notes": "SPP: Progressive hang times"
+      },
+      {
+        "name": "Plate Pinch Rotations",
+        "notes": "SPP: Combined grip/forearm challenge"
+      }
+    [
+  // 1. Hip Extension Basics
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Double-Leg Glute Bridge (Isometric Hold)",
+        "notes": "GPP: 30s holds → SPP: Add single-leg pulses"
+      },
+      {
+        "name": "Quadruped Hip Extension (Band-Resisted)",
+        "notes": "GPP: Controlled ROM → SPP: Add knee flexion"
+      }
+    ]
+  },
+
+  // 2. Unilateral Strength
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Sit-to-Stand (Eccentric Focus)",
+        "notes": "GPP: 3s lowering → SPP: Add unstable surface"
+      },
+      {
+        "name": "Step-Up with Posterior Reach",
+        "notes": "GPP: Improve hip control → SPP: Increase height/speed"
+      }
+    ]
+  },
+
+  // 3. Rotational Stability
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Clamshell with Isometric Hold (Top Position)",
+        "notes": "GPP: 15s holds → SPP: Add mini-band resistance"
+      },
+      {
+        "name": "Standing Hip CARs (Controlled Rotations)",
+        "notes": "GPP: Improve joint awareness → SPP: Add load"
+      }
+    ]
+  },
+
+  // 4. Taper-Specific
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller Glute Sweeps (30s/Side)",
+        "notes": "TAPER: Maintain tissue mobility"
+      },
+      {
+        "name": "Isometric Wall Lean (Hip Extension)",
+        "notes": "TAPER: Activate without fatigue"
+      }
+    ]
+  },
+
+  // 5. Eccentric Loading
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Romanian Deadlift (3s Eccentric)",
+        "notes": "GPP: Hamstring-glute coordination → SPP: Add single-leg"
+      },
+      {
+        "name": "Lateral Lunge with Pause",
+        "notes": "GPP: Adductor integration → SPP: Increase depth"
+      }
+    ]
+  },
+
+  // 6. Activation Circuits
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Fire Hydrant Circles (Mini-Band)",
+        "notes": "GPP: Multi-planar activation → SPP: Add ankle weights"
+      },
+      {
+        "name": "Glute-Medius Isometric Holds (Side-Lying)",
+        "notes": "GPP: 45s holds → SPP: Add leg abduction"
+      }
+    ]
+  },
+
+  // 7. Dynamic Stability
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Single-Leg RDL with Overhead Reach",
+        "notes": "SPP: Integrate kinetic chain"
+      },
+      {
+        "name": "Lateral Bound with Stick Landing",
+        "notes": "SPP: Develop reactive strength"
+      }
+    ]
+  },
+
+  // 8. Mobility/Restoration
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "90/90 Hip Stretch with Glute Engagement",
+        "notes": "GPP: Improve IR/ER → TAPER: Reduce hold time"
+      },
+      {
+        "name": "Piriformis Self-Release (Ball)",
+        "notes": "GPP: 2min/side → TAPER: Light pressure only"
+      }
+    ]
+  },
+
+  // 9. Loaded Carries
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Suitcase Carry (Contralateral Load)",
+        "notes": "GPP: Anti-lateral flexion → SPP: Increase distance"
+      },
+      {
+        "name": "Overhead Farmer's Walk",
+        "notes": "GPP: Core-glute integration → SPP: Add uneven loads"
+      }
+    ]
+  },
+
+  // 10. Neuromuscular
+  {
+    "location": "glutes",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Quick Clamshell Pulses (No Resistance)",
+        "notes": "TAPER: Maintain neural drive"
+      },
+      {
+        "name": "Standing Glute Squeeze with Breath Hold",
+        "notes": "TAPER: Pre-activity priming"
+      }
+    [
+  // 1. Adductor Strength
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Adductor Squeeze (Ball Between Knees)",
+        "notes": "GPP: 30s holds → SPP: Add pulses or unstable surface"
+      },
+      {
+        "name": "Side-Lying Adductor Raises",
+        "notes": "GPP: Short-lever → SPP: Add ankle weights"
+      }
+    ]
+  },
+  // 2. Eccentric Loading
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Copenhagen Plank Eccentric Lowers",
+        "notes": "GPP: 3s lowering → SPP: Full range eccentrics"
+      },
+      {
+        "name": "Seated Adductor Machine Eccentrics",
+        "notes": "GPP: Light load → SPP: Increase time under tension"
+      }
+    ]
+  },
+  // 3. Dynamic Mobility
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Half-Kneeling Adductor Mobilizations",
+        "notes": "GPP: Rocking movements → SPP: Add rotation"
+      },
+      {
+        "name": "Frog Stretch with Pulsed Contractions",
+        "notes": "GPP: PNF techniques → SPP: Active holds"
+      }
+    ]
+  },
+  // 4. Unilateral Stability
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Romanian Deadlifts (Narrow Stance)",
+        "notes": "GPP: Control → SPP: Add contralateral rotation"
+      },
+      {
+        "name": "Lateral Lunge with Isometric Hold",
+        "notes": "GPP: 5s holds → SPP: Explosive return"
+      }
+    ]
+  },
+  // 5. Taper-Specific
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller Adductor Flossing",
+        "notes": "TAPER: Light mobility pre-competition"
+      },
+      {
+        "name": "Standing Adductor Isometrics (Low Intensity)",
+        "notes": "TAPER: Maintain tension without fatigue"
+      }
+    ]
+  },
+  // 6. Core Integration
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug with Adductor Activation",
+        "notes": "GPP: Co-contraction → SPP: Add unstable surface"
+      },
+      {
+        "name": "Pallof Press with Lateral Step",
+        "notes": "GPP: Anti-rotation → SPP: Increase band tension"
+      }
+    ]
+  },
+  // 7. Multiplanar Loading
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Rotational Medicine Ball Throws (Staggered Stance)",
+        "notes": "SPP: Develop transverse plane power"
+      },
+      {
+        "name": "Crossover Step-Ups with Knee Drive",
+        "notes": "SPP: Sport-specific patterning"
+      }
+    ]
+  },
+  // 8. Blood Flow Restriction
+  {
+    "location": "groin",
+    "type": "unspecified",
+    "phase_progression": "GPP",
+    "drills": [
+      {
+        "name": "BFR Adductor Curls (20% 1RM)",
+        "notes": "GPP: Metabolic stimulus without heavy load"
+      },
+      {
+        "name": "BFR Seated Marches",
+        "notes": "GPP: Maintain hip flexor-adductor coordination"
+      }
+    ]
+    [
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Hamstring Bridge Hold (30s)",
+        "notes": "GPP: Mid-range activation → SPP: Add single-leg pulses"
+      },
+      {
+        "name": "Sliding Leg Curls (Towel on Floor)",
+        "notes": "GPP: Eccentric focus → SPP: Increase tempo control"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Standing Bent-Knee Stretch (Active ROM)",
+        "notes": "GPP: Dynamic mobility → SPP: Add rotation component"
+      },
+      {
+        "name": "Seated Band-Resisted Knee Flexion",
+        "notes": "GPP: Light concentric work → SPP: Progress to standing"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Nordic Hamstring Curl Eccentrics",
+        "notes": "GPP: 3s lowering → SPP: Add concentric assistance (bands)"
+      },
+      {
+        "name": "Single-Leg Romanian Deadlift (TRX Assisted)",
+        "notes": "GPP: Controlled range → SPP: Add weights"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller Hamstring Sweeps",
+        "notes": "GPP: Tissue prep → TAPER: Reduce pressure pre-comp"
+      },
+      {
+        "name": "Dynamic PNF Stretching",
+        "notes": "GPP: Contract-relax → TAPER: Shorten duration"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Swiss Ball Hamstring Curls",
+        "notes": "GPP: Bilateral stability → SPP: Unilateral progressions"
+      },
+      {
+        "name": "Kettlebell Swing (Hinge Pattern Focus)",
+        "notes": "GPP: Teach hip dissociation → SPP: Increase explosiveness"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Supine Isometric Knee Extension (Heel Dig)",
+        "notes": "GPP: Co-contraction training → SPP: Add band resistance"
+      },
+      {
+        "name": "Lateral Lunge with Hamstring Emphasis",
+        "notes": "GPP: Multiplane loading → SPP: Add deceleration focus"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Banded Good Morning (Isometric Hold at 45°)",
+        "notes": "GPP: Posterior chain endurance → SPP: Dynamic reps"
+      },
+      {
+        "name": "Reverse Hyperextension (Floor Version)",
+        "notes": "GPP: Low-load activation → SPP: Add ankle weights"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Heat Wrap + Gentle Static Stretch",
+        "notes": "TAPER: Maintain mobility without fatigue"
+      },
+      {
+        "name": "Mini-Band Walks (Monster Walks)",
+        "notes": "TAPER: Glute-hamstring coactivation"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Slider Leg Curl (3s Lower)",
+        "notes": "GPP: Targeted lengthening → SPP: Add pause at end-range"
+      },
+      {
+        "name": "Standing Hamstring Isometric (Against Wall)",
+        "notes": "GPP: Functional angle holds → SPP: Add contralateral movements"
+      }
+    ]
+  },
+  {
+    "location": "hamstring",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Self-Massage (Theracane Trigger Points)",
+        "notes": "GPP: Weekly maintenance → TAPER: Lighten pressure"
+      },
+      {
+        "name": "Aqua Jogging (High Knee Focus)",
+        "notes": "GPP: Non-impact conditioning → TAPER: Reduce volume"
+      }
+    ]
+  [
+  // 1. Grip Foundations
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Towel Twist Isometric Holds",
+        "notes": "GPP: 30s crush grip → SPP: Add wrist rotations during hold"
+      },
+      {
+        "name": "Rice Bucket Finger Extensions",
+        "notes": "GPP: Balance flexor/extensor ratio → SPP: Speed drills post-clinch"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Plate Pinch Transfers",
+        "notes": "GPP: 5lb plate → SPP: Textured plates for mat realism"
+      },
+      {
+        "name": "Wrist Roller (Reverse Winding)",
+        "notes": "GPP: Eccentric forearm control → SPP: Increase rope weight"
+      }
+    ]
+  },
+
+  // 2. Wrist Stability
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Knuckle Push-Up Holds",
+        "notes": "GPP: 15s mid-range → SPP: Add unstable surface (foam pad)"
+      },
+      {
+        "name": "Band-Resisted Wrist Deviations",
+        "notes": "GPP: Radial/ulnar endurance → SPP: Mimic parry angles"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Sledgehammer Levering",
+        "notes": "GPP: Start at hammerhead → TAPER: Lighten to handle-only"
+      },
+      {
+        "name": "Finger Walkout Planks",
+        "notes": "GPP: Wrist-load tolerance → SPP: Add shoulder taps"
+      }
+    ]
+  },
+
+  // 3. Impact Prep
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Micro-Fracture Rice Digs",
+        "notes": "GPP: Progressive density exposure → SPP: Vary textures (sand/beans)"
+      },
+      {
+        "name": "Light Bag Tapping (Open Palm)",
+        "notes": "GPP: Desensitize → SPP: Progress to closed fist"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Reactive Ball Catching (Uneven Bounces)",
+        "notes": "SPP: Improve knuckle impact timing"
+      },
+      {
+        "name": "Taped Wrist Shadowboxing",
+        "notes": "SPP: Reinforce neutral alignment during strikes"
+      }
+    ]
+  },
+
+  // 4. Thumb Specific
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Key Pinch Isometrics",
+        "notes": "GPP: 10s holds → SPP: Add lateral pull resistance"
+      },
+      {
+        "name": "Thumb Opposition Crawls",
+        "notes": "GPP: Mobility → SPP: Speed under fatigue"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "CMC Joint Mobilization (Band-Distracted)",
+        "notes": "GPP: Improve thumb saddle ROM → TAPER: Lighten band tension"
+      },
+      {
+        "name": "Towel Thumb Rolls",
+        "notes": "GPP: Endurance → TAPER: Reduce volume pre-comp"
+      }
+    ]
+  },
+
+  // 5. Recovery Modalities
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Paraffin Wax Therapy",
+        "notes": "TAPER: Post-sparring joint recovery"
+      },
+      {
+        "name": "Contrast Baths (30s Hot/10s Cold)",
+        "notes": "TAPER: Flush metabolic waste between rounds"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Finger Flexor Gliding",
+        "notes": "GPP: Prevent tendon adhesions → TAPER: Maintenance"
+      },
+      {
+        "name": "Nighttime Buddy Taping",
+        "notes": "GPP: Chronic MCP protection → TAPER: Discontinue fight week"
+      }
+    ]
+  },
+
+  // 6. Nerve Mobility
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Median Nerve Flossing",
+        "notes": "GPP: 2x/day → SPP: Combine with shoulder retraction"
+      },
+      {
+        "name": "Ulnar Nerve Tensioners",
+        "notes": "GPP: Prevent cubital tunnel → SPP: Add grip component"
+      }
+    ]
+  },
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dynasplint Wrist Extension",
+        "notes": "GPP: Passive ROM → SPP: Active-assisted"
+      },
+      {
+        "name": "Tendon Gliding Series",
+        "notes": "GPP: Post-impact recovery → SPP: Pre-competition prep"
+      }
+    ]
+  },
+
+  // 7. Combat-Specific Endurance
+  {
+    "location": "hand",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Clinch Grip Endurance Hangs",
+        "notes": "SPP: 60s timed overhand hangs"
+      },
+      {
+        "name": "Rotational Wrist Wrenching",
+        "notes": "SPP: Gi-grip simulation"
+      }
+    ]
+  [
+  {
+    "location": "heel",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Heel Press (Against Wall)",
+        "notes": "GPP: 15s holds at pain-free angle → SPP: Increase hold duration"
+      },
+      {
+        "name": "Towel Stretch with Knee Extended",
+        "notes": "GPP: Static gastrocnemius stretch → SPP: Add pulsed contractions"
+      }
+    ]
+  },
+  {
+    "location": "heel",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Heel Raises (3s Lowering)",
+        "notes": "GPP: Double-leg → SPP: Progress to single-leg"
+      },
+      {
+        "name": "Seated Plantar Fascia Stretch (Toe Extension)",
+        "notes": "GPP: Manual tension → SPP: Add band resistance"
+      }
+    ]
+  },
+  {
+    "location": "heel",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Heel Walks (20 Steps)",
+        "notes": "GPP: Tibialis anterior activation → SPP: Increase distance/speed"
+      },
+      {
+        "name": "Banded Heel Cord Mobilization",
+        "notes": "GPP: Posterior chain glide → SPP: Integrate into squat patterns"
+      }
+    ]
+  },
+  {
+    "location": "heel",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Golf Ball Roll Under Heel",
+        "notes": "GPP: Daily tissue mobilization → TAPER: Reduce pressure"
+      },
+      {
+        "name": "Night Splint (Neutral Position)",
+        "notes": "GPP: Chronic stiffness → TAPER: Discontinue pre-comp"
+      }
+    ]
+  },
+  {
+    "location": "heel",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Warm Water Soak with Epsom Salt",
+        "notes": "TAPER: Pre-competition circulation boost"
+      },
+      {
+        "name": "Light Calf Pump Ankle Pumps",
+        "notes": "TAPER: Maintain mobility without load"
+      }
+    ]
+  [
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Glute Bridge Hold (30° Hip Extension)",
+        "notes": "GPP: 30s holds → SPP: Add marching or single-leg pulses"
+      },
+      {
+        "name": "Standing Hip CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Improve joint awareness → SPP: Add resistance band"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Lateral Lunge (3s Descent)",
+        "notes": "GPP: Frontal plane control → SPP: Add explosive return"
+      },
+      {
+        "name": "Quadruped Hip Circunduction",
+        "notes": "GPP: Mobilize capsule → SPP: Load with ankle weight"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Stance with Hip ER/IR",
+        "notes": "GPP: Rotational stability → SPP: Add unstable surface"
+      },
+      {
+        "name": "90/90 Hip Switch with Posterior Tilt",
+        "notes": "GPP: Internal/external ROM → SPP: Add reach component"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Psoas March with Band Resistance",
+        "notes": "GPP: Improve iliacus coordination → TAPER: Reduce band tension"
+      },
+      {
+        "name": "Supine Figure-4 PIR Stretch",
+        "notes": "GPP: 30s holds → TAPER: Decrease hold duration"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Copenhagen Plank (Adductor Focus)",
+        "notes": "GPP: Isometric strength → SPP: Add dynamic movements"
+      },
+      {
+        "name": "Seated Hip CARS with Dowel Assistance",
+        "notes": "GPP: Passive ROM → SPP: Active control"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Lateral Line Sliders (Glute Med Activation)",
+        "notes": "GPP: Unilateral control → SPP: Add directional changes"
+      },
+      {
+        "name": "Deadbug with Hip Airplane",
+        "notes": "GPP: Core-hip dissociation → SPP: Add weights"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Standing Hip Flexor Stretch with Posterior Tilt",
+        "notes": "GPP: 2min accumulative → SPP: Integrate with rotation"
+      },
+      {
+        "name": "Side-Lying Clamshell with Pause",
+        "notes": "GPP: 2s hold at top → SPP: Add loop band"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller TFL Release (30s)",
+        "notes": "TAPER: Reduce tension without overstimulation"
+      },
+      {
+        "name": "Supine Diaphragmatic Breathing with Hip Capsule",
+        "notes": "TAPER: Neural reset pre-competition"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Half-Kneeling Hip Flexor Isometrics",
+        "notes": "GPP: Build anterior chain stability → SPP: Add rotation"
+      },
+      {
+        "name": "Standing Hip Hike with Control",
+        "notes": "GPP: Pelvic control → SPP: Add step-down component"
+      }
+    ]
+  },
+  {
+    "location": "hip",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Piriformis Self-Massage (Ball)",
+        "notes": "GPP: Daily maintenance → TAPER: Light pressure only"
+      },
+      {
+        "name": "Standing Windmill Toe Touches",
+        "notes": "GPP: Combined mobility → TAPER: Reduce range pre-comp"
+      }
+    ]
+  [
+  {
+    "location": "jaw",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Goldfish Exercise (Assisted Opening)",
+        "notes": "GPP: Improve joint tracking → SPP: Add resistance fingers"
+      },
+      {
+        "name": "Tongue-to-Palate Isometric Holds",
+        "notes": "GPP: 10s holds → SPP: Combine with cervical nods"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Controlled Chin Tucks with Jaw Relaxation",
+        "notes": "GPP: Postural integration → SPP: Add rotation"
+      },
+      {
+        "name": "Masseter Self-Massage (Circular Pressure)",
+        "notes": "GPP: Reduce hypertonicity → SPP: Pre-activity release"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "6-Way Jaw Isometrics (Finger Resistance)",
+        "notes": "GPP: Pain-modulation → TAPER: Reduce hold duration"
+      },
+      {
+        "name": "Warm Compress + Passive Stretching",
+        "notes": "TAPER: Pre-competition relaxation"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Bite Force Grading (Cotton Roll)",
+        "notes": "GPP: Neuromuscular re-education → SPP: Vary textures"
+      },
+      {
+        "name": "Mandibular Lateral Glides (Controlled)",
+        "notes": "GPP: Improve side-to-side mobility → SPP: Add resistance"
+      }
+    ]
+  },
+  {
+    "location": "jaw",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Chewing Gum Alternating Patterns",
+        "notes": "GPP: Bilateral coordination → SPP: Increase viscosity"
+      },
+      {
+        "name": "Diaphragmatic Breathing with Jaw Relaxation",
+        "notes": "GPP: Reduce parafunctional habits → SPP: Integrate with movement"
+      }
+    [
+  // 1. Isometric Core Stabilization
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug Isometric Hold (Knees at 90°)",
+        "notes": "GPP: 30s holds → SPP: Add limb oscillations"
+      },
+      {
+        "name": "Front Plank with Posterior Pelvic Tilt",
+        "notes": "GPP: Teach lumbo-pelvic control → SPP: Add shoulder taps"
+      }
+    ]
+  },
+
+  // 2. Hip-Lumbar Dissociation
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Cat-Cow (Isolated Lumbar Flex/Ext)",
+        "notes": "GPP: Improve segmental control → SPP: Add resistance bands"
+      },
+      {
+        "name": "Quadruped Rockbacks (Hips to Heels)",
+        "notes": "GPP: Mobilize thoracolumbar junction → SPP: Load with sandbag"
+      }
+    ]
+  },
+
+  // 3. Eccentric Control
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "3-Point Kneeling Hip Hinge (3s Lower)",
+        "notes": "GPP: Teach hip-dominant pattern → SPP: Progress to standing"
+      },
+      {
+        "name": "Swiss Ball Rollouts (Eccentric Focus)",
+        "notes": "GPP: Partial ROM → SPP: Full extension with control"
+      }
+    ]
+  },
+
+  // 4. Multidirectional Stability
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Side Plank with Adductor Squeeze",
+        "notes": "GPP: 20s holds → SPP: Add leg lifts"
+      },
+      {
+        "name": "Bird Dog with Band Resistance",
+        "notes": "GPP: Anti-rotation → SPP: Add unstable surface"
+      }
+    ]
+  },
+
+  // 5. Taper-Specific
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Child's Pose with Diaphragmatic Breathing",
+        "notes": "TAPER: Parasympathetic activation"
+      },
+      {
+        "name": "Standing Extension Mobilizations (Over Peanut)",
+        "notes": "TAPER: Light facet joint decompression"
+      }
+    ]
+  },
+
+  // 6. Neural Mobility
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Slump Glides",
+        "notes": "GPP: Improve neural sliding → SPP: Add ankle dorsiflexion"
+      },
+      {
+        "name": "Prone Sciatic Flossing",
+        "notes": "GPP: 2x/day → SPP: Integrate with hip CARs"
+      }
+    ]
+  },
+
+  // 7. Load Transition
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Half-Kneeling Landmine Rotations",
+        "notes": "GPP: Light load → SPP: Increase ROM/speed"
+      },
+      {
+        "name": "Deadlift Pattern with Dowel (Hip Contact)",
+        "notes": "GPP: Teach bar path → SPP: Load with kettlebells"
+      }
+    ]
+  },
+
+  // 8. Anti-Flexion
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Suitcase Carry (Contralateral Loading)",
+        "notes": "GPP: 30s walks → SPP: Increase weight/distance"
+      },
+      {
+        "name": "Reverse Hyperextension (Isometric Hold)",
+        "notes": "GPP: Glute-hamstring activation → SPP: Add pulses"
+      }
+    ]
+  },
+
+  // 9. Bedside Mobility
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Hooklying Marching (Heel Slides)",
+        "notes": "GPP: Morning stiffness relief → TAPER: Reduce volume"
+      },
+      {
+        "name": "Piriformis PNF Stretching",
+        "notes": "GPP: 2min holds → TAPER: Lighten intensity"
+      }
+    ]
+  },
+
+  // 10. Bracing Integration
+  {
+    "location": "lower back",
+    "type": "unspecified",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Pallof Press with Step-Outs",
+        "notes": "SPP: Dynamic core bracing under load"
+      },
+      {
+        "name": "Rotational Medicine Ball Throws",
+        "notes": "SPP: Develop power with maintained neutral spine"
+      }
+      [
+  {
+    "location": "obliques",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Side Plank Isometric Hold (Knees Bent)",
+        "notes": "GPP: 20s holds → SPP: Progress to straight legs or add hip abduction"
+      },
+      {
+        "name": "Seated Band-Resisted Rotation (Isometric)",
+        "notes": "GPP: Hold mid-range → SPP: Add pulsing movements"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Dead Bug with Oblique Focus (Slow Lowering)",
+        "notes": "GPP: 3s eccentric → SPP: Add unstable surface (foam pad)"
+      },
+      {
+        "name": "Pallof Press Isometric Hold",
+        "notes": "GPP: Anti-rotation stability → SPP: Add step-outs"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Side-Lying Windmill Stretch (Active)",
+        "notes": "GPP: Improve rotational ROM → SPP: Add light dumbbell"
+      },
+      {
+        "name": "Standing Cable Chop (Eccentric Focus)",
+        "notes": "GPP: 3s lowering → SPP: Increase load/speed"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Foam Roller Lateral Flexion Mobilization",
+        "notes": "GPP: Tissue release → TAPER: Gentle maintenance"
+      },
+      {
+        "name": "Brettzel Stretch with Breathing",
+        "notes": "GPP: Thoracic-oblique mobility → TAPER: Short holds pre-comp"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Standing Side Bend Isometric (Bodyweight)",
+        "notes": "TAPER: Low-fatigue tension maintenance"
+      },
+      {
+        "name": "Supine Diaphragmatic Breathing with Rib Expansion",
+        "notes": "TAPER: Reset oblique-rib cage relationship"
+      }
+    ]
+  [
+  // 1. Isometric Foundations
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Chin Tuck Isometric Hold (Against Wall)",
+        "notes": "GPP: 10s holds → SPP: Add nodding movements"
+      },
+      {
+        "name": "Side-Lying Neck Isometrics (Hand Resistance)",
+        "notes": "GPP: Multi-angle holds → SPP: Increase duration"
+      }
+    ]
+  },
+
+  // 2. ROM Progressions
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Cervical CARs (Controlled Articular Rotations)",
+        "notes": "GPP: Daily mobility → SPP: Add light band resistance"
+      },
+      {
+        "name": "Supine Neck Glides (Towel Roll Support)",
+        "notes": "GPP: Segmental mobility → SPP: Reduce support"
+      }
+    ]
+  },
+
+  // 3. Scapulo-Cervical Integration
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Scapular Retraction + Neck Extension",
+        "notes": "GPP: Postural chain activation → SPP: Add arm movements"
+      },
+      {
+        "name": "Quadruped Cervical Clock Rotations",
+        "notes": "GPP: Combine neck/shoulder control → SPP: Add limb lifts"
+      }
+    ]
+  },
+
+  // 4. Taper-Specific
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Heat Pack + Gentle Lateral Flexion Stretch",
+        "notes": "TAPER: Pre-competition stiffness reduction"
+      },
+      {
+        "name": "TheraCane Trigger Point Release (30s)",
+        "notes": "TAPER: Light maintenance work"
+      }
+    ]
+  },
+
+  // 5. Eccentric Loading
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Eccentric Chin Tuck (3s Lower from Extension)",
+        "notes": "GPP: Control through full ROM → SPP: Add manual resistance"
+      },
+      {
+        "name": "Prone Head Lift with Slow Lowering",
+        "notes": "GPP: Posterior chain focus → SPP: Add rotation"
+      }
+    ]
+  },
+
+  // 6. Vestibular Integration
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Seated Head Tracking (Follow Thumb)",
+        "notes": "GPP: Basic oculomotor-neck coordination → SPP: Add trunk rotation"
+      },
+      {
+        "name": "Standing Balance with Head Turns",
+        "notes": "GPP: Static → SPP: Dynamic surface progressions"
+      }
+    ]
+  },
+
+  // 7. Neural Mobility
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Median Nerve Glide (With Cervical Side Bend)",
+        "notes": "GPP: 2x/day → TAPER: Reduce repetitions"
+      },
+      {
+        "name": "Supine Occipital Release (Tennis Ball)",
+        "notes": "GPP: Suboccipital tension → TAPER: Light pressure only"
+      }
+    ]
+  },
+
+  // 8. Rotation Control
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Rotation Holds (At 50% ROM)",
+        "notes": "GPP: Build rotational stability → SPP: Add resistance bands"
+      },
+      {
+        "name": "Seated Thoracic Rotation + Neck Tracking",
+        "notes": "GPP: Dissociate cervical/thoracic movement → SPP: Add load"
+      }
+    ]
+  },
+
+  // 9. Anti-Flexion
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Supine Head Float (2" Off Surface)",
+        "notes": "GPP: Anterior chain endurance → SPP: Add nodding motions"
+      },
+      {
+        "name": "Standing Wall Lean (Forehead Contact)",
+        "notes": "GPP: Progressive loading → SPP: Single-leg stance"
+      }
+    ]
+  },
+
+  // 10. Recovery Modalities
+  {
+    "location": "neck",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Pec Minor Doorway Stretch (With Chin Tuck)",
+        "notes": "TAPER: Address compensatory tightness"
+      },
+      {
+        "name": "Cervical Traction (Over Bed Edge)",
+        "notes": "TAPER: Gentle decompression pre-competition"
+      }
+    ]
+  
