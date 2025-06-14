@@ -510,6 +510,157 @@
     ]
   },
   {
+  [
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Mini-Band Lateral Shuffles (Partial Squat)",
+        "notes": "GPP: Activate glute medius → SPP: Add deceleration cues (e.g., soft landing)"
+      },
+      {
+        "name": "Isometric Spanish Squat (30° Flexion)",
+        "notes": "GPP: Reduce patellar stress → SPP: Add pulses or band resistance"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Sliding Hamstring Curls (Sliders/Towel)",
+        "notes": "GPP: Eccentric focus → TAPER: Reduce volume, maintain neuromuscular control"
+      },
+      {
+        "name": "Seated Knee Extension (Hold at 60°)",
+        "notes": "GPP: Quad activation without compression → TAPER: Lighten load, emphasize form"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Step-Downs (Eccentric Focus)",
+        "notes": "GPP: 3s lowering phase → SPP: Add lateral or rotational component"
+      },
+      {
+        "name": "Pogo Hops (Low Amplitude)",
+        "notes": "GPP: Reintroduce plyometrics → SPP: Progress to directional changes"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "VMO Activation Off Bench (Leg Extension Hold)",
+        "notes": "GPP: Isometric at 30° → SPP: Add ankle weights"
+      },
+      {
+        "name": "Quadruped Tibial Glides (Band-Assisted)",
+        "notes": "GPP: Improve joint mobility → SPP: Integrate with crawling patterns"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Couch Stretch + Tibial Rotation",
+        "notes": "TAPER: Combine quad/hip flexor mobility with knee joint play"
+      },
+      {
+        "name": "Low-Load Blood Flow Restriction (BFR) Leg Extensions",
+        "notes": "TAPER: 20% 1RM, high reps (30-15-15-15) to maintain tissue resilience"
+      }
+    [
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Isometric Wall Sit (60° Flexion)",
+        "notes": "GPP: Build endurance → SPP: Add contralateral leg swings or band resistance"
+      },
+      {
+        "name": "Single-Leg Balance with Tibial Rotation",
+        "notes": "GPP: Improve proprioception → SPP: Progress to unstable surface (foam pad)"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Isometric Step-Up Hold (Mid-Range)",
+        "notes": "GPP: 30s holds → SPP: Add explosive concentric phase"
+      },
+      {
+        "name": "Single-Leg Mini-Band Terminal Knee Extension",
+        "notes": "GPP: Isolate VMO → SPP: Integrate into lateral movement patterns"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → TAPER",
+    "drills": [
+      {
+        "name": "Single-Leg Eccentric Decline Squat (3s Lowering)",
+        "notes": "GPP: Control deceleration → TAPER: Reduce depth, emphasize form"
+      },
+      {
+        "name": "Isometric Quadruped Knee Flexion Hold",
+        "notes": "GPP: Hamstring activation → TAPER: Short holds pre-competition"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "GPP → SPP",
+    "drills": [
+      {
+        "name": "Single-Leg Spanish Squat (Isometric)",
+        "notes": "GPP: Reduce patellar load → SPP: Add pulse contractions"
+      },
+      {
+        "name": "Isometric Single-Leg Bridge (Knee Extended)",
+        "notes": "GPP: Glute-hamstring synergy → SPP: Add marching variation"
+      }
+    ]
+  },
+  {
+    "location": "knee",
+    "type": "unspecified",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Isometric Single-Leg Wall Lean (30s)",
+        "notes": "TAPER: Maintain tension without fatigue"
+      },
+      {
+        "name": "Single-Leg Balance with Eyes Closed",
+        "notes": "TAPER: Reinforce neural pathways pre-competition"
+      }
+    
+    
+    
     "location": "knee",
     "type": "instability",
     "phase_progression": "SPP → TAPER",
