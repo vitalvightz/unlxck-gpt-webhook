@@ -68,10 +68,10 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
                 if notes:
                     entry_str = f"{name} – {notes}"
                 drills.append(entry_str)
-                if len(drills) >= 3:
+                if len(drills) >= 2:
                     return drills
 
-    return drills
+    return drills[:2]
 
 
 def generate_recovery_block(training_context: dict) -> str:
@@ -99,22 +99,7 @@ def generate_recovery_block(training_context: dict) -> str:
     ]
 
     injuries = training_context.get("injuries", [])
-    injury_drills = _fetch_injury_drills(
-        injuries,
-        phase,
-    )
-    if injury_drills:
-        recovery_block.append("\n**Injury-Specific Drills:**")
-        recovery_block += [f"- {d}" for d in injury_drills]
-
-    # Add injury-specific support tips
-    done_types = set()
-    for desc in injuries:
-        itype, _ = parse_injury_phrase(desc)
-        if itype and itype in INJURY_SUPPORT_NOTES and itype not in done_types:
-            done_types.add(itype)
-            recovery_block.append(f"\n**{itype.title()} Support Notes:**")
-            recovery_block += [f"- {t}" for t in INJURY_SUPPORT_NOTES[itype]]
+    _ = injuries  # injuries currently unused; rehab protocols handle specifics
 
     # Age-based Adjustments
     if age_risk:

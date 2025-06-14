@@ -172,6 +172,13 @@ def generate_rehab_protocols(
         if itype or loc:
             parsed_entries.append((itype, loc))
 
+    # Prioritize specific injuries over unspecified duplicates
+    parsed_entries.sort(key=lambda x: (x[0] is None or x[0] == "unspecified"))
+
+    # Drop injuries without a body part when at least one body part was found
+    if any(loc for _, loc in parsed_entries):
+        parsed_entries = [p for p in parsed_entries if p[1] is not None]
+
     seen_pairs = set()
     seen_locations = set()
     unique_entries = []
@@ -246,7 +253,7 @@ def generate_rehab_protocols(
                         if entry not in seen_drills:
                             drills.append(entry)
                             seen_drills.add(entry)
-            drills = drills[:3]
+            drills = drills[:2]
             if drills:
                 loc_title = loc.title() if loc else "Unspecified"
                 type_title = itype.title() if itype else "Unspecified"
