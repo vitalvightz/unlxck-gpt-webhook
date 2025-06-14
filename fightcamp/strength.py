@@ -324,7 +324,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 break
         weighted_exercises += [(ex, 0) for ex in fallback_exercises]
 
-    top_exercises = [ex for ex, _ in weighted_exercises[:target_exercises]]
+    # Keep score pairs for later lookups
+    top_pairs = weighted_exercises[:target_exercises]
+    top_exercises = [ex for ex, _ in top_pairs]
     # Remove any duplicate exercise names that slipped through scoring
     seen_exercises = set()
     top_exercises = [ex for ex in top_exercises if not (ex["name"] in seen_exercises or seen_exercises.add(ex["name"]))]
@@ -377,6 +379,26 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             top_exercises.append(ex_obj)
     if len(top_exercises) > target_exercises:
         top_exercises = top_exercises[:target_exercises]
+
+    # --------- ISOMETRIC GUARANTEE ---------
+    if phase in {"GPP", "SPP"}:
+        if not any("isometric" in ex.get("tags", []) for ex in top_exercises):
+            score_lookup = {ex["name"]: score for ex, score in weighted_exercises}
+            iso_candidates = [
+                (ex, score)
+                for ex, score in weighted_exercises
+                if "isometric" in ex.get("tags", []) and ex not in top_exercises
+            ]
+            if iso_candidates:
+                best_iso, _ = max(iso_candidates, key=lambda x: x[1])
+                worst_index = 0
+                worst_score = float("inf")
+                for idx, ex in enumerate(top_exercises):
+                    sc = score_lookup.get(ex.get("name"), 0)
+                    if sc < worst_score:
+                        worst_score = sc
+                        worst_index = idx
+                top_exercises[worst_index] = best_iso
 
     base_exercises = top_exercises
     # Final safety deduplication in case database contained repeats
