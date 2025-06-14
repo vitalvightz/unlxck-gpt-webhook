@@ -199,7 +199,8 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
             if drills:
                 loc_title = loc.title() if loc else "Unspecified"
                 type_title = itype.title() if itype else "Unspecified"
-                lines.append(f"- {loc_title} ({type_title}): {', '.join(drills)}")
+                lines.append(f"- {loc_title} ({type_title}):")
+                lines.extend([f"  • {d}" for d in drills])
     if not lines:
         return "\n⚠️ No rehab options for this phase."
 

@@ -10,7 +10,9 @@ INJURY_SYNONYM_MAP = {
         "out of socket", "popped out", "click out", "shift out", "unhinged",
         "grade 1", "grade 2", "grade 3", "hyperextend", "overstretched", "overextension",
         "stretched ligament", "torn ligament", "ruptured ligament", "blown ligament",
-        "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over"
+        "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over",
+        "acl", "acl tear", "acl injury", "acl surgery", "acl reconstruction",
+        "acl rehab"
     ],
 
     # Muscle/Tendon - every possible pull/tear description
