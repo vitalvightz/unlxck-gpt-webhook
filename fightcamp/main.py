@@ -132,7 +132,7 @@ async def generate_plan(data: dict):
 
     # Extract and normalize fields
     def normalize_list(field):
-        return [w.strip().lower() for w in field.split(",")] if field else []
+        return [w.strip().lower() for w in field.split(",") if w.strip()] if field else []
 
     full_name = get_value("Full name", fields)
     age = get_value("Age", fields)
@@ -186,8 +186,10 @@ async def generate_plan(data: dict):
         "grappler": "mma",
         "karate": "kickboxing"
     }
-    raw_tech_style = fighting_style_technical.strip().lower()
-    mapped_format = style_map.get(raw_tech_style, "mma")
+    # First style in the list determines fight format
+    tech_styles = normalize_list(fighting_style_technical)
+    primary_tech = tech_styles[0] if tech_styles else ""
+    mapped_format = style_map.get(primary_tech, "mma")
     tactical_styles = normalize_list(fighting_style_tactical)
     if stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:
         tactical_styles.append("hybrid")
@@ -217,7 +219,7 @@ async def generate_plan(data: dict):
         "days_available": len(training_days),
         "training_days": training_days,
         "injuries": normalize_list(injuries),
-        "style_technical": raw_tech_style,
+        "style_technical": tech_styles,
         "style_tactical": tactical_styles,
         "weaknesses": [
             tag
