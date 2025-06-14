@@ -219,3 +219,37 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
             lines.extend([f"- {n}" for n in INJURY_SUPPORT_NOTES[itype]])
 
     return "\n**Rehab Protocols**\n" + "\n".join(lines)
+
+
+def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
+    """Return drills covering GPP, SPP and TAPER for the location/type pair."""
+    phases = {"GPP": None, "SPP": None, "TAPER": None}
+
+    def apply_entry(entry: dict) -> None:
+        progress = entry.get("phase_progression", "")
+        phase_list = [p.strip().upper() for p in progress.split("→")]
+        if len(phase_list) < 2:
+            return
+        drills = entry.get("drills", [])
+        if len(drills) < 2:
+            return
+        if phase_list[0] in phases and phases[phase_list[0]] is None:
+            phases[phase_list[0]] = drills[0]
+        if phase_list[1] in phases and phases[phase_list[1]] is None:
+            phases[phase_list[1]] = drills[1]
+
+    for entry in REHAB_BANK:
+        if entry.get("location") == location and entry.get("type") == injury_type:
+            apply_entry(entry)
+            if all(phases.values()):
+                break
+    if not all(phases.values()):
+        for entry in REHAB_BANK:
+            if entry.get("location") == location and entry.get("type") == "unspecified":
+                apply_entry(entry)
+                if all(phases.values()):
+                    break
+
+    if all(phases.values()):
+        return [phases["GPP"], phases["SPP"], phases["TAPER"]]
+    return []
