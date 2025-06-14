@@ -125,7 +125,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
         itype, loc = parse_injury_phrase(phrase)
         if itype:
             parsed_types.append(itype)
-        if itype and loc:
+        if itype or loc:
             parsed_entries.append((itype, loc))
 
     seen_pairs = set()
@@ -154,9 +154,18 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
 
     for itype, loc in unique_entries:
         matches = [
-            entry for entry in REHAB_BANK
-            if entry.get("type") == itype
-            and entry.get("location") == loc
+            entry
+            for entry in REHAB_BANK
+            if (
+                entry.get("type") == itype
+                or entry.get("type") == "unspecified"
+                or itype is None
+            )
+            and (
+                entry.get("location") == loc
+                or entry.get("location") == "unspecified"
+                or loc is None
+            )
             and current_phase.upper() in _phases(entry)
         ]
         if matches:
