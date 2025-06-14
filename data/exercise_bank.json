@@ -1018,7 +1018,21 @@
     "equipment": "cable"
   },
   {
-    "name": "Bird-Dog",
+    "name": "Weighted Hanging Leg Raise",
+    "category": "core",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "core",
+    "type": "unilateral",
+    "tags": [
+      "core",
+      "rehab_friendly"
+    ],
+    {
+    "name": "Wall ISO Deadbug",
     "category": "core",
     "phases": [
       "GPP",
