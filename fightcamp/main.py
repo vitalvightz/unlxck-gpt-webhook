@@ -61,9 +61,10 @@ WEAKNESS_NORMALIZER = {
 }
 
 # Auth setup
-if os.getenv("GOOGLE_CREDS_B64"):
+b64_creds = os.getenv("GOOGLE_CREDS_B64")
+if b64_creds:
     with open("clientsecrettallyso.json", "w") as f:
-        decoded = base64.b64decode(os.getenv("GOOGLE_CREDS_B64"))
+        decoded = base64.b64decode(b64_creds)
         f.write(decoded.decode("utf-8"))
 SERVICE_ACCOUNT_FILE = 'clientsecrettallyso.json'
 SCOPES = ['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
@@ -139,6 +140,7 @@ async def handle_submission(request: Request):
     notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
     # Calculate weeks out from fight date
+    weeks_out: int | str
     if next_fight_date:
         try:
             fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")

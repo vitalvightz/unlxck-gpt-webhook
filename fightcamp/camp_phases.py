@@ -290,7 +290,7 @@ def calculate_phase_weeks(
 
     # 6. Apply post-conversion style rules when relevant
     for s in all_styles:
-        rules = STYLE_RULES.get(s)
+        rules = STYLE_RULES.get(s, {})
         if rules:
             _apply_style_rules(rules, camp_length, weeks)
 
