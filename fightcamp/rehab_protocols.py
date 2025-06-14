@@ -31,6 +31,19 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 # }
 REHAB_BANK = _load_json_strip_comments(DATA_DIR / "rehab_bank.json")
 
+
+def _split_notes_by_phase(notes: str) -> list[tuple[str, str]]:
+    """Return (phase, text) pairs if the notes use a → progression."""
+    if "→" not in notes:
+        return []
+    segments = [seg.strip() for seg in notes.split("→")]
+    results = []
+    for seg in segments:
+        if ":" in seg:
+            phase, desc = seg.split(":", 1)
+            results.append((phase.strip().upper(), desc.strip()))
+    return results
+
 INJURY_TYPES = [
     "sprain",
     "strain",
@@ -211,8 +224,22 @@ def generate_rehab_protocols(
             for m in matches:
                 for d in m.get("drills", []):
                     name = d.get("name")
-                    notes = d.get("notes")
-                    if name:
+                    notes = d.get("notes", "")
+                    if not name:
+                        continue
+
+                    parsed = _split_notes_by_phase(notes)
+                    if parsed:
+                        for phase_label, text in parsed:
+                            if phase_label == current_phase.upper():
+                                entry = name
+                                if text:
+                                    entry = f"{name} – {text}"
+                                if entry not in seen_drills:
+                                    drills.append(entry)
+                                    seen_drills.add(entry)
+                                break
+                    else:
                         entry = name
                         if notes:
                             entry = f"{name} – {notes}"
