@@ -317,6 +317,14 @@ async def handle_submission(request: Request):
     spp_mindset = build_mindset_prompt("SPP")
     taper_mindset = build_mindset_prompt("TAPER")
 
+    rehab_sections = ["## REHAB PROTOCOLS"]
+    if gpp_rehab_block:
+        rehab_sections += ["### GPP", gpp_rehab_block.strip(), ""]
+    if spp_rehab_block:
+        rehab_sections += ["### SPP", spp_rehab_block.strip(), ""]
+    if taper_rehab_block:
+        rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
+
     fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_num = 1
 
@@ -332,9 +340,6 @@ async def handle_submission(request: Request):
             "",
             "### Conditioning",
             gpp_cond_block,
-            "",
-            "### Rehab",
-            gpp_rehab_block,
             "",
         ]
         phase_num += 1
@@ -352,9 +357,6 @@ async def handle_submission(request: Request):
             "### Conditioning",
             spp_cond_block,
             "",
-            "### Rehab",
-            spp_rehab_block,
-            "",
         ]
         phase_num += 1
 
@@ -371,9 +373,6 @@ async def handle_submission(request: Request):
             "### Conditioning",
             taper_cond_block,
             "",
-            "### Rehab",
-            taper_rehab_block,
-            "",
         ]
 
     fight_plan_lines += [
@@ -382,6 +381,8 @@ async def handle_submission(request: Request):
         "",
         "## RECOVERY",
         recovery_block,
+        "",
+    ] + rehab_sections + [
         "",
         "## MINDSET OVERVIEW",
         f"Primary Block(s): {', '.join(training_context['mental_block']).title()}",
