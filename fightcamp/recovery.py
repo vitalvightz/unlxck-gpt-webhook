@@ -61,9 +61,15 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
             continue
 
         for drill in entry.get("drills", []):
-            drills.append(drill.get("name"))
-            if len(drills) >= 2:
-                return drills
+            name = drill.get("name")
+            notes = drill.get("notes")
+            if name:
+                entry_str = name
+                if notes:
+                    entry_str = f"{name} – {notes}"
+                drills.append(entry_str)
+                if len(drills) >= 2:
+                    return drills
 
     return drills
 
