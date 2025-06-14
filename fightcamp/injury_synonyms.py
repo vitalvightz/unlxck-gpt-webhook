@@ -146,17 +146,9 @@ INJURY_SYNONYM_MAP = {
         "finger hyperextend", "toe hyperextend", "joint hyperextend"
     ],
 
-    # Vague - every uncertain phrase
-    "unspecified": [
-        "weird", "weirdness", "off", "offness", "wrong", "wrongness",
-        "not right", "not normal", "not usual", "not typical", "not regular",
-        "funny", "funniness", "strange", "strangeness", "odd", "oddness",
-        "can't explain", "can't describe", "can't put finger on", "don't know",
-        "not sure", "unsure", "uncertain", "mystery", "mysterious",
-        "unknown", "unidentified", "undiagnosed", "unexplained", "unclear",
-        "vague", "vagueness", "ambiguous", "ambiguity", "confusing", "confused",
-        "puzzling", "puzzled", "perplexing", "perplexed", "baffling", "baffled"
-    ]
+    # Vague catch-all type has no specific synonyms. Any description that
+    # fails to match the above categories is treated as "unspecified".
+    "unspecified": []
 }
 
 LOCATION_MAP = {
