@@ -63,31 +63,30 @@ WEAKNESS_NORMALIZER = {
     "coordination/proprioception": ["coordination"],
 }
 
-# Auth setup
 try:
     b64_creds = os.getenv("GOOGLE_CREDS_B64")
-    if b64_creds:
-        with open("clientsecrettallyso.json", "w") as f:
-            decoded = base64.b64decode(b64_creds)
-            f.write(decoded.decode("utf-8"))
+    if not b64_creds:
+        raise ValueError("Base64 credentials not found in env")
+
+    with open("clientsecrettallyso.json", "w") as f:
+        decoded = base64.b64decode(b64_creds)
+        f.write(decoded.decode("utf-8"))
+
     SERVICE_ACCOUNT_FILE = "clientsecrettallyso.json"
     SCOPES = [
         "https://www.googleapis.com/auth/documents",
         "https://www.googleapis.com/auth/drive",
     ]
 
-    if service_account and build:
-        creds = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
-        )
-        docs_service = build("docs", "v1", credentials=creds)
-        drive_service = build("drive", "v3", credentials=creds)
-    else:
-        docs_service = drive_service = None
-        print("⚠️  Google libraries missing; docs export disabled.")
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    docs_service = build("docs", "v1", credentials=creds)
+    drive_service = build("drive", "v3", credentials=creds)
+
 except Exception as e:
     docs_service = drive_service = None
-    print("⚠️  Google credentials not found; docs export disabled.", e)
+    print("⚠️  Google credentials not found or invalid; docs export disabled.", e)
 
 def get_value(label, fields):
     for field in fields:
