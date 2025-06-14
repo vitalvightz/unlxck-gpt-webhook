@@ -1,99 +1,31 @@
 {
   "data": {
     "fields": [
-      {
-        "label": "Full name",
-        "value": "Jordan Testerson"
-      },
-      {
-        "label": "Age",
-        "value": "28"
-      },
-      {
-        "label": "Weight (kg)",
-        "value": "77"
-      },
-      {
-        "label": "Target Weight (kg)",
-        "value": "75"
-      },
-      {
-        "label": "Height (cm)",
-        "value": "180"
-      },
-      {
-        "label": "Fighting Style (Technical)",
-        "value": "mma"
-      },
-      {
-        "label": "Fighting Style (Tactical)",
-        "value": [
-          "pressure",
-          "wrestler"
-        ]
-      },
-      {
-        "label": "Stance",
-        "value": "southpaw"
-      },
-      {
-        "label": "Professional Status",
-        "value": "pro"
-      },
-      {
-        "label": "Current Record",
-        "value": "5-1"
-      },
-      {
-        "label": "When is your next fight?",
-        "value": "2024-09-01"
-      },
-      {
-        "label": "Rounds x Minutes",
-        "value": "3x5"
-      },
-      {
-        "label": "Weekly Training Frequency",
-        "value": "5"
-      },
-      {
-        "label": "Fatigue Level",
-        "value": "moderate"
-      },
-      {
-        "label": "Equipment Access",
-        "value": "barbell, kettlebell, pull-up bar"
-      },
-      {
-        "label": "Time Availability for Training",
-        "value": "Monday, Tuesday, Wednesday, Thursday, Friday"
-      },
-      {
-        "label": "Any injuries or areas you need to work around?",
-        "value": "left knee pain"
-      },
-      {
-        "label": "What are your key performance goals?",
-        "value": "Power & Explosiveness, Conditioning / Endurance"
-      },
-      {
-        "label": "Where do you feel weakest right now?",
-        "value": "Grip Strength, Hip Mobility"
-      },
-      {
-        "label": "Do you prefer certain training styles?",
-        "value": "explosive circuits"
-      },
-      {
-        "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "confidence"
-      },
-      {
-        "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "Loved heavy bag intervals"
-      }
+      { "label": "Full name", "value": "Dre “Switchblade” Carter" },
+      { "label": "Age", "value": "28" },
+      { "label": "Weight (kg)", "value": "77" },
+      { "label": "Target Weight (kg)", "value": "70" },
+      { "label": "Height (cm)", "value": "178" },
+      { "label": "Fighting Style (Technical)", "value": "MMA, Wrestler, Grappler" },
+      { "label": "Fighting Style (Tactical)", "value": ["Pressure Fighter", "Clinch Fighter"] },
+      { "label": "Stance", "value": "Southpaw" },
+      { "label": "Professional Status", "value": "Amateur" },
+      { "label": "Current Record", "value": "9-3" },
+      { "label": "When is your next fight?", "value": "2025-07-30" },
+      { "label": "Rounds x Minutes", "value": "3x5" },
+      { "label": "Weekly Training Frequency", "value": "4" },
+      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Equipment Access", "value": "Barbell, Dumbbells, Bands, Med Balls, Sled" },
+      { "label": "Time Availability for Training", "value": "Monday, Tuesday, Wednesday, Friday" },
+      { "label": "Any injuries or areas you need to work around?", "value": "My knee, I’m coming back from ACL. Need to rebuild stability, confidence and lateral movement." },
+      { "label": "What are your key performance goals?", "value": "Power & Explosiveness, Mobility, Grappling, Injury Prevention, Mental Resilience" },
+      { "label": "Where do you feel weakest right now?", "value": "Knees, Posterior Chain, Lateral Movement, CNS Fatigue, Coordination / Proprioception, Core Stability" },
+      { "label": "Do you prefer certain training styles?", "value": "Explosive, rehab-oriented, compound lifts" },
+      { "label": "Do you struggle with any mental blockers or mindset challenges?", "value": "Injury fear, pressure" },
+      { "label": "Are there any parts of your previous plan you hated or loved?", "value": "Hated how unbalanced the rehab was (too general). Loved band-resisted sled work and contrast sets." }
     ]
-  },
+  }
+},
   "#": [
     "# What are your key performance goals?",
     "# tick all that apply",
