@@ -621,7 +621,12 @@ def generate_conditioning_block(flags):
 
             timing = d.get("timing") or d.get("duration") or "—"
             load = d.get("load") or d.get("intensity") or "—"
-            purpose = d.get("purpose") or d.get("notes") or "—"
+            purpose = (
+                d.get("purpose")
+                or d.get("notes")
+                or d.get("description")
+                or "—"
+            )
             rest = d.get("rest", "—")
 
             output_lines.append(f"- **Drill:** {name}")
