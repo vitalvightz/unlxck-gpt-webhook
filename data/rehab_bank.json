@@ -10360,6 +10360,7 @@
         "notes": "TAPER: Reduce DOMS between sessions"
       }
     ]
+  },
   {
     "location": "upper_back",
     "type": "unspecified",
@@ -10509,6 +10510,7 @@
         "notes": "GPP: Neuromuscular control → TAPER: Maintenance mode"
       }
     ]
+  },
   // 16. Wrist Proprioception
   {
     "location": "wrist",
@@ -10762,6 +10764,7 @@
         "notes": "TAPER: Pre-fight energy flow"
       }
     ]
+  },
   // 1. Fundamental Mobility
   {
     "location": "wrist",
