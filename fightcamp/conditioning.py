@@ -200,11 +200,15 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
 
-    # Handle multiple technical styles
-    if isinstance(technical, list):
-        technical = technical[0].lower()
+    # Normalize technical style(s)
+    if isinstance(technical, str):
+        tech_styles = [t.strip().lower() for t in technical.split(',') if t.strip()]
+    elif isinstance(technical, list):
+        tech_styles = [t.strip().lower() for t in technical if t]
     else:
-        technical = technical.lower()
+        tech_styles = []
+    # First style in list determines fight format
+    primary_tech = tech_styles[0] if tech_styles else ""
 
     # preserve tactical style names for style drill filtering
     if isinstance(style, list):
@@ -213,9 +217,9 @@ def generate_conditioning_block(flags):
         style_names = [style.lower().replace(" ", "_")]
     else:
         style_names = []
-    tech_style_tag = technical.lower().replace(" ", "_")
+    tech_style_tags = [t.replace(" ", "_") for t in tech_styles]
     if not style_names:
-        style_names = [tech_style_tag]
+        style_names = tech_style_tags
 
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
     style_tags = [t for s in style_tags for t in style_tag_map.get(s, [])]
@@ -235,7 +239,7 @@ def generate_conditioning_block(flags):
         "grappling": "grappler",
         "karate": "kickboxing",
     }
-    fight_format = style_map.get(technical, "mma")
+    fight_format = style_map.get(primary_tech, "mma")
     energy_weights = format_weights.get(fight_format, {})
 
     format_tag_map = {
@@ -316,7 +320,7 @@ def generate_conditioning_block(flags):
         system_drills[system].append((drill, total_score))
 
     # ---- Style specific conditioning ----
-    target_style_tags = set(style_names + [tech_style_tag])
+    target_style_tags = set(style_names + tech_style_tags)
     for drill in style_conditioning_bank:
         tags = [t.lower() for t in drill.get("tags", [])]
         if is_banned_drill(drill.get("name", ""), tags, fight_format):

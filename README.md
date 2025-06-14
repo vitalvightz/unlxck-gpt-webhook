@@ -14,6 +14,8 @@ Run the application with `python -m fightcamp.main` from the project root.
 
 Recent updates removed the OpenAI dependency and now build plans entirely from the module outputs. Short-camp handling and style-specific rules still adjust the phase weeks correctly via the helper `_apply_style_rules()`.
 
+The **Fighting Style (Technical)** field accepts a comma-separated list when an athlete has more than one technical base (e.g. `boxing, wrestling`). The style that appears first in this list sets the fight format while conditioning drills consider every style provided.
+
 ### Professional Status
 
 Setting the **Professional Status** field to `pro` or `professional` adjusts the camp ratios when the camp is four weeks or longer. The shift from GPP to SPP depends on fatigue, weight cutting and mindset:
