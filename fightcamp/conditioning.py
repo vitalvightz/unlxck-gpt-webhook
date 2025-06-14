@@ -619,6 +619,8 @@ def generate_conditioning_block(flags):
         for d in drills:
             name = d.get("name", "Unnamed Drill")
             equipment = d.get("equipment", [])
+            if isinstance(equipment, str):
+                equipment = [equipment]
             extra_eq = [e for e in equipment if e.lower() not in name.lower()]
             if extra_eq:
                 name = f"{name} ({', '.join(extra_eq)})"
@@ -644,10 +646,5 @@ def generate_conditioning_block(flags):
             output_lines.append(f"  • Purpose: {purpose}")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
 
-
-    if fatigue == "high":
-        output_lines.append("\n⚠️ High fatigue detected – conditioning volume reduced.")
-    elif fatigue == "moderate":
-        output_lines.append("\n⚠️ Moderate fatigue – monitor recovery and hydration closely.")
 
     return "\n".join(output_lines), selected_drill_names

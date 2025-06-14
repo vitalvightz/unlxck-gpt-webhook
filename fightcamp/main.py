@@ -27,7 +27,7 @@ from .strength import generate_strength_block
 from .conditioning import generate_conditioning_block
 from .recovery import generate_recovery_block
 from .nutrition import generate_nutrition_block
-from .rehab_protocols import generate_rehab_protocols
+from .rehab_protocols import generate_rehab_protocols, generate_support_notes
 
 GOAL_NORMALIZER = {
     "Power & Explosiveness": "explosive",
@@ -298,27 +298,31 @@ async def generate_plan(data: dict):
     gpp_rehab_block = ""
     spp_rehab_block = ""
     taper_rehab_block = ""
+    seen_rehab_drills: set = set()
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
-        gpp_rehab_block = generate_rehab_protocols(
+        gpp_rehab_block, seen_rehab_drills = generate_rehab_protocols(
             injury_string=injuries,
             exercise_data=exercise_bank,
             current_phase="GPP",
+            seen_drills=seen_rehab_drills,
         )
         if gpp_rehab_block.strip().startswith("**Red Flag Detected**"):
             spp_rehab_block = gpp_rehab_block
             taper_rehab_block = gpp_rehab_block
     if not gpp_rehab_block.strip().startswith("**Red Flag Detected**"):
         if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
-            spp_rehab_block = generate_rehab_protocols(
+            spp_rehab_block, seen_rehab_drills = generate_rehab_protocols(
                 injury_string=injuries,
                 exercise_data=exercise_bank,
                 current_phase="SPP",
+                seen_drills=seen_rehab_drills,
             )
         if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
-            taper_rehab_block = generate_rehab_protocols(
+            taper_rehab_block, seen_rehab_drills = generate_rehab_protocols(
                 injury_string=injuries,
                 exercise_data=exercise_bank,
                 current_phase="TAPER",
+                seen_drills=seen_rehab_drills,
             )
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
@@ -350,6 +354,9 @@ async def generate_plan(data: dict):
         rehab_sections += ["### SPP", spp_rehab_block.strip(), ""]
     if taper_rehab_block:
         rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
+    support_notes = generate_support_notes(injuries)
+    if support_notes:
+        rehab_sections += ["", support_notes]
 
     fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_num = 1
