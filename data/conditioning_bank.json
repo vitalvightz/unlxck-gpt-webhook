@@ -1626,5 +1626,186 @@
     "intensity": "RPE 2",
     "tags": ["aerobic", "mobility", "recovery", "parasympathetic"],
     "notes": "Post-training flush only"
+  },
+
+  {
+    "name": "Low Box Jump (Fast Reset)",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 60s rest",
+    "tags": ["plyometric", "low_cns"],
+    "notes": "BOX HEIGHT: 12–18”. Focus on snap-down and fast reset."
+  },
+  {
+    "name": "Pogo Jump Series (Mini Bounce)",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "3x10 reps, 30s rest",
+    "tags": ["plyometric", "elastic"],
+    "notes": "Keep ground contact <150ms. Prioritize rhythm and posture."
+  },
+  {
+    "name": "Band-Resisted Vertical Jump",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "5x3 reps, 90s rest",
+    "tags": ["plyometric", "hip_dominant"],
+    "notes": "Use light resistance bands. Emphasize speed over height."
+  },
+  {
+    "name": "Snapdown to Quick Hop",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x4 reps, 1min rest",
+    "tags": ["plyometric", "reactive"],
+    "notes": "Sharp hinge into immediate mini-hop. Avoid max effort."
+  },
+  {
+    "name": "Mini Hurdle Quick Steps",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "aerobic",
+    "duration": "4x10s, 30s rest",
+    "tags": ["plyometric", "coordination"],
+    "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts."
+  },
+  {
+    "name": "Med Ball Drop Catch to Jump",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x3 reps, 90s rest",
+    "tags": ["plyometric", "upper_body"],
+    "notes": "Partner drops ball → athlete catches + jumps. Use 2–4kg."
+  },
+  {
+    "name": "Mini Box Depth Drop",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x3 reps, 1min rest",
+    "tags": ["plyometric", "eccentric"],
+    "notes": "Height = 6–12”. Cue soft land + quick reset. No rebound."
+  },
+  {
+    "name": "Band-Assisted Jump Reset",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x4 reps, 75s rest",
+    "tags": ["plyometric", "reactive"],
+    "notes": "Attach band overhead. Reduces load to maintain sharpness."
+  },
+  {
+    "name": "Wall Reactive Jump (Cue Start)",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "5x3 reps, 1min rest",
+    "tags": ["plyometric", "reactive"],
+    "notes": "Start facing wall, coach gives go-cue. Jump straight up."
+  },
+  {
+    "name": "Quick Lateral Hop Tap",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x6/side, 30s rest",
+    "tags": ["plyometric", "lateral"],
+    "notes": "Short-distance side hops. Reset after each rep."
+  },
+  {
+    "name": "Tuck Jump (Submax)",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "3x4 reps, 90s rest",
+    "tags": ["plyometric", "core"],
+    "notes": "Cue: sharp tuck, soft land. No max height intention."
+  },
+  {
+    "name": "Band-Resisted Split Jump",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x3/side, 1min rest",
+    "tags": ["plyometric", "hip_dominant"],
+    "notes": "Use light band tension. Stay upright with fast exchange."
+  },
+  {
+    "name": "Single-Leg Med Ball Toss Jump",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "3x4/side, 90s rest",
+    "tags": ["plyometric", "core"],
+    "notes": "Toss ball forward during jump. 2kg ball max."
+  },
+  {
+    "name": "Ankle Snap Bounce",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x10s, 30s rest",
+    "tags": ["plyometric", "ankle"],
+    "notes": "Bounce on midfoot. No knee bend. High frequency bounce."
+  },
+  {
+    "name": "Split Stance Hop Switch",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x4 reps, 60s rest",
+    "tags": ["plyometric", "hip_dominant"],
+    "notes": "Switch stance in air. Light contact, fast rhythm."
+  },
+  {
+    "name": "Reactive Med Ball Chest Pass",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 45s rest",
+    "tags": ["plyometric", "upper_body"],
+    "notes": "Partner gives unpredictable toss cue. Ball: 3–5kg. Emphasize snap."
+  },
+  {
+    "name": "Plyo Push-Up on Knees",
+    "equipment": [],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x4 reps, 60s rest",
+    "tags": ["plyometric", "upper_body"],
+    "notes": "Push explosively, hands leave floor. Submax only. Full rest between sets."
+  },
+  {
+    "name": "Band-Resisted Straight Punch Release",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "3x5/side, 30s rest",
+    "tags": ["plyometric", "reactive"],
+    "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed."
+  },
+  {
+    "name": "Overhead Med Ball Slam (Snappy)",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "6x3 reps, 1min rest",
+    "tags": ["plyometric", "core"],
+    "notes": "Use 2–4kg ball. Minimize effort, maximize intent and speed."
+  },
+  {
+    "name": "Seated Med Ball Chest Pop",
+    "equipment": ["Med Balls / Bands"],
+    "phases": ["TAPER"],
+    "system": "ATP-PCr",
+    "duration": "4x5 reps, 45s rest",
+    "tags": ["plyometric", "upper_body"],
+    "notes": "Seated on floor, rapid chest-level throws. Partner return or wall."
   }
 ]
