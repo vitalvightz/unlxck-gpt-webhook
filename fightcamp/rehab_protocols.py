@@ -180,7 +180,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
                             entry = f"{name} – {notes}"
                         if entry not in drills:
                             drills.append(entry)
-            drills = drills[:2]
+            drills = drills[:4]
             if drills:
                 lines.append(f"- {loc.title()} ({itype.title()}): {', '.join(drills)}")
     if not lines:
