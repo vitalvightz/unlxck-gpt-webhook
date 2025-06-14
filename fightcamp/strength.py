@@ -262,7 +262,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if phase not in ex["phases"]:
             continue
 
-        phase_tags = list(phase_tag_boost.get(phase, {}).keys())
+        phase_dict = phase_tag_boost.get(phase, {})
+        phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
         method = ex.get("method", "").lower()
 
         score = score_exercise(
@@ -328,8 +329,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     top_pairs = weighted_exercises[:target_exercises]
     top_exercises = [ex for ex, _ in top_pairs]
     # Remove any duplicate exercise names that slipped through scoring
-    seen_exercises = set()
-    top_exercises = [ex for ex in top_exercises if not (ex["name"] in seen_exercises or seen_exercises.add(ex["name"]))]
+    seen_exercises: set[str] = set()
+    unique_top: list[dict] = []
+    for ex in top_exercises:
+        name = ex.get("name")
+        if name not in seen_exercises:
+            seen_exercises.add(name)
+            unique_top.append(ex)
+    top_exercises = unique_top
 
     # --------- UNIVERSAL STRENGTH INSERTION ---------
     if phase == "GPP":
@@ -367,8 +374,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for st in style_list:
         mandatory.extend(STYLE_MANDATORY.get(st, [])[:2])
     # remove duplicates while preserving order
-    seen = set()
-    mandatory = [m for m in mandatory if not (m in seen or seen.add(m))]
+    seen: set[str] = set()
+    unique_mandatory: list[str] = []
+    for m in mandatory:
+        if m not in seen:
+            seen.add(m)
+            unique_mandatory.append(m)
+    mandatory = unique_mandatory
     for name in mandatory:
         ex_obj = next((e for e in STYLE_EXERCISES if e.get("name") == name), None)
         if not ex_obj:
@@ -402,8 +414,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     base_exercises = top_exercises
     # Final safety deduplication in case database contained repeats
-    seen_exercises = set()
-    base_exercises = [ex for ex in base_exercises if not (ex["name"] in seen_exercises or seen_exercises.add(ex["name"]))]
+    seen_names: set[str] = set()
+    unique_base: list[dict] = []
+    for ex in base_exercises:
+        name = ex.get("name")
+        if name not in seen_names:
+            seen_names.add(name)
+            unique_base.append(ex)
+    base_exercises = unique_base
     used_days = training_days[:num_strength_sessions]
 
     phase_loads = {
