@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import random
 
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 
@@ -175,6 +176,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
                     name = d.get("name")
                     if name and name not in drills:
                         drills.append(name)
+            random.shuffle(drills)
             drills = drills[:2]
             if drills:
                 lines.append(f"- {loc.title()} ({itype.title()}): {', '.join(drills)}")
