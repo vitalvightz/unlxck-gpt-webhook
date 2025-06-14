@@ -58,7 +58,7 @@
   {
     "phase": "GPP",
     "name": "Neck Harness Isometrics",
-    "tags": ["neck", "cns_freshness", "resilience", "isometric"],
+    "tags": ["neck", "cns_freshness", "resilience"],
     "prescription": "3x30s in each direction",
     "notes": "Improves cervical strength and reduces concussion risk."
   },
