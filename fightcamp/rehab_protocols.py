@@ -195,7 +195,7 @@ def generate_rehab_protocols(*, injury_string: str, exercise_data: list, current
                             entry = f"{name} – {notes}"
                         if entry not in drills:
                             drills.append(entry)
-            drills = drills[:4]
+            drills = drills[:3]
             if drills:
                 loc_title = loc.title() if loc else "Unspecified"
                 type_title = itype.title() if itype else "Unspecified"
