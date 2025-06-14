@@ -1,28 +1,159 @@
 {
   "data": {
     "fields": [
-      {"label": "Full name", "value": "Jordan Testerson"},
-      {"label": "Age", "value": "28"},
-      {"label": "Weight (kg)", "value": "77"},
-      {"label": "Target Weight (kg)", "value": "75"},
-      {"label": "Height (cm)", "value": "180"},
-      {"label": "Fighting Style (Technical)", "value": "mma"},
-      {"label": "Fighting Style (Tactical)", "value": ["pressure", "wrestler"]},
-      {"label": "Stance", "value": "southpaw"},
-      {"label": "Professional Status", "value": "pro"},
-      {"label": "Current Record", "value": "5-1"},
-      {"label": "When is your next fight?", "value": "2024-09-01"},
-      {"label": "Rounds x Minutes", "value": "3x5"},
-      {"label": "Weekly Training Frequency", "value": "5"},
-      {"label": "Fatigue Level", "value": "moderate"},
-      {"label": "Equipment Access", "value": "barbell, kettlebell, pull-up bar"},
-      {"label": "Time Availability for Training", "value": "Monday, Tuesday, Wednesday, Thursday, Friday"},
-      {"label": "Any injuries or areas you need to work around?", "value": "left knee pain"},
-      {"label": "What are your key performance goals?", "value": "Power & Explosiveness, Conditioning / Endurance"},
-      {"label": "Where do you feel weakest right now?", "value": "Grip Strength, Hip Mobility"},
-      {"label": "Do you prefer certain training styles?", "value": "explosive circuits"},
-      {"label": "Do you struggle with any mental blockers or mindset challenges?", "value": "confidence"},
-      {"label": "Are there any parts of your previous plan you hated or loved?", "value": "Loved heavy bag intervals"}
+      {
+        "label": "Full name",
+        "value": "Jordan Testerson"
+      },
+      {
+        "label": "Age",
+        "value": "28"
+      },
+      {
+        "label": "Weight (kg)",
+        "value": "77"
+      },
+      {
+        "label": "Target Weight (kg)",
+        "value": "75"
+      },
+      {
+        "label": "Height (cm)",
+        "value": "180"
+      },
+      {
+        "label": "Fighting Style (Technical)",
+        "value": "mma"
+      },
+      {
+        "label": "Fighting Style (Tactical)",
+        "value": [
+          "pressure",
+          "wrestler"
+        ]
+      },
+      {
+        "label": "Stance",
+        "value": "southpaw"
+      },
+      {
+        "label": "Professional Status",
+        "value": "pro"
+      },
+      {
+        "label": "Current Record",
+        "value": "5-1"
+      },
+      {
+        "label": "When is your next fight?",
+        "value": "2024-09-01"
+      },
+      {
+        "label": "Rounds x Minutes",
+        "value": "3x5"
+      },
+      {
+        "label": "Weekly Training Frequency",
+        "value": "5"
+      },
+      {
+        "label": "Fatigue Level",
+        "value": "moderate"
+      },
+      {
+        "label": "Equipment Access",
+        "value": "barbell, kettlebell, pull-up bar"
+      },
+      {
+        "label": "Time Availability for Training",
+        "value": "Monday, Tuesday, Wednesday, Thursday, Friday"
+      },
+      {
+        "label": "Any injuries or areas you need to work around?",
+        "value": "left knee pain"
+      },
+      {
+        "label": "What are your key performance goals?",
+        "value": "Power & Explosiveness, Conditioning / Endurance"
+      },
+      {
+        "label": "Where do you feel weakest right now?",
+        "value": "Grip Strength, Hip Mobility"
+      },
+      {
+        "label": "Do you prefer certain training styles?",
+        "value": "explosive circuits"
+      },
+      {
+        "label": "Do you struggle with any mental blockers or mindset challenges?",
+        "value": "confidence"
+      },
+      {
+        "label": "Are there any parts of your previous plan you hated or loved?",
+        "value": "Loved heavy bag intervals"
+      }
     ]
-  }
+  },
+  "#": [
+    "# What are your key performance goals?",
+    "# tick all that apply",
+    "#   • Maximal Strength",
+    "#   • Power & Explosiveness",
+    "#   • Conditioning / Endurance",
+    "#   • Mobility",
+    "#   • Speed",
+    "#   • Grappling",
+    "#   • Striking",
+    "#   • Injury Prevention",
+    "#   • Mental Resilience",
+    "#   • Skill Refinement",
+    "#   • Coordination / Proprioception",
+    "",
+    "# Equipment Access",
+    "# Tick all that apply",
+    "#   • Barbell",
+    "#   • Dumbbells",
+    "#   • Trap Bar",
+    "#   • Kettlebells",
+    "#   • Med Balls / Bands",
+    "#   • Tire",
+    "#   • Sled",
+    "#   • Sledgehammer",
+    "#   • Sandbag",
+    "#   • Battle Ropes",
+    "",
+    "# Fatigue Level (select one)",
+    "#   • Low",
+    "#   • Moderate",
+    "#   • High",
+    "",
+    "# Training Phase (select one or more)",
+    "#   • Off-Season",
+    "#   • Mid-Camp",
+    "#   • Fight Week",
+    "#   • In-Rehab",
+    "#   • Post-Fight Recovery",
+    "",
+    "# Fighting Style (Tactical)",
+    "# tick all that apply",
+    "#   • Brawler",
+    "#   • Pressure Fighter",
+    "#   • Clinch Fighter",
+    "#   • Distance Striker",
+    "#   • Counter Striker",
+    "#   • Submission Hunter",
+    "#   • Kicker",
+    "#   • Scrambler",
+    "",
+    "# Fighting Style (Technical)",
+    "# tick all that apply",
+    "#   • MMA",
+    "#   • Boxer",
+    "#   • Kickboxer",
+    "#   • Muay Thai",
+    "#   • BJJ",
+    "#   • Karate",
+    "#   • Wrestler",
+    "#   • Grappler"
+  ]
 }
