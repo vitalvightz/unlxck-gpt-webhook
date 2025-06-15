@@ -143,11 +143,21 @@ def expand_tags(input_list, tag_map):
         expanded.extend(tags)
     return [t.lower() for t in expanded]
 
-def is_banned_drill(name: str, tags: list[str], fight_format: str, details: str = "") -> bool:
+def is_banned_drill(
+    name: str,
+    tags: list[str],
+    fight_format: str,
+    details: str = "",
+    tactical_styles: list[str] | None = None,
+    technical_styles: list[str] | None = None,
+) -> bool:
     """Return True if the drill should be removed for the given sport."""
     name = name.lower()
     tags = [t.lower() for t in tags]
     details = details.lower()
+
+    tactical_styles = [s.lower().replace(" ", "_") for s in tactical_styles or []]
+    technical_styles = [s.lower().replace(" ", "_") for s in technical_styles or []]
 
     grappling_terms = {
         "wrestling",
@@ -168,10 +178,21 @@ def is_banned_drill(name: str, tags: list[str], fight_format: str, details: str 
             if term in name or term in tags or term in details:
                 return True
 
+    kick_terms = ["kick", "knee", "clinch knee strike"]
+
     if fight_format == "boxing":
-        for term in ["kick", "knee", "clinch knee strike"]:
+        for term in kick_terms:
             if term in name or term in tags or term in details:
                 return True
+
+    if fight_format not in {"kickboxing", "muay_thai"}:
+        if (
+            "kicker" not in tactical_styles
+            and not any(s in {"kickboxing", "muay_thai"} for s in technical_styles)
+        ):
+            for term in kick_terms:
+                if term in name or term in tags or term in details:
+                    return True
 
     return False
 
@@ -287,7 +308,14 @@ def generate_conditioning_block(flags):
                 drill.get("equipment_note", ""),
             ]
         )
-        if is_banned_drill(drill.get("name", ""), tags, fight_format, details):
+        if is_banned_drill(
+            drill.get("name", ""),
+            tags,
+            fight_format,
+            details,
+            style_names,
+            tech_style_tags,
+        ):
             continue
 
         # Suppress high CNS drills in TAPER unless criteria met
@@ -344,7 +372,14 @@ def generate_conditioning_block(flags):
                 drill.get("equipment_note", ""),
             ]
         )
-        if is_banned_drill(drill.get("name", ""), tags, fight_format, details):
+        if is_banned_drill(
+            drill.get("name", ""),
+            tags,
+            fight_format,
+            details,
+            style_names,
+            tech_style_tags,
+        ):
             continue
         if not target_style_tags.intersection(tags):
             continue
