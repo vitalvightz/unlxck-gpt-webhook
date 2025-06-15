@@ -890,15 +890,6 @@
     "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post"
   },
   {
-    "name": "Cold Exposure Recovery (Between Rounds)",
-    "equipment": [],
-    "phases": ["TAPER"],
-    "system": "cognitive",
-    "duration": "4x1min ice bath intervals",
-    "tags": ["recovery", "cns_freshness"],
-    "notes": "TEMPERATURE: 50-59°F. CONTRAINDICATED with circulatory issues"
-  },
-  {
     "name": "Water Jug Carries (No Sled)",
     "equipment": [],
     "phases": ["GPP"],
