@@ -1,46 +1,46 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Layla “Vortex” Navarro" },
-      { "label": "Age", "value": "21" },
-      { "label": "Weight (kg)", "value": "60" },
-      { "label": "Target Weight (kg)", "value": "57" },
-      { "label": "Height (cm)", "value": "166" },
-      { "label": "Fighting Style (Technical)", "value": ["Boxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["Counter Striker", "Distance Striker"] },
-      { "label": "Stance", "value": "Southpaw" },
-      { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "4-2" },
-      { "label": "When is your next fight?", "value": "2025-09-10" },
-      { "label": "Rounds x Minutes", "value": "3x3" },
-      { "label": "Weekly Training Frequency", "value": "3" },
-      { "label": "Fatigue Level", "value": "Moderate" },
-      { "label": "Training Phase", "value": "In-Rehab" },
-      { "label": "Equipment Access", "value": ["Med Balls / Bands"] },
-      { "label": "Training Availability", "value": ["Monday", "Wednesday", "Friday"] },
+      { "label": "Full name", "value": "Malik “Iron Pulse” Okoro" },
+      { "label": "Age", "value": "29" },
+      { "label": "Weight (kg)", "value": "81" },
+      { "label": "Target Weight (kg)", "value": "77" },
+      { "label": "Height (cm)", "value": "180" },
+      { "label": "Fighting Style (Technical)", "value": ["MMA", "Wrestler"] },
+      { "label": "Fighting Style (Tactical)", "value": ["Scrambler", "Pressure Fighter"] },
+      { "label": "Stance", "value": "Orthodox" },
+      { "label": "Professional Status", "value": "Pro" },
+      { "label": "Current Record", "value": "7-1" },
+      { "label": "When is your next fight?", "value": "2025-08-03" },
+      { "label": "Rounds x Minutes", "value": "3x5" },
+      { "label": "Weekly Training Frequency", "value": "6" },
+      { "label": "Fatigue Level", "value": "High" },
+      { "label": "Training Phase", "value": "Mid-Camp" },
+      { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Sled", "Sandbag", "Bands", "Pull-Up Bar"] },
+      { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "I’ve been dealing with a recurring strain in my left shoulder, and my wrist tends to flare up after intense pad work or bag sessions."
+        "value": "Mild elbow tendonitis flares up after grappling. Hip flexors feel tight on back squats and sprawls."
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Mobility", "Conditioning / Endurance", "Injury Prevention", "Mental Resilience"]
+        "value": ["Power & Explosiveness", "Grappling", "Injury Prevention", "Conditioning / Endurance"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["Shoulders", "Grip Strength", "CNS Fatigue", "Core Stability", "Lateral Movement"]
+        "value": ["Grip Strength", "Core Stability", "CNS Fatigue"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "I prefer slow, controlled rehab-style circuits, isolation-based strength work, and mobility sessions that incorporate breath control."
+        "value": "High-intensity circuits, live drilling, sled pushes, and low-rep strength blocks."
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "Yes. I often feel like I don’t belong at this level — like I’m constantly playing catch-up to other fighters. It's a quiet kind of imposter syndrome I haven't fully shaken."
+        "value": "I struggle to control my aggression. I push too hard and burn out if I feel frustrated during sparring or training."
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "I really liked the mobility warm-ups and tempo-based strength sets — they helped me feel more connected and stable. What I hated was being pushed into sparring before I felt physically ready — that completely wrecked my confidence."
+        "value": "I hated long steady-state cardio. I loved heavy sled pushes and reactive drills that simulate scrambles or transitions."
       }
     ]
   }
