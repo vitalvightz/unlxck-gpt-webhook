@@ -5,14 +5,14 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Single-Leg Balance on Foam Pad",
+        "name": "Banded Ankle Alphabet Complex",
         "phase": "GPP",
-        "notes": "Rebuild proprioception"
+        "notes": "3x A-Z forward/backward with 1kg ankle weight"
       },
       {
-        "name": "Banded Ankle Circles",
+        "name": "Single-Leg BOSU Balance w/ Perturbations",
         "phase": "GPP",
-        "notes": "Restore multi-directional control"
+        "notes": "Partner nudges shoulders randomly, progress to eyes closed"
       }
     ]
   },
@@ -22,14 +22,26 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Single-Leg Balance on Foam Pad",
+        "name": "Lateral Bound-to-Stabilization (12\" box)",
         "phase": "SPP",
-        "notes": "Progress to dynamic balance under fatigue"
+        "notes": "Land single-leg, hold 3s, add 10% BW vest"
       },
       {
-        "name": "Banded Ankle Circles",
+        "name": "Resisted Ankle CARs (Monster Band)",
         "phase": "SPP",
-        "notes": "Add resistance for joint reactivity"
+        "notes": "Controlled rotations on sand surface"
+      }
+    ]
+  },
+  {
+    "location": "ankle",
+    "type": "sprain",
+    "phase_progression": "TAPER",
+    "drills": [
+      {
+        "name": "Reactive Ankle Stiffening Drills",
+        "phase": "TAPER",
+        "notes": "Random direction taps with fight stance load"
       }
     ]
   },
@@ -39,14 +51,14 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Towel Scrunches (Toe Curls)",
+        "name": "Eccentric Toe Drags (5s release)",
         "phase": "GPP",
-        "notes": "Activate toe flexors and arch"
+        "notes": "Towel resistance with slow return"
       },
       {
-        "name": "Bottom-Up Kettlebell Hold (Toe Loaded)",
+        "name": "Barefoot Toe Splay Holds",
         "phase": "GPP",
-        "notes": "Restore control"
+        "notes": "30s iso-holds with toe spread"
       }
     ]
   },
@@ -56,14 +68,14 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Towel Scrunches (Toe Curls)",
+        "name": "Weighted Toe Flexion ISO",
         "phase": "SPP",
-        "notes": "Add towel weight or reps"
+        "notes": "25% 1RM plate resistance for 10s holds"
       },
       {
-        "name": "Bottom-Up Kettlebell Hold (Toe Loaded)",
+        "name": "Plyo-Toe Rebound Drills",
         "phase": "SPP",
-        "notes": "Reinforce toe stability in loaded posture"
+        "notes": "Mini-trampoline jumps focusing on toe spring"
       }
     ]
   },
@@ -73,65 +85,14 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Double-Leg Pogo Jumps",
+        "name": "Single-Leg Pogo Jumps (Anti-Rotation)",
         "phase": "SPP",
-        "notes": "Rebuild spring and rebound"
+        "notes": "With band resisting medial/lateral drift"
       },
       {
-        "name": "Toe Off Isometric Presses",
+        "name": "Toe-Off Depth Drops",
         "phase": "SPP",
-        "notes": "Load toe under static extension"
-      }
-    ]
-  },
-  {
-    "location": "toe",
-    "type": "sprain",
-    "phase_progression": "TAPER",
-    "drills": [
-      {
-        "name": "Double-Leg Pogo Jumps",
-        "phase": "TAPER",
-        "notes": "Maintain SSC sharpness with low volume"
-      },
-      {
-        "name": "Toe Off Isometric Presses",
-        "phase": "TAPER",
-        "notes": "Use short bursts pre-fight"
-      }
-    ]
-  },
-  {
-    "location": "foot",
-    "type": "pain",
-    "phase_progression": "GPP",
-    "drills": [
-      {
-        "name": "Short Foot Doming",
-        "phase": "GPP",
-        "notes": "Rebuild arch activation"
-      },
-      {
-        "name": "Toe Spreads with Band",
-        "phase": "GPP",
-        "notes": "Mobilize transverse arch"
-      }
-    ]
-  },
-  {
-    "location": "foot",
-    "type": "pain",
-    "phase_progression": "SPP",
-    "drills": [
-      {
-        "name": "Short Foot Doming",
-        "phase": "SPP",
-        "notes": "Progress to standing or loaded stances"
-      },
-      {
-        "name": "Toe Spreads with Band",
-        "phase": "SPP",
-        "notes": "Add tempo or band tension"
+        "notes": "6\" box → explosive toe push to stabilization"
       }
     ]
   },
@@ -141,48 +102,14 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Knee-Locked Calf Stretch",
+        "name": "Isometric Foot Doming w/ Compression",
         "phase": "GPP",
-        "notes": "Restore length to fascia line"
+        "notes": "10s holds under bodyweight compression"
       },
       {
-        "name": "Massage Gun Sweep \u2013 Arch to Heel",
+        "name": "Eccentric Heel Walks",
         "phase": "GPP",
-        "notes": "Break up tension points"
-      }
-    ]
-  },
-  {
-    "location": "foot",
-    "type": "tendonitis",
-    "phase_progression": "SPP",
-    "drills": [
-      {
-        "name": "Knee-Locked Calf Stretch",
-        "phase": "SPP",
-        "notes": "Maintain under load"
-      },
-      {
-        "name": "Massage Gun Sweep \u2013 Arch to Heel",
-        "phase": "SPP",
-        "notes": "Post-drill flush"
-      }
-    ]
-  },
-  {
-    "location": "foot",
-    "type": "tendonitis",
-    "phase_progression": "TAPER",
-    "drills": [
-      {
-        "name": "Knee-Locked Calf Stretch",
-        "phase": "TAPER",
-        "notes": "Use short holds post-session"
-      },
-      {
-        "name": "Massage Gun Sweep \u2013 Arch to Heel",
-        "phase": "TAPER",
-        "notes": "Morning priming tool"
+        "notes": "3s lowering phase, toes elevated"
       }
     ]
   },
@@ -192,26 +119,18 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Heel Taps on Soft Mat",
+        "name": "Texture Exposure Walks",
         "phase": "GPP",
-        "notes": "Rebuild sensory tolerance"
+        "notes": "Barefoot on varied surfaces (grass/gravel)"
       },
       {
-        "name": "Heel Taps on Soft Mat",
+        "name": "Pulsed Heel Taps",
         "phase": "GPP",
-        "notes": "Light progression to walking load"
-      },
-      {
-        "name": "Foam Pad Heel Rolls",
-        "phase": "GPP",
-        "notes": "Improve pressure dispersion"
-      },
-      {
-        "name": "Foam Pad Heel Rolls",
-        "phase": "GPP",
-        "notes": "Advance to barefoot load steps"
+        "notes": "20% BW loading with 2s pulses"
       }
     ]
+  }
+]
   },
   {
     "location": "heel",
