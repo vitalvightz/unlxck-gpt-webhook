@@ -131,31 +131,26 @@
     ]
   }
 ]
-  },
+  [
   {
     "location": "heel",
     "type": "tendonitis",
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Toe-Elevated Calf Raises",
+        "name": "Eccentric Toe-Elevated Calf Raises (3-1-1 Tempo)",
         "phase": "SPP",
-        "notes": "Strengthen fascia in stretch"
+        "notes": "3s lowering phase at 120% bodyweight"
       },
       {
-        "name": "Toe-Elevated Calf Raises",
+        "name": "Banded Toe Flexion Holds",
         "phase": "SPP",
-        "notes": "Add slow eccentric tempo"
+        "notes": "30s end-range isometrics with monster band"
       },
       {
-        "name": "Toe Pulls with Band",
+        "name": "Plyometric Heel Drop Rebound",
         "phase": "SPP",
-        "notes": "Train fascia end-range"
-      },
-      {
-        "name": "Toe Pulls with Band",
-        "phase": "SPP",
-        "notes": "Build foot tolerance during strikes"
+        "notes": "6\" drop → explosive toe push-off"
       }
     ]
   },
@@ -165,24 +160,14 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Wall Calf Stretch (Straight Leg)",
+        "name": "Contrast Therapy Sequence",
         "phase": "TAPER",
-        "notes": "Drain posterior tightness"
+        "notes": "1min ice → 2min warm water x 5 rounds"
       },
       {
-        "name": "Wall Calf Stretch (Straight Leg)",
+        "name": "Pulsed Dorsiflexion Pumps",
         "phase": "TAPER",
-        "notes": "Restore range pre-fight"
-      },
-      {
-        "name": "Elevated Heel Pumps",
-        "phase": "TAPER",
-        "notes": "Promote circulation"
-      },
-      {
-        "name": "Elevated Heel Pumps",
-        "phase": "TAPER",
-        "notes": "Use between drills or post-session"
+        "notes": "Against resistance band, 30 reps"
       }
     ]
   },
@@ -192,14 +177,14 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Single-Leg RDL with Reach",
+        "name": "Single-Leg RDL with Reactive Catch",
         "phase": "SPP",
-        "notes": "Build control under movement"
+        "notes": "Partner throws 2-4kg med ball during movement"
       },
       {
-        "name": "Barefoot Lateral Hops",
+        "name": "Barefoot Hexagon Hops",
         "phase": "SPP",
-        "notes": "Test quick contact control"
+        "notes": "Random direction changes on foam pad"
       }
     ]
   },
@@ -209,14 +194,14 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Single-Leg RDL with Reach",
+        "name": "Single-Leg RDL with Visual Focus",
         "phase": "TAPER",
-        "notes": "Keep pattern with low load"
+        "notes": "Fixate on moving target (30% intensity)"
       },
       {
-        "name": "Barefoot Lateral Hops",
+        "name": "Barefoot Clock Taps",
         "phase": "TAPER",
-        "notes": "Reduce distance but keep speed"
+        "notes": "Light precision touches (12 positions)"
       }
     ]
   },
@@ -226,58 +211,14 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Toe Spreading with Resistance Band",
+        "name": "Dynamic Toe Spreading with Band Walk",
         "phase": "GPP",
-        "notes": "Loosen foot structures"
+        "notes": "Lateral steps while maintaining toe splay"
       },
       {
-        "name": "Lacrosse Ball Roll \u2013 Arch to Base",
+        "name": "Cold Steel Roll (Frozen Water Bottle)",
         "phase": "GPP",
-        "notes": "Break up adhesions"
-      }
-    ]
-  },
-  {
-    "location": "foot",
-    "type": "tightness",
-    "phase_progression": "TAPER",
-    "drills": [
-      {
-        "name": "Toe Spreading with Resistance Band",
-        "phase": "TAPER",
-        "notes": "Maintain mobility for balance"
-      },
-      {
-        "name": "Lacrosse Ball Roll \u2013 Arch to Base",
-        "phase": "TAPER",
-        "notes": "Use daily pre-warmup"
-      }
-    ]
-  },
-  {
-    "location": "foot",
-    "type": "soreness",
-    "phase_progression": "TAPER",
-    "drills": [
-      {
-        "name": "Foot Massage with Lacrosse Ball",
-        "phase": "TAPER",
-        "notes": "Decrease residual tension"
-      },
-      {
-        "name": "Foot Massage with Lacrosse Ball",
-        "phase": "TAPER",
-        "notes": "Use nightly or post-conditioning"
-      },
-      {
-        "name": "Pedal Flush \u2013 Reverse Bike Low Intensity",
-        "phase": "TAPER",
-        "notes": "Light recovery flush"
-      },
-      {
-        "name": "Pedal Flush \u2013 Reverse Bike Low Intensity",
-        "phase": "TAPER",
-        "notes": "Maintain oxygen to tissue"
+        "notes": "Combined cryotherapy + myofascial release"
       }
     ]
   },
@@ -287,18 +228,35 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Banded Ankle Distraction",
+        "name": "Weighted Ankle Distraction (20% BW)",
         "phase": "GPP",
-        "notes": "Create space in front joint"
+        "notes": "3x30s hangs from pull-up bar"
       },
       {
-        "name": "Loaded Knee-Over-Toe Lunge",
+        "name": "Deficit Knee-Over-Toe Lunge",
         "phase": "GPP",
-        "notes": "Control dorsiflexion"
+        "notes": "4\" elevation under forefoot"
       }
     ]
   },
   {
+    "location": "ankle",
+    "type": "impingement",
+    "phase_progression": "SPP",
+    "drills": [
+      {
+        "name": "Band-Resisted Ankle CARs",
+        "phase": "SPP",
+        "notes": "Controlled rotations under tension"
+      },
+      {
+        "name": "Plyo Box Depth Landing",
+        "phase": "SPP",
+        "notes": "Focus on silent ankle absorption"
+      }
+    ]
+  }
+]
     "location": "ankle",
     "type": "impingement",
     "phase_progression": "SPP",
