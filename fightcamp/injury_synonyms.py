@@ -453,7 +453,12 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     """
     text = text.lower()
     for key, canonical in LOCATION_MAP.items():
-        if key in text or fuzz.partial_ratio(key, text) >= threshold:
+        # Prefer exact word matches to avoid false positives like "shin" -> "chin"
+        if re.search(r"\b" + re.escape(key) + r"\b", text):
+            return canonical
+        # Only use fuzzy matching for longer phrases where accidental overlaps
+        # are less likely
+        if len(key) > 4 and fuzz.partial_ratio(key, text) >= threshold:
             return canonical
     return None
 
