@@ -1,46 +1,46 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Malik “Iron Pulse” Okoro" },
-      { "label": "Age", "value": "29" },
-      { "label": "Weight (kg)", "value": "81" },
-      { "label": "Target Weight (kg)", "value": "77" },
-      { "label": "Height (cm)", "value": "180" },
-      { "label": "Fighting Style (Technical)", "value": ["MMA", "Wrestler"] },
-      { "label": "Fighting Style (Tactical)", "value": ["Scrambler", "Pressure Fighter"] },
+      { "label": "Full name", "value": "Titan" },
+      { "label": "Age", "value": "22" },
+      { "label": "Weight (kg)", "value": "83" },
+      { "label": "Target Weight (kg)", "value": "80" },
+      { "label": "Height (cm)", "value": "183" },
+      { "label": "Fighting Style (Technical)", "value": ["Boxer"] },
+      { "label": "Fighting Style (Tactical)", "value": ["Brawler", "Pressure Fighter"] },
       { "label": "Stance", "value": "Orthodox" },
-      { "label": "Professional Status", "value": "Pro" },
-      { "label": "Current Record", "value": "7-1" },
-      { "label": "When is your next fight?", "value": "2025-08-03" },
-      { "label": "Rounds x Minutes", "value": "3x5" },
+      { "label": "Professional Status", "value": "Amateur" },
+      { "label": "Current Record", "value": "15-6" },
+      { "label": "When is your next fight?", "value": "2025-07-23" },
+      { "label": "Rounds x Minutes", "value": "3x3" },
       { "label": "Weekly Training Frequency", "value": "6" },
-      { "label": "Fatigue Level", "value": "High" },
-      { "label": "Training Phase", "value": "Mid-Camp" },
-      { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Sled", "Sandbag", "Bands", "Pull-Up Bar"] },
-      { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] },
+      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Training Phase", "value": "Fight Week" },
+      { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Kettlebells", "Med Balls / Bands", "Sandbag", "Battle Ropes"] },
+      { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "Mild elbow tendonitis flares up after grappling. Hip flexors feel tight on back squats and sprawls."
+        "value": "Ankles and wrist"
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Power & Explosiveness", "Grappling", "Injury Prevention", "Conditioning / Endurance"]
+        "value": ["Power & Explosiveness", "Conditioning / Endurance", "Mobility", "Speed", "Striking", "Mental Resilience", "Skill Refinement"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["Grip Strength", "Core Stability", "CNS Fatigue"]
+        "value": ["CNS Fatigue"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "High-intensity circuits, live drilling, sled pushes, and low-rep strength blocks."
+        "value": "No"
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "I struggle to control my aggression. I push too hard and burn out if I feel frustrated during sparring or training."
+        "value": "No"
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "I hated long steady-state cardio. I loved heavy sled pushes and reactive drills that simulate scrambles or transitions."
+        "value": "I love training hard"
       }
     ]
   }
