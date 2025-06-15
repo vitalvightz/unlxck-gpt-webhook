@@ -1800,3 +1800,28 @@
     "notes": "Seated on floor, rapid chest-level throws. Partner return or wall."
   }
 ]
+{
+  "exercises": [
+    {
+      "name": "Partner Manual Neck Resistance",
+      "equipment": ["Partner"],
+      "phases": ["SPP", "Taper"],
+      "system": "alactic",
+      "modality": "durability",
+      "duration": "4x30s (forward/side/back)",
+      "intensity": "moderate",
+      "tags": ["neck", "durability", "striking_defense"],
+      "notes": "Partner applies progressive resistance in all directions to simulate fight-level impacts"
+    },
+    {
+      "name": "Neck Harness Flexion/Extension",
+      "equipment": ["Neck Harness"],
+      "phases": ["GPP", "SPP"],
+      "system": "hypertrophy",
+      "modality": "durability",
+      "duration": "4x15 reps (flexion/extension)",
+      "intensity": "moderate",
+      "tags": ["neck", "durability", "prehab"],
+      "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight"
+    }
+
