@@ -29,8 +29,8 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
         itype, loc = parse_injury_phrase(desc)
         if itype:
             injury_types.add(itype)
-        if loc:
-            locations.add(loc)
+            if loc:
+                locations.add(loc)
 
     drills = []
 

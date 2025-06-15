@@ -167,10 +167,10 @@ def generate_rehab_protocols(
     parsed_types = []
     for phrase in injury_phrases:
         itype, loc = parse_injury_phrase(phrase)
-        if itype:
-            parsed_types.append(itype)
-        if itype or loc:
-            parsed_entries.append((itype, loc))
+        if not itype:
+            continue
+        parsed_types.append(itype)
+        parsed_entries.append((itype, loc))
 
     # Prioritize specific injuries over unspecified duplicates
     parsed_entries.sort(key=lambda x: (x[0] is None or x[0] == "unspecified"))
