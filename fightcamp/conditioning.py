@@ -88,6 +88,7 @@ weakness_tag_map = {
     "balance": ["balance", "stability", "unilateral"],
     "explosiveness": ["explosive", "rate_of_force", "plyometric"],
     "shoulders": ["shoulders", "upper_body"],
+    "shoulder": ["shoulders", "upper_body"],
     "hip mobility": ["hip_dominant", "mobility"],
     "grip strength": ["grip", "pull"],
     "posterior chain": ["posterior_chain", "hip_dominant"],
