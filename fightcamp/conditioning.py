@@ -556,7 +556,7 @@ def generate_conditioning_block(flags):
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
 
-    # --------- STYLE TAPER CONDITIONING INSERTION ---------
+    # --------- STYLE TAPER DRILL INSERTION ---------
     if phase == "TAPER":
         try:
             with open(DATA_DIR / "style_taper_conditioning.json", "r") as f:
@@ -577,6 +577,22 @@ def generate_conditioning_block(flags):
             drill = random.choice(taper_candidates)
             if drill.get("name") not in existing_cond_names:
                 system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
+                final_drills.append((system, [drill]))
+                selected_drill_names.append(drill.get("name"))
+
+        # --------- TAPER PLYOMETRIC GUARANTEE ---------
+        taper_plyos = [
+            d for d in conditioning_bank
+            if "TAPER" in [p.upper() for p in d.get("phases", [])]
+            and "plyometric" in {t.lower() for t in d.get("tags", [])}
+        ]
+        if taper_plyos:
+            existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
+            drill = random.choice(taper_plyos)
+            if drill.get("name") not in existing_cond_names:
+                system = SYSTEM_ALIASES.get(
+                    drill.get("system", "").lower(), drill.get("system", "misc")
+                )
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
 
