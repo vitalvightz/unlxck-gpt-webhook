@@ -3073,7 +3073,7 @@
       "phases": ["TAPER"],
       "movement": "eccentric_proprioception",
       "type": "rotational",
-      "tags": ["mma", "counter_striker", "distance_striker"],
+      "tags": ["mma", "boxing", "counter_striker", "distance_striker"],
       "equipment": "Elastic band (waist) + strobe light",
       "equipment_notes": "Band provides lateral resistance",
       "description": "Pivot 45° against band tension when strobe flashes, then counter strike. Combines visual disruption with load for reactive pivoting."
