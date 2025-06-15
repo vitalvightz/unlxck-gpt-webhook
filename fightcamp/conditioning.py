@@ -176,7 +176,8 @@ def select_coordination_drill(flags, existing_names: set[str]):
     """Return a coordination drill matching the current phase if needed."""
     goals = [g.lower() for g in flags.get("key_goals", [])]
     weaknesses = [w.lower() for w in flags.get("weaknesses", [])]
-    if "coordination" not in goals and "coordination" not in weaknesses:
+    coord_terms = {"coordination", "coordination/proprioception", "coordination / proprioception"}
+    if not any(g in coord_terms for g in goals) and not any(w in coord_terms for w in weaknesses):
         return None
 
     phase = flags.get("phase", "GPP").upper()
