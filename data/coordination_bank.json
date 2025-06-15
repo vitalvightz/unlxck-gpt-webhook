@@ -3042,9 +3042,7 @@
       "equipment": "Wall Space, Partner",
       "equipment_notes": "Partner provides light resistance.",
       "description": "Walk feet up wall while maintaining rear naked choke grips. Trains submission retention during positional scrambling."
-    }
-  {
-  "drills": [
+    },
     {
       "name": "Blindfolded Grapevine Entry",
       "category": "footwork",
@@ -3109,7 +3107,7 @@
       "tags": ["mma", "pressure_fighter", "scrambler"],
       "equipment": "Force plates (or bathroom scales)",
       "equipment_notes": "Audio feedback for weight distribution",
-      "description": "Step over 12" hurdle while maintaining 60/40 weight distribution (audio cue if imbalance). Teaches conscious weight shift for level changes."
+      "description": "Step over 12\" hurdle while maintaining 60/40 weight distribution (audio cue if imbalance). Teaches conscious weight shift for level changes."
     },
     {
       "name": "Disrupted Single-Leg Balance",
@@ -3396,7 +3394,7 @@
       "phases": ["SPP"],
       "movement": "visual_reaction",
       "type": "linear",
-      "tags": ["boxing", "counter_striker", brawler"],
+      "tags": ["boxing", "counter_striker", "brawler"],
       "equipment": "Randomly swinging tennis balls (3x, head height)",
       "description": "Slip swinging balls, then explode forward with 3-punch combo. Conditions aggression under visual distraction."
     },
@@ -3406,7 +3404,7 @@
       "phases": ["TAPER"],
       "movement": "kinesthetic_awareness",
       "type": "linear",
-      "tags": ["boxing", "clinch_fighter", pressure_fighter"],
+      "tags": ["boxing", "clinch_fighter", "pressure_fighter"],
       "equipment": "Wall pads (or heavy bag against wall)",
       "description": "Throw rapid combinations while chest lightly brushes heavy bag. Forces compact punches in tight spaces."
     },
@@ -3480,4 +3478,5 @@
       "equipment": "Ring ropes (or simulated corner)",
       "description": "Cut off partner in a corner while reacting to thrown tennis balls. Conditions aggression under sensory overload."
     }
-  
+  ]
+}
