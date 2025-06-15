@@ -16,14 +16,14 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Fix NumPy Binary Error
+      - name: Clean Reinstall of All Dependencies (C-extension safe)
         run: |
           pip uninstall -y numpy
           pip install --no-cache-dir numpy
-          pip install --force-reinstall --no-cache-dir -U spacy
 
-      - name: Install dependencies
-        run: |
+          pip uninstall -y spacy pandas scipy scikit-learn matplotlib nltk
+          pip install --force-reinstall --no-cache-dir -U spacy pandas scipy scikit-learn matplotlib nltk
+
           pip install -r requirements.txt
           pip check
 
