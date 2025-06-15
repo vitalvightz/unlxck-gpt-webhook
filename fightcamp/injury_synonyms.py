@@ -459,18 +459,23 @@ def remove_negated_phrases(text: str) -> str:
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     """Return the canonical injury type for the given text using spaCy."""
     doc = nlp(text.lower())
-    matches = INJURY_MATCHER(doc)
-    if matches:
-        match_id = matches[0][0]
+
+    # phrase matcher first - skip spans that contain negated tokens
+    for match_id, start, end in INJURY_MATCHER(doc):
+        span = doc[start:end]
+        if any(tok._.negex for tok in span):
+            continue
         return INJURY_MATCH_ID_TO_CANONICAL.get(match_id)
 
-    # fallback to fuzzy matching if no phrase match is found
-    text_lower = doc.text
+    # fallback to fuzzy matching on non-negated tokens only
+    cleaned = " ".join(tok.text for tok in doc if not tok._.negex).strip()
+    if not cleaned:
+        return None
     for canonical, synonyms in INJURY_SYNONYM_MAP.items():
-        if fuzz.partial_ratio(canonical, text_lower) >= threshold:
+        if fuzz.partial_ratio(canonical, cleaned) >= threshold:
             return canonical
         for phrase in synonyms:
-            if fuzz.partial_ratio(phrase, text_lower) >= threshold:
+            if fuzz.partial_ratio(phrase, cleaned) >= threshold:
                 return canonical
     return None
 
@@ -478,23 +483,28 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
 def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     """Return the canonical body part for the provided text using spaCy."""
     doc = nlp(text.lower())
-    matches = LOCATION_MATCHER(doc)
-    if matches:
-        match_id = matches[0][0]
+
+    # phrase matcher, skip spans containing negated tokens
+    for match_id, start, end in LOCATION_MATCHER(doc):
+        span = doc[start:end]
+        if any(tok._.negex for tok in span):
+            continue
         return LOC_MATCH_ID_TO_CANONICAL.get(match_id)
 
-    text_lower = doc.text
+    cleaned = " ".join(tok.text for tok in doc if not tok._.negex).strip()
+    if not cleaned:
+        return None
     for key, canonical in LOCATION_MAP.items():
-        if len(key) > 4 and fuzz.partial_ratio(key, text_lower) >= threshold:
+        if len(key) > 4 and fuzz.partial_ratio(key, cleaned) >= threshold:
             return canonical
     return None
 
 
 def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     """Extract canonical injury type and location from an injury phrase."""
-    cleaned = remove_negated_phrases(phrase)
-    injury_type = canonicalize_injury_type(cleaned)
-    location = canonicalize_location(cleaned)
+    doc_text = phrase.lower()
+    injury_type = canonicalize_injury_type(doc_text)
+    location = canonicalize_location(doc_text)
     return injury_type, location
 
 
