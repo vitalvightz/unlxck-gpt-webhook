@@ -100,7 +100,7 @@ The `hybrid` style tag refers to stance-switching ability rather than mixing mul
 
 **Mindset module** (`mindset_module.py`)
 
-Keyword counts determine the top mental blocks. The two highest scoring blocks feed into the phase mindset cues.
+Keyword counts determine the top mental blocks using fuzzy matching. If no clear keyword hits are found, the module falls back to a semantic similarity check via spaCy. The two highest scoring blocks feed into the phase mindset cues.
 
 **Training context** (`training_context.py`)
 

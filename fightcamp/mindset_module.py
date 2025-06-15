@@ -1,4 +1,8 @@
 from rapidfuzz import fuzz
+import spacy
+
+# load large English model once
+nlp = spacy.load("en_core_web_lg")
 
 mindset_bank = {
     "GPP": {
@@ -104,18 +108,36 @@ mental_blocks = {
         "freeze", "retreat"
     ],
     "fear of takedowns": [
-        "takedown", "shot", "wrestle", "throw", "slam", "grapple", 
-        "ground", "panic", "position", "helpless", "submit", "dread", 
-        "control", "smother", "claustro", "mat", "return", "trauma", 
-        "slam", "anxiety", "suplex", "terror", "spinal", "neck", 
-        "shoulder", "reinjur", "knee", "pop", "stack", "guard", 
-        "pass", "pound", "fence", "cage", "pace", "scramble", 
+        "takedown", "shot", "wrestle", "throw", "slam", "grapple",
+        "ground", "panic", "position", "helpless", "submit", "dread",
+        "control", "smother", "claustro", "mat", "return", "trauma",
+        "slam", "anxiety", "suplex", "terror", "spinal", "neck",
+        "shoulder", "reinjur", "knee", "pop", "stack", "guard",
+        "pass", "pound", "fence", "cage", "pace", "scramble",
         "turtle", "clinch", "sprawl"
     ]
 }
 
+
+def semantic_match_block(text: str, threshold: float = 0.78) -> str:
+    """Use spaCy embeddings to match unknown input to nearest mental block category."""
+    if not text.strip():
+        return "generic"
+
+    doc_input = nlp(text.strip().lower())
+    best_block = "generic"
+    best_score = 0.0
+
+    for block in mental_blocks.keys():
+        doc_block = nlp(block)
+        similarity = doc_input.similarity(doc_block)
+        if similarity > best_score:
+            best_block = block
+            best_score = similarity
+    return best_block if best_score >= threshold else "generic"
+
 def classify_mental_block(text: str, top_n: int = 2, threshold: int = 85) -> list:
-    """Classify the mental block using fuzzy matching and return top N likely matches."""
+    """Classify the mental block using fuzzy matching and fallback to semantic similarity."""
     if not text or not isinstance(text, str):
         return ["generic"]
 
@@ -133,12 +155,14 @@ def classify_mental_block(text: str, top_n: int = 2, threshold: int = 85) -> lis
         if match_count:
             scores[block] = match_count
 
-    if not scores:
-        return ["generic"]
+    if scores:
+        sorted_blocks = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        top_blocks = [block for block, _ in sorted_blocks[:top_n]]
+        return top_blocks
 
-    sorted_blocks = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-    top_blocks = [block for block, _ in sorted_blocks[:top_n]]
-    return top_blocks
+    # Fallback: semantic similarity
+    fallback_block = semantic_match_block(text)
+    return [fallback_block]
 
 def get_mindset_by_phase(phase: str, flags: dict) -> str:
     """Get a brief mindset strategy for top blocks in this phase."""
