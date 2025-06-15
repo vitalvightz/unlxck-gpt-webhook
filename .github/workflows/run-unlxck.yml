@@ -19,5 +19,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Fix NumPy Binary Error
+        run: |
+          pip uninstall -y numpy
+          pip install --no-cache-dir numpy
+          pip install --force-reinstall --no-cache-dir -U spacy
+          pip check
+
       - name: Run fightcamp
         run: python -m fightcamp.main
