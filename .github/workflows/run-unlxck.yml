@@ -16,15 +16,15 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Clean Reinstall of All Dependencies (C-extension safe)
+      - name: Full Fix for NumPy Binary Mismatch (spaCy only)
         run: |
-          pip uninstall -y numpy
+          pip uninstall -y numpy spacy
           pip install --no-cache-dir numpy
+          pip install --force-reinstall --no-cache-dir -U spacy
 
-          pip uninstall -y spacy pandas scipy scikit-learn matplotlib nltk
-          pip install --force-reinstall --no-cache-dir -U spacy pandas scipy scikit-learn matplotlib nltk
-
-          pip install -r requirements.txt
+      - name: Install remaining dependencies
+        run: |
+          pip install --no-cache-dir -r requirements.txt
           pip check
 
       - name: Run fightcamp
