@@ -110,10 +110,11 @@ def score_exercise(
 
     return round(score, 4)
 
-def is_banned_exercise(name: str, tags: list[str], fight_format: str) -> bool:
+def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: str = "") -> bool:
     """Return True if the exercise should be removed for the given sport."""
     name = name.lower()
     tags = [t.lower() for t in tags]
+    details = details.lower()
 
     grappling_terms = {
         "wrestling",
@@ -129,12 +130,12 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str) -> bool:
 
     if fight_format in {"boxing", "kickboxing"}:
         for term in grappling_terms:
-            if term in name or term in tags:
+            if term in name or term in tags or term in details:
                 return True
 
     if fight_format == "boxing":
         for term in ["kick", "knee", "clinch knee strike"]:
-            if term in name or term in tags:
+            if term in name or term in tags or term in details:
                 return True
 
     return False
@@ -251,7 +252,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
-        if is_banned_exercise(ex.get("name", ""), tags, fight_format):
+        details = " ".join(
+            [
+                ex.get("notes", ""),
+                ex.get("method", ""),
+                ex.get("movement", ""),
+            ]
+        )
+        if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
         ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
         if phase == "TAPER":
@@ -309,7 +317,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])
-            if is_banned_exercise(ex.get("name", ""), tags, fight_format):
+            details = " ".join(
+                [
+                    ex.get("notes", ""),
+                    ex.get("method", ""),
+                    ex.get("movement", ""),
+                ]
+            )
+            if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
             if ex.get("name") in prev_exercises and not (
                 phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
