@@ -416,7 +416,7 @@ from rapidfuzz import fuzz
 import spacy
 from spacy.matcher import PhraseMatcher
 from negspacy.negation import Negex
-from spacy.tokens import Token  # ✅ needed to register extensions
+from spacy.tokens import Token, Span  # ✅ needed to register extensions
 
 # load the large english model once
 try:
@@ -450,11 +450,28 @@ for _key, _canonical in LOCATION_MAP.items():
     LOCATION_MATCHER.add(_key, [doc])
     LOC_MATCH_ID_TO_CANONICAL[match_id] = _canonical
 
-def remove_negated_phrases(text: str) -> str:
-    """Strip words marked as negated by Negex from the text."""
+def remove_negated_spans(text: str) -> str:
+    """Remove injury/location phrases that are negated in context."""
     doc = nlp(text)
-    tokens = [tok.text for tok in doc if not tok._.negex]
-    return " ".join(tokens).strip()
+    clean_chunks = []
+
+    # Run phrase matcher on known body parts
+    for match_id, start, end in LOCATION_MATCHER(doc):
+        span = doc[start:end]
+        # Mark span as entity so Negex can evaluate it
+        span = Span(doc, span.start, span.end, label="BODY_PART")
+        if not span.has_extension("negex"):
+            Span.set_extension("negex", default=False, force=True)
+        doc.ents += (span,)
+
+    # Run negex over entities
+    for ent in doc.ents:
+        if ent.label_ == "BODY_PART":
+            if ent._.negex:
+                continue  # skip negated spans
+            clean_chunks.append(ent.text)
+
+    return " ".join(clean_chunks).strip()
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     """Return the canonical injury type for the given text using spaCy."""
@@ -492,7 +509,7 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
 
 def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     """Extract canonical injury type and location from an injury phrase."""
-    cleaned = remove_negated_phrases(phrase)
+    cleaned = remove_negated_spans(phrase)
     injury_type = canonicalize_injury_type(cleaned)
     location = canonicalize_location(cleaned)
     return injury_type, location
