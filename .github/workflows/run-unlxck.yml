@@ -25,6 +25,7 @@ jobs:
       - name: Install other dependencies
         run: |
           pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir git+https://github.com/jenojp/negspacy
           pip check
 
       - name: Download spaCy model
