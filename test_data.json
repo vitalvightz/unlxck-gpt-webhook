@@ -1,29 +1,47 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Kai “Lightning” Moreno" },
-      { "label": "Age", "value": "25" },
-      { "label": "Weight (kg)", "value": "72" },
-      { "label": "Target Weight (kg)", "value": "66" },
-      { "label": "Height (cm)", "value": "175" },
-      { "label": "Fighting Style (Technical)", "value": ["Muay Thai", "Kickboxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["Kicker", "Counter Striker"] },
-      { "label": "Stance", "value": "Orthodox" },
-      { "label": "Professional Status", "value": "Pro" },
-      { "label": "Current Record", "value": "12-2" },
-      { "label": "When is your next fight?", "value": "2025-08-15" },
-      { "label": "Rounds x Minutes", "value": "5x3" },
-      { "label": "Weekly Training Frequency", "value": "5" },
-      { "label": "Fatigue Level", "value": "High" },
-      { "label": "Training Phase", "value": "Mid-Camp" },
-      { "label": "Equipment Access", "value": ["Kettlebells", "Med Balls / Bands", "Sled", "Sandbag"] },
-      { "label": "Training Availability", "value": ["Monday", "Tuesday", "Thursday", "Saturday", "Sunday"] },
-      { "label": "Any injuries or areas you need to work around?", "value": "Right hip tightness, bruised left shin" },
-      { "label": "What are your key performance goals?", "value": ["Power & Explosiveness", "Speed", "Striking", "Injury Prevention"] },
-      { "label": "Where do you feel weakest right now?", "value": ["Core Stability", "Rotation", "Shoulders"] },
-      { "label": "Do you prefer certain training styles?", "value": "Explosive circuits, bodyweight strength, short rest intervals" },
-      { "label": "Do you struggle with any mental blockers or mindset challenges?", "value": "Confidence" },
-      { "label": "Are there any parts of your previous plan you hated or loved?", "value": "Loved EMOM circuits and rotational med ball throws. Hated long aerobic work." }
+      { "label": "Full name", "value": "Layla “Vortex” Navarro" },
+      { "label": "Age", "value": "21" },
+      { "label": "Weight (kg)", "value": "60" },
+      { "label": "Target Weight (kg)", "value": "57" },
+      { "label": "Height (cm)", "value": "166" },
+      { "label": "Fighting Style (Technical)", "value": ["Boxer"] },
+      { "label": "Fighting Style (Tactical)", "value": ["Counter Striker", "Distance Striker"] },
+      { "label": "Stance", "value": "Southpaw" },
+      { "label": "Professional Status", "value": "Amateur" },
+      { "label": "Current Record", "value": "4-2" },
+      { "label": "When is your next fight?", "value": "2025-09-10" },
+      { "label": "Rounds x Minutes", "value": "3x3" },
+      { "label": "Weekly Training Frequency", "value": "3" },
+      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Training Phase", "value": "In-Rehab" },
+      { "label": "Equipment Access", "value": ["Med Balls / Bands"] },
+      { "label": "Training Availability", "value": ["Monday", "Wednesday", "Friday"] },
+      {
+        "label": "Any injuries or areas you need to work around?",
+        "value": "I’ve been dealing with a recurring strain in my left shoulder, and my wrist tends to flare up after intense pad work or bag sessions."
+      },
+      {
+        "label": "What are your key performance goals?",
+        "value": ["Mobility", "Conditioning / Endurance", "Injury Prevention", "Mental Resilience"]
+      },
+      {
+        "label": "Where do you feel weakest right now?",
+        "value": ["Shoulders", "Grip Strength", "CNS Fatigue", "Core Stability", "Lateral Movement"]
+      },
+      {
+        "label": "Do you prefer certain training styles?",
+        "value": "I prefer slow, controlled rehab-style circuits, isolation-based strength work, and mobility sessions that incorporate breath control."
+      },
+      {
+        "label": "Do you struggle with any mental blockers or mindset challenges?",
+        "value": "Yes. I often feel like I don’t belong at this level — like I’m constantly playing catch-up to other fighters. It's a quiet kind of imposter syndrome I haven't fully shaken."
+      },
+      {
+        "label": "Are there any parts of your previous plan you hated or loved?",
+        "value": "I really liked the mobility warm-ups and tempo-based strength sets — they helped me feel more connected and stable. What I hated was being pushed into sparring before I felt physically ready — that completely wrecked my confidence."
+      }
     ]
   }
 }
