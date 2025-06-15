@@ -416,6 +416,7 @@ from rapidfuzz import fuzz
 import spacy
 from spacy.matcher import PhraseMatcher
 from negspacy.negation import Negex
+from spacy.tokens import Token  # ✅ needed to register extensions
 
 # load the large english model once
 try:
@@ -423,12 +424,14 @@ try:
 except Exception:  # pragma: no cover - model might not be available in tests
     nlp = spacy.blank("en")
 
+# register the .negex extension (avoid AttributeError)
+Token.set_extension("negex", default=False, force=True)
+
 # add Negex for negation detection
 try:
     nlp.add_pipe("negex", last=True)
 except Exception:  # pragma: no cover - Negex might not be registered
     nlp.add_pipe(Negex(nlp), last=True)
-
 # Build phrase matchers for injury and location keywords
 INJURY_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
 INJURY_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
