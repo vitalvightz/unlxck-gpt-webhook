@@ -3043,5 +3043,441 @@
       "equipment_notes": "Partner provides light resistance.",
       "description": "Walk feet up wall while maintaining rear naked choke grips. Trains submission retention during positional scrambling."
     }
-  ]
-}
+  {
+  "drills": [
+    {
+      "name": "Blindfolded Grapevine Entry",
+      "category": "footwork",
+      "phases": ["TAPER"],
+      "movement": "tactile_proprioception",
+      "type": "cross-lateral",
+      "tags": ["mma", "clinch_fighter", "scrambler"],
+      "equipment": "Blindfold + tactile markers (floor)",
+      "equipment_notes": "Raised rubber dots mark path",
+      "description": "Blindfolded athlete steps on markers in grapevine pattern (criss-cross), then shoots for double-leg on partner's touch cue. Sharpens foot placement awareness for cage work."
+    },
+    {
+      "name": "Unstable Thai Plum Reaction",
+      "category": "grappling",
+      "phases": ["SPP"],
+      "movement": "vestibular_adaptation",
+      "type": "isometric",
+      "tags": ["mma", "clinch_fighter", "pressure_fighter"],
+      "equipment": "Bosu ball + neck harness (2kg)",
+      "equipment_notes": "Partner initiates clinch breaks",
+      "description": "Maintain Thai plum stance on Bosu while resisting partner's pushes. Harness forces cervical spine awareness during off-balancing."
+    },
+    {
+      "name": "Reactive Banded Pivot",
+      "category": "striking",
+      "phases": ["TAPER"],
+      "movement": "eccentric_proprioception",
+      "type": "rotational",
+      "tags": ["mma", "counter_striker", "distance_striker"],
+      "equipment": "Elastic band (waist) + strobe light",
+      "equipment_notes": "Band provides lateral resistance",
+      "description": "Pivot 45° against band tension when strobe flashes, then counter strike. Combines visual disruption with load for reactive pivoting."
+    },
+    {
+      "name": "Tactile Takedown Chain",
+      "category": "grappling",
+      "phases": ["SPP"],
+      "movement": "kinesthetic_sequencing",
+      "type": "ground_transition",
+      "tags": ["mma", "scrambler", "submission_hunter"],
+      "equipment": "Textured mats (different densities)",
+      "equipment_notes": "Mats marked with braille-like patterns",
+      "description": "Eyes closed, athlete identifies mat texture to initiate specific transitions (e.g., bumpy = granby roll, smooth = hip heist)."
+    },
+    {
+      "name": "Inverted Strike Recovery",
+      "category": "striking",
+      "phases": ["TAPER"],
+      "movement": "inverted_proprioception",
+      "type": "unilateral",
+      "tags": ["mma", "kicker", "brawler"],
+      "equipment": "Gymnastics rings (low)",
+      "equipment_notes": "Rings 1m off ground",
+      "description": "From inverted hang in rings, release one arm to 'catch' a tennis ball tossed by partner, then return to stance for kick. Trains spatial flipping awareness."
+    },
+    {
+      "name": "Weight-Shift Step-Over",
+      "category": "footwork",
+      "phases": ["GPP"],
+      "movement": "load_transfer",
+      "type": "bilateral",
+      "tags": ["mma", "pressure_fighter", "scrambler"],
+      "equipment": "Force plates (or bathroom scales)",
+      "equipment_notes": "Audio feedback for weight distribution",
+      "description": "Step over 12" hurdle while maintaining 60/40 weight distribution (audio cue if imbalance). Teaches conscious weight shift for level changes."
+    },
+    {
+      "name": "Disrupted Single-Leg Balance",
+      "category": "takedowns",
+      "phases": ["SPP"],
+      "movement": "perturbation_training",
+      "type": "unilateral",
+      "tags": ["mma", "submission_hunter", "clinch_fighter"],
+      "equipment": "Vibration platform + ankle weights",
+      "equipment_notes": "1kg weights, 30Hz vibration",
+      "description": "Hold single-leg position on vibrating platform for 20s, then immediately finish double-leg. Challenges proprioception under fatigue."
+    },
+    {
+      "name": "3D Head Movement Grid",
+      "category": "defense",
+      "phases": ["TAPER"],
+      "movement": "cervical_proprioception",
+      "type": "multidirectional",
+      "tags": ["mma", "counter_striker", "brawler"],
+      "equipment": "Hanging tennis balls (head height)",
+      "equipment_notes": "Balls spaced 15cm apart",
+      "description": "Slip/roll through grid without ball contact, reacting to partner's directional taps on shoulders. Enhances head movement spatial mapping."
+    },
+    {
+      "name": "Proprioceptive Guard Retention",
+      "category": "grappling",
+      "phases": ["SPP"],
+      "movement": "tactile_flow",
+      "type": "ground",
+      "tags": ["mma", "scrambler", "submission_hunter"],
+      "equipment": "Textured gloves (sandpaper grips)",
+      "equipment_notes": "Partner wears smooth gloves",
+      "description": "Eyes closed, use glove texture differences to identify partner's grip attempts and counter. Heightens tactile sensitivity for guard play."
+    },
+    {
+      "name": "Dynamic Rope Transition",
+      "category": "footwork",
+      "phases": ["TAPER"],
+      "movement": "grip_proprioception",
+      "type": "upper_lower_disassociation",
+      "tags": ["mma", "pressure_fighter", "clinch_fighter"],
+      "equipment": "Climbing rope (2.5m vertical)",
+      "equipment_notes": "Rope knotted at 30cm intervals",
+      "description": "Climb 3 knots up, then transition to striking combos against pads without looking at hands. Forces grip awareness during stance switches."
+    },
+    {
+      "name": "Asymmetric Catch-Pivot",
+      "category": "striking",
+      "phases": ["SPP"],
+      "movement": "object_tracking",
+      "type": "rotational",
+      "tags": ["mma", "distance_striker", "kicker"],
+      "equipment": "Unevenly weighted medicine ball (1kg/3kg sides)",
+      "equipment_notes": "Partner throws with random rotations",
+      "description": "Catch ball mid-air while pivoting, adjusting to uneven weight distribution before countering. Trains torque control."
+    },
+    {
+      "name": "Haptic Cage Cutting",
+      "category": "footwork",
+      "phases": ["TAPER"],
+      "movement": "tactile_navigation",
+      "type": "angular",
+      "tags": ["mma", "pressure_fighter", "counter_striker"],
+      "equipment": "Tactile floor tape (raised edges)",
+      "equipment_notes": "Tape forms 30/45/60 degree angles",
+      "description": "Navigate tape angles blindfolded using foot contact alone, then explode into cage knee. Mimics cutting off opponents by feel."
+    },
+    {
+      "name": "Vestibular Shot Reset",
+      "category": "takedowns",
+      "phases": ["SPP"],
+      "movement": "vestibular_orientation",
+      "type": "rotational",
+      "tags": ["mma", "scrambler", "pressure_fighter"],
+      "equipment": "Swivel office chair",
+      "equipment_notes": "Partner spins chair before shot",
+      "description": "After 3 spins, immediately shoot for takedown on auditory cue. Trains reorientation after dizziness (common in scrambles)."
+    },
+    {
+      "name": "Proprioceptive Arm Trap",
+      "category": "grappling",
+      "phases": ["TAPER"],
+      "movement": "tactile_sequencing",
+      "type": "upper_body",
+      "tags": ["mma", "submission_hunter", "clinch_fighter"],
+      "equipment": "Variable resistance bands (elbows)",
+      "equipment_notes": "Different tensions per arm",
+      "description": "Eyes closed, trap partner's arm using only resistance feedback to gauge limb positioning. Drills feel-based submissions."
+    },
+    {
+      "name": "Kinesthetic Kick Check",
+      "category": "defense",
+      "phases": ["SPP"],
+      "movement": "tactile_timing",
+      "type": "unilateral",
+      "tags": ["mma", "counter_striker", "kicker"],
+      "equipment": "Foam roller (suspended horizontally)",
+      "equipment_notes": "Roller swings like pendulum",
+      "description": "Check kicks against moving roller without visual tracking (partner calls 'incoming'). Develops reflexive low-line defense."
+    },
+    {
+      "name": "Blindfolded Roundhouse Chamber Hold",
+      "category": "striking",
+      "phases": ["TAPER"],
+      "movement": "kinesthetic_awareness",
+      "type": "unilateral",
+      "tags": ["kickboxing", "kicker", "distance_striker"],
+      "equipment": "Blindfold + wall-mounted support bar",
+      "description": "From blindfolded stance, chamber rear kick and hold for 5 seconds while lightly touching bar for balance. Trains muscle memory for perfect chamber position."
+    },
+    {
+      "name": "Pivot-React Switch Kick",
+      "category": "footwork",
+      "phases": ["SPP"],
+      "movement": "rotational_proprioception",
+      "type": "angular",
+      "tags": ["kickboxing", "kicker", "counter_striker"],
+      "equipment": "Reactive light system (floor pads)",
+      "description": "Pivot 45° when floor pad lights up, then immediately fire switch kick toward target. Combines visual reaction with kicking mechanics."
+    },
+    {
+      "name": "Unstable Teep-Push Sequence",
+      "category": "striking",
+      "phases": ["GPP"],
+      "movement": "balance_recovery",
+      "type": "linear",
+      "tags": ["kickboxing", "kicker", "pressure_fighter"],
+      "equipment": "Bosu ball + heavy bag (suspended)",
+      "description": "Throw push kicks from Bosu ball, maintaining balance as bag swings back. Forces core engagement in kicking exchanges."
+    },
+    {
+      "name": "Tactile Low-Kick Check",
+      "category": "defense",
+      "phases": ["SPP"],
+      "movement": "tactile_timing",
+      "type": "unilateral",
+      "tags": ["kickboxing", "kicker", "counter_striker"],
+      "equipment": "Foam roller (partner rolls at shin height)",
+      "description": "Eyes closed, check low kicks by raising leg when hearing roller approach. Heightens reflexive leg defense."
+    },
+    {
+      "name": "Sliding Roundhouse Combo",
+      "category": "footwork",
+      "phases": ["TAPER"],
+      "movement": "glide_coordination",
+      "type": "lateral",
+      "tags": ["kickboxing", "kicker", "scrambler"],
+      "equipment": "Slide board + kicking shield",
+      "description": "Slide laterally while throwing rear roundhouse, controlling momentum to avoid over-rotation. Mimics angle creation in fights."
+    },
+    {
+      "name": "Dynamic Axe Kick Balance",
+      "category": "striking",
+      "phases": ["SPP"],
+      "movement": "inverted_control",
+      "type": "unilateral",
+      "tags": ["kickboxing", "kicker"],
+      "equipment": "Overhead suspension trainer (TRX)",
+      "description": "Throw axe kicks while holding TRX straps, stopping kick 10cm short of full extension. Builds deceleration control for head kicks."
+    },
+    {
+      "name": "Reactive Hopping Front Kick",
+      "category": "plyometrics",
+      "phases": ["GPP"],
+      "movement": "elastic_rebound",
+      "type": "bilateral",
+      "tags": ["kickboxing", "kicker", "pressure_fighter"],
+      "equipment": "Reactive jump mat + Thai pads",
+      "description": "Hop forward when mat lights up, immediately firing front kick to pad. Links explosive entry with kicking precision."
+    },
+    {
+      "name": "Wobble Board Switch Kick",
+      "category": "striking",
+      "phases": ["TAPER"],
+      "movement": "perturbation_training",
+      "type": "rotational",
+      "tags": ["kickboxing", "kicker"],
+      "equipment": "Wobble board (360° tilt)",
+      "description": "Throw switch kicks while maintaining balance on board. Isolates ankle/knee stability during power kicks."
+    },
+    {
+      "name": "Resisted Knee-Kick Chain",
+      "category": "strength_conditioning",
+      "phases": ["SPP"],
+      "movement": "loaded_coordination",
+      "type": "sequential",
+      "tags": ["kickboxing", "kicker", "clinch_fighter"],
+      "equipment": "Ankle weights (1kg) + resistance band (hips)",
+      "description": "Throw 3 knees followed by roundhouse against band tension. Trains hip flexor endurance for late-round kicking."
+    },
+    {
+      "name": "Mirror Shadow Kicking",
+      "category": "footwork",
+      "phases": ["GPP"],
+      "movement": "visual_proprioception",
+      "type": "mirroring",
+      "tags": ["kickboxing", "kicker", "counter_striker"],
+      "equipment": "Full-length mirror",
+      "description": "Mirror partner's kicking combinations while maintaining perfect form reflection. Enhances spatial awareness for range management."
+    },
+    {
+      "name": "Slope-Adjusted Side Kick",
+      "category": "striking",
+      "phases": ["SPP"],
+      "movement": "grade_adaptation",
+      "type": "linear",
+      "tags": ["kickboxing", "kicker", "distance_striker"],
+      "equipment": "Treadmill (15% incline)",
+      "description": "Throw side kicks while walking backward on incline treadmill. Forces proper hip alignment in pushing kicks under load."
+    },
+    {
+      "name": "Ball-Catch Roundhouse",
+      "category": "reaction",
+      "phases": ["TAPER"],
+      "movement": "object_tracking",
+      "type": "rotational",
+      "tags": ["kickboxing", "kicker"],
+      "equipment": "Reaction ball (uneven bounce)",
+      "description": "Catch ball after one bounce, then immediately pivot into roundhouse. Trains weight transfer during visual distractions."
+    },
+    {
+      "name": "Hurdle Hop-Kick Combo",
+      "category": "plyometrics",
+      "phases": ["GPP"],
+      "movement": "elastic_proprioception",
+      "type": "vertical",
+      "tags": ["kickboxing", "kicker", "scrambler"],
+      "equipment": "6-inch hurdle + hanging bag",
+      "description": "Hop over hurdle, land softly, then fire question-mark kick. Links vertical explosiveness with technical kicking."
+    },
+    {
+      "name": "Weighted Shin-Block Simulation",
+      "category": "defense",
+      "phases": ["SPP"],
+      "movement": "eccentric_control",
+      "type": "isometric",
+      "tags": ["kickboxing", "kicker", "counter_striker"],
+      "equipment": "2kg ankle weight (defending leg only)",
+      "description": "Practice checking kicks with weighted leg, emphasizing slow eccentric lowering. Builds defensive muscle memory under fatigue."
+    },
+    {
+      "name": "360° Spin-Kick Balance",
+      "category": "striking",
+      "phases": ["TAPER"],
+      "movement": "vestibular_integration",
+      "type": "rotational",
+      "tags": ["kickboxing", "kicker"],
+      "equipment": "Balance beam (4-inch width)",
+      "description": "Perform spinning back kick on beam, freezing in finish position for 3 seconds. Trains dizzy recovery for spinning techniques."
+    },
+    {
+      "name": "Blindfolded Shoulder Roll Entry",
+      "category": "defense",
+      "phases": ["TAPER"],
+      "movement": "tactile_proprioception",
+      "type": "rotational",
+      "tags": ["boxing", "pressure_fighter"],
+      "equipment": "Blindfold + rope (waist-level)",
+      "description": "Blindfolded boxer steps forward under rope while executing shoulder rolls, reacting to partner's light chest taps for angle adjustments. Trains close-quarters defensive entries."
+    },
+    {
+      "name": "Sliding Lateral Pivot",
+      "category": "footwork",
+      "phases": ["SPP"],
+      "movement": "directional_awareness",
+      "type": "angular",
+      "tags": ["boxing", "distance_striker"],
+      "equipment": "Slide board (or socks on hardwood)",
+      "description": "Slide laterally off lead foot to create angle, then pivot into cross. Targets weight transfer precision for long-range counters."
+    },
+    {
+      "name": "Clinch Frame & Strike",
+      "category": "clinch",
+      "phases": ["TAPER"],
+      "movement": "isometric_proprioception",
+      "type": "upper_body",
+      "tags": ["boxing", "clinch_fighter"],
+      "equipment": "Resistance bands (attached to wall)",
+      "description": "Maintain forearm frame against band resistance while throwing short uppercuts. Mimics striking in phone-booth clinches."
+    },
+    {
+      "name": "Chaos Slip-Burst",
+      "category": "offense",
+      "phases": ["SPP"],
+      "movement": "visual_reaction",
+      "type": "linear",
+      "tags": ["boxing", "counter_striker", brawler"],
+      "equipment": "Randomly swinging tennis balls (3x, head height)",
+      "description": "Slip swinging balls, then explode forward with 3-punch combo. Conditions aggression under visual distraction."
+    },
+    {
+      "name": "Wall-Assisted Swarm",
+      "category": "offense",
+      "phases": ["TAPER"],
+      "movement": "kinesthetic_awareness",
+      "type": "linear",
+      "tags": ["boxing", "clinch_fighter", pressure_fighter"],
+      "equipment": "Wall pads (or heavy bag against wall)",
+      "description": "Throw rapid combinations while chest lightly brushes heavy bag. Forces compact punches in tight spaces."
+    },
+    {
+      "name": "Reactive L-Step",
+      "category": "footwork",
+      "phases": ["SPP"],
+      "movement": "direction_change",
+      "type": "angular",
+      "tags": ["boxing", "brawler"],
+      "equipment": "Agility ladder + strobe light",
+      "description": "Step through ladder in L-patterns when strobe flashes. Conditions footwork for cutting off the ring."
+    },
+    {
+      "name": "Unstable Philly Shell",
+      "category": "defense",
+      "phases": ["TAPER"],
+      "movement": "vestibular_adaptation",
+      "type": "isometric",
+      "tags": ["boxing", "counter_striker"],
+      "equipment": "Bosu ball (half-sphere side down)",
+      "description": "Hold Philly shell stance on Bosu while partner throws light body shots. Trains balance under fire."
+    },
+    {
+      "name": "Pendulum Cross-Counter",
+      "category": "striking",
+      "phases": ["SPP"],
+      "movement": "timing",
+      "type": "rotational",
+      "tags": ["boxing", "counter_striker"],
+      "equipment": "Hanging speed bag (set to swing)",
+      "description": "As bag swings toward you, time cross-counter at peak momentum. Sharpens interceptive timing."
+    },
+    {
+      "name": "Resisted Angle Jump",
+      "category": "footwork",
+      "phases": ["SPP"],
+      "movement": "explosive",
+      "type": "angular",
+      "tags": ["boxing", "pressure_fighter"],
+      "equipment": "Elastic band (hips)",
+      "description": "Jump 45° laterally against band resistance, then pivot into hook. Trains explosive angle creation."
+    },
+    {
+      "name": "Eyes-Closed Parry Drill",
+      "category": "defense",
+      "phases": ["TAPER"],
+      "movement": "tactile_reaction",
+      "type": "upper_body",
+      "tags": ["boxing", "clinch_fighter"],
+      "equipment": "Focus mitts (partner calls punches)",
+      "description": "Eyes closed, parry mitts based on verbal cues. Develops feel-based defense for clinch entries."
+    },
+    {
+      "name": "Backstep Check Hook",
+      "category": "counter",
+      "phases": ["SPP"],
+      "movement": "eccentric_deceleration",
+      "type": "unilateral",
+      "tags": ["boxing", "distance_striker"],
+      "equipment": "Decline treadmill (5° angle, 1mph)",
+      "description": "Step backward off treadmill belt, then plant for check hook. Trains balance on retreat."
+    },
+    {
+      "name": "Chaos Corner Drill",
+      "category": "pressure",
+      "phases": ["TAPER"],
+      "movement": "peripheral_awareness",
+      "type": "multidirectional",
+      "tags": ["boxing", "pressure_fighter"],
+      "equipment": "Ring ropes (or simulated corner)",
+      "description": "Cut off partner in a corner while reacting to thrown tennis balls. Conditions aggression under sensory overload."
+    }
+  
