@@ -5,7 +5,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "system": "ATP-PCr",
     "modality": "reactive timing",
@@ -25,7 +25,7 @@
       "Med Ball"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "system": "ATP-PCr",
     "modality": "upper-body explosiveness",
@@ -45,7 +45,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "system": "ATP-PCr",
     "modality": "hip switch power",
@@ -65,7 +65,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "system": "ATP-PCr",
     "modality": "leg recoil",
@@ -85,7 +85,7 @@
       "Plyo Box"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 box step-ups (explosive drive)",
     "intensity": "50% height",
@@ -106,7 +106,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 seated hip pops (from guard)",
     "intensity": "Light explosiveness",
@@ -125,7 +125,7 @@
       "Agility Ladder"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 stance switches (with arm swing)",
     "intensity": "60% speed",
@@ -146,7 +146,7 @@
       "Med Ball"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "5x3 med ball slams (8lb)",
     "intensity": "70% power",
@@ -164,7 +164,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 backward skips (quick toe-off)",
     "intensity": "50% effort",
@@ -184,7 +184,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 level-change jumps",
     "intensity": "40% explosion",
@@ -203,7 +203,7 @@
       "Wall"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 wall push jumps (single leg)",
     "intensity": "50% power",
@@ -221,7 +221,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 skipping knee drives",
     "intensity": "30% power",
@@ -239,7 +239,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 slip-to-vertical jumps",
     "intensity": "50% height",
@@ -258,7 +258,7 @@
       "Tire"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 tire stomps (alternating)",
     "intensity": "60% power",
@@ -276,7 +276,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 stance-switch hops",
     "intensity": "40% effort",
@@ -295,7 +295,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x3 bridge-to-hip lifts",
     "intensity": "Light explosiveness",
@@ -314,7 +314,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 sprawl-to-vertical jumps",
     "intensity": "50% height",
@@ -332,7 +332,7 @@
       "Med Ball"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "5x3 rotational med ball throws",
     "intensity": "60% power",
@@ -350,7 +350,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 lead-leg drive pops",
     "intensity": "40% effort",
@@ -370,7 +370,7 @@
       "Mat"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x3 Granby pop-ups",
     "intensity": "Light explosiveness",
@@ -389,7 +389,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 sprawl-to-forward jumps",
     "intensity": "50% distance",
@@ -407,7 +407,7 @@
       "Partner"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 pummel-to-frame jumps",
     "intensity": "30% power",
@@ -425,7 +425,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 pull-counter to jump",
     "intensity": "50% height",
@@ -443,7 +443,7 @@
       "Agility Ladder"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 lateral cutoff hops",
     "intensity": "50% effort",
@@ -461,7 +461,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 switch-kick footwork pops",
     "intensity": "40% effort",
@@ -480,7 +480,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 sit-out to stand jumps",
     "intensity": "Light explosiveness",
@@ -499,7 +499,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 shot-entry hops",
     "intensity": "50% distance",
@@ -518,7 +518,7 @@
       "Med Ball"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "5x3 med ball body drops",
     "intensity": "60% power",
@@ -537,7 +537,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 forward skips (quick plant)",
     "intensity": "50% effort",
@@ -555,7 +555,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 hip heist pops",
     "intensity": "Light explosiveness",
@@ -574,7 +574,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x3 spin-to-jump transitions",
     "intensity": "40% power",
@@ -592,7 +592,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 long guard advance hops",
     "intensity": "30% effort",
@@ -610,7 +610,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 check hook to jump",
     "intensity": "50% height",
@@ -628,7 +628,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 pivot hops",
     "intensity": "40% effort",
@@ -647,7 +647,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 arm drag to jump",
     "intensity": "Light explosiveness",
@@ -666,7 +666,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 sprawl-to-spin jumps",
     "intensity": "40% rotation",
@@ -683,7 +683,7 @@
       "Battle Ropes"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 rope waves to jump",
     "intensity": "50% power",
@@ -701,7 +701,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 lateral slide jumps",
     "intensity": "50% effort",
@@ -719,7 +719,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x4 knee cut drives",
     "intensity": "Light explosiveness",
@@ -738,7 +738,7 @@
       "Wall"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 wall push-off jumps",
     "intensity": "50% height",
@@ -756,7 +756,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 skip knee drives",
     "intensity": "30% power",
@@ -774,7 +774,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 shoulder roll to jump",
     "intensity": "50% height",
@@ -792,7 +792,7 @@
       "Tire"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 stomp-to-stance switch",
     "intensity": "50% speed",
@@ -810,7 +810,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "4x3 stance-switch teep pops",
     "intensity": "40% effort",
@@ -828,7 +828,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x3 bridge to stand jumps",
     "intensity": "Light explosiveness",
@@ -847,7 +847,7 @@
       "Bodyweight"
     ],
     "phases": [
-      "Taper"
+      "TAPER"
     ],
     "duration": "3x5 shot to jump transitions",
     "intensity": "50% height",
@@ -861,7 +861,7 @@
   {
     "name": "Reaction Jab Matrix",
     "equipment": ["Reaction Ball", "Partner"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "visual processing",
     "duration": "3min random ball toss → jab/parry response → x4 rounds",
@@ -873,7 +873,7 @@
   {
     "name": "Clinch Auditory Triggers",
     "equipment": ["Bluetooth Speaker"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "auditory reaction",
     "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
@@ -885,7 +885,7 @@
   {
     "name": "Wrestling Chess",
     "equipment": ["Chess Clock", "Partner"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "decision fatigue",
     "duration": "3min live wrestling → 30s chess move → x5 rounds",
@@ -897,7 +897,7 @@
   {
     "name": "Kick Pattern Recall",
     "equipment": ["Flashcards"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "memory challenge",
     "duration": "3min execute kick combos from flashed cards → x4 rounds",
@@ -909,7 +909,7 @@
   {
     "name": "Takedown Dilemma",
     "equipment": ["Colored Cones"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "choice reaction",
     "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
@@ -921,7 +921,7 @@
   {
     "name": "Brawler's Puzzle Defense",
     "equipment": ["Puzzle Mat"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "pattern recognition",
     "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
@@ -933,7 +933,7 @@
   {
     "name": "Distance Striker's Math Dodge",
     "equipment": ["Whiteboard"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "dual-task loading",
     "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
@@ -945,7 +945,7 @@
   {
     "name": "Grappler's Blindfold Pummeling",
     "equipment": ["Blindfold"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "tactile sensitivity",
     "duration": "3min pummeling blindfolded → x4 rounds",
@@ -957,7 +957,7 @@
   {
     "name": "Pressure Fighter's Shadowboxing Riddle",
     "equipment": ["Earbuds"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "audio distraction",
     "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
@@ -969,7 +969,7 @@
   {
     "name": "Hybrid's Stance-Switch Reaction",
     "equipment": ["Colored Lights"],
-    "phases": ["Taper"],
+    "phases": ["TAPER"],
     "system": "Cognitive",
     "modality": "visual cueing",
     "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
