@@ -3640,7 +3640,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "bjj"
+      "submission_hunter"
     ],
     "notes": "If pass is blocked, transition to back.",
     "equipment_note": "No-gi only"
@@ -3682,7 +3682,7 @@
     "tags": [
       "scrambler",
       "mma",
-      "bjj"
+      "submission_hunter"
     ],
     "notes": "Partner resists first 2 seconds.",
     "equipment_note": "No-gi grips"
@@ -3803,7 +3803,7 @@
     "duration": "10 flying armbar attempts, 5 rounds",
     "intensity": "Technical",
     "tags": [
-      "scrambler",
+      "submission_hunter",
       "mma",
       "bjj"
     ],
@@ -3996,27 +3996,6 @@
     "equipment_note": "Dummy must have flexible spine"
   },
   {
-    "name": "Omoplata Oracle",
-    "equipment": [
-      "Bands",
-      "Partner"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "ATP-PCr",
-    "modality": "rotational finish",
-    "duration": "10 omoplata rolls/min, 4 rounds",
-    "intensity": "80% speed",
-    "tags": [
-      "submission_hunter",
-      "bjj",
-      "shoulder_lock"
-    ],
-    "notes": "Bands resist initial rotation.",
-    "equipment_note": "Anchor bands to floor"
-  },
-  {
     "name": "D’Arce Depth Charge",
     "equipment": [
       "Medicine Ball"
@@ -4055,27 +4034,6 @@
     ],
     "notes": "KB on thigh to simulate opponent’s resistance.",
     "equipment_note": "20-28kg KB"
-  },
-  {
-    "name": "Bow-and-Arrow Hunt",
-    "equipment": [
-      "Gi",
-      "Partner"
-    ],
-    "phases": [
-      "SPP"
-    ],
-    "system": "glycolytic",
-    "modality": "grip endurance",
-    "duration": "3min rounds: 5 chokes/min, 1min rest x 4",
-    "intensity": "90% grip",
-    "tags": [
-      "submission_hunter",
-      "bjj",
-      "bow_and_arrow_choke"
-    ],
-    "notes": "Partner defends first 3 sec of each attempt.",
-    "equipment_note": "Wet gi for realism"
   },
   {
     "name": "Kneebar Khaos",
