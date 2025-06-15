@@ -73,13 +73,14 @@ mental_blocks = {
         "contract", "rank", "title", "break", "perform", "count", "blank"
     ],
     "attention": [
-        "focus", "distract", "adhd", "concentrat", "lapse", "zone", 
-        "wander", "scatter", "overstim", "crowd", "noise", "trash", 
-        "personal", "emotional", "overload", "indecisive", "slow", 
-        "forget", "space", "deficit", "sensory", "thought", "lock", 
-        "sidetrack", "clarity", "fog", "brain", "decide", "fatigue", 
-        "aware", "opponent", "track", "chaotic", "sloppy", "mistake", 
-        "rush", "impulsive", "gameplan", "absent", "daydream", "unaware"
+        "focus", "distract", "adhd", "concentrat", "lapse", "zone",
+        "wander", "scatter", "overstim", "crowd", "noise", "trash",
+        "personal", "emotional", "overload", "indecisive", "slow",
+        "forget", "space", "deficit", "sensory", "thought", "lock",
+        "sidetrack", "clarity", "fog", "brain", "decide", "fatigue",
+        "aware", "opponent", "track", "chaotic", "sloppy", "mistake",
+        "rush", "impulsive", "gameplan", "absent", "daydream", "unaware",
+        "zoning", "zoned", "zoned out", "spacey", "dizzy", "spinning"
     ],
     "motivation": [
         "lazy", "bother", "energy", "motivat", "train", "inspire", 
