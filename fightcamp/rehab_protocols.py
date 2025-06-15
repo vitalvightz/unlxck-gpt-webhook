@@ -262,7 +262,7 @@ def generate_rehab_protocols(
     if not lines:
         return "\n⚠️ No rehab options for this phase.", seen_drills
 
-    return "\n**Rehab Protocols**\n" + "\n".join(lines), seen_drills
+    return "\n".join(lines), seen_drills
 
 
 def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
