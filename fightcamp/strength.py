@@ -462,7 +462,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "**Top Exercises:**",
     ] + [f"- {ex['name']}" for ex in base_exercises] + [
         f"**Prescription:** {base_block}",
-        f"**Total Exercises:** {target_exercises}",
     ]
     
     if fatigue_note:

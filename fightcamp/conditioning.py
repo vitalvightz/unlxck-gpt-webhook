@@ -643,6 +643,29 @@ def generate_conditioning_block(flags):
         final_drills.append((system, [coord_drill]))
         selected_drill_names.append(coord_drill.get("name"))
 
+    # --------- PRO NECK DRILL GUARANTEE ---------
+    status = flags.get("status", "").strip().lower()
+    if status in {"professional", "pro"}:
+        has_neck = any(
+            "neck" in {t.lower() for t in d.get("tags", [])}
+            for _, drills in final_drills
+            for d in drills
+        )
+        if not has_neck:
+            neck_candidates = [
+                d
+                for d in conditioning_bank
+                if "neck" in {t.lower() for t in d.get("tags", [])}
+                and phase.upper() in d.get("phases", [])
+            ]
+            if neck_candidates:
+                drill = random.choice(neck_candidates)
+                system = SYSTEM_ALIASES.get(
+                    drill.get("system", "").lower(), drill.get("system", "misc")
+                )
+                final_drills.append((system, [drill]))
+                selected_drill_names.append(drill.get("name"))
+
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if not system_drills[system_name]:
