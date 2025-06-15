@@ -413,52 +413,76 @@ LOCATION_MAP = {
 
 
 from rapidfuzz import fuzz
-import re
+import spacy
+from spacy.matcher import PhraseMatcher
+from negspacy.negation import Negex
 
-NEGATION_PATTERNS = [
-    r"\bnot\s+\w+", r"\bisn[’']?t\s+\w+", r"\bwasn[’']?t\s+\w+",
-    r"\bain[’']?t\s+\w+", r"\bdidn[’']?t\s+\w+", r"\bno\s+\w+"
-]
+# load the large english model once
+try:
+    nlp = spacy.load("en_core_web_lg")
+except Exception:  # pragma: no cover - model might not be available in tests
+    nlp = spacy.blank("en")
+
+# add Negex for negation detection
+try:
+    nlp.add_pipe("negex", last=True)
+except Exception:  # pragma: no cover - Negex might not be registered
+    nlp.add_pipe(Negex(nlp), last=True)
+
+# Build phrase matchers for injury and location keywords
+INJURY_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
+INJURY_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
+for _canonical, _syns in INJURY_SYNONYM_MAP.items():
+    patterns = [_canonical] + _syns
+    docs = [nlp(p) for p in patterns]
+    match_id = nlp.vocab.strings.add(_canonical)
+    INJURY_MATCHER.add(_canonical, docs)
+    INJURY_MATCH_ID_TO_CANONICAL[match_id] = _canonical
+
+LOCATION_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
+LOC_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
+for _key, _canonical in LOCATION_MAP.items():
+    doc = nlp(_key)
+    match_id = nlp.vocab.strings.add(_key)
+    LOCATION_MATCHER.add(_key, [doc])
+    LOC_MATCH_ID_TO_CANONICAL[match_id] = _canonical
 
 def remove_negated_phrases(text: str) -> str:
-    """Strip phrases where injury keywords are negated, to avoid false matches."""
-    for pattern in NEGATION_PATTERNS:
-        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
-    return text.strip()
+    """Strip words marked as negated by Negex from the text."""
+    doc = nlp(text)
+    tokens = [tok.text for tok in doc if not tok._.negex]
+    return " ".join(tokens).strip()
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
-    """Return the canonical injury type for the given text using fuzzy matching.
+    """Return the canonical injury type for the given text using spaCy."""
+    doc = nlp(text.lower())
+    matches = INJURY_MATCHER(doc)
+    if matches:
+        match_id = matches[0][0]
+        return INJURY_MATCH_ID_TO_CANONICAL.get(match_id)
 
-    The function searches ``INJURY_SYNONYM_MAP`` for any phrase in ``text`` with
-    a similarity score of at least ``threshold`` and returns the corresponding
-    key. If no match is found the function returns ``None``.
-    """
-    text = text.lower()
+    # fallback to fuzzy matching if no phrase match is found
+    text_lower = doc.text
     for canonical, synonyms in INJURY_SYNONYM_MAP.items():
-        if canonical in text or fuzz.partial_ratio(canonical, text) >= threshold:
+        if fuzz.partial_ratio(canonical, text_lower) >= threshold:
             return canonical
         for phrase in synonyms:
-            if phrase in text or fuzz.partial_ratio(phrase, text) >= threshold:
+            if fuzz.partial_ratio(phrase, text_lower) >= threshold:
                 return canonical
     return None
 
 
 def canonicalize_location(text: str, threshold: int = 85) -> str | None:
-    """Return the canonical body part for the provided text using fuzzy matching.
+    """Return the canonical body part for the provided text using spaCy."""
+    doc = nlp(text.lower())
+    matches = LOCATION_MATCHER(doc)
+    if matches:
+        match_id = matches[0][0]
+        return LOC_MATCH_ID_TO_CANONICAL.get(match_id)
 
-    ``LOCATION_MAP`` holds a mapping of keywords to the bank location. The
-    function searches the input text for those keywords with a similarity score
-    of at least ``threshold`` and returns the matching location. If no match is
-    found ``None`` is returned.
-    """
-    text = text.lower()
+    text_lower = doc.text
     for key, canonical in LOCATION_MAP.items():
-        # Prefer exact word matches to avoid false positives like "shin" -> "chin"
-        if re.search(r"\b" + re.escape(key) + r"\b", text):
-            return canonical
-        # Only use fuzzy matching for longer phrases where accidental overlaps
-        # are less likely
-        if len(key) > 4 and fuzz.partial_ratio(key, text) >= threshold:
+        if len(key) > 4 and fuzz.partial_ratio(key, text_lower) >= threshold:
             return canonical
     return None
 
@@ -472,14 +496,10 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
 
 
 def split_injury_text(raw_text: str) -> list[str]:
-    """Normalize free-form injury text into a list of phrases.
-
-    The parser splits on punctuation, common conjunctions, newlines and spaced
-    dashes so that each injury description can be processed separately.
-    """
+    """Normalize free-form injury text into a list of phrases using spaCy."""
     text = raw_text.lower()
-    phrases = re.split(
-        r"(?:,|\.|;|\n|\s[-–—]\s|\band\b|\bbut\b|\bthen\b|\balso\b)+",
-        text,
-    )
-    return [p.strip() for p in phrases if p.strip()]
+    # Replace common connectors with punctuation so spaCy can split sentences
+    for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also "]:
+        text = text.replace(sep, ". ")
+    doc = nlp(text)
+    return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
