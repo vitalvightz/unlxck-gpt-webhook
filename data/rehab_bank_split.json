@@ -256,20 +256,21 @@
       }
     ]
   }
-]
+[
+  {
     "location": "ankle",
     "type": "impingement",
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Banded Ankle Distraction",
+        "name": "Dynamic Banded Ankle Distraction + Strike Stance Holds",
         "phase": "SPP",
-        "notes": "Use pre-lift to clear pinch"
+        "notes": "Band distracts joint while holding fight stance (orthopedic clearance + combat posture)"
       },
       {
-        "name": "Loaded Knee-Over-Toe Lunge",
+        "name": "Loaded Knee-Over-Toe Step Downs",
         "phase": "SPP",
-        "notes": "Increase ROM through full range"
+        "notes": "20% BW vest, control descent to mimic fight footwork mechanics"
       }
     ]
   },
@@ -279,14 +280,14 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Loaded Dorsiflexion Rocks (Barbell Front Foot)",
+        "name": "Combat-Stance Dorsiflexion Rocks",
         "phase": "SPP",
-        "notes": "Open ankle range"
+        "notes": "Barbell on front foot while maintaining fight stance alignment"
       },
       {
-        "name": "Massage Gun \u2013 Anterior Line",
+        "name": "Pulsed Vibration Release + Active Stretch",
         "phase": "SPP",
-        "notes": "Release tight tibialis"
+        "notes": "30s massage gun on tibialis during dynamic stretches"
       }
     ]
   },
@@ -296,14 +297,9 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Loaded Dorsiflexion Rocks (Barbell Front Foot)",
+        "name": "Fight-Stance Dorsiflexion Maintenance",
         "phase": "TAPER",
-        "notes": "Use in taper for glide maintenance"
-      },
-      {
-        "name": "Massage Gun \u2013 Anterior Line",
-        "phase": "TAPER",
-        "notes": "Short bursts pre-drill"
+        "notes": "Light holds in stance (no load) between sessions"
       }
     ]
   },
@@ -313,24 +309,14 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Elevated Ankle Pumps",
+        "name": "Contrast Hydrotherapy for Fighters",
         "phase": "TAPER",
-        "notes": "Pump lymphatic fluid"
+        "notes": "30s ice/30s heat x 5 rounds with stance switches"
       },
       {
-        "name": "Elevated Ankle Pumps",
+        "name": "Compression-Assisted Mobility Drills",
         "phase": "TAPER",
-        "notes": "Use in cooldown to reduce flare"
-      },
-      {
-        "name": "Wall Ankle Circles (No Load)",
-        "phase": "TAPER",
-        "notes": "Gentle ROM recovery"
-      },
-      {
-        "name": "Wall Ankle Circles (No Load)",
-        "phase": "TAPER",
-        "notes": "Keep joint active under zero stress"
+        "notes": "Light bandaging during ankle CARs"
       }
     ]
   },
@@ -340,14 +326,14 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Toe CARs (Controlled Articular Rotations)",
+        "name": "Weighted Toe CARs Combat Prep",
         "phase": "GPP",
-        "notes": "Rebuild capsule range"
+        "notes": "1kg plate resistance during full rotations"
       },
       {
-        "name": "Band Toe Pulls \u2013 End Range",
+        "name": "Toe Splay ISO Walks",
         "phase": "GPP",
-        "notes": "Control full motion"
+        "notes": "5m forward/backward walks maintaining spread"
       }
     ]
   },
@@ -357,14 +343,9 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Toe CARs (Controlled Articular Rotations)",
+        "name": "Explosive Toe Flexion Primers",
         "phase": "TAPER",
-        "notes": "Maintain full ROM pre-fight"
-      },
-      {
-        "name": "Band Toe Pulls \u2013 End Range",
-        "phase": "TAPER",
-        "notes": "Reinforce control under fatigue"
+        "notes": "3x5 fast reps pre-training"
       }
     ]
   },
@@ -374,14 +355,14 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Isometric Big Toe Press into Ground",
+        "name": "Isometric Toe Press Complex",
         "phase": "SPP",
-        "notes": "Load without movement"
+        "notes": "5s max effort → immediate dynamic reps"
       },
       {
-        "name": "Toe Flexor Resistance Band Pulls",
+        "name": "Sandbag Toe Crunch Resistance",
         "phase": "SPP",
-        "notes": "Rebuild control"
+        "notes": "25% BW sandbag on towel for progressive loading"
       }
     ]
   },
@@ -391,14 +372,9 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Isometric Big Toe Press into Ground",
+        "name": "Tactile Toe Activation Between Rounds",
         "phase": "TAPER",
-        "notes": "Use light holds to retain signal"
-      },
-      {
-        "name": "Toe Flexor Resistance Band Pulls",
-        "phase": "TAPER",
-        "notes": "Low fatigue, low movement"
+        "notes": "Light band resistance during rest periods"
       }
     ]
   },
@@ -408,14 +384,9 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Toe Towel Slides (Loaded Variant)",
+        "name": "Eccentric Toe Towel Drags",
         "phase": "GPP",
-        "notes": "Restore flexor glide"
-      },
-      {
-        "name": "Manual Toe Flexor Resistance (Band)",
-        "phase": "GPP",
-        "notes": "Build isolated tension"
+        "notes": "3s release phase with weight"
       }
     ]
   },
@@ -425,14 +396,9 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Toe Towel Slides (Loaded Variant)",
+        "name": "Plyo-Toe Recoil Drills",
         "phase": "SPP",
-        "notes": "Increase tempo or pause"
-      },
-      {
-        "name": "Manual Toe Flexor Resistance (Band)",
-        "phase": "SPP",
-        "notes": "Add continuous reps"
+        "notes": "Mini-trampoline rebounds for explosive return"
       }
     ]
   },
@@ -442,24 +408,9 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Toe Extensor Stretch (Wall Dorsiflex)",
+        "name": "Fightwrap-Assisted Toe Extension",
         "phase": "TAPER",
-        "notes": "Downregulate toe tension"
-      },
-      {
-        "name": "Toe Extensor Stretch (Wall Dorsiflex)",
-        "phase": "TAPER",
-        "notes": "Use post-session or AM"
-      },
-      {
-        "name": "Band-Assisted Toe Extension Hold",
-        "phase": "TAPER",
-        "notes": "Maintain smooth end range"
-      },
-      {
-        "name": "Band-Assisted Toe Extension Hold",
-        "phase": "TAPER",
-        "notes": "Low load activation"
+        "notes": "Tape toes in extension between sessions"
       }
     ]
   },
@@ -469,14 +420,9 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Lateral Hop-Stick Drill",
+        "name": "Reactive Ankle Locking Under Push",
         "phase": "SPP",
-        "notes": "Train reactive ankle control"
-      },
-      {
-        "name": "Foam Pad Jump-Stick",
-        "phase": "SPP",
-        "notes": "Improve soft landing control"
+        "notes": "Unexpected partner perturbations during single-leg stance"
       }
     ]
   },
@@ -486,14 +432,9 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Lateral Hop-Stick Drill",
+        "name": "Strobe Light Balance Challenges",
         "phase": "TAPER",
-        "notes": "Maintain sharpness with short sets"
-      },
-      {
-        "name": "Foam Pad Jump-Stick",
-        "phase": "TAPER",
-        "notes": "Use as CNS primer pre-comp"
+        "notes": "8Hz strobe glasses during stabilization drills"
       }
     ]
   },
@@ -503,14 +444,9 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Resisted Toe Pulls with Band",
+        "name": "Arch Activation Complex",
         "phase": "GPP",
-        "notes": "Load toe flexors"
-      },
-      {
-        "name": "Mid-Foot Isometric Holds (Band Loop)",
-        "phase": "GPP",
-        "notes": "Tension through arch"
+        "notes": "Short foot + toe splay + band resistance sequence"
       }
     ]
   },
@@ -520,14 +456,9 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Resisted Toe Pulls with Band",
+        "name": "Dynamic Arch Loading Drills",
         "phase": "SPP",
-        "notes": "Tie into sprint or strike mechanics"
-      },
-      {
-        "name": "Mid-Foot Isometric Holds (Band Loop)",
-        "phase": "SPP",
-        "notes": "Progress to timed holds or anti-rotation"
+        "notes": "Plyometric hops with arch engagement cues"
       }
     ]
   },
@@ -537,14 +468,9 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Wall Toe Raises",
+        "name": "Eccentric Tibialis Raises",
         "phase": "GPP",
-        "notes": "Activate anterior tibialis"
-      },
-      {
-        "name": "Massage Gun Sweep \u2013 Tibialis Line",
-        "phase": "GPP",
-        "notes": "Reduce inflammation and tension"
+        "notes": "3s lowering phase off ramp"
       }
     ]
   },
@@ -554,14 +480,9 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Wall Toe Raises",
+        "name": "Impact Tempo Runs",
         "phase": "SPP",
-        "notes": "Increase reps + tempo for foot strike endurance"
-      },
-      {
-        "name": "Massage Gun Sweep \u2013 Tibialis Line",
-        "phase": "SPP",
-        "notes": "Use post-run to limit re-flare"
+        "notes": "Grass sprints with 3s deceleration focus"
       }
     ]
   },
@@ -571,14 +492,9 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Foam Roller Circles \u2013 Mid-Shin",
+        "name": "Graduated Impact Protocol",
         "phase": "GPP",
-        "notes": "Restore tissue tolerance"
-      },
-      {
-        "name": "Tap-Drill with Soft Stick",
-        "phase": "GPP",
-        "notes": "Gradually reintroduce impact"
+        "notes": "Foam → bamboo → light steel contact progression"
       }
     ]
   },
@@ -588,14 +504,9 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Foam Roller Circles \u2013 Mid-Shin",
+        "name": "Controlled Strike Simulations",
         "phase": "SPP",
-        "notes": "Progress to kneeling or pad contact drills"
-      },
-      {
-        "name": "Tap-Drill with Soft Stick",
-        "phase": "SPP",
-        "notes": "Mimic striking contact progression"
+        "notes": "Light technical checks (20% power) on pads"
       }
     ]
   },
@@ -605,14 +516,9 @@
     "phase_progression": "GPP",
     "drills": [
       {
-        "name": "Seated Anterior Shin Stretch",
+        "name": "Dynamic Shin Glides",
         "phase": "GPP",
-        "notes": "Loosen tibialis tension"
-      },
-      {
-        "name": "Lacrosse Ball Glide \u2013 Tibialis",
-        "phase": "GPP",
-        "notes": "Break up tight adhesions"
+        "notes": "Resisted ankle circles with band"
       }
     ]
   },
@@ -622,14 +528,9 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Seated Anterior Shin Stretch",
+        "name": "Percussive Release + Active Stretch",
         "phase": "TAPER",
-        "notes": "Maintain front chain length post-training"
-      },
-      {
-        "name": "Lacrosse Ball Glide \u2013 Tibialis",
-        "phase": "TAPER",
-        "notes": "Use short sessions pre-spar"
+        "notes": "Massage gun during dynamic stretches"
       }
     ]
   },
@@ -639,14 +540,9 @@
     "phase_progression": "SPP",
     "drills": [
       {
-        "name": "Heel Walks",
+        "name": "Tibialis Eccentric Overload",
         "phase": "SPP",
-        "notes": "Train anterior chain under low impact"
-      },
-      {
-        "name": "Isometric Toe Lift Holds",
-        "phase": "SPP",
-        "notes": "Load without range"
+        "notes": "Weighted toe raises (5s eccentric)"
       }
     ]
   },
@@ -656,45 +552,13 @@
     "phase_progression": "TAPER",
     "drills": [
       {
-        "name": "Heel Walks",
+        "name": "Pre-Fight Tibialis Activation",
         "phase": "TAPER",
-        "notes": "Maintain foot strike tolerance"
-      },
-      {
-        "name": "Isometric Toe Lift Holds",
-        "phase": "TAPER",
-        "notes": "Quick tension cues pre-sprint or drill"
+        "notes": "Quick tension cues before explosive movements"
       }
     ]
-  },
-  {
-    "location": "shin",
-    "type": "contusion",
-    "phase_progression": "GPP",
-    "drills": [
-      {
-        "name": "Light Shin Percussion",
-        "phase": "GPP",
-        "notes": "Rebuild contact tolerance"
-      },
-      {
-        "name": "Light Shin Percussion",
-        "phase": "GPP",
-        "notes": "Use daily to desensitize tissue"
-      },
-      {
-        "name": "Wall Shin Slides",
-        "phase": "GPP",
-        "notes": "Improve joint mobility"
-      },
-      {
-        "name": "Wall Shin Slides",
-        "phase": "GPP",
-        "notes": "Add tempo or light band once contact is tolerated"
-      }
-    ]
-  },
-  {
+  }
+]
     "location": "calf",
     "type": "strain",
     "phase_progression": "GPP",
