@@ -1,4 +1,26 @@
-from rapidfuzz import fuzz
+try:
+    from rapidfuzz import fuzz
+except ImportError:  # Fallback for minimal environments
+    from difflib import SequenceMatcher
+
+    def fuzz(s1: str, s2: str) -> float:
+        return SequenceMatcher(None, s1, s2).ratio() * 100
+
+    class FuzzWrapper:
+        @staticmethod
+        def partial_ratio(a: str, b: str) -> float:
+            if not a or not b:
+                return 0.0
+            shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+            max_score = 0.0
+            for i in range(len(longer) - len(shorter) + 1):
+                segment = longer[i:i+len(shorter)]
+                score = fuzz(shorter, segment)
+                if score > max_score:
+                    max_score = score
+            return max_score
+
+    fuzz = FuzzWrapper()
 
 mindset_bank = {
     "GPP": {

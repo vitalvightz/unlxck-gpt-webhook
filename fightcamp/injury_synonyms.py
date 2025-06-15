@@ -412,7 +412,32 @@ LOCATION_MAP = {
 }
 
 
-from rapidfuzz import fuzz
+try:
+    from rapidfuzz import fuzz
+except ImportError:
+    from difflib import SequenceMatcher
+
+    def _ratio(s1: str, s2: str) -> float:
+        return SequenceMatcher(None, s1, s2).ratio() * 100
+
+    class FuzzWrapper:
+        def __call__(self, a: str, b: str) -> float:
+            return _ratio(a, b)
+        @staticmethod
+        def partial_ratio(a: str, b: str) -> float:
+            """Return partial ratio similar to rapidfuzz."""
+            if not a or not b:
+                return 0.0
+            shorter, longer = (a, b) if len(a) <= len(b) else (b, a)
+            max_score = 0.0
+            for i in range(len(longer) - len(shorter) + 1):
+                segment = longer[i:i+len(shorter)]
+                score = _ratio(shorter, segment)
+                if score > max_score:
+                    max_score = score
+            return max_score
+
+    fuzz = FuzzWrapper()
 import re
 
 NEGATION_PATTERNS = [

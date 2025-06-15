@@ -12,8 +12,12 @@ from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
-# Load exercise bank
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+# Load exercise bank, handle potential parse issues during minimal runs
+try:
+    exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+except json.JSONDecodeError:
+    exercise_bank = []
+    print("⚠️  exercise_bank.json is invalid; continuing with empty list")
 
 # Modules
 from .training_context import allocate_sessions, normalize_equipment_list

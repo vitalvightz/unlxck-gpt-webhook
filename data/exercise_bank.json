@@ -714,8 +714,8 @@
   "type": "unilateral",
   "tags": ["upper_body", "compound"],
   "equipment": "medicine_ball"
-}
-]
+  },
+
   {
     "name": "Incline DB Press",
     "category": "upper_body",

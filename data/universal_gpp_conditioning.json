@@ -2,7 +2,7 @@
   {
     "phase": "GPP",
     "name": "Steady-State Cardio (Run / Bike / Row)",
-    "system": "Aerobic",
+    "system": "aerobic",
     "duration": "30–60 minutes",
     "intensity": "60–70% max HR (Zone 2)",
     "volume": "2–3x/week",
@@ -13,7 +13,7 @@
   {
     "phase": "GPP",
     "name": "Jump Rope Endurance (Footwork Conditioning)",
-    "system": "Aerobic + Coordination",
+    "system": "aerobic + coordination",
     "duration": "3–5 rounds × 3–5 minutes",
     "intensity": "Moderate steady pace",
     "volume": "2–4x/week",
@@ -35,7 +35,7 @@
   {
     "phase": "GPP",
     "name": "Battle Rope Circuits",
-    "system": "Glycolytic",
+    "system": "glycolytic",
     "duration": "4–6 rounds × 30s work",
     "intensity": "High effort",
     "volume": "1–2x/week",
@@ -46,7 +46,7 @@
   {
     "phase": "GPP",
     "name": "Bodyweight MetCon Circuit",
-    "system": "Glycolytic",
+    "system": "glycolytic",
     "duration": "3–4 rounds of 3–5 exercises × 30s each",
     "intensity": "High tempo",
     "volume": "1–2x/week",

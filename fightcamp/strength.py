@@ -140,7 +140,11 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
 
     return False
 
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+try:
+    exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+except json.JSONDecodeError:
+    exercise_bank = []
+    print("⚠️  exercise_bank.json is invalid; continuing with empty list")
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
