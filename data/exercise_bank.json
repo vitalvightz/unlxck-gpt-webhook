@@ -684,21 +684,38 @@
     ],
     "equipment": "landmine"
   },
+  [
   {
-    "name": "DB Bench Press",
+    "name": "DB Alternating Incline Press (30-45°)",
     "category": "upper_body",
-    "phases": [
-      "GPP"
-    ],
+    "phases": ["GPP"],
     "method": "strength",
     "movement": "horizontal_push",
-    "type": "bilateral",
-    "tags": [
-      "upper_body",
-      "compound"
-    ],
+    "type": "unilateral",
+    "tags": ["upper_body", "compound"],
     "equipment": "dumbbells"
   },
+  {
+    "name": "DB Plyometric Push-Up (Hands on Dumbbells)",
+    "category": "upper_body",
+    "phases": ["GPP"],
+    "method": "power",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": ["upper_body", "compound"],
+    "equipment": "dumbbells"
+  },
+  {
+  "name": "Kneeling Single-Arm Medicine Ball Slam",
+  "category": "upper_body",
+  "phases": ["GPP"],
+  "method": "power",
+  "movement": "horizontal_push",
+  "type": "unilateral",
+  "tags": ["upper_body", "compound"],
+  "equipment": "medicine_ball"
+}
+]
   {
     "name": "Incline DB Press",
     "category": "upper_body",
