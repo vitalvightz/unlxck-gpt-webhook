@@ -681,10 +681,9 @@
     "tags": [
       "shoulders",
       "anti_rotation"
-    ],
-    "equipment": "landmine"
+  ],
+  "equipment": "landmine"
   },
-  [
   {
     "name": "DB Alternating Incline Press (30-45°)",
     "category": "upper_body",
@@ -714,8 +713,7 @@
   "type": "unilateral",
   "tags": ["upper_body", "compound"],
   "equipment": "medicine_ball"
-}
-]
+  },
   {
     "name": "Incline DB Press",
     "category": "upper_body",
