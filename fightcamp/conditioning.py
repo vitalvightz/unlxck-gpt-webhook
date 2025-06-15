@@ -142,10 +142,11 @@ def expand_tags(input_list, tag_map):
         expanded.extend(tags)
     return [t.lower() for t in expanded]
 
-def is_banned_drill(name: str, tags: list[str], fight_format: str) -> bool:
+def is_banned_drill(name: str, tags: list[str], fight_format: str, details: str = "") -> bool:
     """Return True if the drill should be removed for the given sport."""
     name = name.lower()
     tags = [t.lower() for t in tags]
+    details = details.lower()
 
     grappling_terms = {
         "wrestling",
@@ -161,12 +162,12 @@ def is_banned_drill(name: str, tags: list[str], fight_format: str) -> bool:
 
     if fight_format in {"boxing", "kickboxing"}:
         for term in grappling_terms:
-            if term in name or term in tags:
+            if term in name or term in tags or term in details:
                 return True
 
     if fight_format == "boxing":
         for term in ["kick", "knee", "clinch knee strike"]:
-            if term in name or term in tags:
+            if term in name or term in tags or term in details:
                 return True
 
     return False
@@ -275,7 +276,15 @@ def generate_conditioning_block(flags):
             continue
 
         tags = [t.lower() for t in drill.get("tags", [])]
-        if is_banned_drill(drill.get("name", ""), tags, fight_format):
+        details = " ".join(
+            [
+                drill.get("duration", ""),
+                drill.get("notes", ""),
+                drill.get("modality", ""),
+                drill.get("equipment_note", ""),
+            ]
+        )
+        if is_banned_drill(drill.get("name", ""), tags, fight_format, details):
             continue
 
         # Suppress high CNS drills in TAPER unless criteria met
@@ -324,7 +333,15 @@ def generate_conditioning_block(flags):
     target_style_tags = set(style_names + tech_style_tags)
     for drill in style_conditioning_bank:
         tags = [t.lower() for t in drill.get("tags", [])]
-        if is_banned_drill(drill.get("name", ""), tags, fight_format):
+        details = " ".join(
+            [
+                drill.get("duration", ""),
+                drill.get("notes", ""),
+                drill.get("modality", ""),
+                drill.get("equipment_note", ""),
+            ]
+        )
+        if is_banned_drill(drill.get("name", ""), tags, fight_format, details):
             continue
         if not target_style_tags.intersection(tags):
             continue
