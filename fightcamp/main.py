@@ -43,6 +43,7 @@ GOAL_NORMALIZER = {
     "Rotation": "rotational",
     "Balance": "balance",
     "Shoulders": "shoulders",
+    "Shoulder": "shoulders",
     "Hip Mobility": "hip",
     "Grip Strength": "grip",
     "Posterior Chain": "posterior_chain",
@@ -61,6 +62,8 @@ GOAL_NORMALIZER = {
 WEAKNESS_NORMALIZER = {
     "coordination / proprioception": ["coordination"],
     "coordination/proprioception": ["coordination"],
+    "shoulder": ["shoulders"],
+    "shoulders": ["shoulders"],
 }
 
 try:
