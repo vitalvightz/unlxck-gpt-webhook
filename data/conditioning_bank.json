@@ -1798,10 +1798,7 @@
     "duration": "4x5 reps, 45s rest",
     "tags": ["plyometric", "upper_body"],
     "notes": "Seated on floor, rapid chest-level throws. Partner return or wall."
-  }
-]
-{
-  "exercises": [
+  },
     {
       "name": "Partner Manual Neck Resistance",
       "equipment": ["Partner"],
@@ -1810,7 +1807,7 @@
       "modality": "durability",
       "duration": "4x30s (forward/side/back)",
       "intensity": "moderate",
-      "tags": ["neck", "durability", "striking_defense"],
+      "tags": ["neck", "eccentric"],
       "notes": "Partner applies progressive resistance in all directions to simulate fight-level impacts"
     },
     {
@@ -1821,7 +1818,7 @@
       "modality": "durability",
       "duration": "4x15 reps (flexion/extension)",
       "intensity": "moderate",
-      "tags": ["neck", "durability", "prehab"],
+      "tags": ["neck", "eccentric"],
       "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight"
     }
 
