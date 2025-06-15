@@ -100,7 +100,7 @@ Every module looks at how many of its tags match your goals, weaknesses and figh
 - Phase tag match (GPP/SPP/TAPER): **+0.4** each
 - Fatigue penalty: **-0.35** (moderate) or **-0.75** (high)
 - Missing required equipment: exercise is skipped
-- Rehab exercise penalty: **-0.5** in GPP, **-1.0** in SPP, **-0.75** in TAPER
+- Rehab exercise penalty: **-0.7** in GPP, **-1.0** in SPP, **-0.75** in TAPER
 
 ### Conditioning Module
 - Style match (exact): **+1.5**

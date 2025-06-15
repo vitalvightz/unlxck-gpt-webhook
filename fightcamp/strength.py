@@ -103,7 +103,7 @@ def score_exercise(
         return -999
 
     if is_rehab:
-        phase_penalties = {"GPP": -0.5, "SPP": -1.0, "TAPER": -0.75}
+        phase_penalties = {"GPP": -0.7, "SPP": -1.0, "TAPER": -0.75}
         score += phase_penalties.get(current_phase, -0.75)
 
     score += random.uniform(-0.15, 0.15)

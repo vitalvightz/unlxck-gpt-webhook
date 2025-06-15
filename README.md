@@ -39,7 +39,7 @@ The generator ranks drills and exercises based on a simple heuristic score. Each
 - Phase tag matches add `+0.4` each
 - Fatigue penalties: `-0.75` (high) or `-0.35` (moderate)
 - Missing required equipment removes the exercise (`-999`)
-- Rehab exercises incur `-0.5` in GPP, `-1.0` in SPP and `-0.75` in TAPER
+  - Rehab exercises incur `-0.7` in GPP, `-1.0` in SPP and `-0.75` in TAPER
 
 **Conditioning module** (`conditioning.py`)
 
