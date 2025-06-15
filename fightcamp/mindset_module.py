@@ -120,7 +120,8 @@ def classify_mental_block(text: str, top_n: int = 2, threshold: int = 85) -> lis
         return ["generic"]
 
     text = text.lower().strip()
-    if any(bad in text for bad in ["n/a", "none", "idk", "na"]):
+    # treat short negative replies as generic
+    if text in {"no", "nope", "nah", "n/a", "none", "na", "idk"}:
         return ["generic"]
 
     scores = {}
