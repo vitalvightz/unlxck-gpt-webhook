@@ -12,6 +12,12 @@ notes/     → Reference JSON and tag documentation
 
 Run the application with `python -m fightcamp.main` from the project root.
 
+### Dependencies
+
+The code relies on `numpy`, `spacy` and the `en_core_web_lg` language model. If the
+spaCy model isn't available, the mindset module gracefully skips semantic similarity
+matching and relies solely on keyword heuristics.
+
 Recent updates removed the OpenAI dependency and now build plans entirely from the module outputs. Short-camp handling and style-specific rules still adjust the phase weeks correctly via the helper `_apply_style_rules()`.
 
 The **Fighting Style (Technical)** field accepts a comma-separated list when an athlete has more than one technical base (e.g. `boxing, wrestling`). The style that appears first in this list sets the fight format while conditioning drills consider every style provided.
