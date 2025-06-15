@@ -158,6 +158,8 @@ def is_banned_drill(name: str, tags: list[str], fight_format: str, details: str 
         "grappler",
         "sprawl",
         "sprawling",
+        "takedown",
+        "takedowns",
     }
 
     if fight_format in {"boxing", "kickboxing"}:
