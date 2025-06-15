@@ -3185,3 +3185,25 @@
     "equipment": "barbell"
    }
 ]
+
+{
+  "name": "KB Suitcase Carry",
+  "category": "full_body",
+  "phases": ["GPP", "SPP"],
+  "method": "strength_conditioning",
+  "movement": "dynamic",
+  "type": "unilateral",
+  "tags": ["grip", "core"],
+  "equipment": "kettlebell",
+  "pro_tip": "Hold KB opposite side of working leg to maximize oblique engagement - mimics sprawl recovery mechanics",
+  "combat_carryover": "Develops clinch grip endurance and cross-body power transfer for hooks"
+}
+{
+    "name": "Slow-Lowered Pull-Up",
+    "category": "upper_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "eccentric",
+    "type": "compound",
+    "tags": ["eccentric", "grip", "shoulders"],
+    "equipment": "bodyweight",
