@@ -229,6 +229,7 @@ async def generate_plan(data: dict):
         "weight_cut_risk": weight_cut_risk_flag,
         "weight_cut_pct": weight_cut_pct_val,
         "fight_format": mapped_format,
+        "status": status.strip().lower(),
         "training_split": allocate_sessions(training_frequency),
         "key_goals": [GOAL_NORMALIZER.get(g.strip(), g.strip()).lower() for g in key_goals.split(",") if g.strip()],
         "training_preference": training_preference.strip().lower() if training_preference else "",
