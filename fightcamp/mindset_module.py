@@ -1,8 +1,12 @@
 from rapidfuzz import fuzz
-import spacy
 
-# load large English model once
-nlp = spacy.load("en_core_web_lg")
+try:
+    import spacy
+    nlp = spacy.load("en_core_web_lg")
+except Exception as e:  # spaCy or model may be missing in offline environments
+    spacy = None
+    nlp = None
+    print("\u26a0\ufe0f  spaCy large model not available; semantic similarity disabled.", e)
 
 mindset_bank = {
     "GPP": {
@@ -122,6 +126,8 @@ mental_blocks = {
 def semantic_match_block(text: str, threshold: float = 0.78) -> str:
     """Use spaCy embeddings to match unknown input to nearest mental block category."""
     if not text.strip():
+        return "generic"
+    if not nlp:
         return "generic"
 
     doc_input = nlp(text.strip().lower())
