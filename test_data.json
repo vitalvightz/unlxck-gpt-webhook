@@ -18,7 +18,7 @@
       { "label": "Training Phase", "value": "Mid-Camp" },
       { "label": "Equipment Access", "value": ["Barbell", "Battle Ropes", "Trap Bar", "Med Balls / Bands", "Sled", "Dumbbells", "Kettlebells", "Sandbag"] },
       { "label": "Training Availability", "value": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"] },
-      { "label": "Any injuries or areas you need to work around?", "value": "My hand has a fracture which I need to rest for 6 weeks. I had a toothache which left me unable train my jaw which I’d like too" },
+      { "label": "Any injuries or areas you need to work around?", "value": "recovered from a hand fracture but still hurts,. I had a toothache which left me unable train. my jaw is in pain. " },
       { "label": "What are your key performance goals?", "value": ["Skill Refinement", "Power & Explosiveness", "Conditioning / Endurance", "Mobility", "Injury Prevention"] },
       { "label": "Where do you feel weakest right now?", "value": ["Grip Strength", "Explosiveness", "Speed / Reaction", "Lateral Movement"] },
       { "label": "Do you prefer certain training styles?", "value": "Explosive circuits with low reps, hate long cardio slogs" },
