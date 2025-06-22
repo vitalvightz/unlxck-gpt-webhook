@@ -151,7 +151,7 @@ async def generate_plan(data: dict):
     frequency_raw = get_value("Weekly Training Frequency", fields)
     fatigue = get_value("Fatigue Level", fields)
     equipment_access = get_value("Equipment Access", fields)
-    available_days = get_value("Time Availability for Training", fields)
+    available_days = get_value("Training Availability", fields)
 
     # Normalize schedule info
     training_days = [d.strip() for d in available_days.split(',') if d.strip()]

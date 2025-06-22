@@ -256,8 +256,11 @@ def generate_conditioning_block(flags):
     style_map = {
         "mma": "mma",
         "boxer": "boxing",
+        "boxing": "boxing",
         "kickboxer": "kickboxing",
+        "kickboxing": "kickboxing",
         "muay thai": "muay_thai",
+        "muaythai": "muay_thai",
         "bjj": "mma",
         "wrestler": "mma",
         "wrestling": "wrestler",
