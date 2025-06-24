@@ -16,6 +16,7 @@ def map_tags(form_data: Dict) -> Dict:
         "mental_history": "clear_history",
     }
 
+    # Extract inputs
     under_pressure: List[str] = form_data.get("under_pressure", [])
     post_mistake: List[str] = form_data.get("post_mistake", [])
     focus_breakers: List[str] = form_data.get("focus_breakers", [])
@@ -28,64 +29,75 @@ def map_tags(form_data: Dict) -> Dict:
     past_mental: str = form_data.get("past_mental_struggles", "").strip()
 
     # Freeze type
-    if any("freeze" in x.lower() or "stuck" in x.lower() for x in under_pressure):
+    if "I go blank or freeze" in under_pressure or "I hesitate before acting" in under_pressure:
         tags["freeze_type"] = "physical_freeze"
-    elif any("panic" in x.lower() or "overthink" in x.lower() for x in under_pressure):
+    elif "I overthink instead of trusting instinct" in under_pressure or "I second-guess good decisions" in under_pressure:
         tags["freeze_type"] = "mental_freeze"
 
     # Overthink type
-    if any("overthink" in x.lower() for x in under_pressure + post_mistake):
+    if any(x in under_pressure + post_mistake for x in [
+        "I overthink instead of trusting instinct",
+        "I second-guess good decisions",
+        "I replay it over and over in my head"
+    ]):
         tags["overthink_type"] = "overthinker"
-    elif any("doubt" in x.lower() or "hesitat" in x.lower() for x in under_pressure + post_mistake):
+    elif any(x in under_pressure + post_mistake for x in [
+        "I hesitate before acting",
+        "I stop wanting the ball or engaging"
+    ]):
         tags["overthink_type"] = "doubter"
 
     # Focus breaker
-    if any("crowd" in x.lower() or "audience" in x.lower() for x in focus_breakers):
+    if "The crowd / noise" in focus_breakers:
         tags["focus_breaker"] = "distracted_by_crowd"
-    elif any("score" in x.lower() or "result" in x.lower() for x in focus_breakers):
-        tags["focus_breaker"] = "result_focused"
-    elif any("opponent" in x.lower() or "trash" in x.lower() for x in focus_breakers):
-        tags["focus_breaker"] = "opponent_noise"
+    elif "Fear of making the wrong choice" in focus_breakers or "My own inner critic" in focus_breakers:
+        tags["focus_breaker"] = "self_conflict"
+    elif "Teammates or opponents" in focus_breakers:
+        tags["focus_breaker"] = "social_disruption"
 
     # Reset speed
-    if "under" in reset_duration or "<" in reset_duration or "10" in reset_duration:
+    if "instantly" in reset_duration:
         tags["reset_speed"] = "fast_reset"
-    elif "30" in reset_duration or "half" in reset_duration:
+    elif "10–30" in reset_duration:
         tags["reset_speed"] = "medium_reset"
-    elif "min" in reset_duration or "60" in reset_duration:
+    elif "1–2" in reset_duration:
         tags["reset_speed"] = "slow_reset"
+    elif "longer" in reset_duration:
+        tags["reset_speed"] = "very_slow_reset"
 
     # Heart rate response
-    if "speed" in heart_response or "increase" in heart_response or "up" in heart_response:
+    if "spikes" in heart_response:
         tags["hr_response"] = "hr_up"
-    elif "slow" in heart_response or "decrease" in heart_response or "down" in heart_response:
+    elif "drops" in heart_response:
         tags["hr_response"] = "hr_down"
-    elif "same" in heart_response or "no change" in heart_response:
+    elif "normal" in heart_response:
         tags["hr_response"] = "hr_stable"
 
     # Breath pattern
     if "hold" in pressure_breath:
         tags["breath_pattern"] = "breath_hold"
-    elif "fast" in pressure_breath or "shallow" in pressure_breath:
+    elif "shallow" in pressure_breath:
         tags["breath_pattern"] = "breath_fast"
-    elif "slow" in pressure_breath or "deep" in pressure_breath:
-        tags["breath_pattern"] = "breath_slow"
+    elif "normally" in pressure_breath:
+        tags["breath_pattern"] = "breath_normal"
 
     # Motivation type
-    if "reward" in motivator or "praise" in motivator:
+    if "small visible wins" in motivator:
         tags["motivation_type"] = "reward_seeker"
-    elif "avoid" in motivator or "fear" in motivator:
+    elif "avoid failure" in motivator:
         tags["motivation_type"] = "avoid_failure"
-    elif "compete" in motivator or "win" in motivator:
+    elif "competing with others" in motivator:
         tags["motivation_type"] = "competitive"
-    elif "intrinsic" in motivator or "myself" in motivator:
-        tags["motivation_type"] = "self_driven"
+    elif "praise from others" in motivator:
+        tags["motivation_type"] = "external_validation"
 
     # Threat trigger
-    if "shame" in emotional_trigger or "critic" in emotional_trigger:
-        tags["threat_trigger"] = "ego_threat"
-    elif "fear" in emotional_trigger or "safety" in emotional_trigger:
-        tags["threat_trigger"] = "safety_threat"
+    if "coach criticism" in emotional_trigger:
+        tags["threat_trigger"] = "authority_threat"
+    elif "teammate judgement" in emotional_trigger:
+        tags["threat_trigger"] = "peer_threat"
+    elif "crowd pressure" in emotional_trigger:
+        tags["threat_trigger"] = "audience_threat"
 
     # Mental history
     if past_mental:
