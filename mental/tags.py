@@ -1,6 +1,4 @@
-"""Mapping functions for mental performance tags."""
 from typing import Dict, List
-
 
 def map_tags(form_data: Dict) -> Dict:
     """Map raw form input to controlled mental performance tags."""
@@ -16,25 +14,28 @@ def map_tags(form_data: Dict) -> Dict:
         "mental_history": "clear_history",
     }
 
-    # Extract inputs
+    # Extract lists from multi-selects
     under_pressure: List[str] = form_data.get("under_pressure", [])
     post_mistake: List[str] = form_data.get("post_mistake", [])
     focus_breakers: List[str] = form_data.get("focus_breakers", [])
 
-    pressure_breath: str = form_data.get("pressure_breath", "").lower()
-    heart_response: str = form_data.get("heart_response", "").lower()
-    reset_duration: str = form_data.get("reset_duration", "").lower()
-    motivator: str = form_data.get("motivator", "").lower()
-    emotional_trigger: str = form_data.get("emotional_trigger", "").lower()
-    past_mental: str = form_data.get("past_mental_struggles", "").strip()
+    # Extract singles
+    pressure_breath = form_data.get("pressure_breath", "").strip().lower()
+    heart_response = form_data.get("heart_response", "").strip().lower()
+    reset_duration = form_data.get("reset_duration", "").strip().lower()
+    motivator = form_data.get("motivator", "").strip().lower()
+    emotional_trigger = form_data.get("emotional_trigger", "").strip().lower()
+    past_mental = form_data.get("past_mental_struggles", "").strip()
 
-    # Freeze type
+    # --- Freeze type (multi-select)
     if "I go blank or freeze" in under_pressure or "I hesitate before acting" in under_pressure:
         tags["freeze_type"] = "physical_freeze"
     elif "I overthink instead of trusting instinct" in under_pressure or "I second-guess good decisions" in under_pressure:
         tags["freeze_type"] = "mental_freeze"
+    else:
+        tags["freeze_type"] = "stay_loose"
 
-    # Overthink type
+    # --- Overthink type (multi-select)
     if any(x in under_pressure + post_mistake for x in [
         "I overthink instead of trusting instinct",
         "I second-guess good decisions",
@@ -46,16 +47,26 @@ def map_tags(form_data: Dict) -> Dict:
         "I stop wanting the ball or engaging"
     ]):
         tags["overthink_type"] = "doubter"
+    else:
+        tags["overthink_type"] = "decisive"
 
-    # Focus breaker
+    # --- Focus breaker (multi-select)
     if "The crowd / noise" in focus_breakers:
         tags["focus_breaker"] = "distracted_by_crowd"
+    elif "Coach instructions" in focus_breakers:
+        tags["focus_breaker"] = "coach_noise"
     elif "Fear of making the wrong choice" in focus_breakers or "My own inner critic" in focus_breakers:
         tags["focus_breaker"] = "self_conflict"
     elif "Teammates or opponents" in focus_breakers:
-        tags["focus_breaker"] = "social_disruption"
+        tags["focus_breaker"] = "opponent_noise"
+    elif "Getting tired / out of breath" in focus_breakers:
+        tags["focus_breaker"] = "fatigue"
+    elif "I rarely lose focus" in focus_breakers:
+        tags["focus_breaker"] = "none_reported"
+    else:
+        tags["focus_breaker"] = "none_reported"
 
-    # Reset speed
+    # --- Reset speed (single-select)
     if "instantly" in reset_duration:
         tags["reset_speed"] = "fast_reset"
     elif "10–30" in reset_duration:
@@ -64,24 +75,30 @@ def map_tags(form_data: Dict) -> Dict:
         tags["reset_speed"] = "slow_reset"
     elif "longer" in reset_duration:
         tags["reset_speed"] = "very_slow_reset"
+    else:
+        tags["reset_speed"] = "unknown"
 
-    # Heart rate response
+    # --- Heart rate response (single-select)
     if "spikes" in heart_response:
         tags["hr_response"] = "hr_up"
     elif "drops" in heart_response:
         tags["hr_response"] = "hr_down"
     elif "normal" in heart_response:
         tags["hr_response"] = "hr_stable"
+    else:
+        tags["hr_response"] = "hr_unknown"
 
-    # Breath pattern
+    # --- Breath pattern (single-select)
     if "hold" in pressure_breath:
         tags["breath_pattern"] = "breath_hold"
     elif "shallow" in pressure_breath:
         tags["breath_pattern"] = "breath_fast"
     elif "normally" in pressure_breath:
         tags["breath_pattern"] = "breath_normal"
+    else:
+        tags["breath_pattern"] = "breath_normal"
 
-    # Motivation type
+    # --- Motivation type (single-select)
     if "small visible wins" in motivator:
         tags["motivation_type"] = "reward_seeker"
     elif "avoid failure" in motivator:
@@ -90,17 +107,23 @@ def map_tags(form_data: Dict) -> Dict:
         tags["motivation_type"] = "competitive"
     elif "praise from others" in motivator:
         tags["motivation_type"] = "external_validation"
+    else:
+        tags["motivation_type"] = "motivation_unknown"
 
-    # Threat trigger
+    # --- Threat trigger (single-select)
     if "coach criticism" in emotional_trigger:
         tags["threat_trigger"] = "authority_threat"
     elif "teammate judgement" in emotional_trigger:
         tags["threat_trigger"] = "peer_threat"
     elif "crowd pressure" in emotional_trigger:
         tags["threat_trigger"] = "audience_threat"
+    else:
+        tags["threat_trigger"] = "general_threat"
 
-    # Mental history
+    # --- Mental history (free text)
     if past_mental:
         tags["mental_history"] = "has_history"
+    else:
+        tags["mental_history"] = "clear_history"
 
     return tags
