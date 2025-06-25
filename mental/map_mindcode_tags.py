@@ -1,9 +1,21 @@
 def map_mindcode_tags(form_data: dict) -> dict:
-    """Maps all mental form inputs into controlled tag outputs for downstream mental module."""
-    tags = {}
+    """Maps mental form inputs into controlled tag outputs."""
+    tags = {
+        "under_pressure": [],
+        "post_mistake": [],
+        "focus_breakers": [],
+        "confidence_profile": [],
+        "identity_traits": [],
+        "elite_traits": [],
+        "breath_pattern": "breath_unknown",
+        "hr_response": "hr_unknown",
+        "reset_speed": "unknown",
+        "motivation_type": "motivation_unknown",
+        "threat_trigger": "general_threat",
+        "mental_history": "clear_history",
+    }
 
     # === UNDER PRESSURE ===
-    tags["under_pressure"] = []
     for item in form_data.get("under_pressure", []):
         item = item.lower()
         if "freeze" in item or "blank" in item:
@@ -26,7 +38,6 @@ def map_mindcode_tags(form_data: dict) -> dict:
             tags["under_pressure"].append("thrives")
 
     # === POST MISTAKE ===
-    tags["post_mistake"] = []
     for item in form_data.get("post_mistake", []):
         item = item.lower()
         if "replay" in item:
@@ -45,7 +56,6 @@ def map_mindcode_tags(form_data: dict) -> dict:
             tags["post_mistake"].append("external_judgement")
 
     # === FOCUS BREAKERS ===
-    tags["focus_breakers"] = []
     for item in form_data.get("focus_breakers", []):
         item = item.lower()
         if "crowd" in item or "noise" in item:
@@ -64,7 +74,6 @@ def map_mindcode_tags(form_data: dict) -> dict:
             tags["focus_breakers"].append("focus_locked")
 
     # === CONFIDENCE PROFILE ===
-    tags["confidence_profile"] = []
     for item in form_data.get("confidence_profile", []):
         item = item.lower()
         if "train better" in item:
@@ -102,44 +111,54 @@ def map_mindcode_tags(form_data: dict) -> dict:
     if "hold" in pressure_breath:
         tags["breath_pattern"] = "breath_hold"
     elif "shallow" in pressure_breath:
-        tags["breath_pattern"] = "breath_shallow"
+        tags["breath_pattern"] = "breath_fast"
     elif "normal" in pressure_breath:
         tags["breath_pattern"] = "breath_normal"
+    else:
+        tags["breath_pattern"] = "breath_unknown"
 
     if "spike" in heart_response:
-        tags["hr_response"] = "hr_spike"
+        tags["hr_response"] = "hr_up"
     elif "drop" in heart_response:
-        tags["hr_response"] = "hr_drop"
+        tags["hr_response"] = "hr_down"
     elif "normal" in heart_response:
-        tags["hr_response"] = "hr_normal"
+        tags["hr_response"] = "hr_stable"
+    else:
+        tags["hr_response"] = "hr_unknown"
 
     if "instant" in reset_duration:
-        tags["reset_speed"] = "reset_instant"
+        tags["reset_speed"] = "fast_reset"
     elif "10" in reset_duration:
-        tags["reset_speed"] = "reset_short"
+        tags["reset_speed"] = "medium_reset"
     elif "1" in reset_duration:
-        tags["reset_speed"] = "reset_medium"
+        tags["reset_speed"] = "slow_reset"
     elif "long" in reset_duration:
-        tags["reset_speed"] = "reset_slow"
+        tags["reset_speed"] = "very_slow_reset"
+    else:
+        tags["reset_speed"] = "unknown"
 
     if "avoid" in motivator:
-        tags["motivation"] = "avoid_failure"
+        tags["motivation_type"] = "avoid_failure"
     elif "compete" in motivator:
-        tags["motivation"] = "competitive"
+        tags["motivation_type"] = "competitive"
     elif "praise" in motivator:
-        tags["motivation"] = "praise_seeker"
+        tags["motivation_type"] = "external_validation"
     elif "wins" in motivator:
-        tags["motivation"] = "reward_seeker"
+        tags["motivation_type"] = "reward_seeker"
+    else:
+        tags["motivation_type"] = "motivation_unknown"
 
     if "coach" in emotional_trigger:
-        tags["threat_trigger"] = "coach_criticism"
+        tags["threat_trigger"] = "authority_threat"
     elif "crowd" in emotional_trigger:
-        tags["threat_trigger"] = "crowd_pressure"
+        tags["threat_trigger"] = "audience_threat"
     elif "team" in emotional_trigger:
-        tags["threat_trigger"] = "peer_judgement"
+        tags["threat_trigger"] = "peer_threat"
+    else:
+        tags["threat_trigger"] = "general_threat"
 
     # === MENTAL HISTORY ===
     history = form_data.get("past_mental_struggles", "").strip()
-    tags["mental_history"] = "has_history" if history else "no_history"
+    tags["mental_history"] = "has_history" if history else "clear_history"
 
     return tags
