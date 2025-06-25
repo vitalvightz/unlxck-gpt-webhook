@@ -330,37 +330,3 @@
             "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
             "video_url": null
         }
-    ],
-    "coverage_report": {
-        "completed_tags": [
-            "overthinker",
-            "doubter",
-            "physical_freeze",
-            "mental_freeze",
-            "breath_hold",
-            "breath_fast",
-            "hr_up",
-            "slow_reset",
-            "reward_seeker",
-            "avoid_failure",
-            "authority_threat",
-            "peer_threat",
-            "under_pressure",
-            "mental_loop",
-            "fragile_confidence",
-            "focus_crowd",
-            "focus_fatigue",
-            "emotional_performer",
-            "general_threat"
-        ],
-        "remaining_tags": [
-            "focus_locked",
-            "stage_fear",
-            "hr_stable",
-            "breath_normal",
-            "breath_unknown",
-            "hr_down",
-            "audience_threat"
-        ]
-    }
-}
