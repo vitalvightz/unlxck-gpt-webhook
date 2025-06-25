@@ -17,7 +17,6 @@ def parse_mindcode_form(fields: dict) -> dict:
     elite_traits = [x.strip() for x in get_value("Which traits define a mentally elite athlete in your opinion? (Pick up to 3)", fields).split(",") if x.strip()]
 
     # Single-selects
-    decision_style = get_value("How do you usually make decisions during performance? (Pick one)", fields)
     pressure_breath = get_value("When under pressure, I tend to:", fields)
     heart_response = get_value("After a mistake, my heart rate usually:", fields)
     reset_duration = get_value("How long do you take to reset after a bad moment during performance?", fields)
@@ -35,7 +34,6 @@ def parse_mindcode_form(fields: dict) -> dict:
         "under_pressure": under_pressure,
         "post_mistake": post_mistake,
         "focus_breakers": focus_breakers,
-        "decision_style": decision_style,
         "confidence_profile": confidence_profile,
         "identity_traits": identity_traits,
         "elite_traits": elite_traits,
