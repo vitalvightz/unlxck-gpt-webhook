@@ -206,5 +206,145 @@
       "focus_locked", "stage_fear", "hr_stable", "breath_normal",
       "breath_unknown", "hr_down", "audience_threat"
     ]
-  }
-}
+  {
+  "drills": [
+    // 1. Previously Covered Drills (12 drills from earlier) 
+    // ...
+
+    // 2. New Drills Covering Missing Tags
+    {
+      "name": "The Unshakeable Reset",
+      "description": "Trains autonomic nervous system to recover faster between high-intensity moments.",
+      "theme_tags": ["fast_reset", "hr_stable", "stay_loose"],
+      "raw_traits": ["relaxed", "free", "joyful"],
+      "modalities": ["breathwork", "game reset"],
+      "sports": ["universal"],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "Inhale calm → Exhale reset",
+      "notes": "Between rounds/plays: 1. Inhale for 3s through nose. 2. Exhale for 6s through pursed lips. 3. Shake out limbs. Repeat 2x. Based on polyvagal theory.",
+      "progression": {
+        "beginner": "Practice seated post-training",
+        "intermediate": "Use during cooldown drills",
+        "elite": "Implement between sparring rounds"
+      }
+    },
+    {
+      "name": "Decision Autopilot",
+      "description": "Reduces hesitation by creating neural shortcuts for common in-game choices.",
+      "theme_tags": ["decisive", "focus_decision_fear", "hesitate"],
+      "raw_traits": ["precise", "tactical", "confident"],
+      "modalities": ["visualisation", "imagery reps"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "See → Do",
+      "notes": "Daily: 1. Review 3 frequent game scenarios. 2. Visualize ideal response in first-person POV. 3. Physical mimicry of action. Strengthens premotor cortex pathways.",
+      "progression": {
+        "beginner": "Static visualization",
+        "intermediate": "Add time pressure (2s decisions)",
+        "elite": "Train with sensory distractions"
+      }
+    },
+    {
+      "name": "Fatigue Focus Protocol",
+      "description": "Maintains laser focus when exhausted by training attentional stamina.",
+      "theme_tags": ["focus_fatigue", "hr_down", "breath_normal"],
+      "raw_traits": ["focused", "commanding", "hungry"],
+      "modalities": ["focus drill", "cold exposure"],
+      "sports": ["universal"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "Tunnel → Expand",
+      "notes": "Post-training: 1. Pick a focal point. 2. Alternate between narrow (5s) and wide (5s) attention. 3. Continue for 3min despite fatigue. Builds anterior cingulate cortex resilience.",
+      "progression": {
+        "beginner": "Fresh state training",
+        "intermediate": "After moderate exercise",
+        "elite": "During exhaustion phase (post-competition sim)"
+      }
+    },
+    {
+      "name": "The Iceberg Journal",
+      "description": "Identifies hidden triggers behind emotional reactions during performance.",
+      "theme_tags": ["emotional_performer", "self_anger", "has_history"],
+      "raw_traits": ["aggressive", "wild", "commanding"],
+      "modalities": ["journaling", "reflection"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "What's beneath the wave?",
+      "notes": "Post-competition: 1. Record emotional outbursts. 2. Trace back to root cause (e.g., 'Anger at ref call → fear of losing scholarship'). 3. Reframe next-time response. Uses cognitive behavioral therapy principles.",
+      "progression": {
+        "beginner": "Private journaling",
+        "intermediate": "Discuss with coach",
+        "elite": "Pre-emptive trigger management"
+      }
+    },
+    {
+      "name": "The Pressure Dial",
+      "description": "Teaches athletes to consciously regulate their arousal levels during competition.",
+      "theme_tags": ["pressure_distrust", "emotional", "hr_unknown"],
+      "raw_traits": ["relaxed", "precise", "confident"],
+      "modalities": ["self-talk", "anchor cue"],
+      "sports": ["universal"],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "Dial up → Dial down",
+      "notes": "Mid-performance: 1. Rate pressure 1-10. 2. Adjust using: 'Dial up' (clench fists + sharp inhale) for low energy, 'Dial down' (shake out + long exhale) for anxiety. Based on Yerkes-Dodson law.",
+      "progression": {
+        "beginner": "Awareness training",
+        "intermediate": "Live adjustment in practice",
+        "elite": "Real-time competition use"
+      }
+    },
+    {
+      "name": "The 5-Second Rule",
+      "description": "Prevents overthinking by creating a mandatory action window after stimulus.",
+      "theme_tags": ["overthinker", "second_guess", "focus_self_critic"],
+      "raw_traits": ["ruthless", "aggressive", "focused"],
+      "modalities": ["anchor cue"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "high",
+      "cue": "5...4...3...2...1...GO",
+      "notes": "When uncertain: 1. Count down from 5. 2. Take decisive action on 'GO'. 3. No revisions allowed. Forces prefrontal cortex to commit to action. Inspired by Mel Robbins' research.",
+      "progression": {
+        "beginner": "Simple decisions (e.g., drill selection)",
+        "intermediate": "Complex in-game choices",
+        "elite": "High-stakes competition calls"
+      }
+    },
+    {
+      "name": "The Spotlight Drill",
+      "description": "Simulates audience pressure to build immunity to stage fright.",
+      "theme_tags": ["stage_fear", "audience_threat", "external_judgement"],
+      "raw_traits": ["confident", "commanding", "joyful"],
+      "modalities": ["focus drill", "visualisation"],
+      "sports": ["universal"],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Lights on → Game on",
+      "notes": "Weekly: 1. Record training with bright lights. 2. Imagine judges scoring every move. 3. Post videos online for accountability. Gradually reduces social threat response.",
+      "progression": {
+        "beginner": "Private recording",
+        "intermediate": "Small live audience",
+        "elite": "Public streaming"
+      }
+    },
+    {
+      "name": "The Neutralizer",
+      "description": "Resets emotional reactions to coach/opponent provocations.",
+      "theme_tags": ["coach_noise", "opponent_noise", "authority_threat"],
+      "raw_traits": ["tactical", "relaxed", "precise"],
+      "modalities": ["self-talk", "anchor cue"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Input → Filter → Execute",
+      "notes": "When distracted: 1. Touch ear (physical filter). 2. Whisper 'relevant?' 3. Either implement or discard info. Trains selective auditory processing.",
+      "progression": {
+        "beginner": "Pre-identified triggers",
+        "intermediate": "Unpredictable interruptions",
+        "elite": "High-emotion environments"
+      }
+    
