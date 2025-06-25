@@ -1,0 +1,43 @@
+{
+  "theme_tags": {
+    "freeze_type": ["physical_freeze", "mental_freeze", "stay_loose"],
+    "overthink_type": ["overthinker", "doubter", "decisive"],
+    "focus_breaker": ["distracted_by_crowd", "coach_noise", "self_conflict", "opponent_noise", "fatigue", "none_reported"],
+    "reset_speed": ["fast_reset", "medium_reset", "slow_reset", "very_slow_reset", "unknown"],
+    "hr_response": ["hr_up", "hr_down", "hr_stable", "hr_unknown"],
+    "breath_pattern": ["breath_hold", "breath_fast", "breath_normal", "breath_unknown"],
+    "motivation_type": ["reward_seeker", "avoid_failure", "competitive", "external_validation", "motivation_unknown"],
+    "threat_trigger": ["authority_threat", "peer_threat", "audience_threat", "general_threat"],
+    "mental_history": ["has_history", "clear_history"],
+    "under_pressure": ["hesitate", "freeze", "second_guess", "emotional", "overthink", "avoidant", "audio_cutoff", "demand_avoidance", "thrives"],
+    "post_mistake": ["mental_loop", "shutdown", "compensate", "disengage", "self_anger", "quick_reset", "external_judgement"],
+    "focus_breakers": ["focus_crowd", "focus_coach", "focus_decision_fear", "focus_fatigue", "focus_self_critic", "focus_social", "focus_locked"],
+    "confidence_profile": ["gym_performer", "fragile_confidence", "stage_fear", "pressure_distrust", "emotional_performer", "control_needed", "stable_confidence"]
+  },
+  "raw_traits": [
+    "confident", "focused", "aggressive", "free", "locked-in",
+    "playful", "ruthless", "precise", "tactical", "wild",
+    "hungry", "relaxed", "commanding", "joyful"
+  ],
+  "modalities": [
+    "breathwork", "self-talk", "visualisation", "anchor cue",
+    "reflection", "identity shift", "pre-fight prep", "game reset",
+    "journaling", "focus drill", "cold exposure", "imagery reps"
+  ],
+  "sports": [
+    "football", "boxing", "mma", "kickboxing", "muay thai",
+    "bjj", "wrestling", "grappling", "rugby", "basketball", "track"
+  ],
+  "drill_structure": {
+    "name": "string",
+    "description": "string",
+    "theme_tags": ["list of tags from theme_tags values"],
+    "raw_traits": ["list of up to 3 raw_traits"],
+    "modalities": ["list of modalities used"],
+    "sports": ["list of relevant sports"],
+    "phase": "GPP | SPP | TAPER | UNIVERSAL",
+    "intensity": "low | medium | high",
+    "cue": "short mantra or reminder",
+    "notes": "timing, context, or setup details"
+  }
+}
