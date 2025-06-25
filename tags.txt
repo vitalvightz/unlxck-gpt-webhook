@@ -26,7 +26,7 @@
   ],
   "sports": [
     "football", "boxing", "mma", "kickboxing", "muay thai",
-    "bjj", "wrestling", "grappling", "rugby", "basketball", "track"
+    "bjj", "wrestling", "grappling", "rugby", "basketball", "track", "universal"
   ],
   "drill_structure": {
     "name": "string",
