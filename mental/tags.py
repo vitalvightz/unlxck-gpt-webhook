@@ -8,7 +8,7 @@ def map_tags(form_data: Dict) -> Dict:
         "focus_breaker": "none_reported",
         "reset_speed": "unknown",
         "hr_response": "hr_unknown",
-        "breath_pattern": "breath_normal",
+        "breath_pattern": "breath_unknown",
         "motivation_type": "motivation_unknown",
         "threat_trigger": "general_threat",
         "mental_history": "clear_history",
@@ -96,7 +96,7 @@ def map_tags(form_data: Dict) -> Dict:
     elif "normally" in pressure_breath:
         tags["breath_pattern"] = "breath_normal"
     else:
-        tags["breath_pattern"] = "breath_normal"
+        tags["breath_pattern"] = "breath_unknown"
 
     # --- Motivation type (single-select)
     if "small visible wins" in motivator:
