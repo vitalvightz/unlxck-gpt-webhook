@@ -1,3 +1,46 @@
+"""Mapping helpers for mindcode form fields."""
+
+# Valid input phrases per field. These mirror the Google form options and allow
+# simple mapping without long ``if/elif`` chains.
+BREATH_OPTIONS = ["hold", "shallow", "normal"]
+HR_OPTIONS = ["spike", "drop", "normal"]
+RESET_OPTIONS = ["instant", "10", "1", "long"]
+MOTIVATOR_OPTIONS = ["avoid", "compete", "praise", "wins"]
+TRIGGER_OPTIONS = ["coach", "crowd", "team"]
+
+BREATH_MAP = {
+    "hold": "breath_hold",
+    "shallow": "breath_fast",
+    "normal": "breath_normal",
+}
+
+HR_RESPONSE_MAP = {
+    "spike": "hr_up",
+    "drop": "hr_down",
+    "normal": "hr_stable",
+}
+
+RESET_SPEED_MAP = {
+    "instant": "fast_reset",
+    "10": "medium_reset",
+    "1": "slow_reset",
+    "long": "very_slow_reset",
+}
+
+MOTIVATOR_MAP = {
+    "avoid": "avoid_failure",
+    "compete": "competitive",
+    "praise": "external_validation",
+    "wins": "reward_seeker",
+}
+
+EMOTIONAL_TRIGGER_MAP = {
+    "coach": "authority_threat",
+    "crowd": "audience_threat",
+    "team": "peer_threat",
+}
+
+
 def map_mindcode_tags(form_data: dict) -> dict:
     """Maps mental form inputs into controlled tag outputs."""
     tags = {
@@ -108,57 +151,31 @@ def map_mindcode_tags(form_data: dict) -> dict:
     motivator = form_data.get("motivator", "").lower()
     emotional_trigger = form_data.get("emotional_trigger", "").lower()
 
-    if "hold" in pressure_breath:
-        tags["breath_pattern"] = "breath_hold"
-    elif "shallow" in pressure_breath:
-        tags["breath_pattern"] = "breath_fast"
-    elif "normal" in pressure_breath:
-        tags["breath_pattern"] = "breath_normal"
-    else:
-        tags["breath_pattern"] = "breath_unknown"
-
-    if "spike" in heart_response:
-        tags["hr_response"] = "hr_up"
-    elif "drop" in heart_response:
-        tags["hr_response"] = "hr_down"
-    elif "normal" in heart_response:
-        tags["hr_response"] = "hr_stable"
-    else:
-        tags["hr_response"] = "hr_unknown"
-
-    if "instant" in reset_duration:
-        tags["reset_speed"] = "fast_reset"
-    elif "10" in reset_duration:
-        tags["reset_speed"] = "medium_reset"
-    elif "1" in reset_duration:
-        tags["reset_speed"] = "slow_reset"
-    elif "long" in reset_duration:
-        tags["reset_speed"] = "very_slow_reset"
-    else:
-        tags["reset_speed"] = "unknown"
-
-    if "avoid" in motivator:
-        tags["motivation_type"] = "avoid_failure"
-    elif "compete" in motivator:
-        tags["motivation_type"] = "competitive"
-    elif "praise" in motivator:
-        tags["motivation_type"] = "external_validation"
-    elif "wins" in motivator:
-        tags["motivation_type"] = "reward_seeker"
-    else:
-        tags["motivation_type"] = "motivation_unknown"
-
-    if "coach" in emotional_trigger:
-        tags["threat_trigger"] = "authority_threat"
-    elif "crowd" in emotional_trigger:
-        tags["threat_trigger"] = "audience_threat"
-    elif "team" in emotional_trigger:
-        tags["threat_trigger"] = "peer_threat"
-    else:
-        tags["threat_trigger"] = "general_threat"
+    for key, mapping, value in [
+        ("breath_pattern", BREATH_MAP, pressure_breath),
+        ("hr_response", HR_RESPONSE_MAP, heart_response),
+        ("reset_speed", RESET_SPEED_MAP, reset_duration),
+        ("motivation_type", MOTIVATOR_MAP, motivator),
+        ("threat_trigger", EMOTIONAL_TRIGGER_MAP, emotional_trigger),
+    ]:
+        for phrase, tag in mapping.items():
+            if phrase in value:
+                tags[key] = tag
+                break
 
     # === MENTAL HISTORY ===
     history = form_data.get("past_mental_struggles", "").strip()
     tags["mental_history"] = "has_history" if history else "clear_history"
+
+    # Deduplicate list-based tags
+    for list_key in [
+        "under_pressure",
+        "post_mistake",
+        "focus_breakers",
+        "confidence_profile",
+        "identity_traits",
+        "elite_traits",
+    ]:
+        tags[list_key] = list(set(tags[list_key]))
 
     return tags
