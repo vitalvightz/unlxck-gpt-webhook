@@ -14,6 +14,8 @@ class MapMindcodeTagsTest(unittest.TestCase):
             "focus_breakers": ["The crowd / noise"],
             "confidence_profile": ["I train better than I perform"],
             "identity_traits": ["Confident", "Focused"],
+            "tool_preferences": ["Breathwork", "Visualisation"],
+            "key_struggles": ["Overthinking"],
             "elite_traits": ["Unshakeable focus", "Dominates under pressure"],
             "pressure_breath": "Hold my breath",
             "heart_response": "Spikes",
@@ -28,6 +30,8 @@ class MapMindcodeTagsTest(unittest.TestCase):
         self.assertEqual(tags["focus_breakers"], ["focus_crowd"])
         self.assertEqual(tags["confidence_profile"], ["gym_performer"])
         self.assertEqual(tags["identity_traits"], ["trait_confident", "trait_focused"])
+        self.assertEqual(tags["tool_preferences"], ["pref_breathwork", "pref_visualisation"])
+        self.assertEqual(tags["key_struggles"], ["overthink"])
         self.assertEqual(tags["elite_traits"], ["elite_unshakeable_focus", "elite_dominates_under_pressure"])
         self.assertEqual(tags["breath_pattern"], "breath_hold")
         self.assertEqual(tags["hr_response"], "hr_up")
@@ -39,9 +43,11 @@ class MapMindcodeTagsTest(unittest.TestCase):
     def test_deduplication(self):
         data = {
             "under_pressure": ["I hesitate before acting", "I hesitate before acting"],
+            "tool_preferences": ["Breathwork", "Breathwork"],
         }
         tags = map_mindcode_tags(data)
         self.assertEqual(tags["under_pressure"], ["hesitate"])
+        self.assertEqual(tags["tool_preferences"], ["pref_breathwork"])
 
     def test_normalization(self):
         data = {

@@ -52,6 +52,26 @@ CONFIDENCE_PROFILE_MAP = {
     "i am confident in myself, regardless of outcome": "stable_confidence",
 }
 
+# New multi-select questions
+TRAINING_TOOLS_MAP = {
+    "breathwork": "pref_breathwork",
+    "cold exposure": "pref_cold_exposure",
+    "journaling or reflection": "pref_journaling",
+    "anchor cue (e.g word/action/object)": "pref_anchor_cue",
+    "visualisation": "pref_visualisation",
+    "i’m not sure yet": "pref_unknown",
+}
+
+KEY_STRUGGLES_MAP = {
+    "overthinking": "overthink",
+    "emotional reactions": "emotional",
+    "confidence gaps / self-doubt": "fragile_confidence",
+    "struggling to reset quickly": "slow_reset",
+    "needing control to perform well": "control_needed",
+    "identity crisis (e.g. performing different in training vs where it matters)": "gym_performer",
+    "i don’t know": "unknown_struggle",
+}
+
 # Single-select option -> tag lookups
 BREATH_MAP = {
     "hold my breath": "breath_hold",
@@ -97,6 +117,8 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         "focus_breakers": [],
         "confidence_profile": [],
         "identity_traits": [],
+        "tool_preferences": [],
+        "key_struggles": [],
         "elite_traits": [],
         "breath_pattern": "breath_unknown",
         "hr_response": "hr_unknown",
@@ -112,6 +134,8 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         ("post_mistake", POST_MISTAKE_MAP),
         ("focus_breakers", FOCUS_BREAKERS_MAP),
         ("confidence_profile", CONFIDENCE_PROFILE_MAP),
+        ("tool_preferences", TRAINING_TOOLS_MAP),
+        ("key_struggles", KEY_STRUGGLES_MAP),
     ]:
         for item in form_data.get(field, []):
             normalized = item.strip().lower()
@@ -156,6 +180,8 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         "post_mistake",
         "focus_breakers",
         "confidence_profile",
+        "tool_preferences",
+        "key_struggles",
         "identity_traits",
         "elite_traits",
     ]:
