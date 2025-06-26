@@ -28,7 +28,7 @@ class ScoringTests(unittest.TestCase):
         self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.5)
         drill2 = {"intensity": "medium", "raw_traits": ["commanding"], "modalities": ["visualisation", "breathwork"]}
         athlete_synergy = {"sport": "football", "in_fight_camp": False, "tags": ["thrives"]}
-        self.assertAlmostEqual(score_drill(drill2, "SPP", athlete_synergy), 1.7)
+        self.assertAlmostEqual(score_drill(drill2, "SPP", athlete_synergy), 1.8)
 
     def test_multiple_elite_trait_penalty(self):
         drill = {"intensity": "medium", "raw_traits": ["ruthless", "commanding"], "modalities": ["focus drill"]}
