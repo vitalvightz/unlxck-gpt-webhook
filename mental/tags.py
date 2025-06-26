@@ -1,5 +1,7 @@
 from typing import Dict, List
 
+from .normalization import normalize_tag_dict
+
 def map_tags(form_data: Dict) -> Dict:
     """Map raw form input to controlled mental performance tags."""
     tags = {
@@ -125,5 +127,8 @@ def map_tags(form_data: Dict) -> Dict:
         tags["mental_history"] = "has_history"
     else:
         tags["mental_history"] = "clear_history"
+
+    # Normalize synonymous tags across all fields
+    tags = normalize_tag_dict(tags)
 
     return tags
