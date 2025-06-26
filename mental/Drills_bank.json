@@ -1543,7 +1543,6 @@
       "cue": "MY ARENA",
       "notes": "Detailed mental rehearsal of competition entry specific to each sport (MMA walkout, BJJ mat approach, wrestling tunnel prep)."
     },
-    // Additional drills continue...
     {
       "name": "Submission Failure Reboot",
       "description": "Resets mentality after failed submissions in BJJ/grappling or missed finishes in MMA.",
@@ -1570,12 +1569,6 @@
     }
     
     {
-  "drills": [
-    // 1-7 from previous
-    // ...
-
-    // 8. Takedown Failure Reset
-    {
       "name": "Shot Recovery System",
       "description": "Instinctive reset protocol after failed takedowns in wrestling or MMA cage work.",
       "theme_tags": ["post_mistake", "quick_reset"],
@@ -1587,8 +1580,6 @@
       "cue": "MISS → SPRAWL → CHAIN",
       "notes": "Failed shot immediately transitions to: 1. Defensive sprawl. 2. Secondary takedown. 3. Worst-case guard pull (MMA)."
     },
-
-    // 9. Guard Retention Trigger
     {
       "name": "Guard Survival Autopilot",
       "description": "Pre-programmed reactions to common passes for BJJ and grappling.",
@@ -1601,8 +1592,6 @@
       "cue": "FRAME → RECOVER",
       "notes": "Daily: Partner initiates passes → Instant defensive reaction without conscious thought."
     },
-
-    // 10. Cage Cutting Autopilot
     {
       "name": "Octagon GPS",
       "description": "Eliminates hesitation in MMA cage navigation and cutting off opponents.",
@@ -1615,8 +1604,6 @@
       "cue": "CUT → CORNER → CONTROL",
       "notes": "Use tape marks to simulate cage during shadow work. 45° angle priority system."
     },
-
-    // 11. Tournament Day Protocol
     {
       "name": "Mat-Toughness Builder",
       "description": "Simulates wrestling/BJJ tournament stress through deliberate exposure.",
@@ -1629,8 +1616,6 @@
       "cue": "MAT → MINE",
       "notes": "Weekly: 1. Cold shower pre-training. 2. Loud crowd noise. 3. Judged scenarios with consequences."
     },
-
-    // 12. Submission Chain Reactor
     {
       "name": "Submission Dominoes",
       "description": "Trains automatic submission chains for BJJ/grappling when initial attempts fail.",
@@ -1643,8 +1628,6 @@
       "cue": "MISS → MOVE → FINISH",
       "notes": "Drill 3-move chains: Armbar fails → triangle → omoplata. No hesitation between transitions."
     },
-
-    // 13. Clinch Confidence Builder
     {
       "name": "Dirty Boxing Mindset",
       "description": "Develops MMA clinch aggression through psychological framing.",
@@ -1657,8 +1640,6 @@
       "cue": "MY HOUSE",
       "notes": "Clinch work preceded by: 1. Power pose. 2. Aggression mantra. 3. Physical trigger (tapping gloves)."
     },
-
-    // 14. Wrestling Bottom Reset
     {
       "name": "Escape Autopilot",
       "description": "Instinctive bottom recovery system for wrestling and MMA grappling.",
@@ -1671,8 +1652,6 @@
       "cue": "BUMP → BRIDGE → BASE",
       "notes": "When pinned: 1. Explosive bridge. 2. 2-second breath hold. 3. Systematic escape chain."
     },
-
-    // 15. Amateur Fight Prep
     {
       "name": "First Fight Simulator",
       "description": "Full-sensory debut fight preparation for MMA and BJJ competitors.",
@@ -1685,8 +1664,6 @@
       "cue": "DEBUT → DOMINATE",
       "notes": "Includes: 1. Walkout rehearsal. 2. Announcer call simulation. 3. First exchange scripting."
     },
-
-    // 16. Grappling Gas Tank
     {
       "name": "Survival Breathing",
       "description": "Oxygen-conserving breath control for BJJ/grappling late rounds.",
@@ -1699,8 +1676,6 @@
       "cue": "IN → HOLD → OUT → FIGHT",
       "notes": "4-4-4-4 breathing pattern: Inhale (4s), Hold (4s), Exhale (4s), Hold (4s) during positional drills."
     },
-
-    // 17. Wrestling Top Pressure
     {
       "name": "Ride Clock Mindset",
       "description": "Builds relentless top pressure for wrestling and MMA ground control.",
@@ -1713,8 +1688,6 @@
       "cue": "BREAK → THEM → NOT → ME",
       "notes": "30-second countdown drill where stopping pressure = restart. Mental framing of opponent's discomfort."
     },
-
-    // 18. MMA Cage Awareness
     {
       "name": "Fence GPS",
       "description": "Develops automatic cage awareness for MMA fighters to prevent freezing.",
@@ -1727,8 +1700,6 @@
       "cue": "FIND → THE → FENCE",
       "notes": "Blindfolded cage navigation drills to build spatial awareness without visual dependence."
     },
-
-    // 19. BJJ Competition Start
     {
       "name": "First Grip Battle",
       "description": "Eliminates hesitation in BJJ match openings through pre-programmed reactions.",
@@ -1741,8 +1712,6 @@
       "cue": "GRIP → PULL → GO",
       "notes": "100+ repetitions of competition-start grip sequences until fully automatic."
     },
-
-    // 20. Grappling Mental Toughness
     {
       "name": "Submission Survival",
       "description": "Builds composure in bad positions for BJJ and grappling.",
@@ -1755,9 +1724,6 @@
       "cue": "DANGER → BREATHE → ESCAPE",
       "notes": "Deliberate training in compromised positions with specific recovery protocols."
     }
-    {
-  "drills": [
-    // 1. Motivational Architecture Drills
     {
       "name": "The Why Chain",
       "description": "Builds intrinsic motivation by linking training actions to deeper personal values for MMA/BJJ/Wrestling/Grappling athletes.",
@@ -1793,7 +1759,6 @@
       }
     },
 
-    // 2. Threat Response Drills
     {
       "name": "The Coach Filter",
       "description": "Trains fighters to productively process coaching criticism without threat response activation.",
@@ -1827,4 +1792,139 @@
         "intermediate": "Select peer observation",
         "elite": "Full-team evaluation sessions"
       }
-  
+    {
+      "name": "Sparring Autopilot",
+      "description": "Pre-sets tactical responses for live sparring to eliminate overthinking during chaotic exchanges.",
+      "theme_tags": ["overthink_type", "under_pressure"],
+      "raw_traits": ["precise", "tactical"],
+      "modalities": ["anchor cue", "tactical drill"],
+      "sports": ["MMA"],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "IF [X] → THEN [Y]",
+      "notes": "Pre-sparring: 1. Write 3 'If-Then' rules (e.g., 'If they blitz → pivot right'). 2. Verbalize pre-round. 3. Post-round review execution. Cuts decision latency by 0.8s.",
+      "progression": {
+        "beginner": "Single-technique triggers",
+        "intermediate": "Combination responses",
+        "elite": "Full chaos adaptation"
+      }
+    },
+    {
+      "name": "The 90-Second Storm",
+      "description": "Simulates first-round adrenaline dump with forced early-round action to build confidence in chaotic openings.",
+      "theme_tags": ["confidence_profile", "under_pressure"],
+      "raw_traits": ["aggressive", "dominant"],
+      "modalities": ["pre-fight prep", "focus drill"],
+      "sports": ["MMA"],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "STORM → CONTROL",
+      "notes": "First 90s of sparring: 1. Mandatory engagement. 2. Designated 'chaos creator' partner. 3. Immediate film review of adaptation. Conditions amygdala response.",
+      "progression": {
+        "beginner": "Controlled chaos",
+        "intermediate": "Unpredictable triggers",
+        "elite": "Full competition simulation"
+      }
+    },
+    {
+      "name": "The Chain Breaker",
+      "description": "Resets mentality after failed takedown chains or striking setups during high-intensity sparring.",
+      "theme_tags": ["mental_loop", "reset_speed"],
+      "raw_traits": ["resilient", "playful"],
+      "modalities": ["game reset", "breathwork"],
+      "sports": ["MMA"],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "BREAK → REBOOT",
+      "notes": "After failed sequences: 1. Disengage to safe range. 2. 'Keychain twist' physical reset. 3. Re-engage with simple combo. Used by UFC athletes between rounds.",
+      "progression": {
+        "beginner": "Designated reset moments",
+        "intermediate": "Coach-triggered resets",
+        "elite": "Self-initiated under fire"
+      }
+    },
+    {
+      "name": "Fake-Proof Focus",
+      "description": "Trains visual attention to distinguish feints from committed attacks during sparring exchanges.",
+      "theme_tags": ["focus_breaker"],
+      "raw_traits": ["focused", "locked-in"],
+      "modalities": ["focus drill"],
+      "sports": ["MMA"],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "TRACK → DON'T CHASE",
+      "notes": "Partner throws 10:3 feint:commit ratio. React only to real attacks. Develops saccadic eye movement control. 3 rounds weekly.",
+      "progression": {
+        "beginner": "Telegraphed feints",
+        "intermediate": "Expert-level deception",
+        "elite": "Fatigued defense"
+      }
+    },
+{
+      "name": "Walkway Anchoring",
+      "description": "Links physiological calm to walkout music beats for pre-fight arousal control.",
+      "theme_tags": ["stage_fear", "threat_trigger"],
+      "raw_traits": ["confident", "commanding"],
+      "modalities": ["anchor cue", "breathwork"],
+      "sports": ["MMA"],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "BEAT → BREATHE",
+      "notes": "Daily: 1. Walk to actual fight music. 2. Sync exhales to every 4th beat. 3. Finger tap rhythm on thigh. Creates entrainment effect.",
+      "progression": {
+        "beginner": "Private rehearsals",
+        "intermediate": "Gym walkthroughs",
+        "elite": "Crowd simulation"
+      }
+    },
+    {
+      "name": "The 5-Minute War Room",
+      "description": "Replaces hard sparring with tactical visualization during fight week taper.",
+      "theme_tags": ["confidence_profile"],
+      "raw_traits": ["tactical", "precise"],
+      "modalities": ["visualisation"],
+      "sports": ["MMA"],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "SEE → FEEL → WIN",
+      "notes": "Morning/evening: 1. Watch opponent footage. 2. Mental rehearsal of gameplan. 3. Kinesthetic mimicry of key techniques. Maintains neural pathways without damage risk.",
+      "progression": {
+        "beginner": "Basic technique review",
+        "intermediate": "Full-round simulation",
+        "elite": "Adversity scenario planning"
+      }
+    },
+    {
+      "name": "Emotional Pressure Valve",
+      "description": "90-second regulation drill for fight week nerves or weight-cut stress.",
+      "theme_tags": ["emotional"],
+      "raw_traits": ["relaxed", "joyful"],
+      "modalities": ["breathwork", "cold exposure"],
+      "sports": ["MMA"],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "PRESSURE → POWER",
+      "notes": "When anxious: 1. Cold water face immersion (15s). 2. 4-4-6 breathing. 3. Power pose. Triggers mammalian dive reflex.",
+      "progression": {
+        "beginner": "Scheduled sessions",
+        "intermediate": "Triggered by coach",
+        "elite": "Self-regulated under stress"
+      }
+    },
+    {
+      "name": "The Blueprint Run",
+      "description": "Final-day movement rehearsal linking visualization to micro-physical cues.",
+      "theme_tags": ["under_pressure"],
+      "raw_traits": ["focused", "commanding"],
+      "modalities": ["visualisation", "anchor cue"],
+      "sports": ["MMA"],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "LINK → LOCK → LAUNCH",
+      "notes": "24hrs pre-fight: 1. Shadow drill with exact fight-day gear. 2. Physical trigger for each technique (e.g., ear tap = jab). 3. Full walkthrough at 50% speed. Cements neural firing patterns.",
+      "progression": {
+        "beginner": "Technique segments",
+        "intermediate": "Full-round flow",
+        "elite": "Adversity response testing"
+      }
+    
