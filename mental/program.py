@@ -8,6 +8,15 @@ def parse_mindcode_form(fields: dict) -> dict:
     sport = get_value("Sport", fields)
     position_style = get_value("Position/Style", fields)
 
+    phase_raw = get_value("Where are you at in your performance cycle?", fields).lower()
+    phase_key = phase_raw.replace("\u2019", "'")
+    phase_mapping = {
+        "i'm rebuilding, resetting, or in off-season": "GPP",
+        "i'm training hard, sharpening up, or deep in prep": "SPP",
+        "i've got a match/event coming up or i'm easing down before game day": "TAPER",
+    }
+    mental_phase = phase_mapping.get(phase_key, "")
+
     # Multi-selects (split by ", ")
     under_pressure = [x.strip() for x in get_value("What usually happens to you under pressure? (Tick all that apply)", fields).split(",") if x.strip()]
     post_mistake = [x.strip() for x in get_value("What happens right after you make a mistake? (Tick all that apply)", fields).split(",") if x.strip()]
@@ -46,5 +55,6 @@ def parse_mindcode_form(fields: dict) -> dict:
         "reset_duration": reset_duration,
         "motivator": motivator,
         "emotional_trigger": emotional_trigger,
-        "past_mental_struggles": past_mental_struggles
+        "past_mental_struggles": past_mental_struggles,
+        "mental_phase": mental_phase
     }
