@@ -15,6 +15,8 @@ python -m mental.program
 
 - `mental/program.py` – parses data from the *Mindcode* form and returns a
   dictionary of clean field values.
+  It captures basic athlete info such as name, age, sport and position/style
+  even if those details are not yet used by the scoring logic.
 - `mental/map_mindcode_tags.py` – converts the parsed fields into normalised
   mental performance tags such as `breath_pattern`, `reset_speed` and
   `motivation_type`.

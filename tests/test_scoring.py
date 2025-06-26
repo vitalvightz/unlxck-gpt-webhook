@@ -49,8 +49,8 @@ class ScoringTests(unittest.TestCase):
             "in_fight_camp": False,
             "tags": ["fast_reset", "breath_hold", "other"],
         }
-        # 1.0 base +0.5 phase match +0.3 sport match -0.1 overload = 1.7
-        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.7)
+        # 1.0 base +0.5 phase +0.3 sport match -0.1 overload +0.2 microweight = 1.9
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.9)
 
     def test_weakness_and_reinforcement_bonus(self):
         drill = {
@@ -86,6 +86,14 @@ class ScoringTests(unittest.TestCase):
         }
         # Base 1.0 -0.5 taper penalty -0.2 overload = 0.3
         self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.3)
+
+    def test_sport_microweight_bonus(self):
+        drill = {"theme_tags": ["fast_reset"], "modalities": ["visualisation"]}
+        athlete = {"sport": "boxing"}
+        # No phase match; microweights cancel each other so score stays base 1.0
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.0)
+        # penalty for visualisation-only cancels reset bonus
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -55,6 +55,55 @@ def check_synergy_match(drill: dict, athlete_all_tags):
     return False
 
 
+def sport_microweight_bonus(drill: dict, athlete: dict) -> float:
+    """Return sport-specific micro adjustment for a given drill."""
+    sport = athlete.get("sport", "").lower()
+    tags = {t.lower() for t in drill.get("theme_tags", [])}
+    modalities = [m.lower() for m in drill.get("modalities", [])]
+    traits = {t.lower() for t in drill.get("raw_traits", [])}
+    phase = drill.get("phase", "").upper()
+
+    bonus = 0.0
+
+    if sport in {"mma", "boxing"}:
+        if tags & (FREEZE_TYPE_TAGS | RESET_SPEED_TAGS):
+            bonus += 0.2
+        if "visualisation" in modalities and len(modalities) == 1:
+            bonus -= 0.2
+
+    elif sport in {"rugby", "football"}:
+        if "focus_social" in tags:
+            bonus += 0.2
+        if "focus_social" in tags and {"commanding", "playful"} & traits:
+            bonus += 0.2
+
+    elif sport == "track":
+        if {"focus_locked", "thrives"} & tags:
+            bonus += 0.2
+        if phase == "GPP" and not any(
+            any(k in m for k in ["breathwork", "tempo"]) for m in modalities
+        ):
+            bonus -= 0.2
+
+    elif sport in {"wrestling", "grappling", "bjj"}:
+        if any(
+            any(k in m for k in ["breathwork", "zone 2", "tempo"]) for m in modalities
+        ):
+            bonus += 0.2
+
+    elif sport == "basketball":
+        if {"focus_social", "decision_fear"} & tags:
+            bonus += 0.2
+        if any("game reset" in m or "cue" in m for m in modalities):
+            bonus += 0.2
+
+    if bonus > 0.4:
+        bonus = 0.4
+    if bonus < -0.4:
+        bonus = -0.4
+    return bonus
+
+
 def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = False) -> float:
     """Score a drill for an athlete based on phase, sport and traits."""
     score = 1.0
@@ -114,6 +163,9 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
         # Preferred modality reinforcement
         if set(drill.get("modalities", [])).intersection(preferred_modalities):
             score += 0.1
+
+    # --- Sport specific micro weights
+    score += sport_microweight_bonus(drill, athlete)
 
     # --- Overload penalty
     overload_tags = {"breath_hold", "hr_up", "self_anger"}
