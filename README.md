@@ -16,7 +16,7 @@ The scoring engine compares each drill to an athlete's traits, weaknesses and cu
 
 Scores start at **1.0** and then adjust according to the rules below. Each rule has clear caps so you know the limits without digging into the code:
 
-- **Trait scores** – Each raw trait adds a set value: base traits +0.3, elite tier&nbsp;2 +0.5, elite tier&nbsp;1 +0.7. The combined trait bonus caps at **+1.2**.
+- **Trait scores** – Each raw trait adds a set value: base traits +0.3, elite tier&nbsp;2 +0.6, elite tier&nbsp;1 +0.7. The combined trait bonus caps at **+1.2**.
 - **Phase & intensity logic** – Matching the athlete's phase adds +0.5. High intensity can deduct up to **-0.5** if the athlete is tapering or early in GPP. Fighters in camp skip these penalties.
 - **Weakness match bonus** – When drill tags hit an athlete's listed weaknesses, the score climbs by +0.1 plus +0.05 for each extra match. If the drill also uses a preferred modality, add another +0.1.
 - **Preferred modality reinforcement** – See above; it nudges the score only when a weakness match is found.

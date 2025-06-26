@@ -4,11 +4,11 @@ TRAIT_SCORES = {
     "aggressive": 0.3,
     "resilient": 0.3,
 
-    # Elite Tier 2 (+0.5)
-    "commanding": 0.5,
-    "locked-in": 0.5,
+    # Elite Tier 2 (+0.6)
+    "commanding": 0.6,
 
     # Elite Tier 1 (+0.7)
+    "locked-in": 0.7,
     "dominates": 0.7,
     "ruthless": 0.7,
     "thrives": 0.7,
@@ -19,6 +19,7 @@ SYNERGY_LIST = {
     ("game reset", "breathwork"): {"required_tags": ["slow_reset", "emotional"]},
     ("focus drill", "journaling"): {"required_tags": ["overthink", "stage_fear"]},
     ("anchor cue", "self-talk"): {"required_tags": ["identity_gap", "control_need"]},
+    ("breathwork", "cold exposure"): {"required_tags": ["hr_up", "emotional"]},
 }
 
 ELITE_TRAITS = {"dominates", "ruthless", "thrives", "commanding", "locked-in"}
@@ -55,6 +56,11 @@ def check_synergy_match(drill: dict, athlete_all_tags):
     return False
 
 
+COMBAT_SPORTS = {"mma", "boxing", "kickboxing", "muay thai", "wrestling", "grappling", "bjj"}
+TEAM_SPORTS = {"football", "rugby", "basketball"}
+INDIVIDUAL_SPORTS = {"track"}
+
+
 def sport_microweight_bonus(drill: dict, athlete: dict) -> float:
     """Return sport-specific micro adjustment for a given drill."""
     sport = athlete.get("sport", "").lower()
@@ -65,37 +71,25 @@ def sport_microweight_bonus(drill: dict, athlete: dict) -> float:
 
     bonus = 0.0
 
-    if sport in {"mma", "boxing"}:
+    if sport in COMBAT_SPORTS:
         if tags & (FREEZE_TYPE_TAGS | RESET_SPEED_TAGS):
             bonus += 0.2
         if "visualisation" in modalities and len(modalities) == 1:
             bonus -= 0.2
 
-    elif sport in {"rugby", "football"}:
+    elif sport in TEAM_SPORTS:
         if "focus_social" in tags:
-            bonus += 0.2
-        if "focus_social" in tags and {"commanding", "playful"} & traits:
-            bonus += 0.2
+            bonus += 0.1
+            if {"commanding", "playful"} & traits:
+                bonus += 0.1
 
-    elif sport == "track":
-        if {"focus_locked", "thrives"} & tags:
+    else:  # individual or uncategorized sports
+        if "focus_locked" in tags:
             bonus += 0.2
         if phase == "GPP" and not any(
             any(k in m for k in ["breathwork", "tempo"]) for m in modalities
         ):
             bonus -= 0.2
-
-    elif sport in {"wrestling", "grappling", "bjj"}:
-        if any(
-            any(k in m for k in ["breathwork", "zone 2", "tempo"]) for m in modalities
-        ):
-            bonus += 0.2
-
-    elif sport == "basketball":
-        if {"focus_social", "decision_fear"} & tags:
-            bonus += 0.2
-        if any("game reset" in m or "cue" in m for m in modalities):
-            bonus += 0.2
 
     if bonus > 0.4:
         bonus = 0.4
