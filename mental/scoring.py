@@ -18,10 +18,10 @@ SYNERGY_LIST = {
     ("visualisation", "breathwork"): {"required_tags": ["quick_reset", "thrives"]},
     ("game reset", "breathwork"): {"required_tags": ["slow_reset", "emotional"]},
     ("focus drill", "journaling"): {"required_tags": ["overthink", "stage_fear"]},
-    ("anchor cue", "self-talk"): {"required_tags": ["identity_gap", "control_need"]},
+    ("anchor cue", "self-talk"): {"required_tags": ["control_needed"]},
     ("breathwork", "cold exposure"): {"required_tags": ["hr_up", "emotional"]},
-    ("visualisation", "cue stacking"): {"required_tags": ["focus_drift", "commanding"]},
-    ("self-talk", "video review"): {"required_tags": ["mental_loop", "control_need"]},
+    ("visualisation", "anchor cue"): {"required_tags": ["focus_self_critic", "commanding"]},
+    ("self-talk", "video review"): {"required_tags": ["mental_loop", "control_needed"]},
 }
 
 ELITE_TRAITS = {"dominates", "ruthless", "thrives", "commanding", "locked-in"}
