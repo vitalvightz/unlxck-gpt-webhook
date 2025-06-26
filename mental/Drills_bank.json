@@ -2317,6 +2317,245 @@
         "intermediate": "Full-round flow",
         "elite": "Adversity response testing"
       }
-    }
-  ]
-}
+    [
+  {
+    "name": "First Bell Domination",
+    "description": "Pre-programs aggressive opening sequences to eliminate tentativeness in Round 1.",
+    "theme_tags": ["overthink", "avoidant"],
+    "raw_traits": ["aggressive", "ruthless"],
+    "modalities": ["tactical drill", "visualisation"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "BELL → BOMBARD",
+    "notes": "Drill 3 pre-set combos for opening 30 seconds. Repeat 50x/week."
+  },
+  {
+    "name": "Rope Reset Protocol",
+    "description": "Breaks freeze states when trapped against ropes using vagus nerve activation.",
+    "theme_tags": ["mental_freeze", "physical_freeze"],
+    "raw_traits": ["commanding", "resilient"],
+    "modalities": ["breathwork", "game reset"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "ROPE → RESET → RAGE",
+    "notes": "Exhale fully + glove tap when cornered. Drill with flurry simulations."
+  },
+  {
+    "name": "Judgment-Proof Jab",
+    "description": "Immunizes against audience reactions through crowd noise exposure therapy.",
+    "theme_tags": ["audience_threat"],
+    "raw_traits": ["focused", "confident"],
+    "modalities": ["focus drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "THEIR NOISE → MY RHYTHM",
+    "notes": "Shadowbox with booing recordings. Maintain technical precision."
+  },
+  {
+    "name": "Corner Command",
+    "description": "Conditions fighters to process coach criticism without threat response.",
+    "theme_tags": ["authority_threat"],
+    "raw_traits": ["commanding", "precise"],
+    "modalities": ["anchor cue"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "LISTEN → EXECUTE",
+    "notes": "Deliberate mistakes in sparring to practice receiving corrections."
+  },
+  {
+    "name": "Flurry Autopilot",
+    "description": "Pre-sets defensive responses to pressure flurries via strobe light training.",
+    "theme_tags": ["mental_freeze"],
+    "raw_traits": ["tactical", "calm"],
+    "modalities": ["tactical drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "STORM → SHELL → SLIP",
+    "notes": "Random strobe flashes trigger pre-programmed defensive sequences."
+  },
+  {
+    "name": "Cardio Confidence",
+    "description": "Rebreathing drills to control adrenaline-induced gasping during exchanges.",
+    "theme_tags": ["breath_fast", "hr_up"],
+    "raw_traits": ["relaxed", "focused"],
+    "modalities": ["breathwork"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "GASP → GROUND",
+    "notes": "Post-sprint breath recovery drills with pursed-lip exhales."
+  },
+  {
+    "name": "Error Eraser",
+    "description": "Kinesthetic reset protocol for missed punches to prevent mental loops.",
+    "theme_tags": ["post_mistake"],
+    "raw_traits": ["resilient", "aggressive"],
+    "modalities": ["game reset"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "MISS → MOVE → MURDER",
+    "notes": "Immediate forward pivot after missed shots to reinforce aggression."
+  },
+  {
+    "name": "Third Round Trigger",
+    "description": "Pre-set round transitions to maintain intensity through championship rounds.",
+    "theme_tags": ["fatigue"],
+    "raw_traits": ["hungry", "ruthless"],
+    "modalities": ["anchor cue"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "BELL → BEAST",
+    "notes": "Specific corner ritual (e.g., ammonia sniff) to trigger next-level output."
+  },
+  {
+    "name": "Staredown Steel",
+    "description": "Develops unbreakable composure during prefight faceoffs.",
+    "theme_tags": ["emotional"],
+    "raw_traits": ["commanding", "confident"],
+    "modalities": ["visualisation"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "low",
+    "cue": "EYES → ICE",
+    "notes": "Daily mirror drills with opponent footage playing in background."
+  },
+  {
+    "name": "Cutman Calm",
+    "description": "Trains fighters to maintain clarity when bleeding through biofeedback.",
+    "theme_tags": ["self_anger"],
+    "raw_traits": ["calm", "tactical"],
+    "modalities": ["breathwork"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "BLOOD → BREATHE → BATTLE",
+    "notes": "Simulated cut scenarios with cold water drips during sparring."
+  },
+  {
+    "name": "Decision Dominance",
+    "description": "Eliminates hesitation in split-second openings through strobe training.",
+    "theme_tags": ["overthink"],
+    "raw_traits": ["precise", "aggressive"],
+    "modalities": ["tactical drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "SEE → SEIZE",
+    "notes": "React to 200ms openings during random strobe light intervals."
+  },
+  {
+    "name": "Judges' Justice",
+    "description": "Conditions fighters to ignore bad scorecards and maintain fight IQ.",
+    "theme_tags": ["external_judgement"],
+    "raw_traits": ["tactical", "confident"],
+    "modalities": ["self-talk"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "THEIR SCORE → MY WAR",
+    "notes": "Sparring with deliberately unfair scoring to reinforce process focus."
+  },
+  {
+    "name": "Swarm Survival",
+    "description": "Develops composure under opponent's flurry pressure.",
+    "theme_tags": ["mental_freeze"],
+    "raw_traits": ["calm", "resilient"],
+    "modalities": ["tactical drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "STORM → SHELL → STRIKE",
+    "notes": "3v1 situational sparring with controlled flurry attacks."
+  },
+  {
+    "name": "Towel Trigger",
+    "description": "Creates emergency reserve for late-round exhaustion.",
+    "theme_tags": ["fatigue"],
+    "raw_traits": ["hungry", "ruthless"],
+    "modalities": ["anchor cue"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "TIRED → TERROR",
+    "notes": "Pre-set combo triggered by coach's towel touch during exhaustion drills."
+  },
+  {
+    "name": "Gamble Gloves",
+    "description": "Rewires brain to stay technical during adrenaline spikes.",
+    "theme_tags": ["emotional"],
+    "raw_traits": ["precise", "tactical"],
+    "modalities": ["focus drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "FIRE → FOCUS",
+    "notes": "Spar with one glove weighted to punish wild swings."
+  },
+  {
+    "name": "Doctor's Deception",
+    "description": "Maintains fight IQ during medical checks in championship bouts.",
+    "theme_tags": ["shutdown"],
+    "raw_traits": ["commanding", "confident"],
+    "modalities": ["visualisation"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "PAUSE → PLAN",
+    "notes": "Random stoppages during sparring to practice resetting mentally."
+  },
+  {
+    "name": "Canvas Code",
+    "description": "Prevents emotional spiral after knockdowns through kinesthetic reset.",
+    "theme_tags": ["post_mistake"],
+    "raw_traits": ["resilient", "aggressive"],
+    "modalities": ["game reset"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "DOWN → UP → ATTACK",
+    "notes": "Controlled knockdown drills with immediate counter-attack requirement."
+  },
+  {
+    "name": "Announcer Armor",
+    "description": "Blocks out commentary distractions during major fights.",
+    "theme_tags": ["audience_threat"],
+    "raw_traits": ["focused", "commanding"],
+    "modalities": ["focus drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "medium",
+    "cue": "WORDS → WIND",
+    "notes": "Spar with fight commentary playing at increasing volumes."
+  },
+  {
+    "name": "Champion's Choice",
+    "description": "Eliminates decision paralysis in championship rounds.",
+    "theme_tags": ["overthink"],
+    "raw_traits": ["decisive", "ruthless"],
+    "modalities": ["tactical drill"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "DOUBT → DESTROY",
+    "notes": "Forced 0.5-second decision windows during exhaustion drills."
+  },
+  {
+    "name": "Final Bell Fury",
+    "description": "Conditions fighters to leave everything in the ring for judges.",
+    "theme_tags": ["external_judgement"],
+    "raw_traits": ["aggressive", "hungry"],
+    "modalities": ["anchor cue"],
+    "sports": ["boxing"],
+    "phase": "GPP",
+    "intensity": "high",
+    "cue": "BELL → BLITZ",
+    "notes": "10-second all-out sprint finisher to every round in training."
+  }
+]
