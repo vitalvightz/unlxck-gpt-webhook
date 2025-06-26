@@ -20,6 +20,8 @@ SYNERGY_LIST = {
     ("focus drill", "journaling"): {"required_tags": ["overthink", "stage_fear"]},
     ("anchor cue", "self-talk"): {"required_tags": ["identity_gap", "control_need"]},
     ("breathwork", "cold exposure"): {"required_tags": ["hr_up", "emotional"]},
+    ("visualisation", "cue stacking"): {"required_tags": ["focus_drift", "commanding"]},
+    ("self-talk", "video review"): {"required_tags": ["mental_loop", "control_need"]},
 }
 
 ELITE_TRAITS = {"dominates", "ruthless", "thrives", "commanding", "locked-in"}
