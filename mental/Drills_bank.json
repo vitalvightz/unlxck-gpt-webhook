@@ -1119,29 +1119,3 @@
       }
     }
   ],
-  "coverage_validation": {
-    "mapped_tags": {
-      "under_pressure": [
-        "hesitate",
-        "second_guess",
-        "demand_avoidance"
-      ],
-      "post_mistake": [
-        "mental_loop",
-        "self_anger",
-        "shutdown",
-        "disengage"
-      ],
-      "focus_breakers": [
-        "focus_coach",
-        "focus_social"
-      ],
-      "confidence_profile": [
-        "gym_performer",
-        "control_needed"
-      ]
-    },
-    "full_alignment": true,
-    "remaining_edge_cases": []
-  }
-}
