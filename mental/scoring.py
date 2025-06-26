@@ -126,7 +126,7 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
 
 
     # --- Trait scoring
-    traits = drill.get("raw_traits", [])
+    traits = [t.lower() for t in drill.get("raw_traits", [])]
     trait_score = sum(get_trait_score(t) for t in traits)
     trait_score = min(trait_score, 1.2)
     score += trait_score
@@ -169,7 +169,7 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
 
     # --- Overload penalty
     overload_tags = {"breath_hold", "hr_up", "self_anger"}
-    overload_trigger = intensity == "high" or set(theme_tags) & overload_tags
+    overload_trigger = intensity == "high" or bool(set(theme_tags) & overload_tags)
     if overload_trigger:
         flags = 0
         if athlete_phase == "TAPER":
