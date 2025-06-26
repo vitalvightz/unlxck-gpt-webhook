@@ -18,8 +18,6 @@ python -m mental.program
 - `mental/map_mindcode_tags.py` – converts the parsed fields into normalised
   mental performance tags such as `breath_pattern`, `reset_speed` and
   `motivation_type`.
-- `mental/tags.py` – an alternative mapping helper used by
-  `map_tags.py`.
 - `tags.txt` – lists all available tags and shows how a drill can reference
   them.
 - `tests/` – unit tests covering the tag-mapping logic.
