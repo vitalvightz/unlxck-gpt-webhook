@@ -23,6 +23,20 @@ SYNERGY_LIST = {
 
 ELITE_TRAITS = {"dominates", "ruthless", "thrives", "commanding", "locked-in"}
 
+import json
+import os
+
+# Load tag configuration to identify freeze and reset tags
+TAG_FILE = os.path.join(os.path.dirname(__file__), "..", "tags.txt")
+try:
+    with open(TAG_FILE) as f:
+        _tag_cfg = json.load(f)
+    FREEZE_TYPE_TAGS = set(_tag_cfg["theme_tags"].get("freeze_type", []))
+    RESET_SPEED_TAGS = set(_tag_cfg["theme_tags"].get("reset_speed", []))
+except Exception:  # pragma: no cover - fallback if file missing
+    FREEZE_TYPE_TAGS = set()
+    RESET_SPEED_TAGS = set()
+
 
 def get_trait_score(trait: str) -> float:
     return TRAIT_SCORES.get(trait.lower(), 0.0)
@@ -39,19 +53,31 @@ def check_synergy_match(drill: dict, athlete_tags):
     return False
 
 
-def score_drill(drill: dict, phase: str, athlete: dict) -> float:
-    """Score a drill for an athlete based on phase and traits."""
+def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = False) -> float:
+    """Score a drill for an athlete based on phase, sport and traits."""
     score = 1.0
 
     intensity = drill.get("intensity", "medium").lower()
+    drill_phase = drill.get("phase", "").upper()
+    athlete_phase = phase.upper()
+
     sport = athlete.get("sport", "").lower()
     in_camp = athlete.get("in_fight_camp", False)
+    athlete_tags = [t.lower() for t in athlete.get("tags", [])]
+    theme_tags = [t.lower() for t in drill.get("theme_tags", [])]
 
-    if sport not in {"mma", "boxing"} or not in_camp:
-        if phase == "TAPER" and intensity == "high":
-            score -= 0.5
-        elif phase == "GPP" and intensity == "high":
-            score -= 0.2
+    # --- Theme tag scoring
+    theme_score = 0.0
+    if theme_tags:
+        theme_score += 0.4
+        if len(theme_tags) > 1:
+            theme_score += 0.2
+    theme_score = min(theme_score, 0.6)
+
+    if sport in {"mma", "boxing"} and any(t in FREEZE_TYPE_TAGS or t in RESET_SPEED_TAGS for t in theme_tags):
+        theme_score += 0.05
+
+    score += theme_score
 
     # --- Trait scoring
     traits = drill.get("raw_traits", [])
@@ -59,22 +85,34 @@ def score_drill(drill: dict, phase: str, athlete: dict) -> float:
     trait_score = min(trait_score, 1.2)
     score += trait_score
 
-    athlete_tags = athlete.get("tags", [])
-    synergy_ok = check_synergy_match(drill, athlete_tags)
+    # --- Phase & intensity adjustments
+    if drill_phase and drill_phase == athlete_phase:
+        score += 0.5
 
-    # --- Synergy bonus
+    if not override_flag and not (sport in {"mma", "boxing"} and in_camp):
+        if athlete_phase == "TAPER" and intensity == "high":
+            score -= 0.5
+        elif athlete_phase == "GPP" and intensity == "high":
+            score -= 0.2
+
+    # --- Sport match
+    drill_sports = {s.lower() for s in drill.get("sports", [])}
+    if sport in drill_sports:
+        score += 0.3
+    elif "universal" in drill_sports and len(set(theme_tags) & set(athlete_tags)) >= 3:
+        score -= 0.1
+
+    # --- Tag specificity
+    if len(set(theme_tags) & set(athlete_tags)) >= 3:
+        score += 0.2
+
+    # --- Modality synergy
+    synergy_ok = check_synergy_match(drill, athlete_tags)
     if synergy_ok:
         score += 0.2
 
-    # --- Elite trait synergy penalties
-    drill_traits = set(traits)
-    has_elite_trait = bool(drill_traits & ELITE_TRAITS)
-
-    if has_elite_trait and not synergy_ok:
-        score -= 0.2
-
-    elite_trait_count = len(drill_traits & ELITE_TRAITS)
-    if elite_trait_count >= 2 and not synergy_ok:
+    # --- Elite trait synergy penalty
+    if set(traits) & ELITE_TRAITS and not synergy_ok:
         score -= 0.2
 
     return score

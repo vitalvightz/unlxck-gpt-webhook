@@ -33,7 +33,24 @@ class ScoringTests(unittest.TestCase):
     def test_multiple_elite_trait_penalty(self):
         drill = {"intensity": "medium", "raw_traits": ["ruthless", "commanding"], "modalities": ["focus drill"]}
         athlete = {"sport": "football", "in_fight_camp": False, "tags": []}
-        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.8)
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 2.0)
+
+    def test_theme_tag_and_sport_bonus(self):
+        drill = {
+            "theme_tags": ["fast_reset", "breath_hold"],
+            "sports": ["mma"],
+            "phase": "SPP",
+            "intensity": "medium",
+            "raw_traits": [],
+            "modalities": [],
+        }
+        athlete = {
+            "sport": "mma",
+            "in_fight_camp": False,
+            "tags": ["fast_reset", "breath_hold", "other"],
+        }
+        # 1.0 base +0.6 theme +0.05 combat bonus +0.3 sport match +0.5 phase match = 2.45
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 2.45)
 
 if __name__ == "__main__":
     unittest.main()
