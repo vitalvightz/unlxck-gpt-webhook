@@ -329,10 +329,7 @@
             "cue": "Observe \u2192 Don't absorb",
             "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
             "video_url": null
-        }
-Audit and check for 100% usage. Also check for tag errors or hallucinations as it is a lot to remember: {
-  "drills": [
-    // 1. Freeze/Overthink Coverage
+        },
     {
       "name": "Flow State Trigger",
       "description": "Activates 'stay loose' neural pathways through a 3-step physical ritual to prevent freezing under pressure.",
@@ -368,7 +365,6 @@ Audit and check for 100% usage. Also check for tag errors or hallucinations as i
       }
     },
 
-    // 2. Focus Breakers
     {
       "name": "The Noise Filter",
       "description": "Develops selective auditory attention to neutralize crowd/coach/opponent distractions.",
@@ -404,7 +400,6 @@ Audit and check for 100% usage. Also check for tag errors or hallucinations as i
       }
     },
 
-    // 3. Reset/Breath Patterns
     {
       "name": "Tactical Reset Matrix",
       "description": "Speed-adjustable recovery protocol matching reset cadence to competition demands.",
@@ -440,7 +435,6 @@ Audit and check for 100% usage. Also check for tag errors or hallucinations as i
       }
     },
 
-    // 4. Motivation & Threat
     {
       "name": "Validation Detox",
       "description": "Transforms external validation-seeking into self-referential motivation anchors.",
@@ -476,7 +470,6 @@ Audit and check for 100% usage. Also check for tag errors or hallucinations as i
       }
     },
 
-    // 5. Post-Mistake & Confidence
     {
       "name": "The Phoenix Protocol",
       "description": "Structured comeback sequence for athletes who shutdown after errors.",
@@ -511,4 +504,5 @@ Audit and check for 100% usage. Also check for tag errors or hallucinations as i
         "elite": "Hostile territory implementation"
       }
     }
-  ],
+  ]
+}
