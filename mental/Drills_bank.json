@@ -21,7 +21,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
+      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
       "notes": "Practice 5 rounds: 1. Sitting calmly. 2. During bodyweight exercises. 3. Right after sprints. Pro tip: Place a hand on your belly to ensure diaphragmatic breathing.",
       "video_url": null
     },
@@ -96,7 +96,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "CLICK (snap fingers) \u2192 CLEAR (exhale)",
+      "cue": "CLICK (snap fingers) → CLEAR (exhale)",
       "notes": "Progression: 1) Practice in training. 2) Add mild stress (e.g., coach yelling). 3) Use in competition. Works by disrupting amygdala hijack via dual sensory input.",
       "video_url": null
     },
@@ -120,7 +120,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
+      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
       "notes": "Progression: 1) Seated. 2) During cooldowns. 3) Under physical stress. Elite: Add eye tracking (follow finger while breathing).",
       "video_url": "https://youtu.be/example_breath"
     },
@@ -166,7 +166,7 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "Action \u2192 Reward | Inaction \u2192 Cost",
+      "cue": "Action → Reward | Inaction → Cost",
       "notes": "Progression: 1) Daily entries. 2) Public accountability. 3) Variable rewards. Elite: Tie to biometrics (e.g., HRV targets).",
       "video_url": null
     },
@@ -235,7 +235,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Delete \u2192 Reset \u2192 Go",
+      "cue": "Delete → Reset → Go",
       "notes": "Progression: 1) Physical gesture. 2) Add scent. 3) Full sequence. Disrupts error-detection loops via novel stimuli.",
       "video_url": null
     },
@@ -303,7 +303,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tunnel \u2192 Expand",
+      "cue": "Tunnel → Expand",
       "notes": "Progression: 1) Fresh. 2) Post-training. 3) Sleep-deprived. Uses peripheral vision control.",
       "video_url": null
     },
@@ -326,7 +326,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Observe \u2192 Don't absorb",
+      "cue": "Observe → Don't absorb",
       "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
       "video_url": null
     },
@@ -351,7 +351,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "Shake \u2192 Smile \u2192 Explode",
+      "cue": "Shake → Smile → Explode",
       "notes": "When tension builds: 1. Full-body shakeout (3s). 2. Forced smile with exhale. 3. Explosive movement cue. Based on facial feedback research showing smiles reduce cortisol by 15%.",
       "progression": {
         "beginner": "Post-training activation",
@@ -380,7 +380,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "See \u2192 Decide \u2192 Destroy",
+      "cue": "See → Decide → Destroy",
       "notes": "Daily: 1. Watch competition footage. 2. Make call in under 0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
       "progression": {
         "beginner": "Obvious scenarios",
@@ -410,7 +410,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tune \u2192 Out \u2192 Execute",
+      "cue": "Tune → Out → Execute",
       "notes": "1. Identify essential sounds (coach's voice). 2. Assign unimportant noise a color. 3. Imagine pushing it away. Uses thalamic gating mechanisms.",
       "progression": {
         "beginner": "Quiet environment",
@@ -439,7 +439,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Thoughts \u2260 Truth",
+      "cue": "Thoughts ≠ Truth",
       "notes": "When doubting: 1. Label thoughts ('I'm having the thought that...'). 2. Thank your mind. 3. Return to breath. Reduces cognitive fusion by 40% in trials.",
       "progression": {
         "beginner": "Post-session reflection",
@@ -469,7 +469,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Match tempo \u2192 Dominate tempo",
+      "cue": "Match tempo → Dominate tempo",
       "notes": "Choose reset speed: 1. Fast (3s power exhale). 2. Medium (5-5-5 breath). 3. Slow (4-6-8 sequence). Aligns with heart rate variability needs.",
       "progression": {
         "beginner": "Single-speed mastery",
@@ -498,7 +498,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Scan \u2192 Recognize \u2192 Adjust",
+      "cue": "Scan → Recognize → Adjust",
       "notes": "Post-exertion: 1. Observe natural breath for 1min. 2. Classify pattern. 3. Adjust toward 6 breaths/min. Enhances respiratory sinus arrhythmia coherence.",
       "progression": {
         "beginner": "Seated observation",
@@ -556,7 +556,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Gladiator mode \u2192 ON",
+      "cue": "Gladiator mode → ON",
       "notes": "Pre-competition: 1. Watch footage of iconic competitors. 2. Physical power pose. 3. Repeat: 'This is my arena'. Boosts testosterone by 20% in studies.",
       "progression": {
         "beginner": "Private ritual",
@@ -586,7 +586,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "Burn \u2192 Rise \u2192 Attack",
+      "cue": "Burn → Rise → Attack",
       "notes": "Post-error: 1. Symbolic gesture (wipe slate). 2. Reset breath (4-4-6). 3. First aggressive action. Reignites competitive drive via noradrenaline modulation.",
       "progression": {
         "beginner": "Controlled error simulation",
@@ -615,7 +615,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Same me \u2192 Any arena",
+      "cue": "Same me → Any arena",
       "notes": "Daily: 1. Recall peak performance feeling. 2. Assign physical trigger (e.g., tapping collarbone). 3. Activate in new environments. Uses episodic memory neural networks.",
       "progression": {
         "beginner": "Home facility activation",
@@ -641,7 +641,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Silence \u2192 Execute",
+      "cue": "Silence → Execute",
       "notes": "During practice: 1. Randomly mute environment for 3-5s. 2. Athlete must complete pre-called action. 3. Gradually increase complexity. Mimics championship pressure moments.",
       "progression": {
         "beginner": "Simple actions (e.g., free throw)",
@@ -695,7 +695,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Reset \u2192 Don't Force",
+      "cue": "Reset → Don't Force",
       "notes": "Post-error: 1. Pause. 2. Perform 2 perfect reps at 50% speed. 3. Resume normal pace. Targets error-correction pathways.",
       "progression": {
         "beginner": "Isolated skills",
@@ -721,7 +721,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Their Opinion \u2260 My Reality",
+      "cue": "Their Opinion ≠ My Reality",
       "notes": "Pre-competition: 1. Write down feared judgments. 2. Physically discard paper. 3. Replace with personal standard. Leverages symbolic action research.",
       "progression": {
         "beginner": "Private processing",
@@ -748,7 +748,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tired Body \u2192 Sharp Mind",
+      "cue": "Tired Body → Sharp Mind",
       "notes": "Post-training: 1. Ice face immersion (30s). 2. Pre-load 3 decisions. 3. Execute while exhausted. Boosts frontal lobe oxygenation.",
       "progression": {
         "beginner": "Low-exertion decisions",
@@ -801,7 +801,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "Melt \u2192 Move",
+      "cue": "Melt → Move",
       "notes": "When frozen: 1. Ice pack to neck (5s). 2. Shake out limbs. 3. Explosive first step. Triggers mammalian dive reflex.",
       "progression": {
         "beginner": "Controlled simulation",
@@ -828,7 +828,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Track \u2192 Analyze \u2192 Activate",
+      "cue": "Track → Analyze → Activate",
       "notes": "For 7 days: 1. Log energy peaks during training. 2. Reverse-engineer triggers. 3. Create motivation 'menu'. Builds metacognitive awareness.",
       "progression": {
         "beginner": "Passive observation",
@@ -855,7 +855,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Decide \u2192 Commit \u2192 Destroy",
+      "cue": "Decide → Commit → Destroy",
       "notes": "Daily: 1. Review game footage. 2. Make call in <1s. 3. Physical mimicry. Strengthens instinctive decision pathways.",
       "progression": {
         "beginner": "Obvious scenarios",
@@ -941,7 +941,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "MINE \u2192 NOW",
+      "cue": "MINE → NOW",
       "notes": "Daily: 1. Visualize demanding action in key moments. 2. Physical claiming gesture (e.g., hand clap). 3. Verbal call for ball/shot. Rewards neural pathways for assertive behavior.",
       "progression": {
         "beginner": "Imagery only",
@@ -970,7 +970,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "ERASE \u2192 RESET",
+      "cue": "ERASE → RESET",
       "notes": "After error: 1. Wiping motion across forehead. 2. Sharp exhale. 3. Immediate positive action. Disrupts default mode network looping.",
       "progression": {
         "beginner": "Controlled error simulation",
@@ -1026,7 +1026,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "FILTER \u2192 EXECUTE",
+      "cue": "FILTER → EXECUTE",
       "notes": "During drills: 1. Identify essential coach cues. 2. Assign non-essential talk a color. 3. Mentally 'delete' irrelevant input. Strengthens auditory selective attention.",
       "progression": {
         "beginner": "Clear signal/noise differentiation",
@@ -1054,7 +1054,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "THEM \u2192 ME",
+      "cue": "THEM → ME",
       "notes": "Weekly: 1. Train with deliberate provocations. 2. Maintain 'bubble' focus. 3. Reward sustained attention. Uses habituation neuroscience principles.",
       "progression": {
         "beginner": "Mild social distractions",
@@ -1082,7 +1082,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "SAME SKILLS \u2192 ANY STAGE",
+      "cue": "SAME SKILLS → ANY STAGE",
       "notes": "Pre-competition: 1. Wear training gear item. 2. Recreate training warmup. 3. Recall gym successes. Creates neural environment familiarity.",
       "progression": {
         "beginner": "Physical familiarity cues",
@@ -1137,7 +1137,7 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "Write \u2192 Release \u2192 Refocus",
+      "cue": "Write → Release → Refocus",
       "notes": "Post-training: 1. Stream-of-consciousness writing for 3min. 2. Physically discard pages. 3. Summarize key insights in 3 bullets. Based on expressive writing research.",
       "progression": {
         "beginner": "Private journaling",
@@ -1164,7 +1164,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "See \u2192 Decide \u2192 Execute",
+      "cue": "See → Decide → Execute",
       "notes": "Daily: 1. Watch game footage. 2. Make call in <0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
       "progression": {
         "beginner": "Clear scenarios",
@@ -1190,7 +1190,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale 4 \u2192 Hold 7 \u2192 Exhale 8",
+      "cue": "Inhale 4 → Hold 7 → Exhale 8",
       "notes": "When overthinking: 1. Stop action. 2. Complete 3 breath cycles. 3. Resume with first instinct. Triggers parasympathetic dominance.",
       "progression": {
         "beginner": "Seated practice",
@@ -1217,7 +1217,7 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "What \u2192 Why \u2192 How",
+      "cue": "What → Why → How",
       "notes": "Post-event: 1. Describe freeze moment. 2. Identify trigger pattern. 3. Plan physical reset cue. Uses cognitive reappraisal.",
       "progression": {
         "beginner": "Video review analysis",
@@ -1244,7 +1244,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Shock \u2192 Reset \u2192 Attack",
+      "cue": "Shock → Reset → Attack",
       "notes": "Weekly: 1. Unexpected freeze trigger (e.g., loud buzzer). 2. Immediate reset sequence. 3. Explosive counteraction. Conditions autonomic response.",
       "progression": {
         "beginner": "Known triggers",
@@ -1270,7 +1270,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale Power \u2192 Exhale Free",
+      "cue": "Inhale Power → Exhale Free",
       "notes": "When frozen: 1. Sharp nose inhale. 2. Forceful mouth exhale. 3. Full-body shakeout. Activates sympathetic-adrenal reset.",
       "progression": {
         "beginner": "Controlled practice",
@@ -1297,7 +1297,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Past Proof \u2192 Present Power",
+      "cue": "Past Proof → Present Power",
       "notes": "Weekly: 1. Record 3 past successes. 2. Note transferable skills. 3. Visualize applying them now. Strengthens self-efficacy beliefs.",
       "progression": {
         "beginner": "General achievements",
@@ -1353,7 +1353,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "Ground \u2192 Analyze \u2192 Respond",
+      "cue": "Ground → Analyze → Respond",
       "notes": "When receiving criticism: 1. 4-4-6 breathing. 2. Cue 'What can I use?'. 3. Extract one actionable item. Uses cognitive reappraisal techniques.",
       "progression": {
         "beginner": "Recorded coach feedback review",
@@ -1382,7 +1382,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "See Success \u2192 Feel Failure",
+      "cue": "See Success → Feel Failure",
       "notes": "Daily: 1. Vividly visualize achieving reward (3min). 2. Equally vivid failure scenario (90s). 3. Physical trigger to activate memory (e.g., wrist tap). Amplifies nucleus accumbens activation.",
       "progression": {
         "beginner": "Guided visualization",
@@ -1437,7 +1437,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Unknown \u2192 Advantage",
+      "cue": "Unknown → Advantage",
       "notes": "When zoning out: 1. Ice pack to wrists (10s). 2. Tactical breathing (4-6-8). 3. Environmental scan for opportunities. Activates parasympathetic nervous system.",
       "progression": {
         "beginner": "Controlled uncertainty",
@@ -1464,20 +1464,35 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Survive \u2192 Thrive",
+      "cue": "Survive → Thrive",
       "notes": "Weekly: 1. Imagine worst-case scenario in detail. 2. Script ideal response. 3. Physically rehearse. Reduces amygdala hijack risk by 41%.",
       "progression": {
         "beginner": "Written scripts",
         "intermediate": "Guided imagery",
         "elite": "Full sensory simulation"
       }
+    },
     {
       "name": "Scramble Autopilot",
       "description": "Pre-programs reactions for common scramble positions to eliminate hesitation during chaotic transitions.",
-      "theme_tags": ["second_guess", "mental_freeze"],
-      "raw_traits": ["aggressive", "precise"],
-      "modalities": ["imagery reps", "anchor cue"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "second_guess",
+        "mental_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "imagery reps",
+        "anchor cue"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "SPRAWL → SNAP → SPIN",
@@ -1486,10 +1501,22 @@
     {
       "name": "Chain Reaction Trigger",
       "description": "Develops continuous offense to prevent freezing during MMA cage work, BJJ transitions, and wrestling exchanges.",
-      "theme_tags": ["mental_freeze"],
-      "raw_traits": ["ruthless", "hungry"],
-      "modalities": ["tactical drill"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "mental_freeze"
+      ],
+      "raw_traits": [
+        "ruthless",
+        "hungry"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "MOVE OR LOSE",
@@ -1498,10 +1525,24 @@
     {
       "name": "Matador Reset Protocol",
       "description": "10-second recovery system after failed takedowns in MMA/wrestling or submissions in BJJ/grappling.",
-      "theme_tags": ["slow_reset", "mental_loop"],
-      "raw_traits": ["resilient", "focused"],
-      "modalities": ["game reset", "breathwork"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "slow_reset",
+        "mental_loop"
+      ],
+      "raw_traits": [
+        "resilient",
+        "focused"
+      ],
+      "modalities": [
+        "game reset",
+        "breathwork"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "RESET → RELOAD",
@@ -1510,10 +1551,23 @@
     {
       "name": "Control Chaos Drill",
       "description": "Trains high-control athletes (BJJ positional players, wrestling top riders) to thrive in chaotic MMA exchanges.",
-      "theme_tags": ["control_needed", "pressure_distrust"],
-      "raw_traits": ["tactical", "commanding"],
-      "modalities": ["focus drill"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "control_needed",
+        "pressure_distrust"
+      ],
+      "raw_traits": [
+        "tactical",
+        "commanding"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "CHAOS → CATALYST",
@@ -1522,10 +1576,24 @@
     {
       "name": "Gas Tank Reframe",
       "description": "Combats fatigue anxiety during MMA later rounds, BJS long matches, and wrestling grueling positions.",
-      "theme_tags": ["fatigue", "self_conflict"],
-      "raw_traits": ["hungry", "resilient"],
-      "modalities": ["self-talk", "breathwork"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "fatigue",
+        "self_conflict"
+      ],
+      "raw_traits": [
+        "hungry",
+        "resilient"
+      ],
+      "modalities": [
+        "self-talk",
+        "breathwork"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "TIRED ≠ WEAK",
@@ -1534,10 +1602,24 @@
     {
       "name": "Cage Door Visualization",
       "description": "Simulates walkout anxiety for MMA cage, BJJ open mat calls, and wrestling tournament environments.",
-      "theme_tags": ["stage_fear", "audience_threat"],
-      "raw_traits": ["confident", "dominant"],
-      "modalities": ["visualisation", "pre-fight prep"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "stage_fear",
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "confident",
+        "dominant"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "low",
       "cue": "MY ARENA",
@@ -1546,10 +1628,23 @@
     {
       "name": "Submission Failure Reboot",
       "description": "Resets mentality after failed submissions in BJJ/grappling or missed finishes in MMA.",
-      "theme_tags": ["post_mistake", "quick_reset"],
-      "raw_traits": ["aggressive", "playful"],
-      "modalities": ["game reset", "anchor cue"],
-      "sports": ["MMA", "BJJ", "Grappling"],
+      "theme_tags": [
+        "post_mistake",
+        "quick_reset"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "playful"
+      ],
+      "modalities": [
+        "game reset",
+        "anchor cue"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "MISS → MOVE → ATTACK",
@@ -1558,23 +1653,45 @@
     {
       "name": "Wrestler's Mental Reps",
       "description": "Builds instinctive reactions for wrestling shots and MMA takedown defense through error-proof repetition.",
-      "theme_tags": ["overthink", "second_guess"],
-      "raw_traits": ["precise", "tactical"],
-      "modalities": ["imagery reps"],
-      "sports": ["MMA", "Wrestling"],
+      "theme_tags": [
+        "overthink",
+        "second_guess"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "imagery reps"
+      ],
+      "sports": [
+        "MMA",
+        "Wrestling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "SEE → SHOOT",
       "notes": "50 daily mental reps of perfect shot entries and sprawls with kinesthetic visualization."
-    }
-    
+    },
     {
       "name": "Shot Recovery System",
       "description": "Instinctive reset protocol after failed takedowns in wrestling or MMA cage work.",
-      "theme_tags": ["post_mistake", "quick_reset"],
-      "raw_traits": ["resilient", "aggressive"],
-      "modalities": ["game reset", "anchor cue"],
-      "sports": ["MMA", "Wrestling"],
+      "theme_tags": [
+        "post_mistake",
+        "quick_reset"
+      ],
+      "raw_traits": [
+        "resilient",
+        "aggressive"
+      ],
+      "modalities": [
+        "game reset",
+        "anchor cue"
+      ],
+      "sports": [
+        "MMA",
+        "Wrestling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "MISS → SPRAWL → CHAIN",
@@ -1583,10 +1700,22 @@
     {
       "name": "Guard Survival Autopilot",
       "description": "Pre-programmed reactions to common passes for BJJ and grappling.",
-      "theme_tags": ["mental_freeze", "second_guess"],
-      "raw_traits": ["tactical", "flexible"],
-      "modalities": ["imagery reps", "tactical drill"],
-      "sports": ["BJJ", "Grappling"],
+      "theme_tags": [
+        "mental_freeze",
+        "second_guess"
+      ],
+      "raw_traits": [
+        "tactical",
+        "flexible"
+      ],
+      "modalities": [
+        "imagery reps",
+        "tactical drill"
+      ],
+      "sports": [
+        "BJJ",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "FRAME → RECOVER",
@@ -1595,10 +1724,21 @@
     {
       "name": "Octagon GPS",
       "description": "Eliminates hesitation in MMA cage navigation and cutting off opponents.",
-      "theme_tags": ["overthink", "focus_breaker"],
-      "raw_traits": ["commanding", "precise"],
-      "modalities": ["visualisation", "focus drill"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "overthink",
+        "focus_breaker"
+      ],
+      "raw_traits": [
+        "commanding",
+        "precise"
+      ],
+      "modalities": [
+        "visualisation",
+        "focus drill"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "CUT → CORNER → CONTROL",
@@ -1607,10 +1747,22 @@
     {
       "name": "Mat-Toughness Builder",
       "description": "Simulates wrestling/BJJ tournament stress through deliberate exposure.",
-      "theme_tags": ["stage_fear", "pressure_distrust"],
-      "raw_traits": ["confident", "dominant"],
-      "modalities": ["pre-fight prep", "cold exposure"],
-      "sports": ["Wrestling", "BJJ"],
+      "theme_tags": [
+        "stage_fear",
+        "pressure_distrust"
+      ],
+      "raw_traits": [
+        "confident",
+        "dominant"
+      ],
+      "modalities": [
+        "pre-fight prep",
+        "cold exposure"
+      ],
+      "sports": [
+        "Wrestling",
+        "BJJ"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "MAT → MINE",
@@ -1619,10 +1771,22 @@
     {
       "name": "Submission Dominoes",
       "description": "Trains automatic submission chains for BJJ/grappling when initial attempts fail.",
-      "theme_tags": ["post_mistake", "quick_reset"],
-      "raw_traits": ["ruthless", "precise"],
-      "modalities": ["imagery reps", "tactical drill"],
-      "sports": ["BJJ", "Grappling"],
+      "theme_tags": [
+        "post_mistake",
+        "quick_reset"
+      ],
+      "raw_traits": [
+        "ruthless",
+        "precise"
+      ],
+      "modalities": [
+        "imagery reps",
+        "tactical drill"
+      ],
+      "sports": [
+        "BJJ",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "MISS → MOVE → FINISH",
@@ -1631,10 +1795,21 @@
     {
       "name": "Dirty Boxing Mindset",
       "description": "Develops MMA clinch aggression through psychological framing.",
-      "theme_tags": ["confidence_profile", "control_needed"],
-      "raw_traits": ["aggressive", "commanding"],
-      "modalities": ["identity shift", "anchor cue"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "confidence_profile",
+        "control_needed"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "commanding"
+      ],
+      "modalities": [
+        "identity shift",
+        "anchor cue"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "MY HOUSE",
@@ -1643,22 +1818,47 @@
     {
       "name": "Escape Autopilot",
       "description": "Instinctive bottom recovery system for wrestling and MMA grappling.",
-      "theme_tags": ["slow_reset", "mental_loop"],
-      "raw_traits": ["resilient", "hungry"],
-      "modalities": ["game reset", "breathwork"],
-      "sports": ["Wrestling", "MMA"],
+      "theme_tags": [
+        "slow_reset",
+        "mental_loop"
+      ],
+      "raw_traits": [
+        "resilient",
+        "hungry"
+      ],
+      "modalities": [
+        "game reset",
+        "breathwork"
+      ],
+      "sports": [
+        "Wrestling",
+        "MMA"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "BUMP → BRIDGE → BASE",
-      "notes": "When pinned: 1. Explosive bridge. 2. 2-second breath hold. 3. Systematic escape chain."
+      "notes": "When pinned: 1. Explosive bridge. 2. 2-second breath hold. 3. Systematic escape chain.",
+      "video_url": "https://youtu.be/escape_autopilot"
     },
     {
       "name": "First Fight Simulator",
       "description": "Full-sensory debut fight preparation for MMA and BJJ competitors.",
-      "theme_tags": ["stage_fear", "audience_threat"],
-      "raw_traits": ["confident", "dominant"],
-      "modalities": ["visualisation", "pre-fight prep"],
-      "sports": ["MMA", "BJJ"],
+      "theme_tags": [
+        "stage_fear",
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "confident",
+        "dominant"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "DEBUT → DOMINATE",
@@ -1667,10 +1867,21 @@
     {
       "name": "Survival Breathing",
       "description": "Oxygen-conserving breath control for BJJ/grappling late rounds.",
-      "theme_tags": ["fatigue", "self_conflict"],
-      "raw_traits": ["resilient", "focused"],
-      "modalities": ["breathwork"],
-      "sports": ["BJJ", "Grappling"],
+      "theme_tags": [
+        "fatigue",
+        "self_conflict"
+      ],
+      "raw_traits": [
+        "resilient",
+        "focused"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "BJJ",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "low",
       "cue": "IN → HOLD → OUT → FIGHT",
@@ -1679,10 +1890,22 @@
     {
       "name": "Ride Clock Mindset",
       "description": "Builds relentless top pressure for wrestling and MMA ground control.",
-      "theme_tags": ["control_needed", "pressure_distrust"],
-      "raw_traits": ["commanding", "ruthless"],
-      "modalities": ["self-talk", "tactical drill"],
-      "sports": ["Wrestling", "MMA"],
+      "theme_tags": [
+        "control_needed",
+        "pressure_distrust"
+      ],
+      "raw_traits": [
+        "commanding",
+        "ruthless"
+      ],
+      "modalities": [
+        "self-talk",
+        "tactical drill"
+      ],
+      "sports": [
+        "Wrestling",
+        "MMA"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "BREAK → THEM → NOT → ME",
@@ -1691,10 +1914,20 @@
     {
       "name": "Fence GPS",
       "description": "Develops automatic cage awareness for MMA fighters to prevent freezing.",
-      "theme_tags": ["mental_freeze", "focus_breaker"],
-      "raw_traits": ["tactical", "aware"],
-      "modalities": ["focus drill"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "mental_freeze",
+        "focus_breaker"
+      ],
+      "raw_traits": [
+        "tactical",
+        "aware"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "FIND → THE → FENCE",
@@ -1703,10 +1936,20 @@
     {
       "name": "First Grip Battle",
       "description": "Eliminates hesitation in BJJ match openings through pre-programmed reactions.",
-      "theme_tags": ["second_guess", "overthink"],
-      "raw_traits": ["aggressive", "precise"],
-      "modalities": ["tactical drill"],
-      "sports": ["BJJ"],
+      "theme_tags": [
+        "second_guess",
+        "overthink"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "BJJ"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "GRIP → PULL → GO",
@@ -1715,22 +1958,48 @@
     {
       "name": "Submission Survival",
       "description": "Builds composure in bad positions for BJJ and grappling.",
-      "theme_tags": ["self_conflict", "post_mistake"],
-      "raw_traits": ["resilient", "calm"],
-      "modalities": ["breathwork", "game reset"],
-      "sports": ["BJJ", "Grappling"],
+      "theme_tags": [
+        "self_conflict",
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "resilient",
+        "calm"
+      ],
+      "modalities": [
+        "breathwork",
+        "game reset"
+      ],
+      "sports": [
+        "BJJ",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "DANGER → BREATHE → ESCAPE",
       "notes": "Deliberate training in compromised positions with specific recovery protocols."
-    }
+    },
     {
       "name": "The Why Chain",
       "description": "Builds intrinsic motivation by linking training actions to deeper personal values for MMA/BJJ/Wrestling/Grappling athletes.",
-      "theme_tags": ["reward_seeker", "external_validation"],
-      "raw_traits": ["hungry", "confident"],
-      "modalities": ["journaling", "reflection"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "reward_seeker",
+        "external_validation"
+      ],
+      "raw_traits": [
+        "hungry",
+        "confident"
+      ],
+      "modalities": [
+        "journaling",
+        "reflection"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "low",
       "cue": "DIG DEEPER",
@@ -1744,10 +2013,23 @@
     {
       "name": "The Scoreboard Reset",
       "description": "Transitions external validation-seeking (medals/social praise) to internal mastery focus for combat sports athletes.",
-      "theme_tags": ["external_validation"],
-      "raw_traits": ["playful", "joyful"],
-      "modalities": ["self-talk", "anchor cue"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "external_validation"
+      ],
+      "raw_traits": [
+        "playful",
+        "joyful"
+      ],
+      "modalities": [
+        "self-talk",
+        "anchor cue"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "MASTERY > METRICS",
@@ -1758,14 +2040,26 @@
         "elite": "Real-time competition application"
       }
     },
-
     {
       "name": "The Coach Filter",
       "description": "Trains fighters to productively process coaching criticism without threat response activation.",
-      "theme_tags": ["authority_threat"],
-      "raw_traits": ["commanding", "confident"],
-      "modalities": ["breathwork", "tactical drill"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "authority_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "breathwork",
+        "tactical drill"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "medium",
       "cue": "INPUT → PROCESS → USE",
@@ -1779,10 +2073,23 @@
     {
       "name": "Mat Pack Mentality",
       "description": "Converts peer judgment anxiety into competitive fuel during MMA sparring, BJJ rolls, and wrestling live goes.",
-      "theme_tags": ["peer_threat"],
-      "raw_traits": ["aggressive", "ruthless"],
-      "modalities": ["visualisation", "identity shift"],
-      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "theme_tags": [
+        "peer_threat"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "visualisation",
+        "identity shift"
+      ],
+      "sports": [
+        "MMA",
+        "BJJ",
+        "Wrestling",
+        "Grappling"
+      ],
       "phase": "GPP",
       "intensity": "high",
       "cue": "THEIR EYES → MY FIRE",
@@ -1792,13 +2099,25 @@
         "intermediate": "Select peer observation",
         "elite": "Full-team evaluation sessions"
       }
+    },
     {
       "name": "Sparring Autopilot",
       "description": "Pre-sets tactical responses for live sparring to eliminate overthinking during chaotic exchanges.",
-      "theme_tags": ["overthink_type", "under_pressure"],
-      "raw_traits": ["precise", "tactical"],
-      "modalities": ["anchor cue", "tactical drill"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "overthink_type",
+        "under_pressure"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "anchor cue",
+        "tactical drill"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "IF [X] → THEN [Y]",
@@ -1812,10 +2131,21 @@
     {
       "name": "The 90-Second Storm",
       "description": "Simulates first-round adrenaline dump with forced early-round action to build confidence in chaotic openings.",
-      "theme_tags": ["confidence_profile", "under_pressure"],
-      "raw_traits": ["aggressive", "dominant"],
-      "modalities": ["pre-fight prep", "focus drill"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "confidence_profile",
+        "under_pressure"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "dominant"
+      ],
+      "modalities": [
+        "pre-fight prep",
+        "focus drill"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "STORM → CONTROL",
@@ -1829,10 +2159,21 @@
     {
       "name": "The Chain Breaker",
       "description": "Resets mentality after failed takedown chains or striking setups during high-intensity sparring.",
-      "theme_tags": ["mental_loop", "reset_speed"],
-      "raw_traits": ["resilient", "playful"],
-      "modalities": ["game reset", "breathwork"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "mental_loop",
+        "reset_speed"
+      ],
+      "raw_traits": [
+        "resilient",
+        "playful"
+      ],
+      "modalities": [
+        "game reset",
+        "breathwork"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "SPP",
       "intensity": "medium",
       "cue": "BREAK → REBOOT",
@@ -1846,10 +2187,19 @@
     {
       "name": "Fake-Proof Focus",
       "description": "Trains visual attention to distinguish feints from committed attacks during sparring exchanges.",
-      "theme_tags": ["focus_breaker"],
-      "raw_traits": ["focused", "locked-in"],
-      "modalities": ["focus drill"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "focus_breaker"
+      ],
+      "raw_traits": [
+        "focused",
+        "locked-in"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "TRACK → DON'T CHASE",
@@ -1860,13 +2210,24 @@
         "elite": "Fatigued defense"
       }
     },
-{
+    {
       "name": "Walkway Anchoring",
       "description": "Links physiological calm to walkout music beats for pre-fight arousal control.",
-      "theme_tags": ["stage_fear", "threat_trigger"],
-      "raw_traits": ["confident", "commanding"],
-      "modalities": ["anchor cue", "breathwork"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "stage_fear",
+        "threat_trigger"
+      ],
+      "raw_traits": [
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "anchor cue",
+        "breathwork"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "TAPER",
       "intensity": "low",
       "cue": "BEAT → BREATHE",
@@ -1880,10 +2241,19 @@
     {
       "name": "The 5-Minute War Room",
       "description": "Replaces hard sparring with tactical visualization during fight week taper.",
-      "theme_tags": ["confidence_profile"],
-      "raw_traits": ["tactical", "precise"],
-      "modalities": ["visualisation"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "confidence_profile"
+      ],
+      "raw_traits": [
+        "tactical",
+        "precise"
+      ],
+      "modalities": [
+        "visualisation"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "TAPER",
       "intensity": "low",
       "cue": "SEE → FEEL → WIN",
@@ -1897,10 +2267,20 @@
     {
       "name": "Emotional Pressure Valve",
       "description": "90-second regulation drill for fight week nerves or weight-cut stress.",
-      "theme_tags": ["emotional"],
-      "raw_traits": ["relaxed", "joyful"],
-      "modalities": ["breathwork", "cold exposure"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "emotional"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "joyful"
+      ],
+      "modalities": [
+        "breathwork",
+        "cold exposure"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "TAPER",
       "intensity": "low",
       "cue": "PRESSURE → POWER",
@@ -1914,10 +2294,20 @@
     {
       "name": "The Blueprint Run",
       "description": "Final-day movement rehearsal linking visualization to micro-physical cues.",
-      "theme_tags": ["under_pressure"],
-      "raw_traits": ["focused", "commanding"],
-      "modalities": ["visualisation", "anchor cue"],
-      "sports": ["MMA"],
+      "theme_tags": [
+        "under_pressure"
+      ],
+      "raw_traits": [
+        "focused",
+        "commanding"
+      ],
+      "modalities": [
+        "visualisation",
+        "anchor cue"
+      ],
+      "sports": [
+        "MMA"
+      ],
       "phase": "TAPER",
       "intensity": "low",
       "cue": "LINK → LOCK → LAUNCH",
@@ -1927,4 +2317,6 @@
         "intermediate": "Full-round flow",
         "elite": "Adversity response testing"
       }
-    
+    }
+  ]
+}
