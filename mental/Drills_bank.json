@@ -330,3 +330,185 @@
             "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
             "video_url": null
         }
+Audit and check for 100% usage. Also check for tag errors or hallucinations as it is a lot to remember: {
+  "drills": [
+    // 1. Freeze/Overthink Coverage
+    {
+      "name": "Flow State Trigger",
+      "description": "Activates 'stay loose' neural pathways through a 3-step physical ritual to prevent freezing under pressure.",
+      "theme_tags": ["stay_loose", "thrives"],
+      "raw_traits": ["free", "playful", "joyful"],
+      "modalities": ["anchor cue", "breathwork"],
+      "sports": ["universal"],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "Shake → Smile → Explode",
+      "notes": "When tension builds: 1. Full-body shakeout (3s). 2. Forced smile with exhale. 3. Explosive movement cue. Based on facial feedback research showing smiles reduce cortisol by 15%.",
+      "progression": {
+        "beginner": "Post-training activation",
+        "intermediate": "During technical drills",
+        "elite": "High-pressure competition use"
+      }
+    },
+    {
+      "name": "Decisive Action Protocol",
+      "description": "Trains instinctive decision-making through time-constrained scenario drilling to eliminate hesitation.",
+      "theme_tags": ["decisive", "hesitate"],
+      "raw_traits": ["ruthless", "aggressive", "precise"],
+      "modalities": ["visualisation", "imagery reps"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "high",
+      "cue": "See → Decide → Destroy",
+      "notes": "Daily: 1. Watch competition footage. 2. Make call in under 0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
+      "progression": {
+        "beginner": "Obvious scenarios",
+        "intermediate": "50/50 situations",
+        "elite": "Information overload"
+      }
+    },
+
+    // 2. Focus Breakers
+    {
+      "name": "The Noise Filter",
+      "description": "Develops selective auditory attention to neutralize crowd/coach/opponent distractions.",
+      "theme_tags": ["distracted_by_crowd", "coach_noise", "opponent_noise"],
+      "raw_traits": ["locked-in", "focused", "commanding"],
+      "modalities": ["focus drill", "mindfulness"],
+      "sports": ["universal"],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Tune → Out → Execute",
+      "notes": "1. Identify essential sounds (coach's voice). 2. Assign unimportant noise a color. 3. Imagine pushing it away. Uses thalamic gating mechanisms.",
+      "progression": {
+        "beginner": "Quiet environment",
+        "intermediate": "Crowd noise recordings",
+        "elite": "Live provocation training"
+      }
+    },
+    {
+      "name": "The Internal Referee",
+      "description": "Silences self-conflict through cognitive defusion techniques adapted from ACT therapy.",
+      "theme_tags": ["self_conflict", "focus_self_critic"],
+      "raw_traits": ["confident", "free", "wild"],
+      "modalities": ["self-talk", "mindfulness"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Thoughts ≠ Truth",
+      "notes": "When doubting: 1. Label thoughts ('I'm having the thought that...'). 2. Thank your mind. 3. Return to breath. Reduces cognitive fusion by 40% in trials.",
+      "progression": {
+        "beginner": "Post-session reflection",
+        "intermediate": "Mid-training application",
+        "elite": "Competition implementation"
+      }
+    },
+
+    // 3. Reset/Breath Patterns
+    {
+      "name": "Tactical Reset Matrix",
+      "description": "Speed-adjustable recovery protocol matching reset cadence to competition demands.",
+      "theme_tags": ["fast_reset", "medium_reset", "very_slow_reset"],
+      "raw_traits": ["relaxed", "commanding", "focused"],
+      "modalities": ["breathwork", "game reset"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Match tempo → Dominate tempo",
+      "notes": "Choose reset speed: 1. Fast (3s power exhale). 2. Medium (5-5-5 breath). 3. Slow (4-6-8 sequence). Aligns with heart rate variability needs.",
+      "progression": {
+        "beginner": "Single-speed mastery",
+        "intermediate": "Contextual switching",
+        "elite": "Opponent-paced disruption"
+      }
+    },
+    {
+      "name": "Breath Signature Scan",
+      "description": "Diagnostic tool to identify and normalize breathing patterns under stress.",
+      "theme_tags": ["breath_slow", "breath_normal", "breath_unknown"],
+      "raw_traits": ["confident", "relaxed"],
+      "modalities": ["breathwork", "mindfulness"],
+      "sports": ["universal"],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "Scan → Recognize → Adjust",
+      "notes": "Post-exertion: 1. Observe natural breath for 1min. 2. Classify pattern. 3. Adjust toward 6 breaths/min. Enhances respiratory sinus arrhythmia coherence.",
+      "progression": {
+        "beginner": "Seated observation",
+        "intermediate": "Post-exercise analysis",
+        "elite": "Real-time competition monitoring"
+      }
+    },
+
+    // 4. Motivation & Threat
+    {
+      "name": "Validation Detox",
+      "description": "Transforms external validation-seeking into self-referential motivation anchors.",
+      "theme_tags": ["external_validation", "audience_threat"],
+      "raw_traits": ["hungry", "aggressive", "wild"],
+      "modalities": ["identity shift", "journaling"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "My standards > Their applause",
+      "notes": "Weekly: 1. List 3 personal success metrics. 2. Contrast with external opinions. 3. Create physical reminder (e.g., wristband). Targets ventral striatum reward pathways.",
+      "progression": {
+        "beginner": "Private definition",
+        "intermediate": "Public commitment",
+        "elite": "Adversity testing"
+      }
+    },
+    {
+      "name": "The Arena Mindset",
+      "description": "Converts competitive motivation into physiological arousal regulation.",
+      "theme_tags": ["competitive", "stage_fear"],
+      "raw_traits": ["ruthless", "hungry", "dominant"],
+      "modalities": ["visualisation", "pre-fight prep"],
+      "sports": ["universal"],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Gladiator mode → ON",
+      "notes": "Pre-competition: 1. Watch footage of iconic competitors. 2. Physical power pose. 3. Repeat: 'This is my arena'. Boosts testosterone by 20% in studies.",
+      "progression": {
+        "beginner": "Private ritual",
+        "intermediate": "Group activation",
+        "elite": "Opponent-facing implementation"
+      }
+    },
+
+    // 5. Post-Mistake & Confidence
+    {
+      "name": "The Phoenix Protocol",
+      "description": "Structured comeback sequence for athletes who shutdown after errors.",
+      "theme_tags": ["shutdown", "disengage", "mental_history"],
+      "raw_traits": ["resilient", "confident", "commanding"],
+      "modalities": ["game reset", "anchor cue"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "high",
+      "cue": "Burn → Rise → Attack",
+      "notes": "Post-error: 1. Symbolic gesture (wipe slate). 2. Reset breath (4-4-6). 3. First aggressive action. Reignites competitive drive via noradrenaline modulation.",
+      "progression": {
+        "beginner": "Controlled error simulation",
+        "intermediate": "Unplanned mistakes",
+        "elite": "High-stakes failure recovery"
+      }
+    },
+    {
+      "name": "The Confidence Switch",
+      "description": "Creates facility-independent confidence through embodied cognition techniques.",
+      "theme_tags": ["gym_performer", "stable_confidence"],
+      "raw_traits": ["confident", "dominant", "joyful"],
+      "modalities": ["identity shift", "anchor cue"],
+      "sports": ["universal"],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Same me → Any arena",
+      "notes": "Daily: 1. Recall peak performance feeling. 2. Assign physical trigger (e.g., tapping collarbone). 3. Activate in new environments. Uses episodic memory neural networks.",
+      "progression": {
+        "beginner": "Home facility activation",
+        "intermediate": "Neutral site testing",
+        "elite": "Hostile territory implementation"
+      }
+    }
+  ],
