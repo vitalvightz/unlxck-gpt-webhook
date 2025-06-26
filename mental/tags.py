@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 from .normalization import normalize_tag_dict
+from .map_mindcode_tags import TRAINING_TOOLS_MAP, KEY_STRUGGLES_MAP
 
 def map_tags(form_data: Dict) -> Dict:
     """Map raw form input to controlled mental performance tags."""
@@ -14,12 +15,16 @@ def map_tags(form_data: Dict) -> Dict:
         "motivation_type": "motivation_unknown",
         "threat_trigger": "general_threat",
         "mental_history": "clear_history",
+        "preferred_modality": [],
+        "struggles_with": [],
     }
 
     # Extract lists from multi-selects
     under_pressure: List[str] = form_data.get("under_pressure", [])
     post_mistake: List[str] = form_data.get("post_mistake", [])
     focus_breakers: List[str] = form_data.get("focus_breakers", [])
+    tool_preferences: List[str] = form_data.get("tool_preferences", [])
+    key_struggles: List[str] = form_data.get("key_struggles", [])
 
     # Extract singles
     pressure_breath = form_data.get("pressure_breath", "").strip().lower()
@@ -27,6 +32,23 @@ def map_tags(form_data: Dict) -> Dict:
     reset_duration = form_data.get("reset_duration", "").strip().lower()
     motivator = form_data.get("motivator", "").strip().lower()
     emotional_trigger = form_data.get("emotional_trigger", "").strip().lower()
+
+    # Map tool preference and struggle lists to tags
+    preferred_modality: List[str] = []
+    for item in tool_preferences:
+        val = item.strip().lower()
+        if val in TRAINING_TOOLS_MAP:
+            preferred_modality.append(TRAINING_TOOLS_MAP[val])
+
+    struggles_with: List[str] = []
+    for item in key_struggles:
+        val = item.strip().lower()
+        if val in KEY_STRUGGLES_MAP:
+            struggles_with.append(KEY_STRUGGLES_MAP[val])
+
+    tags["preferred_modality"] = preferred_modality
+    tags["struggles_with"] = struggles_with
+
     past_mental = form_data.get("past_mental_struggles", "").strip()
 
     # --- Freeze type (multi-select)
@@ -127,6 +149,10 @@ def map_tags(form_data: Dict) -> Dict:
         tags["mental_history"] = "has_history"
     else:
         tags["mental_history"] = "clear_history"
+
+    # Deduplicate preference lists
+    tags["preferred_modality"] = list(dict.fromkeys(tags["preferred_modality"]))
+    tags["struggles_with"] = list(dict.fromkeys(tags["struggles_with"]))
 
     # Normalize synonymous tags across all fields
     tags = normalize_tag_dict(tags)
