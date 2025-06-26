@@ -14,20 +14,26 @@ class ScoringTests(unittest.TestCase):
     def test_phase_intensity_penalty(self):
         drill = {"intensity": "high", "raw_traits": [], "modalities": []}
         athlete = {"sport": "football", "in_fight_camp": False}
-        self.assertAlmostEqual(score_drill(drill, [], "GPP", athlete), 0.8)
-        self.assertAlmostEqual(score_drill(drill, [], "TAPER", athlete), 0.5)
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 0.8)
+        self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.5)
 
     def test_intensity_penalty_skipped_for_fighters(self):
         drill = {"intensity": "high", "raw_traits": [], "modalities": []}
         athlete = {"sport": "mma", "in_fight_camp": True}
-        self.assertAlmostEqual(score_drill(drill, [], "GPP", athlete), 1.0)
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 1.0)
 
     def test_elite_trait_synergy_penalty(self):
         drill = {"intensity": "medium", "raw_traits": ["ruthless"], "modalities": ["focus drill"]}
-        athlete = {"sport": "football", "in_fight_camp": False}
-        self.assertAlmostEqual(score_drill(drill, [], "SPP", athlete), 0.8)
+        athlete = {"sport": "football", "in_fight_camp": False, "tags": []}
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.5)
         drill2 = {"intensity": "medium", "raw_traits": ["commanding"], "modalities": ["visualisation", "breathwork"]}
-        self.assertAlmostEqual(score_drill(drill2, ["thrives"], "SPP", athlete), 1.0)
+        athlete_synergy = {"sport": "football", "in_fight_camp": False, "tags": ["thrives"]}
+        self.assertAlmostEqual(score_drill(drill2, "SPP", athlete_synergy), 1.7)
+
+    def test_multiple_elite_trait_penalty(self):
+        drill = {"intensity": "medium", "raw_traits": ["ruthless", "commanding"], "modalities": ["focus drill"]}
+        athlete = {"sport": "football", "in_fight_camp": False, "tags": []}
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.8)
 
 if __name__ == "__main__":
     unittest.main()
