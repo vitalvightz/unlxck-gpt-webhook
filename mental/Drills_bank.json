@@ -1471,41 +1471,360 @@
         "intermediate": "Guided imagery",
         "elite": "Full sensory simulation"
       }
+    {
+      "name": "Scramble Autopilot",
+      "description": "Pre-programs reactions for common scramble positions to eliminate hesitation during chaotic transitions.",
+      "theme_tags": ["second_guess", "mental_freeze"],
+      "raw_traits": ["aggressive", "precise"],
+      "modalities": ["imagery reps", "anchor cue"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "SPRAWL → SNAP → SPIN",
+      "notes": "Daily: Watch scramble footage → Freeze frame → Call reaction within 0.3s → Physical mimicry. Builds instinctive neural pathways for MMA scrambles, BJJ guard recoveries, and wrestling reshots."
+    },
+    {
+      "name": "Chain Reaction Trigger",
+      "description": "Develops continuous offense to prevent freezing during MMA cage work, BJJ transitions, and wrestling exchanges.",
+      "theme_tags": ["mental_freeze"],
+      "raw_traits": ["ruthless", "hungry"],
+      "modalities": ["tactical drill"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "MOVE OR LOSE",
+      "notes": "Partner drills where stopping = immediate positional penalty. Applies to MMA cage cutting, BJJ guard passing, and wrestling chain wrestling."
+    },
+    {
+      "name": "Matador Reset Protocol",
+      "description": "10-second recovery system after failed takedowns in MMA/wrestling or submissions in BJJ/grappling.",
+      "theme_tags": ["slow_reset", "mental_loop"],
+      "raw_traits": ["resilient", "focused"],
+      "modalities": ["game reset", "breathwork"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "RESET → RELOAD",
+      "notes": "After failed attempts: 1. Backstep to safe range (MMA/wrestling) or guard recovery (BJJ). 2. 4-4-6 breathing. 3. Immediate re-engagement."
+    },
+    {
+      "name": "Control Chaos Drill",
+      "description": "Trains high-control athletes (BJJ positional players, wrestling top riders) to thrive in chaotic MMA exchanges.",
+      "theme_tags": ["control_needed", "pressure_distrust"],
+      "raw_traits": ["tactical", "commanding"],
+      "modalities": ["focus drill"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "CHAOS → CATALYST",
+      "notes": "Deliberately create messy scenarios (MMA cage pinning, BJS scrambles, wrestling funk) while maintaining technical precision."
+    },
+    {
+      "name": "Gas Tank Reframe",
+      "description": "Combats fatigue anxiety during MMA later rounds, BJS long matches, and wrestling grueling positions.",
+      "theme_tags": ["fatigue", "self_conflict"],
+      "raw_traits": ["hungry", "resilient"],
+      "modalities": ["self-talk", "breathwork"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "TIRED ≠ WEAK",
+      "notes": "Pre-fatigue training with empowering mantras specific to each sport's demands (MMA clinch work, BJS guard retention, wrestling bottom recovery)."
+    },
+    {
+      "name": "Cage Door Visualization",
+      "description": "Simulates walkout anxiety for MMA cage, BJJ open mat calls, and wrestling tournament environments.",
+      "theme_tags": ["stage_fear", "audience_threat"],
+      "raw_traits": ["confident", "dominant"],
+      "modalities": ["visualisation", "pre-fight prep"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "MY ARENA",
+      "notes": "Detailed mental rehearsal of competition entry specific to each sport (MMA walkout, BJJ mat approach, wrestling tunnel prep)."
+    },
+    // Additional drills continue...
+    {
+      "name": "Submission Failure Reboot",
+      "description": "Resets mentality after failed submissions in BJJ/grappling or missed finishes in MMA.",
+      "theme_tags": ["post_mistake", "quick_reset"],
+      "raw_traits": ["aggressive", "playful"],
+      "modalities": ["game reset", "anchor cue"],
+      "sports": ["MMA", "BJJ", "Grappling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "MISS → MOVE → ATTACK",
+      "notes": "Immediate transition drill: Failed armbar → take back, Missed RNC → leg attack, etc."
+    },
+    {
+      "name": "Wrestler's Mental Reps",
+      "description": "Builds instinctive reactions for wrestling shots and MMA takedown defense through error-proof repetition.",
+      "theme_tags": ["overthink", "second_guess"],
+      "raw_traits": ["precise", "tactical"],
+      "modalities": ["imagery reps"],
+      "sports": ["MMA", "Wrestling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "SEE → SHOOT",
+      "notes": "50 daily mental reps of perfect shot entries and sprawls with kinesthetic visualization."
     }
-  ],
-  "enhancements": {
-    "authority_threat": {
-      "added_modalities": [
-        "breathwork",
-        "tactical drill"
-      ],
-      "cross_tags": [
-        "general_threat"
-      ]
+    
+    {
+  "drills": [
+    // 1-7 from previous
+    // ...
+
+    // 8. Takedown Failure Reset
+    {
+      "name": "Shot Recovery System",
+      "description": "Instinctive reset protocol after failed takedowns in wrestling or MMA cage work.",
+      "theme_tags": ["post_mistake", "quick_reset"],
+      "raw_traits": ["resilient", "aggressive"],
+      "modalities": ["game reset", "anchor cue"],
+      "sports": ["MMA", "Wrestling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "MISS → SPRAWL → CHAIN",
+      "notes": "Failed shot immediately transitions to: 1. Defensive sprawl. 2. Secondary takedown. 3. Worst-case guard pull (MMA)."
     },
-    "reward_seeker": {
-      "added_modalities": [
-        "imagery reps",
-        "focus drill"
-      ],
-      "new_drills": 2
+
+    // 9. Guard Retention Trigger
+    {
+      "name": "Guard Survival Autopilot",
+      "description": "Pre-programmed reactions to common passes for BJJ and grappling.",
+      "theme_tags": ["mental_freeze", "second_guess"],
+      "raw_traits": ["tactical", "flexible"],
+      "modalities": ["imagery reps", "tactical drill"],
+      "sports": ["BJJ", "Grappling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "FRAME → RECOVER",
+      "notes": "Daily: Partner initiates passes → Instant defensive reaction without conscious thought."
     },
-    "avoid_failure": {
-      "added_modalities": [
-        "visualisation",
-        "focus drill"
-      ],
-      "intensity_range": [
-        "low",
-        "high"
-      ]
+
+    // 10. Cage Cutting Autopilot
+    {
+      "name": "Octagon GPS",
+      "description": "Eliminates hesitation in MMA cage navigation and cutting off opponents.",
+      "theme_tags": ["overthink", "focus_breaker"],
+      "raw_traits": ["commanding", "precise"],
+      "modalities": ["visualisation", "focus drill"],
+      "sports": ["MMA"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "CUT → CORNER → CONTROL",
+      "notes": "Use tape marks to simulate cage during shadow work. 45° angle priority system."
     },
-    "general_threat": {
-      "cross_mapped": [
-        "pressure_distrust",
-        "freeze"
-      ],
-      "new_modality": "cold exposure"
+
+    // 11. Tournament Day Protocol
+    {
+      "name": "Mat-Toughness Builder",
+      "description": "Simulates wrestling/BJJ tournament stress through deliberate exposure.",
+      "theme_tags": ["stage_fear", "pressure_distrust"],
+      "raw_traits": ["confident", "dominant"],
+      "modalities": ["pre-fight prep", "cold exposure"],
+      "sports": ["Wrestling", "BJJ"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "MAT → MINE",
+      "notes": "Weekly: 1. Cold shower pre-training. 2. Loud crowd noise. 3. Judged scenarios with consequences."
+    },
+
+    // 12. Submission Chain Reactor
+    {
+      "name": "Submission Dominoes",
+      "description": "Trains automatic submission chains for BJJ/grappling when initial attempts fail.",
+      "theme_tags": ["post_mistake", "quick_reset"],
+      "raw_traits": ["ruthless", "precise"],
+      "modalities": ["imagery reps", "tactical drill"],
+      "sports": ["BJJ", "Grappling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "MISS → MOVE → FINISH",
+      "notes": "Drill 3-move chains: Armbar fails → triangle → omoplata. No hesitation between transitions."
+    },
+
+    // 13. Clinch Confidence Builder
+    {
+      "name": "Dirty Boxing Mindset",
+      "description": "Develops MMA clinch aggression through psychological framing.",
+      "theme_tags": ["confidence_profile", "control_needed"],
+      "raw_traits": ["aggressive", "commanding"],
+      "modalities": ["identity shift", "anchor cue"],
+      "sports": ["MMA"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "MY HOUSE",
+      "notes": "Clinch work preceded by: 1. Power pose. 2. Aggression mantra. 3. Physical trigger (tapping gloves)."
+    },
+
+    // 14. Wrestling Bottom Reset
+    {
+      "name": "Escape Autopilot",
+      "description": "Instinctive bottom recovery system for wrestling and MMA grappling.",
+      "theme_tags": ["slow_reset", "mental_loop"],
+      "raw_traits": ["resilient", "hungry"],
+      "modalities": ["game reset", "breathwork"],
+      "sports": ["Wrestling", "MMA"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "BUMP → BRIDGE → BASE",
+      "notes": "When pinned: 1. Explosive bridge. 2. 2-second breath hold. 3. Systematic escape chain."
+    },
+
+    // 15. Amateur Fight Prep
+    {
+      "name": "First Fight Simulator",
+      "description": "Full-sensory debut fight preparation for MMA and BJJ competitors.",
+      "theme_tags": ["stage_fear", "audience_threat"],
+      "raw_traits": ["confident", "dominant"],
+      "modalities": ["visualisation", "pre-fight prep"],
+      "sports": ["MMA", "BJJ"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "DEBUT → DOMINATE",
+      "notes": "Includes: 1. Walkout rehearsal. 2. Announcer call simulation. 3. First exchange scripting."
+    },
+
+    // 16. Grappling Gas Tank
+    {
+      "name": "Survival Breathing",
+      "description": "Oxygen-conserving breath control for BJJ/grappling late rounds.",
+      "theme_tags": ["fatigue", "self_conflict"],
+      "raw_traits": ["resilient", "focused"],
+      "modalities": ["breathwork"],
+      "sports": ["BJJ", "Grappling"],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "IN → HOLD → OUT → FIGHT",
+      "notes": "4-4-4-4 breathing pattern: Inhale (4s), Hold (4s), Exhale (4s), Hold (4s) during positional drills."
+    },
+
+    // 17. Wrestling Top Pressure
+    {
+      "name": "Ride Clock Mindset",
+      "description": "Builds relentless top pressure for wrestling and MMA ground control.",
+      "theme_tags": ["control_needed", "pressure_distrust"],
+      "raw_traits": ["commanding", "ruthless"],
+      "modalities": ["self-talk", "tactical drill"],
+      "sports": ["Wrestling", "MMA"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "BREAK → THEM → NOT → ME",
+      "notes": "30-second countdown drill where stopping pressure = restart. Mental framing of opponent's discomfort."
+    },
+
+    // 18. MMA Cage Awareness
+    {
+      "name": "Fence GPS",
+      "description": "Develops automatic cage awareness for MMA fighters to prevent freezing.",
+      "theme_tags": ["mental_freeze", "focus_breaker"],
+      "raw_traits": ["tactical", "aware"],
+      "modalities": ["focus drill"],
+      "sports": ["MMA"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "FIND → THE → FENCE",
+      "notes": "Blindfolded cage navigation drills to build spatial awareness without visual dependence."
+    },
+
+    // 19. BJJ Competition Start
+    {
+      "name": "First Grip Battle",
+      "description": "Eliminates hesitation in BJJ match openings through pre-programmed reactions.",
+      "theme_tags": ["second_guess", "overthink"],
+      "raw_traits": ["aggressive", "precise"],
+      "modalities": ["tactical drill"],
+      "sports": ["BJJ"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "GRIP → PULL → GO",
+      "notes": "100+ repetitions of competition-start grip sequences until fully automatic."
+    },
+
+    // 20. Grappling Mental Toughness
+    {
+      "name": "Submission Survival",
+      "description": "Builds composure in bad positions for BJJ and grappling.",
+      "theme_tags": ["self_conflict", "post_mistake"],
+      "raw_traits": ["resilient", "calm"],
+      "modalities": ["breathwork", "game reset"],
+      "sports": ["BJJ", "Grappling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "DANGER → BREATHE → ESCAPE",
+      "notes": "Deliberate training in compromised positions with specific recovery protocols."
     }
-  }
-}
+    {
+  "drills": [
+    // 1. Motivational Architecture Drills
+    {
+      "name": "The Why Chain",
+      "description": "Builds intrinsic motivation by linking training actions to deeper personal values for MMA/BJJ/Wrestling/Grappling athletes.",
+      "theme_tags": ["reward_seeker", "external_validation"],
+      "raw_traits": ["hungry", "confident"],
+      "modalities": ["journaling", "reflection"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "DIG DEEPER",
+      "notes": "Pre-training: 1. Ask 'Why does this session matter?' 2. Give 3 layered answers (e.g., 'To improve takedowns → to dominate opponents → to prove my discipline'). 3. Keep visual reminder in gym bag. Based on self-determination theory.",
+      "progression": {
+        "beginner": "Weekly written exercises",
+        "intermediate": "Daily quick-answer ritual",
+        "elite": "Integrated with pre-fight routine"
+      }
+    },
+    {
+      "name": "The Scoreboard Reset",
+      "description": "Transitions external validation-seeking (medals/social praise) to internal mastery focus for combat sports athletes.",
+      "theme_tags": ["external_validation"],
+      "raw_traits": ["playful", "joyful"],
+      "modalities": ["self-talk", "anchor cue"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "MASTERY > METRICS",
+      "notes": "Post-session: 1. Identify one technical win unrelated to outcomes. 2. Physical trigger (e.g., grip squeeze) to lock in feeling. 3. Verbalize ('My guard retention felt sharp'). Rewires reward pathways to value process over results.",
+      "progression": {
+        "beginner": "Coach-guided identification",
+        "intermediate": "Self-identified wins",
+        "elite": "Real-time competition application"
+      }
+    },
+
+    // 2. Threat Response Drills
+    {
+      "name": "The Coach Filter",
+      "description": "Trains fighters to productively process coaching criticism without threat response activation.",
+      "theme_tags": ["authority_threat"],
+      "raw_traits": ["commanding", "confident"],
+      "modalities": ["breathwork", "tactical drill"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "INPUT → PROCESS → USE",
+      "notes": "During coaching feedback: 1. Tactical breathing (4s in, 4s hold). 2. Categorize input ('Tactical' vs 'Emotional'). 3. Extract one actionable item. Reduces cortisol spikes by 32% in studies.",
+      "progression": {
+        "beginner": "Recorded video review",
+        "intermediate": "Live technical corrections",
+        "elite": "High-stakes corner instructions"
+      }
+    },
+    {
+      "name": "Mat Pack Mentality",
+      "description": "Converts peer judgment anxiety into competitive fuel during MMA sparring, BJJ rolls, and wrestling live goes.",
+      "theme_tags": ["peer_threat"],
+      "raw_traits": ["aggressive", "ruthless"],
+      "modalities": ["visualisation", "identity shift"],
+      "sports": ["MMA", "BJJ", "Wrestling", "Grappling"],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "THEIR EYES → MY FIRE",
+      "notes": "Pre-training: 1. Visualize peers watching. 2. Assign their gaze a color (e.g., blue energy). 3. 'Draw it in' during performance. Uses social facilitation theory to boost output.",
+      "progression": {
+        "beginner": "Private visualization",
+        "intermediate": "Select peer observation",
+        "elite": "Full-team evaluation sessions"
+      }
+  
