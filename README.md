@@ -1,34 +1,41 @@
-# Mental Training Programme
+# Mental Training Module
 
-This repository contains utilities for parsing mental performance forms and
-generating short training plans. It focuses on mapping questionnaire responses
-into structured tags that can be used to build mindfulness, visualisation and
-journaling drills.
+This project scores mental drills so athletes get targeted practice. It parses questionnaire responses into tags and ranks drills using those tags.
 
-Run the module as a script to print a default plan starting today:
+Run the module to generate a basic plan starting today:
 
 ```bash
 python -m mental.program
 ```
 
-## Code overview
+## Overview
 
-- `mental/program.py` – parses data from the *Mindcode* form and returns a
-  dictionary of clean field values.
-  It captures basic athlete info such as name, age, sport and position/style
-  even if those details are not yet used by the scoring logic.
-- `mental/map_mindcode_tags.py` – converts the parsed fields into normalised
-  mental performance tags such as `breath_pattern`, `reset_speed` and
-  `motivation_type`.
-- `tags.txt` – lists all available tags and shows how a drill can reference
-  them.
-- `tests/` – unit tests covering the tag-mapping logic.
+The scoring engine compares each drill to an athlete's traits, weaknesses and current training phase. The higher the score, the more closely the drill fits that athlete right now.
 
-## Potential with mental drills injected
+## How Scoring Works
 
-By defining drills with the tags in `tags.txt`, the mapping functions can
-automatically match an athlete's responses to relevant exercises. Injecting new
-drills allows coaches to expand the programme and create targeted routines –
-for example, providing decisiveness drills to players who hesitate under
-pressure. As more drills are added, the system can produce customised mental
-training plans across different sports.
+- **Trait scores** – Each raw trait adds a set value: base traits +0.3, elite tier&nbsp;2 +0.5, elite tier&nbsp;1 +0.7. Scores from traits cap at +1.2.
+- **Phase & intensity logic** – A drill matching the athlete's phase gives +0.5. High intensity can deduct up to -0.5 if the athlete is tapering or early in GPP. Fighters in camp skip these penalties.
+- **Weakness match bonus** – When drill tags hit an athlete's listed weaknesses, the score climbs by +0.1 plus +0.05 for each extra match. If the drill also uses a preferred modality, add another +0.1.
+- **Preferred modality reinforcement** – See above; it nudges the score only when a weakness match is found.
+- **Modality synergy pairs** – Certain modality combos give +0.2 if the athlete has required tags (for example, visualisation + breathwork when the athlete needs quick resets).
+- **Sport-specific micro-weights** – Small adjustments (±0.2 each) reward drills that fit common patterns in sports like boxing, football or track.
+- **Overload penalties** – High intensity or overload tags drop the score up to -0.5 when tapering or when an athlete shows CNS fragility.
+
+## What's NOT scored
+
+General relevance without tagged overlap earns nothing. The system only rewards clear tag matches.
+
+## Customization
+
+Edit `mental/scoring.py` to tweak values:
+
+- Update `TRAIT_SCORES` for different trait weights.
+- Change `SYNERGY_LIST` to redefine modality pairs and required tags.
+- Adjust `sport_microweight_bonus()` for sport-specific tweaks.
+
+You can also expand the tag list in `tags.txt` or modify which tags count as weaknesses.
+
+## Design Principle
+
+The system only rewards precision. If a drill doesn't clearly match tagged needs, it stays near the base score.
