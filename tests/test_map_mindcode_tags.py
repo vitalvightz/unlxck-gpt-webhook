@@ -41,5 +41,14 @@ class MapMindcodeTagsTest(unittest.TestCase):
         tags = map_mindcode_tags(data)
         self.assertEqual(tags["under_pressure"], ["hesitate"])
 
+    def test_normalization(self):
+        data = {
+            "post_mistake": ["I shake it off quickly and move on"],
+            "reset_duration": "Instantly",
+        }
+        tags = map_mindcode_tags(data)
+        self.assertEqual(tags["post_mistake"], ["fast_reset"])
+        self.assertEqual(tags["reset_speed"], "fast_reset")
+
 if __name__ == "__main__":
     unittest.main()

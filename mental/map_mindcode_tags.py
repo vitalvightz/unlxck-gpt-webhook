@@ -7,6 +7,8 @@ substring checks.
 
 from typing import Any, Dict, List, Union
 
+from .normalization import normalize_tag_dict
+
 # Multi-select option -> tag lookups
 UNDER_PRESSURE_MAP = {
     "i hesitate before acting": "hesitate",
@@ -158,5 +160,8 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         "elite_traits",
     ]:
         tags[list_key] = list(dict.fromkeys(tags[list_key]))
+
+    # Normalize synonymous tags across all fields
+    tags = normalize_tag_dict(tags)
 
     return tags
