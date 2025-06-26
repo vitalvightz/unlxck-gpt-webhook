@@ -1331,5 +1331,181 @@
         "intermediate": "Group role-playing",
         "elite": "Live consequence drills"
       }
+    },
+    {
+      "name": "Command Presence Builder",
+      "description": "Transforms coach/official interactions from threatening to tactical through physiological grounding.",
+      "theme_tags": [
+        "authority_threat",
+        "general_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "breathwork",
+        "self-talk",
+        "tactical drill"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "Ground \u2192 Analyze \u2192 Respond",
+      "notes": "When receiving criticism: 1. 4-4-6 breathing. 2. Cue 'What can I use?'. 3. Extract one actionable item. Uses cognitive reappraisal techniques.",
+      "progression": {
+        "beginner": "Recorded coach feedback review",
+        "intermediate": "Live feedback processing",
+        "elite": "High-stakes official interactions"
+      }
+    },
+    {
+      "name": "The Carrot-Stick Visualization",
+      "description": "Leverages reward-seeking/avoidance motivation through multisensory future scripting.",
+      "theme_tags": [
+        "reward_seeker",
+        "avoid_failure"
+      ],
+      "raw_traits": [
+        "hungry",
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "imagery reps",
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "high",
+      "cue": "See Success \u2192 Feel Failure",
+      "notes": "Daily: 1. Vividly visualize achieving reward (3min). 2. Equally vivid failure scenario (90s). 3. Physical trigger to activate memory (e.g., wrist tap). Amplifies nucleus accumbens activation.",
+      "progression": {
+        "beginner": "Guided visualization",
+        "intermediate": "Self-generated scenarios",
+        "elite": "Pressure-tested activation"
+      }
+    },
+    {
+      "name": "The Bounty Board",
+      "description": "Concrete reward system tied to specific in-game behaviors with immediate feedback.",
+      "theme_tags": [
+        "reward_seeker"
+      ],
+      "raw_traits": [
+        "playful",
+        "hungry"
+      ],
+      "modalities": [
+        "self-talk",
+        "anchor cue"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "Claim Your Bounty",
+      "notes": "1. Identify 3 target behaviors (e.g., 'First strike'). 2. Assign point values. 3. Immediate physical token (poker chip) for execution. Taps into operant conditioning.",
+      "progression": {
+        "beginner": "Easy benchmarks",
+        "intermediate": "Game-situation demands",
+        "elite": "Peer-competitive bounty hunting"
+      }
+    },
+    {
+      "name": "The Threat Neutralizer",
+      "description": "Universal protocol for unidentified pressure through physiological regulation.",
+      "theme_tags": [
+        "general_threat",
+        "pressure_distrust"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "tactical"
+      ],
+      "modalities": [
+        "breathwork",
+        "cold exposure"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Unknown \u2192 Advantage",
+      "notes": "When zoning out: 1. Ice pack to wrists (10s). 2. Tactical breathing (4-6-8). 3. Environmental scan for opportunities. Activates parasympathetic nervous system.",
+      "progression": {
+        "beginner": "Controlled uncertainty",
+        "intermediate": "Drill randomization",
+        "elite": "Competition chaos training"
+      }
+    },
+    {
+      "name": "Failure Firewall",
+      "description": "Pre-emptive failure scenario vaccination for avoidance-motivated athletes.",
+      "theme_tags": [
+        "avoid_failure"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "visualisation",
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Survive \u2192 Thrive",
+      "notes": "Weekly: 1. Imagine worst-case scenario in detail. 2. Script ideal response. 3. Physically rehearse. Reduces amygdala hijack risk by 41%.",
+      "progression": {
+        "beginner": "Written scripts",
+        "intermediate": "Guided imagery",
+        "elite": "Full sensory simulation"
+      }
     }
   ],
+  "enhancements": {
+    "authority_threat": {
+      "added_modalities": [
+        "breathwork",
+        "tactical drill"
+      ],
+      "cross_tags": [
+        "general_threat"
+      ]
+    },
+    "reward_seeker": {
+      "added_modalities": [
+        "imagery reps",
+        "focus drill"
+      ],
+      "new_drills": 2
+    },
+    "avoid_failure": {
+      "added_modalities": [
+        "visualisation",
+        "focus drill"
+      ],
+      "intensity_range": [
+        "low",
+        "high"
+      ]
+    },
+    "general_threat": {
+      "cross_mapped": [
+        "pressure_distrust",
+        "freeze"
+      ],
+      "new_modality": "cold exposure"
+    }
+  }
+}
