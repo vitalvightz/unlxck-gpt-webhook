@@ -14,6 +14,8 @@ def parse_mindcode_form(fields: dict) -> dict:
     focus_breakers = [x.strip() for x in get_value("What breaks your focus most during games or competition? (Tick all that apply)", fields).split(",") if x.strip()]
     confidence_profile = [x.strip() for x in get_value("Which of these sounds most like you? (Pick 1–2 only)", fields).split(",") if x.strip()]
     identity_traits = [x.strip() for x in get_value("Tick the 3 that describes you best:", fields).split(",") if x.strip()]
+    tool_preferences = [x.strip() for x in get_value("Which of these mental training tools do you prefer or respond well to? (Tick all that apply)", fields).split(",") if x.strip()]
+    key_struggles = [x.strip() for x in get_value("Which of these do you personally struggle with the most during training or competition? (Tick all that apply, be honest)", fields).split(",") if x.strip()]
     elite_traits = [x.strip() for x in get_value("Which traits define a mentally elite athlete in your opinion? (Pick up to 3)", fields).split(",") if x.strip()]
 
     # Single-selects
@@ -36,6 +38,8 @@ def parse_mindcode_form(fields: dict) -> dict:
         "focus_breakers": focus_breakers,
         "confidence_profile": confidence_profile,
         "identity_traits": identity_traits,
+        "tool_preferences": tool_preferences,
+        "key_struggles": key_struggles,
         "elite_traits": elite_traits,
         "pressure_breath": pressure_breath,
         "heart_response": heart_response,

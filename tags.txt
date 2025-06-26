@@ -12,7 +12,15 @@
     "under_pressure": ["hesitate", "freeze", "second_guess", "emotional", "overthink", "avoidant", "audio_cutoff", "demand_avoidance", "thrives"],
     "post_mistake": ["mental_loop", "shutdown", "compensate", "disengage", "self_anger", "quick_reset", "external_judgement"],
     "focus_breakers": ["focus_crowd", "focus_coach", "focus_decision_fear", "focus_fatigue", "focus_self_critic", "focus_social", "focus_locked"],
-    "confidence_profile": ["gym_performer", "fragile_confidence", "stage_fear", "pressure_distrust", "emotional_performer", "control_needed", "stable_confidence"]
+    "confidence_profile": ["gym_performer", "fragile_confidence", "stage_fear", "pressure_distrust", "emotional_performer", "control_needed", "stable_confidence"],
+    "tool_preferences": [
+      "pref_breathwork", "pref_cold_exposure", "pref_journaling",
+      "pref_anchor_cue", "pref_visualisation", "pref_unknown"
+    ],
+    "key_struggles": [
+      "overthink", "emotional", "fragile_confidence",
+      "slow_reset", "control_needed", "gym_performer", "unknown_struggle"
+    ]
   },
   "raw_traits": [
     "confident", "focused", "aggressive", "free", "locked-in",
