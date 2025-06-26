@@ -1,0 +1,35 @@
+name: Run Mental Plan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Fix NumPy Crash (spacy + thinc)
+        run: |
+          pip uninstall -y numpy spacy thinc
+          pip install --no-cache-dir numpy==1.24.4
+          pip install --no-cache-dir spacy==3.6.0 thinc==8.1.12
+
+      - name: Install other dependencies
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir git+https://github.com/jenojp/negspacy
+          pip check
+
+      - name: Download spaCy model
+        run: python -m spacy download en_core_web_lg
+
+      - name: Run mental plan
+        run: python -m mental.main
