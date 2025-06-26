@@ -38,6 +38,28 @@ Edit `mental/scoring.py` to tweak values:
 
 You can also expand the tag list in `tags.txt` or modify which tags count as weaknesses.
 
+## Synergy Coverage
+
+The drill bank already contains examples for some of the synergy pairs defined in
+`mental/scoring.py`. When both modalities from a pair appear in a drill, it
+confirms the pair is represented. Current matches include:
+
+| Drill Name | Matched Pair |
+|------------|--------------|
+| Tactical Reset Matrix | (game reset, breathwork) |
+| Rope Reset Protocol | (game reset, breathwork) |
+| Matador Reset Protocol | (game reset, breathwork) |
+| Escape Autopilot | (game reset, breathwork) |
+| Submission Survival | (game reset, breathwork) |
+| The Chain Breaker | (game reset, breathwork) |
+| Cardio Panic Reset | (game reset, breathwork) |
+| Rope Reset System | (game reset, breathwork) |
+| The Hesitation Killer | (anchor cue, self-talk) |
+| The Bounty Board | (anchor cue, self-talk) |
+| The Scoreboard Reset | (anchor cue, self-talk) |
+| The Threat Neutralizer | (breathwork, cold exposure) |
+| Emotional Pressure Valve | (breathwork, cold exposure) |
+
 ## Design Principle
 
 The system only rewards precision. If a drill doesn't clearly match tagged needs, it stays near the base score.
