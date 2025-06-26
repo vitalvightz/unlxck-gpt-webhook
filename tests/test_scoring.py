@@ -49,8 +49,8 @@ class ScoringTests(unittest.TestCase):
             "in_fight_camp": False,
             "tags": ["fast_reset", "breath_hold", "other"],
         }
-        # 1.0 base +0.6 theme +0.05 combat bonus +0.3 sport match +0.5 phase match = 2.35
-        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 2.35)
+        # 1.0 base +0.5 phase match +0.3 sport match -0.1 overload = 1.7
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.7)
 
     def test_weakness_and_reinforcement_bonus(self):
         drill = {
@@ -67,8 +67,8 @@ class ScoringTests(unittest.TestCase):
             "weakness_tags": ["overthink"],
             "preferred_modality": ["visualisation"],
         }
-        # 1.0 base +0.4 theme +0.5 phase +0.15 weakness +0.1 reinforcement
-        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 2.15)
+        # 1.0 base +0.5 phase +0.15 weakness +0.1 reinforcement = 1.75
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 1.75)
 
     def test_overload_penalty(self):
         drill = {
@@ -84,8 +84,8 @@ class ScoringTests(unittest.TestCase):
             "in_fight_camp": False,
             "tags": ["breath_hold"],
         }
-        # Base 1.0 +0.4 theme -0.5 taper penalty -0.2 overload = 0.7
-        self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.7)
+        # Base 1.0 -0.5 taper penalty -0.2 overload = 0.3
+        self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.3)
 
 if __name__ == "__main__":
     unittest.main()
