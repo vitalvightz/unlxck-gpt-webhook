@@ -10,12 +10,14 @@ class ParseMindcodeFormTest(unittest.TestCase):
             "Age": "23",
             "Sport": "Basketball",
             "Position/Style": "Point Guard",
+            "Where are you at in your performance cycle?": "I\u2019m rebuilding, resetting, or in off-season",
         }
         result = parse_mindcode_form(data)
         self.assertEqual(result["full_name"], "Jane Doe")
         self.assertEqual(result["age"], "23")
         self.assertEqual(result["sport"], "Basketball")
         self.assertEqual(result["position_style"], "Point Guard")
+        self.assertEqual(result["mental_phase"], "GPP")
 
 if __name__ == "__main__":
     unittest.main()
