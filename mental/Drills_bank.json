@@ -1,342 +1,354 @@
 {
-    "drills": [
-        {
-            "name": "The Navy SEAL Breath",
-            "description": "Used by elite operatives to control heart rate under gunfire. Trains your body to stay calm when pressure would normally make you gasp or hold your breath.",
-            "theme_tags": [
-                "breath_hold",
-                "breath_fast",
-                "hr_up"
-            ],
-            "raw_traits": [
-                "relaxed",
-                "commanding",
-                "focused"
-            ],
-            "modalities": [
-                "breathwork"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "medium",
-            "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
-            "notes": "Practice 5 rounds: 1. Sitting calmly. 2. During bodyweight exercises. 3. Right after sprints. Pro tip: Place a hand on your belly to ensure diaphragmatic breathing.",
-            "video_url": null
-        },
-        {
-            "name": "Authority Reframe",
-            "description": "Transforms 'threat' into useful adrenaline by changing how you perceive judgment.",
-            "theme_tags": [
-                "authority_threat",
-                "peer_threat"
-            ],
-            "raw_traits": [
-                "commanding",
-                "confident",
-                "free"
-            ],
-            "modalities": [
-                "self-talk",
-                "identity shift"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "SPP",
-            "intensity": "medium",
-            "cue": "Their eyes are my spotlight",
-            "notes": "Before competitions: 1. Identify 1 authority who triggers nerves. 2. Visualize them as an 'energy source' rather than judge. 3. Say: 'Your attention fuels my focus.' Based on fMRI studies showing reframing reduces amygdala activation by 62%.",
-            "video_url": null
-        },
-        {
-            "name": "The Decisive Playbook",
-            "description": "Pre-programmed responses to bypass hesitation in critical moments by scripting reactions to common pressure scenarios.",
-            "theme_tags": [
-                "overthinker",
-                "doubter",
-                "focus_decision_fear"
-            ],
-            "raw_traits": [
-                "confident",
-                "precise",
-                "commanding"
-            ],
-            "modalities": [
-                "journaling",
-                "self-talk"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "medium",
-            "cue": "When [X], I [Y]",
-            "notes": "Progression: 1) Write 3 scenarios + responses. 2) Review daily for 2 weeks. 3) Simulate with eyes closed. Elite: Add physical triggers (e.g., tapping wrist for each script).",
-            "video_url": null
-        },
-        {
-            "name": "Freeze-Breaker Protocol",
-            "description": "Combines tactile and breathing cues to interrupt freezing during performance.",
-            "theme_tags": [
-                "physical_freeze",
-                "mental_freeze"
-            ],
-            "raw_traits": [
-                "aggressive",
-                "locked-in"
-            ],
-            "modalities": [
-                "anchor cue",
-                "breathwork"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "SPP",
-            "intensity": "high",
-            "cue": "CLICK (snap fingers) \u2192 CLEAR (exhale)",
-            "notes": "Progression: 1) Practice in training. 2) Add mild stress (e.g., coach yelling). 3) Use in competition. Works by disrupting amygdala hijack via dual sensory input.",
-            "video_url": null
-        },
-        {
-            "name": "Combat Breathing",
-            "description": "Navy SEAL-tested 4-second breath cycle to control heart rate and panic responses.",
-            "theme_tags": [
-                "breath_hold",
-                "breath_fast",
-                "hr_up"
-            ],
-            "raw_traits": [
-                "relaxed",
-                "commanding"
-            ],
-            "modalities": [
-                "breathwork"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "medium",
-            "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
-            "notes": "Progression: 1) Seated. 2) During cooldowns. 3) Under physical stress. Elite: Add eye tracking (follow finger while breathing).",
-            "video_url": "https://youtu.be/example_breath"
-        },
-        {
-            "name": "The 10-Second Reset",
-            "description": "Rapid physiological reset using grounding techniques between plays/points.",
-            "theme_tags": [
-                "slow_reset",
-                "hr_unknown"
-            ],
-            "raw_traits": [
-                "focused",
-                "playful"
-            ],
-            "modalities": [
-                "game reset"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "low",
-            "cue": "5-4-3-2-1 (see, touch, hear, smell, taste)",
-            "notes": "Progression: 1) Normal conditions. 2) Mild fatigue. 3) After mistakes. Based on sensory anchoring research.",
-            "video_url": null
-        },
-        {
-            "name": "The Carrot/Stick Journal",
-            "description": "Links concrete rewards/consequences to training behaviors to strengthen motivation pathways.",
-            "theme_tags": [
-                "reward_seeker",
-                "avoid_failure"
-            ],
-            "raw_traits": [
-                "hungry",
-                "aggressive"
-            ],
-            "modalities": [
-                "journaling"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "low",
-            "cue": "Action \u2192 Reward | Inaction \u2192 Cost",
-            "notes": "Progression: 1) Daily entries. 2) Public accountability. 3) Variable rewards. Elite: Tie to biometrics (e.g., HRV targets).",
-            "video_url": null
-        },
-        {
-            "name": "Threat Reframe Drill",
-            "description": "Transforms perceived threats into competitive fuel through cognitive restructuring.",
-            "theme_tags": [
-                "authority_threat",
-                "peer_threat"
-            ],
-            "raw_traits": [
-                "commanding",
-                "confident"
-            ],
-            "modalities": [
-                "self-talk"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "SPP",
-            "intensity": "medium",
-            "cue": "Your pressure is my power",
-            "notes": "Progression: 1) Identify threats. 2) Write reframes. 3) Simulate exposure. Uses fMRI-verified prefrontal override techniques.",
-            "video_url": null
-        },
-        {
-            "name": "Clutch Simulation",
-            "description": "Recreates high-pressure scenarios in training to build neurological tolerance.",
-            "theme_tags": [
-                "under_pressure",
-                "thrives"
-            ],
-            "raw_traits": [
-                "playful",
-                "dominant"
-            ],
-            "modalities": [
-                "pre-fight prep"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "SPP",
-            "intensity": "high",
-            "cue": "This is why I train",
-            "notes": "Progression: 1) Low stakes. 2) Added consequences. 3) Live streaming. Elite: Add sleep deprivation.",
-            "video_url": "https://youtu.be/example_pressure"
-        },
-        {
-            "name": "Error Eraser",
-            "description": "90-second neural reset protocol to stop post-mistake spirals.",
-            "theme_tags": [
-                "mental_loop",
-                "post_mistake"
-            ],
-            "raw_traits": [
-                "resilient",
-                "focused"
-            ],
-            "modalities": [
-                "anchor cue"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "medium",
-            "cue": "Delete \u2192 Reset \u2192 Go",
-            "notes": "Progression: 1) Physical gesture. 2) Add scent. 3) Full sequence. Disrupts error-detection loops via novel stimuli.",
-            "video_url": null
-        },
-        {
-            "name": "Evidence Lockbox",
-            "description": "Physical/digital repository of past successes to combat self-doubt.",
-            "theme_tags": [
-                "fragile_confidence"
-            ],
-            "raw_traits": [
-                "confident",
-                "joyful"
-            ],
-            "modalities": [
-                "journaling"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "low",
-            "cue": "I have receipts",
-            "notes": "Progression: 1) Collect evidence. 2) Weekly reviews. 3) Pre-competition rituals. Activates success neural networks.",
-            "video_url": null
-        },
-        {
-            "name": "The Crowd Filter",
-            "description": "Trains selective attention in chaotic environments using graduated exposure.",
-            "theme_tags": [
-                "focus_crowd",
-                "focus_social"
-            ],
-            "raw_traits": [
-                "locked-in",
-                "aggressive"
-            ],
-            "modalities": [
-                "focus drill"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "SPP",
-            "intensity": "high",
-            "cue": "Noise = Energy",
-            "notes": "Progression: 1) 20% volume. 2) 50%. 3) Full noise + distractions. Rewires auditory filtering.",
-            "video_url": "https://youtu.be/example_focus"
-        },
-        {
-            "name": "Fatigue Focus Drill",
-            "description": "Maintains concentration under exhaustion using targeted attentional shifts.",
-            "theme_tags": [
-                "focus_fatigue",
-                "hr_down"
-            ],
-            "raw_traits": [
-                "relaxed",
-                "focused"
-            ],
-            "modalities": [
-                "focus drill"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "SPP",
-            "intensity": "high",
-            "cue": "Tunnel \u2192 Expand",
-            "notes": "Progression: 1) Fresh. 2) Post-training. 3) Sleep-deprived. Uses peripheral vision control.",
-            "video_url": null
-        },
-        {
-            "name": "Emotional Detachment Protocol",
-            "description": "Develops non-reactive performance states through meta-awareness training.",
-            "theme_tags": [
-                "emotional_performer",
-                "general_threat"
-            ],
-            "raw_traits": [
-                "precise",
-                "tactical"
-            ],
-            "modalities": [
-                "reflection"
-            ],
-            "sports": [
-                "universal"
-            ],
-            "phase": "universal",
-            "intensity": "medium",
-            "cue": "Observe \u2192 Don't absorb",
-            "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
-            "video_url": null
-        },
+  "drills": [
+    {
+      "name": "The Navy SEAL Breath",
+      "description": "Used by elite operatives to control heart rate under gunfire. Trains your body to stay calm when pressure would normally make you gasp or hold your breath.",
+      "theme_tags": [
+        "breath_hold",
+        "breath_fast",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "commanding",
+        "focused"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+      "notes": "Practice 5 rounds: 1. Sitting calmly. 2. During bodyweight exercises. 3. Right after sprints. Pro tip: Place a hand on your belly to ensure diaphragmatic breathing.",
+      "video_url": null
+    },
+    {
+      "name": "Authority Reframe",
+      "description": "Transforms 'threat' into useful adrenaline by changing how you perceive judgment.",
+      "theme_tags": [
+        "authority_threat",
+        "peer_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident",
+        "free"
+      ],
+      "modalities": [
+        "self-talk",
+        "identity shift"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "Their eyes are my spotlight",
+      "notes": "Before competitions: 1. Identify 1 authority who triggers nerves. 2. Visualize them as an 'energy source' rather than judge. 3. Say: 'Your attention fuels my focus.' Based on fMRI studies showing reframing reduces amygdala activation by 62%.",
+      "video_url": null
+    },
+    {
+      "name": "The Decisive Playbook",
+      "description": "Pre-programmed responses to bypass hesitation in critical moments by scripting reactions to common pressure scenarios.",
+      "theme_tags": [
+        "overthinker",
+        "doubter",
+        "focus_decision_fear"
+      ],
+      "raw_traits": [
+        "confident",
+        "precise",
+        "commanding"
+      ],
+      "modalities": [
+        "journaling",
+        "self-talk"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "When [X], I [Y]",
+      "notes": "Progression: 1) Write 3 scenarios + responses. 2) Review daily for 2 weeks. 3) Simulate with eyes closed. Elite: Add physical triggers (e.g., tapping wrist for each script).",
+      "video_url": null
+    },
+    {
+      "name": "Freeze-Breaker Protocol",
+      "description": "Combines tactile and breathing cues to interrupt freezing during performance.",
+      "theme_tags": [
+        "physical_freeze",
+        "mental_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "locked-in"
+      ],
+      "modalities": [
+        "anchor cue",
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "CLICK (snap fingers) → CLEAR (exhale)",
+      "notes": "Progression: 1) Practice in training. 2) Add mild stress (e.g., coach yelling). 3) Use in competition. Works by disrupting amygdala hijack via dual sensory input.",
+      "video_url": null
+    },
+    {
+      "name": "Combat Breathing",
+      "description": "Navy SEAL-tested 4-second breath cycle to control heart rate and panic responses.",
+      "theme_tags": [
+        "breath_hold",
+        "breath_fast",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "commanding"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+      "notes": "Progression: 1) Seated. 2) During cooldowns. 3) Under physical stress. Elite: Add eye tracking (follow finger while breathing).",
+      "video_url": "https://youtu.be/example_breath"
+    },
+    {
+      "name": "The 10-Second Reset",
+      "description": "Rapid physiological reset using grounding techniques between plays/points.",
+      "theme_tags": [
+        "slow_reset",
+        "hr_unknown"
+      ],
+      "raw_traits": [
+        "focused",
+        "playful"
+      ],
+      "modalities": [
+        "game reset"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "5-4-3-2-1 (see, touch, hear, smell, taste)",
+      "notes": "Progression: 1) Normal conditions. 2) Mild fatigue. 3) After mistakes. Based on sensory anchoring research.",
+      "video_url": null
+    },
+    {
+      "name": "The Carrot/Stick Journal",
+      "description": "Links concrete rewards/consequences to training behaviors to strengthen motivation pathways.",
+      "theme_tags": [
+        "reward_seeker",
+        "avoid_failure"
+      ],
+      "raw_traits": [
+        "hungry",
+        "aggressive"
+      ],
+      "modalities": [
+        "journaling"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "Action → Reward | Inaction → Cost",
+      "notes": "Progression: 1) Daily entries. 2) Public accountability. 3) Variable rewards. Elite: Tie to biometrics (e.g., HRV targets).",
+      "video_url": null
+    },
+    {
+      "name": "Threat Reframe Drill",
+      "description": "Transforms perceived threats into competitive fuel through cognitive restructuring.",
+      "theme_tags": [
+        "authority_threat",
+        "peer_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "self-talk"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "medium",
+      "cue": "Your pressure is my power",
+      "notes": "Progression: 1) Identify threats. 2) Write reframes. 3) Simulate exposure. Uses fMRI-verified prefrontal override techniques.",
+      "video_url": null
+    },
+    {
+      "name": "Clutch Simulation",
+      "description": "Recreates high-pressure scenarios in training to build neurological tolerance.",
+      "theme_tags": [
+        "under_pressure",
+        "thrives"
+      ],
+      "raw_traits": [
+        "playful",
+        "dominant"
+      ],
+      "modalities": [
+        "pre-fight prep"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "This is why I train",
+      "notes": "Progression: 1) Low stakes. 2) Added consequences. 3) Live streaming. Elite: Add sleep deprivation.",
+      "video_url": "https://youtu.be/example_pressure"
+    },
+    {
+      "name": "Error Eraser",
+      "description": "90-second neural reset protocol to stop post-mistake spirals.",
+      "theme_tags": [
+        "mental_loop",
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "resilient",
+        "focused"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Delete → Reset → Go",
+      "notes": "Progression: 1) Physical gesture. 2) Add scent. 3) Full sequence. Disrupts error-detection loops via novel stimuli.",
+      "video_url": null
+    },
+    {
+      "name": "Evidence Lockbox",
+      "description": "Physical/digital repository of past successes to combat self-doubt.",
+      "theme_tags": [
+        "fragile_confidence"
+      ],
+      "raw_traits": [
+        "confident",
+        "joyful"
+      ],
+      "modalities": [
+        "journaling"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "I have receipts",
+      "notes": "Progression: 1) Collect evidence. 2) Weekly reviews. 3) Pre-competition rituals. Activates success neural networks.",
+      "video_url": null
+    },
+    {
+      "name": "The Crowd Filter",
+      "description": "Trains selective attention in chaotic environments using graduated exposure.",
+      "theme_tags": [
+        "focus_crowd",
+        "focus_social"
+      ],
+      "raw_traits": [
+        "locked-in",
+        "aggressive"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Noise = Energy",
+      "notes": "Progression: 1) 20% volume. 2) 50%. 3) Full noise + distractions. Rewires auditory filtering.",
+      "video_url": "https://youtu.be/example_focus"
+    },
+    {
+      "name": "Fatigue Focus Drill",
+      "description": "Maintains concentration under exhaustion using targeted attentional shifts.",
+      "theme_tags": [
+        "focus_fatigue",
+        "hr_down"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "focused"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Tunnel → Expand",
+      "notes": "Progression: 1) Fresh. 2) Post-training. 3) Sleep-deprived. Uses peripheral vision control.",
+      "video_url": null
+    },
+    {
+      "name": "Emotional Detachment Protocol",
+      "description": "Develops non-reactive performance states through meta-awareness training.",
+      "theme_tags": [
+        "emotional_performer",
+        "general_threat"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "reflection"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Observe → Don't absorb",
+      "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
+      "video_url": null
+    },
     {
       "name": "Flow State Trigger",
       "description": "Activates 'stay loose' neural pathways through a 3-step physical ritual to prevent freezing under pressure.",
-      "theme_tags": ["stay_loose", "thrives"],
-      "raw_traits": ["free", "playful", "joyful"],
-      "modalities": ["anchor cue", "breathwork"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "stay_loose",
+        "thrives"
+      ],
+      "raw_traits": [
+        "free",
+        "playful",
+        "joyful"
+      ],
+      "modalities": [
+        "anchor cue",
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "medium",
       "cue": "Shake → Smile → Explode",
@@ -350,10 +362,22 @@
     {
       "name": "Decisive Action Protocol",
       "description": "Trains instinctive decision-making through time-constrained scenario drilling to eliminate hesitation.",
-      "theme_tags": ["decisive", "hesitate"],
-      "raw_traits": ["ruthless", "aggressive", "precise"],
-      "modalities": ["visualisation", "imagery reps"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "decisive",
+        "hesitate"
+      ],
+      "raw_traits": [
+        "ruthless",
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "visualisation",
+        "imagery reps"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "high",
       "cue": "See → Decide → Destroy",
@@ -364,14 +388,26 @@
         "elite": "Information overload"
       }
     },
-
     {
       "name": "The Noise Filter",
       "description": "Develops selective auditory attention to neutralize crowd/coach/opponent distractions.",
-      "theme_tags": ["distracted_by_crowd", "coach_noise", "opponent_noise"],
-      "raw_traits": ["locked-in", "focused", "commanding"],
-      "modalities": ["focus drill", "mindfulness"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "distracted_by_crowd",
+        "coach_noise",
+        "opponent_noise"
+      ],
+      "raw_traits": [
+        "locked-in",
+        "focused",
+        "commanding"
+      ],
+      "modalities": [
+        "focus drill",
+        "mindfulness"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "Tune → Out → Execute",
@@ -385,10 +421,22 @@
     {
       "name": "The Internal Referee",
       "description": "Silences self-conflict through cognitive defusion techniques adapted from ACT therapy.",
-      "theme_tags": ["self_conflict", "focus_self_critic"],
-      "raw_traits": ["confident", "free", "wild"],
-      "modalities": ["self-talk", "mindfulness"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "self_conflict",
+        "focus_self_critic"
+      ],
+      "raw_traits": [
+        "confident",
+        "free",
+        "wild"
+      ],
+      "modalities": [
+        "self-talk",
+        "mindfulness"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "Thoughts ≠ Truth",
@@ -399,14 +447,26 @@
         "elite": "Competition implementation"
       }
     },
-
     {
       "name": "Tactical Reset Matrix",
       "description": "Speed-adjustable recovery protocol matching reset cadence to competition demands.",
-      "theme_tags": ["fast_reset", "medium_reset", "very_slow_reset"],
-      "raw_traits": ["relaxed", "commanding", "focused"],
-      "modalities": ["breathwork", "game reset"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "fast_reset",
+        "medium_reset",
+        "very_slow_reset"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "commanding",
+        "focused"
+      ],
+      "modalities": [
+        "breathwork",
+        "game reset"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "Match tempo → Dominate tempo",
@@ -420,10 +480,22 @@
     {
       "name": "Breath Signature Scan",
       "description": "Diagnostic tool to identify and normalize breathing patterns under stress.",
-      "theme_tags": ["breath_slow", "breath_normal", "breath_unknown"],
-      "raw_traits": ["confident", "relaxed"],
-      "modalities": ["breathwork", "mindfulness"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "breath_slow",
+        "breath_normal",
+        "breath_unknown"
+      ],
+      "raw_traits": [
+        "confident",
+        "relaxed"
+      ],
+      "modalities": [
+        "breathwork",
+        "mindfulness"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "GPP",
       "intensity": "low",
       "cue": "Scan → Recognize → Adjust",
@@ -434,14 +506,25 @@
         "elite": "Real-time competition monitoring"
       }
     },
-
     {
       "name": "Validation Detox",
       "description": "Transforms external validation-seeking into self-referential motivation anchors.",
-      "theme_tags": ["external_validation", "audience_threat"],
-      "raw_traits": ["hungry", "aggressive", "wild"],
-      "modalities": ["identity shift", "journaling"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "external_validation",
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "hungry",
+        "aggressive",
+        "wild"
+      ],
+      "modalities": [
+        "identity shift",
+        "journaling"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "My standards > Their applause",
@@ -455,10 +538,22 @@
     {
       "name": "The Arena Mindset",
       "description": "Converts competitive motivation into physiological arousal regulation.",
-      "theme_tags": ["competitive", "stage_fear"],
-      "raw_traits": ["ruthless", "hungry", "dominant"],
-      "modalities": ["visualisation", "pre-fight prep"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "competitive",
+        "stage_fear"
+      ],
+      "raw_traits": [
+        "ruthless",
+        "hungry",
+        "dominant"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "Gladiator mode → ON",
@@ -469,14 +564,26 @@
         "elite": "Opponent-facing implementation"
       }
     },
-
     {
       "name": "The Phoenix Protocol",
       "description": "Structured comeback sequence for athletes who shutdown after errors.",
-      "theme_tags": ["shutdown", "disengage", "mental_history"],
-      "raw_traits": ["resilient", "confident", "commanding"],
-      "modalities": ["game reset", "anchor cue"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "shutdown",
+        "disengage",
+        "mental_history"
+      ],
+      "raw_traits": [
+        "resilient",
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "game reset",
+        "anchor cue"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "high",
       "cue": "Burn → Rise → Attack",
@@ -490,10 +597,22 @@
     {
       "name": "The Confidence Switch",
       "description": "Creates facility-independent confidence through embodied cognition techniques.",
-      "theme_tags": ["gym_performer", "stable_confidence"],
-      "raw_traits": ["confident", "dominant", "joyful"],
-      "modalities": ["identity shift", "anchor cue"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "gym_performer",
+        "stable_confidence"
+      ],
+      "raw_traits": [
+        "confident",
+        "dominant",
+        "joyful"
+      ],
+      "modalities": [
+        "identity shift",
+        "anchor cue"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "Same me → Any arena",
@@ -503,16 +622,23 @@
         "intermediate": "Neutral site testing",
         "elite": "Hostile territory implementation"
       }
-    {
-  "drills": [
-    // 1. Audio/Focus
+    },
     {
       "name": "Audio Blackout Training",
       "description": "Conditions athletes to perform instinctively when crowd/coach audio suddenly cuts out during critical moments.",
-      "theme_tags": ["audio_cutoff"],
-      "raw_traits": ["focused", "locked-in"],
-      "modalities": ["focus drill"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "audio_cutoff"
+      ],
+      "raw_traits": [
+        "focused",
+        "locked-in"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "Silence → Execute",
@@ -523,15 +649,24 @@
         "elite": "Full game simulation with blackouts"
       }
     },
-
-    // 2. Avoidance/Compensation
     {
       "name": "The Exposure Ladder",
       "description": "Systematic exposure to feared scenarios to eliminate avoidant behaviors.",
-      "theme_tags": ["avoidant", "demand_avoidance"],
-      "raw_traits": ["aggressive", "hungry"],
-      "modalities": ["imagery reps", "pre-fight prep"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "avoidant",
+        "demand_avoidance"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "hungry"
+      ],
+      "modalities": [
+        "imagery reps",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "medium",
       "cue": "Lean In",
@@ -545,10 +680,19 @@
     {
       "name": "Compensation Calibrator",
       "description": "Prevents overcorrection after mistakes through technical reset protocol.",
-      "theme_tags": ["compensate"],
-      "raw_traits": ["precise", "tactical"],
-      "modalities": ["game reset"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "compensate"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "game reset"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "Reset → Don't Force",
@@ -559,32 +703,22 @@
         "elite": "Competition-speed recovery"
       }
     },
-
-    // 3. Emotional Control
-    {
-      "name": "Emotional Detachment Protocol",
-      "description": "Develops non-reactive performance states through meta-awareness training.",
-      "theme_tags": ["emotional", "self_anger"],
-      "raw_traits": ["relaxed", "confident"],
-      "modalities": ["mindfulness", "breathwork"],
-      "sports": ["universal"],
-      "phase": "universal",
-      "intensity": "low",
-      "cue": "Observe → Don't Absorb",
-      "notes": "When emotional: 1. Label feeling ('This is anger'). 2. Deep exhale. 3. Refocus on technical cue. Based on cognitive defusion techniques.",
-      "progression": {
-        "beginner": "Post-session reflection",
-        "intermediate": "Mid-practice application",
-        "elite": "Competition implementation"
-      }
-    },
     {
       "name": "Judgment Firewall",
       "description": "Blocks external criticism from impacting performance through cognitive filtering.",
-      "theme_tags": ["external_judgement"],
-      "raw_traits": ["confident", "free"],
-      "modalities": ["self-talk"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "external_judgement"
+      ],
+      "raw_traits": [
+        "confident",
+        "free"
+      ],
+      "modalities": [
+        "self-talk"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "Their Opinion ≠ My Reality",
@@ -595,15 +729,23 @@
         "elite": "Live judgment exposure"
       }
     },
-
-    // 4. Fatigue/Focus
     {
       "name": "The Fatigue Override",
       "description": "Maintains decision quality under exhaustion through cognitive priming.",
-      "theme_tags": ["fatigue"],
-      "raw_traits": ["resilient", "focused"],
-      "modalities": ["focus drill", "cold exposure"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "fatigue"
+      ],
+      "raw_traits": [
+        "resilient",
+        "focused"
+      ],
+      "modalities": [
+        "focus drill",
+        "cold exposure"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "Tired Body → Sharp Mind",
@@ -617,10 +759,19 @@
     {
       "name": "Coach Whisper Drill",
       "description": "Trains selective focus on essential coach cues amidst chaos.",
-      "theme_tags": ["focus_coach"],
-      "raw_traits": ["locked-in", "commanding"],
-      "modalities": ["focus drill"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "focus_coach"
+      ],
+      "raw_traits": [
+        "locked-in",
+        "commanding"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "medium",
       "cue": "Find the Signal",
@@ -631,15 +782,23 @@
         "elite": "Full crowd noise interference"
       }
     },
-
-    // 5. Mental State Management
     {
       "name": "Freeze Thaw Protocol",
       "description": "Breaks performance-freezing through physiological resets.",
-      "theme_tags": ["freeze"],
-      "raw_traits": ["aggressive", "playful"],
-      "modalities": ["anchor cue", "cold exposure"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "playful"
+      ],
+      "modalities": [
+        "anchor cue",
+        "cold exposure"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "high",
       "cue": "Melt → Move",
@@ -653,10 +812,20 @@
     {
       "name": "The Why Finder",
       "description": "Identifies hidden motivation sources for athletes with unclear drivers.",
-      "theme_tags": ["motivation_unknown", "has_history"],
-      "raw_traits": ["hungry", "commanding"],
-      "modalities": ["journaling"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "motivation_unknown",
+        "has_history"
+      ],
+      "raw_traits": [
+        "hungry",
+        "commanding"
+      ],
+      "modalities": [
+        "journaling"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "GPP",
       "intensity": "low",
       "cue": "Track → Analyze → Activate",
@@ -667,15 +836,23 @@
         "elite": "Custom activation protocols"
       }
     },
-
-    // 6. Decision Making
     {
       "name": "Overthink Antidote",
       "description": "Short-circuits analysis paralysis through time-constrained decisions.",
-      "theme_tags": ["overthink", "second_guess"],
-      "raw_traits": ["ruthless", "precise"],
-      "modalities": ["imagery reps"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "overthink",
+        "second_guess"
+      ],
+      "raw_traits": [
+        "ruthless",
+        "precise"
+      ],
+      "modalities": [
+        "imagery reps"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "Decide → Commit → Destroy",
@@ -689,10 +866,20 @@
     {
       "name": "Pressure Inoculation",
       "description": "Rebuilds trust in clutch abilities through graduated exposure.",
-      "theme_tags": ["pressure_distrust"],
-      "raw_traits": ["confident", "dominant"],
-      "modalities": ["visualisation", "pre-fight prep"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "pressure_distrust"
+      ],
+      "raw_traits": [
+        "confident",
+        "dominant"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "This is Why I Train",
@@ -703,34 +890,25 @@
         "elite": "Public accountability"
       }
     },
-
-    // 7. Quick Recovery
-    {
-      "name": "The 10-Second Reset",
-      "description": "Elite-level rapid recovery protocol between points/plays.",
-      "theme_tags": ["quick_reset"],
-      "raw_traits": ["resilient", "focused"],
-      "modalities": ["breathwork", "game reset"],
-      "sports": ["universal"],
-      "phase": "universal",
-      "intensity": "medium",
-      "cue": "Inhale Reset → Exhale Go",
-      "notes": "Between actions: 1. Triple inhale-exhale (2s each). 2. Physical reset (e.g., jump). 3. Fresh focus cue. Optimizes autonomic recovery.",
-      "progression": {
-        "beginner": "Post-drill recovery",
-        "intermediate": "Between sparring rounds",
-        "elite": "Competition-speed reset"
-      }
-{
-  "drills": [
-    // 1. Under Pressure Responses
     {
       "name": "The Hesitation Killer",
       "description": "Pre-programmed action triggers to eliminate delays in decision-making during critical moments.",
-      "theme_tags": ["hesitate", "second_guess"],
-      "raw_traits": ["confident", "precise", "aggressive"],
-      "modalities": ["anchor cue", "self-talk"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "hesitate",
+        "second_guess"
+      ],
+      "raw_traits": [
+        "confident",
+        "precise",
+        "aggressive"
+      ],
+      "modalities": [
+        "anchor cue",
+        "self-talk"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "NOW > PERFECT",
@@ -744,10 +922,23 @@
     {
       "name": "Demand Dominance Drill",
       "description": "Builds assertive ball/shot demand behavior in pressure situations.",
-      "theme_tags": ["demand_avoidance"],
-      "raw_traits": ["commanding", "ruthless", "hungry"],
-      "modalities": ["imagery reps", "pre-fight prep"],
-      "sports": ["basketball", "football", "mma"],
+      "theme_tags": [
+        "demand_avoidance"
+      ],
+      "raw_traits": [
+        "commanding",
+        "ruthless",
+        "hungry"
+      ],
+      "modalities": [
+        "imagery reps",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "basketball",
+        "football",
+        "mma"
+      ],
       "phase": "SPP",
       "intensity": "medium",
       "cue": "MINE → NOW",
@@ -758,15 +949,25 @@
         "elite": "Game-simulated demand scenarios"
       }
     },
-
-    // 2. Post-Mistake Responses
     {
       "name": "The Mental Loop Breaker",
       "description": "Physical reset protocol to stop repetitive mistake replay in the mind.",
-      "theme_tags": ["mental_loop", "self_anger"],
-      "raw_traits": ["resilient", "focused", "confident"],
-      "modalities": ["anchor cue", "breathwork"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "mental_loop",
+        "self_anger"
+      ],
+      "raw_traits": [
+        "resilient",
+        "focused",
+        "confident"
+      ],
+      "modalities": [
+        "anchor cue",
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "ERASE → RESET",
@@ -780,10 +981,22 @@
     {
       "name": "Re-Engagement Protocol",
       "description": "Systematic method to overcome post-mistake withdrawal or disengagement.",
-      "theme_tags": ["shutdown", "disengage"],
-      "raw_traits": ["aggressive", "hungry", "playful"],
-      "modalities": ["game reset", "self-talk"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "shutdown",
+        "disengage"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "hungry",
+        "playful"
+      ],
+      "modalities": [
+        "game reset",
+        "self-talk"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "high",
       "cue": "BACK IN",
@@ -794,15 +1007,23 @@
         "elite": "Critical game moment re-engagement"
       }
     },
-
-    // 3. Focus Breakers
     {
       "name": "Coach Signal Focus",
       "description": "Trains selective attention to maintain performance despite coach instructions.",
-      "theme_tags": ["focus_coach"],
-      "raw_traits": ["locked-in", "tactical", "precise"],
-      "modalities": ["focus drill"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "focus_coach"
+      ],
+      "raw_traits": [
+        "locked-in",
+        "tactical",
+        "precise"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "medium",
       "cue": "FILTER → EXECUTE",
@@ -816,10 +1037,21 @@
     {
       "name": "Social Focus Armor",
       "description": "Develops immunity to teammate/opponent distractions through exposure training.",
-      "theme_tags": ["focus_social"],
-      "raw_traits": ["focused", "commanding", "ruthless"],
-      "modalities": ["focus drill", "cold exposure"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "focus_social"
+      ],
+      "raw_traits": [
+        "focused",
+        "commanding",
+        "ruthless"
+      ],
+      "modalities": [
+        "focus drill",
+        "cold exposure"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "SPP",
       "intensity": "high",
       "cue": "THEM → ME",
@@ -830,15 +1062,24 @@
         "elite": "Full competitive antagonism"
       }
     },
-
-    // 4. Confidence Profiles
     {
       "name": "Gym-to-Game Bridge",
       "description": "Transfers training confidence to competition through environmental anchoring.",
-      "theme_tags": ["gym_performer"],
-      "raw_traits": ["confident", "dominant", "joyful"],
-      "modalities": ["identity shift", "anchor cue"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "gym_performer"
+      ],
+      "raw_traits": [
+        "confident",
+        "dominant",
+        "joyful"
+      ],
+      "modalities": [
+        "identity shift",
+        "anchor cue"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "medium",
       "cue": "SAME SKILLS → ANY STAGE",
@@ -852,10 +1093,21 @@
     {
       "name": "Control Converter",
       "description": "Transforms need for control into adaptive focus points during performance.",
-      "theme_tags": ["control_needed"],
-      "raw_traits": ["precise", "tactical", "focused"],
-      "modalities": ["self-talk", "visualisation"],
-      "sports": ["universal"],
+      "theme_tags": [
+        "control_needed"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical",
+        "focused"
+      ],
+      "modalities": [
+        "self-talk",
+        "visualisation"
+      ],
+      "sports": [
+        "universal"
+      ],
       "phase": "universal",
       "intensity": "low",
       "cue": "CONTROL WHAT YOU CAN",
@@ -869,10 +1121,25 @@
   ],
   "coverage_validation": {
     "mapped_tags": {
-      "under_pressure": ["hesitate", "second_guess", "demand_avoidance"],
-      "post_mistake": ["mental_loop", "self_anger", "shutdown", "disengage"],
-      "focus_breakers": ["focus_coach", "focus_social"],
-      "confidence_profile": ["gym_performer", "control_needed"]
+      "under_pressure": [
+        "hesitate",
+        "second_guess",
+        "demand_avoidance"
+      ],
+      "post_mistake": [
+        "mental_loop",
+        "self_anger",
+        "shutdown",
+        "disengage"
+      ],
+      "focus_breakers": [
+        "focus_coach",
+        "focus_social"
+      ],
+      "confidence_profile": [
+        "gym_performer",
+        "control_needed"
+      ]
     },
     "full_alignment": true,
     "remaining_edge_cases": []
