@@ -44,13 +44,13 @@ def get_trait_score(trait: str) -> float:
     return TRAIT_SCORES.get(trait.lower(), 0.0)
 
 
-def check_synergy_match(drill: dict, athlete_tags):
+def check_synergy_match(drill: dict, athlete_all_tags):
     """Return True if drill has a valid synergy modality pair and athlete has at least one required tag."""
     modalities = {m.lower() for m in drill.get("modalities", [])}
-    athlete_tags = {t.lower() for t in athlete_tags}
+    athlete_all_tags = {t.lower() for t in athlete_all_tags}
     for pair, data in SYNERGY_LIST.items():
         if set(pair).issubset(modalities):
-            if set(data["required_tags"]).intersection(athlete_tags):
+            if set(data["required_tags"]).intersection(athlete_all_tags):
                 return True
     return False
 
@@ -65,28 +65,16 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
 
     sport = athlete.get("sport", "").lower()
     in_camp = athlete.get("in_fight_camp", False)
-    athlete_tags = [t.lower() for t in athlete.get("tags", [])]
+    athlete_all_tags = [t.lower() for t in athlete.get("tags", [])]
     theme_tags = [t.lower() for t in drill.get("theme_tags", [])]
 
     weakness_tags = [t.lower() for t in athlete.get("weakness_tags", [])]
     preferred_modalities = [m.lower() for m in athlete.get("preferred_modality", [])]
     if not weakness_tags:
-        weakness_tags = [t for t in athlete_tags if t in WEAKNESS_TAGS]
+        weakness_tags = [t for t in athlete_all_tags if t in WEAKNESS_TAGS]
     if not preferred_modalities:
-        preferred_modalities = [t for t in athlete_tags if t.startswith("pref_")]
+        preferred_modalities = [t for t in athlete_all_tags if t.startswith("pref_")]
 
-    # --- Theme tag scoring
-    theme_score = 0.0
-    if theme_tags:
-        theme_score += 0.4
-        if len(theme_tags) > 1:
-            theme_score += 0.2
-    theme_score = min(theme_score, 0.6)
-
-    if sport in {"mma", "boxing"} and any(t in FREEZE_TYPE_TAGS or t in RESET_SPEED_TAGS for t in theme_tags):
-        theme_score += 0.05
-
-    score += theme_score
 
     # --- Trait scoring
     traits = drill.get("raw_traits", [])
@@ -110,7 +98,7 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
         score += 0.3
 
     # --- Modality synergy
-    synergy_ok = check_synergy_match(drill, athlete_tags)
+    synergy_ok = check_synergy_match(drill, athlete_all_tags)
     if synergy_ok:
         score += 0.2
 
@@ -134,9 +122,9 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
         flags = 0
         if athlete_phase == "TAPER":
             flags += 1
-        if {"breath_hold", "breath_fast"} & set(athlete_tags):
+        if {"breath_hold", "breath_fast"} & set(athlete_all_tags):
             flags += 1
-        if {"fragile_confidence", "cns_fragile"} & set(athlete_tags):
+        if {"fragile_confidence", "cns_fragile"} & set(athlete_all_tags):
             flags += 1
         if flags:
             penalty = -0.1 * flags
