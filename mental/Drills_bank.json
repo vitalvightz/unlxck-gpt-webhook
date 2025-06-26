@@ -21,7 +21,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+      "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
       "notes": "Practice 5 rounds: 1. Sitting calmly. 2. During bodyweight exercises. 3. Right after sprints. Pro tip: Place a hand on your belly to ensure diaphragmatic breathing.",
       "video_url": null
     },
@@ -96,7 +96,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "CLICK (snap fingers) → CLEAR (exhale)",
+      "cue": "CLICK (snap fingers) \u2192 CLEAR (exhale)",
       "notes": "Progression: 1) Practice in training. 2) Add mild stress (e.g., coach yelling). 3) Use in competition. Works by disrupting amygdala hijack via dual sensory input.",
       "video_url": null
     },
@@ -120,7 +120,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+      "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
       "notes": "Progression: 1) Seated. 2) During cooldowns. 3) Under physical stress. Elite: Add eye tracking (follow finger while breathing).",
       "video_url": "https://youtu.be/example_breath"
     },
@@ -166,7 +166,7 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "Action → Reward | Inaction → Cost",
+      "cue": "Action \u2192 Reward | Inaction \u2192 Cost",
       "notes": "Progression: 1) Daily entries. 2) Public accountability. 3) Variable rewards. Elite: Tie to biometrics (e.g., HRV targets).",
       "video_url": null
     },
@@ -235,7 +235,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Delete → Reset → Go",
+      "cue": "Delete \u2192 Reset \u2192 Go",
       "notes": "Progression: 1) Physical gesture. 2) Add scent. 3) Full sequence. Disrupts error-detection loops via novel stimuli.",
       "video_url": null
     },
@@ -303,7 +303,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tunnel → Expand",
+      "cue": "Tunnel \u2192 Expand",
       "notes": "Progression: 1) Fresh. 2) Post-training. 3) Sleep-deprived. Uses peripheral vision control.",
       "video_url": null
     },
@@ -326,7 +326,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Observe → Don't absorb",
+      "cue": "Observe \u2192 Don't absorb",
       "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
       "video_url": null
     },
@@ -351,7 +351,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "Shake → Smile → Explode",
+      "cue": "Shake \u2192 Smile \u2192 Explode",
       "notes": "When tension builds: 1. Full-body shakeout (3s). 2. Forced smile with exhale. 3. Explosive movement cue. Based on facial feedback research showing smiles reduce cortisol by 15%.",
       "progression": {
         "beginner": "Post-training activation",
@@ -380,7 +380,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "See → Decide → Destroy",
+      "cue": "See \u2192 Decide \u2192 Destroy",
       "notes": "Daily: 1. Watch competition footage. 2. Make call in under 0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
       "progression": {
         "beginner": "Obvious scenarios",
@@ -410,7 +410,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tune → Out → Execute",
+      "cue": "Tune \u2192 Out \u2192 Execute",
       "notes": "1. Identify essential sounds (coach's voice). 2. Assign unimportant noise a color. 3. Imagine pushing it away. Uses thalamic gating mechanisms.",
       "progression": {
         "beginner": "Quiet environment",
@@ -439,7 +439,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Thoughts ≠ Truth",
+      "cue": "Thoughts \u2260 Truth",
       "notes": "When doubting: 1. Label thoughts ('I'm having the thought that...'). 2. Thank your mind. 3. Return to breath. Reduces cognitive fusion by 40% in trials.",
       "progression": {
         "beginner": "Post-session reflection",
@@ -469,7 +469,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Match tempo → Dominate tempo",
+      "cue": "Match tempo \u2192 Dominate tempo",
       "notes": "Choose reset speed: 1. Fast (3s power exhale). 2. Medium (5-5-5 breath). 3. Slow (4-6-8 sequence). Aligns with heart rate variability needs.",
       "progression": {
         "beginner": "Single-speed mastery",
@@ -498,7 +498,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Scan → Recognize → Adjust",
+      "cue": "Scan \u2192 Recognize \u2192 Adjust",
       "notes": "Post-exertion: 1. Observe natural breath for 1min. 2. Classify pattern. 3. Adjust toward 6 breaths/min. Enhances respiratory sinus arrhythmia coherence.",
       "progression": {
         "beginner": "Seated observation",
@@ -556,7 +556,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Gladiator mode → ON",
+      "cue": "Gladiator mode \u2192 ON",
       "notes": "Pre-competition: 1. Watch footage of iconic competitors. 2. Physical power pose. 3. Repeat: 'This is my arena'. Boosts testosterone by 20% in studies.",
       "progression": {
         "beginner": "Private ritual",
@@ -586,7 +586,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "Burn → Rise → Attack",
+      "cue": "Burn \u2192 Rise \u2192 Attack",
       "notes": "Post-error: 1. Symbolic gesture (wipe slate). 2. Reset breath (4-4-6). 3. First aggressive action. Reignites competitive drive via noradrenaline modulation.",
       "progression": {
         "beginner": "Controlled error simulation",
@@ -615,7 +615,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Same me → Any arena",
+      "cue": "Same me \u2192 Any arena",
       "notes": "Daily: 1. Recall peak performance feeling. 2. Assign physical trigger (e.g., tapping collarbone). 3. Activate in new environments. Uses episodic memory neural networks.",
       "progression": {
         "beginner": "Home facility activation",
@@ -641,7 +641,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Silence → Execute",
+      "cue": "Silence \u2192 Execute",
       "notes": "During practice: 1. Randomly mute environment for 3-5s. 2. Athlete must complete pre-called action. 3. Gradually increase complexity. Mimics championship pressure moments.",
       "progression": {
         "beginner": "Simple actions (e.g., free throw)",
@@ -695,7 +695,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Reset → Don't Force",
+      "cue": "Reset \u2192 Don't Force",
       "notes": "Post-error: 1. Pause. 2. Perform 2 perfect reps at 50% speed. 3. Resume normal pace. Targets error-correction pathways.",
       "progression": {
         "beginner": "Isolated skills",
@@ -721,7 +721,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Their Opinion ≠ My Reality",
+      "cue": "Their Opinion \u2260 My Reality",
       "notes": "Pre-competition: 1. Write down feared judgments. 2. Physically discard paper. 3. Replace with personal standard. Leverages symbolic action research.",
       "progression": {
         "beginner": "Private processing",
@@ -748,7 +748,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tired Body → Sharp Mind",
+      "cue": "Tired Body \u2192 Sharp Mind",
       "notes": "Post-training: 1. Ice face immersion (30s). 2. Pre-load 3 decisions. 3. Execute while exhausted. Boosts frontal lobe oxygenation.",
       "progression": {
         "beginner": "Low-exertion decisions",
@@ -801,7 +801,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "Melt → Move",
+      "cue": "Melt \u2192 Move",
       "notes": "When frozen: 1. Ice pack to neck (5s). 2. Shake out limbs. 3. Explosive first step. Triggers mammalian dive reflex.",
       "progression": {
         "beginner": "Controlled simulation",
@@ -828,7 +828,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Track → Analyze → Activate",
+      "cue": "Track \u2192 Analyze \u2192 Activate",
       "notes": "For 7 days: 1. Log energy peaks during training. 2. Reverse-engineer triggers. 3. Create motivation 'menu'. Builds metacognitive awareness.",
       "progression": {
         "beginner": "Passive observation",
@@ -855,7 +855,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Decide → Commit → Destroy",
+      "cue": "Decide \u2192 Commit \u2192 Destroy",
       "notes": "Daily: 1. Review game footage. 2. Make call in <1s. 3. Physical mimicry. Strengthens instinctive decision pathways.",
       "progression": {
         "beginner": "Obvious scenarios",
@@ -941,7 +941,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "MINE → NOW",
+      "cue": "MINE \u2192 NOW",
       "notes": "Daily: 1. Visualize demanding action in key moments. 2. Physical claiming gesture (e.g., hand clap). 3. Verbal call for ball/shot. Rewards neural pathways for assertive behavior.",
       "progression": {
         "beginner": "Imagery only",
@@ -970,7 +970,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "ERASE → RESET",
+      "cue": "ERASE \u2192 RESET",
       "notes": "After error: 1. Wiping motion across forehead. 2. Sharp exhale. 3. Immediate positive action. Disrupts default mode network looping.",
       "progression": {
         "beginner": "Controlled error simulation",
@@ -1026,7 +1026,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "FILTER → EXECUTE",
+      "cue": "FILTER \u2192 EXECUTE",
       "notes": "During drills: 1. Identify essential coach cues. 2. Assign non-essential talk a color. 3. Mentally 'delete' irrelevant input. Strengthens auditory selective attention.",
       "progression": {
         "beginner": "Clear signal/noise differentiation",
@@ -1054,7 +1054,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "THEM → ME",
+      "cue": "THEM \u2192 ME",
       "notes": "Weekly: 1. Train with deliberate provocations. 2. Maintain 'bubble' focus. 3. Reward sustained attention. Uses habituation neuroscience principles.",
       "progression": {
         "beginner": "Mild social distractions",
@@ -1082,7 +1082,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "SAME SKILLS → ANY STAGE",
+      "cue": "SAME SKILLS \u2192 ANY STAGE",
       "notes": "Pre-competition: 1. Wear training gear item. 2. Recreate training warmup. 3. Recall gym successes. Creates neural environment familiarity.",
       "progression": {
         "beginner": "Physical familiarity cues",
@@ -1117,5 +1117,269 @@
         "intermediate": "Mid-performance adjustment",
         "elite": "Chaos tolerance training"
       }
+    },
+    {
+      "name": "Thought Stream Journal",
+      "description": "Breaks overthinking patterns through structured cognitive defusion journaling.",
+      "theme_tags": [
+        "overthink"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "journaling",
+        "reflection"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "Write \u2192 Release \u2192 Refocus",
+      "notes": "Post-training: 1. Stream-of-consciousness writing for 3min. 2. Physically discard pages. 3. Summarize key insights in 3 bullets. Based on expressive writing research.",
+      "progression": {
+        "beginner": "Private journaling",
+        "intermediate": "Coach review sessions",
+        "elite": "Pre-competition mental clears"
+      }
+    },
+    {
+      "name": "Tactical Decision Simulator",
+      "description": "Trains instinctive decision-making under time pressure to bypass overanalysis.",
+      "theme_tags": [
+        "overthink"
+      ],
+      "raw_traits": [
+        "confident",
+        "aggressive"
+      ],
+      "modalities": [
+        "visualisation",
+        "imagery reps"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "See \u2192 Decide \u2192 Execute",
+      "notes": "Daily: 1. Watch game footage. 2. Make call in <0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
+      "progression": {
+        "beginner": "Clear scenarios",
+        "intermediate": "50/50 situations",
+        "elite": "Information overload"
+      }
+    },
+    {
+      "name": "The 4-7-8 Reset",
+      "description": "Physiological interrupt to break overthinking loops through breath control.",
+      "theme_tags": [
+        "overthink"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "focused"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Inhale 4 \u2192 Hold 7 \u2192 Exhale 8",
+      "notes": "When overthinking: 1. Stop action. 2. Complete 3 breath cycles. 3. Resume with first instinct. Triggers parasympathetic dominance.",
+      "progression": {
+        "beginner": "Seated practice",
+        "intermediate": "Mid-drill application",
+        "elite": "Competition implementation"
+      }
+    },
+    {
+      "name": "Freeze Post-Mortem",
+      "description": "Structured reflection to identify and reprogram freeze triggers.",
+      "theme_tags": [
+        "freeze"
+      ],
+      "raw_traits": [
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "reflection",
+        "journaling"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "low",
+      "cue": "What \u2192 Why \u2192 How",
+      "notes": "Post-event: 1. Describe freeze moment. 2. Identify trigger pattern. 3. Plan physical reset cue. Uses cognitive reappraisal.",
+      "progression": {
+        "beginner": "Video review analysis",
+        "intermediate": "Real-time recognition",
+        "elite": "Pre-emptive trigger management"
+      }
+    },
+    {
+      "name": "Freeze Break Simulator",
+      "description": "High-pressure scenario training to build freeze resistance.",
+      "theme_tags": [
+        "freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "playful"
+      ],
+      "modalities": [
+        "pre-fight prep",
+        "imagery reps"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "Shock \u2192 Reset \u2192 Attack",
+      "notes": "Weekly: 1. Unexpected freeze trigger (e.g., loud buzzer). 2. Immediate reset sequence. 3. Explosive counteraction. Conditions autonomic response.",
+      "progression": {
+        "beginner": "Known triggers",
+        "intermediate": "Variable stressors",
+        "elite": "Full competition simulation"
+      }
+    },
+    {
+      "name": "The Thaw Breath",
+      "description": "Physiological reset to break freezing through targeted breathing patterns.",
+      "theme_tags": [
+        "freeze"
+      ],
+      "raw_traits": [
+        "free",
+        "relaxed"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "universal",
+      "intensity": "medium",
+      "cue": "Inhale Power \u2192 Exhale Free",
+      "notes": "When frozen: 1. Sharp nose inhale. 2. Forceful mouth exhale. 3. Full-body shakeout. Activates sympathetic-adrenal reset.",
+      "progression": {
+        "beginner": "Controlled practice",
+        "intermediate": "Mid-performance application",
+        "elite": "High-stakes implementation"
+      }
+    },
+    {
+      "name": "The Confidence Ledger",
+      "description": "Journaling system to convert historical performance data into present confidence.",
+      "theme_tags": [
+        "has_history"
+      ],
+      "raw_traits": [
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "journaling",
+        "reflection"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "Past Proof \u2192 Present Power",
+      "notes": "Weekly: 1. Record 3 past successes. 2. Note transferable skills. 3. Visualize applying them now. Strengthens self-efficacy beliefs.",
+      "progression": {
+        "beginner": "General achievements",
+        "intermediate": "Specific skill transfers",
+        "elite": "Adversity overcome examples"
+      }
+    },
+    {
+      "name": "Pressure Rehearsal",
+      "description": "Tactical simulation of high-stakes scenarios to build trust under pressure.",
+      "theme_tags": [
+        "pressure_distrust"
+      ],
+      "raw_traits": [
+        "ruthless",
+        "dominant"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "universal"
+      ],
+      "phase": "SPP",
+      "intensity": "high",
+      "cue": "This is My Arena",
+      "notes": "Pre-competition: 1. Watch footage of iconic clutch performances. 2. Physical power pose. 3. Repeat key phrase. Boosts testosterone by 20%.",
+      "progression": {
+        "beginner": "Private visualization",
+        "intermediate": "Group role-playing",
+        "elite": "Live consequence drills"
+      }
     }
   ],
+  "modality_balance_report": {
+    "overthink_coverage": [
+      {
+        "modality": "journaling",
+        "drills": 1
+      },
+      {
+        "modality": "visualisation",
+        "drills": 1
+      },
+      {
+        "modality": "breathwork",
+        "drills": 1
+      }
+    ],
+    "freeze_coverage": [
+      {
+        "modality": "reflection",
+        "drills": 1
+      },
+      {
+        "modality": "imagery reps",
+        "drills": 1
+      },
+      {
+        "modality": "breathwork",
+        "drills": 1
+      }
+    ],
+    "full_tag_coverage": [
+      "audio_cutoff",
+      "avoidant",
+      "compensate",
+      "control_needed",
+      "demand_avoidance",
+      "emotional",
+      "external_judgement",
+      "fatigue",
+      "focus_coach",
+      "freeze",
+      "has_history",
+      "motivation_unknown",
+      "overthink",
+      "pressure_distrust",
+      "quick_reset",
+      "second_guess",
+      "self_anger"
+    ]
+  }
+}
