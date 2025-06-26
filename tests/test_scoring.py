@@ -1,7 +1,7 @@
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import unittest
-from mental.scoring import check_synergy_match, score_drill
+from mental.scoring import check_synergy_match, score_drill, score_drills
 
 class ScoringTests(unittest.TestCase):
     def test_check_synergy_match(self):
@@ -93,6 +93,16 @@ class ScoringTests(unittest.TestCase):
         # No phase match; microweights cancel each other so score stays base 1.0
         self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.0)
         # penalty for visualisation-only cancels reset bonus
+
+    def test_score_drills_ordering(self):
+        drills = [
+            {"phase": "GPP", "intensity": "medium", "raw_traits": ["focused"], "modalities": []},
+            {"phase": "GPP", "intensity": "high", "raw_traits": [], "modalities": []},
+        ]
+        tags = {"preferred_modality": [], "struggles_with": []}
+        result = score_drills(drills, tags, "football", "GPP")
+        self.assertEqual(len(result), 2)
+        self.assertGreaterEqual(result[0]["score"], result[1]["score"])
 
 
 if __name__ == "__main__":

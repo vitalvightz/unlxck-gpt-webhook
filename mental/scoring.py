@@ -181,3 +181,27 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
             score += penalty
 
     return score
+
+
+def score_drills(drills, tags_map, sport, phase, in_fight_camp=False, override_flag=False):
+    """Score a list of drills and return them sorted by score."""
+    athlete = {
+        "sport": sport,
+        "in_fight_camp": in_fight_camp,
+        "tags": [],
+        "weakness_tags": tags_map.get("struggles_with", []),
+        "preferred_modality": tags_map.get("preferred_modality", []),
+    }
+
+    for val in tags_map.values():
+        if isinstance(val, list):
+            athlete["tags"].extend(val)
+        else:
+            athlete["tags"].append(val)
+
+    scored = []
+    for d in drills:
+        s = score_drill(d, phase, athlete, override_flag)
+        scored.append({**d, "score": s})
+
+    return sorted(scored, key=lambda x: x["score"], reverse=True)
