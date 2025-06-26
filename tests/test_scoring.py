@@ -15,7 +15,7 @@ class ScoringTests(unittest.TestCase):
         drill = {"intensity": "high", "raw_traits": [], "modalities": []}
         athlete = {"sport": "football", "in_fight_camp": False}
         self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 0.8)
-        self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.5)
+        self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.4)
 
     def test_intensity_penalty_skipped_for_fighters(self):
         drill = {"intensity": "high", "raw_traits": [], "modalities": []}
@@ -49,8 +49,43 @@ class ScoringTests(unittest.TestCase):
             "in_fight_camp": False,
             "tags": ["fast_reset", "breath_hold", "other"],
         }
-        # 1.0 base +0.6 theme +0.05 combat bonus +0.3 sport match +0.5 phase match = 2.45
-        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 2.45)
+        # 1.0 base +0.6 theme +0.05 combat bonus +0.3 sport match +0.5 phase match = 2.35
+        self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 2.35)
+
+    def test_weakness_and_reinforcement_bonus(self):
+        drill = {
+            "theme_tags": ["overthink"],
+            "modalities": ["visualisation"],
+            "intensity": "medium",
+            "phase": "GPP",
+            "raw_traits": [],
+            "sports": [],
+        }
+        athlete = {
+            "sport": "football",
+            "in_fight_camp": False,
+            "weakness_tags": ["overthink"],
+            "preferred_modality": ["visualisation"],
+        }
+        # 1.0 base +0.4 theme +0.5 phase +0.15 weakness +0.1 reinforcement
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 2.15)
+
+    def test_overload_penalty(self):
+        drill = {
+            "theme_tags": ["breath_hold"],
+            "modalities": [],
+            "intensity": "high",
+            "phase": "GPP",
+            "raw_traits": [],
+            "sports": [],
+        }
+        athlete = {
+            "sport": "football",
+            "in_fight_camp": False,
+            "tags": ["breath_hold"],
+        }
+        # Base 1.0 +0.4 theme -0.5 taper penalty -0.2 overload = 0.7
+        self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.7)
 
 if __name__ == "__main__":
     unittest.main()

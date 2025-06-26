@@ -33,9 +33,11 @@ try:
         _tag_cfg = json.load(f)
     FREEZE_TYPE_TAGS = set(_tag_cfg["theme_tags"].get("freeze_type", []))
     RESET_SPEED_TAGS = set(_tag_cfg["theme_tags"].get("reset_speed", []))
+    WEAKNESS_TAGS = set(_tag_cfg["theme_tags"].get("key_struggles", []))
 except Exception:  # pragma: no cover - fallback if file missing
     FREEZE_TYPE_TAGS = set()
     RESET_SPEED_TAGS = set()
+    WEAKNESS_TAGS = set()
 
 
 def get_trait_score(trait: str) -> float:
@@ -65,6 +67,13 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
     in_camp = athlete.get("in_fight_camp", False)
     athlete_tags = [t.lower() for t in athlete.get("tags", [])]
     theme_tags = [t.lower() for t in drill.get("theme_tags", [])]
+
+    weakness_tags = [t.lower() for t in athlete.get("weakness_tags", [])]
+    preferred_modalities = [m.lower() for m in athlete.get("preferred_modality", [])]
+    if not weakness_tags:
+        weakness_tags = [t for t in athlete_tags if t in WEAKNESS_TAGS]
+    if not preferred_modalities:
+        preferred_modalities = [t for t in athlete_tags if t.startswith("pref_")]
 
     # --- Theme tag scoring
     theme_score = 0.0
@@ -99,12 +108,6 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
     drill_sports = {s.lower() for s in drill.get("sports", [])}
     if sport in drill_sports:
         score += 0.3
-    elif "universal" in drill_sports and len(set(theme_tags) & set(athlete_tags)) >= 3:
-        score -= 0.1
-
-    # --- Tag specificity
-    if len(set(theme_tags) & set(athlete_tags)) >= 3:
-        score += 0.2
 
     # --- Modality synergy
     synergy_ok = check_synergy_match(drill, athlete_tags)
@@ -114,5 +117,31 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
     # --- Elite trait synergy penalty
     if set(traits) & ELITE_TRAITS and not synergy_ok:
         score -= 0.2
+
+    # --- Weakness match bonus
+    overlap = set(theme_tags) & set(weakness_tags)
+    if overlap:
+        score += 0.1 + 0.05 * len(overlap)
+
+        # Preferred modality reinforcement
+        if set(drill.get("modalities", [])).intersection(preferred_modalities):
+            score += 0.1
+
+    # --- Overload penalty
+    overload_tags = {"breath_hold", "hr_up", "self_anger"}
+    overload_trigger = intensity == "high" or set(theme_tags) & overload_tags
+    if overload_trigger:
+        flags = 0
+        if athlete_phase == "TAPER":
+            flags += 1
+        if {"breath_hold", "breath_fast"} & set(athlete_tags):
+            flags += 1
+        if {"fragile_confidence", "cns_fragile"} & set(athlete_tags):
+            flags += 1
+        if flags:
+            penalty = -0.1 * flags
+            if penalty < -0.5:
+                penalty = -0.5
+            score += penalty
 
     return score
