@@ -168,7 +168,11 @@ def generate_rehab_protocols(
     for phrase in injury_phrases:
         itype, loc = parse_injury_phrase(phrase)
         if not itype:
-            continue
+            if loc:
+                # default to unspecified type when a location is provided
+                itype = "unspecified"
+            else:
+                continue
         parsed_types.append(itype)
         parsed_entries.append((itype, loc))
 
@@ -304,7 +308,9 @@ def generate_support_notes(injury_string: str) -> str:
     phrases = split_injury_text(injury_string)
     parsed_types = set()
     for p in phrases:
-        itype, _ = parse_injury_phrase(p)
+        itype, loc = parse_injury_phrase(p)
+        if not itype and loc:
+            itype = "unspecified"
         if itype and itype in INJURY_SUPPORT_NOTES:
             parsed_types.add(itype)
 
