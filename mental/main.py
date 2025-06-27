@@ -4,9 +4,9 @@ import base64
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
-from .program import parse_mindcode_form
-from .tags import map_tags
-from .scoring import score_drills
+from mental.program import parse_mindcode_form
+from mental.tags import map_tags
+from mental.scoring import score_drills
 
 # Load drill bank
 with open("Drills_bank.json", "r") as f:
