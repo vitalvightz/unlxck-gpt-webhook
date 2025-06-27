@@ -66,36 +66,51 @@ def get_folder_id(drive_service, folder_name):
 
 def handler(form_fields, creds_b64):
     parsed = parse_mindcode_form(form_fields)
+
+    full_name = parsed.get("full_name", "").strip()
+    sport = parsed.get("sport", "").strip().lower()
+    position_style = parsed.get("position_style", "").strip()
+    phase = parsed.get("mental_phase", "").strip().upper()
+
+    # 🧱 Required data guard
+    if not full_name or not sport or not phase:
+        raise ValueError("❌ Missing required athlete info: name, sport, or phase")
+
+    if phase not in ["GPP", "SPP", "TAPER"]:
+        print(f"⚠️ Invalid phase: '{phase}' → defaulting to GPP")
+        phase = "GPP"
+
     tags = map_tags(parsed)
-    sport = parsed["sport"].strip().lower()
-    phase = parsed["mental_phase"]
-
-    # Score drills
     scored = score_drills(DRILL_BANK, tags, sport, phase)
-    drills_by_phase = {"GPP": [], "SPP": [], "TAPER": []}
 
+    drills_by_phase = {p: [] for p in ["GPP", "SPP", "TAPER"]}
     if phase == "GPP":
         phases = ["GPP", "SPP", "TAPER"]
     elif phase == "SPP":
         phases = ["SPP", "TAPER"]
-    elif phase == "TAPER":
-        phases = ["TAPER"]
     else:
-        phases = []
+        phases = ["TAPER"]
 
     for p in phases:
-        filtered = [d for d in scored if d["phase"].lower() == p.lower()]
-        drills_by_phase[p] = filtered[:5]
+        drills = [d for d in scored if d["phase"].upper() == p]
+        drills_by_phase[p] = drills[:5]
 
-    # Build output
-    doc_text = build_plan_output(drills_by_phase, parsed)
+    # Handle empty result fallback
+    if not any(drills_by_phase.values()):
+        doc_text = f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
+    else:
+        doc_text = build_plan_output(drills_by_phase, {
+            "full_name": full_name,
+            "sport": sport,
+            "position_style": position_style,
+            "mental_phase": phase
+        })
 
-    # Create doc
+    # Create and upload doc
     docs_service, drive_service = load_google_services(creds_b64)
-    doc = docs_service.documents().create(body={"title": f"{parsed['full_name']} – MENTAL PERFORMANCE PLAN"}).execute()
+    doc = docs_service.documents().create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}).execute()
     doc_id = doc.get("documentId")
 
-    # Assign to correct folder
     folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
     if folder_id:
         drive_service.files().update(
@@ -104,7 +119,6 @@ def handler(form_fields, creds_b64):
             removeParents="root"
         ).execute()
 
-    # Insert plan content
     docs_service.documents().batchUpdate(
         documentId=doc_id,
         body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
