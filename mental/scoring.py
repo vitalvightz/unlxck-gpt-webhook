@@ -200,7 +200,12 @@ def score_drills(drills, tags_map, sport, phase, in_fight_camp=False, override_f
             athlete["tags"].append(val)
 
     scored = []
+    sport_lc = sport.lower()
     for d in drills:
+        drill_sports = {s.lower() for s in d.get("sports", [])}
+        if drill_sports and sport_lc not in drill_sports and "universal" not in drill_sports:
+            continue
+
         s = score_drill(d, phase, athlete, override_flag)
         scored.append({**d, "score": s})
 

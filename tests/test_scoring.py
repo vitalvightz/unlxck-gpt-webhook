@@ -104,6 +104,16 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(len(result), 2)
         self.assertGreaterEqual(result[0]["score"], result[1]["score"])
 
+    def test_drill_filtering_by_sport(self):
+        drills = [
+            {"phase": "GPP", "intensity": "medium", "raw_traits": [], "modalities": [], "sports": ["mma"]},
+            {"phase": "GPP", "intensity": "medium", "raw_traits": [], "modalities": [], "sports": ["universal"]},
+        ]
+        tags = {"preferred_modality": [], "struggles_with": []}
+        result = score_drills(drills, tags, "boxing", "GPP")
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["sports"], ["universal"])
+
 
 if __name__ == "__main__":
     unittest.main()
