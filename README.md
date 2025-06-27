@@ -14,16 +14,25 @@ The scoring engine compares each drill to an athlete's traits, weaknesses and cu
 
 ## How Scoring Works
 
-Scores start at **1.0** and then adjust according to the rules below. Each rule has clear caps so you know the limits without digging into the code:
+Scores start at **1.0**. The adjustments below raise or lower the final number. Each rule has a hard limit so you know exactly how far it can move the score.
 
-- **Trait scores** – Each raw trait adds a set value: base traits +0.3, elite tier&nbsp;2 +0.6, elite tier&nbsp;1 +0.7. The combined trait bonus caps at **+1.2**.
-- **Phase & intensity logic** – Matching the athlete's phase adds +0.5. High intensity can deduct up to **-0.5** if the athlete is tapering or early in GPP. Fighters in camp skip these penalties.
-- **Weakness match bonus** – When drill tags hit an athlete's listed weaknesses, the score climbs by +0.1 plus +0.05 for each extra match. If the drill also uses a preferred modality, add another +0.1.
-- **Preferred modality reinforcement** – See above; it nudges the score only when a weakness match is found.
-- **Modality synergy pairs** – Certain modality combos give +0.2 if the athlete has required tags. Elite traits without a synergy pair incur a **-0.2** penalty.
-- **Phase synergy bonus** – Later-phase drills get up to +0.15 extra when they share cues, modalities or themes with earlier drills. Cue matching uses spaCy similarity (when available) for smarter overlap.
-- **Sport-specific micro-weights** – Small adjustments (±0.2 each) reward drills that fit common patterns in sports like boxing, football or track. These bonuses and penalties are capped at **±0.4** in total.
-- **Overload penalties** – High intensity or overload tags drop the score up to **-0.5** when tapering or when an athlete shows CNS fragility.
+| Rule | Weight | Cap |
+| ---- | ------ | --- |
+| Base trait | +0.3 each | **+1.2** combined |
+| Elite trait tier&nbsp;2 | +0.6 each | |
+| Elite trait tier&nbsp;1 | +0.7 each | |
+| Phase match | +0.5 | |
+| Sport match | +0.3 | |
+| High intensity penalty | -0.5 in TAPER, -0.2 in GPP | |
+| Weakness match | +0.1 (+0.05 for each extra tag) | |
+| Preferred modality reinforcement | +0.1 | |
+| Modality synergy pair | +0.2 | |
+| Elite trait without synergy | -0.2 | |
+| Phase synergy bonus | cue +0.07, modality +0.05, theme +0.03 | **+0.15** |
+| Sport-specific micro weights | ±0.2 each | **±0.4** total |
+| Overload penalty | -0.1 per flag | **-0.5** total |
+
+These values stack in order, but no single rule can exceed its cap.
 
 ## What's NOT scored
 
