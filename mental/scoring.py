@@ -157,6 +157,11 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
     if synergy_ok:
         score += 0.2
 
+    # --- CNS stress tag penalty
+    cns_stress_tags = {"breath_hold", "hr_up", "self_anger"}
+    if cns_stress_tags & set(drill.get("tags", [])):
+        score -= 0.1
+
     # --- Elite trait synergy penalty
     if set(traits) & ELITE_TRAITS and not synergy_ok:
         score -= 0.2
