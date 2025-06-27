@@ -67,8 +67,8 @@ class ScoringTests(unittest.TestCase):
             "weakness_tags": ["overthink"],
             "preferred_modality": ["visualisation"],
         }
-        # 1.0 base +0.5 phase +0.15 weakness +0.1 reinforcement = 1.75
-        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 1.75)
+        # 1.0 base +0.5 phase +0.15 weakness +0.2 reinforcement = 1.85
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 1.85)
 
     def test_overload_penalty(self):
         drill = {

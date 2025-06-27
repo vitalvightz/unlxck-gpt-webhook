@@ -173,7 +173,7 @@ def score_drill(drill: dict, phase: str, athlete: dict, override_flag: bool = Fa
 
         # Preferred modality reinforcement
         if set(drill.get("modalities", [])).intersection(preferred_modalities):
-            score += 0.1
+            score += 0.2
 
     # --- Sport specific micro weights
     score += sport_microweight_bonus(drill, athlete)
