@@ -87,6 +87,12 @@ class ScoringTests(unittest.TestCase):
         # Base 1.0 -0.5 taper penalty -0.2 overload = 0.3
         self.assertAlmostEqual(score_drill(drill, "TAPER", athlete), 0.3)
 
+    def test_cns_stress_tag_penalty(self):
+        drill = {"tags": ["breath_hold"]}
+        athlete = {"sport": "football"}
+        # Base 1.0 -0.1 CNS stress penalty = 0.9
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 0.9)
+
     def test_sport_microweight_bonus(self):
         drill = {"theme_tags": ["fast_reset"], "modalities": ["visualisation"]}
         athlete = {"sport": "boxing"}

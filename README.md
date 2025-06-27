@@ -31,6 +31,7 @@ Scores start at **1.0**. The adjustments below raise or lower the final number. 
 | Phase synergy bonus | cue +0.07, modality +0.05, theme +0.03 | **+0.15** |
 | Sport-specific micro weights | ±0.2 each | **±0.4** total |
 | Overload penalty | -0.1 per flag | **-0.5** total |
+| CNS stress drill tag penalty | -0.1 | |
 
 These values stack in order, but no single rule can exceed its cap.
 
