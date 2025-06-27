@@ -8,16 +8,22 @@ def parse_mindcode_form(fields: dict) -> dict:
     sport = get_value("Sport", fields)
     position_style = get_value("Position/Style", fields)
 
-    phase_raw = get_value("Where are you at in your performance cycle?", fields).lower()
-    phase_key = phase_raw.replace("\u2019", "'")
+    # 🔒 Robust phase mapping fix
+    phase_raw = get_value("Where are you at in your performance cycle?", fields)
+    phase_clean = phase_raw.replace("’", "'").replace("‘", "'").lower().strip()
+
     phase_mapping = {
         "i'm rebuilding, resetting, or in off-season": "GPP",
         "i'm training hard, sharpening up, or deep in prep": "SPP",
         "i've got a match/event coming up or i'm easing down before game day": "TAPER",
     }
-    mental_phase = phase_mapping.get(phase_key, "")
 
-    # Multi-selects (split by ", ")
+    mental_phase = phase_mapping.get(phase_clean)
+    if not mental_phase:
+        print(f"⚠️ Phase input not recognized: '{phase_raw}' → defaulting to GPP")
+        mental_phase = "GPP"
+
+    # Multi-selects
     under_pressure = [x.strip() for x in get_value("What usually happens to you under pressure? (Tick all that apply)", fields).split(",") if x.strip()]
     post_mistake = [x.strip() for x in get_value("What happens right after you make a mistake? (Tick all that apply)", fields).split(",") if x.strip()]
     focus_breakers = [x.strip() for x in get_value("What breaks your focus most during games or competition? (Tick all that apply)", fields).split(",") if x.strip()]
