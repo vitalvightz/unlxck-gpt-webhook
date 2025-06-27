@@ -8,7 +8,7 @@ from mental.program import parse_mindcode_form
 from mental.tags import map_tags
 from mental.scoring import score_drills
 
-# Load drill bank relative to this file so execution location doesn't matter
+# Load drill bank
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
 with open(DRILLS_PATH, "r") as f:
     DRILL_BANK = json.load(f)["drills"]
@@ -45,12 +45,24 @@ def build_plan_output(drills_by_phase, athlete_info):
                 lines.append(format_drill_block(d, phase))
     return "\n\n".join(lines)
 
-def load_google_docs_service(creds_b64: str):
+def load_google_services(creds_b64: str):
     decoded = base64.b64decode(creds_b64)
     with open("mental_google_creds.json", "wb") as f:
         f.write(decoded)
-    creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=["https://www.googleapis.com/auth/documents"])
-    return build("docs", "v1", credentials=creds)
+    scopes = [
+        "https://www.googleapis.com/auth/documents",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=scopes)
+    return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds)
+
+def get_folder_id(drive_service, folder_name):
+    response = drive_service.files().list(
+        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
+        spaces="drive",
+    ).execute()
+    folders = response.get("files", [])
+    return folders[0]["id"] if folders else None
 
 def handler(form_fields, creds_b64):
     parsed = parse_mindcode_form(form_fields)
@@ -79,18 +91,28 @@ def handler(form_fields, creds_b64):
     doc_text = build_plan_output(drills_by_phase, parsed)
 
     # Create doc
-    service = load_google_docs_service(creds_b64)
-    doc = service.documents().create(body={"title": f"{parsed['full_name']} – MENTAL PERFORMANCE PLAN"}).execute()
+    docs_service, drive_service = load_google_services(creds_b64)
+    doc = docs_service.documents().create(body={"title": f"{parsed['full_name']} – MENTAL PERFORMANCE PLAN"}).execute()
     doc_id = doc.get("documentId")
 
-    service.documents().batchUpdate(
+    # Assign to correct folder
+    folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
+    if folder_id:
+        drive_service.files().update(
+            fileId=doc_id,
+            addParents=folder_id,
+            removeParents="root"
+        ).execute()
+
+    # Insert plan content
+    docs_service.documents().batchUpdate(
         documentId=doc_id,
         body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
     ).execute()
 
     return f"https://docs.google.com/document/d/{doc_id}"
 
-# Test locally with payload and env var
+# Local test
 if __name__ == "__main__":
     payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
     with open(payload_path, "r") as f:
