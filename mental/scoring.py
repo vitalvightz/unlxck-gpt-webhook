@@ -209,4 +209,42 @@ def score_drills(drills, tags_map, sport, phase, in_fight_camp=False, override_f
         s = score_drill(d, phase, athlete, override_flag)
         scored.append({**d, "score": s})
 
+    # --- Phase synergy bonus ---
+    phase_order = {"UNIVERSAL": 0, "GPP": 1, "SPP": 2, "TAPER": 3}
+    phase_buckets = {}
+    for d in scored:
+        p = d.get("phase", "UNIVERSAL").upper()
+        p = p if p in phase_order else "UNIVERSAL"
+        phase_buckets.setdefault(p, []).append(d)
+
+    def _calc_synergy(d1, d2):
+        bonus = 0.0
+        cue1 = set(str(d1.get("cue", "")).lower().replace("→", " ").split())
+        cue2 = set(str(d2.get("cue", "")).lower().replace("→", " ").split())
+        if cue1 & cue2:
+            bonus += 0.05
+        if set(m.lower() for m in d1.get("modalities", [])) & set(m.lower() for m in d2.get("modalities", [])):
+            bonus += 0.05
+        if set(t.lower() for t in d1.get("theme_tags", [])) & set(t.lower() for t in d2.get("theme_tags", [])):
+            bonus += 0.05
+        return min(bonus, 0.15)
+
+    for d in scored:
+        p = d.get("phase", "UNIVERSAL").upper()
+        p = p if p in phase_order else "UNIVERSAL"
+        earlier = []
+        for ep, idx in phase_order.items():
+            if idx < phase_order[p]:
+                earlier.extend(phase_buckets.get(ep, []))
+        if not earlier:
+            continue
+        best = 0.0
+        for ed in earlier:
+            val = _calc_synergy(d, ed)
+            if val > best:
+                best = val
+            if best >= 0.15:
+                break
+        d["score"] += best
+
     return sorted(scored, key=lambda x: x["score"], reverse=True)
