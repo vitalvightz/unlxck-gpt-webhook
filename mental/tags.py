@@ -14,6 +14,7 @@ def map_tags(form_data: Dict) -> Dict:
         "breath_pattern": "breath_unknown",
         "motivation_type": "motivation_unknown",
         "threat_trigger": "general_threat",
+        "decision_making": "decision_unknown",
         "mental_history": "clear_history",
         "preferred_modality": [],
         "struggles_with": [],
@@ -32,6 +33,7 @@ def map_tags(form_data: Dict) -> Dict:
     reset_duration = form_data.get("reset_duration", "").strip().lower()
     motivator = form_data.get("motivator", "").strip().lower()
     emotional_trigger = form_data.get("emotional_trigger", "").strip().lower()
+    decision_choice = form_data.get("decision_making", "").strip().lower()
 
     # Map tool preference and struggle lists to tags
     preferred_modality: List[str] = []
@@ -143,6 +145,20 @@ def map_tags(form_data: Dict) -> Dict:
         tags["threat_trigger"] = "audience_threat"
     else:
         tags["threat_trigger"] = "general_threat"
+
+    # --- Decision making (single-select)
+    if "instantly" in decision_choice or "instinct" in decision_choice:
+        tags["decision_making"] = "decide_fast"
+    elif "think" in decision_choice:
+        tags["decision_making"] = "decide_think"
+    elif "freeze" in decision_choice:
+        tags["decision_making"] = "decide_freeze"
+    elif "wait" in decision_choice:
+        tags["decision_making"] = "decide_wait"
+    elif "sometimes" in decision_choice:
+        tags["decision_making"] = "decide_mix"
+    else:
+        tags["decision_making"] = "decision_unknown"
 
     # --- Mental history (free text)
     if past_mental:

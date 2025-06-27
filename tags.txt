@@ -9,6 +9,7 @@
     "motivation_type": ["reward_seeker", "avoid_failure", "competitive", "external_validation", "motivation_unknown"],
     "threat_trigger": ["authority_threat", "peer_threat", "audience_threat", "general_threat"],
     "mental_history": ["has_history", "clear_history"],
+    "decision_making": ["decide_fast", "decide_think", "decide_freeze", "decide_wait", "decide_mix", "decision_unknown"],
     "under_pressure": ["hesitate", "freeze", "second_guess", "emotional", "overthink", "avoidant", "audio_cutoff", "demand_avoidance", "thrives"],
     "post_mistake": ["mental_loop", "shutdown", "compensate", "disengage", "self_anger", "quick_reset", "external_judgement"],
     "focus_breakers": ["focus_crowd", "focus_coach", "focus_decision_fear", "focus_fatigue", "focus_self_critic", "focus_social", "focus_locked"],
