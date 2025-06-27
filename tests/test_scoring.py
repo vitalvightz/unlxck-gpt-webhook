@@ -114,6 +114,33 @@ class ScoringTests(unittest.TestCase):
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["sports"], ["universal"])
 
+    def test_phase_synergy_bonus(self):
+        drills = [
+            {
+                "phase": "GPP",
+                "cue": "Snap Exhale",
+                "intensity": "medium",
+                "raw_traits": [],
+                "modalities": ["visualisation"],
+                "theme_tags": ["focus_locked"],
+                "sports": [],
+            },
+            {
+                "phase": "SPP",
+                "cue": "Snap Exhale",
+                "intensity": "medium",
+                "raw_traits": [],
+                "modalities": ["visualisation"],
+                "theme_tags": ["focus_locked"],
+                "sports": [],
+            },
+        ]
+        tags = {"preferred_modality": [], "struggles_with": []}
+        result = score_drills(drills, tags, "football", "SPP")
+        self.assertEqual(len(result), 2)
+        self.assertAlmostEqual(result[0]["score"], 1.65)
+        self.assertGreater(result[0]["score"], result[1]["score"])
+
 
 if __name__ == "__main__":
     unittest.main()
