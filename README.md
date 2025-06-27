@@ -21,6 +21,7 @@ Scores start at **1.0** and then adjust according to the rules below. Each rule 
 - **Weakness match bonus** – When drill tags hit an athlete's listed weaknesses, the score climbs by +0.1 plus +0.05 for each extra match. If the drill also uses a preferred modality, add another +0.1.
 - **Preferred modality reinforcement** – See above; it nudges the score only when a weakness match is found.
 - **Modality synergy pairs** – Certain modality combos give +0.2 if the athlete has required tags. Elite traits without a synergy pair incur a **-0.2** penalty.
+- **Phase synergy bonus** – Later-phase drills get up to +0.15 extra when they share cues, modalities or themes with earlier drills, encouraging a smooth progression.
 - **Sport-specific micro-weights** – Small adjustments (±0.2 each) reward drills that fit common patterns in sports like boxing, football or track. These bonuses and penalties are capped at **±0.4** in total.
 - **Overload penalties** – High intensity or overload tags drop the score up to **-0.5** when tapering or when an athlete shows CNS fragility.
 
