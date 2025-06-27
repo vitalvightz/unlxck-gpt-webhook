@@ -108,6 +108,15 @@ EMOTIONAL_TRIGGER_MAP = {
     "i don’t know / i zoned out": "general_threat",
 }
 
+# Decision making styles
+DECISION_MAKING_MAP = {
+    "i act instantly and trust my instincts": "decide_fast",
+    "i think first, then act": "decide_think",
+    "i freeze when i have too many options": "decide_freeze",
+    "i wait for others to decide first": "decide_wait",
+    "sometimes i lead sometimes i defer": "decide_mix",
+}
+
 
 def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[str]]]:
     """Map raw form input to controlled mental performance tags."""
@@ -125,6 +134,7 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         "reset_speed": "unknown",
         "motivation_type": "motivation_unknown",
         "threat_trigger": "general_threat",
+        "decision_making": "decision_unknown",
         "mental_history": "clear_history",
     }
 
@@ -158,6 +168,7 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
     reset_duration = form_data.get("reset_duration", "").strip().lower()
     motivator = form_data.get("motivator", "").strip().lower()
     emotional_trigger = form_data.get("emotional_trigger", "").strip().lower()
+    decision_choice = form_data.get("decision_making", "").strip().lower()
 
     lookup_pairs = [
         ("breath_pattern", BREATH_MAP, pressure_breath),
@@ -165,6 +176,7 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         ("reset_speed", RESET_SPEED_MAP, reset_duration),
         ("motivation_type", MOTIVATOR_MAP, motivator),
         ("threat_trigger", EMOTIONAL_TRIGGER_MAP, emotional_trigger),
+        ("decision_making", DECISION_MAKING_MAP, decision_choice),
     ]
     for key, mapping, value in lookup_pairs:
         if value in mapping:

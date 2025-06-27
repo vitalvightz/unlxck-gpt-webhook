@@ -11,6 +11,7 @@ class ParseMindcodeFormTest(unittest.TestCase):
             "Sport": "Basketball",
             "Position/Style": "Point Guard",
             "Where are you at in your performance cycle?": "I\u2019m rebuilding, resetting, or in off-season",
+            "How do you usually make decisions during performance? (Pick one)": "I act instantly and trust my instincts",
         }
         result = parse_mindcode_form(data)
         self.assertEqual(result["full_name"], "Jane Doe")
@@ -18,6 +19,7 @@ class ParseMindcodeFormTest(unittest.TestCase):
         self.assertEqual(result["sport"], "Basketball")
         self.assertEqual(result["position_style"], "Point Guard")
         self.assertEqual(result["mental_phase"], "GPP")
+        self.assertEqual(result["decision_making"], "I act instantly and trust my instincts")
 
 if __name__ == "__main__":
     unittest.main()

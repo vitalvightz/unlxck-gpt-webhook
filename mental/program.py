@@ -33,6 +33,7 @@ def parse_mindcode_form(fields: dict) -> dict:
     reset_duration = get_value("How long do you take to reset after a bad moment during performance?", fields)
     motivator = get_value("What motivates you more?", fields)
     emotional_trigger = get_value("Which one hits harder?", fields)
+    decision_making = get_value("How do you usually make decisions during performance? (Pick one)", fields)
 
     # Long text
     past_mental_struggles = get_value("Is there anything you’ve struggled with mentally in the past that’s still affecting you?", fields)
@@ -55,6 +56,7 @@ def parse_mindcode_form(fields: dict) -> dict:
         "reset_duration": reset_duration,
         "motivator": motivator,
         "emotional_trigger": emotional_trigger,
+        "decision_making": decision_making,
         "past_mental_struggles": past_mental_struggles,
         "mental_phase": mental_phase
     }

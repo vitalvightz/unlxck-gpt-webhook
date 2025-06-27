@@ -22,6 +22,7 @@ class MapMindcodeTagsTest(unittest.TestCase):
             "reset_duration": "Instantly",
             "motivator": "Small visible wins",
             "emotional_trigger": "Coach criticism",
+            "decision_making": "I think first, then act",
             "past_mental_struggles": "",
         }
         tags = map_mindcode_tags(data)
@@ -39,6 +40,7 @@ class MapMindcodeTagsTest(unittest.TestCase):
         self.assertEqual(tags["motivation_type"], "reward_seeker")
         self.assertEqual(tags["threat_trigger"], "authority_threat")
         self.assertEqual(tags["mental_history"], "clear_history")
+        self.assertEqual(tags["decision_making"], "decide_think")
 
     def test_deduplication(self):
         data = {
