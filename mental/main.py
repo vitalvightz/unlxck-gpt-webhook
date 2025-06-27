@@ -8,8 +8,9 @@ from mental.program import parse_mindcode_form
 from mental.tags import map_tags
 from mental.scoring import score_drills
 
-# Load drill bank
-with open("Drills_bank.json", "r") as f:
+# Load drill bank relative to this file so execution location doesn't matter
+DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
+with open(DRILLS_PATH, "r") as f:
     DRILL_BANK = json.load(f)["drills"]
 
 def format_drill_block(drill, phase):
@@ -91,7 +92,8 @@ def handler(form_fields, creds_b64):
 
 # Test locally with payload and env var
 if __name__ == "__main__":
-    with open("test_payload.json", "r") as f:
+    payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
+    with open(payload_path, "r") as f:
         fields = json.load(f)
     link = handler(fields, os.environ["GOOGLE_CREDS_B64"])
     print("Saved to:", link)
