@@ -28,6 +28,16 @@ ELITE_TRAITS = {"dominates", "ruthless", "thrives", "commanding", "locked-in"}
 
 import json
 import os
+from typing import Iterable
+
+try:  # pragma: no cover - spaCy is optional for testing
+    import spacy
+    try:
+        _NLP = spacy.load("en_core_web_sm")
+    except Exception:  # model not installed
+        _NLP = spacy.blank("en")
+except Exception:  # spaCy not available
+    _NLP = None
 
 # Load tag configuration to identify freeze and reset tags
 TAG_FILE = os.path.join(os.path.dirname(__file__), "..", "tags.txt")
@@ -217,41 +227,45 @@ def score_drills(drills, tags_map, sport, phase, in_fight_camp=False, override_f
         p = p if p in phase_order else "UNIVERSAL"
         phase_buckets.setdefault(p, []).append(d)
 
-    def _calc_synergy(d1, d2):
-        bonus = 0.0
-        cue1 = set(str(d1.get("cue", "")).lower().replace("→", " ").split())
-        cue2 = set(str(d2.get("cue", "")).lower().replace("→", " ").split())
-        if cue1 & cue2:
-            bonus += 0.07
+    def _cue_match(cue: str, prior_cues: Iterable[str]) -> bool:
+        cue = str(cue)
+        if not cue:
+            return False
+        if _NLP:
+            doc1 = _NLP(cue)
+            for prev in prior_cues:
+                doc2 = _NLP(str(prev))
+                try:
+                    if doc1.vector_norm and doc2.vector_norm and doc1.similarity(doc2) >= 0.75:
+                        return True
+                except Exception:
+                    pass
+        tokens1 = set(cue.lower().replace("→", " ").split())
+        for prev in prior_cues:
+            tokens2 = set(str(prev).lower().replace("→", " ").split())
+            if tokens1 & tokens2:
+                return True
+        return False
 
-        mod1 = {m.lower() for m in d1.get("modalities", [])}
-        mod2 = {m.lower() for m in d2.get("modalities", [])}
-        if mod1 & mod2:
-            bonus += 0.05
+    phase_history = {"cues": [], "modalities": set(), "themes": set()}
+    for phase in sorted(phase_order, key=lambda x: phase_order[x]):
+        drills_in_phase = phase_buckets.get(phase, [])
+        for d in drills_in_phase:
+            bonus = 0.0
+            if _cue_match(d.get("cue", ""), phase_history["cues"]):
+                bonus += 0.07
+            if {m.lower() for m in d.get("modalities", [])} & phase_history["modalities"]:
+                bonus += 0.05
+            if {t.lower() for t in d.get("theme_tags", [])} & phase_history["themes"]:
+                bonus += 0.03
+            if bonus > 0.15:
+                bonus = 0.15
+            d["score"] += bonus
 
-        th1 = {t.lower() for t in d1.get("theme_tags", [])}
-        th2 = {t.lower() for t in d2.get("theme_tags", [])}
-        if th1 & th2:
-            bonus += 0.03
-
-        return min(bonus, 0.15)
-
-    for d in scored:
-        p = d.get("phase", "UNIVERSAL").upper()
-        p = p if p in phase_order else "UNIVERSAL"
-        earlier = []
-        for ep, idx in phase_order.items():
-            if idx < phase_order[p]:
-                earlier.extend(phase_buckets.get(ep, []))
-        if not earlier:
-            continue
-        best = 0.0
-        for ed in earlier:
-            val = _calc_synergy(d, ed)
-            if val > best:
-                best = val
-            if best >= 0.15:
-                break
-        d["score"] += best
+        for d in drills_in_phase:
+            if d.get("cue"):
+                phase_history["cues"].append(d["cue"])
+            phase_history["modalities"].update({m.lower() for m in d.get("modalities", [])})
+            phase_history["themes"].update({t.lower() for t in d.get("theme_tags", [])})
 
     return sorted(scored, key=lambda x: x["score"], reverse=True)
