@@ -6,7 +6,7 @@
       { "label": "Weight (kg)", "value": "62" },
       { "label": "Target Weight (kg)", "value": "55" },
       { "label": "Height (cm)", "value": "168" },
-      { "label": "Fighting Style (Technical)", "value": ["Boxer"] },
+      { "label": "Fighting Style (Technical)", "value": ["Boxing"] },
       { "label": "Fighting Style (Tactical)", "value": ["Brawler", "Distance Striker", "Counter Striker", "Pressure Fighter"] },
       { "label": "Stance", "value": "Hybrid" },
       { "label": "Professional Status", "value": "Amateur" },
