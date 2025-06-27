@@ -56,7 +56,8 @@
       "theme_tags": [
         "overthinker",
         "doubter",
-        "focus_decision_fear"
+        "focus_decision_fear",
+        "decide_fast"
       ],
       "raw_traits": [
         "confident",
@@ -81,7 +82,8 @@
       "description": "Combines tactile and breathing cues to interrupt freezing during performance.",
       "theme_tags": [
         "physical_freeze",
-        "mental_freeze"
+        "mental_freeze",
+        "decide_freeze"
       ],
       "raw_traits": [
         "aggressive",
@@ -364,7 +366,8 @@
       "description": "Trains instinctive decision-making through time-constrained scenario drilling to eliminate hesitation.",
       "theme_tags": [
         "decisive",
-        "hesitate"
+        "hesitate",
+        "decide_fast"
       ],
       "raw_traits": [
         "ruthless",
@@ -733,7 +736,8 @@
       "name": "The Fatigue Override",
       "description": "Maintains decision quality under exhaustion through cognitive priming.",
       "theme_tags": [
-        "fatigue"
+        "fatigue",
+        "decide_fast"
       ],
       "raw_traits": [
         "resilient",
@@ -786,7 +790,9 @@
       "name": "Freeze Thaw Protocol",
       "description": "Breaks performance-freezing through physiological resets.",
       "theme_tags": [
-        "freeze"
+        "freeze",
+        "decide_freeze",
+        "decide_think"
       ],
       "raw_traits": [
         "aggressive",
@@ -841,7 +847,9 @@
       "description": "Short-circuits analysis paralysis through time-constrained decisions.",
       "theme_tags": [
         "overthink",
-        "second_guess"
+        "second_guess",
+        "decide_fast",
+        "decide_freeze"
       ],
       "raw_traits": [
         "ruthless",
@@ -895,7 +903,9 @@
       "description": "Pre-programmed action triggers to eliminate delays in decision-making during critical moments.",
       "theme_tags": [
         "hesitate",
-        "second_guess"
+        "second_guess",
+        "decide_fast",
+        "decide_freeze"
       ],
       "raw_traits": [
         "confident",
@@ -1122,7 +1132,8 @@
       "name": "Thought Stream Journal",
       "description": "Breaks overthinking patterns through structured cognitive defusion journaling.",
       "theme_tags": [
-        "overthink"
+        "overthink",
+        "decide_think"
       ],
       "raw_traits": [
         "precise",
@@ -1202,7 +1213,9 @@
       "name": "Freeze Post-Mortem",
       "description": "Structured reflection to identify and reprogram freeze triggers.",
       "theme_tags": [
-        "freeze"
+        "freeze",
+        "decide_freeze",
+        "decide_think"
       ],
       "raw_traits": [
         "confident",
@@ -1229,7 +1242,8 @@
       "name": "Freeze Break Simulator",
       "description": "High-pressure scenario training to build freeze resistance.",
       "theme_tags": [
-        "freeze"
+        "freeze",
+        "decide_freeze"
       ],
       "raw_traits": [
         "aggressive",
@@ -1282,7 +1296,8 @@
       "name": "The Confidence Ledger",
       "description": "Journaling system to convert historical performance data into present confidence.",
       "theme_tags": [
-        "has_history"
+        "has_history",
+        "decide_think"
       ],
       "raw_traits": [
         "confident",
@@ -1477,7 +1492,9 @@
       "description": "Pre-programs reactions for common scramble positions to eliminate hesitation during chaotic transitions.",
       "theme_tags": [
         "second_guess",
-        "mental_freeze"
+        "mental_freeze",
+        "decide_fast",
+        "decide_freeze"
       ],
       "raw_traits": [
         "aggressive",
@@ -1502,7 +1519,8 @@
       "name": "Chain Reaction Trigger",
       "description": "Develops continuous offense to prevent freezing during MMA cage work, BJJ transitions, and wrestling exchanges.",
       "theme_tags": [
-        "mental_freeze"
+        "mental_freeze",
+        "decide_freeze"
       ],
       "raw_traits": [
         "ruthless",
@@ -1702,7 +1720,8 @@
       "description": "Pre-programmed reactions to common passes for BJJ and grappling.",
       "theme_tags": [
         "mental_freeze",
-        "second_guess"
+        "second_guess",
+        "decide_freeze"
       ],
       "raw_traits": [
         "tactical",
@@ -1916,7 +1935,8 @@
       "description": "Develops automatic cage awareness for MMA fighters to prevent freezing.",
       "theme_tags": [
         "mental_freeze",
-        "focus_breaker"
+        "focus_breaker",
+        "decide_freeze"
       ],
       "raw_traits": [
         "tactical",
@@ -1938,7 +1958,8 @@
       "description": "Eliminates hesitation in BJJ match openings through pre-programmed reactions.",
       "theme_tags": [
         "second_guess",
-        "overthink"
+        "overthink",
+        "decide_fast"
       ],
       "raw_traits": [
         "aggressive",
@@ -1984,7 +2005,8 @@
       "description": "Builds intrinsic motivation by linking training actions to deeper personal values for MMA/BJJ/Wrestling/Grappling athletes.",
       "theme_tags": [
         "reward_seeker",
-        "external_validation"
+        "external_validation",
+        "decide_think"
       ],
       "raw_traits": [
         "hungry",
@@ -2105,7 +2127,8 @@
       "description": "Pre-sets tactical responses for live sparring to eliminate overthinking during chaotic exchanges.",
       "theme_tags": [
         "overthink_type",
-        "under_pressure"
+        "under_pressure",
+        "decide_fast"
       ],
       "raw_traits": [
         "precise",
@@ -2317,11 +2340,11 @@
         "intermediate": "Full-round flow",
         "elite": "Adversity response testing"
       }
-    [
+    },
   {
     "name": "First Bell Domination",
     "description": "Pre-programs aggressive opening sequences to eliminate tentativeness in Round 1.",
-    "theme_tags": ["overthink", "avoidant"],
+    "theme_tags": ["overthink", "avoidant", "decide_fast"],
     "raw_traits": ["aggressive", "ruthless"],
     "modalities": ["tactical drill", "visualisation"],
     "sports": ["boxing"],
@@ -2333,7 +2356,7 @@
   {
     "name": "Rope Reset Protocol",
     "description": "Breaks freeze states when trapped against ropes using vagus nerve activation.",
-    "theme_tags": ["mental_freeze", "physical_freeze"],
+    "theme_tags": ["mental_freeze", "physical_freeze", "decide_freeze"],
     "raw_traits": ["commanding", "resilient"],
     "modalities": ["breathwork", "game reset"],
     "sports": ["boxing"],
@@ -2369,7 +2392,10 @@
   {
     "name": "Flurry Autopilot",
     "description": "Pre-sets defensive responses to pressure flurries via strobe light training.",
-    "theme_tags": ["mental_freeze"],
+      "theme_tags": [
+        "mental_freeze",
+        "decide_freeze"
+      ],
     "raw_traits": ["tactical", "calm"],
     "modalities": ["tactical drill"],
     "sports": ["boxing"],
@@ -2441,7 +2467,7 @@
   {
     "name": "Decision Dominance",
     "description": "Eliminates hesitation in split-second openings through strobe training.",
-    "theme_tags": ["overthink"],
+        "theme_tags": ["overthink", "decide_fast", "decide_freeze"],
     "raw_traits": ["precise", "aggressive"],
     "modalities": ["tactical drill"],
     "sports": ["boxing"],
@@ -2537,7 +2563,7 @@
   {
     "name": "Champion's Choice",
     "description": "Eliminates decision paralysis in championship rounds.",
-    "theme_tags": ["overthink"],
+    "theme_tags": ["overthink", "decide_fast"],
     "raw_traits": ["decisive", "ruthless"],
     "modalities": ["tactical drill"],
     "sports": ["boxing"],
@@ -2558,12 +2584,12 @@
     "cue": "BELL → BLITZ",
     "notes": "10-second all-out sprint finisher to every round in training."
   }
-  {
+  ],
   "boxing_spp_drills": [
     {
       "name": "Flurry Freeze Breaker",
       "description": "Pre-programmed defensive responses to overwhelm punches that trigger freezing.",
-      "theme_tags": ["physical_freeze", "mental_freeze"],
+      "theme_tags": ["physical_freeze", "mental_freeze", "decide_freeze"],
       "raw_traits": ["aggressive", "ruthless"],
       "modalities": ["tactical drill", "anchor cue"],
       "sports": ["boxing"],
@@ -2623,7 +2649,7 @@
     {
       "name": "Tentative Trigger",
       "description": "Eliminates hesitancy in opening exchanges.",
-      "theme_tags": ["overthink", "avoidant"],
+      "theme_tags": ["overthink", "avoidant", "decide_fast"],
       "raw_traits": ["aggressive", "hungry"],
       "modalities": ["tactical drill"],
       "sports": ["boxing"],
@@ -2683,7 +2709,7 @@
     {
       "name": "Freeze Flash Drill",
       "description": "Prevents lock-up during unexpected punches.",
-      "theme_tags": ["physical_freeze"],
+        "theme_tags": ["physical_freeze", "decide_freeze"],
       "raw_traits": ["aggressive", "precise"],
       "modalities": ["tactical drill"],
       "sports": ["boxing"],
@@ -2695,7 +2721,7 @@
     {
       "name": "Overthink Override",
       "description": "Short-circuits analysis paralysis in tactical moments.",
-      "theme_tags": ["overthink"],
+      "theme_tags": ["overthink", "decide_fast", "decide_freeze"],
       "raw_traits": ["wild", "aggressive"],
       "modalities": ["anchor cue"],
       "sports": ["boxing"],
@@ -2707,7 +2733,7 @@
     {
       "name": "Rope Rage Protocol",
       "description": "Emergency escape from corner pressure.",
-      "theme_tags": ["mental_freeze"],
+      "theme_tags": ["mental_freeze", "decide_freeze"],
       "raw_traits": ["aggressive", "ruthless"],
       "modalities": ["tactical drill"],
       "sports": ["boxing"],
@@ -2779,7 +2805,7 @@
     {
       "name": "Decision Autopilot",
       "description": "Removes hesitation in championship rounds.",
-      "theme_tags": ["overthink"],
+      "theme_tags": ["overthink", "decide_fast"],
       "raw_traits": ["precise", "tactical"],
       "modalities": ["anchor cue"],
       "sports": ["boxing"],
@@ -2799,8 +2825,7 @@
       "intensity": "medium",
       "cue": "CHAOS → CONTROL",
       "notes": "Weekly: 1. Unusual ring walks. 2. Hostile crowd noise. 3. Extended introductions."
-    }
-  [
+    },
   {
     "name": "Taper Focus Funnel",
     "description": "Narrows attention to key cues while filtering crowd noise during fight week.",
@@ -2828,7 +2853,7 @@
   {
     "name": "Freeze Breaker Combo",
     "description": "Pre-programmed response to flurries that prevents mental/physical freezing.",
-    "theme_tags": ["mental_freeze", "physical_freeze"],
+    "theme_tags": ["mental_freeze", "physical_freeze", "decide_freeze"],
     "raw_traits": ["aggressive", "ruthless"],
     "modalities": ["imagery reps", "game reset"],
     "sports": ["boxing"],
@@ -2864,7 +2889,7 @@
   {
     "name": "Decision Autopilot",
     "description": "Eliminates hesitation in punch selection during fatigue.",
-    "theme_tags": ["overthink", "avoidant"],
+    "theme_tags": ["overthink", "avoidant", "decide_fast"],
     "raw_traits": ["tactical", "precise"],
     "modalities": ["visualisation", "tactical drill"],
     "sports": ["boxing"],
@@ -2948,7 +2973,7 @@
   {
     "name": "Decision Deadline",
     "description": "Eliminates hesitation in punch selection under fatigue.",
-    "theme_tags": ["overthink", "avoidant"],
+    "theme_tags": ["overthink", "avoidant", "decide_fast"],
     "raw_traits": ["precise", "tactical"],
     "modalities": ["tactical drill", "focus drill"],
     "sports": ["boxing"],
@@ -3008,7 +3033,7 @@
   {
     "name": "Corner-to-Center Transition",
     "description": "Accelerates mental reset when moving from defense to offense.",
-    "theme_tags": ["mental_freeze", "reset_speed"],
+    "theme_tags": ["mental_freeze", "reset_speed", "decide_freeze"],
     "raw_traits": ["aggressive", "precise"],
     "modalities": ["game reset", "anchor cue"],
     "sports": ["boxing"],
@@ -3041,3 +3066,5 @@
     "cue": "12TH ROUND LEGACY",
     "notes": "Full sensory simulation of final round with imagined stakes and fatigue."
   }
+ ]
+}
