@@ -238,7 +238,6 @@
       "name": "Clutch Simulation",
       "description": "Recreates high-pressure scenarios in training to build neurological tolerance.",
       "theme_tags": [
-        "under_pressure",
         "thrives"
       ],
       "raw_traits": [
@@ -261,8 +260,7 @@
       "name": "Error Eraser",
       "description": "90-second neural reset protocol to stop post-mistake spirals.",
       "theme_tags": [
-        "mental_loop",
-        "post_mistake"
+        "mental_loop"
       ],
       "raw_traits": [
         "resilient",
@@ -453,7 +451,7 @@
       ],
       "modalities": [
         "focus drill",
-        "mindfulness"
+        "reflection"
       ],
       "sports": [
         "universal"
@@ -487,7 +485,7 @@
       ],
       "modalities": [
         "self-talk",
-        "mindfulness"
+        "reflection"
       ],
       "sports": [
         "universal"
@@ -545,7 +543,6 @@
       "name": "Breath Signature Scan",
       "description": "Diagnostic tool to identify and normalize breathing patterns under stress.",
       "theme_tags": [
-        "breath_slow",
         "breath_normal",
         "breath_unknown"
       ],
@@ -555,7 +552,7 @@
       ],
       "modalities": [
         "breathwork",
-        "mindfulness"
+        "reflection"
       ],
       "sports": [
         "universal"
@@ -643,8 +640,7 @@
       "description": "Structured comeback sequence for athletes who shutdown after errors.",
       "theme_tags": [
         "shutdown",
-        "disengage",
-        "mental_history"
+        "disengage"
       ],
       "raw_traits": [
         "resilient",
@@ -1471,7 +1467,7 @@
       "modalities": [
         "breathwork",
         "self-talk",
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "universal"
@@ -1663,7 +1659,7 @@
         "hungry"
       ],
       "modalities": [
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "MMA",
@@ -1799,7 +1795,6 @@
       "name": "Submission Failure Reboot",
       "description": "Resets mentality after failed submissions in BJJ/grappling or missed finishes in MMA.",
       "theme_tags": [
-        "post_mistake",
         "quick_reset"
       ],
       "raw_traits": [
@@ -1848,7 +1843,6 @@
       "name": "Shot Recovery System",
       "description": "Instinctive reset protocol after failed takedowns in wrestling or MMA cage work.",
       "theme_tags": [
-        "post_mistake",
         "quick_reset"
       ],
       "raw_traits": [
@@ -1882,7 +1876,7 @@
       ],
       "modalities": [
         "imagery reps",
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "BJJ",
@@ -1901,8 +1895,7 @@
       "name": "Octagon GPS",
       "description": "Eliminates hesitation in MMA cage navigation and cutting off opponents.",
       "theme_tags": [
-        "overthink",
-        "focus_breaker"
+        "overthink"
       ],
       "raw_traits": [
         "commanding",
@@ -1949,7 +1942,6 @@
       "name": "Submission Dominoes",
       "description": "Trains automatic submission chains for BJJ/grappling when initial attempts fail.",
       "theme_tags": [
-        "post_mistake",
         "quick_reset"
       ],
       "raw_traits": [
@@ -1958,7 +1950,7 @@
       ],
       "modalities": [
         "imagery reps",
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "BJJ",
@@ -1973,7 +1965,6 @@
       "name": "Dirty Boxing Mindset",
       "description": "Develops MMA clinch aggression through psychological framing.",
       "theme_tags": [
-        "confidence_profile",
         "control_needed"
       ],
       "raw_traits": [
@@ -2089,7 +2080,7 @@
       ],
       "modalities": [
         "self-talk",
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "Wrestling",
@@ -2105,7 +2096,6 @@
       "description": "Develops automatic cage awareness for MMA fighters to prevent freezing.",
       "theme_tags": [
         "mental_freeze",
-        "focus_breaker",
         "decide_freeze"
       ],
       "raw_traits": [
@@ -2140,7 +2130,7 @@
         "precise"
       ],
       "modalities": [
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "BJJ"
@@ -2158,8 +2148,7 @@
       "name": "Submission Survival",
       "description": "Builds composure in bad positions for BJJ and grappling.",
       "theme_tags": [
-        "self_conflict",
-        "post_mistake"
+        "self_conflict"
       ],
       "raw_traits": [
         "resilient",
@@ -2265,7 +2254,7 @@
       ],
       "modalities": [
         "breathwork",
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "MMA",
@@ -2324,8 +2313,6 @@
       "name": "Sparring Autopilot",
       "description": "Pre-sets tactical responses for live sparring to eliminate overthinking during chaotic exchanges.",
       "theme_tags": [
-        "overthink_type",
-        "under_pressure",
         "decide_fast"
       ],
       "raw_traits": [
@@ -2334,7 +2321,7 @@
       ],
       "modalities": [
         "anchor cue",
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "MMA"
@@ -2356,10 +2343,7 @@
     {
       "name": "The 90-Second Storm",
       "description": "Simulates first-round adrenaline dump with forced early-round action to build confidence in chaotic openings.",
-      "theme_tags": [
-        "confidence_profile",
-        "under_pressure"
-      ],
+      "theme_tags": [],
       "raw_traits": [
         "aggressive",
         "dominant"
@@ -2385,8 +2369,7 @@
       "name": "The Chain Breaker",
       "description": "Resets mentality after failed takedown chains or striking setups during high-intensity sparring.",
       "theme_tags": [
-        "mental_loop",
-        "reset_speed"
+        "mental_loop"
       ],
       "raw_traits": [
         "resilient",
@@ -2412,9 +2395,7 @@
     {
       "name": "Fake-Proof Focus",
       "description": "Trains visual attention to distinguish feints from committed attacks during sparring exchanges.",
-      "theme_tags": [
-        "focus_breaker"
-      ],
+      "theme_tags": [],
       "raw_traits": [
         "focused",
         "locked-in"
@@ -2439,8 +2420,7 @@
       "name": "Walkway Anchoring",
       "description": "Links physiological calm to walkout music beats for pre-fight arousal control.",
       "theme_tags": [
-        "stage_fear",
-        "threat_trigger"
+        "stage_fear"
       ],
       "raw_traits": [
         "confident",
@@ -2466,9 +2446,7 @@
     {
       "name": "The 5-Minute War Room",
       "description": "Replaces hard sparring with tactical visualization during fight week taper.",
-      "theme_tags": [
-        "confidence_profile"
-      ],
+      "theme_tags": [],
       "raw_traits": [
         "tactical",
         "precise"
@@ -2519,9 +2497,7 @@
     {
       "name": "The Blueprint Run",
       "description": "Final-day movement rehearsal linking visualization to micro-physical cues.",
-      "theme_tags": [
-        "under_pressure"
-      ],
+      "theme_tags": [],
       "raw_traits": [
         "focused",
         "commanding"
@@ -2556,7 +2532,7 @@
         "ruthless"
       ],
       "modalities": [
-        "tactical drill",
+        "focus drill",
         "visualisation"
       ],
       "sports": [
@@ -2662,7 +2638,7 @@
         "calm"
       ],
       "modalities": [
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "boxing"
@@ -2705,9 +2681,7 @@
     {
       "name": "Error Eraser",
       "description": "Kinesthetic reset protocol for missed punches to prevent mental loops.",
-      "theme_tags": [
-        "post_mistake"
-      ],
+      "theme_tags": [],
       "raw_traits": [
         "resilient",
         "aggressive"
@@ -2802,7 +2776,7 @@
         "aggressive"
       ],
       "modalities": [
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "boxing"
@@ -2849,7 +2823,7 @@
         "resilient"
       ],
       "modalities": [
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "boxing"
@@ -2931,9 +2905,7 @@
     {
       "name": "Canvas Code",
       "description": "Prevents emotional spiral after knockdowns through kinesthetic reset.",
-      "theme_tags": [
-        "post_mistake"
-      ],
+      "theme_tags": [],
       "raw_traits": [
         "resilient",
         "aggressive"
@@ -2985,7 +2957,7 @@
         "ruthless"
       ],
       "modalities": [
-        "tactical drill"
+        "focus drill"
       ],
       "sports": [
         "boxing"

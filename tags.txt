@@ -26,7 +26,8 @@
   "raw_traits": [
     "confident", "focused", "aggressive", "free", "locked-in",
     "playful", "ruthless", "precise", "tactical", "wild",
-    "hungry", "relaxed", "commanding", "joyful"
+    "hungry", "relaxed", "commanding", "joyful",
+    "resilient", "dominant", "decisive", "calm", "aware", "flexible"
   ],
   "modalities": [
     "breathwork", "self-talk", "visualisation", "anchor cue",

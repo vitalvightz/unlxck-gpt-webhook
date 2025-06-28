@@ -13,7 +13,7 @@ from mental.program import parse_mindcode_form
 from mental.tags import map_tags
 from mental.scoring import score_drills
 from mental.contradictions import detect_contradictions
-from mental.tag_labels import human_label, humanize_list
+from mental.tag_labels import humanize_list
 
 # Load drill bank
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
