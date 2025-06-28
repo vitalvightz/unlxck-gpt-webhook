@@ -119,26 +119,19 @@ DECISION_MAKING_MAP = {
 
 
 def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[str]]]:
-    """Map raw form input to controlled mental performance tags."""
-    tags: Dict[str, Union[str, List[str]]] = {
-        "under_pressure": [],
-        "post_mistake": [],
-        "focus_breakers": [],
-        "confidence_profile": [],
-        "identity_traits": [],
-        "tool_preferences": [],
-        "key_struggles": [],
-        "elite_traits": [],
-        "breath_pattern": "breath_unknown",
-        "hr_response": "hr_unknown",
-        "reset_speed": "unknown",
-        "motivation_type": "motivation_unknown",
-        "threat_trigger": "general_threat",
-        "decision_making": "decision_unknown",
-        "mental_history": "clear_history",
-    }
+    """Compatibility wrapper that uses :func:`map_tags` then adds legacy keys."""
+    from .tags import map_tags
 
-    # === MULTI-SELECT FIELDS ===
+    tags = map_tags(form_data)
+
+    def _map_list(field: str, mapping: Dict[str, str]) -> list[str]:
+        vals = []
+        for item in form_data.get(field, []):
+            key = item.strip().lower()
+            if key in mapping:
+                vals.append(mapping[key])
+        return list(dict.fromkeys(vals))
+
     for field, mapping in [
         ("under_pressure", UNDER_PRESSURE_MAP),
         ("post_mistake", POST_MISTAKE_MAP),
@@ -147,59 +140,6 @@ def map_mindcode_tags(form_data: Dict[str, Any]) -> Dict[str, Union[str, List[st
         ("tool_preferences", TRAINING_TOOLS_MAP),
         ("key_struggles", KEY_STRUGGLES_MAP),
     ]:
-        for item in form_data.get(field, []):
-            normalized = item.strip().lower()
-            if normalized in mapping:
-                tags[field].append(mapping[normalized])
+        tags[field] = _map_list(field, mapping)
 
-    # === IDENTITY TRAITS ===
-    tags["identity_traits"] = [
-        f"trait_{x.lower().replace(' ', '_')}" for x in form_data.get("identity_traits", [])
-    ]
-
-    # === ELITE TRAITS ===
-    tags["elite_traits"] = [
-        f"elite_{x.lower().replace(' ', '_').replace('/', '_')}" for x in form_data.get("elite_traits", [])
-    ]
-
-    # === SINGLE SELECTS ===
-    pressure_breath = form_data.get("pressure_breath", "").strip().lower()
-    heart_response = form_data.get("heart_response", "").strip().lower()
-    reset_duration = form_data.get("reset_duration", "").strip().lower()
-    motivator = form_data.get("motivator", "").strip().lower()
-    emotional_trigger = form_data.get("emotional_trigger", "").strip().lower()
-    decision_choice = form_data.get("decision_making", "").strip().lower()
-
-    lookup_pairs = [
-        ("breath_pattern", BREATH_MAP, pressure_breath),
-        ("hr_response", HR_RESPONSE_MAP, heart_response),
-        ("reset_speed", RESET_SPEED_MAP, reset_duration),
-        ("motivation_type", MOTIVATOR_MAP, motivator),
-        ("threat_trigger", EMOTIONAL_TRIGGER_MAP, emotional_trigger),
-        ("decision_making", DECISION_MAKING_MAP, decision_choice),
-    ]
-    for key, mapping, value in lookup_pairs:
-        if value in mapping:
-            tags[key] = mapping[value]
-
-    # === MENTAL HISTORY ===
-    history = form_data.get("past_mental_struggles", "").strip()
-    tags["mental_history"] = "has_history" if history else "clear_history"
-
-    # Deduplicate lists while preserving order
-    for list_key in [
-        "under_pressure",
-        "post_mistake",
-        "focus_breakers",
-        "confidence_profile",
-        "tool_preferences",
-        "key_struggles",
-        "identity_traits",
-        "elite_traits",
-    ]:
-        tags[list_key] = list(dict.fromkeys(tags[list_key]))
-
-    # Normalize synonymous tags across all fields
-    tags = normalize_tag_dict(tags)
-
-    return tags
+    return normalize_tag_dict(tags)

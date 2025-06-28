@@ -1631,10 +1631,10 @@
         "anchor cue"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -1662,10 +1662,10 @@
         "focus drill"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1692,10 +1692,10 @@
         "breathwork"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1721,10 +1721,10 @@
         "focus drill"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -1747,10 +1747,10 @@
         "breathwork"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1778,10 +1778,10 @@
         "pre-fight prep"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "low",
@@ -1806,9 +1806,9 @@
         "anchor cue"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Grappling"
+        "mma",
+        "bjj",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -1830,8 +1830,8 @@
         "imagery reps"
       ],
       "sports": [
-        "MMA",
-        "Wrestling"
+        "mma",
+        "wrestling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1854,8 +1854,8 @@
         "anchor cue"
       ],
       "sports": [
-        "MMA",
-        "Wrestling"
+        "mma",
+        "wrestling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -1879,8 +1879,8 @@
         "focus drill"
       ],
       "sports": [
-        "BJJ",
-        "Grappling"
+        "bjj",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1906,7 +1906,7 @@
         "focus drill"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1930,8 +1930,8 @@
         "cold exposure"
       ],
       "sports": [
-        "Wrestling",
-        "BJJ"
+        "wrestling",
+        "bjj"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -1953,8 +1953,8 @@
         "focus drill"
       ],
       "sports": [
-        "BJJ",
-        "Grappling"
+        "bjj",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -1976,7 +1976,7 @@
         "anchor cue"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -1999,8 +1999,8 @@
         "breathwork"
       ],
       "sports": [
-        "Wrestling",
-        "MMA"
+        "wrestling",
+        "mma"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -2028,8 +2028,8 @@
         "pre-fight prep"
       ],
       "sports": [
-        "MMA",
-        "BJJ"
+        "mma",
+        "bjj"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -2054,8 +2054,8 @@
         "breathwork"
       ],
       "sports": [
-        "BJJ",
-        "Grappling"
+        "bjj",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "low",
@@ -2083,8 +2083,8 @@
         "focus drill"
       ],
       "sports": [
-        "Wrestling",
-        "MMA"
+        "wrestling",
+        "mma"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -2106,7 +2106,7 @@
         "focus drill"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -2133,7 +2133,7 @@
         "focus drill"
       ],
       "sports": [
-        "BJJ"
+        "bjj"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -2159,8 +2159,8 @@
         "game reset"
       ],
       "sports": [
-        "BJJ",
-        "Grappling"
+        "bjj",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -2188,10 +2188,10 @@
         "reflection"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "low",
@@ -2224,10 +2224,10 @@
         "anchor cue"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -2257,10 +2257,10 @@
         "focus drill"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "medium",
@@ -2291,10 +2291,10 @@
         "identity shift"
       ],
       "sports": [
-        "MMA",
-        "BJJ",
-        "Wrestling",
-        "Grappling"
+        "mma",
+        "bjj",
+        "wrestling",
+        "grappling"
       ],
       "phase": "GPP",
       "intensity": "high",
@@ -2324,7 +2324,7 @@
         "focus drill"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "SPP",
       "intensity": "high",
@@ -2353,7 +2353,7 @@
         "focus drill"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "SPP",
       "intensity": "high",
@@ -2380,7 +2380,7 @@
         "breathwork"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "SPP",
       "intensity": "medium",
@@ -2404,7 +2404,7 @@
         "focus drill"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "SPP",
       "intensity": "high",
@@ -2431,7 +2431,7 @@
         "breathwork"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "TAPER",
       "intensity": "low",
@@ -2455,7 +2455,7 @@
         "visualisation"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "TAPER",
       "intensity": "low",
@@ -2482,7 +2482,7 @@
         "cold exposure"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "TAPER",
       "intensity": "low",
@@ -2507,7 +2507,7 @@
         "anchor cue"
       ],
       "sports": [
-        "MMA"
+        "mma"
       ],
       "phase": "TAPER",
       "intensity": "low",

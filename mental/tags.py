@@ -35,6 +35,24 @@ def map_tags(form_data: Dict) -> Dict:
     emotional_trigger = form_data.get("emotional_trigger", "").strip().lower()
     decision_choice = form_data.get("decision_making", "").strip().lower()
 
+    # Identity & elite traits -> prefixed tags
+    identity_traits: List[str] = [
+        f"trait_{t.strip().lower().replace(' ', '_')}"
+        for t in form_data.get("identity_traits", [])
+    ]
+    elite_traits: List[str] = [
+        f"elite_{t.strip().lower().replace(' ', '_').replace('/', '_')}"
+        for t in form_data.get("elite_traits", [])
+    ]
+    tags["identity_traits"] = identity_traits
+    tags["elite_traits"] = elite_traits
+
+    # Raw trait list for synergy checks
+    tags["traits"] = [
+        t.split("trait_", 1)[-1] if t.startswith("trait_") else t.split("elite_", 1)[-1]
+        for t in identity_traits + elite_traits
+    ]
+
     # Map tool preference and struggle lists to tags
     preferred_modality: List[str] = []
     for item in tool_preferences:
@@ -166,9 +184,12 @@ def map_tags(form_data: Dict) -> Dict:
     else:
         tags["mental_history"] = "clear_history"
 
-    # Deduplicate preference lists
+    # Deduplicate lists
     tags["preferred_modality"] = list(dict.fromkeys(tags["preferred_modality"]))
     tags["struggles_with"] = list(dict.fromkeys(tags["struggles_with"]))
+    tags["identity_traits"] = list(dict.fromkeys(tags.get("identity_traits", [])))
+    tags["elite_traits"] = list(dict.fromkeys(tags.get("elite_traits", [])))
+    tags["traits"] = list(dict.fromkeys(tags.get("traits", [])))
 
     # Normalize synonymous tags across all fields
     tags = normalize_tag_dict(tags)
