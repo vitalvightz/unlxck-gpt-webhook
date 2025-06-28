@@ -9,7 +9,7 @@ TRAIT_SCORES = {
 
     # Elite Tier 1 (+0.7)
     "locked-in": 0.7,
-    "dominates": 0.7,
+    "dominant": 0.7,
     "ruthless": 0.7,
     "thrives": 0.7,
 }
@@ -24,7 +24,7 @@ SYNERGY_LIST = {
     ("self-talk", "video review"): {"required_tags": ["mental_loop", "control_needed"]},
 }
 
-ELITE_TRAITS = {"dominates", "ruthless", "thrives", "commanding", "locked-in"}
+ELITE_TRAITS = {"dominant", "ruthless", "thrives", "commanding", "locked-in"}
 
 import json
 import os
@@ -95,7 +95,17 @@ def sport_microweight_bonus(drill: dict, athlete: dict) -> float:
             if {"commanding", "playful"} & traits:
                 bonus += 0.1
 
-    else:  # individual or uncategorized sports
+    elif sport in INDIVIDUAL_SPORTS:
+        if "focus_locked" in tags:
+            bonus += 0.2
+        if "visualisation" in modalities and len(modalities) == 1:
+            bonus += 0.1
+        if phase == "GPP" and not any(
+            any(k in m for k in ["breathwork", "tempo"]) for m in modalities
+        ):
+            bonus -= 0.2
+
+    else:  # uncategorized sports
         if "focus_locked" in tags:
             bonus += 0.2
         if phase == "GPP" and not any(
