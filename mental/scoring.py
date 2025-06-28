@@ -15,7 +15,8 @@ TRAIT_SCORES = {
 }
 
 SYNERGY_LIST = {
-    ("visualisation", "breathwork"): {"required_tags": ["quick_reset", "thrives"]},
+    # Normalize to canonical tag names so synergy works after tag normalization
+    ("visualisation", "breathwork"): {"required_tags": ["fast_reset", "thrives"]},
     ("game reset", "breathwork"): {"required_tags": ["slow_reset", "emotional"]},
     ("focus drill", "journaling"): {"required_tags": ["overthink", "stage_fear"]},
     ("anchor cue", "self-talk"): {"required_tags": ["control_needed"]},

@@ -6,10 +6,11 @@ from mental.scoring import check_synergy_match, score_drill, score_drills
 class ScoringTests(unittest.TestCase):
     def test_check_synergy_match(self):
         drill = {"modalities": ["visualisation", "breathwork"]}
-        self.assertTrue(check_synergy_match(drill, ["quick_reset"]))
+        # fast_reset is the canonical tag after normalization
+        self.assertTrue(check_synergy_match(drill, ["fast_reset"]))
         self.assertFalse(check_synergy_match(drill, ["overthink"]))
         drill2 = {"modalities": ["visualisation"]}
-        self.assertFalse(check_synergy_match(drill2, ["quick_reset"]))
+        self.assertFalse(check_synergy_match(drill2, ["fast_reset"]))
 
     def test_phase_intensity_penalty(self):
         drill = {"intensity": "high", "raw_traits": [], "modalities": []}
