@@ -112,8 +112,15 @@ CONTRADICTION_PAIRS = {
 
 
 def detect_contradictions(tags: set) -> list[str]:
+    def _match(needle: str, pool: set[str]) -> bool:
+        if needle in pool:
+            return True
+        if ":" not in needle:
+            return any(t.split(":", 1)[-1] == needle for t in pool)
+        return False
+
     flagged_notes: list[str] = []
     for pair, details in CONTRADICTION_PAIRS.items():
-        if all(tag in tags for tag in pair):
+        if all(_match(p, tags) for p in pair):
             flagged_notes.append(details["note"])
     return flagged_notes

@@ -19,6 +19,8 @@ from mental.tag_labels import humanize_list
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
 with open(DRILLS_PATH, "r") as f:
     DRILL_BANK = json.load(f)["drills"]
+for d in DRILL_BANK:
+    d["sports"] = [s.lower() for s in d.get("sports", [])]
 
 def format_drill_block(drill, phase):
     block = f"""🧠 {phase.upper()}: {drill['name']}
