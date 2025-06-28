@@ -88,6 +88,30 @@ TAG_LABELS = {
     "fast_reset": "Resets Instantly",
     "medium_reset": "Resets in 10–30s",
     "very_slow_reset": "Very Slow Reset",
+
+    # Additional theme tags
+    "distracted_by_crowd": "Focus Breaks from Crowd",
+    "coach_noise": "Coach-Driven Distraction",
+    "opponent_noise": "Opponent Distraction",
+    "self_conflict": "Inner Conflict",
+    "fatigue": "Focus Breaks When Tired",
+    "physical_freeze": "Physical Freeze",
+    "mental_freeze": "Mental Freeze",
+    "overthinker": "Overthinker",
+    "doubter": "Doubter",
+    "stay_loose": "Stays Loose",
+    "breath_slow": "Breath Slows Down",
+    "decisive": "Decisive",
+
+    # Generic category labels
+    "focus_breaker": "Focus Breaker",
+    "overthink_type": "Overthinking Style",
+    "under_pressure": "Under-Pressure Trait",
+    "post_mistake": "Post-Mistake Trait",
+    "reset_speed": "Reset Speed",
+    "mental_history": "Mental History",
+    "threat_trigger": "Threat Trigger",
+    "confidence_profile": "Confidence Profile",
 }
 
 
