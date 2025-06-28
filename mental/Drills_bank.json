@@ -21,9 +21,10 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+      "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
       "notes": "Practice 5 rounds: 1. Sitting calmly. 2. During bodyweight exercises. 3. Right after sprints. Pro tip: Place a hand on your belly to ensure diaphragmatic breathing.",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'The Navy SEAL Breath'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
     },
     {
       "name": "Authority Reframe",
@@ -48,7 +49,8 @@
       "intensity": "medium",
       "cue": "Their eyes are my spotlight",
       "notes": "Before competitions: 1. Identify 1 authority who triggers nerves. 2. Visualize them as an 'energy source' rather than judge. 3. Say: 'Your attention fuels my focus.' Based on fMRI studies showing reframing reduces amygdala activation by 62%.",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'Authority Reframe'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice."
     },
     {
       "name": "The Decisive Playbook",
@@ -75,7 +77,8 @@
       "intensity": "medium",
       "cue": "When [X], I [Y]",
       "notes": "Progression: 1) Write 3 scenarios + responses. 2) Review daily for 2 weeks. 3) Simulate with eyes closed. Elite: Add physical triggers (e.g., tapping wrist for each script).",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'The Decisive Playbook'? You reported you overthink under stress. This drill targets decisive action practice through journaling work."
     },
     {
       "name": "Freeze-Breaker Protocol",
@@ -98,9 +101,10 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "CLICK (snap fingers) → CLEAR (exhale)",
+      "cue": "CLICK (snap fingers) \u2192 CLEAR (exhale)",
       "notes": "Progression: 1) Practice in training. 2) Add mild stress (e.g., coach yelling). 3) Use in competition. Works by disrupting amygdala hijack via dual sensory input.",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'Freeze-Breaker Protocol'? You reported you freeze up under pressure. This drill targets freeze interruption through anchor cues."
     },
     {
       "name": "Combat Breathing",
@@ -122,9 +126,10 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale (4s) → Hold (4s) → Exhale (4s) → Hold (4s)",
+      "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
       "notes": "Progression: 1) Seated. 2) During cooldowns. 3) Under physical stress. Elite: Add eye tracking (follow finger while breathing).",
-      "video_url": "https://youtu.be/example_breath"
+      "video_url": "https://youtu.be/example_breath",
+      "why_this_works": "Why 'Combat Breathing'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
     },
     {
       "name": "The 10-Second Reset",
@@ -147,7 +152,8 @@
       "intensity": "low",
       "cue": "5-4-3-2-1 (see, touch, hear, smell, taste)",
       "notes": "Progression: 1) Normal conditions. 2) Mild fatigue. 3) After mistakes. Based on sensory anchoring research.",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'The 10-Second Reset'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines."
     },
     {
       "name": "The Carrot/Stick Journal",
@@ -168,9 +174,10 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "Action → Reward | Inaction → Cost",
+      "cue": "Action \u2192 Reward | Inaction \u2192 Cost",
       "notes": "Progression: 1) Daily entries. 2) Public accountability. 3) Variable rewards. Elite: Tie to biometrics (e.g., HRV targets).",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'The Carrot/Stick Journal'? You reported you rely on small wins for motivation. This drill targets reward linkage through journaling work."
     },
     {
       "name": "Threat Reframe Drill",
@@ -193,7 +200,8 @@
       "intensity": "medium",
       "cue": "Your pressure is my power",
       "notes": "Progression: 1) Identify threats. 2) Write reframes. 3) Simulate exposure. Uses fMRI-verified prefrontal override techniques.",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'Threat Reframe Drill'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice."
     },
     {
       "name": "Clutch Simulation",
@@ -237,7 +245,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Delete → Reset → Go",
+      "cue": "Delete \u2192 Reset \u2192 Go",
       "notes": "Progression: 1) Physical gesture. 2) Add scent. 3) Full sequence. Disrupts error-detection loops via novel stimuli.",
       "video_url": null
     },
@@ -261,7 +269,8 @@
       "intensity": "low",
       "cue": "I have receipts",
       "notes": "Progression: 1) Collect evidence. 2) Weekly reviews. 3) Pre-competition rituals. Activates success neural networks.",
-      "video_url": null
+      "video_url": null,
+      "why_this_works": "Why 'Evidence Lockbox'? You reported you lose confidence after mistakes. This drill targets confidence anchoring through journaling work."
     },
     {
       "name": "The Crowd Filter",
@@ -305,7 +314,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tunnel → Expand",
+      "cue": "Tunnel \u2192 Expand",
       "notes": "Progression: 1) Fresh. 2) Post-training. 3) Sleep-deprived. Uses peripheral vision control.",
       "video_url": null
     },
@@ -328,7 +337,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Observe → Don't absorb",
+      "cue": "Observe \u2192 Don't absorb",
       "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
       "video_url": null
     },
@@ -353,7 +362,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "Shake → Smile → Explode",
+      "cue": "Shake \u2192 Smile \u2192 Explode",
       "notes": "When tension builds: 1. Full-body shakeout (3s). 2. Forced smile with exhale. 3. Explosive movement cue. Based on facial feedback research showing smiles reduce cortisol by 15%.",
       "progression": {
         "beginner": "Post-training activation",
@@ -383,13 +392,14 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "See → Decide → Destroy",
+      "cue": "See \u2192 Decide \u2192 Destroy",
       "notes": "Daily: 1. Watch competition footage. 2. Make call in under 0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
       "progression": {
         "beginner": "Obvious scenarios",
         "intermediate": "50/50 situations",
         "elite": "Information overload"
-      }
+      },
+      "why_this_works": "Why 'Decisive Action Protocol'? You reported you act instantly under pressure. This drill targets instinctive reactions through visualisation practice."
     },
     {
       "name": "The Noise Filter",
@@ -413,7 +423,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tune → Out → Execute",
+      "cue": "Tune \u2192 Out \u2192 Execute",
       "notes": "1. Identify essential sounds (coach's voice). 2. Assign unimportant noise a color. 3. Imagine pushing it away. Uses thalamic gating mechanisms.",
       "progression": {
         "beginner": "Quiet environment",
@@ -442,13 +452,14 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Thoughts ≠ Truth",
+      "cue": "Thoughts \u2260 Truth",
       "notes": "When doubting: 1. Label thoughts ('I'm having the thought that...'). 2. Thank your mind. 3. Return to breath. Reduces cognitive fusion by 40% in trials.",
       "progression": {
         "beginner": "Post-session reflection",
         "intermediate": "Mid-training application",
         "elite": "Competition implementation"
-      }
+      },
+      "why_this_works": "Why 'The Internal Referee'? You reported your inner critic distracts you. This drill targets silencing the inner critic through self-talk practice."
     },
     {
       "name": "Tactical Reset Matrix",
@@ -472,7 +483,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Match tempo → Dominate tempo",
+      "cue": "Match tempo \u2192 Dominate tempo",
       "notes": "Choose reset speed: 1. Fast (3s power exhale). 2. Medium (5-5-5 breath). 3. Slow (4-6-8 sequence). Aligns with heart rate variability needs.",
       "progression": {
         "beginner": "Single-speed mastery",
@@ -501,7 +512,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Scan → Recognize → Adjust",
+      "cue": "Scan \u2192 Recognize \u2192 Adjust",
       "notes": "Post-exertion: 1. Observe natural breath for 1min. 2. Classify pattern. 3. Adjust toward 6 breaths/min. Enhances respiratory sinus arrhythmia coherence.",
       "progression": {
         "beginner": "Seated observation",
@@ -559,7 +570,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Gladiator mode → ON",
+      "cue": "Gladiator mode \u2192 ON",
       "notes": "Pre-competition: 1. Watch footage of iconic competitors. 2. Physical power pose. 3. Repeat: 'This is my arena'. Boosts testosterone by 20% in studies.",
       "progression": {
         "beginner": "Private ritual",
@@ -589,7 +600,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "Burn → Rise → Attack",
+      "cue": "Burn \u2192 Rise \u2192 Attack",
       "notes": "Post-error: 1. Symbolic gesture (wipe slate). 2. Reset breath (4-4-6). 3. First aggressive action. Reignites competitive drive via noradrenaline modulation.",
       "progression": {
         "beginner": "Controlled error simulation",
@@ -618,7 +629,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Same me → Any arena",
+      "cue": "Same me \u2192 Any arena",
       "notes": "Daily: 1. Recall peak performance feeling. 2. Assign physical trigger (e.g., tapping collarbone). 3. Activate in new environments. Uses episodic memory neural networks.",
       "progression": {
         "beginner": "Home facility activation",
@@ -644,7 +655,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Silence → Execute",
+      "cue": "Silence \u2192 Execute",
       "notes": "During practice: 1. Randomly mute environment for 3-5s. 2. Athlete must complete pre-called action. 3. Gradually increase complexity. Mimics championship pressure moments.",
       "progression": {
         "beginner": "Simple actions (e.g., free throw)",
@@ -698,7 +709,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Reset → Don't Force",
+      "cue": "Reset \u2192 Don't Force",
       "notes": "Post-error: 1. Pause. 2. Perform 2 perfect reps at 50% speed. 3. Resume normal pace. Targets error-correction pathways.",
       "progression": {
         "beginner": "Isolated skills",
@@ -724,7 +735,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Their Opinion ≠ My Reality",
+      "cue": "Their Opinion \u2260 My Reality",
       "notes": "Pre-competition: 1. Write down feared judgments. 2. Physically discard paper. 3. Replace with personal standard. Leverages symbolic action research.",
       "progression": {
         "beginner": "Private processing",
@@ -752,13 +763,14 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Tired Body → Sharp Mind",
+      "cue": "Tired Body \u2192 Sharp Mind",
       "notes": "Post-training: 1. Ice face immersion (30s). 2. Pre-load 3 decisions. 3. Execute while exhausted. Boosts frontal lobe oxygenation.",
       "progression": {
         "beginner": "Low-exertion decisions",
         "intermediate": "Moderate fatigue",
         "elite": "Complete exhaustion"
-      }
+      },
+      "why_this_works": "Why 'The Fatigue Override'? You reported you act instantly under pressure. This drill targets instinctive reactions through attention training."
     },
     {
       "name": "Coach Whisper Drill",
@@ -807,7 +819,7 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "Melt → Move",
+      "cue": "Melt \u2192 Move",
       "notes": "When frozen: 1. Ice pack to neck (5s). 2. Shake out limbs. 3. Explosive first step. Triggers mammalian dive reflex.",
       "progression": {
         "beginner": "Controlled simulation",
@@ -834,7 +846,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Track → Analyze → Activate",
+      "cue": "Track \u2192 Analyze \u2192 Activate",
       "notes": "For 7 days: 1. Log energy peaks during training. 2. Reverse-engineer triggers. 3. Create motivation 'menu'. Builds metacognitive awareness.",
       "progression": {
         "beginner": "Passive observation",
@@ -863,13 +875,14 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Decide → Commit → Destroy",
+      "cue": "Decide \u2192 Commit \u2192 Destroy",
       "notes": "Daily: 1. Review game footage. 2. Make call in <1s. 3. Physical mimicry. Strengthens instinctive decision pathways.",
       "progression": {
         "beginner": "Obvious scenarios",
         "intermediate": "50/50 situations",
         "elite": "Information overload"
-      }
+      },
+      "why_this_works": "Why 'Overthink Antidote'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through imagery reps."
     },
     {
       "name": "Pressure Inoculation",
@@ -927,7 +940,8 @@
         "beginner": "Simple choices (e.g., strike selection)",
         "intermediate": "Complex tactical decisions",
         "elite": "High-consequence game situations"
-      }
+      },
+      "why_this_works": "Why 'The Hesitation Killer'? You reported you act instantly under pressure. This drill targets instinctive reactions through anchor cues."
     },
     {
       "name": "Demand Dominance Drill",
@@ -951,7 +965,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "MINE → NOW",
+      "cue": "MINE \u2192 NOW",
       "notes": "Daily: 1. Visualize demanding action in key moments. 2. Physical claiming gesture (e.g., hand clap). 3. Verbal call for ball/shot. Rewards neural pathways for assertive behavior.",
       "progression": {
         "beginner": "Imagery only",
@@ -980,7 +994,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "ERASE → RESET",
+      "cue": "ERASE \u2192 RESET",
       "notes": "After error: 1. Wiping motion across forehead. 2. Sharp exhale. 3. Immediate positive action. Disrupts default mode network looping.",
       "progression": {
         "beginner": "Controlled error simulation",
@@ -1036,7 +1050,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "FILTER → EXECUTE",
+      "cue": "FILTER \u2192 EXECUTE",
       "notes": "During drills: 1. Identify essential coach cues. 2. Assign non-essential talk a color. 3. Mentally 'delete' irrelevant input. Strengthens auditory selective attention.",
       "progression": {
         "beginner": "Clear signal/noise differentiation",
@@ -1064,7 +1078,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "THEM → ME",
+      "cue": "THEM \u2192 ME",
       "notes": "Weekly: 1. Train with deliberate provocations. 2. Maintain 'bubble' focus. 3. Reward sustained attention. Uses habituation neuroscience principles.",
       "progression": {
         "beginner": "Mild social distractions",
@@ -1092,7 +1106,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "SAME SKILLS → ANY STAGE",
+      "cue": "SAME SKILLS \u2192 ANY STAGE",
       "notes": "Pre-competition: 1. Wear training gear item. 2. Recreate training warmup. 3. Recall gym successes. Creates neural environment familiarity.",
       "progression": {
         "beginner": "Physical familiarity cues",
@@ -1148,13 +1162,14 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "Write → Release → Refocus",
+      "cue": "Write \u2192 Release \u2192 Refocus",
       "notes": "Post-training: 1. Stream-of-consciousness writing for 3min. 2. Physically discard pages. 3. Summarize key insights in 3 bullets. Based on expressive writing research.",
       "progression": {
         "beginner": "Private journaling",
         "intermediate": "Coach review sessions",
         "elite": "Pre-competition mental clears"
-      }
+      },
+      "why_this_works": "Why 'Thought Stream Journal'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through journaling work."
     },
     {
       "name": "Tactical Decision Simulator",
@@ -1175,13 +1190,14 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "See → Decide → Execute",
+      "cue": "See \u2192 Decide \u2192 Execute",
       "notes": "Daily: 1. Watch game footage. 2. Make call in <0.5s. 3. Physically mimic action. Strengthens parietal-occipital predictive pathways.",
       "progression": {
         "beginner": "Clear scenarios",
         "intermediate": "50/50 situations",
         "elite": "Information overload"
-      }
+      },
+      "why_this_works": "Why 'Tactical Decision Simulator'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through visualisation practice."
     },
     {
       "name": "The 4-7-8 Reset",
@@ -1201,13 +1217,14 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale 4 → Hold 7 → Exhale 8",
+      "cue": "Inhale 4 \u2192 Hold 7 \u2192 Exhale 8",
       "notes": "When overthinking: 1. Stop action. 2. Complete 3 breath cycles. 3. Resume with first instinct. Triggers parasympathetic dominance.",
       "progression": {
         "beginner": "Seated practice",
         "intermediate": "Mid-drill application",
         "elite": "Competition implementation"
-      }
+      },
+      "why_this_works": "Why 'The 4-7-8 Reset'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through breathing drills."
     },
     {
       "name": "Freeze Post-Mortem",
@@ -1230,7 +1247,7 @@
       ],
       "phase": "universal",
       "intensity": "low",
-      "cue": "What → Why → How",
+      "cue": "What \u2192 Why \u2192 How",
       "notes": "Post-event: 1. Describe freeze moment. 2. Identify trigger pattern. 3. Plan physical reset cue. Uses cognitive reappraisal.",
       "progression": {
         "beginner": "Video review analysis",
@@ -1258,7 +1275,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Shock → Reset → Attack",
+      "cue": "Shock \u2192 Reset \u2192 Attack",
       "notes": "Weekly: 1. Unexpected freeze trigger (e.g., loud buzzer). 2. Immediate reset sequence. 3. Explosive counteraction. Conditions autonomic response.",
       "progression": {
         "beginner": "Known triggers",
@@ -1284,7 +1301,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Inhale Power → Exhale Free",
+      "cue": "Inhale Power \u2192 Exhale Free",
       "notes": "When frozen: 1. Sharp nose inhale. 2. Forceful mouth exhale. 3. Full-body shakeout. Activates sympathetic-adrenal reset.",
       "progression": {
         "beginner": "Controlled practice",
@@ -1312,7 +1329,7 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "Past Proof → Present Power",
+      "cue": "Past Proof \u2192 Present Power",
       "notes": "Weekly: 1. Record 3 past successes. 2. Note transferable skills. 3. Visualize applying them now. Strengthens self-efficacy beliefs.",
       "progression": {
         "beginner": "General achievements",
@@ -1368,13 +1385,14 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "Ground → Analyze → Respond",
+      "cue": "Ground \u2192 Analyze \u2192 Respond",
       "notes": "When receiving criticism: 1. 4-4-6 breathing. 2. Cue 'What can I use?'. 3. Extract one actionable item. Uses cognitive reappraisal techniques.",
       "progression": {
         "beginner": "Recorded coach feedback review",
         "intermediate": "Live feedback processing",
         "elite": "High-stakes official interactions"
-      }
+      },
+      "why_this_works": "Why 'Command Presence Builder'? You reported coach criticism rattles you. This drill targets reframing criticism through breathing drills."
     },
     {
       "name": "The Carrot-Stick Visualization",
@@ -1397,13 +1415,14 @@
       ],
       "phase": "universal",
       "intensity": "high",
-      "cue": "See Success → Feel Failure",
+      "cue": "See Success \u2192 Feel Failure",
       "notes": "Daily: 1. Vividly visualize achieving reward (3min). 2. Equally vivid failure scenario (90s). 3. Physical trigger to activate memory (e.g., wrist tap). Amplifies nucleus accumbens activation.",
       "progression": {
         "beginner": "Guided visualization",
         "intermediate": "Self-generated scenarios",
         "elite": "Pressure-tested activation"
-      }
+      },
+      "why_this_works": "Why 'The Carrot-Stick Visualization'? You reported you rely on small wins for motivation. This drill targets reward linkage through imagery reps."
     },
     {
       "name": "The Bounty Board",
@@ -1430,7 +1449,8 @@
         "beginner": "Easy benchmarks",
         "intermediate": "Game-situation demands",
         "elite": "Peer-competitive bounty hunting"
-      }
+      },
+      "why_this_works": "Why 'The Bounty Board'? You reported you rely on small wins for motivation. This drill targets reward linkage through self-talk practice."
     },
     {
       "name": "The Threat Neutralizer",
@@ -1452,7 +1472,7 @@
       ],
       "phase": "universal",
       "intensity": "medium",
-      "cue": "Unknown → Advantage",
+      "cue": "Unknown \u2192 Advantage",
       "notes": "When zoning out: 1. Ice pack to wrists (10s). 2. Tactical breathing (4-6-8). 3. Environmental scan for opportunities. Activates parasympathetic nervous system.",
       "progression": {
         "beginner": "Controlled uncertainty",
@@ -1479,7 +1499,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "Survive → Thrive",
+      "cue": "Survive \u2192 Thrive",
       "notes": "Weekly: 1. Imagine worst-case scenario in detail. 2. Script ideal response. 3. Physically rehearse. Reduces amygdala hijack risk by 41%.",
       "progression": {
         "beginner": "Written scripts",
@@ -1512,8 +1532,9 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "SPRAWL → SNAP → SPIN",
-      "notes": "Daily: Watch scramble footage → Freeze frame → Call reaction within 0.3s → Physical mimicry. Builds instinctive neural pathways for MMA scrambles, BJJ guard recoveries, and wrestling reshots."
+      "cue": "SPRAWL \u2192 SNAP \u2192 SPIN",
+      "notes": "Daily: Watch scramble footage \u2192 Freeze frame \u2192 Call reaction within 0.3s \u2192 Physical mimicry. Builds instinctive neural pathways for MMA scrambles, BJJ guard recoveries, and wrestling reshots.",
+      "why_this_works": "Why 'Scramble Autopilot'? You reported you act instantly under pressure. This drill targets instinctive reactions through imagery reps."
     },
     {
       "name": "Chain Reaction Trigger",
@@ -1563,8 +1584,9 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "RESET → RELOAD",
-      "notes": "After failed attempts: 1. Backstep to safe range (MMA/wrestling) or guard recovery (BJJ). 2. 4-4-6 breathing. 3. Immediate re-engagement."
+      "cue": "RESET \u2192 RELOAD",
+      "notes": "After failed attempts: 1. Backstep to safe range (MMA/wrestling) or guard recovery (BJJ). 2. 4-4-6 breathing. 3. Immediate re-engagement.",
+      "why_this_works": "Why 'Matador Reset Protocol'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines."
     },
     {
       "name": "Control Chaos Drill",
@@ -1588,7 +1610,7 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "CHAOS → CATALYST",
+      "cue": "CHAOS \u2192 CATALYST",
       "notes": "Deliberately create messy scenarios (MMA cage pinning, BJS scrambles, wrestling funk) while maintaining technical precision."
     },
     {
@@ -1614,8 +1636,9 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "TIRED ≠ WEAK",
-      "notes": "Pre-fatigue training with empowering mantras specific to each sport's demands (MMA clinch work, BJS guard retention, wrestling bottom recovery)."
+      "cue": "TIRED \u2260 WEAK",
+      "notes": "Pre-fatigue training with empowering mantras specific to each sport's demands (MMA clinch work, BJS guard retention, wrestling bottom recovery).",
+      "why_this_works": "Why 'Gas Tank Reframe'? You reported your inner critic distracts you. This drill targets silencing the inner critic through self-talk practice."
     },
     {
       "name": "Cage Door Visualization",
@@ -1665,8 +1688,8 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "MISS → MOVE → ATTACK",
-      "notes": "Immediate transition drill: Failed armbar → take back, Missed RNC → leg attack, etc."
+      "cue": "MISS \u2192 MOVE \u2192 ATTACK",
+      "notes": "Immediate transition drill: Failed armbar \u2192 take back, Missed RNC \u2192 leg attack, etc."
     },
     {
       "name": "Wrestler's Mental Reps",
@@ -1688,8 +1711,9 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "SEE → SHOOT",
-      "notes": "50 daily mental reps of perfect shot entries and sprawls with kinesthetic visualization."
+      "cue": "SEE \u2192 SHOOT",
+      "notes": "50 daily mental reps of perfect shot entries and sprawls with kinesthetic visualization.",
+      "why_this_works": "Why 'Wrestler's Mental Reps'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through imagery reps."
     },
     {
       "name": "Shot Recovery System",
@@ -1712,7 +1736,7 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "MISS → SPRAWL → CHAIN",
+      "cue": "MISS \u2192 SPRAWL \u2192 CHAIN",
       "notes": "Failed shot immediately transitions to: 1. Defensive sprawl. 2. Secondary takedown. 3. Worst-case guard pull (MMA)."
     },
     {
@@ -1737,8 +1761,8 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "FRAME → RECOVER",
-      "notes": "Daily: Partner initiates passes → Instant defensive reaction without conscious thought."
+      "cue": "FRAME \u2192 RECOVER",
+      "notes": "Daily: Partner initiates passes \u2192 Instant defensive reaction without conscious thought."
     },
     {
       "name": "Octagon GPS",
@@ -1760,8 +1784,9 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "CUT → CORNER → CONTROL",
-      "notes": "Use tape marks to simulate cage during shadow work. 45° angle priority system."
+      "cue": "CUT \u2192 CORNER \u2192 CONTROL",
+      "notes": "Use tape marks to simulate cage during shadow work. 45\u00b0 angle priority system.",
+      "why_this_works": "Why 'Octagon GPS'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through visualisation practice."
     },
     {
       "name": "Mat-Toughness Builder",
@@ -1784,7 +1809,7 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "MAT → MINE",
+      "cue": "MAT \u2192 MINE",
       "notes": "Weekly: 1. Cold shower pre-training. 2. Loud crowd noise. 3. Judged scenarios with consequences."
     },
     {
@@ -1808,8 +1833,8 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "MISS → MOVE → FINISH",
-      "notes": "Drill 3-move chains: Armbar fails → triangle → omoplata. No hesitation between transitions."
+      "cue": "MISS \u2192 MOVE \u2192 FINISH",
+      "notes": "Drill 3-move chains: Armbar fails \u2192 triangle \u2192 omoplata. No hesitation between transitions."
     },
     {
       "name": "Dirty Boxing Mindset",
@@ -1855,9 +1880,10 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "BUMP → BRIDGE → BASE",
+      "cue": "BUMP \u2192 BRIDGE \u2192 BASE",
       "notes": "When pinned: 1. Explosive bridge. 2. 2-second breath hold. 3. Systematic escape chain.",
-      "video_url": "https://youtu.be/escape_autopilot"
+      "video_url": "https://youtu.be/escape_autopilot",
+      "why_this_works": "Why 'Escape Autopilot'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines."
     },
     {
       "name": "First Fight Simulator",
@@ -1880,7 +1906,7 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "DEBUT → DOMINATE",
+      "cue": "DEBUT \u2192 DOMINATE",
       "notes": "Includes: 1. Walkout rehearsal. 2. Announcer call simulation. 3. First exchange scripting."
     },
     {
@@ -1903,8 +1929,9 @@
       ],
       "phase": "GPP",
       "intensity": "low",
-      "cue": "IN → HOLD → OUT → FIGHT",
-      "notes": "4-4-4-4 breathing pattern: Inhale (4s), Hold (4s), Exhale (4s), Hold (4s) during positional drills."
+      "cue": "IN \u2192 HOLD \u2192 OUT \u2192 FIGHT",
+      "notes": "4-4-4-4 breathing pattern: Inhale (4s), Hold (4s), Exhale (4s), Hold (4s) during positional drills.",
+      "why_this_works": "Why 'Survival Breathing'? You reported your inner critic distracts you. This drill targets silencing the inner critic through breathing drills."
     },
     {
       "name": "Ride Clock Mindset",
@@ -1927,7 +1954,7 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "BREAK → THEM → NOT → ME",
+      "cue": "BREAK \u2192 THEM \u2192 NOT \u2192 ME",
       "notes": "30-second countdown drill where stopping pressure = restart. Mental framing of opponent's discomfort."
     },
     {
@@ -1950,7 +1977,7 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "FIND → THE → FENCE",
+      "cue": "FIND \u2192 THE \u2192 FENCE",
       "notes": "Blindfolded cage navigation drills to build spatial awareness without visual dependence."
     },
     {
@@ -1973,8 +2000,9 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "GRIP → PULL → GO",
-      "notes": "100+ repetitions of competition-start grip sequences until fully automatic."
+      "cue": "GRIP \u2192 PULL \u2192 GO",
+      "notes": "100+ repetitions of competition-start grip sequences until fully automatic.",
+      "why_this_works": "Why 'First Grip Battle'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
     },
     {
       "name": "Submission Survival",
@@ -1997,8 +2025,9 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "DANGER → BREATHE → ESCAPE",
-      "notes": "Deliberate training in compromised positions with specific recovery protocols."
+      "cue": "DANGER \u2192 BREATHE \u2192 ESCAPE",
+      "notes": "Deliberate training in compromised positions with specific recovery protocols.",
+      "why_this_works": "Why 'Submission Survival'? You reported your inner critic distracts you. This drill targets silencing the inner critic through breathing drills."
     },
     {
       "name": "The Why Chain",
@@ -2025,12 +2054,13 @@
       "phase": "GPP",
       "intensity": "low",
       "cue": "DIG DEEPER",
-      "notes": "Pre-training: 1. Ask 'Why does this session matter?' 2. Give 3 layered answers (e.g., 'To improve takedowns → to dominate opponents → to prove my discipline'). 3. Keep visual reminder in gym bag. Based on self-determination theory.",
+      "notes": "Pre-training: 1. Ask 'Why does this session matter?' 2. Give 3 layered answers (e.g., 'To improve takedowns \u2192 to dominate opponents \u2192 to prove my discipline'). 3. Keep visual reminder in gym bag. Based on self-determination theory.",
       "progression": {
         "beginner": "Weekly written exercises",
         "intermediate": "Daily quick-answer ritual",
         "elite": "Integrated with pre-fight routine"
-      }
+      },
+      "why_this_works": "Why 'The Why Chain'? You reported you rely on small wins for motivation. This drill targets reward linkage through journaling work."
     },
     {
       "name": "The Scoreboard Reset",
@@ -2084,13 +2114,14 @@
       ],
       "phase": "GPP",
       "intensity": "medium",
-      "cue": "INPUT → PROCESS → USE",
+      "cue": "INPUT \u2192 PROCESS \u2192 USE",
       "notes": "During coaching feedback: 1. Tactical breathing (4s in, 4s hold). 2. Categorize input ('Tactical' vs 'Emotional'). 3. Extract one actionable item. Reduces cortisol spikes by 32% in studies.",
       "progression": {
         "beginner": "Recorded video review",
         "intermediate": "Live technical corrections",
         "elite": "High-stakes corner instructions"
-      }
+      },
+      "why_this_works": "Why 'The Coach Filter'? You reported coach criticism rattles you. This drill targets reframing criticism through breathing drills."
     },
     {
       "name": "Mat Pack Mentality",
@@ -2114,7 +2145,7 @@
       ],
       "phase": "GPP",
       "intensity": "high",
-      "cue": "THEIR EYES → MY FIRE",
+      "cue": "THEIR EYES \u2192 MY FIRE",
       "notes": "Pre-training: 1. Visualize peers watching. 2. Assign their gaze a color (e.g., blue energy). 3. 'Draw it in' during performance. Uses social facilitation theory to boost output.",
       "progression": {
         "beginner": "Private visualization",
@@ -2143,13 +2174,14 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "IF [X] → THEN [Y]",
-      "notes": "Pre-sparring: 1. Write 3 'If-Then' rules (e.g., 'If they blitz → pivot right'). 2. Verbalize pre-round. 3. Post-round review execution. Cuts decision latency by 0.8s.",
+      "cue": "IF [X] \u2192 THEN [Y]",
+      "notes": "Pre-sparring: 1. Write 3 'If-Then' rules (e.g., 'If they blitz \u2192 pivot right'). 2. Verbalize pre-round. 3. Post-round review execution. Cuts decision latency by 0.8s.",
       "progression": {
         "beginner": "Single-technique triggers",
         "intermediate": "Combination responses",
         "elite": "Full chaos adaptation"
-      }
+      },
+      "why_this_works": "Why 'Sparring Autopilot'? You reported you act instantly under pressure. This drill targets instinctive reactions through anchor cues."
     },
     {
       "name": "The 90-Second Storm",
@@ -2171,7 +2203,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "STORM → CONTROL",
+      "cue": "STORM \u2192 CONTROL",
       "notes": "First 90s of sparring: 1. Mandatory engagement. 2. Designated 'chaos creator' partner. 3. Immediate film review of adaptation. Conditions amygdala response.",
       "progression": {
         "beginner": "Controlled chaos",
@@ -2199,7 +2231,7 @@
       ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "BREAK → REBOOT",
+      "cue": "BREAK \u2192 REBOOT",
       "notes": "After failed sequences: 1. Disengage to safe range. 2. 'Keychain twist' physical reset. 3. Re-engage with simple combo. Used by UFC athletes between rounds.",
       "progression": {
         "beginner": "Designated reset moments",
@@ -2225,7 +2257,7 @@
       ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "TRACK → DON'T CHASE",
+      "cue": "TRACK \u2192 DON'T CHASE",
       "notes": "Partner throws 10:3 feint:commit ratio. React only to real attacks. Develops saccadic eye movement control. 3 rounds weekly.",
       "progression": {
         "beginner": "Telegraphed feints",
@@ -2253,7 +2285,7 @@
       ],
       "phase": "TAPER",
       "intensity": "low",
-      "cue": "BEAT → BREATHE",
+      "cue": "BEAT \u2192 BREATHE",
       "notes": "Daily: 1. Walk to actual fight music. 2. Sync exhales to every 4th beat. 3. Finger tap rhythm on thigh. Creates entrainment effect.",
       "progression": {
         "beginner": "Private rehearsals",
@@ -2279,7 +2311,7 @@
       ],
       "phase": "TAPER",
       "intensity": "low",
-      "cue": "SEE → FEEL → WIN",
+      "cue": "SEE \u2192 FEEL \u2192 WIN",
       "notes": "Morning/evening: 1. Watch opponent footage. 2. Mental rehearsal of gameplan. 3. Kinesthetic mimicry of key techniques. Maintains neural pathways without damage risk.",
       "progression": {
         "beginner": "Basic technique review",
@@ -2306,7 +2338,7 @@
       ],
       "phase": "TAPER",
       "intensity": "low",
-      "cue": "PRESSURE → POWER",
+      "cue": "PRESSURE \u2192 POWER",
       "notes": "When anxious: 1. Cold water face immersion (15s). 2. 4-4-6 breathing. 3. Power pose. Triggers mammalian dive reflex.",
       "progression": {
         "beginner": "Scheduled sessions",
@@ -2333,7 +2365,7 @@
       ],
       "phase": "TAPER",
       "intensity": "low",
-      "cue": "LINK → LOCK → LAUNCH",
+      "cue": "LINK \u2192 LOCK \u2192 LAUNCH",
       "notes": "24hrs pre-fight: 1. Shadow drill with exact fight-day gear. 2. Physical trigger for each technique (e.g., ear tap = jab). 3. Full walkthrough at 50% speed. Cements neural firing patterns.",
       "progression": {
         "beginner": "Technique segments",
@@ -2341,730 +2373,1367 @@
         "elite": "Adversity response testing"
       }
     },
-  {
-    "name": "First Bell Domination",
-    "description": "Pre-programs aggressive opening sequences to eliminate tentativeness in Round 1.",
-    "theme_tags": ["overthink", "avoidant", "decide_fast"],
-    "raw_traits": ["aggressive", "ruthless"],
-    "modalities": ["tactical drill", "visualisation"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "BELL → BOMBARD",
-    "notes": "Drill 3 pre-set combos for opening 30 seconds. Repeat 50x/week."
-  },
-  {
-    "name": "Rope Reset Protocol",
-    "description": "Breaks freeze states when trapped against ropes using vagus nerve activation.",
-    "theme_tags": ["mental_freeze", "physical_freeze", "decide_freeze"],
-    "raw_traits": ["commanding", "resilient"],
-    "modalities": ["breathwork", "game reset"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "ROPE → RESET → RAGE",
-    "notes": "Exhale fully + glove tap when cornered. Drill with flurry simulations."
-  },
-  {
-    "name": "Judgment-Proof Jab",
-    "description": "Immunizes against audience reactions through crowd noise exposure therapy.",
-    "theme_tags": ["audience_threat"],
-    "raw_traits": ["focused", "confident"],
-    "modalities": ["focus drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "THEIR NOISE → MY RHYTHM",
-    "notes": "Shadowbox with booing recordings. Maintain technical precision."
-  },
-  {
-    "name": "Corner Command",
-    "description": "Conditions fighters to process coach criticism without threat response.",
-    "theme_tags": ["authority_threat"],
-    "raw_traits": ["commanding", "precise"],
-    "modalities": ["anchor cue"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "LISTEN → EXECUTE",
-    "notes": "Deliberate mistakes in sparring to practice receiving corrections."
-  },
-  {
-    "name": "Flurry Autopilot",
-    "description": "Pre-sets defensive responses to pressure flurries via strobe light training.",
+    {
+      "name": "First Bell Domination",
+      "description": "Pre-programs aggressive opening sequences to eliminate tentativeness in Round 1.",
+      "theme_tags": [
+        "overthink",
+        "avoidant",
+        "decide_fast"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "tactical drill",
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "BELL \u2192 BOMBARD",
+      "notes": "Drill 3 pre-set combos for opening 30 seconds. Repeat 50x/week.",
+      "why_this_works": "Why 'First Bell Domination'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+    },
+    {
+      "name": "Rope Reset Protocol",
+      "description": "Breaks freeze states when trapped against ropes using vagus nerve activation.",
+      "theme_tags": [
+        "mental_freeze",
+        "physical_freeze",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "commanding",
+        "resilient"
+      ],
+      "modalities": [
+        "breathwork",
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "ROPE \u2192 RESET \u2192 RAGE",
+      "notes": "Exhale fully + glove tap when cornered. Drill with flurry simulations.",
+      "why_this_works": "Why 'Rope Reset Protocol'? You reported you freeze up under pressure. This drill targets freeze interruption through breathing drills."
+    },
+    {
+      "name": "Judgment-Proof Jab",
+      "description": "Immunizes against audience reactions through crowd noise exposure therapy.",
+      "theme_tags": [
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "focused",
+        "confident"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "THEIR NOISE \u2192 MY RHYTHM",
+      "notes": "Shadowbox with booing recordings. Maintain technical precision."
+    },
+    {
+      "name": "Corner Command",
+      "description": "Conditions fighters to process coach criticism without threat response.",
+      "theme_tags": [
+        "authority_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "precise"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "LISTEN \u2192 EXECUTE",
+      "notes": "Deliberate mistakes in sparring to practice receiving corrections.",
+      "why_this_works": "Why 'Corner Command'? You reported coach criticism rattles you. This drill targets reframing criticism through anchor cues."
+    },
+    {
+      "name": "Flurry Autopilot",
+      "description": "Pre-sets defensive responses to pressure flurries via strobe light training.",
       "theme_tags": [
         "mental_freeze",
         "decide_freeze"
       ],
-    "raw_traits": ["tactical", "calm"],
-    "modalities": ["tactical drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "STORM → SHELL → SLIP",
-    "notes": "Random strobe flashes trigger pre-programmed defensive sequences."
-  },
-  {
-    "name": "Cardio Confidence",
-    "description": "Rebreathing drills to control adrenaline-induced gasping during exchanges.",
-    "theme_tags": ["breath_fast", "hr_up"],
-    "raw_traits": ["relaxed", "focused"],
-    "modalities": ["breathwork"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "GASP → GROUND",
-    "notes": "Post-sprint breath recovery drills with pursed-lip exhales."
-  },
-  {
-    "name": "Error Eraser",
-    "description": "Kinesthetic reset protocol for missed punches to prevent mental loops.",
-    "theme_tags": ["post_mistake"],
-    "raw_traits": ["resilient", "aggressive"],
-    "modalities": ["game reset"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "MISS → MOVE → MURDER",
-    "notes": "Immediate forward pivot after missed shots to reinforce aggression."
-  },
-  {
-    "name": "Third Round Trigger",
-    "description": "Pre-set round transitions to maintain intensity through championship rounds.",
-    "theme_tags": ["fatigue"],
-    "raw_traits": ["hungry", "ruthless"],
-    "modalities": ["anchor cue"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "BELL → BEAST",
-    "notes": "Specific corner ritual (e.g., ammonia sniff) to trigger next-level output."
-  },
-  {
-    "name": "Staredown Steel",
-    "description": "Develops unbreakable composure during prefight faceoffs.",
-    "theme_tags": ["emotional"],
-    "raw_traits": ["commanding", "confident"],
-    "modalities": ["visualisation"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "low",
-    "cue": "EYES → ICE",
-    "notes": "Daily mirror drills with opponent footage playing in background."
-  },
-  {
-    "name": "Cutman Calm",
-    "description": "Trains fighters to maintain clarity when bleeding through biofeedback.",
-    "theme_tags": ["self_anger"],
-    "raw_traits": ["calm", "tactical"],
-    "modalities": ["breathwork"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "BLOOD → BREATHE → BATTLE",
-    "notes": "Simulated cut scenarios with cold water drips during sparring."
-  },
-  {
-    "name": "Decision Dominance",
-    "description": "Eliminates hesitation in split-second openings through strobe training.",
-        "theme_tags": ["overthink", "decide_fast", "decide_freeze"],
-    "raw_traits": ["precise", "aggressive"],
-    "modalities": ["tactical drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "SEE → SEIZE",
-    "notes": "React to 200ms openings during random strobe light intervals."
-  },
-  {
-    "name": "Judges' Justice",
-    "description": "Conditions fighters to ignore bad scorecards and maintain fight IQ.",
-    "theme_tags": ["external_judgement"],
-    "raw_traits": ["tactical", "confident"],
-    "modalities": ["self-talk"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "THEIR SCORE → MY WAR",
-    "notes": "Sparring with deliberately unfair scoring to reinforce process focus."
-  },
-  {
-    "name": "Swarm Survival",
-    "description": "Develops composure under opponent's flurry pressure.",
-    "theme_tags": ["mental_freeze"],
-    "raw_traits": ["calm", "resilient"],
-    "modalities": ["tactical drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "STORM → SHELL → STRIKE",
-    "notes": "3v1 situational sparring with controlled flurry attacks."
-  },
-  {
-    "name": "Towel Trigger",
-    "description": "Creates emergency reserve for late-round exhaustion.",
-    "theme_tags": ["fatigue"],
-    "raw_traits": ["hungry", "ruthless"],
-    "modalities": ["anchor cue"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "TIRED → TERROR",
-    "notes": "Pre-set combo triggered by coach's towel touch during exhaustion drills."
-  },
-  {
-    "name": "Gamble Gloves",
-    "description": "Rewires brain to stay technical during adrenaline spikes.",
-    "theme_tags": ["emotional"],
-    "raw_traits": ["precise", "tactical"],
-    "modalities": ["focus drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "FIRE → FOCUS",
-    "notes": "Spar with one glove weighted to punish wild swings."
-  },
-  {
-    "name": "Doctor's Deception",
-    "description": "Maintains fight IQ during medical checks in championship bouts.",
-    "theme_tags": ["shutdown"],
-    "raw_traits": ["commanding", "confident"],
-    "modalities": ["visualisation"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "PAUSE → PLAN",
-    "notes": "Random stoppages during sparring to practice resetting mentally."
-  },
-  {
-    "name": "Canvas Code",
-    "description": "Prevents emotional spiral after knockdowns through kinesthetic reset.",
-    "theme_tags": ["post_mistake"],
-    "raw_traits": ["resilient", "aggressive"],
-    "modalities": ["game reset"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "DOWN → UP → ATTACK",
-    "notes": "Controlled knockdown drills with immediate counter-attack requirement."
-  },
-  {
-    "name": "Announcer Armor",
-    "description": "Blocks out commentary distractions during major fights.",
-    "theme_tags": ["audience_threat"],
-    "raw_traits": ["focused", "commanding"],
-    "modalities": ["focus drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "medium",
-    "cue": "WORDS → WIND",
-    "notes": "Spar with fight commentary playing at increasing volumes."
-  },
-  {
-    "name": "Champion's Choice",
-    "description": "Eliminates decision paralysis in championship rounds.",
-    "theme_tags": ["overthink", "decide_fast"],
-    "raw_traits": ["decisive", "ruthless"],
-    "modalities": ["tactical drill"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "DOUBT → DESTROY",
-    "notes": "Forced 0.5-second decision windows during exhaustion drills."
-  },
-  {
-    "name": "Final Bell Fury",
-    "description": "Conditions fighters to leave everything in the ring for judges.",
-    "theme_tags": ["external_judgement"],
-    "raw_traits": ["aggressive", "hungry"],
-    "modalities": ["anchor cue"],
-    "sports": ["boxing"],
-    "phase": "GPP",
-    "intensity": "high",
-    "cue": "BELL → BLITZ",
-    "notes": "10-second all-out sprint finisher to every round in training."
-  }
+      "raw_traits": [
+        "tactical",
+        "calm"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "STORM \u2192 SHELL \u2192 SLIP",
+      "notes": "Random strobe flashes trigger pre-programmed defensive sequences."
+    },
+    {
+      "name": "Cardio Confidence",
+      "description": "Rebreathing drills to control adrenaline-induced gasping during exchanges.",
+      "theme_tags": [
+        "breath_fast",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "focused"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "GASP \u2192 GROUND",
+      "notes": "Post-sprint breath recovery drills with pursed-lip exhales.",
+      "why_this_works": "Why 'Cardio Confidence'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
+    },
+    {
+      "name": "Error Eraser",
+      "description": "Kinesthetic reset protocol for missed punches to prevent mental loops.",
+      "theme_tags": [
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "resilient",
+        "aggressive"
+      ],
+      "modalities": [
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "MISS \u2192 MOVE \u2192 MURDER",
+      "notes": "Immediate forward pivot after missed shots to reinforce aggression."
+    },
+    {
+      "name": "Third Round Trigger",
+      "description": "Pre-set round transitions to maintain intensity through championship rounds.",
+      "theme_tags": [
+        "fatigue"
+      ],
+      "raw_traits": [
+        "hungry",
+        "ruthless"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "BELL \u2192 BEAST",
+      "notes": "Specific corner ritual (e.g., ammonia sniff) to trigger next-level output."
+    },
+    {
+      "name": "Staredown Steel",
+      "description": "Develops unbreakable composure during prefight faceoffs.",
+      "theme_tags": [
+        "emotional"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "low",
+      "cue": "EYES \u2192 ICE",
+      "notes": "Daily mirror drills with opponent footage playing in background."
+    },
+    {
+      "name": "Cutman Calm",
+      "description": "Trains fighters to maintain clarity when bleeding through biofeedback.",
+      "theme_tags": [
+        "self_anger"
+      ],
+      "raw_traits": [
+        "calm",
+        "tactical"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "BLOOD \u2192 BREATHE \u2192 BATTLE",
+      "notes": "Simulated cut scenarios with cold water drips during sparring."
+    },
+    {
+      "name": "Decision Dominance",
+      "description": "Eliminates hesitation in split-second openings through strobe training.",
+      "theme_tags": [
+        "overthink",
+        "decide_fast",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "precise",
+        "aggressive"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "SEE \u2192 SEIZE",
+      "notes": "React to 200ms openings during random strobe light intervals.",
+      "why_this_works": "Why 'Decision Dominance'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+    },
+    {
+      "name": "Judges' Justice",
+      "description": "Conditions fighters to ignore bad scorecards and maintain fight IQ.",
+      "theme_tags": [
+        "external_judgement"
+      ],
+      "raw_traits": [
+        "tactical",
+        "confident"
+      ],
+      "modalities": [
+        "self-talk"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "THEIR SCORE \u2192 MY WAR",
+      "notes": "Sparring with deliberately unfair scoring to reinforce process focus."
+    },
+    {
+      "name": "Swarm Survival",
+      "description": "Develops composure under opponent's flurry pressure.",
+      "theme_tags": [
+        "mental_freeze"
+      ],
+      "raw_traits": [
+        "calm",
+        "resilient"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "STORM \u2192 SHELL \u2192 STRIKE",
+      "notes": "3v1 situational sparring with controlled flurry attacks."
+    },
+    {
+      "name": "Towel Trigger",
+      "description": "Creates emergency reserve for late-round exhaustion.",
+      "theme_tags": [
+        "fatigue"
+      ],
+      "raw_traits": [
+        "hungry",
+        "ruthless"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "TIRED \u2192 TERROR",
+      "notes": "Pre-set combo triggered by coach's towel touch during exhaustion drills."
+    },
+    {
+      "name": "Gamble Gloves",
+      "description": "Rewires brain to stay technical during adrenaline spikes.",
+      "theme_tags": [
+        "emotional"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "FIRE \u2192 FOCUS",
+      "notes": "Spar with one glove weighted to punish wild swings."
+    },
+    {
+      "name": "Doctor's Deception",
+      "description": "Maintains fight IQ during medical checks in championship bouts.",
+      "theme_tags": [
+        "shutdown"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "PAUSE \u2192 PLAN",
+      "notes": "Random stoppages during sparring to practice resetting mentally."
+    },
+    {
+      "name": "Canvas Code",
+      "description": "Prevents emotional spiral after knockdowns through kinesthetic reset.",
+      "theme_tags": [
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "resilient",
+        "aggressive"
+      ],
+      "modalities": [
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "DOWN \u2192 UP \u2192 ATTACK",
+      "notes": "Controlled knockdown drills with immediate counter-attack requirement."
+    },
+    {
+      "name": "Announcer Armor",
+      "description": "Blocks out commentary distractions during major fights.",
+      "theme_tags": [
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "focused",
+        "commanding"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "medium",
+      "cue": "WORDS \u2192 WIND",
+      "notes": "Spar with fight commentary playing at increasing volumes."
+    },
+    {
+      "name": "Champion's Choice",
+      "description": "Eliminates decision paralysis in championship rounds.",
+      "theme_tags": [
+        "overthink",
+        "decide_fast"
+      ],
+      "raw_traits": [
+        "decisive",
+        "ruthless"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "DOUBT \u2192 DESTROY",
+      "notes": "Forced 0.5-second decision windows during exhaustion drills.",
+      "why_this_works": "Why 'Champion's Choice'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+    },
+    {
+      "name": "Final Bell Fury",
+      "description": "Conditions fighters to leave everything in the ring for judges.",
+      "theme_tags": [
+        "external_judgement"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "hungry"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "GPP",
+      "intensity": "high",
+      "cue": "BELL \u2192 BLITZ",
+      "notes": "10-second all-out sprint finisher to every round in training."
+    }
   ],
   "boxing_spp_drills": [
     {
       "name": "Flurry Freeze Breaker",
       "description": "Pre-programmed defensive responses to overwhelm punches that trigger freezing.",
-      "theme_tags": ["physical_freeze", "mental_freeze", "decide_freeze"],
-      "raw_traits": ["aggressive", "ruthless"],
-      "modalities": ["tactical drill", "anchor cue"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "physical_freeze",
+        "mental_freeze",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "tactical drill",
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "SWARM → SWIPE → STEP",
-      "notes": "Partner throws 10-punch flurries, react with: 1. Forearm swipe (break plane). 2. Angle change. 3. Counter hook. 50 reps/week."
+      "cue": "SWARM \u2192 SWIPE \u2192 STEP",
+      "notes": "Partner throws 10-punch flurries, react with: 1. Forearm swipe (break plane). 2. Angle change. 3. Counter hook. 50 reps/week.",
+      "why_this_works": "Why 'Flurry Freeze Breaker'? You reported you freeze up under pressure. This drill targets freeze interruption through technical reps."
     },
     {
       "name": "Judgment-Proof Jab",
       "description": "Maintains technical precision under audience pressure.",
-      "theme_tags": ["audience_threat"],
-      "raw_traits": ["precise", "focused"],
-      "modalities": ["focus drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "precise",
+        "focused"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "NOISE → JAB",
+      "cue": "NOISE \u2192 JAB",
       "notes": "Shadowbox with crowd noise recordings, focusing solely on perfect jab mechanics."
     },
     {
       "name": "Cardio Panic Reset",
       "description": "Breaks the anxiety-HR spiral during fatigued rounds.",
-      "theme_tags": ["breath_fast", "hr_up"],
-      "raw_traits": ["relaxed", "commanding"],
-      "modalities": ["breathwork", "game reset"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "breath_fast",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "commanding"
+      ],
+      "modalities": [
+        "breathwork",
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "GASP → GROUND → GO",
-      "notes": "When gassed: 1. 3-step exhale. 2. Foot stomp. 3. Short burst combo. Mimics adrenaline dump recovery."
+      "cue": "GASP \u2192 GROUND \u2192 GO",
+      "notes": "When gassed: 1. 3-step exhale. 2. Foot stomp. 3. Short burst combo. Mimics adrenaline dump recovery.",
+      "why_this_works": "Why 'Cardio Panic Reset'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
     },
     {
       "name": "Corner Command",
       "description": "Processes mid-round coaching without threat response.",
-      "theme_tags": ["authority_threat"],
-      "raw_traits": ["confident", "tactical"],
-      "modalities": ["anchor cue"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "authority_threat"
+      ],
+      "raw_traits": [
+        "confident",
+        "tactical"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "HEAR → FILTER → ACT",
-      "notes": "Coach shouts random instructions during sparring; fighter executes only pre-agreed keywords."
+      "cue": "HEAR \u2192 FILTER \u2192 ACT",
+      "notes": "Coach shouts random instructions during sparring; fighter executes only pre-agreed keywords.",
+      "why_this_works": "Why 'Corner Command'? You reported coach criticism rattles you. This drill targets reframing criticism through anchor cues."
     },
     {
       "name": "Self-Rage Redirect",
       "description": "Converts post-mistake anger into tactical adjustments.",
-      "theme_tags": ["self_anger", "post_mistake"],
-      "raw_traits": ["aggressive", "precise"],
-      "modalities": ["self-talk"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "self_anger",
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "self-talk"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "MAD → MEAN → MOVE",
+      "cue": "MAD \u2192 MEAN \u2192 MOVE",
       "notes": "After eating clean shot: 1. Glove tap to head (physical release). 2. Growl exhale. 3. Immediate counter sequence."
     },
     {
       "name": "Tentative Trigger",
       "description": "Eliminates hesitancy in opening exchanges.",
-      "theme_tags": ["overthink", "avoidant", "decide_fast"],
-      "raw_traits": ["aggressive", "hungry"],
-      "modalities": ["tactical drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "overthink",
+        "avoidant",
+        "decide_fast"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "hungry"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "SEE → STRIKE",
-      "notes": "First 10 seconds of sparring rounds must initiate with 3-punch combo, regardless of opponent."
+      "cue": "SEE \u2192 STRIKE",
+      "notes": "First 10 seconds of sparring rounds must initiate with 3-punch combo, regardless of opponent.",
+      "why_this_works": "Why 'Tentative Trigger'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
     },
     {
       "name": "Shutdown Sequence",
       "description": "Emergency reset for emotional collapse mid-fight.",
-      "theme_tags": ["shutdown", "emotional"],
-      "raw_traits": ["commanding", "resilient"],
-      "modalities": ["anchor cue", "breathwork"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "shutdown",
+        "emotional"
+      ],
+      "raw_traits": [
+        "commanding",
+        "resilient"
+      ],
+      "modalities": [
+        "anchor cue",
+        "breathwork"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "DOWN → DIG → DESTROY",
+      "cue": "DOWN \u2192 DIG \u2192 DESTROY",
       "notes": "When overwhelmed: 1. Wipe mouth (physical trigger). 2. Recall pre-loaded memory. 3. Forward pressure combo."
     },
     {
       "name": "Referee Armor",
       "description": "Ignores perceived bad calls during action.",
-      "theme_tags": ["authority_threat"],
-      "raw_traits": ["focused", "ruthless"],
-      "modalities": ["focus drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "authority_threat"
+      ],
+      "raw_traits": [
+        "focused",
+        "ruthless"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "low",
-      "cue": "WHISTLE → WORK",
-      "notes": "Partner randomly interrupts sparring; fighter maintains combat stance and focus."
+      "cue": "WHISTLE \u2192 WORK",
+      "notes": "Partner randomly interrupts sparring; fighter maintains combat stance and focus.",
+      "why_this_works": "Why 'Referee Armor'? You reported coach criticism rattles you. This drill targets reframing criticism through attention training."
     },
     {
       "name": "Crowd Energy Siphon",
       "description": "Transforms audience pressure into performance fuel.",
-      "theme_tags": ["audience_threat"],
-      "raw_traits": ["commanding", "joyful"],
-      "modalities": ["visualisation"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "audience_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "joyful"
+      ],
+      "modalities": [
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "BOO → BOOST",
+      "cue": "BOO \u2192 BOOST",
       "notes": "Visualize negative crowd noise as physical energy entering gloves during padwork."
     },
     {
       "name": "Cardio Lie Detector",
       "description": "Overrides false fatigue signals in championship rounds.",
-      "theme_tags": ["hr_up", "breath_fast"],
-      "raw_traits": ["hungry", "ruthless"],
-      "modalities": ["self-talk"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "hr_up",
+        "breath_fast"
+      ],
+      "raw_traits": [
+        "hungry",
+        "ruthless"
+      ],
+      "modalities": [
+        "self-talk"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "TIRED → LYING",
-      "notes": "When exhausted: 1. Name 3 fresh body parts. 2. Throw 5 power shots. 3. Reset stance."
+      "cue": "TIRED \u2192 LYING",
+      "notes": "When exhausted: 1. Name 3 fresh body parts. 2. Throw 5 power shots. 3. Reset stance.",
+      "why_this_works": "Why 'Cardio Lie Detector'? You reported your heart rate spikes after errors. This drill targets heart-rate regulation through self-talk practice."
     },
     {
       "name": "Freeze Flash Drill",
       "description": "Prevents lock-up during unexpected punches.",
-        "theme_tags": ["physical_freeze", "decide_freeze"],
-      "raw_traits": ["aggressive", "precise"],
-      "modalities": ["tactical drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "physical_freeze",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "FLASH → FIGHT",
-      "notes": "Coach randomly shouts during sparring; fighter must immediately counter."
+      "cue": "FLASH \u2192 FIGHT",
+      "notes": "Coach randomly shouts during sparring; fighter must immediately counter.",
+      "why_this_works": "Why 'Freeze Flash Drill'? You reported you freeze up under pressure. This drill targets freeze interruption through technical reps."
     },
     {
       "name": "Overthink Override",
       "description": "Short-circuits analysis paralysis in tactical moments.",
-      "theme_tags": ["overthink", "decide_fast", "decide_freeze"],
-      "raw_traits": ["wild", "aggressive"],
-      "modalities": ["anchor cue"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "overthink",
+        "decide_fast",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "wild",
+        "aggressive"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "THINK → THROW",
-      "notes": "When hesitating: 1. Snap fingers. 2. Throw predetermined combo. 3. Reset."
+      "cue": "THINK \u2192 THROW",
+      "notes": "When hesitating: 1. Snap fingers. 2. Throw predetermined combo. 3. Reset.",
+      "why_this_works": "Why 'Overthink Override'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through anchor cues."
     },
     {
       "name": "Rope Rage Protocol",
       "description": "Emergency escape from corner pressure.",
-      "theme_tags": ["mental_freeze", "decide_freeze"],
-      "raw_traits": ["aggressive", "ruthless"],
-      "modalities": ["tactical drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "mental_freeze",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "TRAPPED → TORNADO",
+      "cue": "TRAPPED \u2192 TORNADO",
       "notes": "When against ropes: 1. Dip right. 2. Liver shot. 3. Slip left. 100 reps/week."
     },
     {
       "name": "Post-KD Reboot",
       "description": "Instant reset after knockdowns.",
-      "theme_tags": ["post_mistake"],
-      "raw_traits": ["resilient", "hungry"],
-      "modalities": ["game reset"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "resilient",
+        "hungry"
+      ],
+      "modalities": [
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "DOWN → DRAFT → DESTROY",
+      "cue": "DOWN \u2192 DRAFT \u2192 DESTROY",
       "notes": "After simulated KD: 1. Spit mouthguard. 2. Deep sniff. 3. Forward march."
     },
     {
       "name": "Staredown Switch",
       "description": "Controls pre-fight intimidation games.",
-      "theme_tags": ["peer_threat"],
-      "raw_traits": ["commanding", "confident"],
-      "modalities": ["visualisation"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "peer_threat"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "low",
-      "cue": "THEIR EYES → MY FIRE",
+      "cue": "THEIR EYES \u2192 MY FIRE",
       "notes": "Practice converting opponent's gaze into personal focus trigger."
     },
     {
       "name": "Bell-to-Bell Focus",
       "description": "Maintains concentration between rounds.",
-      "theme_tags": ["focus_breaker"],
-      "raw_traits": ["focused", "locked-in"],
-      "modalities": ["focus drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "focus_breaker"
+      ],
+      "raw_traits": [
+        "focused",
+        "locked-in"
+      ],
+      "modalities": [
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "REST → READY",
+      "cue": "REST \u2192 READY",
       "notes": "During minute breaks: 1. No sitting. 2. Stare at neutral point. 3. Shadowbox last combo."
     },
     {
       "name": "Cutman Calm",
       "description": "Manages panic during blood/doctor checks.",
-      "theme_tags": ["emotional"],
-      "raw_traits": ["relaxed", "confident"],
-      "modalities": ["breathwork"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "emotional"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "confident"
+      ],
+      "modalities": [
+        "breathwork"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "low",
-      "cue": "BLOOD → BREATHE",
+      "cue": "BLOOD \u2192 BREATHE",
       "notes": "During simulated cuts: 1. 4-7-8 breathing. 2. Positive self-talk. 3. Visualize restart."
     },
     {
       "name": "Gamble Gloves",
       "description": "Eliminates hesitation in trading situations.",
-      "theme_tags": ["avoidant"],
-      "raw_traits": ["aggressive", "wild"],
-      "modalities": ["tactical drill"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "avoidant"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "wild"
+      ],
+      "modalities": [
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "HURT → HURT MORE",
+      "cue": "HURT \u2192 HURT MORE",
       "notes": "When hit clean: must return 3-punch combo within 1 second."
     },
     {
       "name": "Decision Autopilot",
       "description": "Removes hesitation in championship rounds.",
-      "theme_tags": ["overthink", "decide_fast"],
-      "raw_traits": ["precise", "tactical"],
-      "modalities": ["anchor cue"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "overthink",
+        "decide_fast"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "high",
-      "cue": "DOUBT → DO",
-      "notes": "Last 30 seconds of sparring: coach shouts random numbers = predetermined combos."
+      "cue": "DOUBT \u2192 DO",
+      "notes": "Last 30 seconds of sparring: coach shouts random numbers = predetermined combos.",
+      "why_this_works": "Why 'Decision Autopilot'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through anchor cues."
     },
     {
       "name": "Judgment Day Prep",
       "description": "Simulates high-pressure title fight variables.",
-      "theme_tags": ["audience_threat", "authority_threat"],
-      "raw_traits": ["confident", "commanding"],
-      "modalities": ["visualisation"],
-      "sports": ["boxing"],
+      "theme_tags": [
+        "audience_threat",
+        "authority_threat"
+      ],
+      "raw_traits": [
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
       "phase": "SPP",
       "intensity": "medium",
-      "cue": "CHAOS → CONTROL",
-      "notes": "Weekly: 1. Unusual ring walks. 2. Hostile crowd noise. 3. Extended introductions."
+      "cue": "CHAOS \u2192 CONTROL",
+      "notes": "Weekly: 1. Unusual ring walks. 2. Hostile crowd noise. 3. Extended introductions.",
+      "why_this_works": "Why 'Judgment Day Prep'? You reported coach criticism rattles you. This drill targets reframing criticism through visualisation practice."
     },
-  {
-    "name": "Taper Focus Funnel",
-    "description": "Narrows attention to key cues while filtering crowd noise during fight week.",
-    "theme_tags": ["audience_threat", "focus_crowd"],
-    "raw_traits": ["locked-in", "focused"],
-    "modalities": ["focus drill", "visualisation"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "low",
-    "cue": "TUNNEL VISION",
-    "notes": "Use noise-canceling headphones playing crowd sounds while visualizing perfect technique execution."
-  },
-  {
-    "name": "Judgment-Proof Jab",
-    "description": "Maintains technical precision under evaluative pressure from coaches.",
-    "theme_tags": ["authority_threat", "overthink"],
-    "raw_traits": ["precise", "confident"],
-    "modalities": ["anchor cue", "tactical drill"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "CRITICISM → FUEL",
-    "notes": "Shadowbox while receiving deliberate technical criticism, maintaining perfect form."
-  },
-  {
-    "name": "Freeze Breaker Combo",
-    "description": "Pre-programmed response to flurries that prevents mental/physical freezing.",
-    "theme_tags": ["mental_freeze", "physical_freeze", "decide_freeze"],
-    "raw_traits": ["aggressive", "ruthless"],
-    "modalities": ["imagery reps", "game reset"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "FLURRY → COUNTER",
-    "notes": "Mental rehearsal of specific counter combinations when trapped against ropes."
-  },
-  {
-    "name": "Cardio Calibration",
-    "description": "Resets breathing and heart rate patterns between rounds.",
-    "theme_tags": ["breath_fast", "hr_up"],
-    "raw_traits": ["relaxed", "precise"],
-    "modalities": ["breathwork", "anchor cue"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "low",
-    "cue": "IN 4 → HOLD 4 → OUT 6",
-    "notes": "Practice during padwork breaks to match actual round intervals."
-  },
-  {
-    "name": "Self-Rage Redirect",
-    "description": "Converts post-mistake anger into tactical adjustments.",
-    "theme_tags": ["self_anger", "post_mistake"],
-    "raw_traits": ["commanding", "aggressive"],
-    "modalities": ["self-talk", "game reset"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "ANGER → ACTION",
-    "notes": "Deliberately make mistakes in sparring to practice real-time correction."
-  },
-  {
-    "name": "Decision Autopilot",
-    "description": "Eliminates hesitation in punch selection during fatigue.",
-    "theme_tags": ["overthink", "avoidant", "decide_fast"],
-    "raw_traits": ["tactical", "precise"],
-    "modalities": ["visualisation", "tactical drill"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "SEE → THROW",
-    "notes": "Pre-program 3 'if-then' combos for common scenarios, drilled at 50% speed."
-  },
-  {
-    "name": "Walkout Heartrate Control",
-    "description": "Manages pre-fight adrenaline spike during ring approach.",
-    "theme_tags": ["hr_up", "emotional"],
-    "raw_traits": ["confident", "relaxed"],
-    "modalities": ["breathwork", "anchor cue"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "low",
-    "cue": "STEPS → BREATHS",
-    "notes": "Synchronize exhales with each step during walkout rehearsals."
-  },
-  {
-    "name": "Corner Command Protocol",
-    "description": "Optimizes between-round information absorption under stress.",
-    "theme_tags": ["authority_threat", "shutdown"],
-    "raw_traits": ["focused", "commanding"],
-    "modalities": ["anchor cue", "focus drill"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "LISTEN → NOD → EXECUTE",
-    "notes": "Practice with increasingly complex corner instructions during sparring breaks."
-  },
-  {
-    "name": "Rope Reset System",
-    "description": "Breaks freeze states when trapped against ropes.",
-    "theme_tags": ["mental_freeze", "physical_freeze"],
-    "raw_traits": ["aggressive", "ruthless"],
-    "modalities": ["game reset", "breathwork"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "TAP → SNAP → ATTACK",
-    "notes": "Physical glove tap triggers pre-programmed escape combination."
-  },
-  {
-    "name": "Judgment Filter",
-    "description": "Blocks external evaluation during technical execution.",
-    "theme_tags": ["audience_threat", "authority_threat"],
-    "raw_traits": ["confident", "commanding"],
-    "modalities": ["self-talk", "focus drill"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "THEIR EYES → MY HANDS",
-    "notes": "Train while observers give deliberate negative feedback on technique."
-  },
-  {
-    "name": "Adrenaline Mirror",
-    "description": "Simulates fight-night arousal during final technical work.",
-    "theme_tags": ["hr_up", "emotional"],
-    "raw_traits": ["focused", "confident"],
-    "modalities": ["visualisation", "pre-fight prep"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "SHAKE → FOCUS → BOX",
-    "notes": "Pre-padwork adrenaline spikes induced via cold exposure or breath holds."
-  },
-  {
-    "name": "Mistake Momentum",
-    "description": "Prevents post-error shutdown after taking clean shots.",
-    "theme_tags": ["post_mistake", "shutdown"],
-    "raw_traits": ["resilient", "aggressive"],
-    "modalities": ["game reset", "self-talk"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "HIT → GRIN → ANSWER",
-    "notes": "Deliberately eat light shots in sparring to practice immediate countering."
-  },
-  {
-    "name": "Decision Deadline",
-    "description": "Eliminates hesitation in punch selection under fatigue.",
-    "theme_tags": ["overthink", "avoidant", "decide_fast"],
-    "raw_traits": ["precise", "tactical"],
-    "modalities": ["tactical drill", "focus drill"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "1-MISSISSIPPI → THROW",
-    "notes": "Forced 1-second decision window during technical sparring."
-  },
-  {
-    "name": "Staredown Stabilizer",
-    "description": "Maintains autonomic control during prefight faceoffs.",
-    "theme_tags": ["emotional", "hr_up"],
-    "raw_traits": ["commanding", "confident"],
-    "modalities": ["breathwork", "anchor cue"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "low",
-    "cue": "EYES → BREATH → SMIRK",
-    "notes": "Practice with simulated staredowns including flash photography."
-  },
-  {
-    "name": "Bell-to-Bell Focus",
-    "description": "Sustains concentration through round transitions.",
-    "theme_tags": ["focus_fatigue", "shutdown"],
-    "raw_traits": ["focused", "resilient"],
-    "modalities": ["focus drill", "anchor cue"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "DING → DEEP → GO",
-    "notes": "Use actual bell sounds during padwork with immediate restart demands."
-  },
-  {
-    "name": "Pain-to-Power Redirect",
-    "description": "Converts fatigue signals into offensive output.",
-    "theme_tags": ["emotional", "self_anger"],
-    "raw_traits": ["aggressive", "ruthless"],
-    "modalities": ["self-talk", "identity shift"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "BURN → BEAST",
-    "notes": "Triggered when lactic acid builds, using specific power-generating imagery."
-  },
-  {
-    "name": "Scoreboard Immunity",
-    "description": "Maintains process focus regardless of perceived round outcomes.",
-    "theme_tags": ["external_validation", "emotional"],
-    "raw_traits": ["confident", "commanding"],
-    "modalities": ["self-talk", "reflection"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "low",
-    "cue": "MY ROUNDS → MY RULES",
-    "notes": "Watch controversial fight footage while maintaining technical self-evaluation."
-  },
-  {
-    "name": "Corner-to-Center Transition",
-    "description": "Accelerates mental reset when moving from defense to offense.",
-    "theme_tags": ["mental_freeze", "reset_speed", "decide_freeze"],
-    "raw_traits": ["aggressive", "precise"],
-    "modalities": ["game reset", "anchor cue"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "CENTER → HUNT",
-    "notes": "Physical ring position triggers offensive mindset shift."
-  },
-  {
-    "name": "Announcer Filter",
-    "description": "Blocks disruptive commentary during competition.",
-    "theme_tags": ["audience_threat", "focus_crowd"],
-    "raw_traits": ["focused", "locked-in"],
-    "modalities": ["focus drill", "breathwork"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "medium",
-    "cue": "WORDS → WIND",
-    "notes": "Train with distracting commentary playing during technical work."
-  },
-  {
-    "name": "Championship Minutes",
-    "description": "Simulates final championship round pressure.",
-    "theme_tags": ["under_pressure", "hr_up"],
-    "raw_traits": ["resilient", "commanding"],
-    "modalities": ["visualisation", "pre-fight prep"],
-    "sports": ["boxing"],
-    "phase": "TAPER",
-    "intensity": "high",
-    "cue": "12TH ROUND LEGACY",
-    "notes": "Full sensory simulation of final round with imagined stakes and fatigue."
-  }
- ]
+    {
+      "name": "Taper Focus Funnel",
+      "description": "Narrows attention to key cues while filtering crowd noise during fight week.",
+      "theme_tags": [
+        "audience_threat",
+        "focus_crowd"
+      ],
+      "raw_traits": [
+        "locked-in",
+        "focused"
+      ],
+      "modalities": [
+        "focus drill",
+        "visualisation"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "TUNNEL VISION",
+      "notes": "Use noise-canceling headphones playing crowd sounds while visualizing perfect technique execution."
+    },
+    {
+      "name": "Judgment-Proof Jab",
+      "description": "Maintains technical precision under evaluative pressure from coaches.",
+      "theme_tags": [
+        "authority_threat",
+        "overthink"
+      ],
+      "raw_traits": [
+        "precise",
+        "confident"
+      ],
+      "modalities": [
+        "anchor cue",
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "CRITICISM \u2192 FUEL",
+      "notes": "Shadowbox while receiving deliberate technical criticism, maintaining perfect form.",
+      "why_this_works": "Why 'Judgment-Proof Jab'? You reported coach criticism rattles you. This drill targets reframing criticism through anchor cues."
+    },
+    {
+      "name": "Freeze Breaker Combo",
+      "description": "Pre-programmed response to flurries that prevents mental/physical freezing.",
+      "theme_tags": [
+        "mental_freeze",
+        "physical_freeze",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "imagery reps",
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "FLURRY \u2192 COUNTER",
+      "notes": "Mental rehearsal of specific counter combinations when trapped against ropes.",
+      "why_this_works": "Why 'Freeze Breaker Combo'? You reported you freeze up under pressure. This drill targets freeze interruption through imagery reps."
+    },
+    {
+      "name": "Cardio Calibration",
+      "description": "Resets breathing and heart rate patterns between rounds.",
+      "theme_tags": [
+        "breath_fast",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "relaxed",
+        "precise"
+      ],
+      "modalities": [
+        "breathwork",
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "IN 4 \u2192 HOLD 4 \u2192 OUT 6",
+      "notes": "Practice during padwork breaks to match actual round intervals.",
+      "why_this_works": "Why 'Cardio Calibration'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
+    },
+    {
+      "name": "Self-Rage Redirect",
+      "description": "Converts post-mistake anger into tactical adjustments.",
+      "theme_tags": [
+        "self_anger",
+        "post_mistake"
+      ],
+      "raw_traits": [
+        "commanding",
+        "aggressive"
+      ],
+      "modalities": [
+        "self-talk",
+        "game reset"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "ANGER \u2192 ACTION",
+      "notes": "Deliberately make mistakes in sparring to practice real-time correction."
+    },
+    {
+      "name": "Decision Autopilot",
+      "description": "Eliminates hesitation in punch selection during fatigue.",
+      "theme_tags": [
+        "overthink",
+        "avoidant",
+        "decide_fast"
+      ],
+      "raw_traits": [
+        "tactical",
+        "precise"
+      ],
+      "modalities": [
+        "visualisation",
+        "tactical drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "SEE \u2192 THROW",
+      "notes": "Pre-program 3 'if-then' combos for common scenarios, drilled at 50% speed.",
+      "why_this_works": "Why 'Decision Autopilot'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through visualisation practice."
+    },
+    {
+      "name": "Walkout Heartrate Control",
+      "description": "Manages pre-fight adrenaline spike during ring approach.",
+      "theme_tags": [
+        "hr_up",
+        "emotional"
+      ],
+      "raw_traits": [
+        "confident",
+        "relaxed"
+      ],
+      "modalities": [
+        "breathwork",
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "STEPS \u2192 BREATHS",
+      "notes": "Synchronize exhales with each step during walkout rehearsals.",
+      "why_this_works": "Why 'Walkout Heartrate Control'? You reported your heart rate spikes after errors. This drill targets heart-rate regulation through breathing drills."
+    },
+    {
+      "name": "Corner Command Protocol",
+      "description": "Optimizes between-round information absorption under stress.",
+      "theme_tags": [
+        "authority_threat",
+        "shutdown"
+      ],
+      "raw_traits": [
+        "focused",
+        "commanding"
+      ],
+      "modalities": [
+        "anchor cue",
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "LISTEN \u2192 NOD \u2192 EXECUTE",
+      "notes": "Practice with increasingly complex corner instructions during sparring breaks.",
+      "why_this_works": "Why 'Corner Command Protocol'? You reported coach criticism rattles you. This drill targets reframing criticism through anchor cues."
+    },
+    {
+      "name": "Rope Reset System",
+      "description": "Breaks freeze states when trapped against ropes.",
+      "theme_tags": [
+        "mental_freeze",
+        "physical_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "game reset",
+        "breathwork"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "TAP \u2192 SNAP \u2192 ATTACK",
+      "notes": "Physical glove tap triggers pre-programmed escape combination.",
+      "why_this_works": "Why 'Rope Reset System'? You reported you freeze up under pressure. This drill targets freeze interruption through reset routines."
+    },
+    {
+      "name": "Judgment Filter",
+      "description": "Blocks external evaluation during technical execution.",
+      "theme_tags": [
+        "audience_threat",
+        "authority_threat"
+      ],
+      "raw_traits": [
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "self-talk",
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "THEIR EYES \u2192 MY HANDS",
+      "notes": "Train while observers give deliberate negative feedback on technique.",
+      "why_this_works": "Why 'Judgment Filter'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice."
+    },
+    {
+      "name": "Adrenaline Mirror",
+      "description": "Simulates fight-night arousal during final technical work.",
+      "theme_tags": [
+        "hr_up",
+        "emotional"
+      ],
+      "raw_traits": [
+        "focused",
+        "confident"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "SHAKE \u2192 FOCUS \u2192 BOX",
+      "notes": "Pre-padwork adrenaline spikes induced via cold exposure or breath holds.",
+      "why_this_works": "Why 'Adrenaline Mirror'? You reported your heart rate spikes after errors. This drill targets heart-rate regulation through visualisation practice."
+    },
+    {
+      "name": "Mistake Momentum",
+      "description": "Prevents post-error shutdown after taking clean shots.",
+      "theme_tags": [
+        "post_mistake",
+        "shutdown"
+      ],
+      "raw_traits": [
+        "resilient",
+        "aggressive"
+      ],
+      "modalities": [
+        "game reset",
+        "self-talk"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "HIT \u2192 GRIN \u2192 ANSWER",
+      "notes": "Deliberately eat light shots in sparring to practice immediate countering."
+    },
+    {
+      "name": "Decision Deadline",
+      "description": "Eliminates hesitation in punch selection under fatigue.",
+      "theme_tags": [
+        "overthink",
+        "avoidant",
+        "decide_fast"
+      ],
+      "raw_traits": [
+        "precise",
+        "tactical"
+      ],
+      "modalities": [
+        "tactical drill",
+        "focus drill"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "1-MISSISSIPPI \u2192 THROW",
+      "notes": "Forced 1-second decision window during technical sparring.",
+      "why_this_works": "Why 'Decision Deadline'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+    },
+    {
+      "name": "Staredown Stabilizer",
+      "description": "Maintains autonomic control during prefight faceoffs.",
+      "theme_tags": [
+        "emotional",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "commanding",
+        "confident"
+      ],
+      "modalities": [
+        "breathwork",
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "EYES \u2192 BREATH \u2192 SMIRK",
+      "notes": "Practice with simulated staredowns including flash photography.",
+      "why_this_works": "Why 'Staredown Stabilizer'? You reported your heart rate spikes after errors. This drill targets heart-rate regulation through breathing drills."
+    },
+    {
+      "name": "Bell-to-Bell Focus",
+      "description": "Sustains concentration through round transitions.",
+      "theme_tags": [
+        "focus_fatigue",
+        "shutdown"
+      ],
+      "raw_traits": [
+        "focused",
+        "resilient"
+      ],
+      "modalities": [
+        "focus drill",
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "DING \u2192 DEEP \u2192 GO",
+      "notes": "Use actual bell sounds during padwork with immediate restart demands."
+    },
+    {
+      "name": "Pain-to-Power Redirect",
+      "description": "Converts fatigue signals into offensive output.",
+      "theme_tags": [
+        "emotional",
+        "self_anger"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "ruthless"
+      ],
+      "modalities": [
+        "self-talk",
+        "identity shift"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "BURN \u2192 BEAST",
+      "notes": "Triggered when lactic acid builds, using specific power-generating imagery."
+    },
+    {
+      "name": "Scoreboard Immunity",
+      "description": "Maintains process focus regardless of perceived round outcomes.",
+      "theme_tags": [
+        "external_validation",
+        "emotional"
+      ],
+      "raw_traits": [
+        "confident",
+        "commanding"
+      ],
+      "modalities": [
+        "self-talk",
+        "reflection"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "low",
+      "cue": "MY ROUNDS \u2192 MY RULES",
+      "notes": "Watch controversial fight footage while maintaining technical self-evaluation."
+    },
+    {
+      "name": "Corner-to-Center Transition",
+      "description": "Accelerates mental reset when moving from defense to offense.",
+      "theme_tags": [
+        "mental_freeze",
+        "reset_speed",
+        "decide_freeze"
+      ],
+      "raw_traits": [
+        "aggressive",
+        "precise"
+      ],
+      "modalities": [
+        "game reset",
+        "anchor cue"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "CENTER \u2192 HUNT",
+      "notes": "Physical ring position triggers offensive mindset shift."
+    },
+    {
+      "name": "Announcer Filter",
+      "description": "Blocks disruptive commentary during competition.",
+      "theme_tags": [
+        "audience_threat",
+        "focus_crowd"
+      ],
+      "raw_traits": [
+        "focused",
+        "locked-in"
+      ],
+      "modalities": [
+        "focus drill",
+        "breathwork"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "medium",
+      "cue": "WORDS \u2192 WIND",
+      "notes": "Train with distracting commentary playing during technical work."
+    },
+    {
+      "name": "Championship Minutes",
+      "description": "Simulates final championship round pressure.",
+      "theme_tags": [
+        "under_pressure",
+        "hr_up"
+      ],
+      "raw_traits": [
+        "resilient",
+        "commanding"
+      ],
+      "modalities": [
+        "visualisation",
+        "pre-fight prep"
+      ],
+      "sports": [
+        "boxing"
+      ],
+      "phase": "TAPER",
+      "intensity": "high",
+      "cue": "12TH ROUND LEGACY",
+      "notes": "Full sensory simulation of final round with imagined stakes and fatigue.",
+      "why_this_works": "Why 'Championship Minutes'? You reported your heart rate spikes after errors. This drill targets heart-rate regulation through visualisation practice."
+    }
+  ]
 }
