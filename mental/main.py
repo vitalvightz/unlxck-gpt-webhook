@@ -13,6 +13,7 @@ from mental.program import parse_mindcode_form
 from mental.tags import map_tags
 from mental.scoring import score_drills
 from mental.contradictions import detect_contradictions
+from mental.tag_labels import human_label, humanize_list
 
 # Load drill bank
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
@@ -53,8 +54,14 @@ def format_drill_block(drill, phase):
     if drill.get("video_url"):
         block += f"\n\n🔗 Tutorial:\n{drill['video_url']}"
 
-    # 🏷️ Insert tag breakdown
-    block += f"\n\n🔖 Tags:\nTraits → {', '.join(drill['raw_traits'])}  \nThemes → {', '.join(drill['theme_tags'])}\n"
+    # 🏷️ Insert tag breakdown with human-readable labels
+    trait_labels = humanize_list(drill.get('raw_traits', []))
+    theme_labels = humanize_list(drill.get('theme_tags', []))
+    block += (
+        f"\n\n🔖 Tags:\n"
+        f"Traits → {', '.join(trait_labels)}  \n"
+        f"Themes → {', '.join(theme_labels)}\n"
+    )
     return block
 
 def build_plan_output(drills_by_phase, athlete_info):
