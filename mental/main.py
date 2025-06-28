@@ -30,8 +30,24 @@ def format_drill_block(drill, phase):
 
 🧩 Notes:
 {drill['notes']}"""
+
+    # 🔍 Insert WHY THIS WORKS if available
+    if drill.get("why_this_works"):
+        block += f"\n\n🧠 Why This Works:\n{drill['why_this_works']}"
+
+    # 🎯 Insert COACH SIDEBAR if available
+    if drill.get("coach_sidebar"):
+        if isinstance(drill["coach_sidebar"], list):
+            sidebar = "\n".join([f"– {s}" for s in drill["coach_sidebar"]])
+        else:
+            sidebar = f"– {drill['coach_sidebar']}"
+        block += f"\n\n🗣️ Coach Sidebar:\n{sidebar}"
+
+    # 🔗 Insert tutorial video if available
     if drill.get("video_url"):
         block += f"\n\n🔗 Tutorial:\n{drill['video_url']}"
+
+    # 🏷️ Insert tag breakdown
     block += f"\n\n🔖 Tags:\nTraits → {', '.join(drill['raw_traits'])}  \nThemes → {', '.join(drill['theme_tags'])}\n"
     return block
 
