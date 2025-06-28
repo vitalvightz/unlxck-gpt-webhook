@@ -24,7 +24,11 @@
       "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
       "notes": "Practice 5 rounds: 1. Sitting calmly. 2. During bodyweight exercises. 3. Right after sprints. Pro tip: Place a hand on your belly to ensure diaphragmatic breathing.",
       "video_url": null,
-      "why_this_works": "Why 'The Navy SEAL Breath'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
+      "why_this_works": "Why 'The Navy SEAL Breath'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: tight jaw, no visible exhale under pressure. Cue long audible exhales before next action.",
+        "Watch for: shallow chest breathing or panic breath. Reset drill until breath normalizes under same cue."
+      ]
     },
     {
       "name": "Authority Reframe",
@@ -50,7 +54,11 @@
       "cue": "Their eyes are my spotlight",
       "notes": "Before competitions: 1. Identify 1 authority who triggers nerves. 2. Visualize them as an 'energy source' rather than judge. 3. Say: 'Your attention fuels my focus.' Based on fMRI studies showing reframing reduces amygdala activation by 62%.",
       "video_url": null,
-      "why_this_works": "Why 'Authority Reframe'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice."
+      "why_this_works": "Why 'Authority Reframe'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice.",
+      "coach_sidebar": [
+        "Watch for: flinching or tension after coach cues. Reduce tone intensity, shift to task-based feedback.",
+        "Watch for: social withdrawal or over-effort around peers. Isolate task and rebuild safe confidence."
+      ]
     },
     {
       "name": "The Decisive Playbook",
@@ -78,7 +86,10 @@
       "cue": "When [X], I [Y]",
       "notes": "Progression: 1) Write 3 scenarios + responses. 2) Review daily for 2 weeks. 3) Simulate with eyes closed. Elite: Add physical triggers (e.g., tapping wrist for each script).",
       "video_url": null,
-      "why_this_works": "Why 'The Decisive Playbook'? You reported you overthink under stress. This drill targets decisive action practice through journaling work."
+      "why_this_works": "Why 'The Decisive Playbook'? You reported you overthink under stress. This drill targets decisive action practice through journaling work.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "Freeze-Breaker Protocol",
@@ -104,7 +115,12 @@
       "cue": "CLICK (snap fingers) \u2192 CLEAR (exhale)",
       "notes": "Progression: 1) Practice in training. 2) Add mild stress (e.g., coach yelling). 3) Use in competition. Works by disrupting amygdala hijack via dual sensory input.",
       "video_url": null,
-      "why_this_works": "Why 'Freeze-Breaker Protocol'? You reported you freeze up under pressure. This drill targets freeze interruption through anchor cues."
+      "why_this_works": "Why 'Freeze-Breaker Protocol'? You reported you freeze up under pressure. This drill targets freeze interruption through anchor cues.",
+      "coach_sidebar": [
+        "Watch for: hesitation or complete pause under pressure. Cue athlete to move or vocalize to break inertia.",
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Combat Breathing",
@@ -129,7 +145,11 @@
       "cue": "Inhale (4s) \u2192 Hold (4s) \u2192 Exhale (4s) \u2192 Hold (4s)",
       "notes": "Progression: 1) Seated. 2) During cooldowns. 3) Under physical stress. Elite: Add eye tracking (follow finger while breathing).",
       "video_url": "https://youtu.be/example_breath",
-      "why_this_works": "Why 'Combat Breathing'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
+      "why_this_works": "Why 'Combat Breathing'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: tight jaw, no visible exhale under pressure. Cue long audible exhales before next action.",
+        "Watch for: shallow chest breathing or panic breath. Reset drill until breath normalizes under same cue."
+      ]
     },
     {
       "name": "The 10-Second Reset",
@@ -153,7 +173,10 @@
       "cue": "5-4-3-2-1 (see, touch, hear, smell, taste)",
       "notes": "Progression: 1) Normal conditions. 2) Mild fatigue. 3) After mistakes. Based on sensory anchoring research.",
       "video_url": null,
-      "why_this_works": "Why 'The 10-Second Reset'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines."
+      "why_this_works": "Why 'The 10-Second Reset'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines.",
+      "coach_sidebar": [
+        "Watch for: lingering on errors or body posture drop. Interrupt with physical reset cue (step, shake, breathe)."
+      ]
     },
     {
       "name": "The Carrot/Stick Journal",
@@ -177,7 +200,11 @@
       "cue": "Action \u2192 Reward | Inaction \u2192 Cost",
       "notes": "Progression: 1) Daily entries. 2) Public accountability. 3) Variable rewards. Elite: Tie to biometrics (e.g., HRV targets).",
       "video_url": null,
-      "why_this_works": "Why 'The Carrot/Stick Journal'? You reported you rely on small wins for motivation. This drill targets reward linkage through journaling work."
+      "why_this_works": "Why 'The Carrot/Stick Journal'? You reported you rely on small wins for motivation. This drill targets reward linkage through journaling work.",
+      "coach_sidebar": [
+        "Watch for: high energy after wins, drop after errors. Anchor attention to task not outcome.",
+        "Watch for: reluctance to engage or only taking safe reps. Praise risk attempts, even failed ones."
+      ]
     },
     {
       "name": "Threat Reframe Drill",
@@ -201,7 +228,11 @@
       "cue": "Your pressure is my power",
       "notes": "Progression: 1) Identify threats. 2) Write reframes. 3) Simulate exposure. Uses fMRI-verified prefrontal override techniques.",
       "video_url": null,
-      "why_this_works": "Why 'Threat Reframe Drill'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice."
+      "why_this_works": "Why 'Threat Reframe Drill'? You reported coach criticism rattles you. This drill targets reframing criticism through self-talk practice.",
+      "coach_sidebar": [
+        "Watch for: flinching or tension after coach cues. Reduce tone intensity, shift to task-based feedback.",
+        "Watch for: social withdrawal or over-effort around peers. Isolate task and rebuild safe confidence."
+      ]
     },
     {
       "name": "Clutch Simulation",
@@ -339,7 +370,10 @@
       "intensity": "medium",
       "cue": "Observe \u2192 Don't absorb",
       "notes": "Progression: 1) Identify triggers. 2) Label emotions. 3) Practice detachment. Based on mindfulness research.",
-      "video_url": null
+      "video_url": null,
+      "coach_sidebar": [
+        "Watch for: stress signs across all cues. Narrow drills until control returns, then expand again."
+      ]
     },
     {
       "name": "Flow State Trigger",
@@ -399,7 +433,10 @@
         "intermediate": "50/50 situations",
         "elite": "Information overload"
       },
-      "why_this_works": "Why 'Decisive Action Protocol'? You reported you act instantly under pressure. This drill targets instinctive reactions through visualisation practice."
+      "why_this_works": "Why 'Decisive Action Protocol'? You reported you act instantly under pressure. This drill targets instinctive reactions through visualisation practice.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "The Noise Filter",
@@ -429,7 +466,12 @@
         "beginner": "Quiet environment",
         "intermediate": "Crowd noise recordings",
         "elite": "Live provocation training"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: glances to audience or head turning. Reinforce inward focus with breath count or task cue.",
+        "Watch for: attention split toward coach mid-task. Reduce external instruction and anchor single-task focus.",
+        "Watch for: reactive tension or focus shift when opponent moves. Cue pre-planned responses, not reactions."
+      ]
     },
     {
       "name": "The Internal Referee",
@@ -459,7 +501,10 @@
         "intermediate": "Mid-training application",
         "elite": "Competition implementation"
       },
-      "why_this_works": "Why 'The Internal Referee'? You reported your inner critic distracts you. This drill targets silencing the inner critic through self-talk practice."
+      "why_this_works": "Why 'The Internal Referee'? You reported your inner critic distracts you. This drill targets silencing the inner critic through self-talk practice.",
+      "coach_sidebar": [
+        "Watch for: visible frustration, shaking head, or self-talk. Cue external focus and debrief after drill."
+      ]
     },
     {
       "name": "Tactical Reset Matrix",
@@ -489,7 +534,12 @@
         "beginner": "Single-speed mastery",
         "intermediate": "Contextual switching",
         "elite": "Opponent-paced disruption"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: immediate shift in body language or eye contact after error. Reinforce that as ideal reset behavior.",
+        "Watch for: delayed but eventual return to task focus. Cue with time-based language ('next rep', 'reset now').",
+        "Watch for: long mental disengagement or emotional spiral. Use firm cue and end drill early if needed."
+      ]
     },
     {
       "name": "Breath Signature Scan",
@@ -518,7 +568,10 @@
         "beginner": "Seated observation",
         "intermediate": "Post-exercise analysis",
         "elite": "Real-time competition monitoring"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: stable exhale patterns. Reinforce this as default during chaos."
+      ]
     },
     {
       "name": "Validation Detox",
@@ -547,7 +600,11 @@
         "beginner": "Private definition",
         "intermediate": "Public commitment",
         "elite": "Adversity testing"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: checking others' reactions. Cue athlete to describe internal success markers.",
+        "Watch for: performance drop when observed. Simulate audience and reward calm reps."
+      ]
     },
     {
       "name": "The Arena Mindset",
@@ -576,7 +633,10 @@
         "beginner": "Private ritual",
         "intermediate": "Group activation",
         "elite": "Opponent-facing implementation"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: obsession with beating others. Rotate drills to reward internal goals too."
+      ]
     },
     {
       "name": "The Phoenix Protocol",
@@ -770,7 +830,11 @@
         "intermediate": "Moderate fatigue",
         "elite": "Complete exhaustion"
       },
-      "why_this_works": "Why 'The Fatigue Override'? You reported you act instantly under pressure. This drill targets instinctive reactions through attention training."
+      "why_this_works": "Why 'The Fatigue Override'? You reported you act instantly under pressure. This drill targets instinctive reactions through attention training.",
+      "coach_sidebar": [
+        "Watch for: technical breakdown during fatigue, not just tiredness. Observe if mindset collapses with breath.",
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "Coach Whisper Drill",
@@ -825,7 +889,11 @@
         "beginner": "Controlled simulation",
         "intermediate": "Unexpected freeze moments",
         "elite": "High-pressure activation"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices.",
+        "Watch for: scanning but delayed action. Add time pressure constraints to simulate fatigue decisions."
+      ]
     },
     {
       "name": "The Why Finder",
@@ -852,7 +920,10 @@
         "beginner": "Passive observation",
         "intermediate": "Strategic experimentation",
         "elite": "Custom activation protocols"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: patterns of disengagement, shutdown, or mood shifts. Note and track for trends."
+      ]
     },
     {
       "name": "Overthink Antidote",
@@ -882,7 +953,11 @@
         "intermediate": "50/50 situations",
         "elite": "Information overload"
       },
-      "why_this_works": "Why 'Overthink Antidote'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through imagery reps."
+      "why_this_works": "Why 'Overthink Antidote'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through imagery reps.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Pressure Inoculation",
@@ -941,7 +1016,11 @@
         "intermediate": "Complex tactical decisions",
         "elite": "High-consequence game situations"
       },
-      "why_this_works": "Why 'The Hesitation Killer'? You reported you act instantly under pressure. This drill targets instinctive reactions through anchor cues."
+      "why_this_works": "Why 'The Hesitation Killer'? You reported you act instantly under pressure. This drill targets instinctive reactions through anchor cues.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Demand Dominance Drill",
@@ -1169,7 +1248,10 @@
         "intermediate": "Coach review sessions",
         "elite": "Pre-competition mental clears"
       },
-      "why_this_works": "Why 'Thought Stream Journal'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through journaling work."
+      "why_this_works": "Why 'Thought Stream Journal'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through journaling work.",
+      "coach_sidebar": [
+        "Watch for: scanning but delayed action. Add time pressure constraints to simulate fatigue decisions."
+      ]
     },
     {
       "name": "Tactical Decision Simulator",
@@ -1253,7 +1335,11 @@
         "beginner": "Video review analysis",
         "intermediate": "Real-time recognition",
         "elite": "Pre-emptive trigger management"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices.",
+        "Watch for: scanning but delayed action. Add time pressure constraints to simulate fatigue decisions."
+      ]
     },
     {
       "name": "Freeze Break Simulator",
@@ -1281,7 +1367,10 @@
         "beginner": "Known triggers",
         "intermediate": "Variable stressors",
         "elite": "Full competition simulation"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "The Thaw Breath",
@@ -1335,7 +1424,11 @@
         "beginner": "General achievements",
         "intermediate": "Specific skill transfers",
         "elite": "Adversity overcome examples"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: patterns of disengagement, shutdown, or mood shifts. Note and track for trends.",
+        "Watch for: scanning but delayed action. Add time pressure constraints to simulate fatigue decisions."
+      ]
     },
     {
       "name": "Pressure Rehearsal",
@@ -1392,7 +1485,11 @@
         "intermediate": "Live feedback processing",
         "elite": "High-stakes official interactions"
       },
-      "why_this_works": "Why 'Command Presence Builder'? You reported coach criticism rattles you. This drill targets reframing criticism through breathing drills."
+      "why_this_works": "Why 'Command Presence Builder'? You reported coach criticism rattles you. This drill targets reframing criticism through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: flinching or tension after coach cues. Reduce tone intensity, shift to task-based feedback.",
+        "Watch for: stress signs across all cues. Narrow drills until control returns, then expand again."
+      ]
     },
     {
       "name": "The Carrot-Stick Visualization",
@@ -1422,7 +1519,11 @@
         "intermediate": "Self-generated scenarios",
         "elite": "Pressure-tested activation"
       },
-      "why_this_works": "Why 'The Carrot-Stick Visualization'? You reported you rely on small wins for motivation. This drill targets reward linkage through imagery reps."
+      "why_this_works": "Why 'The Carrot-Stick Visualization'? You reported you rely on small wins for motivation. This drill targets reward linkage through imagery reps.",
+      "coach_sidebar": [
+        "Watch for: high energy after wins, drop after errors. Anchor attention to task not outcome.",
+        "Watch for: reluctance to engage or only taking safe reps. Praise risk attempts, even failed ones."
+      ]
     },
     {
       "name": "The Bounty Board",
@@ -1450,7 +1551,10 @@
         "intermediate": "Game-situation demands",
         "elite": "Peer-competitive bounty hunting"
       },
-      "why_this_works": "Why 'The Bounty Board'? You reported you rely on small wins for motivation. This drill targets reward linkage through self-talk practice."
+      "why_this_works": "Why 'The Bounty Board'? You reported you rely on small wins for motivation. This drill targets reward linkage through self-talk practice.",
+      "coach_sidebar": [
+        "Watch for: high energy after wins, drop after errors. Anchor attention to task not outcome."
+      ]
     },
     {
       "name": "The Threat Neutralizer",
@@ -1478,7 +1582,10 @@
         "beginner": "Controlled uncertainty",
         "intermediate": "Drill randomization",
         "elite": "Competition chaos training"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: stress signs across all cues. Narrow drills until control returns, then expand again."
+      ]
     },
     {
       "name": "Failure Firewall",
@@ -1505,7 +1612,10 @@
         "beginner": "Written scripts",
         "intermediate": "Guided imagery",
         "elite": "Full sensory simulation"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: reluctance to engage or only taking safe reps. Praise risk attempts, even failed ones."
+      ]
     },
     {
       "name": "Scramble Autopilot",
@@ -1534,7 +1644,12 @@
       "intensity": "high",
       "cue": "SPRAWL \u2192 SNAP \u2192 SPIN",
       "notes": "Daily: Watch scramble footage \u2192 Freeze frame \u2192 Call reaction within 0.3s \u2192 Physical mimicry. Builds instinctive neural pathways for MMA scrambles, BJJ guard recoveries, and wrestling reshots.",
-      "why_this_works": "Why 'Scramble Autopilot'? You reported you act instantly under pressure. This drill targets instinctive reactions through imagery reps."
+      "why_this_works": "Why 'Scramble Autopilot'? You reported you act instantly under pressure. This drill targets instinctive reactions through imagery reps.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Chain Reaction Trigger",
@@ -1559,7 +1674,11 @@
       "phase": "GPP",
       "intensity": "medium",
       "cue": "MOVE OR LOSE",
-      "notes": "Partner drills where stopping = immediate positional penalty. Applies to MMA cage cutting, BJJ guard passing, and wrestling chain wrestling."
+      "notes": "Partner drills where stopping = immediate positional penalty. Applies to MMA cage cutting, BJJ guard passing, and wrestling chain wrestling.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Matador Reset Protocol",
@@ -1586,7 +1705,10 @@
       "intensity": "medium",
       "cue": "RESET \u2192 RELOAD",
       "notes": "After failed attempts: 1. Backstep to safe range (MMA/wrestling) or guard recovery (BJJ). 2. 4-4-6 breathing. 3. Immediate re-engagement.",
-      "why_this_works": "Why 'Matador Reset Protocol'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines."
+      "why_this_works": "Why 'Matador Reset Protocol'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines.",
+      "coach_sidebar": [
+        "Watch for: lingering on errors or body posture drop. Interrupt with physical reset cue (step, shake, breathe)."
+      ]
     },
     {
       "name": "Control Chaos Drill",
@@ -1638,7 +1760,11 @@
       "intensity": "medium",
       "cue": "TIRED \u2260 WEAK",
       "notes": "Pre-fatigue training with empowering mantras specific to each sport's demands (MMA clinch work, BJS guard retention, wrestling bottom recovery).",
-      "why_this_works": "Why 'Gas Tank Reframe'? You reported your inner critic distracts you. This drill targets silencing the inner critic through self-talk practice."
+      "why_this_works": "Why 'Gas Tank Reframe'? You reported your inner critic distracts you. This drill targets silencing the inner critic through self-talk practice.",
+      "coach_sidebar": [
+        "Watch for: technical breakdown during fatigue, not just tiredness. Observe if mindset collapses with breath.",
+        "Watch for: visible frustration, shaking head, or self-talk. Cue external focus and debrief after drill."
+      ]
     },
     {
       "name": "Cage Door Visualization",
@@ -1664,7 +1790,10 @@
       "phase": "GPP",
       "intensity": "low",
       "cue": "MY ARENA",
-      "notes": "Detailed mental rehearsal of competition entry specific to each sport (MMA walkout, BJJ mat approach, wrestling tunnel prep)."
+      "notes": "Detailed mental rehearsal of competition entry specific to each sport (MMA walkout, BJJ mat approach, wrestling tunnel prep).",
+      "coach_sidebar": [
+        "Watch for: performance drop when observed. Simulate audience and reward calm reps."
+      ]
     },
     {
       "name": "Submission Failure Reboot",
@@ -1762,7 +1891,11 @@
       "phase": "GPP",
       "intensity": "medium",
       "cue": "FRAME \u2192 RECOVER",
-      "notes": "Daily: Partner initiates passes \u2192 Instant defensive reaction without conscious thought."
+      "notes": "Daily: Partner initiates passes \u2192 Instant defensive reaction without conscious thought.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Octagon GPS",
@@ -1883,7 +2016,10 @@
       "cue": "BUMP \u2192 BRIDGE \u2192 BASE",
       "notes": "When pinned: 1. Explosive bridge. 2. 2-second breath hold. 3. Systematic escape chain.",
       "video_url": "https://youtu.be/escape_autopilot",
-      "why_this_works": "Why 'Escape Autopilot'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines."
+      "why_this_works": "Why 'Escape Autopilot'? You reported it takes you a while to mentally recover. This drill targets quick reset practice through reset routines.",
+      "coach_sidebar": [
+        "Watch for: lingering on errors or body posture drop. Interrupt with physical reset cue (step, shake, breathe)."
+      ]
     },
     {
       "name": "First Fight Simulator",
@@ -1907,7 +2043,10 @@
       "phase": "GPP",
       "intensity": "medium",
       "cue": "DEBUT \u2192 DOMINATE",
-      "notes": "Includes: 1. Walkout rehearsal. 2. Announcer call simulation. 3. First exchange scripting."
+      "notes": "Includes: 1. Walkout rehearsal. 2. Announcer call simulation. 3. First exchange scripting.",
+      "coach_sidebar": [
+        "Watch for: performance drop when observed. Simulate audience and reward calm reps."
+      ]
     },
     {
       "name": "Survival Breathing",
@@ -1931,7 +2070,11 @@
       "intensity": "low",
       "cue": "IN \u2192 HOLD \u2192 OUT \u2192 FIGHT",
       "notes": "4-4-4-4 breathing pattern: Inhale (4s), Hold (4s), Exhale (4s), Hold (4s) during positional drills.",
-      "why_this_works": "Why 'Survival Breathing'? You reported your inner critic distracts you. This drill targets silencing the inner critic through breathing drills."
+      "why_this_works": "Why 'Survival Breathing'? You reported your inner critic distracts you. This drill targets silencing the inner critic through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: technical breakdown during fatigue, not just tiredness. Observe if mindset collapses with breath.",
+        "Watch for: visible frustration, shaking head, or self-talk. Cue external focus and debrief after drill."
+      ]
     },
     {
       "name": "Ride Clock Mindset",
@@ -1978,7 +2121,11 @@
       "phase": "GPP",
       "intensity": "medium",
       "cue": "FIND \u2192 THE \u2192 FENCE",
-      "notes": "Blindfolded cage navigation drills to build spatial awareness without visual dependence."
+      "notes": "Blindfolded cage navigation drills to build spatial awareness without visual dependence.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "First Grip Battle",
@@ -2002,7 +2149,10 @@
       "intensity": "high",
       "cue": "GRIP \u2192 PULL \u2192 GO",
       "notes": "100+ repetitions of competition-start grip sequences until fully automatic.",
-      "why_this_works": "Why 'First Grip Battle'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+      "why_this_works": "Why 'First Grip Battle'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "Submission Survival",
@@ -2027,7 +2177,10 @@
       "intensity": "high",
       "cue": "DANGER \u2192 BREATHE \u2192 ESCAPE",
       "notes": "Deliberate training in compromised positions with specific recovery protocols.",
-      "why_this_works": "Why 'Submission Survival'? You reported your inner critic distracts you. This drill targets silencing the inner critic through breathing drills."
+      "why_this_works": "Why 'Submission Survival'? You reported your inner critic distracts you. This drill targets silencing the inner critic through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: visible frustration, shaking head, or self-talk. Cue external focus and debrief after drill."
+      ]
     },
     {
       "name": "The Why Chain",
@@ -2060,7 +2213,12 @@
         "intermediate": "Daily quick-answer ritual",
         "elite": "Integrated with pre-fight routine"
       },
-      "why_this_works": "Why 'The Why Chain'? You reported you rely on small wins for motivation. This drill targets reward linkage through journaling work."
+      "why_this_works": "Why 'The Why Chain'? You reported you rely on small wins for motivation. This drill targets reward linkage through journaling work.",
+      "coach_sidebar": [
+        "Watch for: high energy after wins, drop after errors. Anchor attention to task not outcome.",
+        "Watch for: checking others' reactions. Cue athlete to describe internal success markers.",
+        "Watch for: scanning but delayed action. Add time pressure constraints to simulate fatigue decisions."
+      ]
     },
     {
       "name": "The Scoreboard Reset",
@@ -2090,7 +2248,10 @@
         "beginner": "Coach-guided identification",
         "intermediate": "Self-identified wins",
         "elite": "Real-time competition application"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: checking others' reactions. Cue athlete to describe internal success markers."
+      ]
     },
     {
       "name": "The Coach Filter",
@@ -2121,7 +2282,10 @@
         "intermediate": "Live technical corrections",
         "elite": "High-stakes corner instructions"
       },
-      "why_this_works": "Why 'The Coach Filter'? You reported coach criticism rattles you. This drill targets reframing criticism through breathing drills."
+      "why_this_works": "Why 'The Coach Filter'? You reported coach criticism rattles you. This drill targets reframing criticism through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: flinching or tension after coach cues. Reduce tone intensity, shift to task-based feedback."
+      ]
     },
     {
       "name": "Mat Pack Mentality",
@@ -2151,7 +2315,10 @@
         "beginner": "Private visualization",
         "intermediate": "Select peer observation",
         "elite": "Full-team evaluation sessions"
-      }
+      },
+      "coach_sidebar": [
+        "Watch for: social withdrawal or over-effort around peers. Isolate task and rebuild safe confidence."
+      ]
     },
     {
       "name": "Sparring Autopilot",
@@ -2181,7 +2348,10 @@
         "intermediate": "Combination responses",
         "elite": "Full chaos adaptation"
       },
-      "why_this_works": "Why 'Sparring Autopilot'? You reported you act instantly under pressure. This drill targets instinctive reactions through anchor cues."
+      "why_this_works": "Why 'Sparring Autopilot'? You reported you act instantly under pressure. This drill targets instinctive reactions through anchor cues.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "The 90-Second Storm",
@@ -2396,7 +2566,10 @@
       "intensity": "high",
       "cue": "BELL \u2192 BOMBARD",
       "notes": "Drill 3 pre-set combos for opening 30 seconds. Repeat 50x/week.",
-      "why_this_works": "Why 'First Bell Domination'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+      "why_this_works": "Why 'First Bell Domination'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "Rope Reset Protocol",
@@ -2421,7 +2594,12 @@
       "intensity": "high",
       "cue": "ROPE \u2192 RESET \u2192 RAGE",
       "notes": "Exhale fully + glove tap when cornered. Drill with flurry simulations.",
-      "why_this_works": "Why 'Rope Reset Protocol'? You reported you freeze up under pressure. This drill targets freeze interruption through breathing drills."
+      "why_this_works": "Why 'Rope Reset Protocol'? You reported you freeze up under pressure. This drill targets freeze interruption through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: hesitation or complete pause under pressure. Cue athlete to move or vocalize to break inertia.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Judgment-Proof Jab",
@@ -2442,7 +2620,10 @@
       "phase": "GPP",
       "intensity": "medium",
       "cue": "THEIR NOISE \u2192 MY RHYTHM",
-      "notes": "Shadowbox with booing recordings. Maintain technical precision."
+      "notes": "Shadowbox with booing recordings. Maintain technical precision.",
+      "coach_sidebar": [
+        "Watch for: performance drop when observed. Simulate audience and reward calm reps."
+      ]
     },
     {
       "name": "Corner Command",
@@ -2464,7 +2645,10 @@
       "intensity": "medium",
       "cue": "LISTEN \u2192 EXECUTE",
       "notes": "Deliberate mistakes in sparring to practice receiving corrections.",
-      "why_this_works": "Why 'Corner Command'? You reported coach criticism rattles you. This drill targets reframing criticism through anchor cues."
+      "why_this_works": "Why 'Corner Command'? You reported coach criticism rattles you. This drill targets reframing criticism through anchor cues.",
+      "coach_sidebar": [
+        "Watch for: flinching or tension after coach cues. Reduce tone intensity, shift to task-based feedback."
+      ]
     },
     {
       "name": "Flurry Autopilot",
@@ -2486,7 +2670,11 @@
       "phase": "GPP",
       "intensity": "high",
       "cue": "STORM \u2192 SHELL \u2192 SLIP",
-      "notes": "Random strobe flashes trigger pre-programmed defensive sequences."
+      "notes": "Random strobe flashes trigger pre-programmed defensive sequences.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Cardio Confidence",
@@ -2509,7 +2697,10 @@
       "intensity": "medium",
       "cue": "GASP \u2192 GROUND",
       "notes": "Post-sprint breath recovery drills with pursed-lip exhales.",
-      "why_this_works": "Why 'Cardio Confidence'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills."
+      "why_this_works": "Why 'Cardio Confidence'? You reported your breathing speeds up under pressure. This drill targets breath control through breathing drills.",
+      "coach_sidebar": [
+        "Watch for: shallow chest breathing or panic breath. Reset drill until breath normalizes under same cue."
+      ]
     },
     {
       "name": "Error Eraser",
@@ -2551,7 +2742,10 @@
       "phase": "GPP",
       "intensity": "high",
       "cue": "BELL \u2192 BEAST",
-      "notes": "Specific corner ritual (e.g., ammonia sniff) to trigger next-level output."
+      "notes": "Specific corner ritual (e.g., ammonia sniff) to trigger next-level output.",
+      "coach_sidebar": [
+        "Watch for: technical breakdown during fatigue, not just tiredness. Observe if mindset collapses with breath."
+      ]
     },
     {
       "name": "Staredown Steel",
@@ -2617,7 +2811,11 @@
       "intensity": "high",
       "cue": "SEE \u2192 SEIZE",
       "notes": "React to 200ms openings during random strobe light intervals.",
-      "why_this_works": "Why 'Decision Dominance'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+      "why_this_works": "Why 'Decision Dominance'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test.",
+        "Watch for: analysis paralysis under pressure. Shrink options and reward fast, even imperfect choices."
+      ]
     },
     {
       "name": "Judges' Justice",
@@ -2659,7 +2857,10 @@
       "phase": "GPP",
       "intensity": "high",
       "cue": "STORM \u2192 SHELL \u2192 STRIKE",
-      "notes": "3v1 situational sparring with controlled flurry attacks."
+      "notes": "3v1 situational sparring with controlled flurry attacks.",
+      "coach_sidebar": [
+        "Watch for: blank stare or mental withdrawal. Use short cue words ('reset', 'next') to refocus."
+      ]
     },
     {
       "name": "Towel Trigger",
@@ -2680,7 +2881,10 @@
       "phase": "GPP",
       "intensity": "high",
       "cue": "TIRED \u2192 TERROR",
-      "notes": "Pre-set combo triggered by coach's towel touch during exhaustion drills."
+      "notes": "Pre-set combo triggered by coach's towel touch during exhaustion drills.",
+      "coach_sidebar": [
+        "Watch for: technical breakdown during fatigue, not just tiredness. Observe if mindset collapses with breath."
+      ]
     },
     {
       "name": "Gamble Gloves",
@@ -2764,7 +2968,10 @@
       "phase": "GPP",
       "intensity": "medium",
       "cue": "WORDS \u2192 WIND",
-      "notes": "Spar with fight commentary playing at increasing volumes."
+      "notes": "Spar with fight commentary playing at increasing volumes.",
+      "coach_sidebar": [
+        "Watch for: performance drop when observed. Simulate audience and reward calm reps."
+      ]
     },
     {
       "name": "Champion's Choice",
@@ -2787,7 +2994,10 @@
       "intensity": "high",
       "cue": "DOUBT \u2192 DESTROY",
       "notes": "Forced 0.5-second decision windows during exhaustion drills.",
-      "why_this_works": "Why 'Champion's Choice'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps."
+      "why_this_works": "Why 'Champion's Choice'? You reported you overthink instead of trusting instinct. This drill targets thought interruption through technical reps.",
+      "coach_sidebar": [
+        "Watch for: impulsive decisions that skip scanning. Praise decisiveness, then slow context down to test."
+      ]
     },
     {
       "name": "Final Bell Fury",
