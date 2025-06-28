@@ -1,12 +1,18 @@
 import json
 import os
 import base64
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
+
+try:  # pragma: no cover - optional for tests
+    from google.oauth2.service_account import Credentials
+    from googleapiclient.discovery import build
+except Exception:  # libraries may be absent during testing
+    Credentials = None
+    build = None
 
 from mental.program import parse_mindcode_form
 from mental.tags import map_tags
 from mental.scoring import score_drills
+from mental.contradictions import detect_contradictions
 
 # Load drill bank
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
@@ -53,7 +59,17 @@ def format_drill_block(drill, phase):
 
 def build_plan_output(drills_by_phase, athlete_info):
     lines = [f"# 🧠 MENTAL PERFORMANCE PLAN – {athlete_info['full_name']}\n"]
-    lines.append(f"**Sport:** {athlete_info['sport']} | **Style/Position:** {athlete_info['position_style']} | **Phase:** {athlete_info['mental_phase']}\n")
+    lines.append(
+        f"**Sport:** {athlete_info['sport']} | **Style/Position:** {athlete_info['position_style']} | **Phase:** {athlete_info['mental_phase']}\n"
+    )
+
+    contradictions = detect_contradictions(set(athlete_info.get("all_tags", [])))
+    if contradictions:
+        lines.append("⚠️ **COACH REVIEW FLAGS**")
+        for note in contradictions:
+            lines.append(f"- {note}")
+        lines.append("")  # Add spacing before drills
+
     for phase in ["GPP", "SPP", "TAPER"]:
         if drills_by_phase.get(phase):
             lines.append(f"---\n## 🔷 {phase} DRILLS\n")
@@ -62,6 +78,8 @@ def build_plan_output(drills_by_phase, athlete_info):
     return "\n\n".join(lines)
 
 def load_google_services(creds_b64: str):
+    if Credentials is None or build is None:  # pragma: no cover - safety for tests
+        raise ImportError("Google API client libraries are required for export")
     decoded = base64.b64decode(creds_b64)
     with open("mental_google_creds.json", "wb") as f:
         f.write(decoded)
@@ -99,6 +117,13 @@ def handler(form_fields, creds_b64):
     tags = map_tags(parsed)
     scored = score_drills(DRILL_BANK, tags, sport, phase)
 
+    all_tags = []
+    for key, val in tags.items():
+        if isinstance(val, list):
+            all_tags.extend([f"{key}:{v}" for v in val])
+        else:
+            all_tags.append(f"{key}:{val}")
+
     drills_by_phase = {p: [] for p in ["GPP", "SPP", "TAPER"]}
     if phase == "GPP":
         phases = ["GPP", "SPP", "TAPER"]
@@ -115,12 +140,16 @@ def handler(form_fields, creds_b64):
     if not any(drills_by_phase.values()):
         doc_text = f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
     else:
-        doc_text = build_plan_output(drills_by_phase, {
-            "full_name": full_name,
-            "sport": sport,
-            "position_style": position_style,
-            "mental_phase": phase
-        })
+        doc_text = build_plan_output(
+            drills_by_phase,
+            {
+                "full_name": full_name,
+                "sport": sport,
+                "position_style": position_style,
+                "mental_phase": phase,
+                "all_tags": all_tags,
+            },
+        )
 
     # Create and upload doc
     docs_service, drive_service = load_google_services(creds_b64)
