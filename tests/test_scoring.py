@@ -100,6 +100,19 @@ class ScoringTests(unittest.TestCase):
         self.assertAlmostEqual(score_drill(drill, "SPP", athlete), 1.0)
         # penalty for visualisation-only cancels reset bonus
 
+    def test_individual_sport_bonus(self):
+        drill = {
+            "theme_tags": ["focus_locked"],
+            "modalities": ["visualisation"],
+            "phase": "GPP",
+            "intensity": "medium",
+            "raw_traits": [],
+            "sports": [],
+        }
+        athlete = {"sport": "track", "in_fight_camp": False}
+        # Base 1.0 +0.5 phase match +0.1 individual sport micro bonus = 1.6
+        self.assertAlmostEqual(score_drill(drill, "GPP", athlete), 1.6)
+
     def test_score_drills_ordering(self):
         drills = [
             {"phase": "GPP", "intensity": "medium", "raw_traits": ["focused"], "modalities": []},
