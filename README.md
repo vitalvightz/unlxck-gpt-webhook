@@ -52,3 +52,13 @@ You can also expand the tag list in `tags.txt` or modify which tags count as wea
 ## Design Principle
 
 The system only rewards precision. If a drill doesn't clearly match tagged needs, it stays near the base score.
+
+## Exporting to Google Docs
+
+`mental.main.handler()` can create an athlete plan in Google Docs. Provide your service account credentials as a Base64 string and the ID of a Drive folder you own:
+
+```python
+link = handler(form_payload, os.environ["GOOGLE_CREDS_B64"], os.environ.get("TARGET_FOLDER_ID"))
+```
+
+The document is first created by the service account and then moved into the specified folder so you retain ownership.
