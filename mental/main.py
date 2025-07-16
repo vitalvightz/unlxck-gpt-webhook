@@ -115,12 +115,10 @@ def handler(form_fields, creds_b64):
     position_style = parsed.get("position_style", "").strip()
     phase = parsed.get("mental_phase", "").strip().upper()
 
-    # 🧱 Required data guard
     if not full_name or not sport or not phase:
         raise ValueError("❌ Missing required athlete info: name, sport, or phase")
 
     if phase not in ["GPP", "SPP", "TAPER"]:
-        print(f"⚠️ Invalid phase: '{phase}' → defaulting to GPP")
         phase = "GPP"
 
     tags = map_tags(parsed)
@@ -134,37 +132,28 @@ def handler(form_fields, creds_b64):
             all_tags.append(f"{key}:{val}")
 
     drills_by_phase = {p: [] for p in ["GPP", "SPP", "TAPER"]}
-    if phase == "GPP":
-        phases = ["GPP", "SPP", "TAPER"]
-    elif phase == "SPP":
-        phases = ["SPP", "TAPER"]
-    else:
-        phases = ["TAPER"]
+    for p in ["GPP", "SPP", "TAPER"]:
+        if p in ["GPP", "SPP"] and phase == "GPP":
+            drills_by_phase[p] = [d for d in scored if d["phase"].upper() == p][:5]
+        elif p == "SPP" and phase == "SPP":
+            drills_by_phase[p] = [d for d in scored if d["phase"].upper() == p][:5]
+        elif p == "TAPER" and phase in ["SPP", "TAPER"]:
+            drills_by_phase[p] = [d for d in scored if d["phase"].upper() == p][:5]
 
-    for p in phases:
-        drills = [d for d in scored if d["phase"].upper() == p]
-        drills_by_phase[p] = drills[:5]
+    doc_text = build_plan_output(drills_by_phase, {
+        "full_name": full_name,
+        "sport": sport,
+        "position_style": position_style,
+        "mental_phase": phase,
+        "all_tags": all_tags,
+    }) if any(drills_by_phase.values()) else f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
 
-    # Handle empty result fallback
-    if not any(drills_by_phase.values()):
-        doc_text = f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
-    else:
-        doc_text = build_plan_output(
-            drills_by_phase,
-            {
-                "full_name": full_name,
-                "sport": sport,
-                "position_style": position_style,
-                "mental_phase": phase,
-                "all_tags": all_tags,
-            },
-        )
-
-    # Create and upload doc
-    docs_service, drive_service = load_google_services(creds_b64)
+    # Google Docs + Drive setup
+    docs_service, drive_service, creds = load_google_services(creds_b64)
     doc = docs_service.documents().create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}).execute()
     doc_id = doc.get("documentId")
 
+    # Move doc into folder
     folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
     if folder_id:
         drive_service.files().update(
@@ -173,13 +162,36 @@ def handler(form_fields, creds_b64):
             removeParents="root"
         ).execute()
 
-    docs_service.documents().batchUpdate(
-        documentId=doc_id,
-        body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
-    ).execute()
+        # 🔒 Reassert write permissions after move
+        drive_service.permissions().create(
+            fileId=doc_id,
+            body={
+                "type": "user",
+                "role": "writer",
+                "emailAddress": creds.service_account_email
+            },
+            sendNotificationEmail=False
+        ).execute()
+
+    # Safe retry for inserting text
+    from googleapiclient.errors import HttpError
+    import time
+
+    for attempt in range(3):
+        try:
+            docs_service.documents().batchUpdate(
+                documentId=doc_id,
+                body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
+            ).execute()
+            break
+        except HttpError as e:
+            if e.resp.status == 403 and attempt < 2:
+                time.sleep(1.5)
+            else:
+                raise e
 
     return f"https://docs.google.com/document/d/{doc_id}"
-
+    
 # Local test
 if __name__ == "__main__":
     payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
