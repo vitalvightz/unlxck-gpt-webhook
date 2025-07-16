@@ -3038,7 +3038,8 @@
       "phase": "SPP",
       "intensity": "medium",
       "cue": "NOISE \u2192 JAB",
-      "notes": "Shadowbox with crowd noise recordings, focusing solely on perfect jab mechanics."
+      "notes": "Shadowbox with crowd noise recordings, focusing solely on perfect jab mechanics.",
+      "why_this_works": "Why 'Judgment-Proof Jab'? You said crowd reactions shake your confidence. Focusing on perfect form while noise blares builds trust in your jab."
     },
     {
       "name": "Cardio Panic Reset",
@@ -3106,7 +3107,8 @@
       "phase": "SPP",
       "intensity": "high",
       "cue": "MAD \u2192 MEAN \u2192 MOVE",
-      "notes": "After eating clean shot: 1. Glove tap to head (physical release). 2. Growl exhale. 3. Immediate counter sequence."
+      "notes": "After eating clean shot: 1. Glove tap to head (physical release). 2. Growl exhale. 3. Immediate counter sequence.",
+      "why_this_works": "Why 'Self-Rage Redirect'? You said you get angry after mistakes. Channeling that surge into an immediate counter keeps your head in the fight."
     },
     {
       "name": "Tentative Trigger",
@@ -3153,7 +3155,8 @@
       "phase": "SPP",
       "intensity": "medium",
       "cue": "DOWN \u2192 DIG \u2192 DESTROY",
-      "notes": "When overwhelmed: 1. Wipe mouth (physical trigger). 2. Recall pre-loaded memory. 3. Forward pressure combo."
+      "notes": "When overwhelmed: 1. Wipe mouth (physical trigger). 2. Recall pre-loaded memory. 3. Forward pressure combo.",
+      "why_this_works": "Why 'Shutdown Sequence'? You said you mentally collapse when things go wrong. Running a quick reset routine keeps you attacking instead of freezing."
     },
     {
       "name": "Referee Armor",
@@ -3196,7 +3199,8 @@
       "phase": "SPP",
       "intensity": "medium",
       "cue": "BOO \u2192 BOOST",
-      "notes": "Visualize negative crowd noise as physical energy entering gloves during padwork."
+      "notes": "Visualize negative crowd noise as physical energy entering gloves during padwork.",
+      "why_this_works": "Why 'Crowd Energy Siphon'? Hostile fans drain you. Reframing that noise as power trains you to fight harder when the crowd boos."
     },
     {
       "name": "Cardio Lie Detector",
@@ -3288,6 +3292,7 @@
       "phase": "SPP",
       "intensity": "high",
       "cue": "TRAPPED \u2192 TORNADO",
+      "why_this_works": "Why 'Rope Rage Protocol'? You freeze when trapped. Rehearsing explosive exits trains an automatic escape instead of panic.",
       "notes": "When against ropes: 1. Dip right. 2. Liver shot. 3. Slip left. 100 reps/week."
     },
     {
@@ -3309,7 +3314,8 @@
       "phase": "SPP",
       "intensity": "high",
       "cue": "DOWN \u2192 DRAFT \u2192 DESTROY",
-      "notes": "After simulated KD: 1. Spit mouthguard. 2. Deep sniff. 3. Forward march."
+      "notes": "After simulated KD: 1. Spit mouthguard. 2. Deep sniff. 3. Forward march.",
+      "why_this_works": "Why 'Post-KD Reboot'? Quickly resetting after a knockdown keeps your body aggressive and your mind clear for the next exchange."
     },
     {
       "name": "Staredown Switch",
@@ -3330,6 +3336,7 @@
       "phase": "SPP",
       "intensity": "low",
       "cue": "THEIR EYES \u2192 MY FIRE",
+      "why_this_works": "Why 'Staredown Switch'? Opponents' eyes intimidate you. Visualizing their stare as fuel helps you stay assertive.",
       "notes": "Practice converting opponent's gaze into personal focus trigger."
     },
     {
@@ -3351,6 +3358,7 @@
       "phase": "SPP",
       "intensity": "medium",
       "cue": "REST \u2192 READY",
+      "why_this_works": "Why 'Bell-to-Bell Focus'? You tend to drift during breaks. Staying active and upright trains relentless concentration.",
       "notes": "During minute breaks: 1. No sitting. 2. Stare at neutral point. 3. Shadowbox last combo."
     },
     {
@@ -3372,6 +3380,7 @@
       "phase": "SPP",
       "intensity": "low",
       "cue": "BLOOD \u2192 BREATHE",
+      "why_this_works": "Why 'Cutman Calm'? Blood and doctor checks spike your nerves. Practicing slow breathing keeps you composed if cuts happen.",
       "notes": "During simulated cuts: 1. 4-7-8 breathing. 2. Positive self-talk. 3. Visualize restart."
     },
     {
@@ -3393,6 +3402,7 @@
       "phase": "SPP",
       "intensity": "high",
       "cue": "HURT \u2192 HURT MORE",
+      "why_this_works": "Why 'Gamble Gloves'? You hesitate after getting tagged. Forcing an immediate combo teaches you to answer aggression with aggression.",
       "notes": "When hit clean: must return 3-punch combo within 1 second."
     },
     {
@@ -3461,6 +3471,7 @@
       ],
       "phase": "TAPER",
       "intensity": "low",
+      "why_this_works": "Why 'Taper Focus Funnel'? You struggle with crowd distractions. Practicing with noise in your ears teaches you to lock onto your cues.",
       "cue": "TUNNEL VISION",
       "notes": "Use noise-canceling headphones playing crowd sounds while visualizing perfect technique execution."
     },
@@ -3558,7 +3569,8 @@
       "phase": "TAPER",
       "intensity": "high",
       "cue": "ANGER \u2192 ACTION",
-      "notes": "Deliberately make mistakes in sparring to practice real-time correction."
+      "notes": "Deliberately make mistakes in sparring to practice real-time correction.",
+      "why_this_works": "Why 'Self-Rage Redirect'? You said you get angry after mistakes. Turning that emotion into purposeful action keeps you in control."
     },
     {
       "name": "Decision Autopilot",
@@ -3726,7 +3738,8 @@
       "phase": "TAPER",
       "intensity": "high",
       "cue": "HIT \u2192 GRIN \u2192 ANSWER",
-      "notes": "Deliberately eat light shots in sparring to practice immediate countering."
+      "notes": "Deliberately eat light shots in sparring to practice immediate countering.",
+      "why_this_works": "Why 'Mistake Momentum'? Freezing after errors wastes rounds. Practicing fast counters keeps you proactive under fire."
     },
     {
       "name": "Decision Deadline",
@@ -3798,7 +3811,8 @@
       "phase": "TAPER",
       "intensity": "high",
       "cue": "DING \u2192 DEEP \u2192 GO",
-      "notes": "Use actual bell sounds during padwork with immediate restart demands."
+      "notes": "Use actual bell sounds during padwork with immediate restart demands.",
+      "why_this_works": "Why 'Bell-to-Bell Focus'? Fatigue makes your focus slip. Using the bell as a cue to breathe and move keeps you locked in all fight."
     },
     {
       "name": "Pain-to-Power Redirect",
@@ -3821,7 +3835,8 @@
       "phase": "TAPER",
       "intensity": "high",
       "cue": "BURN \u2192 BEAST",
-      "notes": "Triggered when lactic acid builds, using specific power-generating imagery."
+      "notes": "Triggered when lactic acid builds, using specific power-generating imagery.",
+      "why_this_works": "Why 'Pain-to-Power Redirect'? When fatigue turns to frustration, channeling that burn into aggressive self-talk keeps your output high."
     },
     {
       "name": "Scoreboard Immunity",
@@ -3844,7 +3859,8 @@
       "phase": "TAPER",
       "intensity": "low",
       "cue": "MY ROUNDS \u2192 MY RULES",
-      "notes": "Watch controversial fight footage while maintaining technical self-evaluation."
+      "notes": "Watch controversial fight footage while maintaining technical self-evaluation.",
+      "why_this_works": "Why 'Scoreboard Immunity'? Obsessing over scores distracts you. Training to ignore them keeps you locked on your game plan."
     },
     {
       "name": "Corner-to-Center Transition",
@@ -3868,7 +3884,8 @@
       "phase": "TAPER",
       "intensity": "high",
       "cue": "CENTER \u2192 HUNT",
-      "notes": "Physical ring position triggers offensive mindset shift."
+      "notes": "Physical ring position triggers offensive mindset shift.",
+      "why_this_works": "Why 'Corner-to-Center Transition'? You hesitate after defending. Drilling a quick move to center sparks instant offense."
     },
     {
       "name": "Announcer Filter",
@@ -3891,7 +3908,8 @@
       "phase": "TAPER",
       "intensity": "medium",
       "cue": "WORDS \u2192 WIND",
-      "notes": "Train with distracting commentary playing during technical work."
+      "notes": "Train with distracting commentary playing during technical work.",
+      "why_this_works": "Why 'Announcer Filter'? Commentators can pull your attention away. Training with constant chatter teaches you to tune it out."
     },
     {
       "name": "Championship Minutes",
