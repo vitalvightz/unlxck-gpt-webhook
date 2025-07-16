@@ -93,15 +93,11 @@ def load_google_services(creds_b64: str):
         "https://www.googleapis.com/auth/drive"
     ]
     creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=scopes)
-    return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds), creds
 
-def get_folder_id(drive_service, folder_name):
-    response = drive_service.files().list(
-        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
-        spaces="drive",
-    ).execute()
-    folders = response.get("files", [])
-    return folders[0]["id"] if folders else None
+    # 🔍 DEBUG PRINT — reveals the Google identity in logs
+    print("🔐 Service account in use:", creds.service_account_email)
+
+    return build("docs", "v1", credentials=creds), creds
 
 def handler(form_fields, creds_b64):
     parsed = parse_mindcode_form(form_fields)
@@ -144,40 +140,17 @@ def handler(form_fields, creds_b64):
         "all_tags": all_tags,
     }) if any(drills_by_phase.values()) else f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
 
-    docs_service, drive_service, creds = load_google_services(creds_b64)
+    docs_service, creds = load_google_services(creds_b64)
+
+    # 🔨 Create fresh Google Doc
     doc = docs_service.documents().create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}).execute()
     doc_id = doc.get("documentId")
 
-    folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
-    if folder_id:
-        drive_service.files().update(
-            fileId=doc_id,
-            addParents=folder_id,
-            removeParents="root"
-        ).execute()
-
-        drive_service.permissions().create(
-            fileId=doc_id,
-            body={
-                "type": "user",
-                "role": "writer",
-                "emailAddress": creds.service_account_email
-            },
-            sendNotificationEmail=False
-        ).execute()
-
-    for attempt in range(3):
-        try:
-            docs_service.documents().batchUpdate(
-                documentId=doc_id,
-                body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
-            ).execute()
-            break
-        except HttpError as e:
-            if e.resp.status == 403 and attempt < 2:
-                time.sleep(1.5)
-            else:
-                raise e
+    # 🧠 Insert content
+    docs_service.documents().batchUpdate(
+        documentId=doc_id,
+        body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
+    ).execute()
 
     return f"https://docs.google.com/document/d/{doc_id}"
 
