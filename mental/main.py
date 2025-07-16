@@ -97,7 +97,9 @@ def load_google_services(creds_b64: str):
     # 🔍 DEBUG PRINT — reveals the Google identity in logs
     print("🔐 Service account in use:", creds.service_account_email)
 
-    return build("docs", "v1", credentials=creds), creds
+    docs_service = build("docs", "v1", credentials=creds)
+    drive_service = build("drive", "v3", credentials=creds)
+    return docs_service, drive_service, creds
 
 def handler(form_fields, creds_b64):
     parsed = parse_mindcode_form(form_fields)
@@ -140,7 +142,7 @@ def handler(form_fields, creds_b64):
         "all_tags": all_tags,
     }) if any(drills_by_phase.values()) else f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
 
-    docs_service, creds = load_google_services(creds_b64)
+    docs_service, drive_service, creds = load_google_services(creds_b64)
 
     # 🔨 Create fresh Google Doc
     doc = docs_service.documents().create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}).execute()
