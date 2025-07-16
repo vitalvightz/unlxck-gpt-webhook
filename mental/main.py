@@ -107,7 +107,7 @@ def get_folder_id(drive_service, folder_name):
     folders = response.get("files", [])
     return folders[0]["id"] if folders else None
 
-def handler(form_fields, creds_b64):
+def handler(form_fields, creds_b64, target_folder_id=None):
     parsed = parse_mindcode_form(form_fields)
 
     full_name = parsed.get("full_name", "").strip()
@@ -165,12 +165,14 @@ def handler(form_fields, creds_b64):
     doc = docs_service.documents().create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}).execute()
     doc_id = doc.get("documentId")
 
-    folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
-    if folder_id:
+    if target_folder_id is None:
+        target_folder_id = os.getenv("TARGET_FOLDER_ID")
+    if target_folder_id:
         drive_service.files().update(
             fileId=doc_id,
-            addParents=folder_id,
-            removeParents="root"
+            addParents=target_folder_id,
+            removeParents="root",
+            body={"writersCanShare": True},
         ).execute()
 
     docs_service.documents().batchUpdate(
@@ -185,5 +187,9 @@ if __name__ == "__main__":
     payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
     with open(payload_path, "r") as f:
         fields = json.load(f)
-    link = handler(fields, os.environ["GOOGLE_CREDS_B64"])
+    link = handler(
+        fields,
+        os.environ["GOOGLE_CREDS_B64"],
+        os.environ.get("TARGET_FOLDER_ID")
+    )
     print("Saved to:", link)
