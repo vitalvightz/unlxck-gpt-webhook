@@ -18,7 +18,11 @@ from mental.tag_labels import humanize_list
 # Load drill bank
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
 with open(DRILLS_PATH, "r") as f:
-    DRILL_BANK = json.load(f)["drills"]
+    data = json.load(f)
+    DRILL_BANK = []
+    for key, val in data.items():
+        if key == "drills" or key.endswith("_drills"):
+            DRILL_BANK.extend(val)
 for d in DRILL_BANK:
     d["sports"] = [s.lower() for s in d.get("sports", [])]
 
