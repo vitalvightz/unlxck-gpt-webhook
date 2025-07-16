@@ -24,7 +24,6 @@ for d in DRILL_BANK:
 
 def format_drill_block(drill, phase):
     block = f"""🧠 {phase.upper()}: {drill['name']}
-
 📌 Description:
 {drill['description']}
 
