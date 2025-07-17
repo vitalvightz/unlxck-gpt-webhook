@@ -58,7 +58,13 @@ The system only rewards precision. If a drill doesn't clearly match tagged needs
 `mental.main.handler()` can create an athlete plan in Google Docs. Provide your service account credentials as a Base64 string and the ID of a Drive folder you own:
 
 ```python
-link = handler(form_payload, os.environ["GOOGLE_CREDS_B64"], os.environ.get("TARGET_FOLDER_ID"))
+link = handler(
+    form_payload,
+    os.environ["GOOGLE_CREDS_B64"],
+    os.environ.get("TARGET_FOLDER_ID"),
+    debug=os.environ.get("DEBUG") == "1",
+)
 ```
 
 The document is first created by the service account and then moved into the specified folder so you retain ownership.
+Set the environment variable `DEBUG=1` to print detailed progress and Google API errors when generating plans.

@@ -90,15 +90,22 @@ def build_plan_output(drills_by_phase, athlete_info):
                 lines.append(format_drill_block(d, phase))
     return "\n\n".join(lines)
 
-def load_google_services(creds_b64: str):
+def load_google_services(creds_b64: str, debug: bool = False):
+    """Return Docs and Drive service clients using the provided credentials."""
     if Credentials is None or build is None:  # pragma: no cover - safety for tests
         raise ImportError("Google API client libraries are required for export")
+
     decoded = base64.b64decode(creds_b64)
+    info = json.loads(decoded)
+    if debug:
+        print(f"[DEBUG] Service account: {info.get('client_email')}")
+
     with open("mental_google_creds.json", "wb") as f:
         f.write(decoded)
+
     scopes = [
         "https://www.googleapis.com/auth/documents",
-        "https://www.googleapis.com/auth/drive"
+        "https://www.googleapis.com/auth/drive",
     ]
     creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=scopes)
     return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds)
@@ -111,13 +118,20 @@ def get_folder_id(drive_service, folder_name):
     folders = response.get("files", [])
     return folders[0]["id"] if folders else None
 
-def handler(form_fields, creds_b64, target_folder_id=None):
+def handler(form_fields, creds_b64, target_folder_id=None, *, debug: bool = False):
     parsed = parse_mindcode_form(form_fields)
+    if debug:
+        print("[DEBUG] Parsed form fields")
 
     full_name = parsed.get("full_name", "").strip()
     sport = parsed.get("sport", "").strip().lower()
     position_style = parsed.get("position_style", "").strip()
     phase = parsed.get("mental_phase", "").strip().upper()
+
+    if debug:
+        print(
+            f"[DEBUG] Athlete: {full_name}, sport={sport}, style={position_style}, phase={phase}"
+        )
 
     # 🧱 Required data guard
     if not full_name or not sport or not phase:
@@ -128,6 +142,9 @@ def handler(form_fields, creds_b64, target_folder_id=None):
         phase = "GPP"
 
     tags = map_tags(parsed)
+    if debug:
+        print(f"[DEBUG] Generated tags: {tags}")
+
     scored = score_drills(DRILL_BANK, tags, sport, phase)
 
     all_tags = []
@@ -145,12 +162,19 @@ def handler(form_fields, creds_b64, target_folder_id=None):
     else:
         phases = ["TAPER"]
 
+    if debug:
+        print(f"[DEBUG] Evaluating phases: {phases}")
+
     for p in phases:
         drills = [d for d in scored if d["phase"].upper() == p]
         drills_by_phase[p] = drills[:5]
+        if debug:
+            print(f"[DEBUG] {p} drills → {len(drills_by_phase[p])} selected")
 
     # Handle empty result fallback
     if not any(drills_by_phase.values()):
+        if debug:
+            print("[DEBUG] No drills matched criteria")
         doc_text = f"# ❌ No drills matched for {full_name} in phase {phase}\n\nCheck inputs or adjust your form selections."
     else:
         doc_text = build_plan_output(
@@ -165,24 +189,51 @@ def handler(form_fields, creds_b64, target_folder_id=None):
         )
 
     # Create and upload doc
-    docs_service, drive_service = load_google_services(creds_b64)
-    doc = docs_service.documents().create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}).execute()
+    docs_service, drive_service = load_google_services(creds_b64, debug=debug)
+
+    if debug:
+        print("[DEBUG] Creating Google Doc…")
+
+    try:
+        doc = (
+            docs_service.documents()
+            .create(body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"})
+            .execute()
+        )
+    except Exception as e:  # googleapiclient.errors.HttpError etc
+        print(f"[DEBUG] Failed to create document: {e}")
+        raise
+
     doc_id = doc.get("documentId")
+    if debug:
+        print(f"[DEBUG] Created document ID: {doc_id}")
 
     if target_folder_id is None:
         target_folder_id = os.getenv("TARGET_FOLDER_ID")
     if target_folder_id:
-        drive_service.files().update(
-            fileId=doc_id,
-            addParents=target_folder_id,
-            removeParents="root",
-            body={"writersCanShare": True},
-        ).execute()
+        if debug:
+            print(f"[DEBUG] Moving document to folder {target_folder_id}")
+        try:
+            drive_service.files().update(
+                fileId=doc_id,
+                addParents=target_folder_id,
+                removeParents="root",
+                body={"writersCanShare": True},
+            ).execute()
+        except Exception as e:
+            print(f"[DEBUG] Failed to move document: {e}")
+            raise
 
-    docs_service.documents().batchUpdate(
-        documentId=doc_id,
-        body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
-    ).execute()
+    if debug:
+        print("[DEBUG] Uploading document contents")
+    try:
+        docs_service.documents().batchUpdate(
+            documentId=doc_id,
+            body={"requests": [{"insertText": {"location": {"index": 1}, "text": doc_text}}]}
+        ).execute()
+    except Exception as e:
+        print(f"[DEBUG] Failed to upload document text: {e}")
+        raise
 
     return f"https://docs.google.com/document/d/{doc_id}"
 
@@ -196,9 +247,12 @@ if __name__ == "__main__":
     if not creds_b64:
         raise EnvironmentError("GOOGLE_CREDS_B64 environment variable is required for export")
 
+    debug = os.environ.get("DEBUG", "0") == "1"
+
     link = handler(
         fields,
         creds_b64,
-        os.environ.get("TARGET_FOLDER_ID")
+        os.environ.get("TARGET_FOLDER_ID"),
+        debug=debug,
     )
     print("Saved to:", link)
