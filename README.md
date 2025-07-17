@@ -1,18 +1,51 @@
 # Mental Training Module
 
-This project scores mental drills so athletes get targeted practice. It parses questionnaire responses into tags and ranks drills using those tags.
+This repository turns questionnaire responses into customized mental drill plans. It normalizes raw form fields into tags, scores each drill in `Drills_bank.json`, and builds a phase‑based program that can be exported to Google Docs.
 
-Run the module to generate a basic plan starting today:
+## Setup
+
+Use Python 3 and install the required packages:
 
 ```bash
-python -m mental.program
+pip install -r requirements.txt
 ```
 
-## Overview
+Run the unit tests to ensure everything works:
 
-The scoring engine compares each drill to an athlete's traits, weaknesses and current training phase. The higher the score, the more closely the drill fits that athlete right now.
+```bash
+pytest -q
+```
 
-## How Scoring Works
+## Running
+
+`mental/main.py` provides a small CLI used during development. It loads `tests/test_payload.json` as sample input and requires a base64‑encoded Google credentials string in `GOOGLE_CREDS_B64` to create a document.
+
+```bash
+export GOOGLE_CREDS_B64="..."  # service account credentials
+python -m mental.main
+```
+
+For basic scoring without exporting you can import the modules directly:
+
+```python
+from mental.program import parse_mindcode_form
+from mental.tags import map_tags
+from mental.scoring import score_drills
+
+fields = {...}  # dict matching the Google form
+parsed = parse_mindcode_form(fields)
+tags = map_tags(parsed)
+results = score_drills(DRILL_BANK, tags, parsed["sport"], parsed["mental_phase"])
+```
+
+## Data Flow
+
+1. **`program.parse_mindcode_form`** – extracts structured values from form fields and resolves the training phase.
+2. **`tags.map_tags`** – maps those values to the controlled vocabulary in `tags.txt` and normalizes synonyms.
+3. **`scoring.score_drills`** – applies the rules below to produce a score for each drill. Drills are filtered by sport and sorted by their final score.
+4. **`main.build_plan_output`** – groups the top drills by phase and injects coach notes when contradictory tags are detected.
+
+## Scoring Rules
 
 Scores start at **1.0**. The adjustments below raise or lower the final number. Each rule has a hard limit so you know exactly how far it can move the score.
 
@@ -33,22 +66,18 @@ Scores start at **1.0**. The adjustments below raise or lower the final number. 
 | Overload penalty | -0.1 per flag | **-0.5** total |
 | CNS stress drill tag penalty | -0.1 | |
 
-These values stack in order, but no single rule can exceed its cap.
+These values stack in order, but no single rule can exceed its cap. General relevance without overlapping tags earns nothing – precision is rewarded.
 
-## What's NOT scored
+## Contradiction Detection
 
-General relevance without tagged overlap earns nothing. The system only rewards clear tag matches.
+`contradictions.py` defines tag pairs that signal mismatches in an athlete's answers (e.g. claiming fast decisions yet overthinking). When any pair is present the generated plan highlights a **COACH REVIEW FLAG** with a brief note.
 
 ## Customization
 
-Edit `mental/scoring.py` to tweak values:
-
-- Update `TRAIT_SCORES` for different trait weights.
-- Change `SYNERGY_LIST` to redefine modality pairs and required tags.
-- Adjust `sport_microweight_bonus()` for sport-specific tweaks.
-
-You can also expand the tag list in `tags.txt` or modify which tags count as weaknesses.
+- **Drills** – add or edit entries in `mental/Drills_bank.json` following the structure defined at the bottom of `tags.txt`.
+- **Tags** – extend `tags.txt` and update `TAG_NORMALIZATION_MAP` in `normalization.py` for synonyms.
+- **Scoring** – adjust weights in `scoring.py` such as `TRAIT_SCORES`, `SYNERGY_LIST` or the micro‑weight logic.
 
 ## Design Principle
 
-The system only rewards precision. If a drill doesn't clearly match tagged needs, it stays near the base score.
+The module assumes clear, tagged data. If a drill or athlete input does not explicitly match, it stays near the base score so that only the best‑fitting drills rise to the top.
