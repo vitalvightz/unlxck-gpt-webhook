@@ -1,6 +1,7 @@
 import json
 import os
 import base64
+import sys
 
 try:  # pragma: no cover - optional for tests
     from google.oauth2.service_account import Credentials
@@ -18,7 +19,11 @@ from mental.tag_labels import humanize_list
 # Load drill bank
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
 with open(DRILLS_PATH, "r") as f:
-    DRILL_BANK = json.load(f)["drills"]
+    data = json.load(f)
+    DRILL_BANK = []
+    for key, val in data.items():
+        if key == "drills" or key.endswith("_drills"):
+            DRILL_BANK.extend(val)
 for d in DRILL_BANK:
     d["sports"] = [s.lower() for s in d.get("sports", [])]
 
@@ -185,5 +190,17 @@ if __name__ == "__main__":
     payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
     with open(payload_path, "r") as f:
         fields = json.load(f)
-    link = handler(fields, os.environ["GOOGLE_CREDS_B64"])
+
+    creds = os.getenv("GOOGLE_CREDS_B64")
+    if not creds:
+        print("❌ GOOGLE_CREDS_B64 environment variable is missing")
+        sys.exit(1)
+
+    try:
+        link = handler(fields, creds)
+    except ImportError as e:
+        print(e)
+        print("Ensure google-api-python-client dependencies are installed.")
+        sys.exit(1)
+
     print("Saved to:", link)
