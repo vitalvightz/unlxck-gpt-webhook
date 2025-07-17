@@ -1,6 +1,10 @@
 import json
 import os
+import sys
 import base64
+
+if __package__ is None or __package__ == "":  # allow running as a script
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 try:  # pragma: no cover - optional for tests
     from google.oauth2.service_account import Credentials
@@ -187,9 +191,14 @@ if __name__ == "__main__":
     payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
     with open(payload_path, "r") as f:
         fields = json.load(f)
+
+    creds_b64 = os.environ.get("GOOGLE_CREDS_B64")
+    if not creds_b64:
+        raise EnvironmentError("GOOGLE_CREDS_B64 environment variable is required for export")
+
     link = handler(
         fields,
-        os.environ["GOOGLE_CREDS_B64"],
+        creds_b64,
         os.environ.get("TARGET_FOLDER_ID")
     )
     print("Saved to:", link)
