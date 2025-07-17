@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
+      DEBUG: "1"  # 👈 ENABLE DEBUGGING
 
     steps:
       - name: Checkout repo
