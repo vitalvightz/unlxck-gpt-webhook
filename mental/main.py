@@ -171,19 +171,10 @@ def handler(form_fields, creds_b64, *, debug=False):
     folder_id = os.environ.get("TARGET_FOLDER_ID")
     if debug:
         if folder_id:
-            print(f"[DEBUG] Using target folder: {folder_id}")
+            print(f"[DEBUG] TARGET_FOLDER_ID detected but unused: {folder_id}")
         else:
             print("[DEBUG] No TARGET_FOLDER_ID specified")
-    if folder_id:
-        try:
-            drive_service.files().update(
-                fileId=doc_id,
-                addParents=folder_id,
-            ).execute()
-            if debug:
-                print(f"[DEBUG] Moved to folder ID: {folder_id}")
-        except Exception as e:
-            print(f"[DEBUG] Failed to move document: {e}")
+    # Skipping file move step to avoid 403 permission errors
 
     try:
         docs_service.documents().batchUpdate(
