@@ -78,14 +78,6 @@ def load_google_services(creds_b64: str, debug: bool = False):
         print(f"[DEBUG] Using scopes: {', '.join(scopes)}")
     return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds)
 
-def get_folder_id(drive_service, folder_name):
-    response = drive_service.files().list(
-        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
-        spaces="drive",
-    ).execute()
-    folders = response.get("files", [])
-    return folders[0]["id"] if folders else None
-
 def handler(form_fields, creds_b64, *, debug=False):
     parsed = parse_mindcode_form(form_fields)
     full_name = parsed.get("full_name", "").strip()
@@ -138,11 +130,19 @@ def handler(form_fields, creds_b64, *, debug=False):
 
     docs_service, drive_service = load_google_services(creds_b64, debug=debug)
 
+    folder_id = os.environ.get("TARGET_FOLDER_ID")
+    if not folder_id:
+        raise EnvironmentError("❌ Missing TARGET_FOLDER_ID env var – required for rootless service accounts")
+
     if debug:
+        print(f"[DEBUG] Using folder: {folder_id}")
         print("[DEBUG] Attempting to create document via Docs API…")
     try:
         doc = docs_service.documents().create(
-            body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}
+            body={
+                "title": f"{full_name} – MENTAL PERFORMANCE PLAN",
+                "parents": [folder_id]
+            }
         ).execute()
     except Exception as e:
         print(f"[DEBUG] Failed to create document: {e}")
@@ -152,7 +152,6 @@ def handler(form_fields, creds_b64, *, debug=False):
     if debug:
         print(f"[DEBUG] Created document ID: {doc_id}")
 
-    # Step 1: Grant editor access to your Gmail (critical)
     try:
         drive_service.permissions().create(
             fileId=doc_id,
@@ -167,23 +166,6 @@ def handler(form_fields, creds_b64, *, debug=False):
             print("[DEBUG] Granted Gmail editor access")
     except Exception as e:
         print(f"[DEBUG] Failed to set document permissions: {e}")
-
-    folder_id = os.environ.get("TARGET_FOLDER_ID")
-    if debug:
-        if folder_id:
-            print(f"[DEBUG] Using target folder: {folder_id}")
-        else:
-            print("[DEBUG] No TARGET_FOLDER_ID specified")
-    if folder_id:
-        try:
-            drive_service.files().update(
-                fileId=doc_id,
-                addParents=folder_id,
-            ).execute()
-            if debug:
-                print(f"[DEBUG] Moved to folder ID: {folder_id}")
-        except Exception as e:
-            print(f"[DEBUG] Failed to move document: {e}")
 
     try:
         docs_service.documents().batchUpdate(
