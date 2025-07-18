@@ -151,6 +151,22 @@ def handler(form_fields, creds_b64, *, debug=False):
     if debug:
         print(f"[DEBUG] Created document ID: {doc_id}")
 
+    # Step 1: Grant editor access to your Gmail (critical)
+    try:
+        drive_service.permissions().create(
+            fileId=doc_id,
+            body={
+                "type": "user",
+                "role": "writer",
+                "emailAddress": "unlxckedmind@gmail.com",
+            },
+            fields="id",
+        ).execute()
+        if debug:
+            print("[DEBUG] Granted Gmail editor access")
+    except Exception as e:
+        print(f"[DEBUG] Failed to set document permissions: {e}")
+
     folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
     if folder_id:
         try:
