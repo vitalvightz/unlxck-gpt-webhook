@@ -159,8 +159,9 @@ def handler(form_fields, creds_b64, *, debug=False):
             body={
                 "name": f"{full_name} – MENTAL PERFORMANCE PLAN",
                 "mimeType": "application/vnd.google-apps.document",
-                "parents": [folder_id]
-            }
+                "parents": [folder_id],
+            },
+            supportsAllDrives=True,
         ).execute()
         doc_id = doc_file["id"]
         if debug:
