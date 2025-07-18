@@ -74,7 +74,8 @@ def load_google_services(creds_b64: str, debug: bool = False):
     ]
     creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=scopes)
     if debug:
-        print(f"[DEBUG] Service account: {creds.service_account_email}")
+        print(f"[DEBUG] Authenticated as: {creds.service_account_email}")
+        print(f"[DEBUG] Using scopes: {', '.join(scopes)}")
     return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds)
 
 def get_folder_id(drive_service, folder_name):
@@ -138,7 +139,7 @@ def handler(form_fields, creds_b64, *, debug=False):
     docs_service, drive_service = load_google_services(creds_b64, debug=debug)
 
     if debug:
-        print("[DEBUG] Creating Google Doc…")
+        print("[DEBUG] Attempting to create document via Docs API…")
     try:
         doc = docs_service.documents().create(
             body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}
@@ -168,6 +169,11 @@ def handler(form_fields, creds_b64, *, debug=False):
         print(f"[DEBUG] Failed to set document permissions: {e}")
 
     folder_id = os.environ.get("TARGET_FOLDER_ID")
+    if debug:
+        if folder_id:
+            print(f"[DEBUG] Using target folder: {folder_id}")
+        else:
+            print("[DEBUG] No TARGET_FOLDER_ID specified")
     if folder_id:
         try:
             drive_service.files().update(
