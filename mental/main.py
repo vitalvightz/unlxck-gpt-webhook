@@ -167,7 +167,7 @@ def handler(form_fields, creds_b64, *, debug=False):
     except Exception as e:
         print(f"[DEBUG] Failed to set document permissions: {e}")
 
-    folder_id = get_folder_id(drive_service, "Unlxck Auto Docs")
+    folder_id = os.environ.get("TARGET_FOLDER_ID")
     if folder_id:
         try:
             drive_service.files().update(
