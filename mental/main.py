@@ -65,16 +65,13 @@ def build_plan_output(drills_by_phase, athlete_info):
     return "\n\n".join(lines)
 
 def load_google_services(creds_b64: str, debug: bool = False):
-    decoded = base64.b64decode(creds_b64)
-    with open("mental_google_creds.json", "wb") as f:
-        f.write(decoded)
+    creds_json = base64.b64decode(creds_b64).decode("utf-8")
+    creds_dict = json.loads(creds_json)
     scopes = [
         "https://www.googleapis.com/auth/documents",
         "https://www.googleapis.com/auth/drive",
     ]
-    creds = Credentials.from_service_account_file(
-        "mental_google_creds.json", scopes=scopes
-    )
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     if debug:
         print(f"[DEBUG] Authenticated as: {creds.service_account_email}")
     docs_service = build("docs", "v1", credentials=creds)
