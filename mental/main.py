@@ -70,12 +70,29 @@ def load_google_services(creds_b64: str, debug: bool = False):
         f.write(decoded)
     scopes = [
         "https://www.googleapis.com/auth/documents",
-        "https://www.googleapis.com/auth/drive"
+        "https://www.googleapis.com/auth/drive",
     ]
-    creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=scopes)
+    creds = Credentials.from_service_account_file(
+        "mental_google_creds.json", scopes=scopes
+    )
+    docs_service = build("docs", "v1", credentials=creds)
+    drive_service = build("drive", "v3", credentials=creds)
     if debug:
         print(f"[DEBUG] Authenticated as: {creds.service_account_email}")
-    return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds)
+        try:
+            about = drive_service.about().get(
+                fields="user,storageQuota"
+            ).execute()
+            print(
+                f"[DEBUG] Drive user info:\n{json.dumps(about.get('user', {}), indent=2)}"
+            )
+            if about.get("storageQuota"):
+                print(
+                    f"[DEBUG] Storage quota:\n{json.dumps(about['storageQuota'], indent=2)}"
+                )
+        except Exception as e:
+            print(f"[DEBUG] Failed to fetch Drive about info: {e}")
+    return docs_service, drive_service, creds
 
 def handler(form_fields, creds_b64, *, debug=False):
     parsed = parse_mindcode_form(form_fields)
@@ -127,13 +144,27 @@ def handler(form_fields, creds_b64, *, debug=False):
         )
     )
 
-    docs_service, drive_service = load_google_services(creds_b64, debug=debug)
+    docs_service, drive_service, creds = load_google_services(creds_b64, debug=debug)
 
     folder_id = os.environ.get("TARGET_FOLDER_ID")
     if not folder_id:
         raise EnvironmentError("❌ Missing TARGET_FOLDER_ID env var – required for rootless service accounts")
     if debug:
         print(f"[DEBUG] Using folder ID: {folder_id}")
+        try:
+            permissions = (
+                drive_service.permissions()
+                .list(
+                    fileId=folder_id,
+                    fields="permissions(id,emailAddress,role,type)",
+                )
+                .execute()
+            )
+            print(
+                f"[DEBUG] Folder Permissions:\n{json.dumps(permissions, indent=2)}"
+            )
+        except Exception as e:
+            print(f"[DEBUG] Failed to fetch folder permissions: {e}")
 
     # STEP 1: Create doc via DRIVE API
     try:
@@ -148,7 +179,9 @@ def handler(form_fields, creds_b64, *, debug=False):
         if debug:
             print(f"[DEBUG] Document created via Drive → ID: {doc_id}")
     except Exception as e:
-        print(f"[DEBUG] Failed to create document: {e}")
+        print(
+            f"[DEBUG] Failed to create document as {creds.service_account_email}: {e}"
+        )
         raise
 
     # STEP 2: Get doc object from Docs API
