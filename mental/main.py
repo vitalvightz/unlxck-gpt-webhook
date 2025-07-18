@@ -173,7 +173,6 @@ def handler(form_fields, creds_b64, *, debug=False):
             drive_service.files().update(
                 fileId=doc_id,
                 addParents=folder_id,
-                removeParents="root"
             ).execute()
             if debug:
                 print(f"[DEBUG] Moved to folder ID: {folder_id}")
