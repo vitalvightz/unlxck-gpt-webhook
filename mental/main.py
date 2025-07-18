@@ -75,16 +75,7 @@ def load_google_services(creds_b64: str, debug: bool = False):
     creds = Credentials.from_service_account_file("mental_google_creds.json", scopes=scopes)
     if debug:
         print(f"[DEBUG] Authenticated as: {creds.service_account_email}")
-        print(f"[DEBUG] Using scopes: {', '.join(scopes)}")
     return build("docs", "v1", credentials=creds), build("drive", "v3", credentials=creds)
-
-def get_folder_id(drive_service, folder_name):
-    response = drive_service.files().list(
-        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
-        spaces="drive",
-    ).execute()
-    folders = response.get("files", [])
-    return folders[0]["id"] if folders else None
 
 def handler(form_fields, creds_b64, *, debug=False):
     parsed = parse_mindcode_form(form_fields)
@@ -138,21 +129,36 @@ def handler(form_fields, creds_b64, *, debug=False):
 
     docs_service, drive_service = load_google_services(creds_b64, debug=debug)
 
+    folder_id = os.environ.get("TARGET_FOLDER_ID")
+    if not folder_id:
+        raise EnvironmentError("❌ Missing TARGET_FOLDER_ID env var – required for rootless service accounts")
     if debug:
-        print("[DEBUG] Attempting to create document via Docs API…")
+        print(f"[DEBUG] Using folder ID: {folder_id}")
+
+    # STEP 1: Create doc via DRIVE API
     try:
-        doc = docs_service.documents().create(
-            body={"title": f"{full_name} – MENTAL PERFORMANCE PLAN"}
+        doc_file = drive_service.files().create(
+            body={
+                "name": f"{full_name} – MENTAL PERFORMANCE PLAN",
+                "mimeType": "application/vnd.google-apps.document",
+                "parents": [folder_id]
+            }
         ).execute()
+        doc_id = doc_file["id"]
+        if debug:
+            print(f"[DEBUG] Document created via Drive → ID: {doc_id}")
     except Exception as e:
         print(f"[DEBUG] Failed to create document: {e}")
         raise
 
-    doc_id = doc.get("documentId")
-    if debug:
-        print(f"[DEBUG] Created document ID: {doc_id}")
+    # STEP 2: Get doc object from Docs API
+    try:
+        doc = docs_service.documents().get(documentId=doc_id).execute()
+    except Exception as e:
+        print(f"[DEBUG] Failed to retrieve doc: {e}")
+        raise
 
-    # Step 1: Grant editor access to your Gmail (critical)
+    # STEP 3: Set Gmail editor permission
     try:
         drive_service.permissions().create(
             fileId=doc_id,
@@ -168,14 +174,7 @@ def handler(form_fields, creds_b64, *, debug=False):
     except Exception as e:
         print(f"[DEBUG] Failed to set document permissions: {e}")
 
-    folder_id = os.environ.get("TARGET_FOLDER_ID")
-    if debug:
-        if folder_id:
-            print(f"[DEBUG] TARGET_FOLDER_ID detected but unused: {folder_id}")
-        else:
-            print("[DEBUG] No TARGET_FOLDER_ID specified")
-    # Skipping file move step to avoid 403 permission errors
-
+    # STEP 4: Upload content
     try:
         docs_service.documents().batchUpdate(
             documentId=doc_id,
