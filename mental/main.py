@@ -1,5 +1,6 @@
-import json, os, base64
-from google.oauth2.service_account import Credentials
+import json, os, pickle
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from mental.program import parse_mindcode_form
 from mental.tags import map_tags
@@ -7,11 +8,31 @@ from mental.scoring import score_drills
 from mental.contradictions import detect_contradictions
 from mental.tag_labels import humanize_list
 
+SCOPES = [
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/documents",
+]
+
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
 with open(DRILLS_PATH, "r") as f:
     DRILL_BANK = json.load(f)["drills"]
 for d in DRILL_BANK:
     d["sports"] = [s.lower() for s in d.get("sports", [])]
+
+def get_user_creds():
+    creds = None
+    if os.path.exists("token.json"):
+        with open("token.json", "rb") as token:
+            creds = pickle.load(token)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open("token.json", "wb") as token:
+            pickle.dump(creds, token)
+    return creds
 
 def format_drill_block(drill, phase):
     block = f"""🧠 {phase.upper()}: {drill['name']}
@@ -64,24 +85,15 @@ def build_plan_output(drills_by_phase, athlete_info):
                 lines.append(format_drill_block(d, phase))
     return "\n\n".join(lines)
 
-def load_google_services(creds_b64: str, debug: bool = False):
-    decoded = base64.b64decode(creds_b64)
-    with open("mental_google_creds.json", "wb") as f:
-        f.write(decoded)
-    scopes = [
-        "https://www.googleapis.com/auth/documents",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    creds = Credentials.from_service_account_file(
-        "mental_google_creds.json", scopes=scopes
-    )
+def load_google_services(debug: bool = False):
+    creds = get_user_creds()
     if debug:
-        print(f"[DEBUG] Authenticated as: {creds.service_account_email}")
+        print("[DEBUG] Using authenticated user credentials")
     docs_service = build("docs", "v1", credentials=creds)
     drive_service = build("drive", "v3", credentials=creds)
     return docs_service, drive_service, creds
 
-def handler(form_fields, creds_b64, *, debug=False):
+def handler(form_fields, *, debug=False):
     parsed = parse_mindcode_form(form_fields)
     full_name = parsed.get("full_name", "").strip()
     sport = parsed.get("sport", "").strip().lower()
@@ -131,7 +143,7 @@ def handler(form_fields, creds_b64, *, debug=False):
         )
     )
 
-    docs_service, drive_service, creds = load_google_services(creds_b64, debug=debug)
+    docs_service, drive_service, creds = load_google_services(debug=debug)
 
     folder_id = os.environ.get("TARGET_FOLDER_ID")
     if not folder_id:
@@ -212,9 +224,6 @@ if __name__ == "__main__":
     payload_path = os.path.join(os.path.dirname(__file__), "..", "tests", "test_payload.json")
     with open(payload_path, "r") as f:
         fields = json.load(f)
-    creds_b64 = os.environ.get("GOOGLE_CREDS_B64")
-    if not creds_b64:
-        raise EnvironmentError("GOOGLE_CREDS_B64 not set")
     debug = os.environ.get("DEBUG", "1") == "1"
-    link = handler(fields, creds_b64, debug=debug)
+    link = handler(fields, debug=debug)
     print("Saved to:", link)
