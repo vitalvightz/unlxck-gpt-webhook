@@ -214,6 +214,6 @@ if __name__ == "__main__":
     creds_b64 = os.environ.get("GOOGLE_CREDS_B64")
     if not creds_b64:
         raise EnvironmentError("GOOGLE_CREDS_B64 not set")
-    debug = os.environ.get("DEBUG", "0") == "1"
+    debug = os.environ.get("DEBUG", "1") == "1"
     link = handler(fields, creds_b64, debug=debug)
     print("Saved to:", link)
