@@ -6,8 +6,11 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+    environment: TARGET_FOLDER_ID  # ✅ THIS ENABLES ACCESS TO YOUR ENVIRONMENT VARIABLES
+
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
+      TARGET_FOLDER_ID: ${{ vars.TARGET_FOLDER_ID }}
 
     steps:
       - name: Checkout repo
