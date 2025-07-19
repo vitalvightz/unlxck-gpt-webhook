@@ -16,7 +16,7 @@ import json
 import os
 import tempfile
 from typing import Dict, Iterable, List
-from urllib import request, parse
+
 
 from .contradictions import detect_contradictions
 from .map_mindcode_tags import map_mindcode_tags
@@ -126,37 +126,40 @@ def _export_pdf(doc_text: str, full_name: str) -> str:
 
 
 def _upload_to_supabase(pdf_path: str) -> str:
-    """Upload the PDF at ``pdf_path`` to Supabase Storage and return its URL."""
+    """Upload ``pdf_path`` to Supabase Storage and return its public URL."""
+
+    import mimetypes
+    from urllib import request
+    from urllib.error import HTTPError
+    import os
 
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     if not supabase_url or not supabase_key:
-        raise RuntimeError(
-            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set"
-        )
+        raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
 
-    bucket = "plans"
     filename = os.path.basename(pdf_path)
-    upload_url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket}/{parse.quote(filename)}"
+    bucket = "mental-plans"
+    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
 
     with open(pdf_path, "rb") as f:
         data = f.read()
 
-    headers = {
-        "Authorization": f"Bearer {supabase_key}",
-        "x-upsert": "true",
-        "Content-Type": "application/pdf",
-    }
+    content_type = mimetypes.guess_type(filename)[0] or "application/pdf"
 
-    req = request.Request(upload_url, data=data, headers=headers, method="POST")
+    req = request.Request(upload_url, data=data, method="PUT")
+    req.add_header("Authorization", f"Bearer {supabase_key}")
+    req.add_header("Content-Type", content_type)
+    req.add_header("Content-Length", str(len(data)))
+
     try:
         with request.urlopen(req) as resp:
-            if resp.status not in (200, 201):
-                raise RuntimeError(f"Upload failed with status {resp.status}")
-    except Exception as exc:  # pragma: no cover - network issues
+            if resp.status != 200:
+                raise RuntimeError(f"Failed upload with status {resp.status}")
+    except HTTPError as exc:
         raise RuntimeError("Supabase upload failed") from exc
 
-    return f"{supabase_url.rstrip('/')}/storage/v1/object/public/{bucket}/{parse.quote(filename)}"
+    return f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
 
 
 def handler(event: Dict | None = None) -> str:
