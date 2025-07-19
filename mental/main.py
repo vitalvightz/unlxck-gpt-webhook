@@ -326,10 +326,9 @@ def _upload_to_supabase(pdf_path):
     except HTTPError as e:
         raise RuntimeError("Supabase upload failed") from e
 
-    # The public base URL can be optionally provided as SUPABASE_PUBLIC_URL. If
-    # it's missing or empty we fall back to the main Supabase URL so callers
-    # always get a usable absolute path.
-    public_base = os.getenv("SUPABASE_PUBLIC_URL") or url
+    # Use the Supabase URL directly so the full public link prints in logs.
+    # GitHub no longer masks this variable since it's an Actions variable.
+    public_base = os.getenv("SUPABASE_URL")
     return f"{public_base}/storage/v1/object/public/mental-plans/{filename}"
 
 def bucket_drills_by_phase(drills):
