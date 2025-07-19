@@ -2,12 +2,12 @@
 
 This module parses questionnaire responses, scores drills from the
 ``Drills_bank.json`` file and outputs a formatted plan.  The final
-plan text is converted to a local PDF using :mod:`fpdf`.
+plan text is converted to a PDF using :mod:`fpdf` and uploaded to
+Supabase Storage.
 
-The ``handler`` function is the main entry point and returns the path
-to the generated PDF.  ``build_plan_output`` is used by the test suite
-to verify formatting and therefore kept separate from the export
-logic.
+The ``handler`` function is the main entry point and returns the URL
+to the uploaded PDF. ``build_plan_output`` is used by the test suite to
+verify formatting and therefore kept separate from the export logic.
 """
 
 from __future__ import annotations
@@ -124,8 +124,34 @@ def _export_pdf(doc_text: str, full_name: str) -> str:
     return pdf_path
 
 
+def _upload_to_supabase(pdf_path: str) -> str:
+    """Upload the PDF at ``pdf_path`` to Supabase Storage and return its URL."""
+
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+    if not supabase_url or not supabase_key:
+        raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set")
+
+    try:
+        from supabase import create_client  # type: ignore
+    except Exception as exc:  # pragma: no cover - optional dependency
+        raise RuntimeError("Supabase client library is required") from exc
+
+    client = create_client(supabase_url, supabase_key)
+    storage = client.storage.from_("plans")
+
+    filename = os.path.basename(pdf_path)
+    with open(pdf_path, "rb") as f:
+        storage.upload(filename, f, {"content-type": "application/pdf", "upsert": True})
+
+    public = storage.get_public_url(filename)
+    if isinstance(public, dict):
+        return public.get("data", {}).get("publicUrl") or public.get("publicURL") or ""
+    return str(public)
+
+
 def handler(event: Dict | None = None) -> str:
-    """Process ``event`` data and return path to generated PDF."""
+    """Process ``event`` data and return a public URL to the PDF."""
 
     if event is None:
         raise ValueError("event payload required")
@@ -164,7 +190,8 @@ def handler(event: Dict | None = None) -> str:
     athlete["all_tags"] = all_tags
 
     doc_text = build_plan_output(top_drills, athlete)
-    return _export_pdf(doc_text, athlete["full_name"])
+    pdf_path = _export_pdf(doc_text, athlete["full_name"])
+    return _upload_to_supabase(pdf_path)
 
 
 if __name__ == "__main__":  # pragma: no cover - manual execution helper
