@@ -37,4 +37,4 @@ jobs:
         run: python -m spacy download en_core_web_lg
 
       - name: Run Mental Plan
-        run: python -m mental.main
+        run: python -m mental.main tests/test_payload.json
