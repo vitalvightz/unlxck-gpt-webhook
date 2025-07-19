@@ -1,19 +1,158 @@
-import os
+"""Generate mental training plans and export them as PDFs.
+
+This module parses questionnaire responses, scores drills from the
+``Drills_bank.json`` file and outputs a formatted plan.  The final
+plan text is converted to a local PDF using :mod:`weasyprint`.
+
+The ``handler`` function is the main entry point and returns the path
+to the generated PDF.  ``build_plan_output`` is used by the test suite
+to verify formatting and therefore kept separate from the export
+logic.
+"""
+
+from __future__ import annotations
+
 import json
-import base64
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
+import os
+import tempfile
+from typing import Dict, Iterable, List
 
-# Decode service account credentials from environment variable
-creds_b64 = os.getenv("GOOGLE_CREDS_B64")
-creds_json = json.loads(base64.b64decode(creds_b64))
+from .contradictions import detect_contradictions
+from .map_mindcode_tags import map_mindcode_tags
+from .program import parse_mindcode_form
+from .scoring import score_drills
+from .tag_labels import human_label, humanize_list
 
-# Authenticate
-creds = service_account.Credentials.from_service_account_info(
-    creds_json, scopes=["https://www.googleapis.com/auth/drive"]
-)
-drive = build("drive", "v3", credentials=creds)
 
-# Query storage quota
-about = drive.about().get(fields="storageQuota").execute()
-print(json.dumps(about, indent=2))
+_BANK_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
+
+
+def _load_bank() -> List[dict]:
+    with open(_BANK_PATH) as f:
+        data = json.load(f)
+    return data.get("drills", [])
+
+
+def _humanize_tags(tags: Iterable[str]) -> str:
+    return ", ".join(humanize_list(list(tags)))
+
+
+def build_plan_output(drills: Dict[str, List[dict]], athlete: Dict) -> str:
+    """Return a plain text training plan for ``athlete``.
+
+    Parameters
+    ----------
+    drills:
+        Mapping of phase name to a list of drill dictionaries.
+    athlete:
+        Information about the athlete such as ``full_name`` and
+        ``sport``.  ``athlete['all_tags']`` may be supplied to inject
+        coach review flags based on contradictions.
+    """
+
+    lines: List[str] = []
+    plan_name = f"{athlete.get('full_name', '').strip()} Mental Plan"
+    lines.append(plan_name)
+    lines.append(
+        f"Sport: {athlete.get('sport', '')} | Style: {athlete.get('position_style', '')} | Phase: {athlete.get('mental_phase', '')}"
+    )
+    lines.append("")
+
+    phase_order = {"GPP": 1, "SPP": 2, "TAPER": 3, "UNIVERSAL": 4}
+    for phase in sorted(drills, key=lambda p: phase_order.get(p.upper(), 99)):
+        lines.append(f"=== {phase.upper()} DRILLS ===")
+        for d in drills[phase]:
+            lines.append(d.get("name", "Unnamed Drill"))
+            if d.get("description"):
+                lines.append(d["description"])
+            if d.get("cue"):
+                lines.append(f"Cue → {d['cue']}")
+            if d.get("modalities"):
+                lines.append("Modalities: " + ", ".join(d["modalities"]))
+            tags = _humanize_tags(d.get("raw_traits", []) + d.get("theme_tags", []))
+            if tags:
+                lines.append("Tags: " + tags)
+            if d.get("notes"):
+                lines.append("Notes: " + d["notes"])
+            lines.append("")
+        lines.append("")
+
+    all_tags = set(athlete.get("all_tags", []))
+    notes = detect_contradictions(all_tags) if all_tags else []
+    if notes:
+        lines.append("COACH REVIEW FLAGS")
+        for note in notes:
+            lines.append(f"- {note}")
+        lines.append("")
+
+    return "\n".join(lines).strip() + "\n"
+
+
+def _export_pdf(doc_text: str, full_name: str) -> str:
+    """Save ``doc_text`` to a PDF and return its absolute path."""
+
+    from weasyprint import HTML  # imported lazily for test environments
+
+    safe_name = full_name.replace(" ", "_") or "plan"
+    filename = f"{safe_name}_mental_plan.pdf"
+    pdf_path = os.path.join(tempfile.gettempdir(), filename)
+    html = f"<html><body><pre>{doc_text}</pre></body></html>"
+    HTML(string=html).write_pdf(pdf_path)
+    return pdf_path
+
+
+def handler(event: Dict | None = None) -> str:
+    """Process ``event`` data and return path to generated PDF."""
+
+    if event is None:
+        raise ValueError("event payload required")
+
+    form_fields = event.get("form", event)
+    form_data = parse_mindcode_form(form_fields)
+    tags_map = map_mindcode_tags(form_data)
+
+    all_drills = _load_bank()
+    scored = score_drills(all_drills, tags_map, form_data.get("sport", ""), form_data.get("mental_phase", ""))
+
+    buckets: Dict[str, List[dict]] = {}
+    for d in scored:
+        phase = d.get("phase", "UNIVERSAL").upper()
+        buckets.setdefault(phase, []).append(d)
+
+    for lst in buckets.values():
+        lst.sort(key=lambda x: x["score"], reverse=True)
+
+    # Keep top 3 drills per phase
+    top_drills = {phase: lst[:3] for phase, lst in buckets.items()}
+
+    athlete = {
+        "full_name": form_data.get("full_name", ""),
+        "sport": form_data.get("sport", ""),
+        "position_style": form_data.get("position_style", ""),
+        "mental_phase": form_data.get("mental_phase", ""),
+    }
+
+    all_tags = []
+    for key, value in tags_map.items():
+        if isinstance(value, list):
+            all_tags.extend(f"{key}:{v}" for v in value)
+        else:
+            all_tags.append(f"{key}:{value}")
+    athlete["all_tags"] = all_tags
+
+    doc_text = build_plan_output(top_drills, athlete)
+    return _export_pdf(doc_text, athlete["full_name"])
+
+
+if __name__ == "__main__":  # pragma: no cover - manual execution helper
+    import sys
+
+    if len(sys.argv) < 2:
+        raise SystemExit("Usage: python -m mental.main <payload.json>")
+
+    with open(sys.argv[1]) as f:
+        payload = json.load(f)
+
+    path = handler(payload)
+    print(path)
+

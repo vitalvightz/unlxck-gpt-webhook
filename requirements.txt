@@ -3,11 +3,8 @@ thinc==8.1.12
 git+https://github.com/jenojp/negspacy
 rapidfuzz==3.5.2
 
-# Google Docs export
-google-api-python-client==2.126.0
-google-auth==2.29.0
-google-auth-httplib2==0.2.0
-google-auth-oauthlib==1.2.0
+# Local PDF export
+weasyprint==60.1
 
 # Optional (safe to include – won't break anything)
 numpy==1.24.4
