@@ -149,17 +149,29 @@ def build_plan_html(drills_by_phase, athlete):
 
     style = """
         <style>
-          body { font-family: Arial, sans-serif; color: #000; margin-top: 20pt; }
-          h1.title { font-size: 18pt; font-weight: bold; margin: 0 0 5pt; }
-          p.athlete-info { font-size: 12pt; margin: 0 0 15pt; }
-          h2.coach-header { font-size: 14pt; font-weight: bold; color: #cc0000; margin: 15pt 0 5pt; }
-          ul.coach-flags { font-size: 12pt; margin: 0 0 15pt 20pt; padding-left: 20px; }
-          h2.phase-header { font-size: 16pt; font-weight: bold; margin: 20pt 0 10pt; }
+          body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            line-height: 2;
+            color: #000;
+          }
+
+          h1, h2, h3, p, li {
+            line-height: 2;
+            margin-top: 8px;
+            margin-bottom: 8px;
+          }
+
+          h1.title { font-size: 18pt; font-weight: bold; }
+          p.athlete-info { font-size: 12pt; }
+          h2.coach-header { font-size: 14pt; font-weight: bold; color: #cc0000; }
+          ul.coach-flags { font-size: 12pt; margin-left: 20pt; padding-left: 20px; }
+          h2.phase-header { font-size: 16pt; font-weight: bold; }
           h2.phase-header.gpp { color: #0077cc; }
           h2.phase-header.spp { color: #cc7700; }
           h2.phase-header.taper { color: #228B22; }
-          h3.drill-name { font-size: 13pt; font-weight: bold; margin: 10pt 0 5pt; color: #000; }
-          p.field { font-size: 12pt; line-height: 1.2; margin: 0 0 3pt; }
+          h3.drill-name { font-size: 13pt; font-weight: bold; color: #000; }
+          p.field { font-size: 12pt; }
           span.field-label { font-weight: bold; }
           hr { border: none; border-top: 1px solid #ccc; margin: 15pt 0; }
         </style>
