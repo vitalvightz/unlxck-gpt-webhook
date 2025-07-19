@@ -1,10 +1,9 @@
 """
-Convert mental training plans to rich-styled PDFs using HTML + emojis.
+Convert mental training plans to clean PDFs using FPDF.
 
-Takes the existing `build_plan_output()` logic and renders it into an
-HTML template using full formatting (emojis, bold, line breaks, spacing).
-The HTML is converted to PDF via `pdfkit` (which wraps wkhtmltopdf) and
-uploaded to Supabase Storage. Retains the full Unlxck aesthetic.
+The plan text is generated from drill scores and then cleaned of emoji
+and smart punctuation so the PDF is ASCII-only. The file is uploaded to
+Supabase Storage for public access.
 
 Input: parsed form fields (already structured)
 Output: Supabase public PDF URL
@@ -16,6 +15,11 @@ import tempfile
 import mimetypes
 from urllib import request
 from urllib.error import HTTPError
+
+try:
+    from fpdf import FPDF  # type: ignore
+except Exception:  # pragma: no cover - optional dependency for tests
+    FPDF = None
 
 try:
     import pdfkit  # Requires wkhtmltopdf installed
@@ -33,6 +37,37 @@ with open(DRILLS_PATH) as f:
     DRILL_BANK = json.load(f)["drills"]
 for d in DRILL_BANK:
     d["sports"] = [s.lower() for s in d.get("sports", [])]
+
+# Map of Unicode punctuation and emoji to ASCII-only equivalents
+_CHAR_MAP = {
+    ord("–"): "-",
+    ord("—"): "-",
+    ord("’"): "'",
+    ord("‘"): "'",
+    ord("“"): '"',
+    ord("”"): '"',
+    ord("→"): "->",
+    ord("…"): "...",
+    ord("•"): "-",
+    ord("🧠"): "",
+    ord("📌"): "",
+    ord("🎯"): "",
+    ord("⚙"): "",
+    ord("🔥"): "",
+    ord("🧩"): "",
+    ord("🗣"): "",
+    ord("🔗"): "",
+    ord("🔖"): "",
+    ord("🔷"): "",
+    ord("⚠"): "",
+    ord("️"): "",
+}
+
+def _clean_text(text: str) -> str:
+    """Return ASCII-only text with emoji removed."""
+    cleaned = text.translate(_CHAR_MAP)
+    cleaned = cleaned.encode("ascii", "ignore").decode("ascii")
+    return cleaned
 
 def format_drill_html(drill, phase):
     traits = ", ".join(humanize_list(drill.get("raw_traits", [])))
@@ -112,6 +147,74 @@ def build_plan_output(drills_by_phase, athlete):
 
     return "\n".join(lines)
 
+
+def format_drill_block(drill, phase):
+    """Return cleaned multi-line text for a single drill."""
+    lines = [
+        f"{phase.upper()}: {drill['name']}",
+        f"Description: {drill['description']}",
+        f"Cue: {drill['cue']}",
+        f"Modalities: {', '.join(drill['modalities'])}",
+        f"Intensity: {drill['intensity']} | Sports: {', '.join(drill['sports'])}",
+        f"Notes: {drill['notes']}",
+    ]
+    if drill.get("why_this_works"):
+        lines.append(f"Why This Works: {drill['why_this_works']}")
+    if drill.get("coach_sidebar"):
+        sidebar = drill["coach_sidebar"]
+        if isinstance(sidebar, list):
+            lines.append("Coach Sidebar:")
+            lines.extend(f"- {s}" for s in sidebar)
+        else:
+            lines.append(f"Coach Sidebar: {sidebar}")
+    if drill.get("video_url"):
+        lines.append(f"Tutorial: {drill['video_url']}")
+    traits = ", ".join(humanize_list(drill.get("raw_traits", [])))
+    themes = ", ".join(humanize_list(drill.get("theme_tags", [])))
+    lines.append(f"Tags: Traits -> {traits} | Themes -> {themes}")
+    return "\n".join(_clean_text(l) for l in lines)
+
+
+def build_pdf_text(drills_by_phase, athlete):
+    """Return full plan text cleaned for PDF output."""
+    lines = [
+        _clean_text(f"MENTAL PERFORMANCE PLAN -- {athlete.get('full_name', '')}"),
+        _clean_text(
+            f"Sport: {athlete.get('sport', '')} | Style/Position: {athlete.get('position_style', '')} | Phase: {athlete.get('mental_phase', '')}"
+        ),
+    ]
+
+    contradictions = detect_contradictions(set(athlete.get("all_tags", [])))
+    if contradictions:
+        lines.append("COACH REVIEW FLAGS")
+        lines.extend(_clean_text(f"- {c}") for c in contradictions)
+
+    for phase in ["GPP", "SPP", "TAPER"]:
+        if drills_by_phase.get(phase):
+            lines.append(f"{phase} DRILLS")
+            for d in drills_by_phase[phase]:
+                lines.append(format_drill_block(d, phase))
+                lines.append("")
+
+    return "\n".join(lines)
+
+
+def _export_pdf(text: str, full_name: str) -> str:
+    """Render cleaned text to PDF using FPDF."""
+    safe = full_name.replace(" ", "_") or "plan"
+    path = os.path.join(tempfile.gettempdir(), f"{safe}_mental_plan.pdf")
+    if FPDF is None:
+        raise RuntimeError("fpdf is required for PDF export")
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_font("Arial", size=12)
+    for line in text.splitlines():
+        pdf.multi_cell(0, 10, line)
+    pdf.output(path)
+    return path
+
 def _export_pdf_from_html(html, full_name):
     safe = full_name.replace(" ", "_") or "plan"
     path = os.path.join(tempfile.gettempdir(), f"{safe}_mental_plan.pdf")
@@ -184,8 +287,8 @@ def handler(form_fields: dict):
         "all_tags": all_tags,
     }
 
-    html = build_plan_html(top, athlete)
-    path = _export_pdf_from_html(html, athlete["full_name"])
+    pdf_text = build_pdf_text(top, athlete)
+    path = _export_pdf(pdf_text, athlete["full_name"])
     return _upload_to_supabase(path)
 
 
