@@ -77,66 +77,73 @@ def format_drill_html(drill, phase):
     if drill.get("coach_sidebar"):
         if isinstance(drill["coach_sidebar"], list):
             sidebar = "<br>".join(
-                f"– {_clean_text(s)}" for s in drill["coach_sidebar"]
+                f"&ndash; {_clean_text(s)}" for s in drill["coach_sidebar"]
             )
         else:
-            sidebar = f"– {_clean_text(drill['coach_sidebar'])}"
+            sidebar = f"&ndash; {_clean_text(drill['coach_sidebar'])}"
 
     fields = [
-        f"<h3>{phase.upper()}: {_clean_text(drill['name'])}</h3>",
-        f"<p><b>Description:</b><br>{_clean_text(drill['description'])}</p>",
-        f"<p><b>Cue:</b><br>{_clean_text(drill['cue'])}</p>",
-        f"<p><b>Modalities:</b><br>{', '.join(_clean_text(m) for m in drill['modalities'])}</p>",
-        f"<p><b>Intensity:</b> {_clean_text(drill['intensity'])} | Sports: {', '.join(_clean_text(s) for s in drill['sports'])}</p>",
-        f"<p><b>Notes:</b><br>{_clean_text(drill['notes'])}</p>",
+        f"<h3 class='drill-name'>{phase.upper()}: {_clean_text(drill['name'])}</h3>",
+        f"<p class='field'><span class='field-label'>Description:</span> {_clean_text(drill['description'])}</p>",
+        f"<p class='field'><span class='field-label'>Cue:</span> <b>{_clean_text(drill['cue'])}</b></p>",
+        f"<p class='field'><span class='field-label'>Modalities:</span> {', '.join(_clean_text(m) for m in drill['modalities'])}</p>",
+        f"<p class='field'><span class='field-label'>Intensity:</span> {_clean_text(drill['intensity'])} | Sports: {', '.join(_clean_text(s) for s in drill['sports'])}</p>",
+        f"<p class='field'><span class='field-label'>Notes:</span> {_clean_text(drill['notes'])}</p>",
     ]
 
     if drill.get("why_this_works"):
         fields.append(
-            f"<p><b>Why This Works:</b><br>{_clean_text(drill['why_this_works'])}</p>"
+            f"<p class='field'><span class='field-label'>Why This Works:</span> {_clean_text(drill['why_this_works'])}</p>"
         )
     if sidebar:
-        fields.append(f"<p><b>Coach Sidebar:</b><br>{sidebar}</p>")
+        fields.append(f"<p class='field'><span class='field-label'>Coach Sidebar:</span> {sidebar}</p>")
     if drill.get("video_url"):
-        fields.append(f"<p><b>Tutorial:</b> {_clean_text(drill['video_url'])}</p>")
+        fields.append(f"<p class='field'><span class='field-label'>Tutorial:</span> {_clean_text(drill['video_url'])}</p>")
 
     fields.append(
-        f"<p><b>Tags:</b><br>Traits → {_clean_text(traits)}<br>Themes → {_clean_text(themes)}</p>"
+        f"<p class='field'><span class='field-label'>Tags:</span> Traits -> {_clean_text(traits)} | Themes -> {_clean_text(themes)}</p>"
     )
 
     return "\n".join(fields) + "<hr>"
 
 def build_plan_html(drills_by_phase, athlete):
     blocks = [
-        f"<h1>MENTAL PERFORMANCE PLAN – {_clean_text(athlete['full_name'])}</h1>",
+        f"<h1 class='title'>MENTAL PERFORMANCE PLAN – {_clean_text(athlete['full_name'])}</h1>",
         (
-            f"<p><b>Sport:</b> {_clean_text(athlete['sport'])} | "
-            f"<b>Style/Position:</b> {_clean_text(athlete['position_style'])} | "
-            f"<b>Phase:</b> {_clean_text(athlete['mental_phase'])}</p>"
+            f"<p class='athlete-info'>Sport: {_clean_text(athlete['sport'])} | "
+            f"Style/Position: {_clean_text(athlete['position_style'])} | "
+            f"Phase: {_clean_text(athlete['mental_phase'])}</p>"
         ),
     ]
 
     contradictions = detect_contradictions(set(athlete.get("all_tags", [])))
     if contradictions:
-        blocks.append("<h2>COACH REVIEW FLAGS</h2>")
+        blocks.append("<h2 class='coach-header'>COACH REVIEW FLAGS</h2>")
         blocks.append(
-            "<ul>" + "".join(f"<li>{_clean_text(c)}</li>" for c in contradictions) + "</ul>"
+            "<ul class='coach-flags'>" + "".join(f"<li>{_clean_text(c)}</li>" for c in contradictions) + "</ul>"
         )
 
     for phase in ["GPP", "SPP", "TAPER"]:
         if drills_by_phase.get(phase):
-            blocks.append(f"<h2>{phase} DRILLS</h2>")
+            blocks.append(f"<h2 class='phase-header {phase.lower()}'>{phase} DRILLS</h2>")
             for drill in drills_by_phase[phase]:
                 blocks.append(format_drill_html(drill, phase))
 
     style = """
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #222; }
-          h1 { font-size: 28px; margin-bottom: 10px; }
-          h2 { font-size: 20px; margin-top: 30px; margin-bottom: 10px; }
-          h3 { font-size: 18px; margin-top: 20px; margin-bottom: 5px; }
-          p { margin: 6px 0 10px; }
-          hr { border: 1px solid #ccc; margin: 30px 0; }
+          body { font-family: Arial, sans-serif; color: #000; margin-top: 20pt; }
+          h1.title { font-size: 18pt; font-weight: bold; margin: 0 0 5pt; }
+          p.athlete-info { font-size: 12pt; margin: 0 0 15pt; }
+          h2.coach-header { font-size: 14pt; font-weight: bold; color: #cc0000; margin: 15pt 0 5pt; }
+          ul.coach-flags { font-size: 12pt; margin: 0 0 15pt 20pt; padding-left: 20px; }
+          h2.phase-header { font-size: 16pt; font-weight: bold; margin: 20pt 0 10pt; }
+          h2.phase-header.gpp { color: #0077cc; }
+          h2.phase-header.spp { color: #cc7700; }
+          h2.phase-header.taper { color: #228B22; }
+          h3.drill-name { font-size: 13pt; font-weight: bold; margin: 10pt 0 5pt; color: #000; }
+          p.field { font-size: 12pt; line-height: 1.2; margin: 0 0 3pt; }
+          span.field-label { font-weight: bold; }
+          hr { border: none; border-top: 1px solid #ccc; margin: 15pt 0; }
         </style>
     """
 
@@ -325,8 +332,12 @@ def handler(form_fields: dict):
         "all_tags": all_tags,
     }
 
-    pdf_text = build_pdf_text(top, athlete)
-    path = _export_pdf(pdf_text, athlete["full_name"])
+    html = build_plan_html(top, athlete)
+    if pdfkit is not None:
+        path = _export_pdf_from_html(html, athlete["full_name"])
+    else:
+        pdf_text = build_pdf_text(top, athlete)
+        path = _export_pdf(pdf_text, athlete["full_name"])
     return _upload_to_supabase(path)
 
 
