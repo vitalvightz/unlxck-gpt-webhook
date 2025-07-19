@@ -72,55 +72,75 @@ def _clean_text(text: str) -> str:
 def format_drill_html(drill, phase):
     traits = ", ".join(humanize_list(drill.get("raw_traits", [])))
     themes = ", ".join(humanize_list(drill.get("theme_tags", [])))
+
     sidebar = ""
     if drill.get("coach_sidebar"):
         if isinstance(drill["coach_sidebar"], list):
-            sidebar = "<br>".join(f"– {s}" for s in drill["coach_sidebar"])
+            sidebar = "<br>".join(
+                f"– {_clean_text(s)}" for s in drill["coach_sidebar"]
+            )
         else:
-            sidebar = f"– {drill['coach_sidebar']}"
+            sidebar = f"– {_clean_text(drill['coach_sidebar'])}"
 
-    return f"""
-    <div class="drill-block">
-        <h3>🧠 {phase.upper()}: {drill['name']}</h3>
-        <p><b>📌 Description:</b><br>{drill['description']}</p>
-        <p><b>🎯 Cue:</b><br>{drill['cue']}</p>
-        <p><b>⚙️ Modalities:</b><br>{', '.join(drill['modalities'])}</p>
-        <p><b>🔥 Intensity:</b> {drill['intensity']} | Sports: {', '.join(drill['sports'])}</p>
-        <p><b>🧩 Notes:</b><br>{drill['notes']}</p>
-        {"<p><b>🧠 Why This Works:</b><br>" + drill["why_this_works"] + "</p>" if drill.get("why_this_works") else ""}
-        {"<p><b>🗣️ Coach Sidebar:</b><br>" + sidebar + "</p>" if sidebar else ""}
-        {"<p><b>🔗 Tutorial:</b><br>" + drill["video_url"] + "</p>" if drill.get("video_url") else ""}
-        <p><b>🔖 Tags:</b><br>Traits → {traits}<br>Themes → {themes}</p>
-    </div><hr>
-    """
+    fields = [
+        f"<h3>{phase.upper()}: {_clean_text(drill['name'])}</h3>",
+        f"<p><b>Description:</b><br>{_clean_text(drill['description'])}</p>",
+        f"<p><b>Cue:</b><br>{_clean_text(drill['cue'])}</p>",
+        f"<p><b>Modalities:</b><br>{', '.join(_clean_text(m) for m in drill['modalities'])}</p>",
+        f"<p><b>Intensity:</b> {_clean_text(drill['intensity'])} | Sports: {', '.join(_clean_text(s) for s in drill['sports'])}</p>",
+        f"<p><b>Notes:</b><br>{_clean_text(drill['notes'])}</p>",
+    ]
+
+    if drill.get("why_this_works"):
+        fields.append(
+            f"<p><b>Why This Works:</b><br>{_clean_text(drill['why_this_works'])}</p>"
+        )
+    if sidebar:
+        fields.append(f"<p><b>Coach Sidebar:</b><br>{sidebar}</p>")
+    if drill.get("video_url"):
+        fields.append(f"<p><b>Tutorial:</b> {_clean_text(drill['video_url'])}</p>")
+
+    fields.append(
+        f"<p><b>Tags:</b><br>Traits → {_clean_text(traits)}<br>Themes → {_clean_text(themes)}</p>"
+    )
+
+    return "\n".join(fields) + "<hr>"
 
 def build_plan_html(drills_by_phase, athlete):
-    blocks = [f"<h1>🧠 MENTAL PERFORMANCE PLAN – {athlete['full_name']}</h1>"]
-    blocks.append(f"<p><b>Sport:</b> {athlete['sport']} | <b>Style/Position:</b> {athlete['position_style']} | <b>Phase:</b> {athlete['mental_phase']}</p>")
+    blocks = [
+        f"<h1>MENTAL PERFORMANCE PLAN – {_clean_text(athlete['full_name'])}</h1>",
+        (
+            f"<p><b>Sport:</b> {_clean_text(athlete['sport'])} | "
+            f"<b>Style/Position:</b> {_clean_text(athlete['position_style'])} | "
+            f"<b>Phase:</b> {_clean_text(athlete['mental_phase'])}</p>"
+        ),
+    ]
 
     contradictions = detect_contradictions(set(athlete.get("all_tags", [])))
     if contradictions:
-        blocks.append("<h3>⚠️ COACH REVIEW FLAGS</h3><ul>" + "".join(f"<li>{c}</li>" for c in contradictions) + "</ul>")
+        blocks.append("<h2>COACH REVIEW FLAGS</h2>")
+        blocks.append(
+            "<ul>" + "".join(f"<li>{_clean_text(c)}</li>" for c in contradictions) + "</ul>"
+        )
 
     for phase in ["GPP", "SPP", "TAPER"]:
         if drills_by_phase.get(phase):
-            blocks.append(f"<h2>🔷 {phase} DRILLS</h2>")
+            blocks.append(f"<h2>{phase} DRILLS</h2>")
             for drill in drills_by_phase[phase]:
                 blocks.append(format_drill_html(drill, phase))
 
-    return f"""
-    <html><head>
+    style = """
         <style>
-            body {{ font-family: Arial, sans-serif; padding: 40px; }}
-            h1 {{ color: #333; }}
-            hr {{ border: 1px solid #ccc; margin: 30px 0; }}
-            .drill-block {{ margin-bottom: 20px; }}
-            p {{ margin: 5px 0 10px; }}
+          body { font-family: Arial, sans-serif; padding: 40px; color: #222; }
+          h1 { font-size: 28px; margin-bottom: 10px; }
+          h2 { font-size: 20px; margin-top: 30px; margin-bottom: 10px; }
+          h3 { font-size: 18px; margin-top: 20px; margin-bottom: 5px; }
+          p { margin: 6px 0 10px; }
+          hr { border: 1px solid #ccc; margin: 30px 0; }
         </style>
-    </head><body>
-    {''.join(blocks)}
-    </body></html>
     """
+
+    return f"<html><head>{style}</head><body>{''.join(blocks)}</body></html>"
 
 def build_plan_output(drills_by_phase, athlete):
     """Return plain-text plan for testing and logging."""
