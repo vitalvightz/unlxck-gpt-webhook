@@ -38,55 +38,71 @@ def _humanize_tags(tags: Iterable[str]) -> str:
     return ", ".join(humanize_list(list(tags)))
 
 
-def build_plan_output(drills: Dict[str, List[dict]], athlete: Dict) -> str:
-    """Return a plain text training plan for ``athlete``.
+def format_drill_block(drill: dict, phase: str) -> str:
+    """Return a formatted text block for a single drill."""
 
-    Parameters
-    ----------
-    drills:
-        Mapping of phase name to a list of drill dictionaries.
-    athlete:
-        Information about the athlete such as ``full_name`` and
-        ``sport``.  ``athlete['all_tags']`` may be supplied to inject
-        coach review flags based on contradictions.
+    block = (
+        f"🧠 {phase.upper()}: {drill.get('name', '')}\n"
+        f"📌 Description:\n{drill.get('description', '')}\n\n"
+        f"🎯 Cue:\n{drill.get('cue', '')}\n\n"
+        f"⚙️ Modalities:\n{', '.join(drill.get('modalities', []))}\n\n"
+        f"🔥 Intensity:\n{drill.get('intensity', '')} | Sports: {', '.join(drill.get('sports', []))}\n\n"
+        f"🧩 Notes:\n{drill.get('notes', '')}"
+    )
+
+    if drill.get("why_this_works"):
+        block += f"\n\n🧠 Why This Works:\n{drill['why_this_works']}"
+
+    if drill.get("coach_sidebar"):
+        sidebar = drill["coach_sidebar"]
+        if isinstance(sidebar, list):
+            sidebar = "\n".join(f"– {s}" for s in sidebar)
+        else:
+            sidebar = f"– {sidebar}"
+        block += f"\n\n🗣️ Coach Sidebar:\n{sidebar}"
+
+    if drill.get("video_url"):
+        block += f"\n\n🔗 Tutorial:\n{drill['video_url']}"
+
+    trait_labels = humanize_list(drill.get('raw_traits', []))
+    theme_labels = humanize_list(drill.get('theme_tags', []))
+    block += (
+        "\n\n🔖 Tags:\n"
+        f"Traits → {', '.join(trait_labels)}  \n"
+        f"Themes → {', '.join(theme_labels)}\n"
+    )
+    return block
+
+
+def build_plan_output(drills: Dict[str, List[dict]], athlete: Dict) -> str:
+    """Return a rich text training plan for ``athlete``.
+
+    The output mirrors the original document-style format used when
+    generating plans via Google Docs.  It is also used by the unit tests
+    to verify tag humanization and contradiction injection.
     """
 
     lines: List[str] = []
-    plan_name = f"{athlete.get('full_name', '').strip()} Mental Plan"
-    lines.append(plan_name)
     lines.append(
-        f"Sport: {athlete.get('sport', '')} | Style: {athlete.get('position_style', '')} | Phase: {athlete.get('mental_phase', '')}"
+        f"# 🧠 MENTAL PERFORMANCE PLAN – {athlete.get('full_name', '').strip()}\n"
     )
-    lines.append("")
+    lines.append(
+        f"**Sport:** {athlete.get('sport', '')} | **Style/Position:** {athlete.get('position_style', '')} | **Phase:** {athlete.get('mental_phase', '')}\n"
+    )
 
-    phase_order = {"GPP": 1, "SPP": 2, "TAPER": 3, "UNIVERSAL": 4}
-    for phase in sorted(drills, key=lambda p: phase_order.get(p.upper(), 99)):
-        lines.append(f"=== {phase.upper()} DRILLS ===")
-        for d in drills[phase]:
-            lines.append(d.get("name", "Unnamed Drill"))
-            if d.get("description"):
-                lines.append(d["description"])
-            if d.get("cue"):
-                lines.append(f"Cue → {d['cue']}")
-            if d.get("modalities"):
-                lines.append("Modalities: " + ", ".join(d["modalities"]))
-            tags = _humanize_tags(d.get("raw_traits", []) + d.get("theme_tags", []))
-            if tags:
-                lines.append("Tags: " + tags)
-            if d.get("notes"):
-                lines.append("Notes: " + d["notes"])
-            lines.append("")
-        lines.append("")
-
-    all_tags = set(athlete.get("all_tags", []))
-    notes = detect_contradictions(all_tags) if all_tags else []
-    if notes:
-        lines.append("COACH REVIEW FLAGS")
-        for note in notes:
+    contradictions = detect_contradictions(set(athlete.get("all_tags", [])))
+    if contradictions:
+        lines.append("⚠️ **COACH REVIEW FLAGS**")
+        for note in contradictions:
             lines.append(f"- {note}")
         lines.append("")
 
-    return "\n".join(lines).strip() + "\n"
+    for phase in ["GPP", "SPP", "TAPER"]:
+        if drills.get(phase):
+            lines.append(f"---\n## 🔷 {phase} DRILLS\n")
+            for d in drills[phase]:
+                lines.append(format_drill_block(d, phase))
+    return "\n\n".join(lines)
 
 
 _CHAR_MAP = {
