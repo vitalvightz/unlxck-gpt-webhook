@@ -10,7 +10,9 @@ jobs:
 
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
-      TARGET_FOLDER_ID: ${{ vars.TARGET_FOLDER_ID }}
+      TARGET_FOLDER_ID: ${{ secrets.TARGET_FOLDER_ID }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
     steps:
       - name: Checkout repo
