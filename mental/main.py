@@ -154,16 +154,27 @@ def build_plan_output(drills_by_phase, athlete):
         lines.append("COACH REVIEW FLAGS")
         lines.extend(f"- {c}" for c in contradictions)
 
-    for phase in ["GPP", "SPP", "TAPER"]:
-        if drills_by_phase.get(phase):
-            lines.append(f"{phase} DRILLS")
-            for d in drills_by_phase[phase]:
-                traits = ", ".join(humanize_list(d.get("raw_traits", [])))
-                themes = ", ".join(humanize_list(d.get("theme_tags", [])))
-                lines.append(f"{d['name']}: {d['description']}")
-                if traits or themes:
-                    lines.append(f"Tags: Traits → {traits} | Themes → {themes}")
-                lines.append("")
+    phase_order = ["GPP", "SPP", "TAPER"]
+    start_phase = athlete.get("mental_phase", "GPP").upper()
+    try:
+        start_idx = phase_order.index(start_phase)
+    except ValueError:
+        start_idx = 0
+
+    for ph in phase_order[start_idx:]:
+        drills = drills_by_phase.get(ph)
+        if not drills:
+            drills = drills_by_phase.get("UNIVERSAL", [])
+        if not drills:
+            continue
+        lines.append(f"{ph} DRILLS")
+        for d in drills:
+            traits = ", ".join(humanize_list(d.get("raw_traits", [])))
+            themes = ", ".join(humanize_list(d.get("theme_tags", [])))
+            lines.append(f"{d['name']}: {d['description']}")
+            if traits or themes:
+                lines.append(f"Tags: Traits → {traits} | Themes → {themes}")
+            lines.append("")
 
     return "\n".join(lines)
 
@@ -209,12 +220,23 @@ def build_pdf_text(drills_by_phase, athlete):
         lines.append("COACH REVIEW FLAGS")
         lines.extend(_clean_text(f"- {c}") for c in contradictions)
 
-    for phase in ["GPP", "SPP", "TAPER"]:
-        if drills_by_phase.get(phase):
-            lines.append(f"{phase} DRILLS")
-            for d in drills_by_phase[phase]:
-                lines.append(format_drill_block(d, phase))
-                lines.append("")
+    phase_order = ["GPP", "SPP", "TAPER"]
+    start_phase = athlete.get("mental_phase", "GPP").upper()
+    try:
+        start_idx = phase_order.index(start_phase)
+    except ValueError:
+        start_idx = 0
+
+    for ph in phase_order[start_idx:]:
+        drills = drills_by_phase.get(ph)
+        if not drills:
+            drills = drills_by_phase.get("UNIVERSAL", [])
+        if not drills:
+            continue
+        lines.append(f"{ph} DRILLS")
+        for d in drills:
+            lines.append(format_drill_block(d, ph))
+            lines.append("")
 
     return "\n".join(lines)
 
@@ -271,14 +293,10 @@ def _upload_to_supabase(pdf_path):
     return f"{public_base}/storage/v1/object/public/mental-plans/{filename}"
 
 def bucket_drills_by_phase(drills):
-    """Return drills grouped by phase, duplicating UNIVERSAL across all phases."""
-    buckets = {"GPP": [], "SPP": [], "TAPER": []}
+    """Return drills grouped by phase with UNIVERSAL kept separate."""
+    buckets = {"GPP": [], "SPP": [], "TAPER": [], "UNIVERSAL": []}
     for d in drills:
         phase = d.get("phase", "GPP").upper()
-        if phase == "UNIVERSAL":
-            for p in buckets:
-                buckets[p].append(d)
-            continue
         if phase not in buckets:
             phase = "GPP"
         buckets[phase].append(d)
