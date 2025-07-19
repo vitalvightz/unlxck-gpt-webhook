@@ -2,7 +2,7 @@
 
 This module parses questionnaire responses, scores drills from the
 ``Drills_bank.json`` file and outputs a formatted plan.  The final
-plan text is converted to a local PDF using :mod:`weasyprint`.
+plan text is converted to a local PDF using :mod:`fpdf`.
 
 The ``handler`` function is the main entry point and returns the path
 to the generated PDF.  ``build_plan_output`` is used by the test suite
@@ -88,6 +88,17 @@ def build_plan_output(drills: Dict[str, List[dict]], athlete: Dict) -> str:
     return "\n".join(lines).strip() + "\n"
 
 
+_CHAR_MAP = {
+    ord("–"): "-",
+    ord("—"): "--",
+    ord("’"): "'",
+    ord("‘"): "'",
+    ord("“"): '"',
+    ord("”"): '"',
+    ord("→"): "->",
+}
+
+
 def _export_pdf(doc_text: str, full_name: str) -> str:
     """Save ``doc_text`` to a PDF and return its absolute path."""
 
@@ -101,10 +112,12 @@ def _export_pdf(doc_text: str, full_name: str) -> str:
     filename = f"{safe_name}_mental_plan.pdf"
     pdf_path = os.path.join(tempfile.gettempdir(), filename)
 
+    clean_text = doc_text.translate(_CHAR_MAP)
+
     pdf = FPDF("P", "mm", "A4")
     pdf.add_page()
     pdf.set_font("Helvetica", size=12)
-    for line in doc_text.splitlines():
+    for line in clean_text.splitlines():
         pdf.multi_cell(0, 10, line)
     pdf.output(pdf_path)
 
