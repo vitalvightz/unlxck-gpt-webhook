@@ -17,7 +17,10 @@ import mimetypes
 from urllib import request
 from urllib.error import HTTPError
 
-import pdfkit  # Requires wkhtmltopdf installed
+try:
+    import pdfkit  # Requires wkhtmltopdf installed
+except Exception:  # pragma: no cover - optional dependency for tests
+    pdfkit = None
 from mental.program import parse_mindcode_form
 from mental.tags import map_tags
 from mental.scoring import score_drills
@@ -84,9 +87,36 @@ def build_plan_html(drills_by_phase, athlete):
     </body></html>
     """
 
+def build_plan_output(drills_by_phase, athlete):
+    """Return plain-text plan for testing and logging."""
+    lines = [
+        f"MENTAL PERFORMANCE PLAN -- {athlete.get('full_name', '')}",
+        f"Sport: {athlete.get('sport', '')} | Style/Position: {athlete.get('position_style', '')} | Phase: {athlete.get('mental_phase', '')}",
+    ]
+
+    contradictions = detect_contradictions(set(athlete.get("all_tags", [])))
+    if contradictions:
+        lines.append("COACH REVIEW FLAGS")
+        lines.extend(f"- {c}" for c in contradictions)
+
+    for phase in ["GPP", "SPP", "TAPER"]:
+        if drills_by_phase.get(phase):
+            lines.append(f"{phase} DRILLS")
+            for d in drills_by_phase[phase]:
+                traits = ", ".join(humanize_list(d.get("raw_traits", [])))
+                themes = ", ".join(humanize_list(d.get("theme_tags", [])))
+                lines.append(f"{d['name']}: {d['description']}")
+                if traits or themes:
+                    lines.append(f"Tags: Traits → {traits} | Themes → {themes}")
+                lines.append("")
+
+    return "\n".join(lines)
+
 def _export_pdf_from_html(html, full_name):
     safe = full_name.replace(" ", "_") or "plan"
     path = os.path.join(tempfile.gettempdir(), f"{safe}_mental_plan.pdf")
+    if pdfkit is None:
+        raise RuntimeError("pdfkit is required for PDF export")
     pdfkit.from_string(html, path)
     return path
 
@@ -117,15 +147,27 @@ def _upload_to_supabase(pdf_path):
     public_base = os.getenv("SUPABASE_PUBLIC_URL", url)
     return f"{public_base}/storage/v1/object/public/mental-plans/{filename}"
 
+def bucket_drills_by_phase(drills):
+    """Return drills grouped by phase, duplicating UNIVERSAL across all phases."""
+    buckets = {"GPP": [], "SPP": [], "TAPER": []}
+    for d in drills:
+        phase = d.get("phase", "GPP").upper()
+        if phase == "UNIVERSAL":
+            for p in buckets:
+                buckets[p].append(d)
+            continue
+        if phase not in buckets:
+            phase = "GPP"
+        buckets[phase].append(d)
+    return buckets
+
+
 def handler(form_fields: dict):
     parsed = parse_mindcode_form(form_fields)
     tags = map_tags(parsed)
     drills = score_drills(DRILL_BANK, tags, parsed.get("sport", ""), parsed.get("mental_phase", ""))
 
-    drills_by_phase = {"GPP": [], "SPP": [], "TAPER": []}
-    for d in drills:
-        phase = d.get("phase", "GPP").upper()
-        drills_by_phase[phase].append(d)
+    drills_by_phase = bucket_drills_by_phase(drills)
 
     for lst in drills_by_phase.values():
         lst.sort(key=lambda x: x.get("score", 0), reverse=True)
