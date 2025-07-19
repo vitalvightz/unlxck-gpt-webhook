@@ -6,7 +6,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    environment: TARGET_FOLDER_ID  # ✅ THIS ENABLES ACCESS TO YOUR ENVIRONMENT VARIABLES
+    environment: TARGET_FOLDER_ID  # ✅ Enables access to environment variables
 
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
@@ -24,6 +24,11 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Install wkhtmltopdf (PDF binary)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wkhtmltopdf
+
       - name: Fix NumPy crash (spacy + thinc conflict)
         run: |
           pip uninstall -y numpy spacy thinc
@@ -34,6 +39,7 @@ jobs:
         run: |
           pip install --no-cache-dir -r requirements.txt
           pip install --no-cache-dir git+https://github.com/jenojp/negspacy
+          pip install --no-cache-dir pdfkit
           pip check
 
       - name: Download spaCy model
