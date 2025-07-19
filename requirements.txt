@@ -6,6 +6,9 @@ rapidfuzz==3.5.2
 # Local PDF export
 fpdf==1.7.2
 
+# Needed for rendering the plan PDF
+pdfkit
+
 # Optional (safe to include – won't break anything)
 numpy==1.24.4
 pydantic==1.10.13

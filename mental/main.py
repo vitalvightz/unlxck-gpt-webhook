@@ -145,3 +145,13 @@ def handler(form_fields: dict):
     html = build_plan_html(top, athlete)
     path = _export_pdf_from_html(html, athlete["full_name"])
     return _upload_to_supabase(path)
+
+
+if __name__ == "__main__":
+    import sys
+
+    with open(sys.argv[1]) as f:
+        payload = json.load(f)
+
+    link = handler(payload)
+    print(link)

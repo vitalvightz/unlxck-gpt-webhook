@@ -8,6 +8,15 @@ Run the module to generate a basic plan starting today:
 python -m mental.program
 ```
 
+## Setup
+
+Install dependencies and the PDF rendering tools:
+
+```bash
+pip install -r requirements.txt
+```
+The `wkhtmltopdf` binary must also be installed for `pdfkit` to work.
+
 ## Overview
 
 The scoring engine compares each drill to an athlete's traits, weaknesses and current training phase. The higher the score, the more closely the drill fits that athlete right now.
