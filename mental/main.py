@@ -16,6 +16,7 @@ import json
 import os
 import tempfile
 from typing import Dict, Iterable, List
+from urllib import request, parse
 
 from .contradictions import detect_contradictions
 from .map_mindcode_tags import map_mindcode_tags
@@ -134,22 +135,28 @@ def _upload_to_supabase(pdf_path: str) -> str:
             "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set"
         )
 
-    try:
-        from supabase import create_client  # type: ignore
-    except Exception as exc:  # pragma: no cover - optional dependency
-        raise RuntimeError("Supabase client library is required") from exc
-
-    client = create_client(supabase_url, supabase_key)
-    storage = client.storage.from_("plans")
-
+    bucket = "plans"
     filename = os.path.basename(pdf_path)
-    with open(pdf_path, "rb") as f:
-        storage.upload(filename, f, {"content-type": "application/pdf", "upsert": True})
+    upload_url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket}/{parse.quote(filename)}"
 
-    public = storage.get_public_url(filename)
-    if isinstance(public, dict):
-        return public.get("data", {}).get("publicUrl") or public.get("publicURL") or ""
-    return str(public)
+    with open(pdf_path, "rb") as f:
+        data = f.read()
+
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "x-upsert": "true",
+        "Content-Type": "application/pdf",
+    }
+
+    req = request.Request(upload_url, data=data, headers=headers, method="POST")
+    try:
+        with request.urlopen(req) as resp:
+            if resp.status not in (200, 201):
+                raise RuntimeError(f"Upload failed with status {resp.status}")
+    except Exception as exc:  # pragma: no cover - network issues
+        raise RuntimeError("Supabase upload failed") from exc
+
+    return f"{supabase_url.rstrip('/')}/storage/v1/object/public/{bucket}/{parse.quote(filename)}"
 
 
 def handler(event: Dict | None = None) -> str:
