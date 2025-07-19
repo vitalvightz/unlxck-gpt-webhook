@@ -91,13 +91,23 @@ def build_plan_output(drills: Dict[str, List[dict]], athlete: Dict) -> str:
 def _export_pdf(doc_text: str, full_name: str) -> str:
     """Save ``doc_text`` to a PDF and return its absolute path."""
 
-    from weasyprint import HTML  # imported lazily for test environments
+    # ``fpdf`` matches the expected API for orientation/unit/format arguments
+    try:
+        from fpdf import FPDF  # type: ignore
+    except Exception as exc:  # pragma: no cover - environment missing fpdf
+        raise RuntimeError("PDF export requires the `fpdf` package") from exc
 
     safe_name = full_name.replace(" ", "_") or "plan"
     filename = f"{safe_name}_mental_plan.pdf"
     pdf_path = os.path.join(tempfile.gettempdir(), filename)
-    html = f"<html><body><pre>{doc_text}</pre></body></html>"
-    HTML(string=html).write_pdf(pdf_path)
+
+    pdf = FPDF("P", "mm", "A4")
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=12)
+    for line in doc_text.splitlines():
+        pdf.multi_cell(0, 10, line)
+    pdf.output(pdf_path)
+
     return pdf_path
 
 
