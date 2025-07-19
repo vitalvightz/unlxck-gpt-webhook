@@ -113,6 +113,19 @@ _CHAR_MAP = {
     ord("“"): '"',
     ord("”"): '"',
     ord("→"): "->",
+    # Strip emoji and other non-Latin characters unsupported by FPDF
+    ord("🧠"): "",
+    ord("📌"): "",
+    ord("🎯"): "",
+    ord("⚙"): "",
+    ord("🔥"): "",
+    ord("🧩"): "",
+    ord("🗣"): "",
+    ord("🔗"): "",
+    ord("🔖"): "",
+    ord("🔷"): "",
+    ord("⚠"): "",
+    ord("️"): "",  # Variation selector
 }
 
 
