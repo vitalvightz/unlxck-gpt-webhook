@@ -188,7 +188,8 @@ def _upload_to_supabase(pdf_path: str) -> str:
     except HTTPError as exc:
         raise RuntimeError("Supabase upload failed") from exc
 
-    return f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
+    public_base = os.getenv("SUPABASE_PUBLIC_URL", supabase_url)
+    return f"{public_base}/storage/v1/object/public/{bucket}/{filename}"
 
 
 def handler(event: Dict | None = None) -> str:
