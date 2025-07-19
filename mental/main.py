@@ -34,7 +34,14 @@ from mental.tag_labels import humanize_list
 
 DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
 with open(DRILLS_PATH) as f:
-    DRILL_BANK = json.load(f)["drills"]
+    _raw_bank = json.load(f)
+
+# Support additional drill lists like "boxing_spp_drills" by merging them
+DRILL_BANK = list(_raw_bank.get("drills", []))
+for k, v in _raw_bank.items():
+    if k != "drills" and k.endswith("_drills") and isinstance(v, list):
+        DRILL_BANK.extend(v)
+
 for d in DRILL_BANK:
     d["sports"] = [s.lower() for s in d.get("sports", [])]
 
@@ -123,11 +130,22 @@ def build_plan_html(drills_by_phase, athlete):
             "<ul class='coach-flags'>" + "".join(f"<li>{_clean_text(c)}</li>" for c in contradictions) + "</ul>"
         )
 
-    for phase in ["GPP", "SPP", "TAPER"]:
-        if drills_by_phase.get(phase):
-            blocks.append(f"<h2 class='phase-header {phase.lower()}'>{phase} DRILLS</h2>")
-            for drill in drills_by_phase[phase]:
-                blocks.append(format_drill_html(drill, phase))
+    phase_order = ["GPP", "SPP", "TAPER"]
+    start_phase = athlete.get("mental_phase", "GPP").upper()
+    try:
+        start_idx = phase_order.index(start_phase)
+    except ValueError:
+        start_idx = 0
+
+    for phase in phase_order[start_idx:]:
+        drills = drills_by_phase.get(phase)
+        if not drills:
+            drills = drills_by_phase.get("UNIVERSAL", [])
+        if not drills:
+            continue
+        blocks.append(f"<h2 class='phase-header {phase.lower()}'>{phase} DRILLS</h2>")
+        for drill in drills:
+            blocks.append(format_drill_html(drill, phase))
 
     style = """
         <style>

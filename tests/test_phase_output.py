@@ -1,7 +1,7 @@
 import os, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import unittest
-from mental.main import build_plan_output
+from mental.main import build_plan_output, build_plan_html
 
 class PhaseRestrictionTest(unittest.TestCase):
     def test_selected_and_following_phases_rendered(self):
@@ -63,6 +63,11 @@ class PhaseRestrictionTest(unittest.TestCase):
         self.assertIn("Universal", output)
         self.assertNotIn("GPP DRILLS", output)
 
+        html = build_plan_html(drills, athlete)
+        self.assertIn("SPP DRILLS", html)
+        self.assertIn("TAPER DRILLS", html)
+        self.assertNotIn("GPP DRILLS", html)
+
     def test_gpp_renders_all_phases(self):
         drills = {
             "GPP": [{"name": "GPP", "description": "d", "cue": "", "modalities": [], "sports": [], "intensity": "low", "phase": "GPP", "notes": "", "raw_traits": [], "theme_tags": []}],
@@ -80,6 +85,11 @@ class PhaseRestrictionTest(unittest.TestCase):
         self.assertIn("GPP DRILLS", output)
         self.assertIn("SPP DRILLS", output)
         self.assertIn("TAPER DRILLS", output)
+
+        html = build_plan_html(drills, athlete)
+        self.assertIn("GPP DRILLS", html)
+        self.assertIn("SPP DRILLS", html)
+        self.assertIn("TAPER DRILLS", html)
 
 if __name__ == "__main__":
     unittest.main()
