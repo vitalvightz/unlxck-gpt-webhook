@@ -1,250 +1,147 @@
-"""Generate mental training plans and export them as PDFs.
+"""
+Convert mental training plans to rich-styled PDFs using HTML + emojis.
 
-This module parses questionnaire responses, scores drills from the
-``Drills_bank.json`` file and outputs a formatted plan.  The final
-plan text is converted to a PDF using :mod:`fpdf` and uploaded to
-Supabase Storage.
+Takes the existing `build_plan_output()` logic and renders it into an
+HTML template using full formatting (emojis, bold, line breaks, spacing).
+The HTML is converted to PDF via `pdfkit` (which wraps wkhtmltopdf) and
+uploaded to Supabase Storage. Retains the full Unlxck aesthetic.
 
-The ``handler`` function is the main entry point and returns the URL
-to the uploaded PDF. ``build_plan_output`` is used by the test suite to
-verify formatting and therefore kept separate from the export logic.
+Input: parsed form fields (already structured)
+Output: Supabase public PDF URL
 """
 
-from __future__ import annotations
-
-import json
 import os
+import json
 import tempfile
-from typing import Dict, Iterable, List
+import mimetypes
+from urllib import request
+from urllib.error import HTTPError
+
+import pdfkit  # Requires wkhtmltopdf installed
+from mental.program import parse_mindcode_form
+from mental.tags import map_tags
+from mental.scoring import score_drills
+from mental.contradictions import detect_contradictions
+from mental.tag_labels import humanize_list
 
 
-from .contradictions import detect_contradictions
-from .map_mindcode_tags import map_mindcode_tags
-from .program import parse_mindcode_form
-from .scoring import score_drills
-from .tag_labels import human_label, humanize_list
+DRILLS_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
+with open(DRILLS_PATH) as f:
+    DRILL_BANK = json.load(f)["drills"]
+for d in DRILL_BANK:
+    d["sports"] = [s.lower() for s in d.get("sports", [])]
 
-
-_BANK_PATH = os.path.join(os.path.dirname(__file__), "Drills_bank.json")
-
-
-def _load_bank() -> List[dict]:
-    with open(_BANK_PATH) as f:
-        data = json.load(f)
-    return data.get("drills", [])
-
-
-def _humanize_tags(tags: Iterable[str]) -> str:
-    return ", ".join(humanize_list(list(tags)))
-
-
-def format_drill_block(drill: dict, phase: str) -> str:
-    """Return a formatted text block for a single drill."""
-
-    block = (
-        f"🧠 {phase.upper()}: {drill.get('name', '')}\n"
-        f"📌 Description:\n{drill.get('description', '')}\n\n"
-        f"🎯 Cue:\n{drill.get('cue', '')}\n\n"
-        f"⚙️ Modalities:\n{', '.join(drill.get('modalities', []))}\n\n"
-        f"🔥 Intensity:\n{drill.get('intensity', '')} | Sports: {', '.join(drill.get('sports', []))}\n\n"
-        f"🧩 Notes:\n{drill.get('notes', '')}"
-    )
-
-    if drill.get("why_this_works"):
-        block += f"\n\n🧠 Why This Works:\n{drill['why_this_works']}"
-
+def format_drill_html(drill, phase):
+    traits = ", ".join(humanize_list(drill.get("raw_traits", [])))
+    themes = ", ".join(humanize_list(drill.get("theme_tags", [])))
+    sidebar = ""
     if drill.get("coach_sidebar"):
-        sidebar = drill["coach_sidebar"]
-        if isinstance(sidebar, list):
-            sidebar = "\n".join(f"– {s}" for s in sidebar)
+        if isinstance(drill["coach_sidebar"], list):
+            sidebar = "<br>".join(f"– {s}" for s in drill["coach_sidebar"])
         else:
-            sidebar = f"– {sidebar}"
-        block += f"\n\n🗣️ Coach Sidebar:\n{sidebar}"
+            sidebar = f"– {drill['coach_sidebar']}"
 
-    if drill.get("video_url"):
-        block += f"\n\n🔗 Tutorial:\n{drill['video_url']}"
-
-    trait_labels = humanize_list(drill.get('raw_traits', []))
-    theme_labels = humanize_list(drill.get('theme_tags', []))
-    block += (
-        "\n\n🔖 Tags:\n"
-        f"Traits → {', '.join(trait_labels)}  \n"
-        f"Themes → {', '.join(theme_labels)}\n"
-    )
-    return block
-
-
-def build_plan_output(drills: Dict[str, List[dict]], athlete: Dict) -> str:
-    """Return a rich text training plan for ``athlete``.
-
-    The output mirrors the original document-style format used when
-    generating plans via Google Docs.  It is also used by the unit tests
-    to verify tag humanization and contradiction injection.
+    return f"""
+    <div class="drill-block">
+        <h3>🧠 {phase.upper()}: {drill['name']}</h3>
+        <p><b>📌 Description:</b><br>{drill['description']}</p>
+        <p><b>🎯 Cue:</b><br>{drill['cue']}</p>
+        <p><b>⚙️ Modalities:</b><br>{', '.join(drill['modalities'])}</p>
+        <p><b>🔥 Intensity:</b> {drill['intensity']} | Sports: {', '.join(drill['sports'])}</p>
+        <p><b>🧩 Notes:</b><br>{drill['notes']}</p>
+        {"<p><b>🧠 Why This Works:</b><br>" + drill["why_this_works"] + "</p>" if drill.get("why_this_works") else ""}
+        {"<p><b>🗣️ Coach Sidebar:</b><br>" + sidebar + "</p>" if sidebar else ""}
+        {"<p><b>🔗 Tutorial:</b><br>" + drill["video_url"] + "</p>" if drill.get("video_url") else ""}
+        <p><b>🔖 Tags:</b><br>Traits → {traits}<br>Themes → {themes}</p>
+    </div><hr>
     """
 
-    lines: List[str] = []
-    lines.append(
-        f"# 🧠 MENTAL PERFORMANCE PLAN – {athlete.get('full_name', '').strip()}\n"
-    )
-    lines.append(
-        f"**Sport:** {athlete.get('sport', '')} | **Style/Position:** {athlete.get('position_style', '')} | **Phase:** {athlete.get('mental_phase', '')}\n"
-    )
+def build_plan_html(drills_by_phase, athlete):
+    blocks = [f"<h1>🧠 MENTAL PERFORMANCE PLAN – {athlete['full_name']}</h1>"]
+    blocks.append(f"<p><b>Sport:</b> {athlete['sport']} | <b>Style/Position:</b> {athlete['position_style']} | <b>Phase:</b> {athlete['mental_phase']}</p>")
 
     contradictions = detect_contradictions(set(athlete.get("all_tags", [])))
     if contradictions:
-        lines.append("⚠️ **COACH REVIEW FLAGS**")
-        for note in contradictions:
-            lines.append(f"- {note}")
-        lines.append("")
+        blocks.append("<h3>⚠️ COACH REVIEW FLAGS</h3><ul>" + "".join(f"<li>{c}</li>" for c in contradictions) + "</ul>")
 
     for phase in ["GPP", "SPP", "TAPER"]:
-        if drills.get(phase):
-            lines.append(f"---\n## 🔷 {phase} DRILLS\n")
-            for d in drills[phase]:
-                lines.append(format_drill_block(d, phase))
-    return "\n\n".join(lines)
+        if drills_by_phase.get(phase):
+            blocks.append(f"<h2>🔷 {phase} DRILLS</h2>")
+            for drill in drills_by_phase[phase]:
+                blocks.append(format_drill_html(drill, phase))
 
+    return f"""
+    <html><head>
+        <style>
+            body {{ font-family: Arial, sans-serif; padding: 40px; }}
+            h1 {{ color: #333; }}
+            hr {{ border: 1px solid #ccc; margin: 30px 0; }}
+            .drill-block {{ margin-bottom: 20px; }}
+            p {{ margin: 5px 0 10px; }}
+        </style>
+    </head><body>
+    {''.join(blocks)}
+    </body></html>
+    """
 
-_CHAR_MAP = {
-    ord("–"): "-",
-    ord("—"): "--",
-    ord("’"): "'",
-    ord("‘"): "'",
-    ord("“"): '"',
-    ord("”"): '"',
-    ord("→"): "->",
-    # Strip emoji and other non-Latin characters unsupported by FPDF
-    ord("🧠"): "",
-    ord("📌"): "",
-    ord("🎯"): "",
-    ord("⚙"): "",
-    ord("🔥"): "",
-    ord("🧩"): "",
-    ord("🗣"): "",
-    ord("🔗"): "",
-    ord("🔖"): "",
-    ord("🔷"): "",
-    ord("⚠"): "",
-    ord("️"): "",  # Variation selector
-}
+def _export_pdf_from_html(html, full_name):
+    safe = full_name.replace(" ", "_") or "plan"
+    path = os.path.join(tempfile.gettempdir(), f"{safe}_mental_plan.pdf")
+    pdfkit.from_string(html, path)
+    return path
 
-
-def _export_pdf(doc_text: str, full_name: str) -> str:
-    """Save ``doc_text`` to a PDF and return its absolute path."""
-
-    # ``fpdf`` matches the expected API for orientation/unit/format arguments
-    try:
-        from fpdf import FPDF  # type: ignore
-    except Exception as exc:  # pragma: no cover - environment missing fpdf
-        raise RuntimeError("PDF export requires the `fpdf` package") from exc
-
-    safe_name = full_name.replace(" ", "_") or "plan"
-    filename = f"{safe_name}_mental_plan.pdf"
-    pdf_path = os.path.join(tempfile.gettempdir(), filename)
-
-    clean_text = doc_text.translate(_CHAR_MAP)
-
-    pdf = FPDF("P", "mm", "A4")
-    pdf.add_page()
-    pdf.set_font("Helvetica", size=12)
-    for line in clean_text.splitlines():
-        pdf.multi_cell(0, 10, line)
-    pdf.output(pdf_path)
-
-    return pdf_path
-
-
-def _upload_to_supabase(pdf_path: str) -> str:
-    """Upload ``pdf_path`` to Supabase Storage and return its public URL."""
-
-    import mimetypes
-    from urllib import request
-    from urllib.error import HTTPError
-    import os
-
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-    if not supabase_url or not supabase_key:
-        raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set")
+def _upload_to_supabase(pdf_path):
+    url = os.environ["SUPABASE_URL"]
+    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    if not url or not key:
+        raise RuntimeError("Missing Supabase credentials")
 
     filename = os.path.basename(pdf_path)
-    bucket = "mental-plans"
-    upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+    storage_path = f"{url}/storage/v1/object/mental-plans/{filename}"
 
     with open(pdf_path, "rb") as f:
         data = f.read()
 
-    content_type = mimetypes.guess_type(filename)[0] or "application/pdf"
-
-    req = request.Request(upload_url, data=data, method="PUT")
-    req.add_header("Authorization", f"Bearer {supabase_key}")
-    req.add_header("Content-Type", content_type)
+    req = request.Request(storage_path, data=data, method="PUT")
+    req.add_header("Authorization", f"Bearer {key}")
+    req.add_header("Content-Type", mimetypes.guess_type(filename)[0] or "application/pdf")
     req.add_header("Content-Length", str(len(data)))
 
     try:
-        with request.urlopen(req) as resp:
-            if resp.status != 200:
-                raise RuntimeError(f"Failed upload with status {resp.status}")
-    except HTTPError as exc:
-        raise RuntimeError("Supabase upload failed") from exc
+        with request.urlopen(req) as r:
+            if r.status != 200:
+                raise RuntimeError("Upload failed")
+    except HTTPError as e:
+        raise RuntimeError("Supabase upload failed") from e
 
-    public_base = os.getenv("SUPABASE_PUBLIC_URL", supabase_url)
-    return f"{public_base}/storage/v1/object/public/{bucket}/{filename}"
+    public_base = os.getenv("SUPABASE_PUBLIC_URL", url)
+    return f"{public_base}/storage/v1/object/public/mental-plans/{filename}"
 
+def handler(form_fields: dict):
+    parsed = parse_mindcode_form(form_fields)
+    tags = map_tags(parsed)
+    drills = score_drills(DRILL_BANK, tags, parsed.get("sport", ""), parsed.get("mental_phase", ""))
 
-def handler(event: Dict | None = None) -> str:
-    """Process ``event`` data and return a public URL to the PDF."""
+    drills_by_phase = {"GPP": [], "SPP": [], "TAPER": []}
+    for d in drills:
+        phase = d.get("phase", "GPP").upper()
+        drills_by_phase[phase].append(d)
 
-    if event is None:
-        raise ValueError("event payload required")
+    for lst in drills_by_phase.values():
+        lst.sort(key=lambda x: x.get("score", 0), reverse=True)
 
-    form_fields = event.get("form", event)
-    form_data = parse_mindcode_form(form_fields)
-    tags_map = map_mindcode_tags(form_data)
+    # Keep top 3 per phase
+    top = {k: v[:3] for k, v in drills_by_phase.items()}
 
-    all_drills = _load_bank()
-    scored = score_drills(all_drills, tags_map, form_data.get("sport", ""), form_data.get("mental_phase", ""))
-
-    buckets: Dict[str, List[dict]] = {}
-    for d in scored:
-        phase = d.get("phase", "UNIVERSAL").upper()
-        buckets.setdefault(phase, []).append(d)
-
-    for lst in buckets.values():
-        lst.sort(key=lambda x: x["score"], reverse=True)
-
-    # Keep top 3 drills per phase
-    top_drills = {phase: lst[:3] for phase, lst in buckets.items()}
-
+    all_tags = [f"{k}:{v}" for k, val in tags.items() for v in (val if isinstance(val, list) else [val])]
     athlete = {
-        "full_name": form_data.get("full_name", ""),
-        "sport": form_data.get("sport", ""),
-        "position_style": form_data.get("position_style", ""),
-        "mental_phase": form_data.get("mental_phase", ""),
+        "full_name": parsed.get("full_name", ""),
+        "sport": parsed.get("sport", ""),
+        "position_style": parsed.get("position_style", ""),
+        "mental_phase": parsed.get("mental_phase", ""),
+        "all_tags": all_tags,
     }
 
-    all_tags = []
-    for key, value in tags_map.items():
-        if isinstance(value, list):
-            all_tags.extend(f"{key}:{v}" for v in value)
-        else:
-            all_tags.append(f"{key}:{value}")
-    athlete["all_tags"] = all_tags
-
-    doc_text = build_plan_output(top_drills, athlete)
-    pdf_path = _export_pdf(doc_text, athlete["full_name"])
-    return _upload_to_supabase(pdf_path)
-
-
-if __name__ == "__main__":  # pragma: no cover - manual execution helper
-    import sys
-
-    if len(sys.argv) < 2:
-        raise SystemExit("Usage: python -m mental.main <payload.json>")
-
-    with open(sys.argv[1]) as f:
-        payload = json.load(f)
-
-    path = handler(payload)
-    print(path)
-
+    html = build_plan_html(top, athlete)
+    path = _export_pdf_from_html(html, athlete["full_name"])
+    return _upload_to_supabase(path)
