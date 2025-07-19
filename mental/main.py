@@ -130,7 +130,9 @@ def _upload_to_supabase(pdf_path: str) -> str:
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     if not supabase_url or not supabase_key:
-        raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set")
+        raise RuntimeError(
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set"
+        )
 
     try:
         from supabase import create_client  # type: ignore
