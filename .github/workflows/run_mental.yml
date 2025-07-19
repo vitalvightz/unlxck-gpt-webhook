@@ -10,8 +10,8 @@ jobs:
 
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
-      TARGET_FOLDER_ID: ${{ secrets.TARGET_FOLDER_ID }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      TARGET_FOLDER_ID: ${{ vars.TARGET_FOLDER_ID }}
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
     steps:
