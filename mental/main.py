@@ -115,7 +115,7 @@ def format_drill_html(drill, phase):
 
 def build_plan_html(drills_by_phase, athlete):
     blocks = [
-        f"<h1 class='title'>MENTAL PERFORMANCE PLAN – {_clean_text(athlete['full_name'])}</h1>",
+        f"<h1 class='title'>MENTAL PERFORMANCE PLAN: {_clean_text(athlete['full_name'])}</h1>",
         (
             f"<p class='athlete-info'>Sport: {_clean_text(athlete['sport'])} | "
             f"Style/Position: {_clean_text(athlete['position_style'])} | "
