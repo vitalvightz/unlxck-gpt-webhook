@@ -217,11 +217,11 @@ def select_coordination_drill(flags, existing_names: set[str]):
     return random.choice(candidates) if candidates else None
 
 
-def format_drill_block(drill: dict) -> str:
-    """Return a formatted Markdown block for a single drill."""
+def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
+    """Return a formatted Markdown block for a single drill with color."""
     lines = [
         f"**System:** {drill['system']}",
-        f"**Drill:** {drill['name']}",
+        f"**Drill:** <span style='color:{phase_color}'><b>{drill['name']}</b></span>",
         f"**Load:** {drill['load']}",
         f"**Rest:** {drill['rest']}",
         f"**Timing:** {drill['timing']}",
@@ -232,6 +232,7 @@ def format_drill_block(drill: dict) -> str:
 
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
+    phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase.upper(), "#000")
     fatigue = flags.get("fatigue", "low")
     style = flags.get("style_tactical", [])
     technical = flags.get("style_technical", [])
@@ -760,7 +761,7 @@ def generate_conditioning_block(flags):
                 "purpose": purpose,
                 "red_flags": d.get("red_flags", "None"),
             }
-            output_lines.append(format_drill_block(drill_block))
+            output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
 
 
     return "\n".join(output_lines), selected_drill_names

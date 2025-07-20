@@ -515,6 +515,7 @@ async def generate_plan(data: dict):
         sport=mapped_format,
         phase_split=phase_split,
         status=status,
+        record=record,
         gpp=gpp_phase,
         spp=spp_phase,
         taper=taper_phase,
