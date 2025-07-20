@@ -301,7 +301,7 @@ async def generate_plan(data: dict):
     spp_mindset = build_mindset_prompt("SPP")
     taper_mindset = build_mindset_prompt("TAPER")
 
-    rehab_sections = ["## REHAB PROTOCOLS"]
+    rehab_sections = ["## Rehab Protocols"]
     if gpp_rehab_block:
         rehab_sections += ["### GPP", gpp_rehab_block.strip(), ""]
     if spp_rehab_block:
@@ -363,15 +363,15 @@ async def generate_plan(data: dict):
         ]
 
     fight_plan_lines += [
-        "## NUTRITION",
+        "## Nutrition",
         nutrition_block,
         "",
-        "## RECOVERY",
+        "## Recovery",
         recovery_block,
         "",
     ] + rehab_sections + [
         "",
-        "## MINDSET OVERVIEW",
+        "## Mindset Overview",
         f"Primary Block(s): {', '.join(training_context['mental_block']).title()}",
         "",
         "### Sparring & Conditioning Adjustments",
@@ -388,7 +388,7 @@ async def generate_plan(data: dict):
         "- **If Sparring Was Unexpectedly Hard:**",
         "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
         "",
-        "## ATHLETE PROFILE",
+        "## Athlete Profile",
         f"- **Name:** <b>{full_name}</b><br>",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
