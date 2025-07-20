@@ -502,6 +502,15 @@ async def generate_plan(data: dict):
 
     adjustments_table = _md_to_html("- If sparring today: reduce S&C by 30%\n- No sparring this week: add extra glycolytic conditioning")
 
+    sparring_nutrition_html = _md_to_html(
+        "### **5. Nutrition Adjustments for Unknown Sparring Load**\n"
+        "- **On Expected Hard Sparring Days:**\n"
+        "  - Increase intra-workout carbs (e.g., 30g HBCD during session).\n"
+        "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.\n"
+        "- **If Sparring Was Unexpectedly Hard:**\n"
+        "  - Add 500mg sodium + 20oz electrolyte drink immediately."
+    )
+
     html = build_html_document(
         full_name=full_name,
         sport=mapped_format,
@@ -516,6 +525,7 @@ async def generate_plan(data: dict):
         rehab_html=rehab_html,
         mindset_overview=f"Primary Block(s): {', '.join(training_context['mental_block']).title()}",
         adjustments_table=adjustments_table,
+        sparring_nutrition_html=sparring_nutrition_html,
         athlete_profile_html=athlete_profile_html,
     )
 

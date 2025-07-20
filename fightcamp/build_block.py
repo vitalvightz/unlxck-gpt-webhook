@@ -159,6 +159,7 @@ def build_html_document(
     rehab_html: str = "",
     mindset_overview: str = "",
     adjustments_table: str = "",
+    sparring_nutrition_html: str = "",
     athlete_profile_html: str = "",
 ) -> str:
     """Assemble the full HTML string."""
@@ -236,6 +237,8 @@ def build_html_document(
         _md_to_html(mindset_overview),
         _section_title("Sparring & Conditioning Adjustments Table"),
         adjustments_table,
+        _section_title("Nutrition Adjustments for Unknown Sparring Load"),
+        sparring_nutrition_html,
         _section_title("Athlete Profile"),
         athlete_profile_html,
         "</body></html>",
