@@ -11,3 +11,4 @@ spacy==3.6.0
 thinc==8.1.12
 pdfkit
 supabase
+markdown2
