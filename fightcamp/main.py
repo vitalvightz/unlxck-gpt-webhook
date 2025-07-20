@@ -502,7 +502,6 @@ async def generate_plan(data: dict):
     adjustments_table = _md_to_html("- If sparring today: reduce S&C by 30%\n- No sparring this week: add extra glycolytic conditioning")
 
     sparring_nutrition_html = _md_to_html(
-        "### **5. Nutrition Adjustments for Unknown Sparring Load**\n"
         "- **On Expected Hard Sparring Days:**\n"
         "  - Increase intra-workout carbs (e.g., 30g HBCD during session).\n"
         "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.\n"
