@@ -381,7 +381,6 @@ async def generate_plan(data: dict):
         "",
         "---",
         "",
-        "### **5. Nutrition Adjustments for Unknown Sparring Load**",
         "- **On Expected Hard Sparring Days:**",
         "  - Increase intra-workout carbs (e.g., 30g HBCD during session).",
         "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.",
