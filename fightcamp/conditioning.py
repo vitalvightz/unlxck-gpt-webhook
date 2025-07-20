@@ -738,12 +738,11 @@ def generate_conditioning_block(flags):
             rest = d.get("rest", "—")
 
             output_lines.append(f"- **Drill:** {name}")
-            output_lines.append(f"  • Load: {load}")
-            output_lines.append(f"  • Rest: {rest}")
-            output_lines.append(f"  • Timing: {timing}")
-            output_lines.append(f"  • Purpose: {purpose}")
-            output_lines.append("")
-            output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
+            output_lines.append(f"  Load: {load}")
+            output_lines.append(f"  Rest: {rest}")
+            output_lines.append(f"  Timing: {timing}")
+            output_lines.append(f"  Purpose: {purpose}")
+            output_lines.append(f"  ⚠️ Red Flags: {d.get('red_flags', 'None')}")
             output_lines.append("")
 
 
