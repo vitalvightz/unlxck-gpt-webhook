@@ -84,7 +84,8 @@ def _md_to_html(text: str) -> str:
         stripped = line.lstrip()
         if stripped.startswith("•"):
             line = re.sub(r"^\s*•", "-", line)
-        if re.search(r"Flags:\s*None$", stripped, re.IGNORECASE):
+        # Skip standalone "Flags: None" lines but keep drills containing it
+        if re.fullmatch(r"(?:Red\s+)?Flags:\s*None", stripped, re.IGNORECASE):
             continue
         if stripped.startswith("- **Drill:") and cleaned_lines:
             cleaned_lines.append("")
