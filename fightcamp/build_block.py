@@ -172,12 +172,12 @@ def build_html_document(
       margin: 30px;
     }
     h1 {font-size:24pt; margin-top:20px; margin-bottom:10px; font-weight:bold;}
-    h2 {font-size:18pt; margin-top:20px; margin-bottom:10px; font-weight:bold; text-align:left; text-decoration: underline;}
-    h3 {font-size:14pt; margin-top:12px; margin-bottom:6px; font-weight:bold; text-align:left;}
-    h4 {font-size:12pt; margin-top:8px; margin-bottom:4px; font-weight:bold; text-align:left;}
+    h2 {font-size:18pt; margin-top:28px; margin-bottom:14px; font-weight:bold; text-align:left; text-decoration: underline;}
+    h3 {font-size:14pt; margin-top:18px; margin-bottom:8px; font-weight:bold; text-align:left;}
+    h4 {font-size:12pt; margin-top:12px; margin-bottom:6px; font-weight:bold; text-align:left;}
     p {font-size:11.5pt; margin-bottom:6px; text-align:left; line-height:1.4;}
     li {font-size:11.5pt; margin-bottom:6px; text-align:left; line-height:1.4;}
-    hr { border: 1px solid #ccc; margin: 30px 0; }
+    hr { border: 1px solid #ccc; margin: 40px 0; }
     ul { padding-left: 18px; margin-bottom:12px; }
     </style>
     """
@@ -211,8 +211,12 @@ def build_html_document(
 
     if gpp:
         lines.append(phase_html(gpp, "#4CAF50"))
+        if spp or taper:
+            lines.append("<hr>")
     if spp:
         lines.append(phase_html(spp, "#FF9800"))
+        if taper:
+            lines.append("<hr>")
     if taper:
         lines.append(phase_html(taper, "#F44336"))
 
