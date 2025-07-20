@@ -216,6 +216,20 @@ def select_coordination_drill(flags, existing_names: set[str]):
 
     return random.choice(candidates) if candidates else None
 
+
+def format_drill_block(drill: dict) -> str:
+    """Return a formatted Markdown block for a single drill."""
+    lines = [
+        f"**System:** {drill['system']}",
+        f"**Drill:** {drill['name']}",
+        f"**Load:** {drill['load']}",
+        f"**Rest:** {drill['rest']}",
+        f"**Timing:** {drill['timing']}",
+        f"**Purpose:** {drill['purpose']}",
+        f"**Red Flags:** {drill['red_flags']}",
+    ]
+    return "\n".join(lines) + "\n"
+
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     fatigue = flags.get("fatigue", "low")
@@ -737,13 +751,16 @@ def generate_conditioning_block(flags):
             )
             rest = d.get("rest", "—")
 
-            output_lines.append(f"- **Drill:** {name}")
-            output_lines.append(f"  Load: {load}")
-            output_lines.append(f"  Rest: {rest}")
-            output_lines.append(f"  Timing: {timing}")
-            output_lines.append(f"  Purpose: {purpose}")
-            output_lines.append(f"  ⚠️ Red Flags: {d.get('red_flags', 'None')}")
-            output_lines.append("")
+            drill_block = {
+                "system": system.upper(),
+                "name": name,
+                "load": load,
+                "rest": rest,
+                "timing": timing,
+                "purpose": purpose,
+                "red_flags": d.get("red_flags", "None"),
+            }
+            output_lines.append(format_drill_block(drill_block))
 
 
     return "\n".join(output_lines), selected_drill_names
