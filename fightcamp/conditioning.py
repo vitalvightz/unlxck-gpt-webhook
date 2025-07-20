@@ -219,15 +219,18 @@ def select_coordination_drill(flags, existing_names: set[str]):
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
     """Return a formatted Markdown block for a single drill with color."""
-    lines = [
+
+    # Use HTML line breaks so bullets display vertically when converted to HTML
+    br = "<br>"
+    parts = [
         f"- **Drill: <span style='color:{phase_color}'>{drill['name']}</span>**",
-        f"  Load: {drill['load']}",
-        f"  Rest: {drill['rest']}",
-        f"  Timing: {drill['timing']}",
-        f"  Purpose: {drill['purpose']}",
+        f"  Load: {drill['load']}{br}",
+        f"  Rest: {drill['rest']}{br}",
+        f"  Timing: {drill['timing']}{br}",
+        f"  Purpose: {drill['purpose']}{br}",
         f"  ⚠️ Red Flags: {drill['red_flags']}",
     ]
-    return "\n".join(lines) + "\n"
+    return "".join(parts) + "\n"
 
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
