@@ -391,7 +391,7 @@ async def generate_plan(data: dict):
         "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
         "",
         "## ATHLETE PROFILE",
-        f"- Name: {full_name}",
+        f"- **Name:** {full_name}",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
         f"- Target Weight: {target_weight}kg",
@@ -477,7 +477,7 @@ async def generate_plan(data: dict):
     rehab_html = "\n".join(rehab_parts)
 
     profile_lines = [
-        f"- Name: {full_name}",
+        f"- **Name:** {full_name}",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
         f"- Target Weight: {target_weight}kg",
