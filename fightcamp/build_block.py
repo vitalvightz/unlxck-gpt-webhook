@@ -212,14 +212,17 @@ def build_html_document(
 
     if gpp:
         lines.append(phase_html(gpp, "#4CAF50"))
+        lines.append("<br><br>")
         if spp or taper:
             lines.append("<hr>")
     if spp:
         lines.append(phase_html(spp, "#FF9800"))
+        lines.append("<br><br>")
         if taper:
             lines.append("<hr>")
     if taper:
         lines.append(phase_html(taper, "#F44336"))
+        lines.append("<br><br>")
 
     lines += [
         _section_title("NUTRITION"),

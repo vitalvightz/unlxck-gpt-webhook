@@ -457,19 +457,25 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     strength_output = [
         "🏋️‍♂️ **Strength & Power Module**",
-        f"Phase: {phase}",
-        f"Primary Focus: {focus}",
-        "Top Exercises:",
+        f"**Phase:** {phase}",
+        f"**Primary Focus:** {focus}",
         "",
+        "**Top Exercises:**",
     ]
 
     for ex in base_exercises:
         strength_output.append(f"- {ex['name']}")
 
-    strength_output.append(f"Prescription: {base_block}")
+    strength_output += [
+        "",
+        f"**Prescription:** {base_block}",
+    ]
 
     if fatigue_note:
-        strength_output += [f"**Adjustment:** {fatigue_note}"]
+        strength_output += [
+            "",
+            f"**Adjustment:** {fatigue_note}",
+        ]
 
     all_tags = []
     for ex in base_exercises:
