@@ -226,17 +226,17 @@ def build_html_document(
         lines.append("<br><br>")
 
     lines += [
-        _section_title("NUTRITION"),
+        _section_title("Nutrition"),
         _md_to_html(nutrition_block),
-        _section_title("RECOVERY"),
+        _section_title("Recovery"),
         _md_to_html(recovery_block),
-        _section_title("REHAB PROTOCOLS"),
+        _section_title("Rehab Protocols"),
         rehab_html,
-        _section_title("MINDSET OVERVIEW"),
+        _section_title("Mindset Overview"),
         _md_to_html(mindset_overview),
-        _section_title("SPARRING & CONDITIONING ADJUSTMENTS TABLE"),
+        _section_title("Sparring & Conditioning Adjustments Table"),
         adjustments_table,
-        _section_title("ATHLETE PROFILE"),
+        _section_title("Athlete Profile"),
         athlete_profile_html,
         "</body></html>",
     ]
