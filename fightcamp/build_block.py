@@ -24,15 +24,8 @@ try:
 except Exception:  # pragma: no cover - pdfkit may be missing
     pdfkit = None
 
-# Map of Unicode punctuation and emoji to ASCII-safe equivalents
+# Map of emoji and symbols that should be stripped from output
 _CHAR_MAP = {
-    ord("–"): "-",
-    ord("—"): "-",
-    ord("’"): "'",
-    ord("‘"): "'",
-    ord("“"): '"',
-    ord("”"): '"',
-    ord("→"): "->",
     ord("…"): "...",
     ord("•"): "-",
     ord("🧠"): "",
@@ -51,10 +44,14 @@ _CHAR_MAP = {
 
 
 def _clean_text(text: str) -> str:
-    """Return ASCII-only text without emoji."""
+    """Return UTF-8 cleaned text without unwanted emoji."""
     cleaned = text.translate(_CHAR_MAP)
-    cleaned = cleaned.encode("ascii", "ignore").decode("ascii")
     return cleaned
+
+
+def _upgrade_symbols(text: str) -> str:
+    """Improve typography for arrows and apostrophes."""
+    return text.replace("->", "→").replace("'", "’")
 
 
 def _md_to_html(text: str) -> str:
@@ -63,12 +60,12 @@ def _md_to_html(text: str) -> str:
     html_parts = []
     in_list = False
     for line in lines:
-        line = _clean_text(line)
+        line = _upgrade_symbols(_clean_text(line.replace("**", "")))
         if line.startswith("- ") or line.startswith("• "):
             if not in_list:
                 html_parts.append("<ul>")
                 in_list = True
-            html_parts.append(f"<li>{line[2:].strip()}</li>")
+            html_parts.append(f"<li>▸ {line[2:].strip()}</li>")
         else:
             if in_list:
                 html_parts.append("</ul>")
@@ -92,11 +89,11 @@ class PhaseBlock:
 
 
 def _section_title(text: str) -> str:
-    return f"<h2>{text}</h2>"
+    return f'<h2 style="font-size:18px;font-weight:bold;margin-top:20px">{text}</h2>'
 
 
 def _subheading(text: str) -> str:
-    return f"<h3>{text}</h3>"
+    return f'<h3 style="font-size:14px;font-weight:bold;margin-top:12px">{text}</h3>'
 
 
 def build_html_document(
@@ -126,20 +123,21 @@ def build_html_document(
       color: #222;
       margin: 40px;
     }
-    h1, h2, h3 {
-      margin-top: 20px;
-      margin-bottom: 10px;
-    }
-    p, li { margin-bottom: 8px; }
+    h1 {font-size:24px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
+    h2 {font-size:18px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
+    h3 {font-size:14px; margin-top:12px; margin-bottom:6px; font-weight:bold;}
+    p {font-size:12px; margin-bottom:6px;}
+    li {font-size:12px; margin-bottom:6px;}
     hr { border: 1px solid #ccc; margin: 30px 0; }
-    ul { padding-left: 20px; }
+    ul { padding-left: 20px; margin-bottom:12px; }
     </style>
     """
 
     lines = ["<html><head>", style_sheet, "</head><body>"]
 
+    title_name = _upgrade_symbols(_clean_text(full_name))
     lines.append(
-        f'<h1 style="font-size: 24px;">FIGHT CAMP PLAN – {_clean_text(full_name)}</h1>'
+        f'<h1>FIGHT CAMP PLAN – {title_name}</h1>'
     )
     lines.append(
         f'<p><b>Sport:</b> {_clean_text(sport)} | <b>Phase Split:</b> {phase_split} | '
@@ -148,8 +146,8 @@ def build_html_document(
 
     def phase_html(block: PhaseBlock, color: str) -> str:
         parts = [
-            f'<h2 style="font-size: 20px; border-left: 4px solid {color}; '
-            f'padding-left: 10px;">{_clean_text(block.name)}</h2>',
+            f'<h2 style="border-left: 4px solid {color}; padding-left: 10px;">'
+            f'{_upgrade_symbols(_clean_text(block.name))}</h2>',
             _subheading("Mindset Focus"),
             _md_to_html(block.mindset),
             _subheading("Strength & Power"),
@@ -193,7 +191,8 @@ def html_to_pdf(html: str, output_path: str) -> Optional[str]:
     if not pdfkit:
         return None
     try:  # pragma: no cover - external call
-        pdfkit.from_string(html, output_path)
+        options = {"encoding": "UTF-8"}
+        pdfkit.from_string(html, output_path, options=options)
         return output_path
     except Exception:
         return None
