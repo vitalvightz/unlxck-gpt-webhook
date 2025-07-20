@@ -742,6 +742,7 @@ def generate_conditioning_block(flags):
             output_lines.append(f"  • Rest: {rest}")
             output_lines.append(f"  • Timing: {timing}")
             output_lines.append(f"  • Purpose: {purpose}")
+            output_lines.append("")
             output_lines.append(f"  • ⚠️ Red Flags: {d.get('red_flags', 'None')}")
             output_lines.append("")
 
