@@ -178,7 +178,7 @@ def is_banned_drill(
             if term in name or term in tags or term in details:
                 return True
 
-    kick_terms = ["kick", "knee", "clinch knee strike"]
+    kick_terms = ["kick", "knee", "clinch knee strike", "teep"]
 
     if fight_format == "boxing":
         for term in kick_terms:
