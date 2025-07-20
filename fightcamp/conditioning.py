@@ -222,12 +222,13 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
 
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
+    bullet = "•"
     parts = [
         f"- **Drill: <span style='color:{phase_color}'>{drill['name']}</span>**",
-        f"  Load: {drill['load']}{br}",
-        f"  Rest: {drill['rest']}{br}",
-        f"  Timing: {drill['timing']}{br}",
-        f"  Purpose: {drill['purpose']}{br}",
+        f"  {bullet} Load: {drill['load']}{br}",
+        f"  {bullet} Rest: {drill['rest']}{br}",
+        f"  {bullet} Timing: {drill['timing']}{br}",
+        f"  {bullet} Purpose: {drill['purpose']}{br}",
         f"  ⚠️ Red Flags: {drill['red_flags']}",
     ]
     return "".join(parts) + "\n"
@@ -722,12 +723,23 @@ def generate_conditioning_block(flags):
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
 
+    # Group drills by energy system so each system only prints once
+    grouped_drills: dict[str, list[dict]] = {}
+    for system, drills in final_drills:
+        grouped_drills.setdefault(system, []).extend(drills)
+
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if not system_drills[system_name]:
             output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
 
-    for system, drills in final_drills:
+    ordered_keys = ["aerobic", "glycolytic", "alactic"]
+    ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
+
+    for system in ordered_keys:
+        drills = grouped_drills.get(system)
+        if not drills:
+            continue
         output_lines.append(
             f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
         )
