@@ -18,6 +18,12 @@ from dataclasses import dataclass
 from typing import Optional
 
 import os
+import re
+
+try:
+    import markdown2  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    markdown2 = None
 
 try:
     import pdfkit  # type: ignore
@@ -50,22 +56,37 @@ def _clean_text(text: str) -> str:
 
 
 def _upgrade_symbols(text: str) -> str:
-    """Improve typography for arrows and apostrophes."""
-    return text.replace("->", "→").replace("'", "’")
+    """Improve typography for arrows, dashes and apostrophes."""
+    return (
+        text.replace("->", "→")
+        .replace("--", "–")
+        .replace("'", "’")
+    )
 
 
 def _md_to_html(text: str) -> str:
-    """Convert simple Markdown-style bullets to HTML."""
-    lines = [l.rstrip() for l in text.splitlines() if l.strip()]
+    """Convert Markdown text to HTML with simple bullet support."""
+    if markdown2 is None:  # fallback to stripping bold markers
+        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    cleaned_lines = []
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if stripped.startswith("•"):
+            line = re.sub(r"^\s*•", "-", line)
+        cleaned_lines.append(line)
+    cleaned_text = _upgrade_symbols(_clean_text("\n".join(cleaned_lines)))
+    if markdown2:
+        return markdown2.markdown(cleaned_text)
+    # simple HTML if markdown2 unavailable
+    lines = [l.rstrip() for l in cleaned_text.splitlines() if l.strip()]
     html_parts = []
     in_list = False
     for line in lines:
-        line = _upgrade_symbols(_clean_text(line.replace("**", "")))
-        if line.startswith("- ") or line.startswith("• "):
+        if line.startswith("- "):
             if not in_list:
                 html_parts.append("<ul>")
                 in_list = True
-            html_parts.append(f"<li>▸ {line[2:].strip()}</li>")
+            html_parts.append(f"<li>{line[2:].strip()}</li>")
         else:
             if in_list:
                 html_parts.append("</ul>")
@@ -118,18 +139,18 @@ def build_html_document(
     <style>
     body {
       font-family: Arial, sans-serif;
-      font-size: 13px;
-      line-height: 1.5;
+      font-size: 15px;
+      line-height: 1.4;
       color: #222;
       margin: 40px;
     }
-    h1 {font-size:24px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
-    h2 {font-size:18px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
-    h3 {font-size:14px; margin-top:12px; margin-bottom:6px; font-weight:bold;}
-    p {font-size:12px; margin-bottom:6px;}
-    li {font-size:12px; margin-bottom:6px;}
+    h1 {font-size:26px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
+    h2 {font-size:22px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
+    h3 {font-size:18px; margin-top:12px; margin-bottom:6px; font-weight:bold;}
+    p {font-size:15px; margin-bottom:6px;}
+    li {font-size:15px; margin-bottom:8px;}
     hr { border: 1px solid #ccc; margin: 30px 0; }
-    ul { padding-left: 20px; margin-bottom:12px; }
+    ul { padding-left: 20px; margin-bottom:16px; }
     </style>
     """
 
@@ -192,7 +213,8 @@ def html_to_pdf(html: str, output_path: str) -> Optional[str]:
         return None
     try:  # pragma: no cover - external call
         options = {"encoding": "UTF-8"}
-        pdfkit.from_string(html, output_path, options=options)
+        html_utf8 = html.encode("utf-8").decode("utf-8")
+        pdfkit.from_string(html_utf8, output_path, options=options)
         return output_path
     except Exception:
         return None
