@@ -73,6 +73,10 @@ def _md_to_html(text: str) -> str:
         stripped = line.lstrip()
         if stripped.startswith("•"):
             line = re.sub(r"^\s*•", "-", line)
+        if re.search(r"Flags:\s*None$", stripped, re.IGNORECASE):
+            continue
+        if stripped.startswith("- **Drill:") and cleaned_lines:
+            cleaned_lines.append("")
         cleaned_lines.append(line)
     cleaned_text = _upgrade_symbols(_clean_text("\n".join(cleaned_lines)))
     if markdown2:
@@ -110,11 +114,13 @@ class PhaseBlock:
 
 
 def _section_title(text: str) -> str:
-    return f'<h2 style="font-size:18px;font-weight:bold;margin-top:20px">{text}</h2>'
+    """Return a section header."""
+    return f'<h2>{text}</h2>'
 
 
 def _subheading(text: str) -> str:
-    return f'<h3 style="font-size:14px;font-weight:bold;margin-top:12px">{text}</h3>'
+    """Return a subsection header."""
+    return f'<h3>{text}</h3>'
 
 
 def build_html_document(
@@ -139,18 +145,18 @@ def build_html_document(
     <style>
     body {
       font-family: Arial, sans-serif;
-      font-size: 15px;
+      font-size: 11pt;
       line-height: 1.4;
       color: #222;
-      margin: 40px;
+      margin: 30px;
     }
-    h1 {font-size:26px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
-    h2 {font-size:22px; margin-top:20px; margin-bottom:10px; font-weight:bold;}
-    h3 {font-size:18px; margin-top:12px; margin-bottom:6px; font-weight:bold;}
-    p {font-size:15px; margin-bottom:6px;}
-    li {font-size:15px; margin-bottom:8px;}
+    h1 {font-size:24pt; margin-top:20px; margin-bottom:10px; font-weight:bold;}
+    h2 {font-size:18pt; margin-top:20px; margin-bottom:10px; font-weight:bold; text-align:left;}
+    h3 {font-size:14pt; margin-top:12px; margin-bottom:6px; font-weight:bold; text-align:left;}
+    p {font-size:11pt; margin-bottom:6px; text-align:left; line-height:1.4;}
+    li {font-size:11pt; margin-bottom:6px; text-align:left; line-height:1.4;}
     hr { border: 1px solid #ccc; margin: 30px 0; }
-    ul { padding-left: 20px; margin-bottom:16px; }
+    ul { padding-left: 18px; margin-bottom:12px; }
     </style>
     """
 
