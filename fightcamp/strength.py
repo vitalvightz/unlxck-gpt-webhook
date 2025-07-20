@@ -460,11 +460,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         f"**Phase:** {phase}",
         f"**Primary Focus:** {focus}",
         "",
-        "**Top Exercises:**",
+        "**Top Drills:**",
     ]
 
     for ex in base_exercises:
-        strength_output.append(f"- {ex['name']}")
+        strength_output.append(f"• {ex['name']}")
 
     strength_output += [
         "",
