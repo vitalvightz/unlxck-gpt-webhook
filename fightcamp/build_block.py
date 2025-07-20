@@ -149,6 +149,7 @@ def build_html_document(
     sport: str,
     phase_split: str,
     status: str,
+    record: str = "",
     gpp: Optional[PhaseBlock] = None,
     spp: Optional[PhaseBlock] = None,
     taper: Optional[PhaseBlock] = None,
@@ -186,10 +187,14 @@ def build_html_document(
     lines.append(
         '<h1>FIGHT CAMP PLAN</h1>'
     )
-    lines.append(
+    header_line = (
         f'<p><b>Sport:</b> {_clean_text(sport)} | <b>Phase Split:</b> {phase_split} | '
-        f'<b>Status:</b> {_clean_text(status)}</p><hr>'
+        f'<b>Status:</b> {_clean_text(status)}'
     )
+    if record:
+        header_line += f' | <b>Record:</b> {_clean_text(record)}'
+    header_line += '</p><hr>'
+    lines.append(header_line)
 
     def phase_html(block: PhaseBlock, color: str) -> str:
         parts = [
