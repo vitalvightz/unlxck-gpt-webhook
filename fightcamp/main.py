@@ -7,6 +7,7 @@ from .build_block import (
     build_html_document,
     html_to_pdf,
     upload_to_supabase,
+    _md_to_html,
 )
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
