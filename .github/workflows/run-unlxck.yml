@@ -9,7 +9,6 @@ jobs:
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
