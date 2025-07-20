@@ -19,6 +19,7 @@ from typing import Optional
 
 import os
 import re
+import unicodedata
 
 try:
     import markdown2  # type: ignore
@@ -45,6 +46,7 @@ _CHAR_MAP = {
     ord("🔖"): "",
     ord("🔷"): "",
     ord("⚠"): "",
+    ord("🍽"): "",
     ord("️"): "",
 }
 
@@ -52,7 +54,16 @@ _CHAR_MAP = {
 def _clean_text(text: str) -> str:
     """Return UTF-8 cleaned text without unwanted emoji."""
     cleaned = text.translate(_CHAR_MAP)
-    return cleaned
+    result_chars = []
+    for ch in cleaned:
+        cat = unicodedata.category(ch)
+        name = unicodedata.name(ch, "")
+        if cat in {"So", "Co", "Cs"}:
+            continue
+        if "VARIATION SELECTOR" in name:
+            continue
+        result_chars.append(ch)
+    return "".join(result_chars)
 
 
 def _upgrade_symbols(text: str) -> str:
@@ -86,6 +97,15 @@ def _md_to_html(text: str) -> str:
     html_parts = []
     in_list = False
     for line in lines:
+        heading_match = re.match(r"^(#+)\s+(.*)", line)
+        if heading_match:
+            if in_list:
+                html_parts.append("</ul>")
+                in_list = False
+            level = min(len(heading_match.group(1)), 6)
+            text = heading_match.group(2).strip()
+            html_parts.append(f"<h{level}>{text}</h{level}>")
+            continue
         if line.startswith("- "):
             if not in_list:
                 html_parts.append("<ul>")
@@ -163,9 +183,8 @@ def build_html_document(
 
     lines = ["<html><head>", style_sheet, "</head><body>"]
 
-    title_name = _upgrade_symbols(_clean_text(full_name))
     lines.append(
-        f'<h1>FIGHT CAMP PLAN – {title_name}</h1>'
+        '<h1>FIGHT CAMP PLAN</h1>'
     )
     lines.append(
         f'<p><b>Sport:</b> {_clean_text(sport)} | <b>Phase Split:</b> {phase_split} | '
