@@ -185,9 +185,10 @@ def build_html_document(
 
     lines = ["<html><head>", style_sheet, "</head><body>"]
 
-    lines.append(
-        '<h1>FIGHT CAMP PLAN</h1>'
-    )
+    title = "FIGHT CAMP PLAN"
+    if full_name:
+        title += f" – {_clean_text(full_name)}"
+    lines.append(f"<h1>{title}</h1>")
     header_line = (
         f'<p><b>Sport:</b> {_clean_text(sport)} | <b>Phase Split:</b> {phase_split} | '
         f'<b>Status:</b> {_clean_text(status)}'
