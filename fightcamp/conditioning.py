@@ -220,7 +220,7 @@ def select_coordination_drill(flags, existing_names: set[str]):
 def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
     """Return a formatted Markdown block for a single drill with color."""
     lines = [
-        f"- **Drill:** <span style='color:{phase_color}'><b>{drill['name']}</b></span>",
+        f"- <b>Drill: <span style=\"color:{phase_color}\">{drill['name']}</span></b>",
         f"  Load: {drill['load']}",
         f"  Rest: {drill['rest']}",
         f"  Timing: {drill['timing']}",
