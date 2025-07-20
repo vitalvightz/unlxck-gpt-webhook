@@ -456,23 +456,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
 
     strength_output = [
-        "",
         "🏋️‍♂️ **Strength & Power Module**",
         f"Phase: {phase}",
         f"Primary Focus: {focus}",
-        "",
         "Top Exercises:",
     ] + [f"- {ex['name']}" for ex in base_exercises] + [
-        "",
         f"Prescription: {base_block}",
     ]
 
     if fatigue_note:
-        strength_output += [
-            "",
-            f"**Adjustment:** {fatigue_note}",
-            "",
-        ]
+        strength_output += [f"**Adjustment:** {fatigue_note}"]
 
     all_tags = []
     for ex in base_exercises:
