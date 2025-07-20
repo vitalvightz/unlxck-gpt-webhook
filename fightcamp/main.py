@@ -389,7 +389,7 @@ async def generate_plan(data: dict):
         "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
         "",
         "## ATHLETE PROFILE",
-        f"- Name: {full_name}",
+        f"- **Name:** <b>{full_name}</b><br>",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
         f"- Target Weight: {target_weight}kg",
@@ -475,7 +475,7 @@ async def generate_plan(data: dict):
     rehab_html = "\n".join(rehab_parts)
 
     profile_lines = [
-        f"- Name: {full_name}",
+        f"- **Name:** <b>{full_name}</b><br>",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
         f"- Target Weight: {target_weight}kg",
@@ -500,13 +500,7 @@ async def generate_plan(data: dict):
     ]
     athlete_profile_html = _md_to_html("\n".join(profile_lines))
 
-    adjustments_table = (
-        "<table>"
-        "<tr><th>Scenario</th><th>Adjustment</th></tr>"
-        "<tr><td>Technical sparring today</td><td>Keep S&C but <b>cut volume by 30%</b>.</td></tr>"
-        "<tr><td>No sparring this week</td><td>Add an <b>extra glycolytic conditioning session</b> (e.g., 5x3min bag rounds).</td></tr>"
-        "</table>"
-    )
+    adjustments_table = _md_to_html("- If sparring today: reduce S&C by 30%\n- No sparring this week: add extra glycolytic conditioning")
 
     html = build_html_document(
         full_name=full_name,
