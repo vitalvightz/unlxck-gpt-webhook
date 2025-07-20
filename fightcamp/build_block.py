@@ -1,22 +1,20 @@
 """HTML export builder for fight camp plans.
 
 This module mirrors the style used for the elite mental plan export. It
-constructs PDFKit-ready HTML with strict spacing and semantic tags.  The module
-also supports storing the resulting HTML to Supabase if connection
-information is available.
+constructs PDFKit-ready HTML with strict spacing and semantic tags. The resulting
+HTML is converted to PDF and, if Supabase credentials are supplied, the PDF is
+uploaded directly to Supabase Storage.
 
 Environment Variables
 ---------------------
-SUPABASE_URL and SUPABASE_KEY are optional. When supplied, the HTML output will
-be inserted into the ``fight_plans`` table with the columns ``name`` and
-``html``. The Supabase client is lazily imported so the package is optional in
-minimal environments.
+SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are optional. When provided, the
+``upload_to_supabase`` function will place the generated PDF into the ``fight-plans``
+bucket. No raw HTML is stored.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Optional
 
 import os
@@ -81,19 +79,6 @@ def _md_to_html(text: str) -> str:
     return "\n".join(html_parts)
 
 
-def _maybe_supabase_client():
-    """Return a Supabase client if env vars are set and the library exists."""
-
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    if not url or not key:
-        return None
-    try:  # pragma: no cover - library might not be installed
-        from supabase import create_client  # type: ignore
-
-        return create_client(url, key)
-    except Exception:
-        return None
 
 
 @dataclass
@@ -198,15 +183,6 @@ def build_html_document(
     ]
 
     html = "\n".join(lines)
-
-    client = _maybe_supabase_client()
-    if client:
-        try:  # pragma: no cover - external call
-            client.table("fight_plans").insert(
-                {"name": full_name, "html": html, "created_at": datetime.utcnow()}
-            ).execute()
-        except Exception:
-            pass
 
     return html
 
