@@ -218,13 +218,13 @@ def select_coordination_drill(flags, existing_names: set[str]):
 
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
-    """Return a formatted Markdown block for a single drill with color."""
+    """Return a formatted Markdown block for a single drill."""
 
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
     bullet = "•"
     parts = [
-        f"- **Drill: <span style='color:{phase_color}'>{drill['name']}</span>**",
+        f"- **Drill: {drill['name']}**",
         f"  {bullet} Load: {drill['load']}{br}",
         f"  {bullet} Rest: {drill['rest']}{br}",
         f"  {bullet} Timing: {drill['timing']}{br}",
@@ -621,7 +621,7 @@ def generate_conditioning_block(flags):
         injected_target = 2
         injected = 0
         for drill in universal_conditioning:
-            if injected >= injected_target:
+            if injected >= injected_target or len(selected_drill_names) >= total_drills:
                 break
             if drill.get("name") in existing_cond_names:
                 continue
@@ -650,7 +650,7 @@ def generate_conditioning_block(flags):
         if not taper_candidates:
             taper_candidates = style_taper_bank
 
-        if taper_candidates:
+        if taper_candidates and len(selected_drill_names) < total_drills:
             drill = random.choice(taper_candidates)
             if drill.get("name") not in existing_cond_names:
                 system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
@@ -663,7 +663,7 @@ def generate_conditioning_block(flags):
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
             and "plyometric" in {t.lower() for t in d.get("tags", [])}
         ]
-        if taper_plyos:
+        if taper_plyos and len(selected_drill_names) < total_drills:
             existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
             drill = random.choice(taper_plyos)
             if drill.get("name") not in existing_cond_names:
@@ -675,7 +675,7 @@ def generate_conditioning_block(flags):
 
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
     goal_set = {g.lower() for g in goals}
-    if "skill_refinement" in goal_set:
+    if "skill_refinement" in goal_set and len(selected_drill_names) < total_drills:
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
         skill_drills = [
             d for d in style_conditioning_bank
@@ -695,7 +695,7 @@ def generate_conditioning_block(flags):
     # --------- OPTIONAL COORDINATION DRILL INSERTION ---------
     existing_names = {d.get("name") for _, drills in final_drills for d in drills}
     coord_drill = select_coordination_drill(flags, existing_names)
-    if coord_drill:
+    if coord_drill and len(selected_drill_names) < total_drills:
         system = SYSTEM_ALIASES.get(coord_drill.get("system", "").lower(), coord_drill.get("system", "misc"))
         final_drills.append((system, [coord_drill]))
         selected_drill_names.append(coord_drill.get("name"))
@@ -715,13 +715,19 @@ def generate_conditioning_block(flags):
                 if "neck" in {t.lower() for t in d.get("tags", [])}
                 and phase.upper() in d.get("phases", [])
             ]
-            if neck_candidates:
+            if neck_candidates and len(selected_drill_names) < total_drills:
                 drill = random.choice(neck_candidates)
                 system = SYSTEM_ALIASES.get(
                     drill.get("system", "").lower(), drill.get("system", "misc")
                 )
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
+
+    # Trim any extras beyond the recommended count
+    if len(selected_drill_names) > total_drills:
+        extra = len(selected_drill_names) - total_drills
+        final_drills = final_drills[:-extra]
+        selected_drill_names = selected_drill_names[:-extra]
 
     # Group drills by energy system so each system only prints once
     grouped_drills: dict[str, list[dict]] = {}
