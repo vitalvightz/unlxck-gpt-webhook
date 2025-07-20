@@ -1,14 +1,13 @@
 from datetime import datetime
-import os, json, base64
+import os, json
 import asyncio
-from functools import partial
-try:
-    from google.oauth2 import service_account
-    from googleapiclient.discovery import build
-except ImportError:  # Google libraries may be missing in minimal environments
-    service_account = None
-    build = None
 from pathlib import Path
+from .build_block import (
+    PhaseBlock,
+    build_html_document,
+    html_to_pdf,
+    upload_to_supabase,
+)
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
@@ -66,31 +65,6 @@ WEAKNESS_NORMALIZER = {
     "shoulders": ["shoulders"],
 }
 
-try:
-    b64_creds = os.getenv("GOOGLE_CREDS_B64")
-    if not b64_creds:
-        raise ValueError("Base64 credentials not found in env")
-
-    with open("clientsecrettallyso.json", "w") as f:
-        decoded = base64.b64decode(b64_creds)
-        f.write(decoded.decode("utf-8"))
-
-    SERVICE_ACCOUNT_FILE = "clientsecrettallyso.json"
-    SCOPES = [
-        "https://www.googleapis.com/auth/documents",
-        "https://www.googleapis.com/auth/drive",
-    ]
-
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
-    )
-    docs_service = build("docs", "v1", credentials=creds)
-    drive_service = build("drive", "v3", credentials=creds)
-
-except Exception as e:
-    docs_service = drive_service = None
-    print("⚠️  Google credentials not found or invalid; docs export disabled.", e)
-
 def get_value(label, fields):
     for field in fields:
         if field.get("label", "").strip() == label.strip():
@@ -102,31 +76,6 @@ def get_value(label, fields):
             return str(value).strip() if value is not None else ""
     return ""
 
-def get_folder_id(folder_name):
-    if not drive_service:
-        return None
-    response = drive_service.files().list(
-        q=f"mimeType='application/vnd.google-apps.folder' and name='{folder_name}'",
-        spaces="drive",
-    ).execute()
-    folders = response.get("files", [])
-    return folders[0]["id"] if folders else None
-
-def create_doc(title, content):
-    if not docs_service or not drive_service:
-        return None
-    folder_id = get_folder_id("Unlxck Auto Docs")
-    doc = docs_service.documents().create(body={"title": title}).execute()
-    doc_id = doc["documentId"]
-    if folder_id:
-        drive_service.files().update(
-            fileId=doc_id, addParents=folder_id, removeParents="root"
-        ).execute()
-    docs_service.documents().batchUpdate(
-        documentId=doc_id,
-        body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]},
-    ).execute()
-    return f"https://docs.google.com/document/d/{doc_id}"
 
 
 async def generate_plan(data: dict):
@@ -467,25 +416,120 @@ async def generate_plan(data: dict):
      
     fight_plan_text = "\n".join(fight_plan_lines)
 
-    full_plan = fight_plan_text
-    print("✅ Plan generated locally (First 500 chars):\n", full_plan[:500])
+    print("✅ Plan generated locally (First 500 chars):\n", fight_plan_text[:500])
 
-    loop = asyncio.get_running_loop()
-    for _ in range(2):
-        try:
-            doc_link = await loop.run_in_executor(
-                None,
-                partial(create_doc, f"Fight Plan – {full_name}", full_plan)
-            )
-            print("✅ Google Doc Created:", doc_link)
-            break
-        except Exception as e:
-            print("❌ Google Docs API Error (Retrying):", e)
-            await asyncio.sleep(2)
-    else:
-        doc_link = None
+    phase_split = f"{phase_weeks['GPP']} / {phase_weeks['SPP']} / {phase_weeks['TAPER']}"
 
-    return {"doc_link": doc_link or "Document creation failed"}
+    def build_phase(name, weeks, days, mindset, strength, cond):
+        return PhaseBlock(
+            name=name,
+            weeks=weeks,
+            days=days,
+            mindset=mindset,
+            strength=strength,
+            conditioning=cond,
+        )
+
+    gpp_phase = None
+    spp_phase = None
+    taper_phase = None
+    if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
+        gpp_phase = build_phase(
+            f"PHASE 1: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
+            phase_weeks["GPP"],
+            phase_weeks["days"]["GPP"],
+            gpp_mindset,
+            gpp_block["block"] if gpp_block else "",
+            gpp_cond_block,
+        )
+    if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
+        spp_phase = build_phase(
+            f"PHASE 2: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
+            phase_weeks["SPP"],
+            phase_weeks["days"]["SPP"],
+            spp_mindset,
+            spp_block["block"] if spp_block else "",
+            spp_cond_block,
+        )
+    if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
+        taper_phase = build_phase(
+            f"PHASE 3: TAPER – {phase_weeks['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
+            phase_weeks["TAPER"],
+            phase_weeks["days"]["TAPER"],
+            taper_mindset,
+            taper_block["block"] if taper_block else "",
+            taper_cond_block,
+        )
+
+    rehab_parts = []
+    if gpp_rehab_block:
+        rehab_parts.append("<h3>GPP</h3>")
+        rehab_parts.append(_md_to_html(gpp_rehab_block.strip()))
+    if spp_rehab_block:
+        rehab_parts.append("<h3>SPP</h3>")
+        rehab_parts.append(_md_to_html(spp_rehab_block.strip()))
+    if taper_rehab_block:
+        rehab_parts.append("<h3>TAPER</h3>")
+        rehab_parts.append(_md_to_html(taper_rehab_block.strip()))
+    if support_notes:
+        rehab_parts.append(_md_to_html(support_notes))
+    rehab_html = "\n".join(rehab_parts)
+
+    profile_lines = [
+        f"- Name: {full_name}",
+        f"- Age: {age}",
+        f"- Weight: {weight}kg",
+        f"- Target Weight: {target_weight}kg",
+        f"- Height: {height}cm",
+        f"- Technical Style: {fighting_style_technical}",
+        f"- Tactical Style: {fighting_style_tactical}",
+        f"- Stance: {stance}",
+        f"- Status: {status}",
+        f"- Record: {record}",
+        f"- Fight Format: {rounds_format}",
+        f"- Fight Date: {next_fight_date}",
+        f"- Weeks Out: {weeks_out}",
+        f"- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper",
+        f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
+        f"- Fatigue Level: {fatigue}",
+        f"- Injuries: {injuries}",
+        f"- Training Availability: {available_days}",
+        f"- Weaknesses: {weak_areas}",
+        f"- Key Goals: {key_goals}",
+        f"- Mindset Challenges: {', '.join(training_context['mental_block'])}",
+        f"- Notes: {notes}",
+    ]
+    athlete_profile_html = _md_to_html("\n".join(profile_lines))
+
+    adjustments_table = (
+        "<table>"
+        "<tr><th>Scenario</th><th>Adjustment</th></tr>"
+        "<tr><td>Technical sparring today</td><td>Keep S&C but <b>cut volume by 30%</b>.</td></tr>"
+        "<tr><td>No sparring this week</td><td>Add an <b>extra glycolytic conditioning session</b> (e.g., 5x3min bag rounds).</td></tr>"
+        "</table>"
+    )
+
+    html = build_html_document(
+        full_name=full_name,
+        sport=mapped_format,
+        phase_split=phase_split,
+        status=status,
+        gpp=gpp_phase,
+        spp=spp_phase,
+        taper=taper_phase,
+        nutrition_block=nutrition_block,
+        recovery_block=recovery_block,
+        rehab_html=rehab_html,
+        mindset_overview=f"Primary Block(s): {', '.join(training_context['mental_block']).title()}",
+        adjustments_table=adjustments_table,
+        athlete_profile_html=athlete_profile_html,
+    )
+
+    safe = full_name.replace(" ", "_") or "plan"
+    pdf_path = html_to_pdf(html, f"{safe}_fight_plan.pdf")
+    pdf_url = upload_to_supabase(pdf_path) if pdf_path else "PDF generation failed"
+
+    return {"pdf_url": pdf_url}
 
 
 def main():
@@ -495,7 +539,7 @@ def main():
     with open(data_file, "r") as f:
         data = json.load(f)
     result = asyncio.run(generate_plan(data))
-    print(f"::notice title=Google Doc::Plan link: {result.get('doc_link')}")
+    print(f"::notice title=Plan PDF::URL: {result.get('pdf_url')}")
 
 
 if __name__ == "__main__":
