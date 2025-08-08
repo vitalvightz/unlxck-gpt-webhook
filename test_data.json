@@ -1,29 +1,29 @@
-test_payload = {
+{
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Adrian 'The Hammer' Cole" },
-      { "label": "Age", "value": "27" },
-      { "label": "Weight (kg)", "value": "75" },
-      { "label": "Target Weight (kg)", "value": "72.5" },
-      { "label": "Height (cm)", "value": "179" },
-      { "label": "Fighting Style (Technical)", "value": ["Boxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["Counter Striker", "Distance Striker"] },
-      { "label": "Stance", "value": "Orthodox" },
-      { "label": "Professional Status", "value": "Pro" },
-      { "label": "Current Record", "value": "14-2-0" },
-      { "label": "When is your next fight?", "value": "2025-09-28" },
-      { "label": "Rounds x Minutes", "value": "10x3" },
+      { "label": "Full name", "value": "Ninjin" },
+      { "label": "Age", "value": "24" },
+      { "label": "Weight (kg)", "value": "62" },
+      { "label": "Target Weight (kg)", "value": "55" },
+      { "label": "Height (cm)", "value": "168" },
+      { "label": "Fighting Style (Technical)", "value": ["Boxing"] },
+      { "label": "Fighting Style (Tactical)", "value": ["Brawler", "Distance Striker", "Counter Striker", "Pressure Fighter"] },
+      { "label": "Stance", "value": "Hybrid" },
+      { "label": "Professional Status", "value": "Amateur" },
+      { "label": "Current Record", "value": "8-7-3" },
+      { "label": "When is your next fight?", "value": "2025-08-17" },
+      { "label": "Rounds x Minutes", "value": "3x3" },
       { "label": "Weekly Training Frequency", "value": "6" },
-      { "label": "Fatigue Level", "value": "Low" },
-      { "label": "Training Phase", "value": "Mid-Camp" },
-      { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Med Balls / Bands", "Battle Ropes", "Sled"] },
+      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Training Phase", "value": "In-Rehab" },
+      { "label": "Equipment Access", "value": ["Dumbbells", "Sandbag"] },
       { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] },
-      { "label": "Any injuries or areas you need to work around?", "value": "Minor soreness in left shoulder" },
-      { "label": "What are your key performance goals?", "value": ["Power & Explosiveness", "Conditioning / Endurance", "Speed", "Striking", "Injury Prevention"] },
-      { "label": "Where do you feel weakest right now?", "value": ["Shoulders", "Grip Strength", "Conditioning"] },
-      { "label": "Do you prefer certain training styles?", "value": "Explosive lifts, short sprints, and technical pad work." },
-      { "label": "Do you struggle with any mental blockers or mindset challenges?", "value": "Occasionally overthinks strategy mid-fight." },
-      { "label": "Are there any parts of your previous plan you hated or loved?", "value": "Loved contrast training for power; hated excessive long-distance running." }
+      { "label": "Any injuries or areas you need to work around?", "value": "neck" },
+      { "label": "What are your key performance goals?", "value": ["Skill Refinement", "Power & Explosiveness", "Speed", "Mobility"] },
+      { "label": "Where do you feel weakest right now?", "value": ["Knees", "Speed / Reaction"] },
+      { "label": "Do you prefer certain training styles?", "value": "no" },
+      { "label": "Do you struggle with any mental blockers or mindset challenges?", "value": "Sometimes not really sure" },
+      { "label": "Are there any parts of your previous plan you hated or loved?", "value": "I hated cutting weight" }
     ]
   }
 }
