@@ -1,3 +1,60 @@
+from rapidfuzz import fuzz
+import spacy
+from spacy.matcher import PhraseMatcher
+from negspacy.negation import Negex
+from spacy.tokens import Token  # ✅ needed to register extensions
+
+# Heavier weight to categories we want to prefer when there’s overlap
+TYPE_PRIORITY = {
+    "instability": 1.00,
+    "sprain": 0.90,
+    "impingement": 0.85,
+    "tendonitis": 0.80,
+    "strain": 0.78,
+    "hyperextension": 0.75,
+    "stiffness": 0.70,
+    "tightness": 0.68,
+    "contusion": 0.65,
+    "swelling": 0.65,
+    "soreness": 0.60,
+    "pain": 0.58,
+    "unspecified": 0.10,
+}
+
+# Words/phrases that are strong, near-exclusive hints for given categories.
+# Used to disambiguate when PhraseMatcher hits collide (e.g., sprain vs instability).
+EXCLUSIVE_HINTS = {
+    "sprain": {
+        "rolled", "rolling", "inversion", "eversion",
+        "ligament", "ligament tear", "ligament pop", "grade 1", "grade 2", "grade 3",
+        "acl", "mcl", "lcl", "pcl",
+        "twist", "twisted"
+    },
+    "instability": {
+        "gave way", "giving way", "apprehension", "fear", "afraid",
+        "don’t trust", "don't trust", "can’t trust", "can't trust",
+        "dislocate", "dislocated", "sublux", "subluxation",
+        "unreliable", "unstable"
+    },
+}
+
+# Per-category fuzzy thresholds (defaults remain 85 if not listed)
+FUZZY_THRESHOLDS = {
+    "pain": 90,
+    "tightness": 88,
+    "stiffness": 88,
+    "soreness": 90,
+    # others default to 85
+}
+
+# Spine/back context routing (phrase-level)
+SPINE_HINTS = {
+    "neck": {"neck", "cervical", "c-spine"},
+    "upper_back": {"upper back", "upper-back", "thoracic", "t-spine", "mid back", "mid-back"},
+    "lower_back": {"lower back", "lower-back", "lumbar", "l-spine", "sciatic", "sciatica", "sacrum"},
+}
+
+
 INJURY_SYNONYM_MAP = {
     # Ligament - now with every joint instability phrase imaginable
     "sprain": [
@@ -306,8 +363,8 @@ LOCATION_MAP = {
     "hammy": "hamstring",
     "posterior thigh": "hamstring",
     "biceps femoris": "hamstring",
-    "femur": "hamstring",
-    "thigh bone": "hamstring",
+    "femur": "unspecified",
+    "thigh bone": "unspecified",
     "hand": "hand",
     "hands": "hand",
     "palm": "hand",
@@ -412,12 +469,6 @@ LOCATION_MAP = {
 }
 
 
-from rapidfuzz import fuzz
-import spacy
-from spacy.matcher import PhraseMatcher
-from negspacy.negation import Negex
-from spacy.tokens import Token  # ✅ needed to register extensions
-
 # load the large english model once
 try:
     nlp = spacy.load("en_core_web_lg")
@@ -457,47 +508,128 @@ def remove_negated_phrases(text: str) -> str:
     return " ".join(tokens).strip()
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
-    """Return the canonical injury type for the given text using spaCy."""
+    """
+    Return the canonical injury type using:
+    1) Phrase matches (non-negated) to collect candidates,
+    2) Exclusive-hint scoring to separate overlapping categories (e.g., sprain vs instability),
+    3) Fuzzy fallback with per-category thresholds,
+    4) Priority tie-breaks via TYPE_PRIORITY.
+    """
     doc = nlp(text.lower())
 
-    # phrase matcher first - skip spans that contain negated tokens
+    candidates: dict[str, float] = {}
+
+    # 1) Phrase matcher first (fast / precise), ignore negated spans
+    hits = []
     for match_id, start, end in INJURY_MATCHER(doc):
         span = doc[start:end]
         if any(tok._.negex for tok in span):
             continue
-        return INJURY_MATCH_ID_TO_CANONICAL.get(match_id)
+        hits.append(INJURY_MATCH_ID_TO_CANONICAL.get(match_id))
 
-    # fallback to fuzzy matching on non-negated tokens only
-    cleaned = " ".join(tok.text for tok in doc if not tok._.negex).strip()
-    if not cleaned:
+    for c in hits:
+        if not c:
+            continue
+        # Base score for a direct phrase hit
+        candidates[c] = candidates.get(c, 0.0) + 1.5
+
+    # 2) Exclusive-hints to disambiguate overlaps
+    text_no_neg = " ".join(tok.text for tok in doc if not tok._.negex)
+    for cat, hints in EXCLUSIVE_HINTS.items():
+        if any(h in text_no_neg for h in hints):
+            candidates[cat] = candidates.get(cat, 0.0) + 1.0
+
+    # 3) Fuzzy fallback on the cleaned text (non-negated tokens only)
+    cleaned = text_no_neg.strip()
+    if cleaned and not candidates:
+        for canonical, synonyms in INJURY_SYNONYM_MAP.items():
+            thr = FUZZY_THRESHOLDS.get(canonical, threshold)
+            if fuzz.partial_ratio(canonical, cleaned) >= thr:
+                candidates[canonical] = candidates.get(canonical, 0.0) + 0.9
+            for phrase in synonyms:
+                if fuzz.partial_ratio(phrase, cleaned) >= thr:
+                    candidates[canonical] = candidates.get(canonical, 0.0) + 0.8
+
+    if not candidates:
         return None
-    for canonical, synonyms in INJURY_SYNONYM_MAP.items():
-        if fuzz.partial_ratio(canonical, cleaned) >= threshold:
-            return canonical
-        for phrase in synonyms:
-            if fuzz.partial_ratio(phrase, cleaned) >= threshold:
-                return canonical
-    return None
+
+    # 4) Apply category priority as a tie-break modifier
+    def _final_score(cat: str, base: float) -> float:
+        return base * (1.0 + 0.05 * TYPE_PRIORITY.get(cat, 0.1))
+
+    best_cat = max(candidates.items(), key=lambda kv: _final_score(kv[0], kv[1]))[0]
+
+    # Special rule: if both "sprain" and "instability" are present, force decision by hints.
+    if {"sprain", "instability"}.issubset(set(candidates.keys())):
+        sprain_hint = any(h in text_no_neg for h in EXCLUSIVE_HINTS["sprain"])
+        instab_hint = any(h in text_no_neg for h in EXCLUSIVE_HINTS["instability"])
+        if sprain_hint and not instab_hint:
+            return "sprain"
+        if instab_hint and not sprain_hint:
+            return "instability"
+        # If both/neither hints: keep priority-based winner already chosen.
+    return best_cat
 
 
 def canonicalize_location(text: str, threshold: int = 85) -> str | None:
-    """Return the canonical body part for the provided text using spaCy."""
+    """
+    Return canonical location with:
+    1) Phrase match (non-negated),
+    2) Context routing for 'spine/back' mentions into neck / upper_back / lower_back,
+    3) Fuzzy fallback (partial-ratio).
+    """
     doc = nlp(text.lower())
 
-    # phrase matcher, skip spans containing negated tokens
+    # 1) Phrase match (fast), ignore negated spans
     for match_id, start, end in LOCATION_MATCHER(doc):
         span = doc[start:end]
         if any(tok._.negex for tok in span):
             continue
-        return LOC_MATCH_ID_TO_CANONICAL.get(match_id)
+        loc = LOC_MATCH_ID_TO_CANONICAL.get(match_id)
 
+        # 2) Context routing if spine/back-ish
+        if loc in {"lower back"}:
+            pass
+        txt = text.lower()
+        if ("spine" in txt) or ("back" in txt):
+            if any(h in txt for h in SPINE_HINTS["neck"]):
+                return "neck"
+            if any(h in txt for h in SPINE_HINTS["upper_back"]):
+                return "upper back"
+            if any(h in txt for h in SPINE_HINTS["lower_back"]):
+                return "lower back"
+            # Default if unspecified: lower back (as before)
+            return "lower back"
+
+        return loc
+
+    # 3) Fuzzy fallback on non-negated tokens only
     cleaned = " ".join(tok.text for tok in doc if not tok._.negex).strip()
     if not cleaned:
         return None
+    best = None
+    best_score = 0
     for key, canonical in LOCATION_MAP.items():
-        if len(key) > 4 and fuzz.partial_ratio(key, cleaned) >= threshold:
-            return canonical
-    return None
+        if len(key) <= 4:
+            continue
+        score = fuzz.partial_ratio(key, cleaned)
+        if score >= threshold and score > best_score:
+            best = canonical
+            best_score = score
+
+    # Context routing for spine/back if we only reached fuzzy stage
+    if best in {None, "lower back"}:
+        txt = cleaned
+        if ("spine" in txt) or ("back" in txt):
+            if any(h in txt for h in SPINE_HINTS["neck"]):
+                return "neck"
+            if any(h in txt for h in SPINE_HINTS["upper_back"]):
+                return "upper back"
+            if any(h in txt for h in SPINE_HINTS["lower_back"]):
+                return "lower back"
+            return "lower back"
+
+    return best
 
 
 def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
