@@ -225,7 +225,8 @@ async def generate_plan(data: dict):
         strength_blocks.append(spp_block["block"])
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
-        taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": spp_ex_names}
+        combined_prev = list({*gpp_ex_names, *spp_ex_names})
+        taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": combined_prev}
         taper_block = generate_strength_block(
             flags=taper_flags,
             weaknesses=training_context["weaknesses"],

@@ -146,6 +146,15 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
 
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 
+# Load universal strength list for cross-phase novelty exemptions
+try:
+    _universal_strength = json.loads(
+        (DATA_DIR / "universal_gpp_strength.json").read_text()
+    )
+except Exception:
+    _universal_strength = []
+UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
+
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
@@ -168,6 +177,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     exercise_counts = calculate_exercise_numbers(training_frequency, phase)
     target_exercises = exercise_counts.get("strength", 0)
     prev_exercises = flags.get("prev_exercises", [])
+
+    # Names exempt from cross-phase novelty rules
+    style_mandatory_names = {
+        name for st in style_list for name in STYLE_MANDATORY.get(st, [])
+    }
+    cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
@@ -256,6 +271,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
+        tags_lower = {t.lower() for t in tags}
         details = " ".join(
             [
                 ex.get("notes", ""),
@@ -293,11 +309,20 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if score == -999:
             continue
 
-        # Phase-based novelty enforcement
-        if ex.get("name") in prev_exercises and not (
-            phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
-        ):
-            continue
+        # Phase-based novelty enforcement with exemptions
+        if prev_exercises and ex.get("name") in prev_exercises:
+            if not (
+                ex.get("name") in UNIVERSAL_STRENGTH_NAMES
+                or ex.get("name") in style_mandatory_names
+                or any(
+                    term in ex.get("name", "").lower() or term in tags_lower
+                    for term in cornerstone_terms
+                )
+                or (
+                    phase == "TAPER" and tags_lower & {"neural_primer", "speed"}
+                )
+            ):
+                continue
 
         # No additional fatigue or equipment adjustments; handled in score_exercise
 
@@ -321,6 +346,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])
+            tags_lower = {t.lower() for t in tags}
             details = " ".join(
                 [
                     ex.get("notes", ""),
@@ -330,10 +356,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             )
             if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
-            if ex.get("name") in prev_exercises and not (
-                phase == "TAPER" and any(t in {"neural_primer", "speed"} for t in tags)
-            ):
-                continue
+            if prev_exercises and ex.get("name") in prev_exercises:
+                if not (
+                    ex.get("name") in UNIVERSAL_STRENGTH_NAMES
+                    or ex.get("name") in style_mandatory_names
+                    or any(
+                        term in ex.get("name", "").lower() or term in tags_lower
+                        for term in cornerstone_terms
+                    )
+                    or (
+                        phase == "TAPER" and tags_lower & {"neural_primer", "speed"}
+                    )
+                ):
+                    continue
             if phase == "TAPER":
                 if any(t in taper_banned for t in tags) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
                     continue
