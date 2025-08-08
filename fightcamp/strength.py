@@ -102,6 +102,10 @@ def score_exercise(
     if not set(required_equipment).issubset(set(available_equipment)):
         return -999
 
+    phase_boost = phase_equipment_boost.get(current_phase, set())
+    if any(eq in phase_boost for eq in available_equipment):
+        score += 0.25
+
     if is_rehab:
         phase_penalties = {"GPP": -0.7, "SPP": -1.0, "TAPER": -0.75}
         score += phase_penalties.get(current_phase, -0.75)
