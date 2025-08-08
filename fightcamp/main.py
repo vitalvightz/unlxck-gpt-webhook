@@ -313,12 +313,21 @@ async def generate_plan(data: dict):
     if support_notes:
         rehab_sections += ["", support_notes]
 
+    def _week_str(weeks: int, days: int) -> str:
+        """Return a display string for weeks, avoiding zero for short phases."""
+        return "~1" if weeks == 0 and days > 0 else str(weeks)
+
+    week_str = {
+        phase: _week_str(phase_weeks[phase], phase_weeks["days"][phase])
+        for phase in ("GPP", "SPP", "TAPER")
+    }
+
     fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_num = 1
 
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         fight_plan_lines += [
-            f"## PHASE {phase_num}: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
+            f"## PHASE {phase_num}: GENERAL PREPARATION PHASE (GPP) – {week_str['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
             "",
             "### Mindset Focus",
             gpp_mindset,
@@ -334,7 +343,7 @@ async def generate_plan(data: dict):
 
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         fight_plan_lines += [
-            f"## PHASE {phase_num}: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
+            f"## PHASE {phase_num}: SPECIFIC PREPARATION PHASE (SPP) – {week_str['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
             "",
             "### Mindset Focus",
             spp_mindset,
@@ -350,7 +359,7 @@ async def generate_plan(data: dict):
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         fight_plan_lines += [
-            f"## PHASE {phase_num}: TAPER – {phase_weeks['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
+            f"## PHASE {phase_num}: TAPER – {week_str['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
             "",
             "### Mindset Focus",
             taper_mindset,
@@ -402,7 +411,7 @@ async def generate_plan(data: dict):
         f"- Fight Format: {rounds_format}",
         f"- Fight Date: {next_fight_date}",
         f"- Weeks Out: {weeks_out}",
-        f"- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper",
+        f"- Phase Weeks: {week_str['GPP']} GPP / {week_str['SPP']} SPP / {week_str['TAPER']} Taper",
         f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries}",
@@ -417,7 +426,7 @@ async def generate_plan(data: dict):
 
     print("✅ Plan generated locally (First 500 chars):\n", fight_plan_text[:500])
 
-    phase_split = f"{phase_weeks['GPP']} / {phase_weeks['SPP']} / {phase_weeks['TAPER']}"
+    phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
 
     def build_phase(name, weeks, days, mindset, strength, cond):
         return PhaseBlock(
@@ -434,7 +443,7 @@ async def generate_plan(data: dict):
     taper_phase = None
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         gpp_phase = build_phase(
-            f"PHASE 1: GENERAL PREPARATION PHASE (GPP) – {phase_weeks['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
+            f"PHASE 1: GENERAL PREPARATION PHASE (GPP) – {week_str['GPP']} WEEKS ({phase_weeks['days']['GPP']} DAYS)",
             phase_weeks["GPP"],
             phase_weeks["days"]["GPP"],
             gpp_mindset,
@@ -443,7 +452,7 @@ async def generate_plan(data: dict):
         )
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         spp_phase = build_phase(
-            f"PHASE 2: SPECIFIC PREPARATION PHASE (SPP) – {phase_weeks['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
+            f"PHASE 2: SPECIFIC PREPARATION PHASE (SPP) – {week_str['SPP']} WEEKS ({phase_weeks['days']['SPP']} DAYS)",
             phase_weeks["SPP"],
             phase_weeks["days"]["SPP"],
             spp_mindset,
@@ -452,7 +461,7 @@ async def generate_plan(data: dict):
         )
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_phase = build_phase(
-            f"PHASE 3: TAPER – {phase_weeks['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
+            f"PHASE 3: TAPER – {week_str['TAPER']} WEEKS ({phase_weeks['days']['TAPER']} DAYS)",
             phase_weeks["TAPER"],
             phase_weeks["days"]["TAPER"],
             taper_mindset,
@@ -488,7 +497,7 @@ async def generate_plan(data: dict):
         f"- Fight Format: {rounds_format}",
         f"- Fight Date: {next_fight_date}",
         f"- Weeks Out: {weeks_out}",
-        f"- Phase Weeks: {phase_weeks['GPP']} GPP / {phase_weeks['SPP']} SPP / {phase_weeks['TAPER']} Taper",
+        f"- Phase Weeks: {week_str['GPP']} GPP / {week_str['SPP']} SPP / {week_str['TAPER']} Taper",
         f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries}",
