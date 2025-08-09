@@ -27,16 +27,31 @@ try:
 except Exception:
     STYLE_EXERCISES = []
 
-STYLE_MANDATORY = {
-    "brawler": ["Sledgehammer Slam", "Medicine Ball Slam"],
-    "pressure fighter": ["Weighted Sled Push", "Jumping Lunge"],
-    "clinch fighter": ["Farmer’s Carry", "Weighted Pull-Up"],
-    "distance striker": ["Overhead Med Ball Slam", "Pallof Press"],
-    "counter striker": ["Barbell Landmine Twist", "Pallof Press"],
-    "submission hunter": ["Weighted Pull-Up", "Kettlebell Swing"],
-    "kicker": ["Bulgarian Split Squat", "Walking Lunges"],
-    "scrambler": ["Barbell Thruster", "Turkish Get-Up"],
+
+CANONICAL_STYLE_TAGS = {
+    "brawler",
+    "pressure_fighter",
+    "clinch_fighter",
+    "distance_striker",
+    "counter_striker",
+    "submission_hunter",
+    "kicker",
+    "scrambler",
+    "grappler",
+    "wrestler",
 }
+
+
+def normalize_style_tags(tags):
+    """Return canonical tactical style tags without ``style_`` prefixes."""
+    normalized = set()
+    for tag in tags:
+        t = tag.lower().replace(" ", "_")
+        if t.startswith("style_"):
+            t = t[6:]
+        if t in CANONICAL_STYLE_TAGS:
+            normalized.add(t)
+    return normalized
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
@@ -177,11 +192,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     exercise_counts = calculate_exercise_numbers(training_frequency, phase)
     target_exercises = exercise_counts.get("strength", 0)
     prev_exercises = flags.get("prev_exercises", [])
-
-    # Names exempt from cross-phase novelty rules
-    style_mandatory_names = {
-        name for st in style_list for name in STYLE_MANDATORY.get(st, [])
-    }
+    recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
 
     style_tag_map = {
@@ -313,7 +324,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if prev_exercises and ex.get("name") in prev_exercises:
             if not (
                 ex.get("name") in UNIVERSAL_STRENGTH_NAMES
-                or ex.get("name") in style_mandatory_names
                 or any(
                     term in ex.get("name", "").lower() or term in tags_lower
                     for term in cornerstone_terms
@@ -359,7 +369,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if prev_exercises and ex.get("name") in prev_exercises:
                 if not (
                     ex.get("name") in UNIVERSAL_STRENGTH_NAMES
-                    or ex.get("name") in style_mandatory_names
                     or any(
                         term in ex.get("name", "").lower() or term in tags_lower
                         for term in cornerstone_terms
@@ -423,29 +432,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     inserted += 1
                     break
 
-    # Inject mandatory exercises for each tactical style
-    mandatory = []
-    for st in style_list:
-        mandatory.extend(STYLE_MANDATORY.get(st, [])[:2])
-    # remove duplicates while preserving order
-    seen: set[str] = set()
-    unique_mandatory: list[str] = []
-    for m in mandatory:
-        if m not in seen:
-            seen.add(m)
-            unique_mandatory.append(m)
-    mandatory = unique_mandatory
-    for name in mandatory:
-        ex_obj = next((e for e in STYLE_EXERCISES if e.get("name") == name), None)
-        if not ex_obj:
-            continue
-        if phase not in ex_obj.get("phases", []):
-            continue
-        if all(e.get("name") != name for e in top_exercises):
-            top_exercises.append(ex_obj)
-    if len(top_exercises) > target_exercises:
-        top_exercises = top_exercises[:target_exercises]
-
     # --------- ISOMETRIC GUARANTEE ---------
     if phase in {"GPP", "SPP"}:
         if not any("isometric" in ex.get("tags", []) for ex in top_exercises):
@@ -476,6 +462,30 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             seen_names.add(name)
             unique_base.append(ex)
     base_exercises = unique_base
+
+    # ------- STYLE-SPECIFIC INJECTION -------
+    athlete_style_set = normalize_style_tags(style_list)
+    available_eq = set(equipment_access)
+    inserts: list[dict] = []
+    for ex in STYLE_EXERCISES:
+        if phase not in ex.get("phases", []):
+            continue
+        ex_tags = set(ex.get("tags", []))
+        if not ex_tags & athlete_style_set:
+            continue
+        ex_eq = set(normalize_equipment_list(ex.get("equipment", [])))
+        if ex_eq and ex_eq != {"bodyweight"} and not ex_eq.issubset(available_eq):
+            continue
+        if any(e.get("name") == ex.get("name") for e in base_exercises):
+            continue
+        if ex.get("movement") in recent_movements and "cornerstone" not in ex_tags:
+            continue
+        inserts.append(ex)
+
+    base_exercises = inserts + base_exercises
+    if len(base_exercises) > target_exercises:
+        base_exercises = base_exercises[:target_exercises]
+
     used_days = training_days[:num_strength_sessions]
 
     phase_loads = {

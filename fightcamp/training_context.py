@@ -1,12 +1,31 @@
 import re
 
+EQUIP_ALIASES = {
+    "med balls": "medicine_ball",
+    "med ball": "medicine_ball",
+    "medicine balls": "medicine_ball",
+    "medicine ball": "medicine_ball",
+    "band": "bands",
+    "plates": "plate",
+}
+
+
 def normalize_equipment_list(raw):
+    """Split and canonicalize equipment names."""
     if isinstance(raw, list):
-        return [item.lower().strip() for item in raw]
-    if isinstance(raw, str):
+        parts = raw
+    elif isinstance(raw, str):
         parts = re.split(r"\s*(?:,|/| and )\s*", raw)
-        return [part.lower().strip() for part in parts if part]
-    return []
+    else:
+        return []
+
+    normalized = []
+    for part in parts:
+        key = part.lower().strip()
+        key = EQUIP_ALIASES.get(key, key).replace(" ", "_")
+        if key:
+            normalized.append(key)
+    return normalized
     
 # ✅ Correct constant definition (not a function)
 known_equipment = [

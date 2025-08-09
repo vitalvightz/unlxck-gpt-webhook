@@ -190,6 +190,7 @@ async def generate_plan(data: dict):
         "age": int(age) if age.isdigit() else 0,
         "weight": float(weight) if weight.replace('.', '', 1).isdigit() else 0.0,
         "prev_exercises": [],
+        "recent_exercises": [],
         "phase_weeks": phase_weeks,
     }
 
@@ -200,6 +201,8 @@ async def generate_plan(data: dict):
     strength_blocks = []
     gpp_ex_names = []
     spp_ex_names = []
+    gpp_movements: set[str] = set()
+    spp_movements: set[str] = set()
     gpp_block = None
     spp_block = None
     taper_block = None
@@ -212,21 +215,34 @@ async def generate_plan(data: dict):
             mindset_cue=phase_mindset_cues.get("GPP"),
         )
         gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
+        gpp_movements = {ex["movement"] for ex in gpp_block["exercises"]}
         strength_blocks.append(gpp_block["block"])
 
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
-        spp_flags = {**training_context, "phase": "SPP", "prev_exercises": gpp_ex_names}
+        spp_flags = {
+            **training_context,
+            "phase": "SPP",
+            "prev_exercises": gpp_ex_names,
+            "recent_exercises": list(gpp_movements),
+        }
         spp_block = generate_strength_block(
             flags=spp_flags,
             weaknesses=training_context["weaknesses"],
             mindset_cue=phase_mindset_cues.get("SPP"),
         )
         spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
+        spp_movements = {ex["movement"] for ex in spp_block["exercises"]}
         strength_blocks.append(spp_block["block"])
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         combined_prev = list({*gpp_ex_names, *spp_ex_names})
-        taper_flags = {**training_context, "phase": "TAPER", "prev_exercises": combined_prev}
+        combined_recent = list(gpp_movements | spp_movements)
+        taper_flags = {
+            **training_context,
+            "phase": "TAPER",
+            "prev_exercises": combined_prev,
+            "recent_exercises": combined_recent,
+        }
         taper_block = generate_strength_block(
             flags=taper_flags,
             weaknesses=training_context["weaknesses"],
