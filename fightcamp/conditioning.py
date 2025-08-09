@@ -316,6 +316,7 @@ def generate_conditioning_block(flags):
         s: {"aerobic": [], "glycolytic": [], "alactic": []} for s in style_names
     }
     selected_drill_names = []
+    reason_lookup: dict[str, dict] = {}
 
     for drill in conditioning_bank:
         if phase.upper() not in drill.get("phases", []):
@@ -384,12 +385,26 @@ def generate_conditioning_block(flags):
         system_score = round(energy_multiplier * 1.0, 2)
         total_score = base_score + system_score
 
+        penalty = 0.0
         if fatigue == "high" and "high_cns" in tags:
             total_score -= 2.0
+            penalty = -2.0
         elif fatigue == "moderate" and "high_cns" in tags:
             total_score -= 1.0
+            penalty = -1.0
 
-        system_drills[system].append((drill, total_score))
+        reasons = {
+            "weakness_hits": num_weak,
+            "goal_hits": num_goals,
+            "style_hits": num_style,
+            "phase_hits": 1,
+            "load_adjustments": system_score,
+            "equipment_boost": 0.0,
+            "penalties": penalty,
+            "final_score": round(total_score, 4),
+        }
+
+        system_drills[system].append((drill, total_score, reasons))
 
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
@@ -456,17 +471,33 @@ def generate_conditioning_block(flags):
         goal_matches = sum(1 for t in tags if t in goal_tags)
         score += 0.6 * min(weak_matches, 1)
         score += 0.5 * min(goal_matches, 1)
+        penalty = 0.0
         if "high_cns" in tags:
             if fatigue == "high":
                 score -= 1.0
+                penalty = -1.0
             elif fatigue == "moderate":
                 score -= 0.5
-        score += random.uniform(-0.2, 0.2)
+                penalty = -0.5
+        noise = random.uniform(-0.2, 0.2)
+        score += noise
 
-        style_system_drills[system].append((drill, score))
+        reasons = {
+            "weakness_hits": weak_matches,
+            "goal_hits": goal_matches,
+            "style_hits": 1,
+            "phase_hits": 1,
+            "load_adjustments": 0.75 if system == top_system else 0.0,
+            "equipment_boost": equip_bonus,
+            "penalties": penalty,
+            "randomness": round(noise, 4),
+            "final_score": round(score, 4),
+        }
+
+        style_system_drills[system].append((drill, score, reasons))
         for st in style_names:
             if st in tags:
-                style_drills_by_style[st][system].append((drill, score))
+                style_drills_by_style[st][system].append((drill, score, reasons))
 
     for drills in system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
@@ -497,7 +528,7 @@ def generate_conditioning_block(flags):
 
     def pop_drill(source: dict, system: str):
         drills = source.get(system, [])
-        for idx, (drill, _) in enumerate(drills):
+        for idx, (drill, _, reasons) in enumerate(drills):
             name = drill.get("name")
             tags = [t.lower() for t in drill.get("tags", [])]
             allow_repeat = (
@@ -510,13 +541,13 @@ def generate_conditioning_block(flags):
             selected_drill_names.append(name)
             del drills[idx]
             source[system] = drills
-            return drill
-        return None
+            return drill, reasons
+        return None, None
 
     def pop_style_drill(system: str):
         for style in sorted(style_counts, key=style_counts.get):
             drills = style_drills_by_style.get(style, {}).get(system, [])
-            for idx, (drill, _) in enumerate(drills):
+            for idx, (drill, _, reasons) in enumerate(drills):
                 name = drill.get("name")
                 tags = [t.lower() for t in drill.get("tags", [])]
                 allow_repeat = (
@@ -530,8 +561,8 @@ def generate_conditioning_block(flags):
                 del drills[idx]
                 style_drills_by_style[style][system] = drills
                 style_counts[style] += 1
-                return drill
-        return None
+                return drill, reasons
+        return None, None
 
     style_target = round(total_drills * STYLE_CONDITIONING_RATIO.get(phase.upper(), 0))
     style_remaining = min(style_target, sum(len(v) for v in style_system_drills.values()))
@@ -540,17 +571,18 @@ def generate_conditioning_block(flags):
     def blended_pick(system: str):
         nonlocal style_remaining, general_remaining
         drill = None
+        reasons = None
         if style_remaining > 0:
-            drill = pop_style_drill(system)
+            drill, reasons = pop_style_drill(system)
             if drill:
                 style_remaining -= 1
-                return drill
+                return drill, reasons
         if general_remaining > 0:
-            drill = pop_drill(system_drills, system)
+            drill, reasons = pop_drill(system_drills, system)
             if drill:
                 general_remaining -= 1
-                return drill
-        return None
+                return drill, reasons
+        return None, None
 
     if phase.upper() == "TAPER":
         style_list = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
@@ -560,23 +592,26 @@ def generate_conditioning_block(flags):
             fatigue == "low" and any(s in ["pressure fighter", "scrambler"] for s in style_list)
         )
 
-        d = blended_pick("alactic")
+        d, r = blended_pick("alactic")
         if d:
             final_drills.append(("alactic", [d]))
+            reason_lookup[d.get("name")] = r
             selected_counts["alactic"] += 1
             taper_selected += 1
 
         if allow_aerobic and taper_selected < 2:
-            d = blended_pick("aerobic")
+            d, r = blended_pick("aerobic")
             if d:
                 final_drills.append(("aerobic", [d]))
+                reason_lookup[d.get("name")] = r
                 selected_counts["aerobic"] += 1
                 taper_selected += 1
 
         if allow_glycolytic and taper_selected < 2:
-            d = blended_pick("glycolytic")
+            d, r = blended_pick("glycolytic")
             if d:
                 final_drills.append(("glycolytic", [d]))
+                reason_lookup[d.get("name")] = r
                 selected_counts["glycolytic"] += 1
                 taper_selected += 1
     else:
@@ -585,10 +620,11 @@ def generate_conditioning_block(flags):
             if quota <= 0:
                 continue
             while quota > 0:
-                d = blended_pick(system)
+                d, r = blended_pick(system)
                 if not d:
                     break
                 final_drills.append((system, [d]))
+                reason_lookup[d.get("name")] = r
                 selected_counts[system] += 1
                 quota -= 1
 
@@ -601,11 +637,12 @@ def generate_conditioning_block(flags):
             system = max(deficits, key=deficits.get)
             if deficits[system] <= 0:
                 break
-            d = blended_pick(system)
+            d, r = blended_pick(system)
             if not d:
                 deficits[system] = 0
                 continue
             final_drills.append((system, [d]))
+            reason_lookup[d.get("name")] = r
             selected_counts[system] += 1
             deficits[system] = max(0, deficits[system] - 1)
             remaining_slots -= 1
@@ -643,6 +680,16 @@ def generate_conditioning_block(flags):
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
+                reason_lookup[drill.get("name")] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "final_score": 0,
+                }
                 existing_cond_names.add(drill.get("name"))
                 injected += 1
 
@@ -673,6 +720,16 @@ def generate_conditioning_block(flags):
                 system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
+                reason_lookup[drill.get("name")] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "final_score": 0,
+                }
 
         # --------- TAPER PLYOMETRIC GUARANTEE ---------
         taper_plyos = [
@@ -693,6 +750,16 @@ def generate_conditioning_block(flags):
                 )
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
+                reason_lookup[drill.get("name")] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "final_score": 0,
+                }
 
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
     goal_set = {g.lower() for g in goals}
@@ -724,6 +791,16 @@ def generate_conditioning_block(flags):
         system = SYSTEM_ALIASES.get(coord_drill.get("system", "").lower(), coord_drill.get("system", "misc"))
         final_drills.append((system, [coord_drill]))
         selected_drill_names.append(coord_drill.get("name"))
+        reason_lookup[coord_drill.get("name")] = {
+            "goal_hits": 0,
+            "weakness_hits": 0,
+            "style_hits": 0,
+            "phase_hits": 1,
+            "load_adjustments": 0,
+            "equipment_boost": 0,
+            "penalties": 0,
+            "final_score": 0,
+        }
 
     # --------- PRO NECK DRILL GUARANTEE ---------
     status = flags.get("status", "").strip().lower()
@@ -751,6 +828,16 @@ def generate_conditioning_block(flags):
                 )
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
+                reason_lookup[drill.get("name")] = {
+                    "goal_hits": 0,
+                    "weakness_hits": 0,
+                    "style_hits": 0,
+                    "phase_hits": 1,
+                    "load_adjustments": 0,
+                    "equipment_boost": 0,
+                    "penalties": 0,
+                    "final_score": 0,
+                }
 
     # Trim any extras beyond the recommended count
     if len(selected_drill_names) > total_drills:
@@ -810,5 +897,26 @@ def generate_conditioning_block(flags):
             }
             output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
 
+    why_log = []
+    for system, drills in grouped_drills.items():
+        for d in drills:
+            nm = d.get("name")
+            reasons = reason_lookup.get(nm, {}).copy()
+            parts = []
+            if reasons.get("goal_hits"):
+                parts.append(f"{reasons['goal_hits']} goal match")
+            if reasons.get("weakness_hits"):
+                parts.append(f"{reasons['weakness_hits']} weakness tag")
+            if reasons.get("style_hits"):
+                parts.append(f"{reasons['style_hits']} style tag")
+            if reasons.get("phase_hits"):
+                parts.append(f"{reasons['phase_hits']} phase tag")
+            if reasons.get("equipment_boost"):
+                parts.append("equipment boost")
+            if reasons.get("load_adjustments"):
+                parts.append("system emphasis")
+            explanation = ", ".join(parts) if parts else "balanced selection"
+            reasons.setdefault("final_score", 0)
+            why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
-    return "\n".join(output_lines), selected_drill_names
+    return "\n".join(output_lines), selected_drill_names, why_log

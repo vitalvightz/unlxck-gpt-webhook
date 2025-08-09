@@ -83,22 +83,34 @@ def score_exercise(
     required_equipment,
     is_rehab,
 ):
-    """Return a weighted score for a candidate exercise."""
+    """Return a weighted score and breakdown for a candidate exercise."""
     score = 0.0
+    reasons = {
+        "goal_hits": 0,
+        "weakness_hits": 0,
+        "style_hits": 0,
+        "phase_hits": 0,
+        "load_adjustments": 0.0,
+        "equipment_boost": 0.0,
+        "penalties": 0.0,
+    }
 
     weakness_matches = len(set(exercise_tags) & set(weakness_tags))
     score += weakness_matches * 0.6
+    reasons["weakness_hits"] = weakness_matches
 
     goal_matches = len(set(exercise_tags) & set(goal_tags))
     score += goal_matches * 0.5
+    reasons["goal_hits"] = goal_matches
 
     matched_style_tags = list(set(exercise_tags) & set(style_tags))
-    score += len(matched_style_tags) * 0.3
-
+    style_score = len(matched_style_tags) * 0.3
     if len(matched_style_tags) == 2:
-        score += 0.2
+        style_score += 0.2
     elif len(matched_style_tags) >= 3:
-        score += 0.1
+        style_score += 0.1
+    score += style_score
+    reasons["style_hits"] = len(matched_style_tags)
 
     total_matches = len(
         set(exercise_tags) & set(weakness_tags + goal_tags + style_tags)
@@ -108,26 +120,37 @@ def score_exercise(
 
     phase_matches = len(set(exercise_tags) & set(phase_tags))
     score += phase_matches * 0.4
+    reasons["phase_hits"] = phase_matches
 
+    fatigue_penalty = 0.0
     if fatigue_level == "high":
-        score -= 0.75
+        fatigue_penalty = -0.75
     elif fatigue_level == "moderate":
-        score -= 0.35
+        fatigue_penalty = -0.35
+    score += fatigue_penalty
+    reasons["load_adjustments"] = fatigue_penalty
 
     if not set(required_equipment).issubset(set(available_equipment)):
-        return -999
+        return -999, reasons
 
     phase_boost = phase_equipment_boost.get(current_phase, set())
-    if any(eq in phase_boost for eq in available_equipment):
-        score += 0.25
+    equipment_bonus = 0.25 if any(eq in phase_boost for eq in available_equipment) else 0.0
+    score += equipment_bonus
+    reasons["equipment_boost"] = equipment_bonus
 
+    rehab_penalty = 0.0
     if is_rehab:
         phase_penalties = {"GPP": -0.7, "SPP": -1.0, "TAPER": -0.75}
-        score += phase_penalties.get(current_phase, -0.75)
+        rehab_penalty = phase_penalties.get(current_phase, -0.75)
+        score += rehab_penalty
+    reasons["penalties"] = rehab_penalty
 
-    score += random.uniform(-0.15, 0.15)
+    noise = random.uniform(-0.15, 0.15)
+    score += noise
+    reasons["randomness"] = round(noise, 4)
+    reasons["final_score"] = round(score, 4)
 
-    return round(score, 4)
+    return round(score, 4), reasons
 
 def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: str = "") -> bool:
     """Return True if the exercise should be removed for the given sport."""
@@ -305,7 +328,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
         method = ex.get("method", "").lower()
 
-        score = score_exercise(
+        score, breakdown = score_exercise(
             exercise_tags=tags,
             weakness_tags=weaknesses or [],
             goal_tags=goal_tags,
@@ -337,7 +360,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         # No additional fatigue or equipment adjustments; handled in score_exercise
 
         if score >= 0:
-            weighted_exercises.append((ex, score))
+            weighted_exercises.append((ex, score, breakdown))
 
     weighted_exercises.sort(key=lambda x: x[1], reverse=True)
     days_count = len(training_days) if isinstance(training_days, list) else training_days
@@ -386,11 +409,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             fallback_exercises.append(ex)
             if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
                 break
-        weighted_exercises += [(ex, 0) for ex in fallback_exercises]
+        weighted_exercises += [(ex, 0, {}) for ex in fallback_exercises]
 
     # Keep score pairs for later lookups
+    score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
+    reason_lookup = {ex["name"]: reasons for ex, _, reasons in weighted_exercises}
+
     top_pairs = weighted_exercises[:target_exercises]
-    top_exercises = [ex for ex, _ in top_pairs]
+    top_exercises = [ex for ex, _, _ in top_pairs]
     # Remove any duplicate exercise names that slipped through scoring
     seen_exercises: set[str] = set()
     unique_top: list[dict] = []
@@ -435,10 +461,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # --------- ISOMETRIC GUARANTEE ---------
     if phase in {"GPP", "SPP"}:
         if not any("isometric" in ex.get("tags", []) for ex in top_exercises):
-            score_lookup = {ex["name"]: score for ex, score in weighted_exercises}
+            score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
             iso_candidates = [
                 (ex, score)
-                for ex, score in weighted_exercises
+                for ex, score, _ in weighted_exercises
                 if "isometric" in ex.get("tags", []) and ex not in top_exercises
             ]
             if iso_candidates:
@@ -486,6 +512,34 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     if len(base_exercises) > target_exercises:
         base_exercises = base_exercises[:target_exercises]
 
+    # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------
+    def _enforce_conflicts(ex_list):
+        has_med_ball_rot = any(
+            "medicine_ball" in normalize_equipment_list(ex.get("equipment", []))
+            and "rotational" in {t.lower() for t in ex.get("tags", [])}
+            for ex in ex_list
+        )
+        if not has_med_ball_rot:
+            return
+        for idx, ex in enumerate(ex_list):
+            name_lower = ex.get("name", "").lower()
+            if "heavy rdl" in name_lower or ("rdl" in name_lower and "heavy" in name_lower):
+                for cand, _, cand_reasons in weighted_exercises:
+                    cand_name = cand.get("name", "").lower()
+                    if cand_name == name_lower:
+                        continue
+                    cand_tags = {t.lower() for t in cand.get("tags", [])}
+                    cand_eq = normalize_equipment_list(cand.get("equipment", []))
+                    if (
+                        "medicine_ball" in cand_eq and "rotational" in cand_tags
+                    ) or ("rdl" in cand_name and "heavy" in cand_name):
+                        continue
+                    ex_list[idx] = cand
+                    reason_lookup[cand.get("name")] = cand_reasons
+                    return
+
+    _enforce_conflicts(base_exercises)
+
     used_days = training_days[:num_strength_sessions]
 
     phase_loads = {
@@ -530,10 +584,32 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in base_exercises:
         all_tags.extend(ex.get("tags", []))
 
+    why_log = []
+    for ex in base_exercises:
+        name = ex.get("name")
+        reasons = reason_lookup.get(name, {}).copy()
+        reasons.setdefault("final_score", score_lookup.get(name, 0))
+        parts = []
+        if reasons.get("goal_hits"):
+            parts.append(f"{reasons['goal_hits']} goal match")
+        if reasons.get("weakness_hits"):
+            parts.append(f"{reasons['weakness_hits']} weakness tag")
+        if reasons.get("style_hits"):
+            parts.append(f"{reasons['style_hits']} style tag")
+        if reasons.get("phase_hits"):
+            parts.append(f"{reasons['phase_hits']} phase tag")
+        if reasons.get("equipment_boost"):
+            parts.append("equipment boost")
+        if reasons.get("load_adjustments"):
+            parts.append("fatigue adjustment")
+        explanation = ", ".join(parts) if parts else "balanced selection"
+        why_log.append({"name": name, "reasons": reasons, "explanation": explanation})
+
     return {
         "block": "\n".join(strength_output),
         "num_sessions": len(used_days),
         "preferred_tags": list(set(all_tags)),
         "exercises": base_exercises,
+        "why_log": why_log,
     }
     

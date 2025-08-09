@@ -201,11 +201,13 @@ async def generate_plan(data: dict):
     strength_blocks = []
     gpp_ex_names = []
     spp_ex_names = []
+    taper_ex_names = []
     gpp_movements: set[str] = set()
     spp_movements: set[str] = set()
     gpp_block = None
     spp_block = None
     taper_block = None
+    strength_reason_log: dict[str, list] = {}
 
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         gpp_flags = {**training_context, "phase": "GPP"}
@@ -216,6 +218,7 @@ async def generate_plan(data: dict):
         )
         gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
         gpp_movements = {ex["movement"] for ex in gpp_block["exercises"]}
+        strength_reason_log = {"GPP": gpp_block.get("why_log", [])}
         strength_blocks.append(gpp_block["block"])
 
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
@@ -233,6 +236,7 @@ async def generate_plan(data: dict):
         spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
         spp_movements = {ex["movement"] for ex in spp_block["exercises"]}
         strength_blocks.append(spp_block["block"])
+        strength_reason_log["SPP"] = spp_block.get("why_log", [])
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         combined_prev = list({*gpp_ex_names, *spp_ex_names})
@@ -248,7 +252,9 @@ async def generate_plan(data: dict):
             weaknesses=training_context["weaknesses"],
             mindset_cue=phase_mindset_cues.get("TAPER"),
         )
+        taper_ex_names = [ex["name"] for ex in taper_block["exercises"]]
         strength_blocks.append(taper_block["block"])
+        strength_reason_log["TAPER"] = taper_block.get("why_log", [])
 
     strength_block = "\n\n".join(strength_blocks)
 
@@ -257,14 +263,22 @@ async def generate_plan(data: dict):
     spp_cond_block = ""
     taper_cond_block = ""
 
+    conditioning_reason_log: dict[str, list] = {}
+    gpp_cond_names: list[str] = []
+    spp_cond_names: list[str] = []
+    taper_cond_names: list[str] = []
+
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
-        gpp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "GPP"})
+        gpp_cond_block, gpp_cond_names, gpp_cond_reasons = generate_conditioning_block({**training_context, "phase": "GPP"})
+        conditioning_reason_log["GPP"] = gpp_cond_reasons
 
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
-        spp_cond_block, _ = generate_conditioning_block({**training_context, "phase": "SPP"})
+        spp_cond_block, spp_cond_names, spp_cond_reasons = generate_conditioning_block({**training_context, "phase": "SPP"})
+        conditioning_reason_log["SPP"] = spp_cond_reasons
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
-        taper_cond_block, _ = generate_conditioning_block({**training_context, "phase": "TAPER"})
+        taper_cond_block, taper_cond_names, taper_cond_reasons = generate_conditioning_block({**training_context, "phase": "TAPER"})
+        conditioning_reason_log["TAPER"] = taper_cond_reasons
 
     gpp_rehab_block = ""
     spp_rehab_block = ""
@@ -535,6 +549,20 @@ async def generate_plan(data: dict):
         "  - Add 500mg sodium + 20oz electrolyte drink immediately."
     )
 
+    # ----- Coach Notes & Why Log -----
+    previous = set(training_context.get("prev_exercises", []))
+    all_strength_names = gpp_ex_names + spp_ex_names + (taper_ex_names if taper_block else [])
+    all_cond_names = gpp_cond_names + spp_cond_names + taper_cond_names
+    novel_strength = [n for n in all_strength_names if n not in previous]
+    novel_conditioning = [n for n in all_cond_names if n not in previous]
+    coach_notes = (
+        f"Novelty Summary: {len(novel_strength)} new strength moves, {len(novel_conditioning)} new conditioning drills."
+    )
+    reason_log = {
+        "strength": strength_reason_log,
+        "conditioning": conditioning_reason_log,
+    }
+
     html = build_html_document(
         full_name=full_name,
         sport=mapped_format,
@@ -551,13 +579,14 @@ async def generate_plan(data: dict):
         adjustments_table=adjustments_table,
         sparring_nutrition_html=sparring_nutrition_html,
         athlete_profile_html=athlete_profile_html,
+        coach_notes=coach_notes,
     )
 
     safe = full_name.replace(" ", "_") or "plan"
     pdf_path = html_to_pdf(html, f"{safe}_fight_plan.pdf")
     pdf_url = upload_to_supabase(pdf_path) if pdf_path else "PDF generation failed"
 
-    return {"pdf_url": pdf_url}
+    return {"pdf_url": pdf_url, "why_log": reason_log, "coach_notes": coach_notes}
 
 
 def main():
