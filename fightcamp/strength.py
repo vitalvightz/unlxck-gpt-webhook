@@ -13,7 +13,7 @@ from .training_context import (
 phase_equipment_boost = {
     "GPP": {"barbell", "trap_bar", "sled", "pullup_bar"},
     "SPP": {"landmine", "cable", "medicine_ball", "bands"},
-    "TAPER": {"medicine_ball", "bodyweight", "band", "partner"}
+    "TAPER": {"medicine_ball", "bodyweight", "bands", "partner"}
 }
 
 # Load style specific exercises (file lacks closing brackets so we patch)
@@ -54,8 +54,8 @@ def normalize_style_tags(tags):
     return normalized
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
-    entry_equip_list = [e.strip().lower() for e in entry_equip.replace("/", ",").split(",") if e.strip()]
-    user_equipment = [e.lower().strip() for e in user_equipment]
+    entry_equip_list = normalize_equipment_list(entry_equip)
+    user_equipment = normalize_equipment_list(user_equipment)
     known_equipment = [e.lower() for e in known_equipment]
 
     if not entry_equip_list or "bodyweight" in entry_equip_list:
@@ -292,7 +292,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
-        ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+        ex_equipment = normalize_equipment_list(ex.get("equipment", []))
         if phase == "TAPER":
             if any(t in taper_banned for t in tags) or any(eq in {"barbell", "trap_bar"} for eq in ex_equipment):
                 continue
@@ -352,7 +352,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
             if phase not in ex["phases"]:
                 continue
-            ex_equipment = [e.strip().lower() for e in ex.get("equipment", "").replace("/", ",").split(",") if e.strip()]
+            ex_equipment = normalize_equipment_list(ex.get("equipment", []))
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])

@@ -10,18 +10,29 @@ EQUIP_ALIASES = {
 }
 
 
+def _split_items(value):
+    if isinstance(value, str):
+        return re.split(r"\s*(?:,|/| and )\s*", value)
+    return [value]
+
+
 def normalize_equipment_list(raw):
-    """Split and canonicalize equipment names."""
+    """Return a list of canonical equipment tokens."""
+    parts: list[str] = []
     if isinstance(raw, list):
-        parts = raw
+        for item in raw:
+            parts.extend(_split_items(item))
     elif isinstance(raw, str):
-        parts = re.split(r"\s*(?:,|/| and )\s*", raw)
+        parts.extend(_split_items(raw))
     else:
         return []
 
-    normalized = []
+    normalized: list[str] = []
     for part in parts:
         key = part.lower().strip()
+        if key in {"med balls / bands", "med balls/bands"}:
+            normalized.extend(["medicine_ball", "bands"])
+            continue
         key = EQUIP_ALIASES.get(key, key).replace(" ", "_")
         if key:
             normalized.append(key)
@@ -37,7 +48,7 @@ known_equipment = [
     "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
     "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
     "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
-    "elliptical", "bodyweight", "med_balls", "battle_rope", "kettlebells"
+    "elliptical", "bodyweight", "battle_rope", "kettlebells"
 ]
 
 def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
