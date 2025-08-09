@@ -232,25 +232,69 @@ def select_coordination_drill(flags, existing_names: set[str]):
     return random.choice(candidates) if candidates else None
 
 
+def _split_duration_rest(duration: str) -> tuple[str, str | None]:
+    """Split a duration string into duration and rest components."""
+
+    if not duration:
+        return "—", None
+    parts = [p.strip() for p in duration.split(",")]
+    if len(parts) > 1 and "rest" in parts[-1].lower():
+        return ", ".join(parts[:-1]), parts[-1]
+    return duration, None
+
+
+def _parse_notes(notes: str, tags: list[str]) -> tuple[str, str, str | None]:
+    """Extract constraint lines, remaining notes and red flags."""
+
+    import re
+
+    constraint_lines: list[str] = []
+    red_flags: list[str] = []
+    remaining: list[str] = []
+
+    for raw in re.split(r"[\n;]+", notes or ""):
+        line = raw.strip()
+        if not line:
+            continue
+        if re.search(r"(ALERT|RULE):", line, re.I):
+            line = re.sub(r".*?(ALERT|RULE):\s*", "", line, flags=re.I)
+            constraint_lines.append(line)
+        elif re.search(r"RED FLAG:", line, re.I):
+            line = re.sub(r".*?RED FLAG:\s*", "", line, flags=re.I)
+            red_flags.append(line)
+        else:
+            remaining.append(line)
+
+    tag_constraints = [
+        t.replace("_", " ")
+        for t in tags or []
+        if any(k in t.lower() for k in ["rule", "alert", "avoid", "no_", "friendly"])
+    ]
+    constraint_lines.extend(tag_constraints)
+
+    constraints = "; ".join(constraint_lines) if constraint_lines else "None."
+    notes_out = "; ".join(remaining).strip()
+    red_flag_text = "; ".join(red_flags) if red_flags else None
+    return constraints, notes_out, red_flag_text
+
+
 def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
     """Return a formatted Markdown block for a single drill."""
 
-    # Use HTML line breaks so bullets display vertically when converted to HTML
-    br = "<br>"
     bullet = "•"
-    load_line = f"  {bullet} Load: {drill['load']}"
-    if drill.get("equipment_note"):
-        load_line += f" ({drill['equipment_note']})"
-    load_line += br
-    parts = [
-        f"- **Drill: {drill['name']}**",
-        load_line,
-        f"  {bullet} Rest: {drill['rest']}{br}",
-        f"  {bullet} Timing: {drill['timing']}{br}",
-        f"  {bullet} Purpose: {drill['purpose']}{br}",
-        f"  ⚠️ Red Flags: {drill['red_flags']}",
-    ]
-    return "".join(parts) + "\n"
+    lines = [f"{bullet} Drill: {drill['name']}"]
+    lines.append(f"    {bullet} Intensity: {drill['intensity']}")
+    lines.append(f"    {bullet} Duration: {drill['duration']}")
+    if drill.get("rest"):
+        lines.append(f"    {bullet} Rest: {drill['rest']}")
+    lines.append(f"    {bullet} Equipment: {drill['equipment']}")
+    lines.append(f"    {bullet} Load: {drill['load']}")
+    lines.append("")
+    lines.append(f"    {bullet} Purpose: {drill['purpose']}")
+    lines.append(f"    {bullet} Constraints: {drill['constraints']}")
+    lines.append(f"    {bullet} Notes: {drill['notes']}")
+    lines.append(f"    {bullet} Red Flags: {drill['red_flags']}")
+    return "\n".join(lines) + "\n"
 
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
@@ -921,32 +965,48 @@ def generate_conditioning_block(flags):
         )
         for d in drills:
             name = d.get("name", "Unnamed Drill")
-            equipment = normalize_equipment_list(d.get("equipment", []))
-            extra_eq = [e for e in equipment if e not in name.lower()]
+            equipment_list = normalize_equipment_list(d.get("equipment", []))
+            extra_eq = [e for e in equipment_list if e not in name.lower()]
             if extra_eq:
                 name = f"{name} ({', '.join(extra_eq)})"
 
-            timing = d.get("timing") or d.get("duration") or "—"
-            load = d.get("load") or d.get("intensity") or "—"
+            duration_raw = d.get("timing") or d.get("duration") or "—"
+            duration, rest = _split_duration_rest(duration_raw)
+            intensity = d.get("intensity", "—")
+            load = d.get("load", "—")
             equip_note = d.get("equipment_note") or d.get("equipment_notes")
 
-            purpose = (
-                d.get("purpose")
-                or d.get("notes")
-                or d.get("description")
-                or "—"
+            notes_field = d.get("notes", "")
+            purpose = d.get("purpose")
+            if not purpose and notes_field:
+                purpose = notes_field
+                notes_field = ""
+            constraints, remaining_notes, note_red = _parse_notes(
+                notes_field, d.get("tags", [])
             )
-            rest = d.get("rest", "—")
 
+            if equip_note:
+                clean = equip_note.replace("Requires:", "").strip().rstrip(".")
+                if remaining_notes:
+                    remaining_notes = f"{remaining_notes} Requires: {clean}."
+                else:
+                    remaining_notes = f"Requires: {clean}."
+
+            equipment_str = ", ".join(equipment_list) if equipment_list else "—"
+            red_flags = d.get("red_flags") or note_red or "None"
+            notes_line = remaining_notes if remaining_notes else "—"
+            purpose_line = purpose or "—"
             drill_block = {
-                "system": system.upper(),
                 "name": name,
-                "load": load,
-                "equipment_note": equip_note,
+                "intensity": intensity,
+                "duration": duration,
                 "rest": rest,
-                "timing": timing,
-                "purpose": purpose,
-                "red_flags": d.get("red_flags", "None"),
+                "equipment": equipment_str,
+                "load": load or "—",
+                "purpose": purpose_line,
+                "constraints": constraints,
+                "notes": notes_line,
+                "red_flags": red_flags,
             }
             output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
 
