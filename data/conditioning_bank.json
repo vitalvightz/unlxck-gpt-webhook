@@ -2338,7 +2338,7 @@
     "system": "aerobic",
     "modality": "breathing",
     "duration": "15min",
-    "intensity": "nasal only",
+    "intensity": "zone 2",
     "tags": [
       "aerobic",
       "recovery",
@@ -2516,7 +2516,7 @@
     "system": "aerobic",
     "modality": "shadowbox",
     "duration": "15min continuous",
-    "intensity": "very low",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "skill",
