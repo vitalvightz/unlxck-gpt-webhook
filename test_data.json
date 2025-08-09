@@ -16,7 +16,7 @@
       { "label": "Weekly Training Frequency", "value": "6" },
       { "label": "Fatigue Level", "value": "Low" },
       { "label": "Training Phase", "value": "Mid-Camp" },
-      { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Med Balls / Bands", "Sled"] },
+      { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Medicine Ball", "Bands", "Sled"] },
       { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] },
       { "label": "Any injuries or areas you need to work around?", "value": "right shoulder" },
       { "label": "What are your key performance goals?", "value": ["Power & Explosiveness", "Conditioning / Endurance", "Speed"] },

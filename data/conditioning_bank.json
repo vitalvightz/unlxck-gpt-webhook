@@ -40,9 +40,7 @@
   },
   {
     "name": "Pad EMOM (5x5 format)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": [],
     "phases": [
       "SPP"
     ],
@@ -59,9 +57,7 @@
   },
   {
     "name": "Reaction Ball Drills",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "TAPER"
     ],
@@ -412,9 +408,7 @@
   },
   {
     "name": "Padded Circuit (Zone 2)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": [],
     "phases": [
       "GPP"
     ],
@@ -469,9 +463,7 @@
   },
   {
     "name": "Band-Resisted Broad Jump",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "SPP"
     ],
@@ -485,9 +477,7 @@
   },
   {
     "name": "Medicine Ball Rotational Throw",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -590,9 +580,7 @@
   },
   {
     "name": "Med Ball Chest Pass (Reactive)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -620,9 +608,7 @@
   },
   {
     "name": "Band-Resisted Sprint Start",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "SPP"
     ],
@@ -681,9 +667,7 @@
   },
   {
     "name": "Wall Ball Shot (Max Height)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -725,9 +709,7 @@
   },
   {
     "name": "Med Ball Slam (Rotational)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -755,9 +737,7 @@
   },
   {
     "name": "Band-Resisted Lateral Bound",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "SPP"
     ],
@@ -799,9 +779,7 @@
   },
   {
     "name": "Pad Round Triples",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": [],
     "phases": [
       "SPP"
     ],
@@ -958,9 +936,7 @@
   },
   {
     "name": "Med Ball Circuit",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -1152,9 +1128,7 @@
   },
   {
     "name": "Wall Ball Conditioning",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -1307,9 +1281,7 @@
   },
   {
     "name": "Med Ball Reaction Drill",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "SPP"
     ],
@@ -1568,9 +1540,7 @@
   },
   {
     "name": "Med Ball Slams (Glycolytic)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "GPP"
     ],
@@ -1586,9 +1556,7 @@
   },
   {
     "name": "Band-Resisted Broad Jumps (ATP-PCr)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "GPP"
     ],
@@ -1776,9 +1744,7 @@
   },
   {
     "name": "Wall Ball Shot Intervals (Glycolytic)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "GPP"
     ],
@@ -1794,9 +1760,7 @@
   },
   {
     "name": "Band-Resisted Sprint Starts (ATP-PCr)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "GPP"
     ],
@@ -2003,9 +1967,7 @@
   },
   {
     "name": "Med Ball Throw Circuit (Glycolytic)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "GPP"
     ],
@@ -2666,9 +2628,7 @@
   },
   {
     "name": "Band-Resisted Vertical Jump",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "TAPER"
     ],
@@ -2710,9 +2670,7 @@
   },
   {
     "name": "Med Ball Drop Catch to Jump",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "TAPER"
     ],
@@ -2740,9 +2698,7 @@
   },
   {
     "name": "Band-Assisted Jump Reset",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "TAPER"
     ],
@@ -2798,9 +2754,7 @@
   },
   {
     "name": "Band-Resisted Split Jump",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "TAPER"
     ],
@@ -2814,9 +2768,7 @@
   },
   {
     "name": "Single-Leg Med Ball Toss Jump",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "TAPER"
     ],
@@ -2858,9 +2810,7 @@
   },
   {
     "name": "Reactive Med Ball Chest Pass",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "TAPER"
     ],
@@ -2888,9 +2838,7 @@
   },
   {
     "name": "Band-Resisted Straight Punch Release",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["bands"],
     "phases": [
       "TAPER"
     ],
@@ -2904,9 +2852,7 @@
   },
   {
     "name": "Overhead Med Ball Slam (Snappy)",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "TAPER"
     ],
@@ -2920,9 +2866,7 @@
   },
   {
     "name": "Seated Med Ball Chest Pop",
-    "equipment": [
-      "Med Balls / Bands"
-    ],
+    "equipment": ["medicine_ball"],
     "phases": [
       "TAPER"
     ],

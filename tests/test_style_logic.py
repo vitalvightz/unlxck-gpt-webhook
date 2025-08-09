@@ -15,6 +15,19 @@ def test_style_tag_mapping():
 
 def test_equipment_alias_split():
     assert set(normalize_equipment_list("Med Balls / Bands")) == {"medicine_ball", "bands"}
+    assert set(normalize_equipment_list(["Med Balls / Bands"])) == {"medicine_ball", "bands"}
+
+
+def test_no_legacy_token_in_data():
+    repo_root = Path(__file__).resolve().parents[1]
+    forbidden = "med balls / bands"
+    forbidden_combo = '"medicine_ball", "bands"'
+    for path in repo_root.rglob("*.json"):
+        if "tests" in path.parts:
+            continue
+        text = path.read_text().lower()
+        assert forbidden not in text, f"Legacy token found in {path}"
+        assert forbidden_combo not in text, f"Combined equipment found in {path}"
 
 
 def test_boxer_avoids_grappling_terms():
