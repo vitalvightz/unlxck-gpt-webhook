@@ -12,7 +12,7 @@ EQUIP_ALIASES = {
 
 def _split_items(value):
     if isinstance(value, str):
-        return re.split(r"\s*(?:,|/| and )\s*", value)
+        return re.split(r"\s*(?:,|/|\+| and )\s*", value)
     return [value]
 
 

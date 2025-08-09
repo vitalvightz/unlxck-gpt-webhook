@@ -1,7 +1,9 @@
 [
   {
     "name": "Assault Bike Sprint Intervals",
-    "equipment": [],
+    "equipment": [
+      "assault_bike"
+    ],
     "phases": [
       "GPP",
       "SPP"
@@ -9,19 +11,19 @@
     "system": "ATP-PCr",
     "modality": "bike",
     "duration": "10s x 8 rounds, 1:5 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "explosive",
       "posterior_chain",
       "low_impact"
     ],
-    "notes": "Good for posterior-chain drive without joint pounding",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Assault Bike"
+    "notes": "Good for posterior-chain drive without joint pounding (max effort)",
+    "equipment_note": "Requires: Assault Bike"
   },
   {
     "name": "Zone 2 Sled Circuit",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "GPP"
@@ -36,7 +38,7 @@
       "core"
     ],
     "notes": "Great for building base without CNS load",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Pad EMOM (5x5 format)",
@@ -57,7 +59,9 @@
   },
   {
     "name": "Reaction Ball Drills",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -82,13 +86,13 @@
     "system": "aerobic",
     "modality": "run",
     "duration": "30–40min",
-    "intensity": "low (zone 2)",
+    "intensity": "zone 2",
     "tags": [
       "aerobic",
       "low_impact",
       "recovery"
     ],
-    "notes": "Low load; good for mental reset and recovery flush"
+    "notes": "Low load; good for mental reset and recovery flush (low (zone 2))"
   },
   {
     "name": "Grapple Circuits (High Pace)",
@@ -110,7 +114,7 @@
   {
     "name": "Sled Sprint Repeats",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -125,7 +129,7 @@
       "low_impact"
     ],
     "notes": "Safe CNS explosive work when sprinting is contraindicated",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Jump Rope Conditioning",
@@ -154,13 +158,13 @@
     "system": "glycolytic",
     "modality": "run",
     "duration": "20s uphill x 6 reps",
-    "intensity": "hard",
+    "intensity": "high",
     "tags": [
       "posterior_chain",
       "conditioning",
       "intensity"
     ],
-    "notes": "High intensity, not ideal with hamstring injuries"
+    "notes": "High intensity, not ideal with hamstring injuries (hard)"
   },
   {
     "name": "Shadowboxing Intervals",
@@ -191,7 +195,8 @@
     "tags": [
       "low_cns"
     ],
-    "notes": "After lower body strength days only"
+    "notes": "After lower body strength days only",
+    "intensity": "zone 2"
   },
   {
     "name": "Pool Running (Weight Belt)",
@@ -209,7 +214,9 @@
   },
   {
     "name": "Bike Zone 2 (Nasal Only)",
-    "equipment": [],
+    "equipment": [
+      "stationary_bike"
+    ],
     "phases": [
       "GPP",
       "TAPER"
@@ -220,7 +227,7 @@
       "low_impact"
     ],
     "notes": "Primary hamstring rehab modality",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Stationary Bike"
+    "equipment_note": "Requires: Stationary Bike"
   },
   {
     "name": "Swim Intervals (Freestyle)",
@@ -237,7 +244,9 @@
   },
   {
     "name": "Step Mill (No Hands)",
-    "equipment": [],
+    "equipment": [
+      "step_mill"
+    ],
     "phases": [
       "GPP"
     ],
@@ -247,7 +256,7 @@
       "quad_dominant"
     ],
     "notes": "Contraindicated with knee pain",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Step Mill"
+    "equipment_note": "Requires: Step Mill"
   },
   {
     "name": "Shadowboxing (Light Pace)",
@@ -265,7 +274,9 @@
   },
   {
     "name": "Rowing (Zone 2)",
-    "equipment": [],
+    "equipment": [
+      "rower"
+    ],
     "phases": [
       "GPP"
     ],
@@ -275,7 +286,7 @@
       "posterior_chain"
     ],
     "notes": "Low-impact deadlift alternative",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Rower"
+    "equipment_note": "Requires: Rower"
   },
   {
     "name": "Hiking (Weighted Vest)",
@@ -307,7 +318,7 @@
   {
     "name": "Sled Drag Walk",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "GPP"
@@ -318,11 +329,13 @@
       "posterior_chain"
     ],
     "notes": "25% BW load max",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Recumbent Bike",
-    "equipment": [],
+    "equipment": [
+      "recumbent_bike"
+    ],
     "phases": [
       "GPP",
       "TAPER"
@@ -333,11 +346,13 @@
       "rehab_friendly"
     ],
     "notes": "For acute lower back pain",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Recumbent Bike"
+    "equipment_note": "Requires: Recumbent Bike"
   },
   {
     "name": "Arm Ergometer",
-    "equipment": [],
+    "equipment": [
+      "arm_ergometer"
+    ],
     "phases": [
       "GPP"
     ],
@@ -347,7 +362,7 @@
       "upper_body"
     ],
     "notes": "Leg injury alternative",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Arm Ergometer"
+    "equipment_note": "Requires: Arm Ergometer"
   },
   {
     "name": "Yoga Flow (Dynamic)",
@@ -366,7 +381,7 @@
   {
     "name": "Farmers Walk (Light)",
     "equipment": [
-      "Dumbbells"
+      "dumbbells"
     ],
     "phases": [
       "GPP"
@@ -393,7 +408,9 @@
   },
   {
     "name": "Elliptical (Nasal Only)",
-    "equipment": [],
+    "equipment": [
+      "elliptical"
+    ],
     "phases": [
       "GPP",
       "TAPER"
@@ -404,7 +421,7 @@
       "low_impact"
     ],
     "notes": "Backward motion for hamstrings",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Elliptical"
+    "equipment_note": "Requires: Elliptical"
   },
   {
     "name": "Padded Circuit (Zone 2)",
@@ -435,7 +452,9 @@
   },
   {
     "name": "Sandbag Carry (Light)",
-    "equipment": [],
+    "equipment": [
+      "sandbag"
+    ],
     "phases": [
       "GPP"
     ],
@@ -445,7 +464,7 @@
       "core"
     ],
     "notes": "25% BW load",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
+    "equipment_note": "Requires: Sandbag"
   },
   {
     "name": "Agility Ladder (Recovery)",
@@ -463,7 +482,9 @@
   },
   {
     "name": "Band-Resisted Broad Jump",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "SPP"
     ],
@@ -477,7 +498,9 @@
   },
   {
     "name": "Medicine Ball Rotational Throw",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -520,7 +543,7 @@
   {
     "name": "Sled Sprint (Empty)",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -532,7 +555,7 @@
       "low_impact"
     ],
     "notes": "DEADLIFT RECOVERY: Safe 48h post pulls at <30% intensity. HAMSTRING: Preferred over hill sprints",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Box Jump (Stick Landing)",
@@ -551,7 +574,7 @@
   {
     "name": "KB Swing (Heavy)",
     "equipment": [
-      "Kettlebells"
+      "kettlebells"
     ],
     "phases": [
       "SPP"
@@ -580,7 +603,9 @@
   },
   {
     "name": "Med Ball Chest Pass (Reactive)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -608,7 +633,9 @@
   },
   {
     "name": "Band-Resisted Sprint Start",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "SPP"
     ],
@@ -637,7 +664,7 @@
   {
     "name": "Sled Push (Light)",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -649,7 +676,7 @@
       "concentric"
     ],
     "notes": "LOAD: 25% BW. DEADLIFT RECOVERY: Safe 48h post max effort",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Single-Leg Hop (Stabilize)",
@@ -667,7 +694,9 @@
   },
   {
     "name": "Wall Ball Shot (Max Height)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -709,7 +738,9 @@
   },
   {
     "name": "Med Ball Slam (Rotational)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -737,7 +768,9 @@
   },
   {
     "name": "Band-Resisted Lateral Bound",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "SPP"
     ],
@@ -822,7 +855,7 @@
   {
     "name": "Sandbag Shouldering",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -834,12 +867,13 @@
       "rotational"
     ],
     "notes": "SPINE LOAD: Not same week as heavy cleans. WEIGHT: 25-35% BW",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
+    "equipment_note": "Requires: Sandbag"
   },
   {
     "name": "Battle Rope Gauntlet",
     "equipment": [
-      "Battle Rope"
+      "battle_rope",
+      "battle_ropes"
     ],
     "phases": [
       "SPP"
@@ -851,12 +885,12 @@
       "grip"
     ],
     "notes": "UPPER BODY: Program before rest day. FATIGUE: Reduce waves if bench press drops >10%",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Battle Ropes"
+    "equipment_note": "Requires: Battle Ropes"
   },
   {
     "name": "Tire Flip Sprints",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -868,12 +902,12 @@
       "explosive"
     ],
     "notes": "DEADLIFT RECOVERY: 72h minimum after max effort. TIRE WEIGHT: 50-70% deadlift 1RM",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Tire"
+    "equipment_note": "Requires: Tire"
   },
   {
     "name": "Kettlebell Snatch Test",
     "equipment": [
-      "Kettlebells"
+      "kettlebells"
     ],
     "phases": [
       "SPP"
@@ -889,7 +923,7 @@
   {
     "name": "Sled Drag Intervals",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -901,7 +935,7 @@
       "low_impact"
     ],
     "notes": "HAMSTRING FRIENDLY: Preferred over sprints with tightness. LOAD: 30-40% BW",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Sprawl-Burpee Complex",
@@ -920,7 +954,8 @@
   {
     "name": "Rope Climb Sprints",
     "equipment": [
-      "Battle Rope"
+      "battle_rope",
+      "climbing_rope"
     ],
     "phases": [
       "SPP"
@@ -932,11 +967,13 @@
       "pull"
     ],
     "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Towel hangs if rope unavailable",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Climbing Rope"
+    "equipment_note": "Requires: Climbing Rope"
   },
   {
     "name": "Med Ball Circuit",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -992,7 +1029,9 @@
   },
   {
     "name": "Heavy Bag Power Rounds",
-    "equipment": [],
+    "equipment": [
+      "heavy_bag"
+    ],
     "phases": [
       "SPP"
     ],
@@ -1003,12 +1042,12 @@
       "shoulders"
     ],
     "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Heavy Bag"
+    "equipment_note": "Requires: Heavy Bag"
   },
   {
     "name": "Sandbag Get-Up Complex",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -1020,12 +1059,12 @@
       "anti_rotation"
     ],
     "notes": "SPINE LOAD: Reduce reps if form breaks. WEIGHT: 20-25% BW",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
+    "equipment_note": "Requires: Sandbag"
   },
   {
     "name": "Sledgehammer Strikes",
     "equipment": [
-      "Sledgehammer"
+      "sledgehammer"
     ],
     "phases": [
       "SPP"
@@ -1037,7 +1076,7 @@
       "grip"
     ],
     "notes": "ELBOW WARNING: Not for golfers elbow. HAMMER WEIGHT: 6-8lbs",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sledgehammer"
+    "equipment_note": "Requires: Sledgehammer"
   },
   {
     "name": "Defensive Movement Drill",
@@ -1112,7 +1151,7 @@
   {
     "name": "Sled Push-Pull Complex",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -1124,11 +1163,13 @@
       "concentric"
     ],
     "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Wall Ball Conditioning",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -1157,7 +1198,7 @@
   {
     "name": "Sandbag Bearhug Carry",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -1169,7 +1210,7 @@
       "grip"
     ],
     "notes": "SPINE LOAD: Maintain neutral alignment. WEIGHT: 25-35% BW",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
+    "equipment_note": "Requires: Sandbag"
   },
   {
     "name": "Striking Combos Under Fatigue",
@@ -1188,8 +1229,8 @@
   {
     "name": "Tire Slam Intervals",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -1201,7 +1242,7 @@
       "core"
     ],
     "notes": "ELBOW WARNING: Not for golfers elbow. SLEDGEHAMMER: 6-8lbs",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Tire + Sledgehammer"
+    "equipment_note": "Requires: Tire + Sledgehammer"
   },
   {
     "name": "Defensive Level Change Drill",
@@ -1234,7 +1275,7 @@
   {
     "name": "Rope Wave Sprints",
     "equipment": [
-      "Battle Ropes"
+      "battle_ropes"
     ],
     "phases": [
       "SPP"
@@ -1250,9 +1291,9 @@
   {
     "name": "Overhead Carry Complex",
     "equipment": [
-      "Dumbbells",
-      "Kettlebells",
-      "Barbell"
+      "barbell",
+      "dumbbells",
+      "kettlebells"
     ],
     "phases": [
       "SPP"
@@ -1281,7 +1322,9 @@
   },
   {
     "name": "Med Ball Reaction Drill",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "SPP"
     ],
@@ -1296,7 +1339,7 @@
   {
     "name": "Kettlebell Snatch Complex",
     "equipment": [
-      "Kettlebells"
+      "kettlebells"
     ],
     "phases": [
       "SPP"
@@ -1312,7 +1355,7 @@
   {
     "name": "Sandbag Clean & Carry",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -1342,7 +1385,7 @@
   {
     "name": "Sled Drag Sprint Complex",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -1428,7 +1471,7 @@
   {
     "name": "Tire Flip Drag (No Sled)",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -1486,25 +1529,27 @@
   },
   {
     "name": "Assault Bike :10s Sprints (ATP-PCr)",
-    "equipment": [],
+    "equipment": [
+      "assault_bike"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "ATP-PCr",
     "modality": "bike",
     "duration": "8-10 rounds, 1:5 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "explosive",
       "low_impact"
     ],
-    "notes": "Maintain RPM >90. Ideal post-upper body days",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Assault Bike"
+    "notes": "Maintain RPM >90. Ideal post-upper body days (max effort)",
+    "equipment_note": "Requires: Assault Bike"
   },
   {
     "name": "KB Swing Intervals (Glycolytic)",
     "equipment": [
-      "Kettlebells"
+      "kettlebells"
     ],
     "phases": [
       "GPP"
@@ -1512,17 +1557,17 @@
     "system": "glycolytic",
     "modality": "kettlebell",
     "duration": "6x30s on/1:30 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "hip_dominant",
       "posterior_chain"
     ],
-    "notes": "24-32kg. Focus on hip snap, not arm pull"
+    "notes": "24-32kg. Focus on hip snap, not arm pull (RPE 8)"
   },
   {
     "name": "Sled Push Sprints (ATP-PCr)",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "GPP"
@@ -1530,45 +1575,49 @@
     "system": "ATP-PCr",
     "modality": "sled",
     "duration": "6x15yds, 1:6 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "low_impact",
       "concentric"
     ],
-    "notes": "Load: 30% BW. No braking phase",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "notes": "Load: 30% BW. No braking phase (max effort)",
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Med Ball Slams (Glycolytic)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "glycolytic",
     "modality": "med_ball",
     "duration": "5x20s on/1:40 off",
-    "intensity": "RPE 7-8",
+    "intensity": "moderate",
     "tags": [
       "core",
       "triple_extension"
     ],
-    "notes": "6-10kg. Full extension on release"
+    "notes": "6-10kg. Full extension on release (RPE 7-8)"
   },
   {
     "name": "Band-Resisted Broad Jumps (ATP-PCr)",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "ATP-PCr",
     "modality": "plyo",
     "duration": "5x3 reps, 2min rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "explosive",
       "unilateral"
     ],
-    "notes": "Band tension: 20-30% BW. Land softly"
+    "notes": "Band tension: 20-30% BW. Land softly (max effort)"
   },
   {
     "name": "Treadmill Hill Sprints (Glycolytic)",
@@ -1579,17 +1628,17 @@
     "system": "glycolytic",
     "modality": "run",
     "duration": "6x20s @ 15% incline, 1:40 rest",
-    "intensity": "RPE 9",
+    "intensity": "max",
     "tags": [
       "posterior_chain",
       "eccentric"
     ],
-    "notes": "Contraindicated with hamstring tweaks"
+    "notes": "Contraindicated with hamstring tweaks (RPE 9)"
   },
   {
     "name": "Battle Rope Waves (Glycolytic)",
     "equipment": [
-      "Battle Ropes"
+      "battle_ropes"
     ],
     "phases": [
       "GPP"
@@ -1597,13 +1646,13 @@
     "system": "glycolytic",
     "modality": "ropes",
     "duration": "8x30s on/1:30 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "shoulders",
       "grip"
     ],
-    "notes": "Double waves only. No same day as bench",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Battle Ropes"
+    "notes": "Double waves only. No same day as bench (RPE 8)",
+    "equipment_note": "Requires: Battle Ropes"
   },
   {
     "name": "Depth Drops (ATP-PCr)",
@@ -1614,17 +1663,17 @@
     "system": "ATP-PCr",
     "modality": "plyo",
     "duration": "6x3 reps, 90s rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "reactive",
       "eccentric"
     ],
-    "notes": "Box height: 12-18\". No rebound"
+    "notes": "Box height: 12-18\". No rebound (max effort)"
   },
   {
     "name": "Sandbag Shoulder Intervals (Glycolytic)",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "GPP"
@@ -1632,18 +1681,19 @@
     "system": "glycolytic",
     "modality": "sandbag",
     "duration": "5x45s on/2:15 off",
-    "intensity": "RPE 7",
+    "intensity": "moderate",
     "tags": [
       "core",
       "rotational"
     ],
-    "notes": "20-25% BW. Alternate sides",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
+    "notes": "20-25% BW. Alternate sides (RPE 7)",
+    "equipment_note": "Requires: Sandbag"
   },
   {
     "name": "Prowler Sprint Intervals (ATP-PCr)",
     "equipment": [
-      "Sled"
+      "prowler",
+      "sled"
     ],
     "phases": [
       "GPP"
@@ -1651,13 +1701,13 @@
     "system": "ATP-PCr",
     "modality": "sled",
     "duration": "8x10s, 1:5 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "low_impact",
       "concentric"
     ],
-    "notes": "Empty sled. No brakes at end",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Prowler"
+    "notes": "Empty sled. No brakes at end (max effort)",
+    "equipment_note": "Requires: Prowler"
   },
   {
     "name": "Burpee Broad Jumps (Glycolytic)",
@@ -1668,12 +1718,12 @@
     "system": "glycolytic",
     "modality": "bodyweight",
     "duration": "4x30s on/2:30 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "compound",
       "explosive"
     ],
-    "notes": "Minimize ground contact time"
+    "notes": "Minimize ground contact time (RPE 8)"
   },
   {
     "name": "Clap Push-Up Sprints (ATP-PCr)",
@@ -1684,12 +1734,12 @@
     "system": "ATP-PCr",
     "modality": "bodyweight",
     "duration": "6x5 reps + 10yd sprint, 2min rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "upper_body",
       "contrast"
     ],
-    "notes": "No same day as heavy pressing"
+    "notes": "No same day as heavy pressing (max effort)"
   },
   {
     "name": "Lateral Bound Intervals (Glycolytic)",
@@ -1700,17 +1750,17 @@
     "system": "glycolytic",
     "modality": "plyo",
     "duration": "8x20s on/1:40 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "adductors",
       "reactive"
     ],
-    "notes": "Focus on stability, not max distance"
+    "notes": "Focus on stability, not max distance (RPE 8)"
   },
   {
     "name": "Sledgehammer Strikes (Glycolytic)",
     "equipment": [
-      "Sledgehammer"
+      "sledgehammer"
     ],
     "phases": [
       "GPP"
@@ -1718,13 +1768,13 @@
     "system": "glycolytic",
     "modality": "hammer",
     "duration": "5x45s on/1:15 off",
-    "intensity": "RPE 7",
+    "intensity": "moderate",
     "tags": [
       "rotational",
       "grip"
     ],
-    "notes": "Alternate sides. 6-8lb hammer",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sledgehammer"
+    "notes": "Alternate sides. 6-8lb hammer (RPE 7)",
+    "equipment_note": "Requires: Sledgehammer"
   },
   {
     "name": "Box Jump Repeats (ATP-PCr)",
@@ -1735,44 +1785,48 @@
     "system": "ATP-PCr",
     "modality": "plyo",
     "duration": "6x3 reps, 90s rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "quad_dominant",
       "explosive"
     ],
-    "notes": "Box height: 24-30\". Full reset between reps"
+    "notes": "Box height: 24-30\". Full reset between reps (max effort)"
   },
   {
     "name": "Wall Ball Shot Intervals (Glycolytic)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "glycolytic",
     "modality": "med_ball",
     "duration": "8x20s on/1:40 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "triple_extension",
       "overhead"
     ],
-    "notes": "6-8kg ball. Target 10ft+"
+    "notes": "6-8kg ball. Target 10ft+ (RPE 8)"
   },
   {
     "name": "Band-Resisted Sprint Starts (ATP-PCr)",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "ATP-PCr",
     "modality": "sprint",
     "duration": "8x10m, 1:8 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "acceleration",
       "low_volume"
     ],
-    "notes": "Light band tension only"
+    "notes": "Light band tension only (max effort)"
   },
   {
     "name": "Jump Squat Intervals (Glycolytic)",
@@ -1783,17 +1837,17 @@
     "system": "glycolytic",
     "modality": "plyo",
     "duration": "6x30s on/1:30 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "quad_dominant",
       "explosive"
     ],
-    "notes": "Depth: Parallel only. No countermovement"
+    "notes": "Depth: Parallel only. No countermovement (RPE 8)"
   },
   {
     "name": "Tire Flip Sprints (ATP-PCr)",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "GPP"
@@ -1801,13 +1855,13 @@
     "system": "ATP-PCr",
     "modality": "tire",
     "duration": "6x2 flips + 10yd sprint, 2min rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "posterior_chain",
       "compound"
     ],
-    "notes": "Tire weight: 50-70% deadlift max",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Tire"
+    "notes": "Tire weight: 50-70% deadlift max (max effort)",
+    "equipment_note": "Requires: Tire"
   },
   {
     "name": "Defensive Sprawl Intervals (Glycolytic)",
@@ -1818,17 +1872,17 @@
     "system": "glycolytic",
     "modality": "wrestler",
     "duration": "8x20s on/1:40 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "eccentric",
       "reactive"
     ],
-    "notes": "Focus on hip pop, not max speed"
+    "notes": "Focus on hip pop, not max speed (RPE 8)"
   },
   {
     "name": "Single-Arm KB Snatch (ATP-PCr)",
     "equipment": [
-      "Kettlebells"
+      "kettlebells"
     ],
     "phases": [
       "GPP"
@@ -1836,12 +1890,12 @@
     "system": "ATP-PCr",
     "modality": "kettlebell",
     "duration": "5x5/side, 1:5 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "overhead",
       "grip"
     ],
-    "notes": "16-24kg. No press-out at top"
+    "notes": "16-24kg. No press-out at top (max effort)"
   },
   {
     "name": "Agility Ladder Sprints (Glycolytic)",
@@ -1852,34 +1906,36 @@
     "system": "glycolytic",
     "modality": "footwork",
     "duration": "10x15s on/45s off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "reactive",
       "coordination"
     ],
-    "notes": "Change pattern every 2 rounds"
+    "notes": "Change pattern every 2 rounds (RPE 8)"
   },
   {
     "name": "Heavy Bag Power Intervals (Glycolytic)",
-    "equipment": [],
+    "equipment": [
+      "heavy_bag"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "glycolytic",
     "modality": "striking",
     "duration": "8x30s on/1:30 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "shoulders",
       "rotational"
     ],
-    "notes": "16oz gloves. Power shots only",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Heavy Bag"
+    "notes": "16oz gloves. Power shots only (RPE 8)",
+    "equipment_note": "Requires: Heavy Bag"
   },
   {
     "name": "Sandbag Clean & Press (ATP-PCr)",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "GPP"
@@ -1887,13 +1943,13 @@
     "system": "ATP-PCr",
     "modality": "sandbag",
     "duration": "5x3 reps, 2min rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "compound",
       "overhead"
     ],
-    "notes": "20-25% BW. No press-out",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sandbag"
+    "notes": "20-25% BW. No press-out (max effort)",
+    "equipment_note": "Requires: Sandbag"
   },
   {
     "name": "Plyo Step-Up Intervals (Glycolytic)",
@@ -1904,17 +1960,18 @@
     "system": "glycolytic",
     "modality": "plyo",
     "duration": "6x30s on/1:30 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "unilateral",
       "explosive"
     ],
-    "notes": "Box height: 12-16\". Alternate legs"
+    "notes": "Box height: 12-16\". Alternate legs (RPE 8)"
   },
   {
     "name": "Rope Climb Sprints (ATP-PCr)",
     "equipment": [
-      "Battle Ropes"
+      "battle_ropes",
+      "climbing_rope"
     ],
     "phases": [
       "GPP"
@@ -1922,13 +1979,13 @@
     "system": "ATP-PCr",
     "modality": "climbing",
     "duration": "6x1 climb + 10yd sprint, 3min rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "grip",
       "pull"
     ],
-    "notes": "Sub towel hangs if no rope",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Climbing Rope"
+    "notes": "Sub towel hangs if no rope (max effort)",
+    "equipment_note": "Requires: Climbing Rope"
   },
   {
     "name": "Shadowboxing Power Bursts (Glycolytic)",
@@ -1939,17 +1996,17 @@
     "system": "glycolytic",
     "modality": "striking",
     "duration": "10x15s on/45s off",
-    "intensity": "RPE 9",
+    "intensity": "max",
     "tags": [
       "shoulders",
       "reactive"
     ],
-    "notes": "Max-speed combos. No pacing"
+    "notes": "Max-speed combos. No pacing (RPE 9)"
   },
   {
     "name": "Sled Drag Sprints (ATP-PCr)",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "GPP"
@@ -1957,29 +2014,31 @@
     "system": "ATP-PCr",
     "modality": "sled",
     "duration": "8x10s, 1:5 rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "posterior_chain",
       "low_impact"
     ],
-    "notes": "Load: 30% BW. Walk back = rest",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "notes": "Load: 30% BW. Walk back = rest (max effort)",
+    "equipment_note": "Requires: Sled"
   },
   {
     "name": "Med Ball Throw Circuit (Glycolytic)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "GPP"
     ],
     "system": "glycolytic",
     "modality": "med_ball",
     "duration": "4 rounds: 10 slams, 10 chest passes, 10 rotational throws",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "core",
       "rotational"
     ],
-    "notes": "6-8kg ball. 30s rest between rounds"
+    "notes": "6-8kg ball. 30s rest between rounds (RPE 8)"
   },
   {
     "name": "Broad Jump Repeats (ATP-PCr)",
@@ -1990,12 +2049,12 @@
     "system": "ATP-PCr",
     "modality": "plyo",
     "duration": "6x3 reps, 2min rest",
-    "intensity": "max effort",
+    "intensity": "max",
     "tags": [
       "horizontal_power",
       "eccentric"
     ],
-    "notes": "Stick landings. Full reset between reps"
+    "notes": "Stick landings. Full reset between reps (max effort)"
   },
   {
     "name": "Grapple Escapes Under Fatigue (Glycolytic)",
@@ -2006,12 +2065,12 @@
     "system": "glycolytic",
     "modality": "grappler",
     "duration": "5x45s on/1:15 off",
-    "intensity": "RPE 8",
+    "intensity": "high",
     "tags": [
       "grip",
       "reactive"
     ],
-    "notes": "Partner drills only. No live sparring"
+    "notes": "Partner drills only. No live sparring (RPE 8)"
   },
   {
     "name": "Tempo Shadowboxing (Aerobic)",
@@ -2022,7 +2081,7 @@
     "system": "aerobic",
     "modality": "shadowbox",
     "duration": "20-30min continuous",
-    "intensity": "zone 2 (50-60% effort)",
+    "intensity": "zone 2",
     "tags": [
       "aerobic",
       "recovery",
@@ -2031,12 +2090,12 @@
       "low_cns",
       "skill"
     ],
-    "notes": "Focus on breathing/technique; no power output"
+    "notes": "Focus on breathing/technique; no power output (zone 2 (50-60% effort))"
   },
   {
     "name": "Recovery Cycling (Nasal Breathing)",
     "equipment": [
-      "Stationary Bike"
+      "stationary_bike"
     ],
     "phases": [
       "SPP",
@@ -2052,7 +2111,8 @@
       "parasympathetic",
       "recovery"
     ],
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Stationary Bike"
+    "equipment_note": "Requires: Stationary Bike",
+    "notes": ""
   },
   {
     "name": "Swimming (Freestyle Laps)",
@@ -2075,7 +2135,7 @@
   {
     "name": "Incline Walk (Posture Focus)",
     "equipment": [
-      "Treadmill"
+      "treadmill"
     ],
     "phases": [
       "SPP"
@@ -2083,19 +2143,19 @@
     "system": "aerobic",
     "modality": "walk",
     "duration": "20min",
-    "intensity": "zone 1-2",
+    "intensity": "zone 1",
     "tags": [
       "aerobic",
       "low_impact",
       "recovery",
       "posterior_chain"
     ],
-    "notes": "15% incline, hands behind head to reinforce posture"
+    "notes": "15% incline, hands behind head to reinforce posture (zone 1-2)"
   },
   {
     "name": "Rowing (Steady State)",
     "equipment": [
-      "Rower"
+      "rower"
     ],
     "phases": [
       "SPP"
@@ -2109,12 +2169,13 @@
       "posterior_chain",
       "low_cns"
     ],
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Rower"
+    "equipment_note": "Requires: Rower",
+    "notes": ""
   },
   {
     "name": "Footwork Ladder (Continuous Flow)",
     "equipment": [
-      "Agility Ladder"
+      "agility_ladder"
     ],
     "phases": [
       "SPP"
@@ -2122,19 +2183,19 @@
     "system": "aerobic",
     "modality": "footwork",
     "duration": "10min continuous",
-    "intensity": "low-moderate",
+    "intensity": "moderate",
     "tags": [
       "aerobic",
       "footwork",
       "coordination",
       "skill"
     ],
-    "notes": "No rest; focus on smooth transitions"
+    "notes": "No rest; focus on smooth transitions (low-moderate)"
   },
   {
     "name": "Light Heavy Bag (Pacing Drill)",
     "equipment": [
-      "Heavy Bag"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
@@ -2142,19 +2203,19 @@
     "system": "aerobic",
     "modality": "striking",
     "duration": "5 x 5min rounds, 30s rest",
-    "intensity": "30% power",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "striking",
       "conditioning",
       "low_cns"
     ],
-    "notes": "Emphasize volume over power"
+    "notes": "Emphasize volume over power (30% power)"
   },
   {
     "name": "Defensive Movement Drills",
     "equipment": [
-      "Slip Rope"
+      "slip_rope"
     ],
     "phases": [
       "SPP"
@@ -2180,19 +2241,19 @@
     "system": "aerobic",
     "modality": "sparring",
     "duration": "3 x 5min rounds",
-    "intensity": "30% effort",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "striking",
       "mma",
       "recovery"
     ],
-    "notes": "No power shots; pure technique"
+    "notes": "No power shots; pure technique (30% effort)"
   },
   {
     "name": "Thai Clinch Walk (Light Resistance)",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -2212,7 +2273,7 @@
   {
     "name": "3-Min Round Intervals (Bag/Pads)",
     "equipment": [
-      "Pads"
+      "pads"
     ],
     "phases": [
       "SPP"
@@ -2220,14 +2281,14 @@
     "system": "aerobic",
     "modality": "striking",
     "duration": "5 rounds, 30s rest",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "aerobic",
       "glycolytic",
       "striking",
       "work_capacity"
     ],
-    "notes": "Pace like a fight, but lower output"
+    "notes": "Pace like a fight, but lower output (50% effort)"
   },
   {
     "name": "EMOM Jab-Cross (Aerobic)",
@@ -2238,19 +2299,19 @@
     "system": "aerobic",
     "modality": "striking",
     "duration": "10min (20 strikes/min)",
-    "intensity": "light",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "striking",
       "shoulders",
       "skill"
     ],
-    "notes": "Focus on crisp technique, not speed/power"
+    "notes": "Focus on crisp technique, not speed/power (light)"
   },
   {
     "name": "Dynamic Yoga for Fighters",
     "equipment": [
-      "Mat"
+      "mat"
     ],
     "phases": [
       "SPP",
@@ -2289,7 +2350,7 @@
   {
     "name": "Pool Running (No Impact)",
     "equipment": [
-      "Pool"
+      "pool"
     ],
     "phases": [
       "SPP",
@@ -2309,7 +2370,7 @@
   {
     "name": "Prowler Push (Light, Continuous)",
     "equipment": [
-      "Prowler"
+      "prowler"
     ],
     "phases": [
       "SPP"
@@ -2325,12 +2386,12 @@
       "mma"
     ],
     "notes": "Forward/backward alternating; no spikes in effort",
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Prowler"
+    "equipment_note": "Requires: Prowler"
   },
   {
     "name": "Sandbag Carry (Bearhug)",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -2338,19 +2399,19 @@
     "system": "aerobic",
     "modality": "carry",
     "duration": "10min continuous",
-    "intensity": "light",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "grip",
       "core",
       "work_capacity"
     ],
-    "notes": "Grappler-specific grip endurance"
+    "notes": "Grappler-specific grip endurance (light)"
   },
   {
     "name": "Ruck March (20-30lbs)",
     "equipment": [
-      "Ruck"
+      "ruck"
     ],
     "phases": [
       "SPP"
@@ -2376,19 +2437,19 @@
     "system": "aerobic",
     "modality": "breathing",
     "duration": "5 x 3min rounds",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "aerobic",
       "cognitive",
       "mental_toughness",
       "striking"
     ],
-    "notes": "Exhale fully before rounds; recover between"
+    "notes": "Exhale fully before rounds; recover between (50% effort)"
   },
   {
     "name": "Kettlebell Swings (EMOM Aerobic)",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -2396,19 +2457,19 @@
     "system": "aerobic",
     "modality": "swing",
     "duration": "10min (8-10 swings/min)",
-    "intensity": "light",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "hip_dominant",
       "low_cns",
       "recovery"
     ],
-    "notes": "Focus on hip snap, not power"
+    "notes": "Focus on hip snap, not power (light)"
   },
   {
     "name": "Sled Drag (Light, RPE 4)",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -2422,12 +2483,13 @@
       "posterior_chain",
       "low_impact"
     ],
-    "equipment_note": "REQUIRES NEW EQUIPMENT OPTION: Sled"
+    "equipment_note": "Requires: Sled",
+    "notes": ""
   },
   {
     "name": "Meditative Jump Rope (Eyes Closed)",
     "equipment": [
-      "Jump Rope"
+      "jump_rope"
     ],
     "phases": [
       "SPP"
@@ -2466,7 +2528,7 @@
   {
     "name": "BJJ Flow Rolling (No Submissions)",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -2474,14 +2536,14 @@
     "system": "aerobic",
     "modality": "grappler",
     "duration": "20min continuous",
-    "intensity": "30% effort",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "bjj",
       "recovery",
       "transition"
     ],
-    "notes": "No grinding; pure movement"
+    "notes": "No grinding; pure movement (30% effort)"
   },
   {
     "name": "Lateral Shuffle + Strike Drills",
@@ -2492,19 +2554,19 @@
     "system": "aerobic",
     "modality": "footwork",
     "duration": "3 x 5min rounds",
-    "intensity": "light",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "lateral_power",
       "striking",
       "footwork"
     ],
-    "notes": "Emphasize angles, not explosiveness"
+    "notes": "Emphasize angles, not explosiveness (light)"
   },
   {
     "name": "Wrestler Chain Drills (50% Effort)",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -2524,7 +2586,7 @@
   {
     "name": "Muay Thai Skip Rope (Rhythm Focus)",
     "equipment": [
-      "Jump Rope"
+      "jump_rope"
     ],
     "phases": [
       "SPP"
@@ -2544,7 +2606,7 @@
   {
     "name": "Band-Resisted Jab/Cross (Slow Tempo)",
     "equipment": [
-      "Bands"
+      "bands"
     ],
     "phases": [
       "SPP"
@@ -2552,14 +2614,14 @@
     "system": "aerobic",
     "modality": "striking",
     "duration": "3 x 5min rounds",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "shoulders",
       "striking",
       "rehab_friendly"
     ],
-    "notes": "Bands anchored at chest height"
+    "notes": "Bands anchored at chest height (40% effort)"
   },
   {
     "name": "Calf Raise Walk (Aerobic)",
@@ -2589,14 +2651,14 @@
     "system": "aerobic",
     "modality": "shadowbox",
     "duration": "15min",
-    "intensity": "RPE 2",
+    "intensity": "zone 1",
     "tags": [
       "aerobic",
       "mobility",
       "recovery",
       "parasympathetic"
     ],
-    "notes": "Post-training flush only"
+    "notes": "Post-training flush only (RPE 2)"
   },
   {
     "name": "Low Box Jump (Fast Reset)",
@@ -2628,7 +2690,9 @@
   },
   {
     "name": "Band-Resisted Vertical Jump",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2670,7 +2734,9 @@
   },
   {
     "name": "Med Ball Drop Catch to Jump",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2698,7 +2764,9 @@
   },
   {
     "name": "Band-Assisted Jump Reset",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2754,7 +2822,9 @@
   },
   {
     "name": "Band-Resisted Split Jump",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2768,7 +2838,9 @@
   },
   {
     "name": "Single-Leg Med Ball Toss Jump",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2810,7 +2882,9 @@
   },
   {
     "name": "Reactive Med Ball Chest Pass",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2838,7 +2912,9 @@
   },
   {
     "name": "Band-Resisted Straight Punch Release",
-    "equipment": ["bands"],
+    "equipment": [
+      "bands"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2852,7 +2928,9 @@
   },
   {
     "name": "Overhead Med Ball Slam (Snappy)",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2866,7 +2944,9 @@
   },
   {
     "name": "Seated Med Ball Chest Pop",
-    "equipment": ["medicine_ball"],
+    "equipment": [
+      "medicine_ball"
+    ],
     "phases": [
       "TAPER"
     ],
@@ -2881,7 +2961,7 @@
   {
     "name": "Partner Manual Neck Resistance",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP",
@@ -2900,7 +2980,7 @@
   {
     "name": "Neck Harness Flexion/Extension",
     "equipment": [
-      "Neck Harness"
+      "neck_harness"
     ],
     "phases": [
       "GPP",

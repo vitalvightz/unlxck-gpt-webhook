@@ -2,7 +2,7 @@
   {
     "name": "Counter-Striker Snap Hops",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
@@ -10,19 +10,19 @@
     "system": "ATP-PCr",
     "modality": "reactive timing",
     "duration": "4x3 ankle hops (quick ground contact)",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "mma",
       "counter_striker"
     ],
-    "notes": "Trains quick reset after defensive moves",
+    "notes": "Trains quick reset after defensive moves (50% effort)",
     "equipment_note": "Mat or grass surface"
   },
   {
     "name": "Clinch Frame Throws",
     "equipment": [
-      "Med Ball"
+      "med_ball"
     ],
     "phases": [
       "TAPER"
@@ -30,19 +30,19 @@
     "system": "ATP-PCr",
     "modality": "upper-body explosiveness",
     "duration": "5x med ball chest throws (6lb)",
-    "intensity": "60% power",
+    "intensity": "zone 2",
     "tags": [
       "muay_thai",
       "mma",
       "clinch_fighter"
     ],
-    "notes": "Simulates framing explosiveness in clinch",
+    "notes": "Simulates framing explosiveness in clinch (60% power)",
     "equipment_note": "Wall target at chest height"
   },
   {
     "name": "Scrambler Lateral Bound",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
@@ -50,19 +50,19 @@
     "system": "ATP-PCr",
     "modality": "hip switch power",
     "duration": "3x5 lateral bounds (sub-max distance)",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "wrestler",
       "mma",
       "scrambler"
     ],
-    "notes": "Mimics shot recovery movements",
+    "notes": "Mimics shot recovery movements (50% effort)",
     "equipment_note": "Mark landing zones 3ft apart"
   },
   {
     "name": "Kicker Step-Bounce",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
@@ -70,25 +70,25 @@
     "system": "ATP-PCr",
     "modality": "leg recoil",
     "duration": "4x3 step-back bounces (off lead leg)",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "kickboxing",
       "kicker",
       "mma"
     ],
-    "notes": "Primes teep/kick retraction speed",
+    "notes": "Primes teep/kick retraction speed (40% effort)",
     "equipment_note": "Flat surface only"
   },
   {
     "name": "Pressure Fighter Box Drive",
     "equipment": [
-      "Plyo Box"
+      "plyo_box"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 box step-ups (explosive drive)",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "mma",
@@ -96,39 +96,39 @@
       "muay thai",
       "pressure_fighter"
     ],
-    "notes": "Develops forward knee drive for cutting off ring",
+    "notes": "Develops forward knee drive for cutting off ring (50% height)",
     "equipment_note": "12\" box height",
     "system": "ATP-PCr"
   },
   {
     "name": "Submission Hunter Hip Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 seated hip pops (from guard)",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "grappler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "Trains explosive hip elevation for subs",
+    "notes": "Trains explosive hip elevation for subs (Light explosiveness)",
     "equipment_note": "Mat surface required",
     "system": "ATP-PCr"
   },
   {
     "name": "Hybrid Stance Switch",
     "equipment": [
-      "Agility Ladder"
+      "agility_ladder"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 stance switches (with arm swing)",
-    "intensity": "60% speed",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "boxing",
@@ -136,846 +136,927 @@
       "kickboxing",
       "hybrid"
     ],
-    "notes": "Sharpens stance transition reflexes",
+    "notes": "Sharpens stance transition reflexes (60% speed)",
     "equipment_note": "Ladder optional",
     "system": "ATP-PCr"
   },
   {
     "name": "Brawler Overhand Pop",
     "equipment": [
-      "Med Ball"
+      "med_ball"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "5x3 med ball slams (8lb)",
-    "intensity": "70% power",
+    "intensity": "moderate",
     "tags": [
       "boxing",
       "brawler"
     ],
-    "notes": "Mimics overhand right mechanics",
+    "notes": "Mimics overhand right mechanics (70% power)",
     "equipment_note": "Concrete wall target",
     "system": "ATP-PCr"
   },
   {
     "name": "Distance Striker Skip-Back",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 backward skips (quick toe-off)",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "kickboxing",
       "mma",
       "boxing",
       "distance_striker"
     ],
-    "notes": "Trains defensive footwork elasticity",
+    "notes": "Trains defensive footwork elasticity (50% effort)",
     "equipment_note": "Grass/turf preferred",
     "system": "ATP-PCr"
   },
   {
     "name": "Grappler Takedown Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 level-change jumps",
-    "intensity": "40% explosion",
+    "intensity": "low",
     "tags": [
       "wrestler",
       "grappler",
       "mma"
     ],
-    "notes": "Primes shot explosiveness",
+    "notes": "Primes shot explosiveness (40% explosion)",
     "equipment_note": "Knee sleeves optional",
     "system": "ATP-PCr"
   },
   {
     "name": "MMA Cage Push-Off",
     "equipment": [
-      "Wall"
+      "wall"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 wall push jumps (single leg)",
-    "intensity": "50% power",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "scrambler"
     ],
-    "notes": "Simulates cage scramble rebounds",
+    "notes": "Simulates cage scramble rebounds (50% power)",
     "equipment_note": "Padded wall ideal",
     "system": "ATP-PCr"
   },
   {
     "name": "Muay Thai Knee Skip",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 skipping knee drives",
-    "intensity": "30% power",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "clinch_fighter"
     ],
-    "notes": "Maintains clinch knee timing",
+    "notes": "Maintains clinch knee timing (30% power)",
     "equipment_note": "Focus on rhythm",
     "system": "ATP-PCr"
   },
   {
     "name": "Counter Striker Slip-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 slip-to-vertical jumps",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "mma",
       "counter_striker"
     ],
-    "notes": "Links head movement to counter explosiveness",
+    "notes": "Links head movement to counter explosiveness (50% height)",
     "equipment_note": "Soft surface",
     "system": "ATP-PCr"
   },
   {
     "name": "Pressure Fighter Stomp",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 tire stomps (alternating)",
-    "intensity": "60% power",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "pressure_fighter"
     ],
-    "notes": "Develops forward pressure mechanics",
+    "notes": "Develops forward pressure mechanics (60% power)",
     "equipment_note": "300lb tire",
     "system": "ATP-PCr"
   },
   {
     "name": "Kicker Switch Hop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 stance-switch hops",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "mma",
       "kicker"
     ],
-    "notes": "Trains kick setup footwork",
+    "notes": "Trains kick setup footwork (40% effort)",
     "equipment_note": "Mark stance width",
     "system": "ATP-PCr"
   },
   {
     "name": "Submission Hunter Bridge Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x3 bridge-to-hip lifts",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "grappler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "Maintains explosive bridging for subs",
+    "notes": "Maintains explosive bridging for subs (Light explosiveness)",
     "equipment_note": "Mat required",
     "system": "ATP-PCr"
   },
   {
     "name": "Hybrid Sprawl-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 sprawl-to-vertical jumps",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "distance_fighter"
     ],
-    "notes": "Links TDD to stand-up explosiveness",
+    "notes": "Links TDD to stand-up explosiveness (50% height)",
     "equipment_note": "Grass/turf",
     "system": "ATP-PCr"
   },
   {
     "name": "Brawler Body Shot Throw",
     "equipment": [
-      "Med Ball"
+      "med_ball"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "5x3 rotational med ball throws",
-    "intensity": "60% power",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "brawler"
     ],
-    "notes": "Mimics hook/uppercut chain explosiveness",
+    "notes": "Mimics hook/uppercut chain explosiveness (60% power)",
     "equipment_note": "10lb ball",
     "system": "ATP-PCr"
   },
   {
     "name": "Distance Striker Teep Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 lead-leg drive pops",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "kicker",
       "mma",
       "distance_striker"
     ],
-    "notes": "Primes teep retraction speed",
+    "notes": "Primes teep retraction speed (40% effort)",
     "equipment_note": "Wall for balance",
     "system": "ATP-PCr"
   },
   {
     "name": "Grappler Granby Roll",
     "equipment": [
-      "Mat"
+      "mat"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x3 Granby pop-ups",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "wrestler",
       "mma",
       "grappler"
     ],
-    "notes": "Sharpens rolling explosiveness",
+    "notes": "Sharpens rolling explosiveness (Light explosiveness)",
     "equipment_note": "BJJ mat",
     "system": "ATP-PCr"
   },
   {
     "name": "MMA Sprawl-Bounce",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 sprawl-to-forward jumps",
-    "intensity": "50% distance",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "scrambler"
     ],
-    "notes": "Trains shot defense to re-engagement",
+    "notes": "Trains shot defense to re-engagement (50% distance)",
     "equipment_note": "Mark 3ft jump target",
     "system": "ATP-PCr"
   },
   {
     "name": "Muay Thai Clinch Pop",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 pummel-to-frame jumps",
-    "intensity": "30% power",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "clinch_fighter"
     ],
-    "notes": "Maintains clinch posture explosiveness",
+    "notes": "Maintains clinch posture explosiveness (30% power)",
     "equipment_note": "Light contact only",
     "system": "ATP-PCr"
   },
   {
     "name": "Counter Striker Pull-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 pull-counter to jump",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "counter_striker"
     ],
-    "notes": "Links defensive pulls to counter bursts",
+    "notes": "Links defensive pulls to counter bursts (50% height)",
     "equipment_note": "Mirror for form",
     "system": "ATP-PCr"
   },
   {
     "name": "Pressure Fighter Cutoff Hop",
     "equipment": [
-      "Agility Ladder"
+      "agility_ladder"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 lateral cutoff hops",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "pressure_fighter"
     ],
-    "notes": "Trains angle-cutting footwork",
+    "notes": "Trains angle-cutting footwork (50% effort)",
     "equipment_note": "Ladder optional",
     "system": "ATP-PCr"
   },
   {
     "name": "Kicker Switch-Kick Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 switch-kick footwork pops",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "kickboxing",
       "mma",
       "kicker"
     ],
-    "notes": "Primes southpaw-orthodox kick transitions",
+    "notes": "Primes southpaw-orthodox kick transitions (40% effort)",
     "equipment_note": "Wall support",
     "system": "ATP-PCr"
   },
   {
     "name": "Submission Hunter Sit-Out Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 sit-out to stand jumps",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "grappler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "Maintains explosive stand-ups",
+    "notes": "Maintains explosive stand-ups (Light explosiveness)",
     "equipment_note": "Mat required",
     "system": "ATP-PCr"
   },
   {
     "name": "Hybrid Takedown Hop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 shot-entry hops",
-    "intensity": "50% distance",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "wrestler",
       "grappler"
     ],
-    "notes": "Sharpens level-change timing",
+    "notes": "Sharpens level-change timing (50% distance)",
     "equipment_note": "Mark 3ft target",
     "system": "ATP-PCr"
   },
   {
     "name": "Brawler Body Roll",
     "equipment": [
-      "Med Ball"
+      "med_ball"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "5x3 med ball body drops",
-    "intensity": "60% power",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "mma",
       "brawler"
     ],
-    "notes": "Mimics body shot absorption/recovery",
+    "notes": "Mimics body shot absorption/recovery (60% power)",
     "equipment_note": "20lb ball to floor",
     "system": "ATP-PCr"
   },
   {
     "name": "Distance Striker Skip-In",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 forward skips (quick plant)",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "kickboxing",
       "distance_striker"
     ],
-    "notes": "Trains blitz entry elasticity",
+    "notes": "Trains blitz entry elasticity (50% effort)",
     "equipment_note": "Even surface",
     "system": "ATP-PCr"
   },
   {
     "name": "Grappler Hip Heist Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 hip heist pops",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "wrestler",
       "mma",
       "grappler"
     ],
-    "notes": "Maintains mat return explosiveness",
+    "notes": "Maintains mat return explosiveness (Light explosiveness)",
     "equipment_note": "Mat required",
     "system": "ATP-PCr"
   },
   {
     "name": "MMA Spin-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x3 spin-to-jump transitions",
-    "intensity": "40% power",
+    "intensity": "low",
     "tags": [
       "mma",
       "scrambler"
     ],
-    "notes": "Trains cage scramble reorientation",
+    "notes": "Trains cage scramble reorientation (40% power)",
     "equipment_note": "Open space",
     "system": "ATP-PCr"
   },
   {
     "name": "Muay Thai Long Guard Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 long guard advance hops",
-    "intensity": "30% effort",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "distance_striker"
     ],
-    "notes": "Maintains teep-ready footwork",
+    "notes": "Maintains teep-ready footwork (30% effort)",
     "equipment_note": "Wall for balance",
     "system": "ATP-PCr"
   },
   {
     "name": "Counter Striker Check-Hop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 check hook to jump",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "counter_striker"
     ],
-    "notes": "Links pull counters to lateral movement",
+    "notes": "Links pull counters to lateral movement (50% height)",
     "equipment_note": "Mirror for form",
     "system": "ATP-PCr"
   },
   {
     "name": "Kicker Roundhouse Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 pivot hops",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "kickboxing",
       "mma",
       "kicker"
     ],
-    "notes": "Maintains kick torque mechanics",
+    "notes": "Maintains kick torque mechanics (40% effort)",
     "equipment_note": "Wall support",
     "system": "ATP-PCr"
   },
   {
     "name": "Submission Hunter Arm Drag Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 arm drag to jump",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "grappler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "Sharpens explosive entries to subs",
+    "notes": "Sharpens explosive entries to subs (Light explosiveness)",
     "equipment_note": "Mat required",
     "system": "ATP-PCr"
   },
   {
     "name": "Hybrid Sprawl-Spin",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 sprawl-to-spin jumps",
-    "intensity": "40% rotation",
+    "intensity": "low",
     "tags": [
       "mma"
     ],
-    "notes": "Trains TDD to back-take transitions",
+    "notes": "Trains TDD to back-take transitions (40% rotation)",
     "equipment_note": "Open space",
     "system": "ATP-PCr"
   },
   {
     "name": "Brawler Rope Hop",
     "equipment": [
-      "Battle Ropes"
+      "battle_ropes"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 rope waves to jump",
-    "intensity": "50% power",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "brawler"
     ],
-    "notes": "Mimics flurry-to-reset explosiveness",
+    "notes": "Mimics flurry-to-reset explosiveness (50% power)",
     "equipment_note": "1.5\" ropes",
     "system": "ATP-PCr"
   },
   {
     "name": "Distance Striker Slide-Hop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 lateral slide jumps",
-    "intensity": "50% effort",
+    "intensity": "zone 2",
     "tags": [
       "kickboxing",
       "distance_striker"
     ],
-    "notes": "Maintains angle-cutting explosiveness",
+    "notes": "Maintains angle-cutting explosiveness (50% effort)",
     "equipment_note": "Mark 3ft zones",
     "system": "ATP-PCr"
   },
   {
     "name": "Grappler Knee Cut Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x4 knee cut drives",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "wrestler",
       "mma",
       "grappler"
     ],
-    "notes": "Sharpens guard pass entries",
+    "notes": "Sharpens guard pass entries (Light explosiveness)",
     "equipment_note": "Mat required",
     "system": "ATP-PCr"
   },
   {
     "name": "MMA Cage Jump",
     "equipment": [
-      "Wall"
+      "wall"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 wall push-off jumps",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "scrambler"
     ],
-    "notes": "Trains cage rebound explosiveness",
+    "notes": "Trains cage rebound explosiveness (50% height)",
     "equipment_note": "Padded wall",
     "system": "ATP-PCr"
   },
   {
     "name": "Muay Thai Skip-Knee",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 skip knee drives",
-    "intensity": "30% power",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "clinch_fighter"
     ],
-    "notes": "Maintains clinch knee timing",
+    "notes": "Maintains clinch knee timing (30% power)",
     "equipment_note": "Focus on rhythm",
     "system": "ATP-PCr"
   },
   {
     "name": "Counter Striker Roll-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 shoulder roll to jump",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "boxing",
       "counter_striker"
     ],
-    "notes": "Links defensive rolls to counters",
+    "notes": "Links defensive rolls to counters (50% height)",
     "equipment_note": "Soft surface",
     "system": "ATP-PCr"
   },
   {
     "name": "Pressure Fighter Stomp-Switch",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 stomp-to-stance switch",
-    "intensity": "50% speed",
+    "intensity": "zone 2",
     "tags": [
       "mma",
       "pressure_fighter"
     ],
-    "notes": "Trains pressure footwork transitions",
+    "notes": "Trains pressure footwork transitions (50% speed)",
     "equipment_note": "200lb tire",
     "system": "ATP-PCr"
   },
   {
     "name": "Kicker Switch-Teep Pop",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "4x3 stance-switch teep pops",
-    "intensity": "40% effort",
+    "intensity": "low",
     "tags": [
       "muay_thai",
       "kicker"
     ],
-    "notes": "Maintains teep versatility",
+    "notes": "Maintains teep versatility (40% effort)",
     "equipment_note": "Wall support",
     "system": "ATP-PCr"
   },
   {
     "name": "Submission Hunter Bridge-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x3 bridge to stand jumps",
-    "intensity": "Light explosiveness",
+    "intensity": "low",
     "tags": [
       "grappler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "Sharpens explosive stand-ups from guard",
+    "notes": "Sharpens explosive stand-ups from guard (Light explosiveness)",
     "equipment_note": "Mat required",
     "system": "ATP-PCr"
   },
   {
     "name": "Shot-Jump",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "TAPER"
     ],
     "duration": "3x5 shot to jump transitions",
-    "intensity": "50% height",
+    "intensity": "zone 2",
     "tags": [
       "mma"
     ],
-    "notes": "Links takedowns to stand-up bursts",
+    "notes": "Links takedowns to stand-up bursts (50% height)",
     "equipment_note": "Mark 3ft target",
     "system": "ATP-PCr"
   },
   {
     "name": "Reaction Jab Matrix",
-    "equipment": ["Reaction Ball", "Partner"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "partner",
+      "reaction_ball"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "visual processing",
     "duration": "3min random ball toss → jab/parry response → x4 rounds",
-    "intensity": "70% speed",
-    "tags": ["boxing", "counter_striker", "skill_refinement"],
-    "notes": "Partner throws ball unpredictably; react with jab or parry",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "skill_refinement"
+    ],
+    "notes": "Partner throws ball unpredictably; react with jab or parry (70% speed)",
     "equipment_note": "Uneven bounce ball required"
   },
   {
     "name": "Clinch Auditory Triggers",
-    "equipment": ["Bluetooth Speaker"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "bluetooth_speaker"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "auditory reaction",
     "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
-    "intensity": "50% effort",
-    "tags": ["muay_thai", "clinch_fighter", "skill_refinement"],
-    "notes": "Pre-recorded beeps signal underhook/overhook switches",
+    "intensity": "zone 2",
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "skill_refinement"
+    ],
+    "notes": "Pre-recorded beeps signal underhook/overhook switches (50% effort)",
     "equipment_note": "Random interval timer (5-15s)"
   },
   {
     "name": "Wrestling Chess",
-    "equipment": ["Chess Clock", "Partner"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "chess_clock",
+      "partner"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "decision fatigue",
     "duration": "3min live wrestling → 30s chess move → x5 rounds",
-    "intensity": "60% effort",
-    "tags": ["wrestling", "scrambler", "skill_refinement"],
-    "notes": "Alternate wrestling rounds with chess moves to drain mental stamina",
+    "intensity": "zone 2",
+    "tags": [
+      "wrestling",
+      "scrambler",
+      "skill_refinement"
+    ],
+    "notes": "Alternate wrestling rounds with chess moves to drain mental stamina (60% effort)",
     "equipment_note": "Portable chess set"
   },
   {
     "name": "Kick Pattern Recall",
-    "equipment": ["Flashcards"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "flashcards"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "memory challenge",
     "duration": "3min execute kick combos from flashed cards → x4 rounds",
-    "intensity": "40% power",
-    "tags": ["kickboxing", "kicker", "skill_refinement"],
-    "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo",
+    "intensity": "low",
+    "tags": [
+      "kickboxing",
+      "kicker",
+      "skill_refinement"
+    ],
+    "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo (40% power)",
     "equipment_note": "Pre-printed kick codes"
   },
   {
     "name": "Takedown Dilemma",
-    "equipment": ["Colored Cones"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "colored_cones"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "choice reaction",
     "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
-    "intensity": "50% speed",
-    "tags": ["mma", "skill_refinement"],
-    "notes": "Random cone colors force adaptive takedown chains",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "skill_refinement"
+    ],
+    "notes": "Random cone colors force adaptive takedown chains (50% speed)",
     "equipment_note": "2+ cone colors"
   },
   {
     "name": "Brawler's Puzzle Defense",
-    "equipment": ["Puzzle Mat"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "puzzle_mat"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "pattern recognition",
     "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
-    "intensity": "60% power",
-    "tags": ["boxing", "brawler", "skill_refinement"],
-    "notes": "Disrupts rhythm to simulate in-fight chaos",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "brawler",
+      "skill_refinement"
+    ],
+    "notes": "Disrupts rhythm to simulate in-fight chaos (60% power)",
     "equipment_note": "4-piece jigsaw"
   },
   {
     "name": "Distance Striker's Math Dodge",
-    "equipment": ["Whiteboard"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "whiteboard"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "dual-task loading",
     "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
-    "intensity": "50% effort",
-    "tags": ["muay_thai", "distance_striker", "skill_refinement"],
-    "notes": "Example: 'Teep → solve 7x8 → pivot'",
+    "intensity": "zone 2",
+    "tags": [
+      "muay_thai",
+      "distance_striker",
+      "skill_refinement"
+    ],
+    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
   },
   {
     "name": "Grappler's Blindfold Pummeling",
-    "equipment": ["Blindfold"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "blindfold"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "tactile sensitivity",
     "duration": "3min pummeling blindfolded → x4 rounds",
-    "intensity": "30% effort",
-    "tags": ["grappling", "submission_hunter", "skill_refinement"],
-    "notes": "Forces reliance on grip/body feel over sight",
+    "intensity": "low",
+    "tags": [
+      "grappling",
+      "submission_hunter",
+      "skill_refinement"
+    ],
+    "notes": "Forces reliance on grip/body feel over sight (30% effort)",
     "equipment_note": "Non-slip mat"
   },
   {
     "name": "Pressure Fighter's Shadowboxing Riddle",
-    "equipment": ["Earbuds"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "earbuds"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "audio distraction",
     "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
-    "intensity": "50% power",
-    "tags": ["mma", "pressure_fighter", "skill_refinement"],
-    "notes": "Coach whispers riddles through earbuds",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "pressure_fighter",
+      "skill_refinement"
+    ],
+    "notes": "Coach whispers riddles through earbuds (50% power)",
     "equipment_note": "Wireless mic for coach"
   },
   {
     "name": "Hybrid's Stance-Switch Reaction",
-    "equipment": ["Colored Lights"],
-    "phases": ["TAPER"],
+    "equipment": [
+      "colored_lights"
+    ],
+    "phases": [
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "visual cueing",
     "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
-    "intensity": "60% speed",
-    "tags": ["mma", "hybrid", "skill_refinement"],
-    "notes": "Forces stance switches under fatigue",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "hybrid",
+      "skill_refinement"
+    ],
+    "notes": "Forces stance switches under fatigue (60% speed)",
     "equipment_note": "Traffic light system"
   }
 ]
