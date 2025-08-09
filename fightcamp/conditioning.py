@@ -178,12 +178,22 @@ def is_banned_drill(
             if term in name or term in tags or term in details:
                 return True
 
-    kick_terms = ["kick", "knee", "clinch knee strike", "teep"]
-
     if fight_format == "boxing":
-        for term in kick_terms:
-            if term in name or term in tags or term in details:
+        boxing_terms = {
+            "grappling",
+            "wrestling",
+            "muay_thai",
+            "clinch",
+            "knee",
+            "kick",
+            "teep",
+            "elbow",
+        }
+        for term in boxing_terms:
+            if term in name or term in tags:
                 return True
+
+    kick_terms = ["kick", "knee", "clinch knee strike", "teep"]
 
     if fight_format not in {"kickboxing", "muay_thai"}:
         if (
@@ -228,9 +238,13 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
     bullet = "•"
+    load_line = f"  {bullet} Load: {drill['load']}"
+    if drill.get("equipment_note"):
+        load_line += f" ({drill['equipment_note']})"
+    load_line += br
     parts = [
         f"- **Drill: {drill['name']}**",
-        f"  {bullet} Load: {drill['load']}{br}",
+        load_line,
         f"  {bullet} Rest: {drill['rest']}{br}",
         f"  {bullet} Timing: {drill['timing']}{br}",
         f"  {bullet} Purpose: {drill['purpose']}{br}",
@@ -276,6 +290,9 @@ def generate_conditioning_block(flags):
 
     goal_tags = expand_tags(goals, goal_tag_map)
     weak_tags = expand_tags(weaknesses, weakness_tag_map)
+    shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
+        'shoulder' in w.lower() for w in weaknesses
+    )
 
     style_map = {
         "mma": "mma",
@@ -294,6 +311,13 @@ def generate_conditioning_block(flags):
     }
     fight_format = style_map.get(primary_tech, "mma")
     energy_weights = format_weights.get(fight_format, {})
+
+    rename_map = {}
+    if fight_format == "boxing":
+        rename_map = {
+            "Clinch Frame Throws": "Frame-and-Pop Chest Throw",
+            "Thai Clinch EMOM": "Inside Hand-Fight EMOM",
+        }
 
     format_tag_map = {
         "mma": ["mma", "bjj", "wrestler"],
@@ -319,25 +343,32 @@ def generate_conditioning_block(flags):
     reason_lookup: dict[str, dict] = {}
 
     for drill in conditioning_bank:
-        if phase.upper() not in drill.get("phases", []):
+        d = drill.copy()
+        if fight_format == "boxing":
+            d["name"] = rename_map.get(d.get("name"), d.get("name"))
+            d["tags"] = [
+                "boxing" if t.lower() == "muay_thai" else t
+                for t in d.get("tags", [])
+            ]
+        if phase.upper() not in d.get("phases", []):
             continue
 
-        raw_system = drill.get("system", "").lower()
+        raw_system = d.get("system", "").lower()
         system = SYSTEM_ALIASES.get(raw_system, raw_system)
         if system not in system_drills:
             continue
 
-        tags = [t.lower() for t in drill.get("tags", [])]
+        tags = [t.lower() for t in d.get("tags", [])]
         details = " ".join(
             [
-                drill.get("duration", ""),
-                drill.get("notes", ""),
-                drill.get("modality", ""),
-                drill.get("equipment_note", ""),
+                d.get("duration", ""),
+                d.get("notes", ""),
+                d.get("modality", ""),
+                d.get("equipment_note", ""),
             ]
         )
         if is_banned_drill(
-            drill.get("name", ""),
+            d.get("name", ""),
             tags,
             fight_format,
             details,
@@ -346,7 +377,15 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        drill_equipment = normalize_equipment_list(drill.get("equipment", []))
+        if (
+            fight_format == "boxing"
+            and phase.upper() == "TAPER"
+            and {"overhead", "rotational", "heavy_load"}.issubset(tags)
+            and not (shoulder_focus and fatigue == "low")
+        ):
+            continue
+
+        drill_equipment = normalize_equipment_list(d.get("equipment", []))
         if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
             continue
 
@@ -404,22 +443,29 @@ def generate_conditioning_block(flags):
             "final_score": round(total_score, 4),
         }
 
-        system_drills[system].append((drill, total_score, reasons))
+        system_drills[system].append((d, total_score, reasons))
 
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
     for drill in style_conditioning_bank:
-        tags = [t.lower() for t in drill.get("tags", [])]
+        d = drill.copy()
+        if fight_format == "boxing":
+            d["name"] = rename_map.get(d.get("name"), d.get("name"))
+            d["tags"] = [
+                "boxing" if t.lower() == "muay_thai" else t
+                for t in d.get("tags", [])
+            ]
+        tags = [t.lower() for t in d.get("tags", [])]
         details = " ".join(
             [
-                drill.get("duration", ""),
-                drill.get("notes", ""),
-                drill.get("modality", ""),
-                drill.get("equipment_note", ""),
+                d.get("duration", ""),
+                d.get("notes", ""),
+                d.get("modality", ""),
+                d.get("equipment_note", ""),
             ]
         )
         if is_banned_drill(
-            drill.get("name", ""),
+            d.get("name", ""),
             tags,
             fight_format,
             details,
@@ -429,10 +475,18 @@ def generate_conditioning_block(flags):
             continue
         if not target_style_tags.intersection(tags):
             continue
-        if phase.upper() not in drill.get("phases", []):
+        if phase.upper() not in d.get("phases", []):
             continue
 
-        raw_system = drill.get("system", "").lower()
+        if (
+            fight_format == "boxing"
+            and phase.upper() == "TAPER"
+            and {"overhead", "rotational", "heavy_load"}.issubset(tags)
+            and not (shoulder_focus and fatigue == "low")
+        ):
+            continue
+
+        raw_system = d.get("system", "").lower()
         system = SYSTEM_ALIASES.get(raw_system, raw_system)
         if system not in style_system_drills:
             continue
@@ -455,7 +509,7 @@ def generate_conditioning_block(flags):
             and not any(t in goal_tags or t in weak_tags for t in tags)
         ):
             continue
-        drill_equipment = normalize_equipment_list(drill.get("equipment", []))
+        drill_equipment = normalize_equipment_list(d.get("equipment", []))
         if drill_equipment and not set(drill_equipment).issubset(equipment_access_set):
             continue
         equip_bonus = 0.5 if drill_equipment else 0.0
@@ -494,10 +548,10 @@ def generate_conditioning_block(flags):
             "final_score": round(score, 4),
         }
 
-        style_system_drills[system].append((drill, score, reasons))
+        style_system_drills[system].append((d, score, reasons))
         for st in style_names:
             if st in tags:
-                style_drills_by_style[st][system].append((drill, score, reasons))
+                style_drills_by_style[st][system].append((d, score, reasons))
 
     for drills in system_drills.values():
         drills.sort(key=lambda x: x[1], reverse=True)
@@ -875,8 +929,6 @@ def generate_conditioning_block(flags):
             timing = d.get("timing") or d.get("duration") or "—"
             load = d.get("load") or d.get("intensity") or "—"
             equip_note = d.get("equipment_note") or d.get("equipment_notes")
-            if equip_note:
-                load = f"{load} ({equip_note})" if load != "—" else equip_note
 
             purpose = (
                 d.get("purpose")
@@ -890,6 +942,7 @@ def generate_conditioning_block(flags):
                 "system": system.upper(),
                 "name": name,
                 "load": load,
+                "equipment_note": equip_note,
                 "rest": rest,
                 "timing": timing,
                 "purpose": purpose,

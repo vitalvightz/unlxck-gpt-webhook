@@ -2,8 +2,8 @@
   {
     "name": "Concrete Hands Circuit",
     "equipment": [
-      "Battle Ropes",
-      "Punching Bag"
+      "battle_ropes",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -11,19 +11,19 @@
     "system": "glycolytic",
     "modality": "concurrent training",
     "duration": "30s max rope slams → 30s dirty boxing combos → x5 rounds",
-    "intensity": "95% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Ropes fatigue arms before punch output - mimics late-round flurries",
+    "notes": "Ropes fatigue arms before punch output - mimics late-round flurries (95% effort)",
     "equipment_note": "2\" ropes, heavy bag"
   },
   {
     "name": "Pavement Pounder",
     "equipment": [
-      "Sledgehammer",
-      "Tire"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -31,19 +31,19 @@
     "system": "ATP-PCr",
     "modality": "rotational annihilation",
     "duration": "10 L/R hammer strikes → 5 tire flips → x5 rounds",
-    "intensity": "Max power",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Transfers to hook power and mauling stamina",
+    "notes": "Transfers to hook power and mauling stamina (Max power)",
     "equipment_note": "12lb hammer, 500lb tire"
   },
   {
     "name": "Back-Alley Brawler",
     "equipment": [
-      "Sandbag",
-      "Bodyweight"
+      "bodyweight",
+      "sandbag"
     ],
     "phases": [
       "GPP",
@@ -52,19 +52,19 @@
     "system": "glycolytic",
     "modality": "strongman meets fight prep",
     "duration": "30s sandbag bear hug → 10 sprawls → x5 rounds",
-    "intensity": "Violent intent",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Simulates clinch control and defensive urgency",
+    "notes": "Simulates clinch control and defensive urgency (Violent intent)",
     "equipment_note": "70lb sandbag"
   },
   {
     "name": "Ding-Dong Roundhouse",
     "equipment": [
-      "Kettlebell",
-      "Bands"
+      "bands",
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -72,19 +72,19 @@
     "system": "ATP-PCr",
     "modality": "power endurance",
     "duration": "8 KB snatches → 10 band-resisted hooks → x5 rounds",
-    "intensity": "Explosive",
+    "intensity": "high",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Snatches = uppercut transfer, bands simulate fatigue",
+    "notes": "Snatches = uppercut transfer, bands simulate fatigue (Explosive)",
     "equipment_note": "24kg KB, monster bands"
   },
   {
     "name": "Phone Booth Killer",
     "equipment": [
-      "Trap Bar",
-      "Bodyweight"
+      "bodyweight",
+      "trap_bar"
     ],
     "phases": [
       "GPP"
@@ -92,38 +92,38 @@
     "system": "glycolytic",
     "modality": "infighting simulator",
     "duration": "5 trap bar jumps → 10 push-ups → x6 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Jumps = explosive entries, push-ups = clinch framing",
+    "notes": "Jumps = explosive entries, push-ups = clinch framing (85% effort)",
     "equipment_note": "Bodyweight jumps only if no trap bar"
   },
   {
     "name": "Brick Fist Protocol",
     "equipment": [
-      "Medicine Ball",
-      "Wall"
+      "medicine_ball",
+      "wall"
     ],
     "phases": [
       "SPP"
     ],
     "system": "ATP-PCr",
     "duration": "15 max-effort chest passes → 5 burpees → x6 rounds",
-    "intensity": "100% power",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Develops fight-ending straight right power",
+    "notes": "Develops fight-ending straight right power (100% power)",
     "equipment_note": "20lb med ball, concrete wall"
   },
   {
     "name": "Gutter War Special",
     "equipment": [
-      "Sled",
-      "Dumbbells"
+      "dumbbells",
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -131,18 +131,18 @@
     "system": "glycolytic",
     "modality": "suffering",
     "duration": "20m sled push → 10 DB thruster punches → x5 rounds",
-    "intensity": "Near-vomit",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Pushes = ring-cutting, thrusters = combos under fatigue",
+    "notes": "Pushes = ring-cutting, thrusters = combos under fatigue (Near-vomit)",
     "equipment_note": "Bodyweight sled load, 25lb DBs"
   },
   {
     "name": "Last Call Circuit",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -150,18 +150,18 @@
     "system": "glycolytic",
     "modality": "prison rules",
     "duration": "10 burpees → 10 sprawls → 10 jumping knees → x5 rounds",
-    "intensity": "Survival mode",
+    "intensity": "high",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Pure desperation conditioning for championship rounds",
+    "notes": "Pure desperation conditioning for championship rounds (Survival mode)",
     "equipment_note": "Concrete floor recommended"
   },
   {
     "name": "Iron Chin Builder",
     "equipment": [
-      "Barbell"
+      "barbell"
     ],
     "phases": [
       "GPP"
@@ -169,19 +169,19 @@
     "system": "aerobic",
     "modality": "neck torture",
     "duration": "10min continuous: 5 neck bridges → 5 plate neck rotations",
-    "intensity": "Steady burn",
+    "intensity": "moderate",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Because getting hit is inevitable",
+    "notes": "Because getting hit is inevitable (Steady burn)",
     "equipment_note": "25lb plate for rotations"
   },
   {
     "name": "Corner Beast Mode",
     "equipment": [
-      "Punching Bag",
-      "Bodyweight"
+      "bodyweight",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -189,19 +189,19 @@
     "system": "glycolytic",
     "modality": "punishment",
     "duration": "30s max hooks → 10 push-ups → 30s uppercuts → x5 rounds",
-    "intensity": "Fight night pace",
+    "intensity": "high",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Simulates being against ropes and firing back",
+    "notes": "Simulates being against ropes and firing back (Fight night pace)",
     "equipment_note": "Heavy bag mandatory"
   },
   {
     "name": "Blackout Blitz",
     "equipment": [
-      "Bands",
-      "Bodyweight"
+      "bands",
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -209,19 +209,19 @@
     "system": "ATP-PCr",
     "modality": "neurological overload",
     "duration": "10 band-resisted sprints → 5 clap push-ups → x6 rounds",
-    "intensity": "Max explosion",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Trains fight-starting explosiveness",
+    "notes": "Trains fight-starting explosiveness (Max explosion)",
     "equipment_note": "Heavy bands anchored low"
   },
   {
     "name": "Smashmouth Shovel Hook",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -229,19 +229,19 @@
     "system": "ATP-PCr",
     "modality": "destruction",
     "duration": "20 alternating hammer strikes → 5 tire jumps → x5 rounds",
-    "intensity": "Kill switch",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Rotational power meets vertical explosion",
+    "notes": "Rotational power meets vertical explosion (Kill switch)",
     "equipment_note": "10lb hammer, 24\" tire"
   },
   {
     "name": "Backfoot Butcher",
     "equipment": [
-      "Kettlebell",
-      "Bodyweight"
+      "bodyweight",
+      "kettlebell"
     ],
     "phases": [
       "GPP"
@@ -249,19 +249,19 @@
     "system": "glycolytic",
     "modality": "retreat punishment",
     "duration": "20 KB swings → 10 backward lunges → x6 rounds",
-    "intensity": "Controlled rage",
+    "intensity": "moderate",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Trains power generation while moving backward",
+    "notes": "Trains power generation while moving backward (Controlled rage)",
     "equipment_note": "32kg KB for monsters"
   },
   {
     "name": "Meat Locker",
     "equipment": [
-      "Sandbag",
-      "Bodyweight"
+      "bodyweight",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -269,19 +269,19 @@
     "system": "glycolytic",
     "modality": "clinch hell",
     "duration": "30s sandbag carry → 10 knees → 5 sprawls → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Pure infighting conditioning",
+    "notes": "Pure infighting conditioning (90% effort)",
     "equipment_note": "100lb sandbag for pros"
   },
   {
     "name": "Junkyard Dog",
     "equipment": [
-      "Trap Bar",
-      "Bodyweight"
+      "bodyweight",
+      "trap_bar"
     ],
     "phases": [
       "GPP"
@@ -289,18 +289,18 @@
     "system": "aerobic",
     "modality": "relentless pressure",
     "duration": "10 trap bar deadlifts → 20m farmer walk → x6 rounds",
-    "intensity": "75% 1RM",
+    "intensity": "moderate",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Grip endurance for mauling",
+    "notes": "Grip endurance for mauling (75% 1RM)",
     "equipment_note": "Straps allowed"
   },
   {
     "name": "Fight Night Finisher",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -308,19 +308,19 @@
     "system": "glycolytic",
     "modality": "pure suffering",
     "duration": "30s sprint → 10 burpees → 30s shadowboxing → x5 rounds",
-    "intensity": "Near death",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "When the lights are bright and tank is empty",
+    "notes": "When the lights are bright and tank is empty (Near death)",
     "equipment_note": "Outdoor hill sprints ideal"
   },
   {
     "name": "Dive Bar Duelist",
     "equipment": [
-      "Dumbbells",
-      "Bodyweight"
+      "bodyweight",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -328,19 +328,19 @@
     "system": "ATP-PCr",
     "modality": "dirty boxing",
     "duration": "10 DB uppercuts → 10 clinch knees → x6 rounds",
-    "intensity": "90% power",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Short-range weapon development",
+    "notes": "Short-range weapon development (90% power)",
     "equipment_note": "25lb DBs minimum"
   },
   {
     "name": "Cement Shoes",
     "equipment": [
-      "Sled",
-      "Bodyweight"
+      "bodyweight",
+      "sled"
     ],
     "phases": [
       "GPP"
@@ -348,19 +348,19 @@
     "system": "aerobic",
     "modality": "footwork torture",
     "duration": "20m sled drag (backward) → 10 defensive slips → x6 rounds",
-    "intensity": "75% effort",
+    "intensity": "moderate",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Trains defensive footwork under fatigue",
+    "notes": "Trains defensive footwork under fatigue (75% effort)",
     "equipment_note": "Bodyweight sled load"
   },
   {
     "name": "Liver Hunter",
     "equipment": [
-      "Medicine Ball",
-      "Bodyweight"
+      "bodyweight",
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -368,19 +368,19 @@
     "system": "ATP-PCr",
     "modality": "body shot specialist",
     "duration": "15 rotational slams → 10 crunch punches → x6 rounds",
-    "intensity": "Max torsion",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Develops rib-breaking power",
+    "notes": "Develops rib-breaking power (Max torsion)",
     "equipment_note": "16lb med ball"
   },
   {
     "name": "Alleyway Ambush",
     "equipment": [
-      "Bands",
-      "Bodyweight"
+      "bands",
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -388,19 +388,19 @@
     "system": "glycolytic",
     "modality": "surprise attack",
     "duration": "5 band-resisted sprints → 10 sprawls → x8 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Trains explosive entries and defensive reactions",
+    "notes": "Trains explosive entries and defensive reactions (90% effort)",
     "equipment_note": "Bands anchored at waist height"
   },
   {
     "name": "Knuckle Dragger",
     "equipment": [
-      "Barbell",
-      "Bodyweight"
+      "barbell",
+      "bodyweight"
     ],
     "phases": [
       "GPP"
@@ -408,19 +408,19 @@
     "system": "aerobic",
     "modality": "old school",
     "duration": "10min continuous: 5 power cleans → 5 push-ups",
-    "intensity": "60% 1RM",
+    "intensity": "zone 2",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Golden era boxing conditioning",
+    "notes": "Golden era boxing conditioning (60% 1RM)",
     "equipment_note": "95lb barbell"
   },
   {
     "name": "Bouncer's Revenge",
     "equipment": [
-      "Kettlebell",
-      "Bodyweight"
+      "bodyweight",
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -428,18 +428,18 @@
     "system": "glycolytic",
     "modality": "doorway defense",
     "duration": "10 KB swings → 5 wall sit punches → x6 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Trains punching from compromised positions",
+    "notes": "Trains punching from compromised positions (90% effort)",
     "equipment_note": "24kg KB"
   },
   {
     "name": "Rooftop Rumble",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -447,18 +447,18 @@
     "system": "glycolytic",
     "modality": "no escape",
     "duration": "30s sprint → 10 push presses (imaginary opponent) → x8 rounds",
-    "intensity": "100% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "For when the ring feels small",
+    "notes": "For when the ring feels small (100% effort)",
     "equipment_note": "Outdoor stairs ideal"
   },
   {
     "name": "Glass Jaw Redemption",
     "equipment": [
-      "Neck Harness"
+      "neck_harness"
     ],
     "phases": [
       "GPP"
@@ -466,19 +466,19 @@
     "system": "aerobic",
     "modality": "prehab",
     "duration": "15min continuous: 5 neck nods → 5 neck rotations",
-    "intensity": "Steady",
+    "intensity": "moderate",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "Because getting hit happens",
+    "notes": "Because getting hit happens (Steady)",
     "equipment_note": "10lb plate for resistance"
   },
   {
     "name": "Parking Lot Punisher",
     "equipment": [
-      "Tire",
-      "Bodyweight"
+      "bodyweight",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -486,19 +486,19 @@
     "system": "glycolytic",
     "modality": "asphalt conditioning",
     "duration": "5 tire flips → 10 push-ups → 5 burpees → x6 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "boxing"
     ],
-    "notes": "No gym? No problem.",
+    "notes": "No gym? No problem. (90% effort)",
     "equipment_note": "300lb+ tire"
   },
   {
     "name": "Cage Mauler",
     "equipment": [
-      "Sled",
-      "Kettlebell"
+      "kettlebell",
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -506,19 +506,19 @@
     "system": "glycolytic",
     "modality": "cage wrestler",
     "duration": "20m sled push → 10 KB swings → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Sled mimics pinning opponents, swings for hip power in dirty boxing",
+    "notes": "Sled mimics pinning opponents, swings for hip power in dirty boxing (90% effort)",
     "equipment_note": "Bodyweight sled load, 24kg KB"
   },
   {
     "name": "Ditch Digger",
     "equipment": [
-      "Sledgehammer",
-      "Tire"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "GPP"
@@ -526,18 +526,18 @@
     "system": "glycolytic",
     "modality": "rotational destruction",
     "duration": "30s alternating hammer strikes → 30s tire flips → x5 rounds",
-    "intensity": "Max effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Transfers to overhand rights and clinch breaks",
+    "notes": "Transfers to overhand rights and clinch breaks (Max effort)",
     "equipment_note": "12lb hammer, 400lb+ tire"
   },
   {
     "name": "Back Alley Clinch",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -545,18 +545,18 @@
     "system": "glycolytic",
     "modality": "dirty grappler",
     "duration": "30s bear hug carry → 10 knees → x6 rounds",
-    "intensity": "Violent intent",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Simulates head control in phone booth fights",
+    "notes": "Simulates head control in phone booth fights (Violent intent)",
     "equipment_note": "70lb sandbag, grind face into bag"
   },
   {
     "name": "Piledriver Circuit",
     "equipment": [
-      "Trap Bar"
+      "trap_bar"
     ],
     "phases": [
       "GPP"
@@ -564,19 +564,19 @@
     "system": "ATP-PCr",
     "modality": "takedown power",
     "duration": "5 explosive deadlifts → 5 sprawls → x6 rounds",
-    "intensity": "80% 1RM",
+    "intensity": "high",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Deadlifts mimic double-leg drive",
+    "notes": "Deadlifts mimic double-leg drive (80% 1RM)",
     "equipment_note": "Straps allowed for grip preservation"
   },
   {
     "name": "Concrete Clinch",
     "equipment": [
-      "Kettlebell",
-      "Wall"
+      "kettlebell",
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -584,19 +584,19 @@
     "system": "glycolytic",
     "modality": "wall fighting",
     "duration": "20 KB cleans → 10 wall knee strikes → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Cleans simulate uppercuts, wall knees for realism",
+    "notes": "Cleans simulate uppercuts, wall knees for realism (85% effort)",
     "equipment_note": "24kg KB, use padded wall if available"
   },
   {
     "name": "Junkyard Judo",
     "equipment": [
-      "Sandbag",
-      "Tire"
+      "sandbag",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -604,18 +604,18 @@
     "system": "glycolytic",
     "modality": "throws under fatigue",
     "duration": "5 bag tosses → 5 tire flips → x6 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Trains explosive hips for suplexes/body locks",
+    "notes": "Trains explosive hips for suplexes/body locks (90% effort)",
     "equipment_note": "50-70lb sandbag"
   },
   {
     "name": "Thug Plank",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "GPP"
@@ -623,19 +623,19 @@
     "system": "glycolytic",
     "modality": "ground survival",
     "duration": "30s forearm plank → 5 technical stand-ups → x8 rounds",
-    "intensity": "Burnout",
+    "intensity": "high",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "For when you're mounted and need to bench press opponent off",
+    "notes": "For when you're mounted and need to bench press opponent off (Burnout)",
     "equipment_note": "Add weight vest for pros"
   },
   {
     "name": "Barroom Brawl",
     "equipment": [
-      "Dumbbells",
-      "Kettlebell"
+      "dumbbells",
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -643,19 +643,19 @@
     "system": "ATP-PCr",
     "modality": "chaos conditioning",
     "duration": "10 DB hooks → 10 KB snatches → x6 rounds",
-    "intensity": "Max power",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Hooks transfer to elbows, snatches for scrambles",
+    "notes": "Hooks transfer to elbows, snatches for scrambles (Max power)",
     "equipment_note": "25lb DBs, 20kg KB"
   },
   {
     "name": "Prison Rules",
     "equipment": [
-      "Medicine Ball",
-      "Wall"
+      "medicine_ball",
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -663,19 +663,19 @@
     "system": "glycolytic",
     "modality": "striking from clinch",
     "duration": "15 slam ball → 10 wall push-offs → x6 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Simulates framing and striking in confined spaces",
+    "notes": "Simulates framing and striking in confined spaces (90% effort)",
     "equipment_note": "20lb med ball, concrete wall"
   },
   {
     "name": "Gutter Fight Finisher",
     "equipment": [
-      "Sled",
-      "Sandbag"
+      "sandbag",
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -683,19 +683,19 @@
     "system": "glycolytic",
     "modality": "last-man-standing",
     "duration": "20m sled drag → 5 bag slams → x5 rounds",
-    "intensity": "Near-vomit",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Drags mimic pulling opponent into guard, slams for GNP",
+    "notes": "Drags mimic pulling opponent into guard, slams for GNP (Near-vomit)",
     "equipment_note": "Bodyweight sled, 70lb bag"
   },
   {
     "name": "Meat Grinder",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "GPP"
@@ -703,19 +703,19 @@
     "system": "glycolytic",
     "modality": "full-body violence",
     "duration": "10 hammer strikes → 5 tire jumps → x8 rounds",
-    "intensity": "Kill switch",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Strikes transfer to head clubbing, jumps for guard passes",
+    "notes": "Strikes transfer to head clubbing, jumps for guard passes (Kill switch)",
     "equipment_note": "10lb hammer, 24\" tire"
   },
   {
     "name": "Backfist Brawler",
     "equipment": [
-      "Bands",
-      "Dumbbells"
+      "bands",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -723,18 +723,18 @@
     "system": "ATP-PCr",
     "modality": "wild striking",
     "duration": "20 band-resisted spins → 10 DB backfists → x5 rounds",
-    "intensity": "Max chaos",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Trains loopy strikes from broken clinch",
+    "notes": "Trains loopy strikes from broken clinch (Max chaos)",
     "equipment_note": "Heavy bands, 10lb DBs"
   },
   {
     "name": "Alleyway Sprawl",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -742,19 +742,19 @@
     "system": "glycolytic",
     "modality": "takedown defense",
     "duration": "10 sprawls → 10 knees → x8 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "For defending shots against walls",
+    "notes": "For defending shots against walls (90% effort)",
     "equipment_note": "Concrete floor recommended"
   },
   {
     "name": "Dogfight Drill",
     "equipment": [
-      "Kettlebell",
-      "Sandbag"
+      "kettlebell",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -762,18 +762,18 @@
     "system": "glycolytic",
     "modality": "ground transitions",
     "duration": "10 KB swings → 5 bag-to-shoulder → x6 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Swings for hip pop, bag lifts for scrambling",
+    "notes": "Swings for hip pop, bag lifts for scrambling (85% effort)",
     "equipment_note": "24kg KB, 70lb sandbag"
   },
   {
     "name": "Headbutt Conditioning",
     "equipment": [
-      "Neck Harness"
+      "neck_harness"
     ],
     "phases": [
       "GPP"
@@ -781,19 +781,19 @@
     "system": "aerobic",
     "modality": "forbidden weapons",
     "duration": "15min: 5 neck bridges → 5 plate nods",
-    "intensity": "Steady burn",
+    "intensity": "moderate",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Because sometimes rules go out the window",
+    "notes": "Because sometimes rules go out the window (Steady burn)",
     "equipment_note": "25lb plate for resistance"
   },
   {
     "name": "Grab & Stab",
     "equipment": [
-      "Dumbbells",
-      "Medicine Ball"
+      "dumbbells",
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -801,19 +801,19 @@
     "system": "glycolytic",
     "modality": "clinch striking",
     "duration": "10 DB uppercuts → 5 med ball slams → x6 rounds",
-    "intensity": "90% power",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Uppercuts transfer to short elbows, slams for dirty TD setups",
+    "notes": "Uppercuts transfer to short elbows, slams for dirty TD setups (90% power)",
     "equipment_note": "20lb DBs, 16lb med ball"
   },
   {
     "name": "Curb Stomper",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -821,19 +821,19 @@
     "system": "ATP-PCr",
     "modality": "ground striking",
     "duration": "10 hammer strikes → 5 sprawl jumps → x6 rounds",
-    "intensity": "Max violence",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Strikes mimic hammerfists, jumps for posture recovery",
+    "notes": "Strikes mimic hammerfists, jumps for posture recovery (Max violence)",
     "equipment_note": "8lb hammer, 24\" tire"
   },
   {
     "name": "Last Man Standing",
     "equipment": [
-      "Sandbag",
-      "Kettlebell"
+      "kettlebell",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -841,18 +841,18 @@
     "system": "glycolytic",
     "modality": "survival conditioning",
     "duration": "30s bag carry → 10 KB snatches → x5 rounds",
-    "intensity": "95% effort",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "For when the fight goes longer than expected",
+    "notes": "For when the fight goes longer than expected (95% effort)",
     "equipment_note": "100lb sandbag, 24kg KB"
   },
   {
     "name": "Backyard Bouncer",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -860,18 +860,18 @@
     "system": "glycolytic",
     "modality": "no-rules endurance",
     "duration": "30s sprint → 10 sprawls → 10 knees → x5 rounds",
-    "intensity": "Near-death",
+    "intensity": "max",
     "tags": [
       "brawler",
       "mma"
     ],
-    "notes": "Simulates multiple attackers/street scenarios",
+    "notes": "Simulates multiple attackers/street scenarios (Near-death)",
     "equipment_note": "Grass or uneven terrain ideal"
   },
   {
     "name": "Thai Clinch Crusher",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -879,19 +879,19 @@
     "system": "glycolytic",
     "modality": "isometric endurance",
     "duration": "30s clinch hold → 10 knees → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "kickboxing"
     ],
-    "notes": "Simulates maintaining plumb position while striking. Alternate between single collar and double collar ties.",
+    "notes": "Simulates maintaining plumb position while striking. Alternate between single collar and double collar ties. (90% effort)",
     "equipment_note": "50-70lb sandbag"
   },
   {
     "name": "Dirty Boxing Marathon",
     "equipment": [
-      "Medicine Ball"
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -899,20 +899,20 @@
     "system": "glycolytic",
     "modality": "rotational endurance",
     "duration": "20 med ball slams → 10 short uppercuts → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "boxing",
       "mma"
     ],
-    "notes": "Develops power for close-quarters body shots and uppercuts against the ropes/cage.",
+    "notes": "Develops power for close-quarters body shots and uppercuts against the ropes/cage. (85% effort)",
     "equipment_note": "6-10kg med ball"
   },
   {
     "name": "Cage Clinch Gauntlet",
     "equipment": [
-      "Bands",
-      "Bodyweight"
+      "bands",
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -920,18 +920,18 @@
     "system": "glycolytic",
     "modality": "resisted pressure",
     "duration": "30s band-resisted forward pressure → 10 cage knees → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "mma"
     ],
-    "notes": "Trains cutting off the octagon against resistance. Use actual cage wall if available.",
+    "notes": "Trains cutting off the octagon against resistance. Use actual cage wall if available. (90% effort)",
     "equipment_note": "Heavy bands anchored at waist height"
   },
   {
     "name": "Plumb Power Circuit",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -939,19 +939,19 @@
     "system": "glycolytic",
     "modality": "dynamic endurance",
     "duration": "20 KB swings → 10 plumb knees → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "kickboxing"
     ],
-    "notes": "Swings mimic pull-down mechanics for knee strikes. Maintain upright Muay Thai posture.",
+    "notes": "Swings mimic pull-down mechanics for knee strikes. Maintain upright Muay Thai posture. (85% effort)",
     "equipment_note": "16-24kg KB"
   },
   {
     "name": "Greco-Roman Grinder",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -959,19 +959,19 @@
     "system": "glycolytic",
     "modality": "upper body clinch",
     "duration": "30s pummeling drills → 10 bodylock lifts → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "mma",
       "boxing"
     ],
-    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch.",
+    "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch. (85% effort)",
     "equipment_note": "50-70lb sandbag"
   },
   {
     "name": "Rope-A-Dope Clinch",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -979,18 +979,18 @@
     "system": "glycolytic",
     "modality": "defensive endurance",
     "duration": "30s rope clinch (simulated) → 10 short hooks → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "boxing"
     ],
-    "notes": "Trains punching from Philly shell clinch position against ropes.",
+    "notes": "Trains punching from Philly shell clinch position against ropes. (90% effort)",
     "equipment_note": "Use corner pads if available"
   },
   {
     "name": "Knee Executioner",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -998,20 +998,20 @@
     "system": "glycolytic",
     "modality": "striking endurance",
     "duration": "30s max knees → 10 sprawls → x5 rounds",
-    "intensity": "95% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "kickboxing",
       "mma"
     ],
-    "notes": "Simulates finishing a hurt opponent against the ropes/cage. Alternate between straight and diagonal knees.",
+    "notes": "Simulates finishing a hurt opponent against the ropes/cage. Alternate between straight and diagonal knees. (95% effort)",
     "equipment_note": "Use Thai pads if available"
   },
   {
     "name": "Wall War Protocol",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1019,19 +1019,19 @@
     "system": "glycolytic",
     "modality": "cage simulation",
     "duration": "30s wall pressure → 10 short elbows → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "mma",
       "muay_thai"
     ],
-    "notes": "Trains cutting off space and striking in confined areas. Focus on framing and head position.",
+    "notes": "Trains cutting off space and striking in confined areas. Focus on framing and head position. (90% effort)",
     "equipment_note": "Use actual wall or cage"
   },
   {
     "name": "Judo Clinch Transition",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1039,19 +1039,19 @@
     "system": "glycolytic",
     "modality": "takedown defense",
     "duration": "30s grip fighting → 5 hip toss counters → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "mma"
     ],
-    "notes": "Develops defensive reactions against judo-style clinch takedowns.",
+    "notes": "Develops defensive reactions against judo-style clinch takedowns. (85% effort)",
     "equipment_note": "Partner recommended"
   },
   {
     "name": "Muay Thai Matrix",
     "equipment": [
-      "Bands",
-      "Bodyweight"
+      "bands",
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1059,19 +1059,19 @@
     "system": "glycolytic",
     "modality": "resisted knees",
     "duration": "20 band-resisted knees → 10 switch knees → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "kickboxing"
     ],
-    "notes": "Bands increase hip flexor endurance for late-round knees. Focus on full hip extension.",
+    "notes": "Bands increase hip flexor endurance for late-round knees. Focus on full hip extension. (90% effort)",
     "equipment_note": "Bands anchored behind at ankle height"
   },
   {
     "name": "Boxer's Clinch Control",
     "equipment": [
-      "Neck Harness"
+      "neck_harness"
     ],
     "phases": [
       "GPP"
@@ -1079,18 +1079,18 @@
     "system": "aerobic",
     "modality": "neck endurance",
     "duration": "15min continuous: 30s forward resistance → 30s lateral → 30s rear",
-    "intensity": "70% effort",
+    "intensity": "moderate",
     "tags": [
       "clinch_fighter",
       "boxing"
     ],
-    "notes": "Builds neck strength for head control in dirty boxing exchanges.",
+    "notes": "Builds neck strength for head control in dirty boxing exchanges. (70% effort)",
     "equipment_note": "10-15lb plate"
   },
   {
     "name": "Smesh Prep Circuit",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -1098,18 +1098,18 @@
     "system": "glycolytic",
     "modality": "power endurance",
     "duration": "10 KB snatches → 10 sprawls → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "mma"
     ],
-    "notes": "Snatches mimic explosive head control adjustments for cage wrestler.",
+    "notes": "Snatches mimic explosive head control adjustments for cage wrestler. (90% effort)",
     "equipment_note": "16-24kg KB"
   },
   {
     "name": "Dutch Clinch Drill",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1117,19 +1117,19 @@
     "system": "glycolytic",
     "modality": "combo endurance",
     "duration": "30s clinch knees → 30s short punches → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "kickboxing",
       "muay_thai"
     ],
-    "notes": "Develops Dutch-style combination striking from the clinch.",
+    "notes": "Develops Dutch-style combination striking from the clinch. (90% effort)",
     "equipment_note": "Thai pads or heavy bag ideal"
   },
   {
     "name": "Cage Crusher",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -1137,18 +1137,18 @@
     "system": "glycolytic",
     "modality": "forward pressure",
     "duration": "20m sled push → 10 cage knees → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "mma"
     ],
-    "notes": "Pushing mimics driving opponent against cage. Maintain fight posture.",
+    "notes": "Pushing mimics driving opponent against cage. Maintain fight posture. (85% effort)",
     "equipment_note": "Bodyweight load on sled"
   },
   {
     "name": "Plumb Power Rotations",
     "equipment": [
-      "Medicine Ball"
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -1156,19 +1156,19 @@
     "system": "ATP-PCr",
     "modality": "rotational power",
     "duration": "15 rotational throws → 10 knees → x5 rounds",
-    "intensity": "Max power",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "kickboxing"
     ],
-    "notes": "Develops explosive power for breaking posture in Thai clinch.",
+    "notes": "Develops explosive power for breaking posture in Thai clinch. (Max power)",
     "equipment_note": "6-10kg med ball"
   },
   {
     "name": "Clinch Sprawl Hell",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1176,19 +1176,19 @@
     "system": "glycolytic",
     "modality": "defensive transitions",
     "duration": "30s clinch → 5 sprawls → x8 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "mma",
       "boxing"
     ],
-    "notes": "Trains defensive reactions when clinch breaks to prevent takedowns.",
+    "notes": "Trains defensive reactions when clinch breaks to prevent takedowns. (90% effort)",
     "equipment_note": "Partner recommended but can shadow"
   },
   {
     "name": "Neck Tie Domination",
     "equipment": [
-      "Neck Harness"
+      "neck_harness"
     ],
     "phases": [
       "GPP"
@@ -1196,20 +1196,20 @@
     "system": "aerobic",
     "modality": "isometric endurance",
     "duration": "15min continuous: 30s forward resistance → 30s lateral → 30s rear",
-    "intensity": "70% effort",
+    "intensity": "moderate",
     "tags": [
       "clinch_fighter",
       "boxing",
       "muay_thai",
       "mma"
     ],
-    "notes": "Universal neck strengthening for all clinch styles.",
+    "notes": "Universal neck strengthening for all clinch styles. (70% effort)",
     "equipment_note": "10-15lb plate"
   },
   {
     "name": "Kill Mode Knees",
     "equipment": [
-      "Bands"
+      "bands"
     ],
     "phases": [
       "SPP"
@@ -1217,20 +1217,20 @@
     "system": "glycolytic",
     "modality": "resisted strikes",
     "duration": "20 band-resisted knees → 10 switch knees → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "kickboxing",
       "mma"
     ],
-    "notes": "Bands increase hip flexor endurance for all combat sports knees.",
+    "notes": "Bands increase hip flexor endurance for all combat sports knees. (90% effort)",
     "equipment_note": "Bands anchored behind at ankle height"
   },
   {
     "name": "Clinch Control 3.0",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -1238,20 +1238,20 @@
     "system": "glycolytic",
     "modality": "loaded endurance",
     "duration": "30s sandbag carry → 10 knees → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "mma",
       "boxing",
       "muay_thai"
     ],
-    "notes": "Universal drill for controlling opponent while striking across all sports.",
+    "notes": "Universal drill for controlling opponent while striking across all sports. (85% effort)",
     "equipment_note": "50-70lb sandbag"
   },
   {
     "name": "Elbow Alley",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1259,19 +1259,19 @@
     "system": "glycolytic",
     "modality": "short-range power",
     "duration": "30s elbow combinations → 10 clinch knees → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "mma"
     ],
-    "notes": "Develops devastating elbow strikes from clinch positions.",
+    "notes": "Develops devastating elbow strikes from clinch positions. (90% effort)",
     "equipment_note": "Use elbow pads on heavy bag"
   },
   {
     "name": "Collar Tie Counter",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1279,19 +1279,19 @@
     "system": "glycolytic",
     "modality": "defensive striking",
     "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "boxing",
       "mma"
     ],
-    "notes": "Trains punching off defensive head control.",
+    "notes": "Trains punching off defensive head control. (85% effort)",
     "equipment_note": "Partner recommended"
   },
   {
     "name": "Clinch Gas Tank",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1299,20 +1299,20 @@
     "system": "glycolytic",
     "modality": "pure endurance",
     "duration": "5min continuous: clinch pummeling → knees → short punches",
-    "intensity": "80% effort",
+    "intensity": "high",
     "tags": [
       "clinch_fighter",
       "mma",
       "muay_thai",
       "boxing"
     ],
-    "notes": "Championship round simulation for all clinch styles.",
+    "notes": "Championship round simulation for all clinch styles. (80% effort)",
     "equipment_note": "Partner or heavy bag"
   },
   {
     "name": "Whizzer War",
     "equipment": [
-      "Bands"
+      "bands"
     ],
     "phases": [
       "SPP"
@@ -1320,19 +1320,19 @@
     "system": "glycolytic",
     "modality": "defensive endurance",
     "duration": "30s band-resisted whizzers → 5 sprawls → x5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "mma",
       "wrestler"
     ],
-    "notes": "Develops late-round takedown defense from overhook positions.",
+    "notes": "Develops late-round takedown defense from overhook positions. (90% effort)",
     "equipment_note": "Bands anchored at shoulder height"
   },
   {
     "name": "Clinch Finisher",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -1340,19 +1340,19 @@
     "system": "ATP-PCr",
     "modality": "max power",
     "duration": "10 explosive knees → 5 power elbows → x5 rounds",
-    "intensity": "100% effort",
+    "intensity": "max",
     "tags": [
       "clinch_fighter",
       "muay_thai",
       "mma"
     ],
-    "notes": "Develops fight-ending power from clinch positions.",
+    "notes": "Develops fight-ending power from clinch positions. (100% effort)",
     "equipment_note": "Thai pads or heavy bag"
   },
   {
     "name": "Pull Counter Matrix",
     "equipment": [
-      "Double-end bag"
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -1360,19 +1360,19 @@
     "system": "ATP-PCr",
     "modality": "precision countering",
     "duration": "3min rounds, 1min rest x 5",
-    "intensity": "90% accuracy",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Focus on pulling straight rights after slipping jabs",
+    "notes": "Focus on pulling straight rights after slipping jabs (90% accuracy)",
     "equipment_note": "Adjust bag tension for realistic rebound"
   },
   {
     "name": "Check Hook Crucible",
     "equipment": [
-      "Punching bag",
-      "Bands"
+      "bands",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1380,19 +1380,19 @@
     "system": "glycolytic",
     "modality": "pivot counters",
     "duration": "30s band-resisted pivots → 30s check hooks, 6 rounds",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "Bands force explosive hip rotation on pivots",
+    "notes": "Bands force explosive hip rotation on pivots (85% power)",
     "equipment_note": "Anchor bands at waist height"
   },
   {
     "name": "Slip & Rip Protocol",
     "equipment": [
-      "Reflex ball"
+      "reflex_ball"
     ],
     "phases": [
       "SPP"
@@ -1400,19 +1400,19 @@
     "system": "ATP-PCr",
     "modality": "reaction countering",
     "duration": "3min continuous, 1min rest x 4",
-    "intensity": "Max reaction speed",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Slip incoming ball → immediate cross counter",
+    "notes": "Slip incoming ball → immediate cross counter (Max reaction speed)",
     "equipment_note": "Use head-mounted version"
   },
   {
     "name": "Philly Shell Torture",
     "equipment": [
-      "Bands",
-      "Dumbbells"
+      "bands",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -1420,18 +1420,18 @@
     "system": "glycolytic",
     "modality": "shoulder endurance",
     "duration": "1min band-resisted shoulder rolls, 30s counters x 6",
-    "intensity": "80% effort",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Maintain defensive posture while countering",
+    "notes": "Maintain defensive posture while countering (80% effort)",
     "equipment_note": "5lb DBs in lead hand"
   },
   {
     "name": "Counter Sniper Drill",
     "equipment": [
-      "Partner mitts"
+      "partner_mitts"
     ],
     "phases": [
       "SPP"
@@ -1439,19 +1439,19 @@
     "system": "ATP-PCr",
     "modality": "timing development",
     "duration": "3min rounds: catch-and-shoot only, 1min rest x 5",
-    "intensity": "Precision focus",
+    "intensity": "moderate",
     "tags": [
       "counter_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "No initiating - only counter strikes allowed",
+    "notes": "No initiating - only counter strikes allowed (Precision focus)",
     "equipment_note": "Coach varies attack angles"
   },
   {
     "name": "Roll Under Hell",
     "equipment": [
-      "Medicine ball"
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -1459,19 +1459,19 @@
     "system": "glycolytic",
     "modality": "duck counters",
     "duration": "20 roll-under uppercuts, 10 body shots x 5 rounds",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Simulate rolling under hooks to counter",
+    "notes": "Simulate rolling under hooks to counter (85% power)",
     "equipment_note": "10-15lb med ball"
   },
   {
     "name": "Interception Drill",
     "equipment": [
-      "Bands",
-      "Punching bag"
+      "bands",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1479,19 +1479,19 @@
     "system": "glycolytic",
     "modality": "stop-hit training",
     "duration": "3min rounds: intercepting jabs, 1min rest x 4",
-    "intensity": "90% timing focus",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "Band resistance builds explosive hand speed",
+    "notes": "Band resistance builds explosive hand speed (90% timing focus)",
     "equipment_note": "Light bands on wrists"
   },
   {
     "name": "Counter Kick Matrix",
     "equipment": [
-      "Thai pads"
+      "thai_pads"
     ],
     "phases": [
       "SPP"
@@ -1499,19 +1499,19 @@
     "system": "ATP-PCr",
     "modality": "leg kick counters",
     "duration": "3min rounds: check → return kick, 1min rest x 5",
-    "intensity": "Technical precision",
+    "intensity": "moderate",
     "tags": [
       "counter_striker",
       "kickboxing",
       "mma"
     ],
-    "notes": "Focus on balance during check-counter transitions",
+    "notes": "Focus on balance during check-counter transitions (Technical precision)",
     "equipment_note": "Pad holder varies kick angles"
   },
   {
     "name": "Pull-Back Sniper",
     "equipment": [
-      "Double-end bag"
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -1519,18 +1519,18 @@
     "system": "glycolytic",
     "modality": "lean-back counters",
     "duration": "50 pull-back straights, 5 rounds",
-    "intensity": "90% accuracy",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Mayweather-style pull counter emphasis",
+    "notes": "Mayweather-style pull counter emphasis (90% accuracy)",
     "equipment_note": "Higher bag tension"
   },
   {
     "name": "Clinch Counter Chaos",
     "equipment": [
-      "Wall"
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -1538,18 +1538,18 @@
     "system": "glycolytic",
     "modality": "framing counters",
     "duration": "30s frame-and-strike, 30s rest x 8",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "mma"
     ],
-    "notes": "Wall simulates cage/rope pressure",
+    "notes": "Wall simulates cage/rope pressure (85% effort)",
     "equipment_note": "Focus on underhook counters"
   },
   {
     "name": "Reaction Overload",
     "equipment": [
-      "Reaction balls"
+      "reaction_balls"
     ],
     "phases": [
       "SPP"
@@ -1557,20 +1557,20 @@
     "system": "ATP-PCr",
     "modality": "neurological training",
     "duration": "3min random ball toss, 1min rest x 4",
-    "intensity": "Max reaction speed",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing",
       "mma"
     ],
-    "notes": "Partner throws from multiple angles",
+    "notes": "Partner throws from multiple angles (Max reaction speed)",
     "equipment_note": "Use 3 different sized balls"
   },
   {
     "name": "Counter Puncher's Gauntlet",
     "equipment": [
-      "Punching bag",
-      "Bands"
+      "bands",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1578,19 +1578,19 @@
     "system": "glycolytic",
     "modality": "exhausted counters",
     "duration": "30s max punches → 30s counter-only, 6 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Fatigue arms before counter training",
+    "notes": "Fatigue arms before counter training (90% effort)",
     "equipment_note": "Heavy bag + ankle bands"
   },
   {
     "name": "Slipping Symphony",
     "equipment": [
-      "Bands",
-      "Cones"
+      "bands",
+      "cones"
     ],
     "phases": [
       "SPP"
@@ -1598,18 +1598,18 @@
     "system": "glycolytic",
     "modality": "defensive angles",
     "duration": "3min rounds: slip → pivot → counter, 1min rest x 4",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Band-resisted defensive movements",
+    "notes": "Band-resisted defensive movements (85% effort)",
     "equipment_note": "Anchor bands at shoulder height"
   },
   {
     "name": "Intercept & Destroy",
     "equipment": [
-      "Focus mitts"
+      "focus_mitts"
     ],
     "phases": [
       "SPP"
@@ -1617,19 +1617,19 @@
     "system": "ATP-PCr",
     "modality": "stop-hits",
     "duration": "3min rounds: intercepting combos, 1min rest x 5",
-    "intensity": "Explosive entries",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "Cutting off opponent's rhythm",
+    "notes": "Cutting off opponent's rhythm (Explosive entries)",
     "equipment_note": "Holder varies rhythm unpredictably"
   },
   {
     "name": "Counter Knee Matrix",
     "equipment": [
-      "Thai pads"
+      "thai_pads"
     ],
     "phases": [
       "SPP"
@@ -1637,19 +1637,19 @@
     "system": "glycolytic",
     "modality": "clinch counters",
     "duration": "3min rounds: catch → knee, 1min rest x 5",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "kickboxing",
       "mma"
     ],
-    "notes": "Emphasize framing before counter knees",
+    "notes": "Emphasize framing before counter knees (85% power)",
     "equipment_note": "Pad holder drives forward"
   },
   {
     "name": "Rolling Thunder",
     "equipment": [
-      "Medicine ball"
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -1657,19 +1657,19 @@
     "system": "ATP-PCr",
     "modality": "duck counters",
     "duration": "20 roll-under hooks, 5 rounds",
-    "intensity": "90% power",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Simulate rolling under wide hooks",
+    "notes": "Simulate rolling under wide hooks (90% power)",
     "equipment_note": "10lb med ball for resistance"
   },
   {
     "name": "Framing Counter Hell",
     "equipment": [
-      "Wall",
-      "Bands"
+      "bands",
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -1677,19 +1677,19 @@
     "system": "glycolytic",
     "modality": "clinch defense",
     "duration": "30s frame under pressure, 30s counter knees x 6",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "counter_striker",
       "mma"
     ],
-    "notes": "Wall simulates cage pressure",
+    "notes": "Wall simulates cage pressure (85% effort)",
     "equipment_note": "Bands for additional resistance"
   },
   {
     "name": "Sniper's Timing",
     "equipment": [
-      "Delay timer",
-      "Punching bag"
+      "delay_timer",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1697,19 +1697,19 @@
     "system": "ATP-PCr",
     "modality": "rhythm breaking",
     "duration": "3min rounds: randomized counter windows, 1min rest x 4",
-    "intensity": "Precision focus",
+    "intensity": "moderate",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Timer beeps signal counter opportunities",
+    "notes": "Timer beeps signal counter opportunities (Precision focus)",
     "equipment_note": "Variable delay settings"
   },
   {
     "name": "Check Hook Matrix",
     "equipment": [
-      "Punching bag",
-      "Bands"
+      "bands",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1717,19 +1717,19 @@
     "system": "glycolytic",
     "modality": "pivot power",
     "duration": "20 check hooks per side, 5 rounds",
-    "intensity": "90% rotation",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "Band resistance on non-punching hand",
+    "notes": "Band resistance on non-punching hand (90% rotation)",
     "equipment_note": "Anchor at 45° angle"
   },
   {
     "name": "Counter Uppercut Drill",
     "equipment": [
-      "Double-end bag"
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -1737,19 +1737,19 @@
     "system": "ATP-PCr",
     "modality": "short-range counters",
     "duration": "50 roll-under uppercuts, 5 rounds",
-    "intensity": "90% accuracy",
+    "intensity": "max",
     "tags": [
       "counter_striker",
       "boxing"
     ],
-    "notes": "Time uppercuts as bag rebounds",
+    "notes": "Time uppercuts as bag rebounds (90% accuracy)",
     "equipment_note": "Lower bag height for body shots"
   },
   {
     "name": "Matrix Shuffle",
     "equipment": [
-      "Cones",
-      "Agility Ladder"
+      "agility_ladder",
+      "cones"
     ],
     "phases": [
       "SPP"
@@ -1757,20 +1757,20 @@
     "system": "aerobic",
     "modality": "footwork",
     "duration": "3min work, 1min rest x 5 rounds",
-    "intensity": "80% effort",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
       "kickboxing",
       "mma"
     ],
-    "notes": "Sharp pivots off cones, maintain stance while circling.",
+    "notes": "Sharp pivots off cones, maintain stance while circling. (80% effort)",
     "equipment_note": "Set cones in diamond pattern"
   },
   {
     "name": "Phantom Step",
     "equipment": [
-      "Bands"
+      "bands"
     ],
     "phases": [
       "SPP"
@@ -1778,20 +1778,20 @@
     "system": "glycolytic",
     "modality": "resisted footwork",
     "duration": "30s lateral steps, 30s rest x 8 rounds",
-    "intensity": "70-80% effort",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
       "kickboxing",
       "mma"
     ],
-    "notes": "Ankle bands for defensive slide training.",
+    "notes": "Ankle bands for defensive slide training. (70-80% effort)",
     "equipment_note": "Light resistance bands"
   },
   {
     "name": "Sniper’s Retreat",
     "equipment": [
-      "Dumbbells"
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -1799,20 +1799,20 @@
     "system": "ATP-PCr",
     "modality": "backstep counters",
     "duration": "10 backstep jabs + 5 cross counters, 5 rounds",
-    "intensity": "Explosive",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "Trains pull-counter mechanics under load.",
+    "notes": "Trains pull-counter mechanics under load. (Explosive)",
     "equipment_note": "5-10lb DBs for hand weight"
   },
   {
     "name": "Ring Generalship",
     "equipment": [
-      "Bands",
-      "Punching Bag"
+      "bands",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1820,19 +1820,19 @@
     "system": "glycolytic",
     "modality": "angle striking",
     "duration": "3min rounds: 45° cuts after combos, 1min rest x 4",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
       "mma"
     ],
-    "notes": "Band-resisted shuffles to reinforce cutting angles.",
+    "notes": "Band-resisted shuffles to reinforce cutting angles. (85% effort)",
     "equipment_note": "Hip-height band anchor"
   },
   {
     "name": "Telescope Drill",
     "equipment": [
-      "Medicine Ball"
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -1840,20 +1840,20 @@
     "system": "ATP-PCr",
     "modality": "range management",
     "duration": "20m sprints w/ med ball feints, 6 rounds",
-    "intensity": "90% sprint effort",
+    "intensity": "max",
     "tags": [
       "distance_striker",
       "kickboxing",
       "mma"
     ],
-    "notes": "Sprint in/out of range, feinting level changes.",
+    "notes": "Sprint in/out of range, feinting level changes. (90% sprint effort)",
     "equipment_note": "6-10kg med ball"
   },
   {
     "name": "Flicker’s Gauntlet",
     "equipment": [
-      "Double-end bag",
-      "Bands"
+      "bands",
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -1861,19 +1861,19 @@
     "system": "glycolytic",
     "modality": "precision endurance",
     "duration": "3min rounds, 1min rest x 5",
-    "intensity": "Fast twitch focus",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing"
     ],
-    "notes": "Band-resisted shoulders during bag work.",
+    "notes": "Band-resisted shoulders during bag work. (Fast twitch focus)",
     "equipment_note": "Light bands for delt fatigue"
   },
   {
     "name": "Outfighter’s Crucible",
     "equipment": [
-      "Battle Ropes",
-      "Cones"
+      "battle_ropes",
+      "cones"
     ],
     "phases": [
       "SPP"
@@ -1881,19 +1881,19 @@
     "system": "glycolytic",
     "modality": "footwork + stamina",
     "duration": "30s ropes + 30s cone drills, 8 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "Ropes fatigue arms before footwork precision.",
+    "notes": "Ropes fatigue arms before footwork precision. (85% effort)",
     "equipment_note": "1.5\" ropes, 5-cone star pattern"
   },
   {
     "name": "Ghost Protocol",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -1901,18 +1901,18 @@
     "system": "glycolytic",
     "modality": "defensive backpedaling",
     "duration": "20m sled drags backward, 6 rounds",
-    "intensity": "50% bodyweight load",
+    "intensity": "zone 2",
     "tags": [
       "distance_striker",
       "mma"
     ],
-    "notes": "Resisted movement to build defensive speed.",
+    "notes": "Resisted movement to build defensive speed. (50% bodyweight load)",
     "equipment_note": "Low sled height for posture"
   },
   {
     "name": "Pendulum Step",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -1920,20 +1920,20 @@
     "system": "ATP-PCr",
     "modality": "lateral explosiveness",
     "duration": "10 KB swings (per side) + 5 lateral jumps, 5 rounds",
-    "intensity": "Max power",
+    "intensity": "max",
     "tags": [
       "distance_striker",
       "kickboxing",
       "mma"
     ],
-    "notes": "Swings mimic check hook power.",
+    "notes": "Swings mimic check hook power. (Max power)",
     "equipment_note": "16-24kg KB"
   },
   {
     "name": "Long Guard Torture",
     "equipment": [
-      "Bands",
-      "Dumbbells"
+      "bands",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -1941,19 +1941,19 @@
     "system": "glycolytic",
     "modality": "shoulder endurance",
     "duration": "1min band-resisted jabs, 30s rest x 6",
-    "intensity": "80% effort",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing",
       "mma"
     ],
-    "notes": "Trains Philly shell/long guard stamina.",
+    "notes": "Trains Philly shell/long guard stamina. (80% effort)",
     "equipment_note": "5lb DBs in non-jabbing hand"
   },
   {
     "name": "Sniper’s Delight",
     "equipment": [
-      "Punching Bag"
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -1961,19 +1961,19 @@
     "system": "ATP-PCr",
     "modality": "1-2 precision",
     "duration": "50 straight rights on bag, reset after each, 5 rounds",
-    "intensity": "90% power",
+    "intensity": "max",
     "tags": [
       "distance_striker",
       "boxing"
     ],
-    "notes": "Emphasizes retraction and re-angle.",
+    "notes": "Emphasizes retraction and re-angle. (90% power)",
     "equipment_note": "Bag at eye level"
   },
   {
     "name": "Octagon Geometry",
     "equipment": [
-      "Agility Ladder",
-      "Cones"
+      "agility_ladder",
+      "cones"
     ],
     "phases": [
       "SPP"
@@ -1981,19 +1981,19 @@
     "system": "aerobic",
     "modality": "cage cutting",
     "duration": "3min rounds, 1min rest x 4",
-    "intensity": "70% effort",
+    "intensity": "moderate",
     "tags": [
       "distance_striker",
       "mma"
     ],
-    "notes": "45° exits off ladder into cone pivots.",
+    "notes": "45° exits off ladder into cone pivots. (70% effort)",
     "equipment_note": "Set cones at 8 angles"
   },
   {
     "name": "Teep & Retreat",
     "equipment": [
-      "Bands",
-      "Wall"
+      "bands",
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -2001,19 +2001,19 @@
     "system": "glycolytic",
     "modality": "push kick defense",
     "duration": "20 resisted backsteps, 10 teep counters, 5 rounds",
-    "intensity": "80% effort",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "kickboxing",
       "mma"
     ],
-    "notes": "Bands anchored at hips for resistance.",
+    "notes": "Bands anchored at hips for resistance. (80% effort)",
     "equipment_note": "Heavy bands only"
   },
   {
     "name": "Flicker’s Endurance",
     "equipment": [
-      "Double-end bag"
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -2021,19 +2021,19 @@
     "system": "glycolytic",
     "modality": "shoulder stamina",
     "duration": "3min rounds, 1min rest x 5",
-    "intensity": "Fast twitch focus",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing"
     ],
-    "notes": "1-2s only, reset stance after each combo.",
+    "notes": "1-2s only, reset stance after each combo. (Fast twitch focus)",
     "equipment_note": "High bag tension"
   },
   {
     "name": "Matador Drill",
     "equipment": [
-      "Punching Bag",
-      "Bands"
+      "bands",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -2041,18 +2041,18 @@
     "system": "glycolytic",
     "modality": "slip-counter",
     "duration": "3min rounds: slip right → cross, 1min rest x 4",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing"
     ],
-    "notes": "Band-resisted slips for defensive load.",
+    "notes": "Band-resisted slips for defensive load. (85% power)",
     "equipment_note": "Anchor bands at head height"
   },
   {
     "name": "Sniper’s Load",
     "equipment": [
-      "Barbell"
+      "barbell"
     ],
     "phases": [
       "GPP"
@@ -2060,20 +2060,20 @@
     "system": "ATP-PCr",
     "modality": "rotational power",
     "duration": "5 landmine twists/side, 5 rounds",
-    "intensity": "60% 1RM",
+    "intensity": "zone 2",
     "tags": [
       "distance_striker",
       "boxing",
       "mma"
     ],
-    "notes": "Mimics cross/overhand torque.",
+    "notes": "Mimics cross/overhand torque. (60% 1RM)",
     "equipment_note": "Use bumper plates"
   },
   {
     "name": "Range Master",
     "equipment": [
-      "Bands",
-      "Dumbbells"
+      "bands",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -2081,18 +2081,18 @@
     "system": "glycolytic",
     "modality": "step-in striking",
     "duration": "10 band-resisted step jabs, 5 rounds",
-    "intensity": "80% speed",
+    "intensity": "high",
     "tags": [
       "distance_striker",
       "boxing"
     ],
-    "notes": "Bands force explosive entry/exit.",
+    "notes": "Bands force explosive entry/exit. (80% speed)",
     "equipment_note": "5lb DBs in rear hand"
   },
   {
     "name": "Elusive Rhythms",
     "equipment": [
-      "Agility Ladder"
+      "agility_ladder"
     ],
     "phases": [
       "SPP"
@@ -2100,20 +2100,20 @@
     "system": "aerobic",
     "modality": "unpredictability",
     "duration": "3min rounds: random direction changes, 1min rest x 4",
-    "intensity": "70% effort",
+    "intensity": "moderate",
     "tags": [
       "distance_striker",
       "boxing",
       "kickboxing"
     ],
-    "notes": "No set pattern—coach calls direction.",
+    "notes": "No set pattern—coach calls direction. (70% effort)",
     "equipment_note": "Use 10ft ladder"
   },
   {
     "name": "Flicker’s Hell",
     "equipment": [
-      "Double-end bag",
-      "Bands"
+      "bands",
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -2121,19 +2121,19 @@
     "system": "glycolytic",
     "modality": "exhausted precision",
     "duration": "30s max-speed punches → 30s defensive slides, 6 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "distance_striker",
       "boxing"
     ],
-    "notes": "Bands on ankles during bag work.",
+    "notes": "Bands on ankles during bag work. (90% effort)",
     "equipment_note": "Light resistance only"
   },
   {
     "name": "Sniper’s Grip",
     "equipment": [
-      "Towel",
-      "Pull-up Bar"
+      "pull-up_bar",
+      "towel"
     ],
     "phases": [
       "GPP"
@@ -2141,19 +2141,19 @@
     "system": "aerobic",
     "modality": "endurance",
     "duration": "30s hangs, 30s rest x 8",
-    "intensity": "70% effort",
+    "intensity": "moderate",
     "tags": [
       "distance_striker",
       "mma"
     ],
-    "notes": "Towel grips simulate clinch fights.",
+    "notes": "Towel grips simulate clinch fights. (70% effort)",
     "equipment_note": "2 towels for MMA transfer"
   },
   {
     "name": "Low Kick Annihilator",
     "equipment": [
-      "Heavy Bag",
-      "Bands"
+      "bands",
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
@@ -2161,20 +2161,20 @@
     "system": "glycolytic",
     "modality": "power endurance",
     "duration": "3min rounds: 10 kicks/leg, 1min rest x 5",
-    "intensity": "90% power",
+    "intensity": "max",
     "tags": [
       "kicker",
       "muay_thai",
       "kickboxing",
       "low_kick"
     ],
-    "notes": "Bands on ankles for resistance during recoil.",
+    "notes": "Bands on ankles for resistance during recoil. (90% power)",
     "equipment_note": "Anchor bands to floor"
   },
   {
     "name": "Head Hunter Protocol",
     "equipment": [
-      "Double-end Bag"
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -2182,21 +2182,21 @@
     "system": "ATP-PCr",
     "modality": "precision head kicks",
     "duration": "20 switch kicks/min, 5 rounds",
-    "intensity": "95% accuracy",
+    "intensity": "max",
     "tags": [
       "kicker",
       "mma",
       "kickboxing",
       "head_kick"
     ],
-    "notes": "Focus on retraction to avoid counters.",
+    "notes": "Focus on retraction to avoid counters. (95% accuracy)",
     "equipment_note": "Adjust bag to head height"
   },
   {
     "name": "Teep Matrix",
     "equipment": [
-      "Wall",
-      "Bands"
+      "bands",
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -2204,20 +2204,20 @@
     "system": "glycolytic",
     "modality": "push kick endurance",
     "duration": "15 teeps/min, 3min rounds x 4",
-    "intensity": "80% speed",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "teep"
     ],
-    "notes": "Bands resist retraction to build hip flexor strength.",
+    "notes": "Bands resist retraction to build hip flexor strength. (80% speed)",
     "equipment_note": "Anchor bands at hip height"
   },
   {
     "name": "Dutch Destroyer",
     "equipment": [
-      "Pads",
-      "Partner"
+      "pads",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -2225,20 +2225,20 @@
     "system": "glycolytic",
     "modality": "combination kicking",
     "duration": "3min rounds: jab-cross-low kick, 1min rest x 5",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "kicker",
       "kickboxing",
       "low_kick",
       "body_kick"
     ],
-    "notes": "Partner calls random kick targets mid-combo.",
+    "notes": "Partner calls random kick targets mid-combo. (85% power)",
     "equipment_note": "Thai pads preferred"
   },
   {
     "name": "Question Mark Kick Drill",
     "equipment": [
-      "Slip Rope"
+      "slip_rope"
     ],
     "phases": [
       "SPP"
@@ -2246,19 +2246,19 @@
     "system": "ATP-PCr",
     "modality": "deception training",
     "duration": "10 feints → 5 kicks/leg, 6 rounds",
-    "intensity": "Focus on technique",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "muay_thai",
       "question_mark_kick"
     ],
-    "notes": "Rope forces proper hip alignment.",
+    "notes": "Rope forces proper hip alignment. (Focus on technique)",
     "equipment_note": "Rope at waist height"
   },
   {
     "name": "Elbow-Kick Synergy",
     "equipment": [
-      "Banana Bag"
+      "banana_bag"
     ],
     "phases": [
       "SPP"
@@ -2266,21 +2266,21 @@
     "system": "glycolytic",
     "modality": "Muay Thai combinations",
     "duration": "3min rounds: elbow-kick-elbow, 1min rest x 4",
-    "intensity": "80% power",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "body_kick",
       "elbow"
     ],
-    "notes": "Focus on smooth transitions.",
+    "notes": "Focus on smooth transitions. (80% power)",
     "equipment_note": "Lean bag for elbow realism"
   },
   {
     "name": "Calf Kick Carnage",
     "equipment": [
-      "Heavy Bag",
-      "Bands"
+      "bands",
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
@@ -2288,19 +2288,19 @@
     "system": "glycolytic",
     "modality": "fight-ending kicks",
     "duration": "20 kicks/leg, 30s rest, 5 rounds",
-    "intensity": "95% power",
+    "intensity": "max",
     "tags": [
       "kicker",
       "mma",
       "low_kick"
     ],
-    "notes": "Bands increase resistance on recoil.",
+    "notes": "Bands increase resistance on recoil. (95% power)",
     "equipment_note": "Use thin bands for speed"
   },
   {
     "name": "Spinning Back Kick",
     "equipment": [
-      "Plyo Box"
+      "plyo_box"
     ],
     "phases": [
       "SPP"
@@ -2308,19 +2308,19 @@
     "system": "ATP-PCr",
     "modality": "rotational power",
     "duration": "10 kicks/side, 5 rounds",
-    "intensity": "Explosive reps",
+    "intensity": "high",
     "tags": [
       "kicker",
       "kickboxing",
       "spinning_kick"
     ],
-    "notes": "Box ensures proper chamber height.",
+    "notes": "Box ensures proper chamber height. (Explosive reps)",
     "equipment_note": "24\" box"
   },
   {
     "name": "Switch Kick Storm",
     "equipment": [
-      "Double-end Bag"
+      "double-end_bag"
     ],
     "phases": [
       "SPP"
@@ -2328,20 +2328,20 @@
     "system": "glycolytic",
     "modality": "timing under fatigue",
     "duration": "3min rounds: 5 switch kicks → 5 punches, x5",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "switch_kick",
       "hybrid"
     ],
-    "notes": "Bag movement simulates opponent retreat.",
+    "notes": "Bag movement simulates opponent retreat. (85% effort)",
     "equipment_note": "High tension on bag"
   },
   {
     "name": "Ax Kick Annihilation",
     "equipment": [
-      "Hanging Pool Noodle"
+      "hanging_pool_noodle"
     ],
     "phases": [
       "SPP"
@@ -2349,20 +2349,20 @@
     "system": "ATP-PCr",
     "modality": "precision targeting",
     "duration": "15 kicks/leg, 5 rounds",
-    "intensity": "Technical focus",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "kickboxing",
       "axe_kick"
     ],
-    "notes": "Noodle marks ideal chin height.",
+    "notes": "Noodle marks ideal chin height. (Technical focus)",
     "equipment_note": "Hang at 6’ height"
   },
   {
     "name": "Body Kick Barrage",
     "equipment": [
-      "Thai Pads",
-      "Partner"
+      "partner",
+      "thai_pads"
     ],
     "phases": [
       "SPP"
@@ -2370,19 +2370,19 @@
     "system": "glycolytic",
     "modality": "liver shot simulation",
     "duration": "20 kicks/round, 5 rounds",
-    "intensity": "90% power",
+    "intensity": "max",
     "tags": [
       "kicker",
       "muay_thai",
       "body_kick"
     ],
-    "notes": "Partner angles pads to mimic rib placement.",
+    "notes": "Partner angles pads to mimic rib placement. (90% power)",
     "equipment_note": "Focus on left side"
   },
   {
     "name": "Step-Through Knee",
     "equipment": [
-      "Heavy Bag"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
@@ -2390,19 +2390,19 @@
     "system": "glycolytic",
     "modality": "forward pressure",
     "duration": "15 knees/leg, 5 rounds",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "step_through_knee"
     ],
-    "notes": "Emphasize hip thrust into bag.",
+    "notes": "Emphasize hip thrust into bag. (85% power)",
     "equipment_note": "Lean bag forward"
   },
   {
     "name": "Flying Knee Drill",
     "equipment": [
-      "Plyo Box"
+      "plyo_box"
     ],
     "phases": [
       "SPP"
@@ -2410,19 +2410,19 @@
     "system": "ATP-PCr",
     "modality": "explosive entry",
     "duration": "10 jumps → knees, 5 rounds",
-    "intensity": "Max height",
+    "intensity": "max",
     "tags": [
       "kicker",
       "mma",
       "flying_knee"
     ],
-    "notes": "Box height determines trajectory.",
+    "notes": "Box height determines trajectory. (Max height)",
     "equipment_note": "12-18\" box"
   },
   {
     "name": "Scoop Kick Counter",
     "equipment": [
-      "Slip Rope"
+      "slip_rope"
     ],
     "phases": [
       "SPP"
@@ -2430,19 +2430,19 @@
     "system": "glycolytic",
     "modality": "defensive kicking",
     "duration": "20 counters/min, 5 rounds",
-    "intensity": "Fast retraction",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "scoop_kick"
     ],
-    "notes": "Rope forces proper angle.",
+    "notes": "Rope forces proper angle. (Fast retraction)",
     "equipment_note": "Rope at calf height"
   },
   {
     "name": "Cartwheel Kick",
     "equipment": [
-      "Crash Mat"
+      "crash_mat"
     ],
     "phases": [
       "SPP"
@@ -2450,19 +2450,19 @@
     "system": "ATP-PCr",
     "modality": "unorthodox power",
     "duration": "10 attempts/round, 5 rounds",
-    "intensity": "Controlled landings",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "kickboxing",
       "cartwheel_kick"
     ],
-    "notes": "Mats reduce fear of falling.",
+    "notes": "Mats reduce fear of falling. (Controlled landings)",
     "equipment_note": "2\" thick mats"
   },
   {
     "name": "Clinch Knee Devastation",
     "equipment": [
-      "Grappler Dummy"
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -2470,19 +2470,19 @@
     "system": "glycolytic",
     "modality": "muay thai clinch",
     "duration": "3min rounds: 10 knees/position, x5",
-    "intensity": "85% power",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "clinch_knee"
     ],
-    "notes": "Switch between collar tie and double collar.",
+    "notes": "Switch between collar tie and double collar. (85% power)",
     "equipment_note": "Dummy must be upright"
   },
   {
     "name": "Switch Stance Killer",
     "equipment": [
-      "Cones"
+      "cones"
     ],
     "phases": [
       "SPP"
@@ -2490,20 +2490,20 @@
     "system": "glycolytic",
     "modality": "stance flexibility",
     "duration": "20 stance switches → 5 kicks, 5 rounds",
-    "intensity": "Fast transitions",
+    "intensity": "high",
     "tags": [
       "kicker",
       "mma",
       "switch_kick",
       "hybrid"
     ],
-    "notes": "Cones mark pivot points.",
+    "notes": "Cones mark pivot points. (Fast transitions)",
     "equipment_note": "5-cone star pattern"
   },
   {
     "name": "Hammer Kick",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -2511,19 +2511,19 @@
     "system": "ATP-PCr",
     "modality": "downward force",
     "duration": "15 kicks/leg, 5 rounds",
-    "intensity": "Full extension",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "kickboxing",
       "hammer_kick"
     ],
-    "notes": "Tire absorbs impact like a body.",
+    "notes": "Tire absorbs impact like a body. (Full extension)",
     "equipment_note": "Vertical tire mount"
   },
   {
     "name": "Jumping Roundhouse",
     "equipment": [
-      "Plyo Box"
+      "plyo_box"
     ],
     "phases": [
       "SPP"
@@ -2531,19 +2531,19 @@
     "system": "ATP-PCr",
     "modality": "aerial power",
     "duration": "10 jumps → kicks, 5 rounds",
-    "intensity": "Max height",
+    "intensity": "max",
     "tags": [
       "kicker",
       "muay_thai",
       "jumping_kick"
     ],
-    "notes": "Box ensures proper takeoff.",
+    "notes": "Box ensures proper takeoff. (Max height)",
     "equipment_note": "12\" box"
   },
   {
     "name": "Side Kick Sniper",
     "equipment": [
-      "Wall"
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -2551,19 +2551,19 @@
     "system": "glycolytic",
     "modality": "linear power",
     "duration": "20 kicks/leg, 5 rounds",
-    "intensity": "90% extension",
+    "intensity": "max",
     "tags": [
       "kicker",
       "kickboxing",
       "side_kick"
     ],
-    "notes": "Wall prevents over-rotation.",
+    "notes": "Wall prevents over-rotation. (90% extension)",
     "equipment_note": "Stand 12\" from wall"
   },
   {
     "name": "Crescent Kick Precision",
     "equipment": [
-      "Hanging Tennis Ball"
+      "hanging_tennis_ball"
     ],
     "phases": [
       "SPP"
@@ -2571,19 +2571,19 @@
     "system": "ATP-PCr",
     "modality": "head targeting",
     "duration": "15 kicks/leg, 5 rounds",
-    "intensity": "Technical focus",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "kickboxing",
       "crescent_kick"
     ],
-    "notes": "Ball marks ideal temple height.",
+    "notes": "Ball marks ideal temple height. (Technical focus)",
     "equipment_note": "Hang at 5’8\""
   },
   {
     "name": "Low-High Deception",
     "equipment": [
-      "Thai Pads"
+      "thai_pads"
     ],
     "phases": [
       "SPP"
@@ -2591,20 +2591,20 @@
     "system": "glycolytic",
     "modality": "feint kicking",
     "duration": "3min rounds: fake low → high kick, x5",
-    "intensity": "85% speed",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "low_kick",
       "head_kick"
     ],
-    "notes": "Padholder calls 'check' to defend.",
+    "notes": "Padholder calls 'check' to defend. (85% speed)",
     "equipment_note": "Focus on hip feints"
   },
   {
     "name": "Back Kick Blitz",
     "equipment": [
-      "Heavy Bag"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
@@ -2612,19 +2612,19 @@
     "system": "ATP-PCr",
     "modality": "blind power",
     "duration": "10 kicks/side, 5 rounds",
-    "intensity": "Full rotation",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "mma",
       "back_kick"
     ],
-    "notes": "Bag swing simulates opponent movement.",
+    "notes": "Bag swing simulates opponent movement. (Full rotation)",
     "equipment_note": "Loosely hung bag"
   },
   {
     "name": "Teep-to-Knee",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -2632,20 +2632,20 @@
     "system": "glycolytic",
     "modality": "range transition",
     "duration": "20 teeps → 10 knees, 5 rounds",
-    "intensity": "80% speed",
+    "intensity": "high",
     "tags": [
       "kicker",
       "muay_thai",
       "teep",
       "clinch_knee"
     ],
-    "notes": "Partner advances after each teep.",
+    "notes": "Partner advances after each teep. (80% speed)",
     "equipment_note": "Chest protector recommended"
   },
   {
     "name": "Capoeira Kick Flow",
     "equipment": [
-      "Mirror"
+      "mirror"
     ],
     "phases": [
       "SPP"
@@ -2653,20 +2653,20 @@
     "system": "ATP-PCr",
     "modality": "unorthodox angles",
     "duration": "3min rounds: 5 kicks/stance, x5",
-    "intensity": "Technical focus",
+    "intensity": "moderate",
     "tags": [
       "kicker",
       "mma",
       "capoeira_kick"
     ],
-    "notes": "Mirror checks form during motion.",
+    "notes": "Mirror checks form during motion. (Technical focus)",
     "equipment_note": "Full-length mirror"
   },
   {
     "name": "Pressure Cooker",
     "equipment": [
-      "Sandbag",
-      "Battle Ropes"
+      "battle_ropes",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -2674,20 +2674,20 @@
     "system": "glycolytic",
     "modality": "circuit",
     "duration": "3min work, 1min rest x 3-5 rounds",
-    "intensity": "85-90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Simulates clinch work and punching under fatigue. Maintain forward pressure throughout.",
+    "notes": "Simulates clinch work and punching under fatigue. Maintain forward pressure throughout. (85-90% effort)",
     "equipment_note": "Use 50-70lb sandbag"
   },
   {
     "name": "Brawler's Gauntlet",
     "equipment": [
-      "Kettlebell",
-      "Medicine Ball",
-      "Bands"
+      "bands",
+      "kettlebell",
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -2695,19 +2695,19 @@
     "system": "ATP-PCr + Glycolytic",
     "modality": "power endurance",
     "duration": "3min work, 1min rest x 3-5 rounds",
-    "intensity": "Explosive movements",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Trains power transfer between strikes and defensive movements.",
+    "notes": "Trains power transfer between strikes and defensive movements. (Explosive movements)",
     "equipment_note": "16-24kg KB, 6-10kg med ball"
   },
   {
     "name": "Ring-Cut Sprint",
     "equipment": [
-      "Dumbbells",
-      "Bands"
+      "bands",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -2715,19 +2715,19 @@
     "system": "glycolytic",
     "modality": "footwork + sprint",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "90% sprint effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Develops ring-cutting footwork and explosive entries.",
+    "notes": "Develops ring-cutting footwork and explosive entries. (90% sprint effort)",
     "equipment_note": "Use 15-25lb DBs for push presses"
   },
   {
     "name": "Clinch & Destroy",
     "equipment": [
-      "Sandbag",
-      "Kettlebell"
+      "kettlebell",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -2735,19 +2735,19 @@
     "system": "glycolytic",
     "modality": "strongman + sprawl",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "Heavy sandbag, explosive KB",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Mimics clinch fighting and defensive recovery.",
+    "notes": "Mimics clinch fighting and defensive recovery. (Heavy sandbag, explosive KB)",
     "equipment_note": "50-70lb sandbag, 20-28kg KB"
   },
   {
     "name": "Dirty Boxing Hell",
     "equipment": [
-      "Medicine Ball",
-      "Bands"
+      "bands",
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -2755,19 +2755,19 @@
     "system": "glycolytic",
     "modality": "rotational power",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "Max power rotations",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Develops body shot power and clinch knee endurance.",
+    "notes": "Develops body shot power and clinch knee endurance. (Max power rotations)",
     "equipment_note": "6-10kg med ball, heavy bands"
   },
   {
     "name": "3-Minute War",
     "equipment": [
-      "Battle Ropes",
-      "Dumbbells"
+      "battle_ropes",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -2775,19 +2775,19 @@
     "system": "glycolytic",
     "modality": "concurrent training",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Simulates late-round fatigue while maintaining punch output.",
+    "notes": "Simulates late-round fatigue while maintaining punch output. (90% effort)",
     "equipment_note": "1.5-2\" ropes, 15-25lb DBs"
   },
   {
     "name": "Puncher's Circuit",
     "equipment": [
-      "Bands",
-      "Kettlebell"
+      "bands",
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -2795,19 +2795,19 @@
     "system": "ATP-PCr",
     "modality": "resisted punches + squats",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "Explosive movements",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Trains punching power with fatigued legs.",
+    "notes": "Trains punching power with fatigued legs. (Explosive movements)",
     "equipment_note": "Heavy bands, 16-24kg KB"
   },
   {
     "name": "Rope & Smash",
     "equipment": [
-      "Battle Ropes",
-      "Sandbag"
+      "battle_ropes",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -2815,19 +2815,19 @@
     "system": "glycolytic",
     "modality": "power endurance",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "85-90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Develops arm endurance for late-round flurries.",
+    "notes": "Develops arm endurance for late-round flurries. (85-90% effort)",
     "equipment_note": "50-70lb sandbag"
   },
   {
     "name": "Last 10 Seconds",
     "equipment": [
-      "Kettlebell",
-      "Bands"
+      "bands",
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -2835,21 +2835,21 @@
     "system": "ATP-PCr",
     "modality": "max power",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "100% effort bursts",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Trains fight-ending flurries when exhausted.",
+    "notes": "Trains fight-ending flurries when exhausted. (100% effort bursts)",
     "equipment_note": "20-28kg KB, heavy bands"
   },
   {
     "name": "Titan's Test",
     "equipment": [
-      "Sandbag",
-      "Medicine Ball",
-      "Bands",
-      "Battle Ropes"
+      "bands",
+      "battle_ropes",
+      "medicine_ball",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -2857,18 +2857,18 @@
     "system": "glycolytic",
     "modality": "full-system fatigue",
     "duration": "3min work, 1min rest x 3 rounds",
-    "intensity": "90-95% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Ultimate pressure fighter gut check. No breaks between exercises.",
+    "notes": "Ultimate pressure fighter gut check. No breaks between exercises. (90-95% effort)",
     "equipment_note": "50-70lb sandbag, 6-10kg med ball"
   },
   {
     "name": "Trap Bar Death March",
     "equipment": [
-      "Trap Bar"
+      "trap_bar"
     ],
     "phases": [
       "GPP",
@@ -2877,18 +2877,18 @@
     "system": "glycolytic",
     "modality": "loaded carry",
     "duration": "30s work, 30s rest x 5 rounds",
-    "intensity": "85% max load",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Simulates clinch fighting and ring-cutting under fatigue. Keep chest up.",
+    "notes": "Simulates clinch fighting and ring-cutting under fatigue. Keep chest up. (85% max load)",
     "equipment_note": "Load heavy but maintain posture"
   },
   {
     "name": "Barbell Smash & Dash",
     "equipment": [
-      "Barbell"
+      "barbell"
     ],
     "phases": [
       "SPP"
@@ -2896,18 +2896,18 @@
     "system": "ATP-PCr + Glycolytic",
     "modality": "compound lifts + sprints",
     "duration": "5 cleans + 20m sprint, 4 rounds",
-    "intensity": "75-80% 1RM",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Cleans mimic explosive uppercuts, sprints emulate ring-cutting.",
+    "notes": "Cleans mimic explosive uppercuts, sprints emulate ring-cutting. (75-80% 1RM)",
     "equipment_note": "Use bumper plates"
   },
   {
     "name": "Tire Flip Fury",
     "equipment": [
-      "Tire"
+      "tire"
     ],
     "phases": [
       "GPP",
@@ -2916,18 +2916,18 @@
     "system": "glycolytic",
     "modality": "strongman",
     "duration": "10 flips + 10 sprawls, 3 rounds",
-    "intensity": "Max speed flips",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Develops full-body power for clinch breaks.",
+    "notes": "Develops full-body power for clinch breaks. (Max speed flips)",
     "equipment_note": "400-600lb tire ideal"
   },
   {
     "name": "Sled Dragger's Delight",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "GPP",
@@ -2936,19 +2936,19 @@
     "system": "glycolytic",
     "modality": "loaded drag",
     "duration": "40m forward/backward x 4 trips",
-    "intensity": "50-70% bodyweight",
+    "intensity": "moderate",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Forward drags = cutting off ring, backward = defensive footwork.",
+    "notes": "Forward drags = cutting off ring, backward = defensive footwork. (50-70% bodyweight)",
     "equipment_note": "Use harness if available"
   },
   {
     "name": "Sledgehammer Showdown",
     "equipment": [
-      "Sledgehammer",
-      "Tire"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -2956,19 +2956,19 @@
     "system": "ATP-PCr",
     "modality": "rotational power",
     "duration": "20s L/R strikes, 10s rest x 8 rounds",
-    "intensity": "Max power strikes",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Mimics hook/body shot mechanics. Keep hips engaged.",
+    "notes": "Mimics hook/body shot mechanics. Keep hips engaged. (Max power strikes)",
     "equipment_note": "8-12lb hammer recommended"
   },
   {
     "name": "Rope & Bag Carnage",
     "equipment": [
-      "Battle Ropes",
-      "Punching Bag"
+      "battle_ropes",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -2976,18 +2976,18 @@
     "system": "glycolytic",
     "modality": "concurrent training",
     "duration": "30s ropes + 30s bag, 5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Ropes fatigue arms, bag work trains combos under exhaustion.",
+    "notes": "Ropes fatigue arms, bag work trains combos under exhaustion. (90% effort)",
     "equipment_note": "Use 1.5-2\" thick ropes"
   },
   {
     "name": "Trap Bar Tackle",
     "equipment": [
-      "Trap Bar"
+      "trap_bar"
     ],
     "phases": [
       "SPP"
@@ -2995,18 +2995,18 @@
     "system": "glycolytic",
     "modality": "eccentric loading",
     "duration": "5 jumps + 5 deadlifts, 4 rounds",
-    "intensity": "60% 1RM",
+    "intensity": "zone 2",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Jumps develop explosive entries, deadlifts simulate clinch posture.",
+    "notes": "Jumps develop explosive entries, deadlifts simulate clinch posture. (60% 1RM)",
     "equipment_note": "Explode upward on jumps"
   },
   {
     "name": "Barbell Bully",
     "equipment": [
-      "Barbell"
+      "barbell"
     ],
     "phases": [
       "GPP"
@@ -3014,19 +3014,19 @@
     "system": "aerobic",
     "modality": "complex",
     "duration": "8 rounds: 5 presses + 5 squats",
-    "intensity": "50% 1RM",
+    "intensity": "zone 2",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Builds work capacity for late-round mauling.",
+    "notes": "Builds work capacity for late-round mauling. (50% 1RM)",
     "equipment_note": "Use fixed barbell if available"
   },
   {
     "name": "Tire Slam & Jam",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -3034,18 +3034,18 @@
     "system": "ATP-PCr",
     "modality": "power endurance",
     "duration": "10 slams + 5 burpees over tire, 5 rounds",
-    "intensity": "Max effort slams",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Slam power transfers to hooks, burpees simulate clinch recovery.",
+    "notes": "Slam power transfers to hooks, burpees simulate clinch recovery. (Max effort slams)",
     "equipment_note": "Wrist wraps recommended"
   },
   {
     "name": "Sled Push Punishment",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -3053,18 +3053,18 @@
     "system": "glycolytic",
     "modality": "pushing",
     "duration": "20m push + 10 sprawls, 6 rounds",
-    "intensity": "Bodyweight load",
+    "intensity": "moderate",
     "tags": [
       "pressure_fighter",
       "boxing"
     ],
-    "notes": "Pushing mimics in-fighting pressure, sprawls train defense.",
+    "notes": "Pushing mimics in-fighting pressure, sprawls train defense. (Bodyweight load)",
     "equipment_note": "Use low sled height for boxing posture"
   },
   {
     "name": "Clinch Grinder",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -3072,19 +3072,19 @@
     "system": "glycolytic",
     "modality": "strongman endurance",
     "duration": "30s bear hug carry → 10 knees, 5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Simulates clinch control under fatigue.",
+    "notes": "Simulates clinch control under fatigue. (90% effort)",
     "equipment_note": "50-70lb sandbag"
   },
   {
     "name": "Cage Bully",
     "equipment": [
-      "Sled"
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -3092,19 +3092,19 @@
     "system": "glycolytic",
     "modality": "forward pressure",
     "duration": "20m sled push → 5 sprawls, 6 rounds",
-    "intensity": "Bodyweight load",
+    "intensity": "moderate",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Mimics cage cutting and wrestler recovery.",
+    "notes": "Mimics cage cutting and wrestler recovery. (Bodyweight load)",
     "equipment_note": "Low sled for MMA posture"
   },
   {
     "name": "Dirty Boxer’s Feast",
     "equipment": [
-      "Medicine Ball",
-      "Wall"
+      "medicine_ball",
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -3112,19 +3112,19 @@
     "system": "ATP-PCr",
     "modality": "rotational power",
     "duration": "15 slam rotations → 10 clinch knees, 5 rounds",
-    "intensity": "Max effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Transfers to body shots and clinch knees.",
+    "notes": "Transfers to body shots and clinch knees. (Max effort)",
     "equipment_note": "10kg med ball"
   },
   {
     "name": "Mauler’s March",
     "equipment": [
-      "Trap Bar"
+      "trap_bar"
     ],
     "phases": [
       "GPP"
@@ -3132,18 +3132,18 @@
     "system": "glycolytic",
     "modality": "loaded carries",
     "duration": "30s walk → 10 uppercuts, 5 rounds",
-    "intensity": "85% max load",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Trains posture for dirty boxing.",
+    "notes": "Trains posture for dirty boxing. (85% max load)",
     "equipment_note": "Straps allowed"
   },
   {
     "name": "Thai Plough",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -3151,18 +3151,18 @@
     "system": "glycolytic",
     "modality": "forward knee drive",
     "duration": "20 KB swings → 10 marching knees, 5 rounds",
-    "intensity": "Violent intent",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing"
     ],
-    "notes": "Swings simulate clinch breaks.",
+    "notes": "Swings simulate clinch breaks. (Violent intent)",
     "equipment_note": "24kg KB"
   },
   {
     "name": "Wall & Maul",
     "equipment": [
-      "Punching Bag"
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -3170,20 +3170,20 @@
     "system": "glycolytic",
     "modality": "infighting",
     "duration": "30s flurry punches → 10 collar tie knees, 5 rounds",
-    "intensity": "95% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Simulates trapping against cage/ropes.",
+    "notes": "Simulates trapping against cage/ropes. (95% effort)",
     "equipment_note": "Heavy bag required"
   },
   {
     "name": "Tire Dominator",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -3191,18 +3191,18 @@
     "system": "ATP-PCr",
     "modality": "destruction",
     "duration": "10 hammer strikes → 5 tire flips, 5 rounds",
-    "intensity": "Max power",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Strikes mimic hooks, flips simulate scrambles.",
+    "notes": "Strikes mimic hooks, flips simulate scrambles. (Max power)",
     "equipment_note": "12lb hammer, 400lb+ tire"
   },
   {
     "name": "Chain Gang",
     "equipment": [
-      "Bands"
+      "bands"
     ],
     "phases": [
       "SPP"
@@ -3210,19 +3210,19 @@
     "system": "glycolytic",
     "modality": "resisted pressure",
     "duration": "30s band-resisted forward steps → 10 sprawls, 6 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Bands anchored to hips for forward drive.",
+    "notes": "Bands anchored to hips for forward drive. (85% effort)",
     "equipment_note": "Monster bands only"
   },
   {
     "name": "Knee Harvest",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -3230,19 +3230,19 @@
     "system": "glycolytic",
     "modality": "clinch endurance",
     "duration": "30s double-collar tie → 20 knees, 5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing"
     ],
-    "notes": "No breaks between rounds.",
+    "notes": "No breaks between rounds. (90% effort)",
     "equipment_note": "Use partner or heavy bag"
   },
   {
     "name": "Pitbull Protocol",
     "equipment": [
-      "Sandbag",
-      "Kettlebell"
+      "kettlebell",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -3250,18 +3250,18 @@
     "system": "glycolytic",
     "modality": "strongman MMA",
     "duration": "10 sandbag cleans → 10 KB snatches, 5 rounds",
-    "intensity": "Heavy",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Cleans = takedown entries, snatches = uppercuts.",
+    "notes": "Cleans = takedown entries, snatches = uppercuts. (Heavy)",
     "equipment_note": "50lb sandbag, 24kg KB"
   },
   {
     "name": "Crowbar Clinch",
     "equipment": [
-      "Dumbbells"
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -3269,19 +3269,19 @@
     "system": "ATP-PCr",
     "modality": "framing power",
     "duration": "10 DB push presses → 10 collar tie pulls, 5 rounds",
-    "intensity": "Explosive",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Trains underhook/frame strength.",
+    "notes": "Trains underhook/frame strength. (Explosive)",
     "equipment_note": "20-25lb DBs"
   },
   {
     "name": "Smother Squad",
     "equipment": [
-      "Bodyweight"
+      "bodyweight"
     ],
     "phases": [
       "SPP"
@@ -3289,19 +3289,19 @@
     "system": "glycolytic",
     "modality": "relentless pace",
     "duration": "10 sprawls → 10 burpee jumps, 6 rounds",
-    "intensity": "No rest",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Simulates scrambles in grappler exchanges.",
+    "notes": "Simulates scrambles in grappler exchanges. (No rest)",
     "equipment_note": "Concrete floor ideal"
   },
   {
     "name": "Trench Warfare",
     "equipment": [
-      "Sled",
-      "Bands"
+      "bands",
+      "sled"
     ],
     "phases": [
       "SPP"
@@ -3309,19 +3309,19 @@
     "system": "glycolytic",
     "modality": "suffering",
     "duration": "20m sled push → 10 band-resisted punches, 5 rounds",
-    "intensity": "Near-vomit",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Pushes = cage pressure, bands = fatigued strikes.",
+    "notes": "Pushes = cage pressure, bands = fatigued strikes. (Near-vomit)",
     "equipment_note": "Bodyweight sled load"
   },
   {
     "name": "Dump Truck",
     "equipment": [
-      "Trap Bar"
+      "trap_bar"
     ],
     "phases": [
       "SPP"
@@ -3329,18 +3329,18 @@
     "system": "ATP-PCr",
     "modality": "takedown power",
     "duration": "5 explosive jumps → 5 deadlifts, 6 rounds",
-    "intensity": "70% 1RM",
+    "intensity": "moderate",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Jumps = shot entries, deadlifts = finishing drives.",
+    "notes": "Jumps = shot entries, deadlifts = finishing drives. (70% 1RM)",
     "equipment_note": "Fast eccentric on deadlifts"
   },
   {
     "name": "Muay Dump",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -3348,19 +3348,19 @@
     "system": "glycolytic",
     "modality": "plum control",
     "duration": "20 KB swings → 10 clinch knees, 5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "kickboxing"
     ],
-    "notes": "Swings mimic off-balancing for sweeps.",
+    "notes": "Swings mimic off-balancing for sweeps. (90% effort)",
     "equipment_note": "28kg KB for advanced"
   },
   {
     "name": "Octopus Guard",
     "equipment": [
-      "Bands",
-      "Medicine Ball"
+      "bands",
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -3368,18 +3368,18 @@
     "system": "glycolytic",
     "modality": "grapple-strike",
     "duration": "10 band-resisted level changes → 10 med ball slams, 5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Trains shot entries under fatigue.",
+    "notes": "Trains shot entries under fatigue. (85% effort)",
     "equipment_note": "Heavy bands, 8kg med ball"
   },
   {
     "name": "Brick Wall",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "GPP"
@@ -3387,20 +3387,20 @@
     "system": "glycolytic",
     "modality": "clinch endurance",
     "duration": "30s shoulder carry → 10 sprawls, 6 rounds",
-    "intensity": "70lb+ sandbag",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Carry simulates head control in clinch.",
+    "notes": "Carry simulates head control in clinch. (70lb+ sandbag)",
     "equipment_note": "No rest between exercises"
   },
   {
     "name": "Chain Reactor",
     "equipment": [
-      "Bands",
-      "Dumbbells"
+      "bands",
+      "dumbbells"
     ],
     "phases": [
       "SPP"
@@ -3408,20 +3408,20 @@
     "system": "ATP-PCr",
     "modality": "resisted combos",
     "duration": "10 band-resisted uppercuts → 10 DB thruster knees, 5 rounds",
-    "intensity": "Explosive",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Bands anchored low for upward resistance.",
+    "notes": "Bands anchored low for upward resistance. (Explosive)",
     "equipment_note": "15-20lb DBs"
   },
   {
     "name": "Grim Reaper",
     "equipment": [
-      "Tire",
-      "Sledgehammer"
+      "sledgehammer",
+      "tire"
     ],
     "phases": [
       "SPP"
@@ -3429,20 +3429,20 @@
     "system": "glycolytic",
     "modality": "killing pace",
     "duration": "20 alternating hammer strikes → 5 burpees over tire, 5 rounds",
-    "intensity": "100% effort",
+    "intensity": "max",
     "tags": [
       "pressure_fighter",
       "mma"
     ],
-    "notes": "Strikes = ground-and-pound, burpees = standups.",
+    "notes": "Strikes = ground-and-pound, burpees = standups. (100% effort)",
     "equipment_note": "10lb hammer, 24\" tire"
   },
   {
     "name": "Pressure Cooker Deluxe",
     "equipment": [
-      "Sandbag",
-      "Kettlebell",
-      "Bands"
+      "bands",
+      "kettlebell",
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -3450,20 +3450,20 @@
     "system": "glycolytic",
     "modality": "hell circuit",
     "duration": "30s sandbag carry → 10 KB swings → 10 band-resisted knees, 5 rounds",
-    "intensity": "No breaks",
+    "intensity": "high",
     "tags": [
       "pressure_fighter",
       "kickboxing",
       "mma"
     ],
-    "notes": "Ultimate infighting gut check.",
+    "notes": "Ultimate infighting gut check. (No breaks)",
     "equipment_note": "50lb sandbag, 24kg KB, heavy bands"
   },
   {
     "name": "Takedown to Backtake Scramble",
     "equipment": [
-      "Partner",
-      "Mats"
+      "mats",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3471,21 +3471,21 @@
     "system": "ATP-PCr",
     "modality": "live reaction",
     "duration": "3min rounds, 1min rest x 5",
-    "intensity": "90% explosiveness",
+    "intensity": "max",
     "tags": [
       "scrambler",
       "mma",
       "wrestler",
       "grappler"
     ],
-    "notes": "Partner counters takedown – you must immediately transition to back control.",
+    "notes": "Partner counters takedown – you must immediately transition to back control. (90% explosiveness)",
     "equipment_note": "Use crash pads for throws"
   },
   {
     "name": "Sprawl to Spin Drill",
     "equipment": [
-      "Bands",
-      "Mats"
+      "bands",
+      "mats"
     ],
     "phases": [
       "SPP"
@@ -3493,20 +3493,20 @@
     "system": "glycolytic",
     "modality": "defensive scrambling",
     "duration": "10 sprawl → spin sequences, 5 rounds",
-    "intensity": "Max speed",
+    "intensity": "max",
     "tags": [
       "scrambler",
       "mma",
       "wrestler"
     ],
-    "notes": "Bands on hips to resist sprawl recovery.",
+    "notes": "Bands on hips to resist sprawl recovery. (Max speed)",
     "equipment_note": "Heavy bands only"
   },
   {
     "name": "Cage Wrestle Chaos",
     "equipment": [
-      "Cage Wall",
-      "Partner"
+      "cage_wall",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3514,19 +3514,19 @@
     "system": "glycolytic",
     "modality": "wall scrambling",
     "duration": "3min rounds, 1min rest x 4",
-    "intensity": "Fight pace",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "cage_work"
     ],
-    "notes": "Partner initiates cage clinch – you must reverse or escape.",
+    "notes": "Partner initiates cage clinch – you must reverse or escape. (Fight pace)",
     "equipment_note": "MMA gloves recommended"
   },
   {
     "name": "Turtle to Guard Scramble",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3534,19 +3534,19 @@
     "system": "ATP-PCr",
     "modality": "ground transitions",
     "duration": "20 escapes → 10 sweeps, 5 rounds",
-    "intensity": "Explosive hips",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "bjj"
     ],
-    "notes": "Partner starts in top turtle – you must recover guard or stand.",
+    "notes": "Partner starts in top turtle – you must recover guard or stand. (Explosive hips)",
     "equipment_note": "No-gi grips only"
   },
   {
     "name": "Shot to Granby Roll",
     "equipment": [
-      "Mats"
+      "mats"
     ],
     "phases": [
       "SPP"
@@ -3554,20 +3554,20 @@
     "system": "glycolytic",
     "modality": "failed shot recovery",
     "duration": "15 shot → roll sequences, 5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "wrestler"
     ],
-    "notes": "Emphasize smooth hip movement.",
+    "notes": "Emphasize smooth hip movement. (85% effort)",
     "equipment_note": "Use soft mats"
   },
   {
     "name": "Stand-Up Sprint",
     "equipment": [
-      "Partner",
-      "Bands"
+      "bands",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3575,19 +3575,19 @@
     "system": "ATP-PCr",
     "modality": "explosive standups",
     "duration": "20 stand-ups/min, 4 rounds",
-    "intensity": "Max explosion",
+    "intensity": "max",
     "tags": [
       "scrambler",
       "mma",
       "wrestler"
     ],
-    "notes": "Bands around waist for resistance.",
+    "notes": "Bands around waist for resistance. (Max explosion)",
     "equipment_note": "Partner applies light pressure"
   },
   {
     "name": "Submission to Sweep Chain",
     "equipment": [
-      "Grappler Dummy"
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -3595,19 +3595,19 @@
     "system": "glycolytic",
     "modality": "transitional awareness",
     "duration": "10 sub attempts → 5 sweeps, 5 rounds",
-    "intensity": "Fast transitions",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "bjj"
     ],
-    "notes": "If sub fails, immediately chain to sweep.",
+    "notes": "If sub fails, immediately chain to sweep. (Fast transitions)",
     "equipment_note": "Dummy must be flexible"
   },
   {
     "name": "Clinch to Takedown Scramble",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3615,20 +3615,20 @@
     "system": "glycolytic",
     "modality": "live clinch work",
     "duration": "3min rounds, 1min rest x 5",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "scrambler",
       "mma",
       "muay_thai",
       "wrestler"
     ],
-    "notes": "Partner resists – you must chain takedowns.",
+    "notes": "Partner resists – you must chain takedowns. (90% effort)",
     "equipment_note": "Wear rash guards"
   },
   {
     "name": "Guard Pass to Backtake",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3636,20 +3636,20 @@
     "system": "ATP-PCr",
     "modality": "positional advancement",
     "duration": "10 passes → 5 backtakes, 5 rounds",
-    "intensity": "Technical speed",
+    "intensity": "moderate",
     "tags": [
       "scrambler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "If pass is blocked, transition to back.",
+    "notes": "If pass is blocked, transition to back. (Technical speed)",
     "equipment_note": "No-gi only"
   },
   {
     "name": "Strike to Takedown Scramble",
     "equipment": [
-      "Focus Mitts",
-      "Partner"
+      "focus_mitts",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3657,20 +3657,20 @@
     "system": "glycolytic",
     "modality": "mixed reactions",
     "duration": "3min rounds: 1-2 → shot, 1min rest x 4",
-    "intensity": "85% speed",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "striking",
       "wrestler"
     ],
-    "notes": "Coach signals shot after random strikes.",
+    "notes": "Coach signals shot after random strikes. (85% speed)",
     "equipment_note": "MMA gloves on"
   },
   {
     "name": "Arm Drag to Backtake",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3678,19 +3678,19 @@
     "system": "ATP-PCr",
     "modality": "live reaction",
     "duration": "20 arm drag attempts, 5 rounds",
-    "intensity": "Explosive pulls",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "submission_hunter"
     ],
-    "notes": "Partner resists first 2 seconds.",
+    "notes": "Partner resists first 2 seconds. (Explosive pulls)",
     "equipment_note": "No-gi grips"
   },
   {
     "name": "Front Headlock Escapes",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3698,20 +3698,20 @@
     "system": "glycolytic",
     "modality": "defensive urgency",
     "duration": "15 escapes → 5 shots, 5 rounds",
-    "intensity": "90% effort",
+    "intensity": "max",
     "tags": [
       "scrambler",
       "mma",
       "wrestler"
     ],
-    "notes": "Partner starts in tight front headlock.",
+    "notes": "Partner starts in tight front headlock. (90% effort)",
     "equipment_note": "Sprawl shorts recommended"
   },
   {
     "name": "Cage to Center Scramble",
     "equipment": [
-      "Cage Wall",
-      "Partner"
+      "cage_wall",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3719,20 +3719,20 @@
     "system": "glycolytic",
     "modality": "cage IQ",
     "duration": "3min rounds, 1min rest x 4",
-    "intensity": "Fight pace",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "cage_work"
     ],
-    "notes": "Partner pins to cage – you must escape to center.",
+    "notes": "Partner pins to cage – you must escape to center. (Fight pace)",
     "equipment_note": "Wear MMA gloves"
   },
   {
     "name": "Rolling Backtake Drill",
     "equipment": [
-      "Mats",
-      "Partner"
+      "mats",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3740,20 +3740,20 @@
     "system": "ATP-PCr",
     "modality": "dynamic movement",
     "duration": "10 rolling backtakes, 5 rounds",
-    "intensity": "Fast transitions",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "bjj"
     ],
-    "notes": "Partner starts in turtle.",
+    "notes": "Partner starts in turtle. (Fast transitions)",
     "equipment_note": "No-gi only"
   },
   {
     "name": "Strike to Submission Chain",
     "equipment": [
-      "Punching Bag",
-      "Grappler Dummy"
+      "grappler_dummy",
+      "punching_bag"
     ],
     "phases": [
       "SPP"
@@ -3761,19 +3761,19 @@
     "system": "glycolytic",
     "modality": "hybrid transitions",
     "duration": "3min rounds: combo → shot → sub attempt, 1min rest x 4",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma"
     ],
-    "notes": "Simulates fight-ending sequences.",
+    "notes": "Simulates fight-ending sequences. (85% effort)",
     "equipment_note": "Bag must be near mats"
   },
   {
     "name": "Granby to Single Leg",
     "equipment": [
-      "Mats",
-      "Partner"
+      "mats",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3781,19 +3781,19 @@
     "system": "ATP-PCr",
     "modality": "ground to stand",
     "duration": "10 granby rolls → 5 shots, 5 rounds",
-    "intensity": "Explosive",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "wrestler"
     ],
-    "notes": "Partner provides light resistance.",
+    "notes": "Partner provides light resistance. (Explosive)",
     "equipment_note": "Wrestler shoes optional"
   },
   {
     "name": "Flying Sub Scramble",
     "equipment": [
-      "Grappler Dummy"
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -3801,19 +3801,19 @@
     "system": "glycolytic",
     "modality": "aerial transitions",
     "duration": "10 flying armbar attempts, 5 rounds",
-    "intensity": "Technical",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "mma",
       "bjj"
     ],
-    "notes": "Focus on landing in control.",
+    "notes": "Focus on landing in control. (Technical)",
     "equipment_note": "Use soft mats"
   },
   {
     "name": "Clinch to Spin Drill",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3821,19 +3821,19 @@
     "system": "glycolytic",
     "modality": "muay thai scrambles",
     "duration": "20 clinch spins, 5 rounds",
-    "intensity": "Fast pivots",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "muay_thai"
     ],
-    "notes": "Partner resists initial clinch.",
+    "notes": "Partner resists initial clinch. (Fast pivots)",
     "equipment_note": "Wear elbow pads"
   },
   {
     "name": "Guard Recovery Sprint",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3841,19 +3841,19 @@
     "system": "ATP-PCr",
     "modality": "fatigue recovery",
     "duration": "15 guard recoveries, 5 rounds",
-    "intensity": "90% speed",
+    "intensity": "max",
     "tags": [
       "scrambler",
       "mma",
       "bjj"
     ],
-    "notes": "Partner starts in side control.",
+    "notes": "Partner starts in side control. (90% speed)",
     "equipment_note": "No-gi only"
   },
   {
     "name": "Standing Backtake Drill",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3861,20 +3861,20 @@
     "system": "glycolytic",
     "modality": "live reaction",
     "duration": "10 standing backtakes, 5 rounds",
-    "intensity": "85% control",
+    "intensity": "high",
     "tags": [
       "scrambler",
       "mma",
       "wrestler"
     ],
-    "notes": "Partner defends first 3 seconds.",
+    "notes": "Partner defends first 3 seconds. (85% control)",
     "equipment_note": "Rash guards recommended"
   },
   {
     "name": "Mat Shark",
     "equipment": [
-      "Grappler Dummy",
-      "Bands"
+      "bands",
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -3882,21 +3882,21 @@
     "system": "glycolytic",
     "modality": "transition chains",
     "duration": "3min rounds, 1min rest x 5",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "mma",
       "armbar",
       "triangle"
     ],
-    "notes": "Drill 3-step sub chains from guard.",
+    "notes": "Drill 3-step sub chains from guard. (85% effort)",
     "equipment_note": "Anchor bands to dummy for resistance"
   },
   {
     "name": "Stranglehold",
     "equipment": [
-      "Gi",
-      "Partner"
+      "gi",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -3904,19 +3904,19 @@
     "system": "ATP-PCr",
     "modality": "live reps",
     "duration": "10 RNC finishes/min, 5 rounds",
-    "intensity": "90% squeeze",
+    "intensity": "max",
     "tags": [
       "submission_hunter",
       "bjj",
       "rear_naked_choke"
     ],
-    "notes": "Partner resists first 5 sec, then taps.",
+    "notes": "Partner resists first 5 sec, then taps. (90% squeeze)",
     "equipment_note": "Use gi lapel for no-gi grip variations"
   },
   {
     "name": "Limb Collector",
     "equipment": [
-      "Resistance Bands"
+      "resistance_bands"
     ],
     "phases": [
       "SPP"
@@ -3924,20 +3924,20 @@
     "system": "glycolytic",
     "modality": "isolated attacks",
     "duration": "20 armbar snaps/min, 4 rounds",
-    "intensity": "Explosive extensions",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "armbar",
       "kimura"
     ],
-    "notes": "Bands on wrists to simulate opponent pulling back.",
+    "notes": "Bands on wrists to simulate opponent pulling back. (Explosive extensions)",
     "equipment_note": "Medium resistance"
   },
   {
     "name": "Heel Hook Highway",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -3945,20 +3945,20 @@
     "system": "ATP-PCr",
     "modality": "leg entanglement drills",
     "duration": "15 entries → 5 finishes, 5 rounds",
-    "intensity": "Max control",
+    "intensity": "max",
     "tags": [
       "submission_hunter",
       "mma",
       "leg_lock",
       "heel_hook"
     ],
-    "notes": "KB on ankle to simulate opponent weight.",
+    "notes": "KB on ankle to simulate opponent weight. (Max control)",
     "equipment_note": "16-24kg KB"
   },
   {
     "name": "Guillotine Gauntlet",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -3966,19 +3966,19 @@
     "system": "glycolytic",
     "modality": "fatigue finishing",
     "duration": "10 standing guillotines, 3min rounds",
-    "intensity": "80% squeeze",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "mma",
       "guillotine"
     ],
-    "notes": "Sandbag mimics sprawl pressure.",
+    "notes": "Sandbag mimics sprawl pressure. (80% squeeze)",
     "equipment_note": "50-70lb bag"
   },
   {
     "name": "Twister Protocol",
     "equipment": [
-      "Grappler Dummy"
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -3986,19 +3986,19 @@
     "system": "glycolytic",
     "modality": "back control",
     "duration": "5 twister setups → 3 finishes, 5 rounds",
-    "intensity": "Slow, technical",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "spinal_lock"
     ],
-    "notes": "Focus on grip transitions.",
+    "notes": "Focus on grip transitions. (Slow, technical)",
     "equipment_note": "Dummy must have flexible spine"
   },
   {
     "name": "D’Arce Depth Charge",
     "equipment": [
-      "Medicine Ball"
+      "medicine_ball"
     ],
     "phases": [
       "SPP"
@@ -4006,19 +4006,19 @@
     "system": "glycolytic",
     "modality": "sinking mechanics",
     "duration": "15 sprawl → D’Arce entries, 5 rounds",
-    "intensity": "Explosive shots",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "mma",
       "d'arce"
     ],
-    "notes": "Med ball simulates opponent’s head pressure.",
+    "notes": "Med ball simulates opponent’s head pressure. (Explosive shots)",
     "equipment_note": "8-12kg ball"
   },
   {
     "name": "Calf Slicer Hell",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -4026,19 +4026,19 @@
     "system": "ATP-PCr",
     "modality": "pressure drills",
     "duration": "10 controlled finishes, 4 rounds",
-    "intensity": "Slow burn",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "leg_lock"
     ],
-    "notes": "KB on thigh to simulate opponent’s resistance.",
+    "notes": "KB on thigh to simulate opponent’s resistance. (Slow burn)",
     "equipment_note": "20-28kg KB"
   },
   {
     "name": "Kneebar Khaos",
     "equipment": [
-      "Resistance Bands"
+      "resistance_bands"
     ],
     "phases": [
       "SPP"
@@ -4046,19 +4046,19 @@
     "system": "ATP-PCr",
     "modality": "extension power",
     "duration": "20 dynamic finishes, 5 rounds",
-    "intensity": "Explosive hips",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "mma",
       "leg_lock"
     ],
-    "notes": "Bands on ankles to simulate opponent retracting leg.",
+    "notes": "Bands on ankles to simulate opponent retracting leg. (Explosive hips)",
     "equipment_note": "Heavy resistance"
   },
   {
     "name": "North-South Chokehold",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -4066,20 +4066,20 @@
     "system": "glycolytic",
     "modality": "pressure finish",
     "duration": "10 squeezes @ 10sec, 5 rounds",
-    "intensity": "85% effort",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "north_south_choke"
     ],
-    "notes": "Sandbag on chest mimics opponent bridging.",
+    "notes": "Sandbag on chest mimics opponent bridging. (85% effort)",
     "equipment_note": "70-100lb bag"
   },
   {
     "name": "Peruvian Necktie Drill",
     "equipment": [
-      "Grappler Dummy",
-      "Bands"
+      "bands",
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -4087,19 +4087,19 @@
     "system": "ATP-PCr",
     "modality": "entry timing",
     "duration": "15 entries → 5 finishes, 4 rounds",
-    "intensity": "Fast setups",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "mma",
       "guillotine_variation"
     ],
-    "notes": "Bands on dummy’s shoulders for resistance.",
+    "notes": "Bands on dummy’s shoulders for resistance. (Fast setups)",
     "equipment_note": "Dummy must have flexible neck"
   },
   {
     "name": "Gogoplata Grinder",
     "equipment": [
-      "Yoga Mat"
+      "yoga_mat"
     ],
     "phases": [
       "SPP"
@@ -4107,19 +4107,19 @@
     "system": "glycolytic",
     "modality": "flexibility + finish",
     "duration": "10 shin-to-throat setups, 5 rounds",
-    "intensity": "Slow, controlled",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "gogoplata"
     ],
-    "notes": "Emphasize hamstring flexibility.",
+    "notes": "Emphasize hamstring flexibility. (Slow, controlled)",
     "equipment_note": "Use mat for hip elevation"
   },
   {
     "name": "Buggy Choke Crucible",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -4127,19 +4127,19 @@
     "system": "ATP-PCr",
     "modality": "guard recovery",
     "duration": "5 escapes → 5 buggy attempts, 5 rounds",
-    "intensity": "85% squeeze",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "buggy_choke"
     ],
-    "notes": "Partner starts in side control.",
+    "notes": "Partner starts in side control. (85% squeeze)",
     "equipment_note": "No-gi only"
   },
   {
     "name": "Electric Chair Sweep",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -4147,19 +4147,19 @@
     "system": "glycolytic",
     "modality": "hip pressure",
     "duration": "10 sweeps → 3 finishes, 5 rounds",
-    "intensity": "Explosive hips",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "electric_chair"
     ],
-    "notes": "KB on hip to add resistance.",
+    "notes": "KB on hip to add resistance. (Explosive hips)",
     "equipment_note": "16-24kg KB"
   },
   {
     "name": "Bicep Slicer Drill",
     "equipment": [
-      "Resistance Bands"
+      "resistance_bands"
     ],
     "phases": [
       "SPP"
@@ -4167,20 +4167,20 @@
     "system": "ATP-PCr",
     "modality": "isolated pressure",
     "duration": "15 controlled crushes, 5 rounds",
-    "intensity": "Slow burn",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "bicep_slicer"
     ],
-    "notes": "Bands simulate opponent pulling arm free.",
+    "notes": "Bands simulate opponent pulling arm free. (Slow burn)",
     "equipment_note": "Anchor bands to rack"
   },
   {
     "name": "Loop Choke Loop",
     "equipment": [
-      "Gi",
-      "Partner"
+      "gi",
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -4188,19 +4188,19 @@
     "system": "glycolytic",
     "modality": "grip fighting",
     "duration": "20 collar grips → 10 finishes, 4 rounds",
-    "intensity": "80% speed",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "loop_choke"
     ],
-    "notes": "Partner resists initial grip.",
+    "notes": "Partner resists initial grip. (80% speed)",
     "equipment_note": "Worn-out gi for friction"
   },
   {
     "name": "Inverted Triangle Matrix",
     "equipment": [
-      "Wall"
+      "wall"
     ],
     "phases": [
       "SPP"
@@ -4208,19 +4208,19 @@
     "system": "ATP-PCr",
     "modality": "inversion drills",
     "duration": "10 wall-assisted entries, 5 rounds",
-    "intensity": "Technical",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "inverted_triangle"
     ],
-    "notes": "Use wall to control inversion angle.",
+    "notes": "Use wall to control inversion angle. (Technical)",
     "equipment_note": "Bare feet for grip"
   },
   {
     "name": "Ezekiel from Hell",
     "equipment": [
-      "Grappler Dummy"
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -4228,19 +4228,19 @@
     "system": "glycolytic",
     "modality": "sleeve control",
     "duration": "20 no-gi finishes, 5 rounds",
-    "intensity": "90% squeeze",
+    "intensity": "max",
     "tags": [
       "submission_hunter",
       "mma",
       "ezekiel"
     ],
-    "notes": "Focus on forearm pressure.",
+    "notes": "Focus on forearm pressure. (90% squeeze)",
     "equipment_note": "Dummy with stiff neck"
   },
   {
     "name": "Anaconda Ambush",
     "equipment": [
-      "Sandbag"
+      "sandbag"
     ],
     "phases": [
       "SPP"
@@ -4248,19 +4248,19 @@
     "system": "ATP-PCr",
     "modality": "shot to finish",
     "duration": "10 shots → 5 rolls, 5 rounds",
-    "intensity": "Explosive entries",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "mma",
       "anaconda"
     ],
-    "notes": "Sandbag simulates sprawl weight.",
+    "notes": "Sandbag simulates sprawl weight. (Explosive entries)",
     "equipment_note": "50-70lb bag"
   },
   {
     "name": "Crucifix Collector",
     "equipment": [
-      "Partner"
+      "partner"
     ],
     "phases": [
       "SPP"
@@ -4268,19 +4268,19 @@
     "system": "glycolytic",
     "modality": "control transitions",
     "duration": "3min rounds: arm trap → choke, 1min rest x 4",
-    "intensity": "85% control",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "crucifix"
     ],
-    "notes": "Partner tries to bench press escape.",
+    "notes": "Partner tries to bench press escape. (85% control)",
     "equipment_note": "No-gi grips only"
   },
   {
     "name": "Toe Hold Torment",
     "equipment": [
-      "Resistance Bands"
+      "resistance_bands"
     ],
     "phases": [
       "SPP"
@@ -4288,19 +4288,19 @@
     "system": "ATP-PCr",
     "modality": "rotational finish",
     "duration": "15 dynamic twists, 5 rounds",
-    "intensity": "Fast hands",
+    "intensity": "high",
     "tags": [
       "submission_hunter",
       "bjj",
       "leg_lock"
     ],
-    "notes": "Bands on foot for resistance.",
+    "notes": "Bands on foot for resistance. (Fast hands)",
     "equipment_note": "Anchor to heavy object"
   },
   {
     "name": "Mir Lock Madness",
     "equipment": [
-      "Kettlebell"
+      "kettlebell"
     ],
     "phases": [
       "SPP"
@@ -4308,19 +4308,19 @@
     "system": "glycolytic",
     "modality": "shoulder pressure",
     "duration": "10 entries → 5 finishes, 5 rounds",
-    "intensity": "Slow grind",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "mir_lock"
     ],
-    "notes": "KB on wrist to simulate opponent’s defense.",
+    "notes": "KB on wrist to simulate opponent’s defense. (Slow grind)",
     "equipment_note": "12-16kg KB"
   },
   {
     "name": "Japanese Necktie Drill",
     "equipment": [
-      "Grappler Dummy"
+      "grappler_dummy"
     ],
     "phases": [
       "SPP"
@@ -4328,1130 +4328,1862 @@
     "system": "ATP-PCr",
     "modality": "angle creation",
     "duration": "15 step-over entries, 5 rounds",
-    "intensity": "Technical",
+    "intensity": "moderate",
     "tags": [
       "submission_hunter",
       "bjj",
       "japanese_necktie"
     ],
-    "notes": "Focus on hip alignment.",
+    "notes": "Focus on hip alignment. (Technical)",
     "equipment_note": "Dummy with flexible arms"
   },
   {
     "name": "Clinch Knee Storm Intervals",
-    "equipment": ["clinching dummy", "wall"],
-    "phases": ["GPP"],
+    "equipment": [
+      "clinching_dummy",
+      "wall"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "45s on / 60s off",
     "intensity": "high",
-    "tags": ["muay_thai", "clinch_fighter", "mma"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "mma"
+    ],
     "notes": "Non-stop knee strikes from plum position. Drive hips through dummy.",
     "equipment_note": "Anchor dummy to wall if needed."
   },
   {
     "name": "Forward-Blast Heavy Bag Intervals",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "20s on / 40s off",
     "intensity": "max",
-    "tags": ["pressure_fighter", "brawler","mma", "boxing"],
+    "tags": [
+      "pressure_fighter",
+      "brawler",
+      "mma",
+      "boxing"
+    ],
     "notes": "Advance relentlessly while throwing power hooks. No backpedaling.",
     "equipment_note": "Bag should swing minimally."
   },
   {
     "name": "Wall-Wrestler Pummel Rounds",
-    "equipment": ["wall", "mma gloves"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mma_gloves",
+      "wall"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "30s on / 45s off",
     "intensity": "high",
-    "tags": ["mma", "scrambler"],
+    "tags": [
+      "mma",
+      "scrambler"
+    ],
     "notes": "Pummel for underhooks while pressed against wall. Simulates cage work.",
     "equipment_note": "Use padded wall if available."
   },
   {
     "name": "Switch-Kick Endurance Drill",
-    "equipment": ["thai pads"],
-    "phases": ["GPP"],
+    "equipment": [
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "40s on / 50s off",
     "intensity": "high",
-    "tags": ["muay_thai", "kicker", "distance_striker", "mma", "hybrid"],
+    "tags": [
+      "muay_thai",
+      "kicker",
+      "distance_striker",
+      "mma",
+      "hybrid"
+    ],
     "notes": "Alternate roundhouse kicks every 2 seconds. Focus on hip turnover.",
     "equipment_note": "Pad holder calls sides randomly."
   },
   {
     "name": "Brawler's Body Shot Barrage",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "25s on / 35s off",
     "intensity": "max",
-    "tags": ["brawler", "boxing"],
+    "tags": [
+      "brawler",
+      "boxing"
+    ],
     "notes": "Digging hooks to the body. Exhale sharply with each shot.",
     "equipment_note": "Wear bag gloves for knuckle protection."
   },
   {
     "name": "Clinch-to-Strike Transition Drill",
-    "equipment": ["partner", "focus mitts"],
-    "phases": ["GPP"],
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "45s on / 60s off",
     "intensity": "high",
-    "tags": ["clinch_fighter", "muay_thai","mma","boxing"],
+    "tags": [
+      "clinch_fighter",
+      "muay_thai",
+      "mma",
+      "boxing"
+    ],
     "notes": "Break clinch into 3-punch combos. Reset immediately.",
     "equipment_note": "Partner wears belly pad for body shots."
   },
   {
     "name": "Sprawl-to-Strike Intervals",
-    "equipment": ["mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "30s on / 45s off",
     "intensity": "high",
-    "tags": ["mma", "scrambler"],
+    "tags": [
+      "mma",
+      "scrambler"
+    ],
     "notes": "Sprawl, then spring up into 2 knees + 2 elbows.",
     "equipment_note": "Use wrestler mat for knee protection."
   },
   {
     "name": "Counter Striker's Shell Defense Drill",
-    "equipment": ["partner", "focus mitts"],
-    "phases": ["GPP"],
+    "equipment": [
+      "focus_mitts",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "1min on / 1min off",
-    "intensity": "mod-high",
-    "tags": ["counter_striker", "boxing"],
-    "notes": "Block/parry flurries, then counter with 3-punch combos.",
+    "intensity": "high",
+    "tags": [
+      "counter_striker",
+      "boxing"
+    ],
+    "notes": "Block/parry flurries, then counter with 3-punch combos. (mod-high)",
     "equipment_note": "Partner varies attack angles."
   },
   {
     "name": "Submission Chain Fatigue Drill",
-    "equipment": ["grappler dummy"],
-    "phases": ["GPP"],
+    "equipment": [
+      "grappler_dummy"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "40s on / 50s off",
     "intensity": "high",
-    "tags": ["submission_hunter", "mma"],
+    "tags": [
+      "submission_hunter",
+      "mma"
+    ],
     "notes": "Cycle through 3 submission attempts without pausing.",
     "equipment_note": "Focus on grip transitions."
   },
   {
     "name": "Teep-and-Clinch Gauntlet",
-    "equipment": ["partner", "thai pads"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner",
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "glycolytic",
     "modality": "interval",
     "duration": "45s on / 60s off",
     "intensity": "high",
-    "tags": ["muay_thai", "distance_striker","kicker"],
+    "tags": [
+      "muay_thai",
+      "distance_striker",
+      "kicker"
+    ],
     "notes": "3 teeps followed by clinch knee series. Repeat.",
     "equipment_note": "Pad holder provides light resistance."
   },
-
   {
     "name": "Sprawl-to-Takedown Reaction Drill",
-    "equipment": ["partner", "mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "sprint",
     "duration": "5s effort / 55s rest",
     "intensity": "max",
-    "tags": ["scrambler", "mma"],
+    "tags": [
+      "scrambler",
+      "mma"
+    ],
     "notes": "Partner signals shot randomly. React with sprawl then immediate takedown.",
     "equipment_note": "Use wrestler shoes if available."
   },
   {
     "name": "Lateral Escape Plyo Pushoffs",
-    "equipment": ["plyo box"],
-    "phases": ["GPP"],
+    "equipment": [
+      "plyo_box"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "jump",
     "duration": "8x per side / 60s rest",
     "intensity": "max",
-    "tags": ["counter_striker", "boxing", "mma"],
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mma"
+    ],
     "notes": "Explode off back foot to evade imaginary strike. Land in stance.",
     "equipment_note": "12-18 inch box height."
   },
   {
     "name": "Guillotine Shot Sprints",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "sprint",
     "duration": "10s max effort / 50s rest",
     "intensity": "max",
-    "tags": ["submission_hunter", "bjj", "mma"],
+    "tags": [
+      "submission_hunter",
+      "bjj",
+      "mma"
+    ],
     "notes": "Sprint 10m, drop to guillotine grip, reset. Repeat.",
     "equipment_note": "Mark distance with cones."
   },
   {
     "name": "Switch-Kick Power Bursts",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x per leg / 60s rest",
     "intensity": "max",
-    "tags": ["kicker", "muay_thai", "mma", "hybrid"],
+    "tags": [
+      "kicker",
+      "muay_thai",
+      "mma",
+      "hybrid"
+    ],
     "notes": "Max-power roundhouse kicks with full hip rotation.",
     "equipment_note": "Secure bag to prevent swing."
   },
   {
     "name": "Takedown Shot Reaction Drill",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "reactive",
     "duration": "5s effort / 55s rest",
     "intensity": "max",
-    "tags": ["wrestler", "mma"],
+    "tags": [
+      "wrestler",
+      "mma"
+    ],
     "notes": "Partner points direction; shooter explodes that way.",
     "equipment_note": "Grass or mat surface only."
   },
   {
     "name": "Cross-Counter Plyo Pushups",
-    "equipment": ["plyo box"],
-    "phases": ["GPP"],
+    "equipment": [
+      "plyo_box"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "jump",
     "duration": "6x per side / 60s rest",
     "intensity": "max",
-    "tags": ["counter_striker", "boxing", "mma"],
+    "tags": [
+      "counter_striker",
+      "boxing",
+      "mma"
+    ],
     "notes": "Explode up from pushup to cross stance. Mimics counter weight transfer.",
     "equipment_note": "Use 12-inch box."
   },
   {
     "name": "Thai Plum Explosion Drill",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "isometric",
     "duration": "5s max pull / 55s rest",
     "intensity": "max",
-    "tags": ["clinch_fighter", "muay_thai"],
+    "tags": [
+      "clinch_fighter",
+      "muay_thai"
+    ],
     "notes": "Yank partner's neck down with full power from plum position.",
     "equipment_note": "Partner wears neck protector."
   },
   {
     "name": "Sprawl-to-Shot Sprints",
-    "equipment": ["mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "sprint",
     "duration": "8s max / 52s rest",
     "intensity": "max",
-    "tags": ["mma", "scrambler", "wrestler"],
+    "tags": [
+      "mma",
+      "scrambler",
+      "wrestler"
+    ],
     "notes": "Sprawl, then explode into double-leg shot. Full recovery between reps.",
     "equipment_note": "Use wrestler mat for knee protection."
   },
   {
     "name": "Lateral Plyo Pushoffs",
-    "equipment": ["plyo box"],
-    "phases": ["GPP"],
+    "equipment": [
+      "plyo_box"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "jump",
     "duration": "6x per side / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "counter_striker", "hybrid"],
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "hybrid"
+    ],
     "notes": "Explode off back foot to mimic defensive pivots.",
     "equipment_note": "12-inch box height."
   },
   {
     "name": "Neck Snap Drill",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "isometric",
     "duration": "5s max effort / 55s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "clinch_fighter", "mma"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "mma"
+    ],
     "notes": "Yank partner's head down violently from clinch.",
     "equipment_note": "Partner wears neck brace."
   },
   {
     "name": "Switch-Kick Acceleration",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "10x per leg / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "kicker", "distance_striker", "hybrid"],
+    "tags": [
+      "muay_thai",
+      "kicker",
+      "distance_striker",
+      "hybrid"
+    ],
     "notes": "Max-power round kicks with full hip rotation.",
     "equipment_note": "Secure bag to prevent swing."
   },
   {
     "name": "Overhand Right Bursts",
-    "equipment": ["focus mitts"],
-    "phases": ["GPP"],
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x per side / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "brawler", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "brawler",
+      "pressure_fighter"
+    ],
     "notes": "Throw fight-ending power shots. Full reset between reps.",
     "equipment_note": "Pad holder braces firmly."
   },
   {
     "name": "Blast Double Sprints",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "sprint",
     "duration": "10m sprints / 50s rest",
     "intensity": "max",
-    "tags": ["wrestler", "mma", "scrambler"],
+    "tags": [
+      "wrestler",
+      "mma",
+      "scrambler"
+    ],
     "notes": "Sprint into explosive takedown finish.",
     "equipment_note": "Mark distance with cones."
   },
   {
     "name": "Knee Strike Bursts",
-    "equipment": ["clinching dummy"],
-    "phases": ["GPP"],
+    "equipment": [
+      "clinching_dummy"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "5x per leg / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "clinch_fighter", "mma"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "mma"
+    ],
     "notes": "Drive knees through dummy with full hip extension.",
     "equipment_note": "Anchor dummy to wall."
   },
   {
     "name": "Guillotine Shot Reactions",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "reactive",
     "duration": "5s effort / 55s rest",
     "intensity": "max",
-    "tags": ["mma", "submission_hunter"],
+    "tags": [
+      "mma",
+      "submission_hunter"
+    ],
     "notes": "Partner signals shot direction; shooter reacts with guillotine grip.",
     "equipment_note": "Grass or mat surface only."
   },
   {
     "name": "MT Teep Acceleration Drill",
-    "equipment": ["thai pads"],
-    "phases": ["GPP"],
+    "equipment": [
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "10x per leg / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "distance_striker", "kicker"],
+    "tags": [
+      "muay_thai",
+      "distance_striker",
+      "kicker"
+    ],
     "notes": "Max-speed push kicks with instant retraction.",
     "equipment_note": "Pad holder provides slight resistance."
   },
   {
     "name": "Reactive Sprawl Jumps",
-    "equipment": ["mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "jump",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["mma", "scrambler", "wrestler"],
+    "tags": [
+      "mma",
+      "scrambler",
+      "wrestler"
+    ],
     "notes": "Partner claps to signal sprawl. Max-height jump after.",
     "equipment_note": "Use crash mat for landing."
   },
   {
     "name": "Forward Lunge Strikes",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "pressure_fighter", "brawler"],
+    "tags": [
+      "boxing",
+      "pressure_fighter",
+      "brawler"
+    ],
     "notes": "Lunge forward with lead hook. Reset completely.",
     "equipment_note": "Bag should be stable."
   },
   {
     "name": "Takedown-to-Knee Drill",
-    "equipment": ["takedown dummy"],
-    "phases": ["GPP"],
+    "equipment": [
+      "takedown_dummy"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "compound",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["mma", "wrestler", "grappler", "muay_thai"],
+    "tags": [
+      "mma",
+      "wrestler",
+      "grappler",
+      "muay_thai"
+    ],
     "notes": "Double-leg takedown into standing knee strike. Reset.",
     "equipment_note": "Anchor dummy securely."
   },
   {
     "name": "Switch-Kick Plyos",
-    "equipment": ["plyo box"],
-    "phases": ["GPP"],
+    "equipment": [
+      "plyo_box"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "jump",
     "duration": "6x per side / 60s rest",
     "intensity": "max",
-    "tags": ["kickboxing", "mma", "kicker", "distance_striker", "hybrid"],
+    "tags": [
+      "kickboxing",
+      "mma",
+      "kicker",
+      "distance_striker",
+      "hybrid"
+    ],
     "notes": "Simulate weight transfer for switch kicks.",
     "equipment_note": "18-inch box height."
   },
   {
     "name": "BJJ Explosive Guard Pull",
-    "equipment": ["mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "reactive",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["bjj", "submission_hunter", "mma"],
+    "tags": [
+      "bjj",
+      "submission_hunter",
+      "mma"
+    ],
     "notes": "Pull guard with immediate hip bump sweep attempt.",
     "equipment_note": "Use crash mat for falls."
   },
   {
     "name": "Dump Explosions",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "throw",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "clinch_fighter", "wrestler"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "wrestler"
+    ],
     "notes": "Max-effort hip toss from clinch position.",
     "equipment_note": "Partner wears crash pad."
   },
   {
     "name": "Slip-Counter Springs",
-    "equipment": ["double-end bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "double-end_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "reactive",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "counter_striker", "mma"],
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "mma"
+    ],
     "notes": "Slip bag swing, then explode with 2-punch counter.",
     "equipment_note": "Shorten bungee for faster returns."
   },
   {
     "name": "Cage-Push Escapes",
-    "equipment": ["cage"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cage"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "isometric",
     "duration": "5s max / 55s rest",
     "intensity": "max",
-    "tags": ["mma", "scrambler", "wrestler"],
+    "tags": [
+      "mma",
+      "scrambler",
+      "wrestler"
+    ],
     "notes": "Explosive push-off from pinned cage position.",
     "equipment_note": "Wear MMA gloves for grip."
   },
   {
     "name": "Liver Hook Bursts",
-    "equipment": ["body opponent bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "body_opponent_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "brawler", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "brawler",
+      "pressure_fighter"
+    ],
     "notes": "Max-power left hooks to liver region. Full reset.",
     "equipment_note": "Angle bag to mimic opponent stance."
   },
   {
     "name": "Long Guard Snap",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "reactive",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "distance_striker", "clinch_fighter"],
+    "tags": [
+      "muay_thai",
+      "distance_striker",
+      "clinch_fighter"
+    ],
     "notes": "Partner attempts clinch; fighter snaps long guard push.",
     "equipment_note": "Partner wears belly pad."
   },
   {
     "name": "Reshot Chains",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "compound",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["wrestler", "mma", "scrambler"],
+    "tags": [
+      "wrestler",
+      "mma",
+      "scrambler"
+    ],
     "notes": "Initial shot > sprawl > immediate reshot. No pauses.",
     "equipment_note": "Partner provides light resistance."
   },
   {
     "name": "Axe Kick Acceleration",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["kickboxing", "mma", "kicker", "distance_striker"],
+    "tags": [
+      "kickboxing",
+      "mma",
+      "kicker",
+      "distance_striker"
+    ],
     "notes": "Max-speed downward axe kicks. Full retraction.",
     "equipment_note": "Hang bag high for proper angle."
   },
   {
     "name": "Swarm Entry Sprints",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "sprint",
     "duration": "10m / 50s rest",
     "intensity": "max",
-    "tags": ["boxing", "brawler", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "brawler",
+      "pressure_fighter"
+    ],
     "notes": "Sprint into imaginary punching flurry. Reset completely.",
     "equipment_note": "Mark start/stop lines."
   },
   {
     "name": "Strike-to-Clinch Drill",
-    "equipment": ["focus mitts"],
-    "phases": ["GPP"],
+    "equipment": [
+      "focus_mitts"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "compound",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["clinch_fighter", "mma", "muay_thai"],
+    "tags": [
+      "clinch_fighter",
+      "mma",
+      "muay_thai"
+    ],
     "notes": "3-punch combo > clinch entry. Explosive transitions.",
     "equipment_note": "Pad holder simulates opponent frame."
   },
   {
     "name": "Hip Slam Drill",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "throw",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "clinch_fighter", "wrestler"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "wrestler"
+    ],
     "notes": "Max-power hip toss from double-collar tie.",
     "equipment_note": "Partner wears crash pad."
   },
   {
     "name": "Pull-Counter Springs",
-    "equipment": ["slip bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "slip_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "reactive",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "counter_striker", "hybrid"],
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "hybrid"
+    ],
     "notes": "Pull away from bag swing, explode back with cross.",
     "equipment_note": "Adjust bag weight for speed."
   },
   {
     "name": "Ground-and-Pound Bursts",
-    "equipment": ["grappler dummy"],
-    "phases": ["GPP"],
+    "equipment": [
+      "grappler_dummy"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "10s max / 50s rest",
     "intensity": "max",
-    "tags": ["mma", "brawler", "pressure_fighter"],
+    "tags": [
+      "mma",
+      "brawler",
+      "pressure_fighter"
+    ],
     "notes": "Short, violent elbow/hammerfist flurries from mount.",
     "equipment_note": "Use MMA gloves for realism."
   },
   {
     "name": "Corner Knee Bursts",
-    "equipment": ["heavy bag", "corner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "corner",
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["muay_thai", "clinch_fighter", "pressure_fighter"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "pressure_fighter"
+    ],
     "notes": "Max-power knees to trapped bag. Full hip extension.",
     "equipment_note": "Angle bag to simulate opponent lean."
   },
   {
     "name": "Scrambler's Standup Explosions",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "compound",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["mma", "scrambler", "wrestler"],
+    "tags": [
+      "mma",
+      "scrambler",
+      "wrestler"
+    ],
     "notes": "From bottom position, explode to feet in one motion.",
     "equipment_note": "Partner provides 20% resistance."
   },
   {
     "name": "Uppercut Barrage",
-    "equipment": ["angle bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "angle_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "8x / 60s rest",
     "intensity": "max",
-    "tags": ["boxing", "brawler", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "brawler",
+      "pressure_fighter"
+    ],
     "notes": "Max-power uppercuts from crouch position. Reset stance.",
     "equipment_note": "Bag height at chest level."
   },
   {
     "name": "Spinning Back Kick Accelerations",
-    "equipment": ["thai pads"],
-    "phases": ["GPP"],
+    "equipment": [
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "ATP-PCr",
     "modality": "strike",
     "duration": "6x / 60s rest",
     "intensity": "max",
-    "tags": ["kickboxing", "kicker", "distance_striker"],
+    "tags": [
+      "kickboxing",
+      "kicker",
+      "distance_striker"
+    ],
     "notes": "Full rotation back kicks with instant reset.",
     "equipment_note": "Pad holder braces firmly."
   },
   {
     "name": "Long-Distance Shadowboxing",
-    "equipment": ["mirror"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mirror"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "steady-state",
     "duration": "3-5min rounds",
-    "intensity": "low-moderate",
-    "tags": ["boxing", "distance_striker", "counter_striker"],
-    "notes": "Emphasize footwork and jab-cross out-fighting.",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "distance_striker",
+      "counter_striker"
+    ],
+    "notes": "Emphasize footwork and jab-cross out-fighting. (low-moderate)",
     "equipment_note": "Film for technique analysis."
   },
   {
     "name": "Clinch Marching Rounds",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "4min rounds",
     "intensity": "moderate",
-    "tags": ["muay_thai", "clinch_fighter"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter"
+    ],
     "notes": "Maintain plum position while circling.",
     "equipment_note": "Partner provides 30% resistance."
   },
   {
     "name": "Grappler's Flow Roll",
-    "equipment": ["partner", "mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "5min rounds",
     "intensity": "low",
-    "tags": ["mma", "submission_hunter"],
+    "tags": [
+      "mma",
+      "submission_hunter"
+    ],
     "notes": "No submissions - constant positional transitions.",
     "equipment_note": "Wear rash guard."
   },
   {
     "name": "Teep Maintenance Drill",
-    "equipment": ["thai pads"],
-    "phases": ["GPP"],
+    "equipment": [
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "2min on / 30s off",
     "intensity": "moderate",
-    "tags": ["muay_thai", "distance_striker"],
+    "tags": [
+      "muay_thai",
+      "distance_striker"
+    ],
     "notes": "1 teep every 5 seconds. Focus on reset speed.",
     "equipment_note": "Pad holder steps in/out."
   },
   {
     "name": "Cage Cutting Footwork",
-    "equipment": ["cage"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cage"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["mma", "pressure_fighter"],
+    "tags": [
+      "mma",
+      "pressure_fighter"
+    ],
     "notes": "Practice cutting off octagon while shadowboxing.",
     "equipment_note": "Wear MMA gloves."
   },
   {
     "name": "Pummeling Endurance Rounds",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "4min rounds",
     "intensity": "moderate",
-    "tags": ["wrestler", "mma"],
+    "tags": [
+      "wrestler",
+      "mma"
+    ],
     "notes": "Hand-fighting only. No takedowns.",
     "equipment_note": "Chalk allowed for grip."
   },
   {
     "name": "Kick Defense March",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "5min rounds",
-    "intensity": "low-moderate",
-    "tags": ["kickboxing", "counter_striker"],
-    "notes": "Continuous check/block motions while circling.",
+    "intensity": "moderate",
+    "tags": [
+      "kickboxing",
+      "counter_striker"
+    ],
+    "notes": "Continuous check/block motions while circling. (low-moderate)",
     "equipment_note": "Ankle weights optional."
   },
   {
     "name": "Brawler's Forward Shadow",
-    "equipment": ["mirror"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mirror"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "pressure_fighter"
+    ],
     "notes": "Aggressive forward movement with high guard.",
     "equipment_note": "Focus on cutting angles."
   },
   {
     "name": "Hybrid Stance Switch Drill",
-    "equipment": ["cones"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cones"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "1min on / 30s off",
     "intensity": "moderate",
-    "tags": ["mma", "hybrid"],
+    "tags": [
+      "mma",
+      "hybrid"
+    ],
     "notes": "Switch stances every 3 steps while navigating cones.",
     "equipment_note": "5-cone zigzag pattern."
   },
   {
     "name": "Thai Skip Rope",
-    "equipment": ["jump rope"],
-    "phases": ["GPP"],
+    "equipment": [
+      "jump_rope"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "10min",
-    "intensity": "low-moderate",
-    "tags": ["muay_thai", "clinch_fighter"],
-    "notes": "Alternate foot every 10 jumps. Stay light.",
+    "intensity": "moderate",
+    "tags": [
+      "muay_thai",
+      "clinch_fighter"
+    ],
+    "notes": "Alternate foot every 10 jumps. Stay light. (low-moderate)",
     "equipment_note": "Use weighted rope for advanced."
   },
   {
     "name": "Octagon Footwork Gauntlet",
-    "equipment": ["cage"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cage"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "5min rounds",
     "intensity": "moderate",
-    "tags": ["mma", "scrambler"],
+    "tags": [
+      "mma",
+      "scrambler"
+    ],
     "notes": "Touch all 8 cage sections in sequence.",
     "equipment_note": "Wear fight shorts."
   },
   {
     "name": "Counter Striker's Retreat Drill",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "counter_striker", "skill_refinement"],
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "skill_refinement"
+    ],
     "notes": "Backstep while maintaining defensive shell.",
     "equipment_note": "Mark distance with tape."
   },
   {
     "name": "Submission Hunter's Guard Retention",
-    "equipment": ["partner", "mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "4min rounds",
-    "intensity": "low-moderate",
-    "tags": ["mma", "submission_hunter"],
-    "notes": "Partner attempts passes while you maintain guard.",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "submission_hunter"
+    ],
+    "notes": "Partner attempts passes while you maintain guard. (low-moderate)",
     "equipment_note": "50% resistance."
   },
   {
     "name": "Kicker's Range Management",
-    "equipment": ["mirror"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mirror"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["kickboxing", "distance_striker"],
+    "tags": [
+      "kickboxing",
+      "distance_striker"
+    ],
     "notes": "Maintain kicking range with constant teep feints.",
     "equipment_note": "Check hip alignment."
   },
   {
     "name": "Wrestler's Wall-Walk Drill",
-    "equipment": ["wall", "mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat",
+      "wall"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "1min on / 30s off",
     "intensity": "moderate",
-    "tags": ["wrestler", "mma"],
+    "tags": [
+      "wrestler",
+      "mma"
+    ],
     "notes": "From butt-scoot position, walk up wall to standing.",
     "equipment_note": "Use padded wall."
   },
   {
     "name": "Pressure Fighter's Cutoff Circuit",
-    "equipment": ["cones"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cones"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "pressure_fighter"
+    ],
     "notes": "Mirror imaginary opponent while cutting off space.",
     "equipment_note": "4-cone square setup."
   },
   {
     "name": "Hybrid's Stance Transition Drill",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "5min",
-    "intensity": "low-moderate",
-    "tags": ["mma", "hybrid"],
-    "notes": "Switch between orthodox/southpaw every 5 steps.",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "hybrid"
+    ],
+    "notes": "Switch between orthodox/southpaw every 5 steps. (low-moderate)",
     "equipment_note": "Focus on balanced transitions."
   },
   {
     "name": "Clinch Fighter's Neck Endurance",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "isometric",
     "duration": "3min rounds",
     "intensity": "low",
-    "tags": ["muay_thai", "clinch_fighter", "skill_refinement"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "skill_refinement"
+    ],
     "notes": "Maintain plum position against light resistance.",
     "equipment_note": "Partner varies pull direction."
   },
   {
     "name": "Scrambler's Turtle Recovery",
-    "equipment": ["mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "1min on / 30s off",
     "intensity": "moderate",
-    "tags": ["mma", "scrambler"],
+    "tags": [
+      "mma",
+      "scrambler"
+    ],
     "notes": "From turtle, stand up and circle out repeatedly.",
     "equipment_note": "No partner needed."
   },
   {
     "name": "Brawler's Body Shot Guard",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "brawler"],
+    "tags": [
+      "boxing",
+      "brawler"
+    ],
     "notes": "High guard while walking bag down with body shots.",
     "equipment_note": "16oz gloves recommended."
   },
   {
     "name": "Distance Striker's Angle Drill",
-    "equipment": ["cones"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cones"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["kickboxing", "distance_striker"],
+    "tags": [
+      "kickboxing",
+      "distance_striker"
+    ],
     "notes": "45-degree steps off centerline between cones.",
     "equipment_note": "5-cone star pattern."
   },
   {
     "name": "MMA Wall-Walk Conditioning",
-    "equipment": ["cage"],
-    "phases": ["GPP"],
+    "equipment": [
+      "cage"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "45s on / 15s off",
     "intensity": "moderate",
-    "tags": ["mma"],
+    "tags": [
+      "mma"
+    ],
     "notes": "Stand back up from seated position using cage.",
     "equipment_note": "Wear fight shorts."
   },
   {
     "name": "Counter Striker's Parry Drill",
-    "equipment": ["double-end bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "double-end_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "counter_striker"],
+    "tags": [
+      "boxing",
+      "counter_striker"
+    ],
     "notes": "Parry bag strikes while maintaining distance.",
     "equipment_note": "Adjust bag height as needed."
   },
   {
     "name": "Kicker's Switch Stance March",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "5min",
-    "intensity": "low-moderate",
-    "tags": ["muay_thai", "kicker", "hybrid"],
-    "notes": "Switch stances every 10 steps with teep feints.",
+    "intensity": "moderate",
+    "tags": [
+      "muay_thai",
+      "kicker",
+      "hybrid"
+    ],
+    "notes": "Switch stances every 10 steps with teep feints. (low-moderate)",
     "equipment_note": "Focus on balance."
   },
   {
     "name": "Grappler's Standup Chain",
-    "equipment": ["partner", "mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat",
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "1min on / 30s off",
     "intensity": "moderate",
-    "tags": ["wrestler", "mma"],
+    "tags": [
+      "wrestler",
+      "mma"
+    ],
     "notes": "From bottom, stand up and immediately sprawl.",
     "equipment_note": "Partner provides 30% resistance."
   },
   {
     "name": "Pressure Fighter's Cutoff Shadow",
-    "equipment": ["mirror"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mirror"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["boxing", "pressure_fighter"],
+    "tags": [
+      "boxing",
+      "pressure_fighter"
+    ],
     "notes": "Advance while cutting off angles in mirror.",
     "equipment_note": "Focus on foot placement."
   },
   {
     "name": "Clinch Fighter's Frame Endurance",
-    "equipment": ["partner"],
-    "phases": ["GPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "isometric",
     "duration": "3min rounds",
     "intensity": "low",
-    "tags": ["muay_thai", "clinch_fighter"],
+    "tags": [
+      "muay_thai",
+      "clinch_fighter"
+    ],
     "notes": "Maintain frames against partner's forward pressure.",
     "equipment_note": "Partner wears belly pad."
   },
   {
     "name": "Hybrid's Transition Circuit",
-    "equipment": ["open space"],
-    "phases": ["GPP"],
+    "equipment": [
+      "open_space"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "5min",
     "intensity": "moderate",
-    "tags": ["mma"],
+    "tags": [
+      "mma"
+    ],
     "notes": "Alternate between striking and shot feints.",
     "equipment_note": "Mark 3 engagement zones."
   },
   {
     "name": "Scrambler's Hip Escape Marathon",
-    "equipment": ["mat"],
-    "phases": ["GPP"],
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "interval",
     "duration": "1min on / 30s off",
     "intensity": "moderate",
-    "tags": ["mma", "scrambler"],
+    "tags": [
+      "mma",
+      "scrambler"
+    ],
     "notes": "Continuous hip escapes down mat length.",
     "equipment_note": "Use wrestler shoes."
   },
   {
     "name": "Distance Striker's Teep Maintenance",
-    "equipment": ["heavy bag"],
-    "phases": ["GPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
     "system": "aerobic",
     "modality": "continuous",
     "duration": "3min rounds",
     "intensity": "moderate",
-    "tags": ["muay_thai", "distance_striker"],
+    "tags": [
+      "muay_thai",
+      "distance_striker"
+    ],
     "notes": "1 teep every 10 seconds. Reset completely.",
     "equipment_note": "Mark optimal range on floor."
   },
-{
-  "name": "Shadow Flow Rounds",
-  "equipment": ["Bodyweight"],
-  "phases": ["SPP"],
-  "system": "aerobic",
-  "modality": "technical endurance",
-  "duration": "3min shadowboxing → 1min rest → x5 rounds",
-  "intensity": "60-70% effort",
-  "tags": ["boxing", "counter_striker", "kickboxing"],
-  "notes": "Emphasize footwork pivots and defensive slips between combos",
-  "equipment_note": "Mirror for self-correction"
-},
+  {
+    "name": "Shadow Flow Rounds",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical endurance",
+    "duration": "3min shadowboxing → 1min rest → x5 rounds",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "kickboxing"
+    ],
+    "notes": "Emphasize footwork pivots and defensive slips between combos (60-70% effort)",
+    "equipment_note": "Mirror for self-correction"
+  },
   {
     "name": "Rope Clinch Frames",
-    "equipment": ["Heavy Bag"],
-    "phases": ["SPP"],
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "fatigue resistance",
     "duration": "30s rope lean → 30s active framing → x8 rounds",
-    "intensity": "RPE 5",
-    "tags": ["boxing", "clinch_fighter"],
-    "notes": "Simulates late-round clinch against ropes",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "clinch_fighter"
+    ],
+    "notes": "Simulates late-round clinch against ropes (RPE 5)",
     "equipment_note": "Bag must touch ropes/wall"
   },
   {
     "name": "Referee Break Counters",
-    "equipment": ["Partner"],
-    "phases": ["SPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "rulebook exploitation",
     "duration": "10s clinch → 2s break → immediate jab → x20 rounds",
-    "intensity": "50% speed",
-    "tags": ["boxing", "clinch_fighter"],
-    "notes": "Trains quick strikes after forced breaks",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "clinch_fighter"
+    ],
+    "notes": "Trains quick strikes after forced breaks (50% speed)",
     "equipment_note": "Headgear for partner"
   },
   {
     "name": "Overhook Uppercut Drill",
-    "equipment": ["Double-End Bag"],
-    "phases": ["SPP"],
+    "equipment": [
+      "double-end_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "infighting transitions",
     "duration": "20s overhook control → 10s uppercuts → x10 rounds",
-    "intensity": "40% power",
-    "tags": ["boxing", "clinch_fighter"],
-    "notes": "Links framing to punch entries",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "clinch_fighter"
+    ],
+    "notes": "Links framing to punch entries (40% power)",
     "equipment_note": "Low-hanging bag"
   },
   {
     "name": "Corner Mauling Circuit",
-    "equipment": ["Punching Bag", "Wall"],
-    "phases": ["SPP"],
+    "equipment": [
+      "punching_bag",
+      "wall"
+    ],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "positional dominance",
     "duration": "45s bag pinned to wall → 15s frame adjustments → x6 rounds",
-    "intensity": "RPE 4",
-    "tags": ["boxing", "clinch_fighter"],
-    "notes": "Conditions forearm stamina for corner control",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "clinch_fighter"
+    ],
+    "notes": "Conditions forearm stamina for corner control (RPE 4)",
     "equipment_note": "Angled bag required"
   },
   {
     "name": "Slip-Clinch Reaction",
-    "equipment": ["Partner"],
-    "phases": ["SPP"],
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "SPP"
+    ],
     "system": "aerobic",
     "modality": "defensive clinching",
     "duration": "Partner jabs → slip → clinch → x50 reps",
-    "intensity": "30% speed",
-    "tags": ["boxing", "clinch_fighter"],
-    "notes": "Drills clinch as defensive response",
-  "equipment_note": "Focus mitts for partner"
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "clinch_fighter"
+    ],
+    "notes": "Drills clinch as defensive response (30% speed)",
+    "equipment_note": "Focus mitts for partner"
   },
   {
     "name": "Reaction Jab Matrix",
-    "equipment": ["Reaction Ball", "Partner"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "partner",
+      "reaction_ball"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "visual processing",
     "duration": "3min random ball toss → jab/parry response → x4 rounds",
-    "intensity": "70% speed",
-    "tags": ["boxing", "counter_striker"],
-    "notes": "Partner throws ball unpredictably; react with jab or parry",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "counter_striker"
+    ],
+    "notes": "Partner throws ball unpredictably; react with jab or parry (70% speed)",
     "equipment_note": "Uneven bounce ball required"
   },
   {
     "name": "Clinch Auditory Triggers",
-    "equipment": ["Bluetooth Speaker"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "bluetooth_speaker"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "auditory reaction",
     "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
-    "intensity": "50% effort",
-    "tags": ["muay_thai", "clinch_fighter"],
-    "notes": "Pre-recorded beeps signal underhook/overhook switches",
+    "intensity": "zone 2",
+    "tags": [
+      "muay_thai",
+      "clinch_fighter"
+    ],
+    "notes": "Pre-recorded beeps signal underhook/overhook switches (50% effort)",
     "equipment_note": "Random interval timer (5-15s)"
   },
   {
     "name": "Wrestling Chess",
-    "equipment": ["Chess Clock", "Partner"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "chess_clock",
+      "partner"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "decision fatigue",
     "duration": "3min live wrestling → 30s chess move → x5 rounds",
-    "intensity": "60% effort",
-    "tags": ["wrestling", "scrambler", "skill_refinement"],
-    "notes": "Alternate wrestling rounds with chess moves to drain mental stamina",
+    "intensity": "zone 2",
+    "tags": [
+      "wrestling",
+      "scrambler",
+      "skill_refinement"
+    ],
+    "notes": "Alternate wrestling rounds with chess moves to drain mental stamina (60% effort)",
     "equipment_note": "Portable chess set"
   },
   {
     "name": "Kick Pattern Recall",
-    "equipment": ["Flashcards"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "flashcards"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "memory challenge",
     "duration": "3min execute kick combos from flashed cards → x4 rounds",
-    "intensity": "40% power",
-    "tags": ["kickboxing", "kicker", "skill_refinement"],
-    "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo",
+    "intensity": "low",
+    "tags": [
+      "kickboxing",
+      "kicker",
+      "skill_refinement"
+    ],
+    "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo (40% power)",
     "equipment_note": "Pre-printed kick codes"
   },
   {
     "name": "Takedown Dilemma",
-    "equipment": ["Colored Cones"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "colored_cones"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "choice reaction",
     "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
-    "intensity": "50% speed",
-    "tags": ["mma", "skill_refinement"],
-    "notes": "Random cone colors force adaptive takedown chains",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "skill_refinement"
+    ],
+    "notes": "Random cone colors force adaptive takedown chains (50% speed)",
     "equipment_note": "2+ cone colors"
   },
   {
     "name": "Brawler's Puzzle Defense",
-    "equipment": ["Puzzle Mat"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "puzzle_mat"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "pattern recognition",
     "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
-    "intensity": "60% power",
-    "tags": ["boxing", "brawler", "skill_refinement"],
-    "notes": "Disrupts rhythm to simulate in-fight chaos",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "brawler",
+      "skill_refinement"
+    ],
+    "notes": "Disrupts rhythm to simulate in-fight chaos (60% power)",
     "equipment_note": "4-piece jigsaw"
   },
   {
     "name": "Distance Striker's Math Dodge",
-    "equipment": ["Whiteboard"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "whiteboard"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "dual-task loading",
     "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
-    "intensity": "50% effort",
-    "tags": ["muay_thai", "distance_striker", "skill_refinement"],
-    "notes": "Example: 'Teep → solve 7x8 → pivot'",
+    "intensity": "zone 2",
+    "tags": [
+      "muay_thai",
+      "distance_striker",
+      "skill_refinement"
+    ],
+    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
   },
   {
     "name": "Grappler's Blindfold Pummeling",
-    "equipment": ["Blindfold"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "blindfold"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "tactile sensitivity",
     "duration": "3min pummeling blindfolded → x4 rounds",
-    "intensity": "30% effort",
-    "tags": ["grappling", "submission_hunter", "skill_refinement"],
-    "notes": "Forces reliance on grip/body feel over sight",
+    "intensity": "low",
+    "tags": [
+      "grappling",
+      "submission_hunter",
+      "skill_refinement"
+    ],
+    "notes": "Forces reliance on grip/body feel over sight (30% effort)",
     "equipment_note": "Non-slip mat"
   },
   {
     "name": "Pressure Fighter's Shadowboxing Riddle",
-    "equipment": ["Earbuds"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "earbuds"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "audio distraction",
     "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
-    "intensity": "50% power",
-    "tags": ["mma", "pressure_fighter", "skill_refinement"],
-    "notes": "Coach whispers riddles through earbuds",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "pressure_fighter",
+      "skill_refinement"
+    ],
+    "notes": "Coach whispers riddles through earbuds (50% power)",
     "equipment_note": "Wireless mic for coach"
   },
   {
     "name": "Hybrid's Stance-Switch Reaction",
-    "equipment": ["Colored Lights"],
-    "phases": ["SPP", "TAPER"],
+    "equipment": [
+      "colored_lights"
+    ],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "system": "Cognitive",
     "modality": "visual cueing",
     "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
-    "intensity": "60% speed",
-    "tags": ["mma", "hybrid", "skill_refinement"],
-    "notes": "Forces stance switches under fatigue",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "hybrid",
+      "skill_refinement"
+    ],
+    "notes": "Forces stance switches under fatigue (60% speed)",
     "equipment_note": "Traffic light system"
   }
 ]
