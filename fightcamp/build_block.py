@@ -161,6 +161,7 @@ def build_html_document(
     adjustments_table: str = "",
     sparring_nutrition_html: str = "",
     athlete_profile_html: str = "",
+    coach_notes: str = "",
 ) -> str:
     """Assemble the full HTML string."""
 
@@ -225,6 +226,9 @@ def build_html_document(
     if taper:
         lines.append(phase_html(taper, "#F44336"))
         lines.append("<br><br>")
+
+    if coach_notes:
+        lines += [_section_title("Coach Notes"), _md_to_html(coach_notes)]
 
     lines += [
         _section_title("Nutrition"),
