@@ -6,8 +6,8 @@ style_specific_exercises = [
         "method": "strength",
         "movement": "static_hold",
         "type": "isometric",
-        "tags": ["grip", "wrestler", "bjj", "style_grappler", "style_wrestler"],
-        "equipment": "plates"
+        "tags": ["grip", "clinch_fighter", "submission_hunter"],
+        "equipment": "plate"
     },
     {
         "name": "Wrist Roller Extensions",
@@ -15,8 +15,8 @@ style_specific_exercises = [
         "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "wrist_extension",
-        "type": "isolation",
-        "tags": ["grip", "style_grappler", "style_wrestler"],
+        "type": "bilateral",
+        "tags": ["grip", "isolation", "clinch_fighter", "submission_hunter"],
         "equipment": "wrist_roller"
     },
     {
@@ -25,8 +25,8 @@ style_specific_exercises = [
         "phases": ["SPP", "TAPER"],
         "method": "strength",
         "movement": "squat_to_press",
-        "type": "compound",
-        "tags": ["explosive", "triple_extension", "rate_of_force", "style_scrambler"],
+        "type": "bilateral",
+        "tags": ["explosive", "triple_extension", "rate_of_force", "compound", "scrambler"],
         "equipment": "barbell"
     },
     {
@@ -36,17 +36,17 @@ style_specific_exercises = [
         "method": "strength",
         "movement": "complex",
         "type": "unilateral",
-        "tags": ["coordination", "balance", "anti_rotation", "style_scrambler"],
+        "tags": ["coordination", "balance", "anti_rotation", "scrambler"],
         "equipment": "kettlebell"
     },
     {
         "name": "Bulgarian Split Squat",
         "category": "lower_body",
-        "phases": ["SPP", "TAPER"],
+        "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "squat",
         "type": "unilateral",
-        "tags": ["quad_dominant", "balance", "hip_dominant", "style_kicker"],
+        "tags": ["quad_dominant", "balance", "hip_dominant", "kicker"],
         "equipment": "dumbbells"
     },
     {
@@ -56,7 +56,7 @@ style_specific_exercises = [
         "method": "strength",
         "movement": "lunge",
         "type": "unilateral",
-        "tags": ["unilateral", "hip_dominant", "mobility", "style_kicker"],
+        "tags": ["unilateral", "hip_dominant", "mobility", "kicker"],
         "equipment": "dumbbells"
     },
     {
@@ -65,8 +65,8 @@ style_specific_exercises = [
         "phases": ["SPP"],
         "method": "strength",
         "movement": "pull",
-        "type": "compound",
-        "tags": ["pull", "grip", "upper_body", "style_submission_hunter", "style_clinch_fighter"],
+        "type": "bilateral",
+        "tags": ["pull", "grip", "upper_body", "submission_hunter", "clinch_fighter", "compound"],
         "equipment": "pullup_bar"
     },
     {
@@ -75,18 +75,18 @@ style_specific_exercises = [
         "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "hinge",
-        "type": "ballistic",
-        "tags": ["posterior_chain", "grip", "explosive", "style_submission_hunter"],
+        "type": "bilateral",
+        "tags": ["posterior_chain", "grip", "explosive", "submission_hunter", "ballistic"],
         "equipment": "kettlebell"
     },
     {
         "name": "Barbell Landmine Twist",
         "category": "core",
-        "phases": ["SPP"],
+        "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "rotation",
-        "type": "anti_rotation",
-        "tags": ["rotational", "anti_rotation", "style_counter_striker"],
+        "type": "bilateral",
+        "tags": ["rotational", "anti_rotation", "counter_striker"],
         "equipment": "landmine"
     },
     {
@@ -96,7 +96,7 @@ style_specific_exercises = [
         "method": "strength",
         "movement": "anti_rotation",
         "type": "isometric",
-        "tags": ["anti_rotation", "cognitive", "style_counter_striker", "style_distance_striker"],
+        "tags": ["anti_rotation", "cognitive", "counter_striker", "distance_striker", "cornerstone"],
         "equipment": "bands"
     },
     {
@@ -105,8 +105,8 @@ style_specific_exercises = [
         "phases": ["SPP"],
         "method": "strength",
         "movement": "slam",
-        "type": "ballistic",
-        "tags": ["explosive", "overhead", "rate_of_force", "style_distance_striker"],
+        "type": "bilateral",
+        "tags": ["explosive", "overhead", "rate_of_force", "distance_striker", "ballistic"],
         "equipment": "medicine_ball"
     },
     {
@@ -115,8 +115,8 @@ style_specific_exercises = [
         "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "carry",
-        "type": "compound",
-        "tags": ["grip", "core", "cns_freshness", "style_clinch_fighter"],
+        "type": "bilateral",
+        "tags": ["grip", "core", "cns_freshness", "clinch_fighter", "compound"],
         "equipment": "dumbbells"
     },
     {
@@ -125,8 +125,8 @@ style_specific_exercises = [
         "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "push",
-        "type": "conditioning",
-        "tags": ["sled", "work_capacity", "posterior_chain", "style_pressure_fighter"],
+        "type": "bilateral",
+        "tags": ["sled", "work_capacity", "posterior_chain", "pressure_fighter", "conditioning"],
         "equipment": "sled"
     },
     {
@@ -135,8 +135,8 @@ style_specific_exercises = [
         "phases": ["SPP", "TAPER"],
         "method": "strength",
         "movement": "lunge",
-        "type": "explosive",
-        "tags": ["explosive", "unilateral", "endurance", "style_pressure_fighter"],
+        "type": "unilateral",
+        "tags": ["explosive", "unilateral", "endurance", "pressure_fighter"],
         "equipment": "bodyweight"
     },
     {
@@ -145,8 +145,8 @@ style_specific_exercises = [
         "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "slam",
-        "type": "rotational",
-        "tags": ["grip", "cognitive", "rotational", "style_brawler"],
+        "type": "bilateral",
+        "tags": ["grip", "cognitive", "rotational", "brawler"],
         "equipment": "sledgehammer"
     },
     {
@@ -155,8 +155,8 @@ style_specific_exercises = [
         "phases": ["GPP", "SPP"],
         "method": "strength",
         "movement": "slam",
-        "type": "ballistic",
-        "tags": ["explosive", "cognitive", "style_brawler"],
+        "type": "bilateral",
+        "tags": ["explosive", "cognitive", "brawler", "ballistic"],
         "equipment": "medicine_ball"
     }
 ]
