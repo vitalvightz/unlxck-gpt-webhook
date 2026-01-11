@@ -18,7 +18,7 @@
       { "label": "Training Phase", "value": "Mid-Camp" },
       { "label": "Equipment Access", "value": ["Barbell", "Dumbbells", "Medicine Ball", "Bands", "Sled"] },
       { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] },
-      { "label": "Any injuries or areas you need to work around?", "value": "my thigh is tight" },
+      { "label": "Any injuries or areas you need to work around?", "value": "my quad is tight and tender too touch" },
       { "label": "What are your key performance goals?", "value": ["Power & Explosiveness", "Conditioning / Endurance", "Speed"] },
       { "label": "Where do you feel weakest right now?", "value": ["Grip Strength", "Hip Mobility"] },
       { "label": "Do you prefer certain training styles?", "value": "High-intensity intervals and explosive work" },
