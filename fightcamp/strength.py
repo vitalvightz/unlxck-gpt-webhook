@@ -194,6 +194,23 @@ except Exception:
     _universal_strength = []
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
+def normalize_exercise_movement(exercise: dict) -> str:
+    """Ensure exercises expose a canonical movement key."""
+    movement = exercise.get("movement")
+    if movement:
+        return movement
+    for key in ("category", "type"):
+        value = exercise.get(key)
+        if value:
+            exercise["movement"] = value
+            return value
+    tags = exercise.get("tags") or []
+    if tags:
+        exercise["movement"] = tags[0]
+        return tags[0]
+    exercise["movement"] = "unknown"
+    return "unknown"
+
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
@@ -548,6 +565,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     return
 
     _enforce_conflicts(base_exercises)
+
+    for ex in base_exercises:
+        normalize_exercise_movement(ex)
 
     used_days = training_days[:num_strength_sessions]
 

@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.training_context import normalize_equipment_list
-from fightcamp.strength import normalize_style_tags, generate_strength_block
+from fightcamp.strength import normalize_exercise_movement, normalize_style_tags, generate_strength_block
 
 
 def test_style_tag_mapping():
@@ -16,6 +16,12 @@ def test_style_tag_mapping():
 def test_equipment_alias_split():
     assert set(normalize_equipment_list("Med Balls / Bands")) == {"medicine_ball", "bands"}
     assert set(normalize_equipment_list(["Med Balls / Bands"])) == {"medicine_ball", "bands"}
+
+
+def test_normalize_exercise_movement_fallback():
+    exercise = {"name": "Test Movement", "category": "hinge", "tags": ["pull"]}
+    assert normalize_exercise_movement(exercise) == "hinge"
+    assert exercise["movement"] == "hinge"
 
 
 def test_no_legacy_token_in_data():
