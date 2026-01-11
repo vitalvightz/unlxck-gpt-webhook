@@ -36,7 +36,7 @@ jobs:
           pip check
 
       - name: Download spaCy model
-        run: python -m spacy download en_core_web_lg
+        run: pip install --no-cache-dir en-core-web-lg==3.6.0
 
       - name: Run fightcamp
         run: python -m fightcamp.main
