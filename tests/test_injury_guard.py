@@ -156,6 +156,13 @@ def test_injury_guard_field_restrictions():
 def test_normalize_injury_regions_parses_phrases():
     assert normalize_injury_regions(["ACL tear"]) == {"knee"}
     assert normalize_injury_regions(["lumbar strain"]) == {"lower_back"}
+    assert normalize_injury_regions(["thigh pain"]) == {"quad"}
+    assert normalize_injury_regions(["arm pain"]) == {"shoulder"}
+    assert normalize_injury_regions(["leg pain"]) == {"knee"}
+    assert normalize_injury_regions(["lower leg pain"]) == {"shin"}
+    assert normalize_injury_regions(["back of thigh pain"]) == {"hamstring"}
+    assert normalize_injury_regions(["inner leg pain"]) == {"groin"}
+    assert normalize_injury_regions(["upper leg pain"]) == {"quad"}
 
 
 def test_drill_text_filter_matches_notes_and_tags():
