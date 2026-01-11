@@ -30,15 +30,15 @@ from .nutrition import generate_nutrition_block
 from .rehab_protocols import generate_rehab_protocols, generate_support_notes
 
 GOAL_NORMALIZER = {
-    "Power & Explosiveness": "explosive",
-    "Conditioning / Endurance": "conditioning",
+    "Power & Explosiveness": "power",
+    "Conditioning / Endurance": "endurance",
     "Maximal Strength": "strength",
     "Mobility": "mobility",
     "Speed": "reactive",
     "Agility": "lateral",
     "Core Stability": "core",
     "CNS Fatigue": "cns",
-    "Speed / Reaction": "reactive",
+    "Speed / Reaction": "speed",
     "Lateral Movement": "lateral",
     "Rotation": "rotational",
     "Balance": "balance",
@@ -51,7 +51,7 @@ GOAL_NORMALIZER = {
     "Neck": "neck",
     "Coordination / Proprioception": "coordination",
     "Coordination/Proprioception": "coordination",
-    "Grappling": "grappler",
+    "Grappling": "grappling",
     "Striking": "striking",
     "Injury Prevention": "injury_prevention",
     "Mental Resilience": "mental_resilience",

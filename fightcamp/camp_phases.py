@@ -255,12 +255,6 @@ def calculate_phase_weeks(
     total = ratios["GPP"] + ratios["SPP"] + ratios["TAPER"]
     ratios = {k: v / total for k, v in ratios.items()}
 
-    # Capture fractional day breakdown before week rounding
-    days = {
-        phase: max(0, round(ratios[phase] * camp_length * 7))
-        for phase in ("GPP", "SPP", "TAPER")
-    }
-
     # 5. Convert ratios to week counts
     weeks = {
         "GPP": max(0, round(ratios["GPP"] * camp_length)),
@@ -298,6 +292,7 @@ def calculate_phase_weeks(
     _rebalance(weeks)
 
     # 7. Return dictionary with both weeks and estimated days
+    days = {phase: weeks[phase] * 7 for phase in ("GPP", "SPP", "TAPER")}
     return {
         **weeks,
         "days": days,
