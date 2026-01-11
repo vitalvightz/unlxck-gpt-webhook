@@ -303,8 +303,8 @@ def _export_pdf_from_html(html, full_name):
     return path
 
 def _upload_to_supabase(pdf_path):
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not url or not key:
         raise RuntimeError("Missing Supabase credentials")
 
@@ -328,7 +328,7 @@ def _upload_to_supabase(pdf_path):
 
     # Use the Supabase URL directly so the full public link prints in logs.
     # GitHub no longer masks this variable since it's an Actions variable.
-    public_base = os.getenv("SUPABASE_URL")
+    public_base = url
     return f"{public_base}/storage/v1/object/public/mental-plans/{filename}"
 
 def bucket_drills_by_phase(drills):
