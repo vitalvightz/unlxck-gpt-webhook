@@ -35,8 +35,5 @@ jobs:
           pip install --no-cache-dir git+https://github.com/jenojp/negspacy
           pip check
 
-      - name: Download spaCy model
-        run: pip install --no-cache-dir en-core-web-lg==3.6.0
-
       - name: Run fightcamp
         run: python -m fightcamp.main
