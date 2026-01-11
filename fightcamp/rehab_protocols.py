@@ -60,6 +60,172 @@ INJURY_TYPES = [
     "unspecified",
 ]
 
+INJURY_TYPE_SEVERITY = {
+    "tightness": "mild",
+    "soreness": "mild",
+    "stiffness": "mild",
+    "pain": "mild",
+    "contusion": "mild",
+    "sprain": "moderate",
+    "strain": "moderate",
+    "tendonitis": "moderate",
+    "impingement": "moderate",
+    "hyperextension": "moderate",
+    "swelling": "severe",
+    "instability": "severe",
+    "unspecified": "moderate",
+}
+
+REGION_GUARDRAILS = {
+    "upper_limb": {
+        "mild": {
+            "allowed": [
+                "Controlled range of motion, tempos, and isometrics.",
+                "Technique-only speed work if pain-free.",
+            ],
+            "avoid": ["Max-effort pressing/gripping if it provokes symptoms."],
+            "replace": ["Lower-body aerobic work to keep conditioning moving."],
+            "red_flags": ["Night pain, numbness/tingling, or loss of strength."],
+        },
+        "moderate": {
+            "allowed": [
+                "Pain-free patterns with isometrics and scap/rotator control.",
+                "Progression gate: symptoms stable 7–10 days before adding load/velocity.",
+            ],
+            "avoid": ["Heavy pressing, dips, overhead ballistic work, high-torque grips."],
+            "replace": ["Keep conditioning via bike or lower-body sessions."],
+            "red_flags": [],
+        },
+        "severe": {
+            "allowed": ["Only symptom-calming movement after clinical review."],
+            "avoid": ["Loaded pressing, overhead work, or contact."],
+            "replace": ["Lower-body conditioning only."],
+            "red_flags": ["Seek medical review before resuming loading."],
+        },
+    },
+    "spine_pelvis": {
+        "mild": {
+            "allowed": ["Hinge patterning, trunk endurance, controlled range of motion."],
+            "avoid": ["Max axial loading if it spikes pain."],
+            "replace": ["Sled or bike conditioning to keep capacity."],
+            "red_flags": [],
+        },
+        "moderate": {
+            "allowed": ["Graded exposure, trunk endurance, hip capacity work."],
+            "avoid": ["Heavy hinge/squat, repeated loaded flexion/rotation."],
+            "replace": ["Low-impact conditioning."],
+            "red_flags": [],
+        },
+        "severe": {
+            "allowed": ["Clinical review; keep movement symptom-calming only."],
+            "avoid": ["Heavy loading and aggressive range of motion."],
+            "replace": ["Non-provocative aerobic work."],
+            "red_flags": ["Seek medical review before resuming loading."],
+        },
+    },
+    "hip_groin": {
+        "mild": {
+            "allowed": ["Controlled strength work with short exposures."],
+            "avoid": ["Sudden lateral/cutting volume spikes."],
+            "replace": ["Low-impact conditioning if needed."],
+            "red_flags": [],
+        },
+        "moderate": {
+            "allowed": ["Isometrics and progressive strength in pain-free range."],
+            "avoid": ["Deep ROM, aggressive lateral lunges/cossacks, sprinting if it bites."],
+            "replace": ["Bike/row/swim conditioning."],
+            "red_flags": [],
+        },
+        "severe": {
+            "allowed": ["Symptom-led rehab after clinical review."],
+            "avoid": ["Cutting, sprinting, or contact."],
+            "replace": ["Low-impact conditioning only."],
+            "red_flags": ["Seek medical review before resuming load."],
+        },
+    },
+    "knee": {
+        "mild": {
+            "allowed": ["Controlled squats/step-ups within tolerance."],
+            "avoid": ["Big jumps in deep knee flexion volume."],
+            "replace": ["Low-impact conditioning."],
+            "red_flags": [],
+        },
+        "moderate": {
+            "allowed": ["Hip-dominant strength focus."],
+            "avoid": ["Repeated jumping, deep loaded knee flexion, hard decels."],
+            "replace": ["Bike conditioning; reintroduce jumps last."],
+            "red_flags": [],
+        },
+        "severe": {
+            "allowed": ["Clinical review plus symptom-led rehab."],
+            "avoid": ["Plyos, hard running, or cutting."],
+            "replace": ["Low-impact capacity work."],
+            "red_flags": ["Seek medical review before resuming impact work."],
+        },
+    },
+    "lower_leg_foot": {
+        "mild": {
+            "allowed": ["Progressive loading and low-impact exposures."],
+            "avoid": ["Sudden sprint/plyo spikes."],
+            "replace": ["Low-impact conditioning."],
+            "red_flags": [],
+        },
+        "moderate": {
+            "allowed": [
+                "Progressive calf/hamstring strength.",
+                "Balance/proprioception for ankle.",
+            ],
+            "avoid": ["Max velocity sprinting, repeated plyos, hard cutting."],
+            "replace": ["Bike/row/pool conditioning."],
+            "red_flags": [],
+        },
+        "severe": {
+            "allowed": ["Protect, then rebuild capacity after clinical review."],
+            "avoid": ["Sprinting, plyos, or cutting."],
+            "replace": ["Low-impact conditioning only."],
+            "red_flags": ["Seek medical review before resuming impact work."],
+        },
+    },
+}
+
+LOCATION_REGION_MAP = {
+    "shoulder": "upper_limb",
+    "chest": "upper_limb",
+    "elbow": "upper_limb",
+    "forearm": "upper_limb",
+    "wrist": "upper_limb",
+    "hand": "upper_limb",
+    "biceps": "upper_limb",
+    "triceps": "upper_limb",
+    "neck": "spine_pelvis",
+    "upper back": "spine_pelvis",
+    "lower back": "spine_pelvis",
+    "si joint": "spine_pelvis",
+    "hip": "hip_groin",
+    "groin": "hip_groin",
+    "hip flexor": "hip_groin",
+    "glute": "hip_groin",
+    "quad": "knee",
+    "knee": "knee",
+    "hamstring": "lower_leg_foot",
+    "calf": "lower_leg_foot",
+    "achilles": "lower_leg_foot",
+    "ankle": "lower_leg_foot",
+    "foot": "lower_leg_foot",
+    "toe": "lower_leg_foot",
+    "shin": "lower_leg_foot",
+    "heel": "lower_leg_foot",
+}
+
+REGION_LABELS = {
+    "upper_limb": "Upper limb",
+    "spine_pelvis": "Spine/pelvis",
+    "hip_groin": "Hip/groin",
+    "knee": "Knee-dominant",
+    "lower_leg_foot": "Lower leg/foot",
+    "unspecified": "Unspecified region",
+}
+
 # Contextual recovery tips for each injury type
 INJURY_SUPPORT_NOTES = {
     "sprain": [
@@ -322,5 +488,158 @@ def generate_support_notes(injury_string: str) -> str:
         lines.append(f"*{itype.title()} Support Advice:*")
         lines.extend([f"- {n}" for n in INJURY_SUPPORT_NOTES[itype]])
         lines.append("")
+
+    return "\n".join(lines).strip()
+
+
+def _normalize_injury_entries(injury_string: str) -> list[tuple[str, str | None]]:
+    injury_phrases = split_injury_text(injury_string)
+    parsed_entries = []
+    for phrase in injury_phrases:
+        itype, loc = parse_injury_phrase(phrase)
+        if not itype:
+            if loc:
+                itype = "unspecified"
+            else:
+                continue
+        parsed_entries.append((itype, loc))
+
+    if any(loc for _, loc in parsed_entries):
+        parsed_entries = [p for p in parsed_entries if p[1] is not None]
+
+    seen_pairs = set()
+    seen_locations = set()
+    unique_entries = []
+    for itype, loc in parsed_entries:
+        if (itype, loc) in seen_pairs:
+            continue
+        if loc in seen_locations:
+            continue
+        seen_pairs.add((itype, loc))
+        seen_locations.add(loc)
+        unique_entries.append((itype, loc))
+    return unique_entries
+
+
+def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
+    phase = phase.upper()
+    drills: list[str] = []
+
+    def _phases(entry):
+        progress = entry.get("phase_progression", "")
+        return [p.strip().upper() for p in progress.split("→") if p.strip()]
+
+    def _append_drills(entry):
+        for drill in entry.get("drills", []):
+            name = drill.get("name")
+            notes = drill.get("notes", "")
+            if not name:
+                continue
+            parsed = _split_notes_by_phase(notes)
+            if parsed:
+                for phase_label, text in parsed:
+                    if phase_label == phase:
+                        entry_text = name if not text else f"{name} – {text}"
+                        if entry_text not in drills:
+                            drills.append(entry_text)
+                        break
+            else:
+                entry_text = name if not notes else f"{name} – {notes}"
+                if entry_text not in drills:
+                    drills.append(entry_text)
+            if len(drills) >= limit:
+                return
+
+    candidates = [
+        (itype, loc),
+        ("unspecified", loc),
+        (itype, "unspecified"),
+        ("unspecified", "unspecified"),
+    ]
+    seen_keys = set()
+    for c_type, c_loc in candidates:
+        if (c_type, c_loc) in seen_keys:
+            continue
+        seen_keys.add((c_type, c_loc))
+        for entry in REHAB_BANK:
+            if entry.get("type") != c_type:
+                continue
+            if c_loc is not None and entry.get("location") != c_loc:
+                continue
+            if phase not in _phases(entry):
+                continue
+            _append_drills(entry)
+            if len(drills) >= limit:
+                return drills[:limit]
+    return drills[:limit]
+
+
+def format_injury_guardrails(phase: str, injuries: str) -> str:
+    """Return markdown injury guardrails for the current phase."""
+    if not injuries:
+        return "✅ No injury guardrails required."
+
+    entries = _normalize_injury_entries(injuries)
+    if not entries:
+        return "✅ No injury guardrails required."
+
+    lines = ["**Injury Summary**"]
+    guardrails: list[tuple[str, str, dict]] = []
+    for itype, loc in entries:
+        severity = INJURY_TYPE_SEVERITY.get(itype, "moderate")
+        region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
+        region_label = REGION_LABELS.get(region_key, REGION_LABELS["unspecified"])
+        location_label = loc.title() if loc else "Unspecified"
+        lines.append(f"- {region_label} ({location_label}) — {itype.title()} ({severity})")
+        ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
+            severity,
+            REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
+        )
+        guardrails.append((region_label, location_label, ruleset))
+
+    lines += ["", "**Training Rules**"]
+    for region_label, location_label, ruleset in guardrails:
+        lines.append(f"- {region_label} ({location_label}):")
+        for allowed in ruleset.get("allowed", []):
+            lines.append(f"  - Allowed: {allowed}")
+        for avoid in ruleset.get("avoid", []):
+            lines.append(f"  - Avoid: {avoid}")
+        for replace in ruleset.get("replace", []):
+            lines.append(f"  - Replace-with: {replace}")
+
+    if phase.upper() == "TAPER":
+        lines.append("")
+        lines.append("_TAPER note: Glycolytic conditioning is optional when injury risk exists._")
+
+    lines += ["", "**Rehab Priority**"]
+    for itype, loc in entries:
+        drills = _rehab_drills_for_phase(itype, loc, phase, limit=4)
+        location_label = loc.title() if loc else "Unspecified"
+        type_label = itype.title() if itype else "Unspecified"
+        if drills:
+            lines.append(f"- {location_label} ({type_label}):")
+            lines.extend([f"  - {d}" for d in drills[:4]])
+        else:
+            lines.append(f"- {location_label} ({type_label}): No rehab drills available for this phase.")
+
+    base_red_flags = [
+        "Pain that worsens and stays elevated the next morning.",
+        "Rapidly increasing swelling, instability, or loss of function.",
+        "Numbness/tingling or night pain.",
+    ]
+    red_flags = []
+    for _, _, ruleset in guardrails:
+        for flag in ruleset.get("red_flags", []):
+            if flag not in red_flags:
+                red_flags.append(flag)
+    if not red_flags:
+        red_flags = base_red_flags
+    else:
+        for flag in base_red_flags:
+            if flag not in red_flags:
+                red_flags.append(flag)
+
+    lines += ["", "**Red Flags**"]
+    lines.extend([f"- {flag}" for flag in red_flags])
 
     return "\n".join(lines).strip()

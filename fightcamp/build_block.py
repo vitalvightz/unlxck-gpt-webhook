@@ -132,6 +132,7 @@ class PhaseBlock:
     mindset: str
     strength: str
     conditioning: str
+    guardrails: str
 
 
 def _section_title(text: str) -> str:
@@ -210,6 +211,8 @@ def build_html_document(
             _md_to_html(block.strength),
             _subheading("Conditioning"),
             _md_to_html(block.conditioning),
+            _subheading("Injury Guardrails"),
+            _md_to_html(block.guardrails),
         ]
         return "\n".join(parts)
 
