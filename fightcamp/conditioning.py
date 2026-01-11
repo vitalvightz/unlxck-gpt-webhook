@@ -140,7 +140,7 @@ _INJURY_GUARD_LOGGED: set[tuple] = set()
 
 
 def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
-    return injury_match_details(drill, injuries, fields=("name",))
+    return injury_match_details(drill, injuries, fields=("name", "notes"))
 
 
 def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool:
