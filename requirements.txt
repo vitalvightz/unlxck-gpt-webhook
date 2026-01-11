@@ -1,5 +1,6 @@
 spacy==3.6.0
 thinc==8.1.12
+en-core-web-lg==3.6.0
 git+https://github.com/jenojp/negspacy
 rapidfuzz==3.5.2
 

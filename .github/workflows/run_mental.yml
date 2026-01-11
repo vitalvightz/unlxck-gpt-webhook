@@ -41,8 +41,8 @@ jobs:
           pip install --no-cache-dir pdfkit
           pip check
 
-      - name: Download spaCy model
-        run: python -m spacy download en_core_web_lg
+      - name: Verify spaCy model
+        run: python -c "import spacy; nlp=spacy.load('en_core_web_lg'); print('spacy model ok')"
 
       - name: Run Mental Plan
         run: python -m mental.main tests/test_payload.json
