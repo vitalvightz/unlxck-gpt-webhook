@@ -27,7 +27,11 @@ from .strength import generate_strength_block
 from .conditioning import generate_conditioning_block
 from .recovery import generate_recovery_block
 from .nutrition import generate_nutrition_block
-from .rehab_protocols import generate_rehab_protocols, generate_support_notes
+from .rehab_protocols import (
+    format_injury_guardrails,
+    generate_rehab_protocols,
+    generate_support_notes,
+)
 
 GOAL_NORMALIZER = {
     "Power & Explosiveness": "explosive",
@@ -338,6 +342,9 @@ async def generate_plan(data: dict):
                 current_phase="TAPER",
                 seen_drills=seen_rehab_drills,
             )
+    gpp_guardrails = format_injury_guardrails("GPP", injuries)
+    spp_guardrails = format_injury_guardrails("SPP", injuries)
+    taper_guardrails = format_injury_guardrails("TAPER", injuries)
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
         "GPP",
@@ -397,6 +404,9 @@ async def generate_plan(data: dict):
             "### Conditioning",
             gpp_cond_block,
             "",
+            "### Injury Guardrails",
+            gpp_guardrails,
+            "",
         ]
         phase_num += 1
 
@@ -413,6 +423,9 @@ async def generate_plan(data: dict):
             "### Conditioning",
             spp_cond_block,
             "",
+            "### Injury Guardrails",
+            spp_guardrails,
+            "",
         ]
         phase_num += 1
 
@@ -428,6 +441,9 @@ async def generate_plan(data: dict):
             "",
             "### Conditioning",
             taper_cond_block,
+            "",
+            "### Injury Guardrails",
+            taper_guardrails,
             "",
         ]
 
@@ -487,7 +503,7 @@ async def generate_plan(data: dict):
 
     phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
 
-    def build_phase(name, weeks, days, mindset, strength, cond):
+    def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
         return PhaseBlock(
             name=name,
             weeks=weeks,
@@ -495,6 +511,7 @@ async def generate_plan(data: dict):
             mindset=mindset,
             strength=strength,
             conditioning=cond,
+            guardrails=guardrails,
         )
 
     gpp_phase = None
@@ -508,6 +525,7 @@ async def generate_plan(data: dict):
             gpp_mindset,
             gpp_block["block"] if gpp_block else "",
             gpp_cond_block,
+            gpp_guardrails,
         )
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         spp_phase = build_phase(
@@ -517,6 +535,7 @@ async def generate_plan(data: dict):
             spp_mindset,
             spp_block["block"] if spp_block else "",
             spp_cond_block,
+            spp_guardrails,
         )
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_phase = build_phase(
@@ -526,6 +545,7 @@ async def generate_plan(data: dict):
             taper_mindset,
             taper_block["block"] if taper_block else "",
             taper_cond_block,
+            taper_guardrails,
         )
 
     rehab_parts = []
