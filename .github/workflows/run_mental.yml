@@ -11,8 +11,8 @@ jobs:
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
       TARGET_FOLDER_ID: ${{ vars.TARGET_FOLDER_ID }}
-      SUPABASE_URL: https://ptchmdvqwqvnnlddiqsp.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0Y2htZHZxd3F2bm5sZGRpcXNwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODEyNDA5NSwiZXhwIjoyMDgzNzAwMDk1fQ.MSG2-8tK30VTXMhknwT1UT06_f75BriCv5nbqpwwHqc
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
       - name: Checkout repo
@@ -43,6 +43,36 @@ jobs:
 
       - name: Verify spaCy model
         run: python -c "import spacy; nlp=spacy.load('en_core_web_lg'); print(nlp('ok')[0].text)"
+
+      - name: Preflight Supabase config
+        run: |
+          python - <<'PY'
+          import os
+          import socket
+          import sys
+          from urllib.parse import urlparse
+
+          raw_url = os.environ.get("SUPABASE_URL", "")
+          url = raw_url.strip().rstrip("/")
+          if not url:
+            print("ERROR: SUPABASE_URL is missing or empty.")
+            sys.exit(1)
+          parsed = urlparse(url)
+          if not parsed.scheme or not parsed.netloc:
+            print(f"ERROR: SUPABASE_URL is malformed: {raw_url!r}")
+            sys.exit(1)
+          host = parsed.hostname
+          if not host:
+            print(f"ERROR: SUPABASE_URL missing hostname: {raw_url!r}")
+            sys.exit(1)
+          print(f"SUPABASE_URL={url}")
+          try:
+            ip = socket.gethostbyname(host)
+          except OSError as exc:
+            print(f"ERROR: DNS lookup failed for {host}: {exc}")
+            sys.exit(1)
+          print(f"DNS OK: {host} -> {ip}")
+          PY
 
       - name: Run Mental Plan
         run: python -m mental.main tests/test_payload.json
