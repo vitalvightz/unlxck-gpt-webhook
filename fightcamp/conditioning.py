@@ -54,6 +54,10 @@ goal_tag_map = {
         "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
         "stability", "movement_quality", "range", "rehab_friendly"
     ],
+    "grappling": [
+        "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+        "manual_resistance", "positioning"
+    ],
     "grappler": [
         "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
         "manual_resistance", "positioning"
@@ -348,9 +352,9 @@ def generate_conditioning_block(flags):
         "muaythai": "muay_thai",
         "bjj": "mma",
         "wrestler": "mma",
-        "wrestling": "wrestler",
+        "wrestling": "mma",
         "grappler": "mma",
-        "grappling": "grappler",
+        "grappling": "mma",
         "karate": "kickboxing",
     }
     fight_format = style_map.get(primary_tech, "mma")
@@ -712,6 +716,29 @@ def generate_conditioning_block(flags):
                 reason_lookup[d.get("name")] = r
                 selected_counts["glycolytic"] += 1
                 taper_selected += 1
+
+        remaining_slots = total_drills - len(selected_drill_names)
+        allowed_systems = ["alactic"]
+        if allow_aerobic:
+            allowed_systems.append("aerobic")
+        if allow_glycolytic:
+            allowed_systems.append("glycolytic")
+
+        while remaining_slots > 0:
+            picked = False
+            for system in allowed_systems:
+                d, r = blended_pick(system)
+                if not d:
+                    continue
+                final_drills.append((system, [d]))
+                reason_lookup[d.get("name")] = r
+                selected_counts[system] += 1
+                remaining_slots -= 1
+                picked = True
+                if remaining_slots <= 0:
+                    break
+            if not picked:
+                break
     else:
         for system in preferred_order:
             quota = system_quota.get(system, 0)

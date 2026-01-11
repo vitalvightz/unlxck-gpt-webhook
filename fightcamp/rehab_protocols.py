@@ -159,7 +159,7 @@ def generate_rehab_protocols(
     if seen_drills is None:
         seen_drills = set()
     if not injury_string:
-        return "\n✅ No rehab work required."
+        return "\n✅ No rehab work required.", seen_drills
 
     injury_phrases = split_injury_text(injury_string)
 

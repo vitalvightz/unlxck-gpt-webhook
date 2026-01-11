@@ -134,7 +134,7 @@ def score_exercise(
         return -999, reasons
 
     phase_boost = phase_equipment_boost.get(current_phase, set())
-    equipment_bonus = 0.25 if any(eq in phase_boost for eq in available_equipment) else 0.0
+    equipment_bonus = 0.25 if set(required_equipment) & phase_boost else 0.0
     score += equipment_bonus
     reasons["equipment_boost"] = equipment_bonus
 
@@ -252,6 +252,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             "stability", "movement_quality", "range", "rehab_friendly"
         ],
         "grappling": [
+            "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
+            "manual_resistance", "positioning"
+        ],
+        "grappler": [
             "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
             "manual_resistance", "positioning"
         ],
