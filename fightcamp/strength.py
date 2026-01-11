@@ -9,7 +9,11 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
-from .injury_filtering import is_injury_safe, injury_violation_reasons, log_injury_debug
+from .injury_filtering import (
+    is_injury_safe_with_fields,
+    injury_violation_reasons_with_fields,
+    log_injury_debug,
+)
 
 # Optional equipment boosts by training phase
 phase_equipment_boost = {
@@ -332,7 +336,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("movement", ""),
             ]
         )
-        if not is_injury_safe(ex, injuries):
+        if not is_injury_safe_with_fields(ex, injuries, fields=("name", "notes")):
             continue
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
@@ -408,7 +412,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     ex.get("movement", ""),
                 ]
             )
-            if not is_injury_safe(ex, injuries):
+            if not is_injury_safe_with_fields(ex, injuries, fields=("name", "notes")):
                 continue
             if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
@@ -473,7 +477,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 break
             if drill.get("name") in existing_names:
                 continue
-            if not is_injury_safe(drill, injuries):
+            if not is_injury_safe_with_fields(drill, injuries, fields=("name", "notes")):
                 continue
             for group in priority_strength_tags:
                 if any(tag in drill.get("tags", []) for tag in group) and not any(
@@ -521,7 +525,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in STYLE_EXERCISES:
         if phase not in ex.get("phases", []):
             continue
-        if not is_injury_safe(ex, injuries):
+        if not is_injury_safe_with_fields(ex, injuries, fields=("name", "notes")):
             continue
         ex_tags = set(ex.get("tags", []))
         if not ex_tags & athlete_style_set:
@@ -571,7 +575,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict | None] = []
         for ex in ex_list:
-            reasons = injury_violation_reasons(ex, injuries)
+            reasons = injury_violation_reasons_with_fields(
+                ex, injuries, fields=("name", "notes")
+            )
             if not reasons:
                 updated.append(ex)
                 continue
@@ -580,7 +586,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 cand_name = cand.get("name")
                 if not cand_name or cand_name in used_names:
                     continue
-                if injury_violation_reasons(cand, injuries):
+                if injury_violation_reasons_with_fields(
+                    cand, injuries, fields=("name", "notes")
+                ):
                     continue
                 replacement = cand
                 reason_lookup[cand_name] = cand_reasons
