@@ -11,8 +11,8 @@ jobs:
     env:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
       TARGET_FOLDER_ID: ${{ vars.TARGET_FOLDER_ID }}
-      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: https://ptchmdvqwqvnnlddiqsp.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0Y2htZHZxd3F2bm5sZGRpcXNwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODEyNDA5NSwiZXhwIjoyMDgzNzAwMDk1fQ.MSG2-8tK30VTXMhknwT1UT06_f75BriCv5nbqpwwHqc
 
     steps:
       - name: Checkout repo
