@@ -6,6 +6,7 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
+from .injury_filtering import is_injury_safe
 
 # Map for tactical styles
 style_tag_map = {
@@ -207,7 +208,7 @@ def is_banned_drill(
     return False
 
 
-def select_coordination_drill(flags, existing_names: set[str]):
+def select_coordination_drill(flags, existing_names: set[str], injuries: list[str]):
     """Return a coordination drill matching the current phase if needed."""
     goals = [g.lower() for g in flags.get("key_goals", [])]
     weaknesses = [w.lower() for w in flags.get("weaknesses", [])]
@@ -223,6 +224,7 @@ def select_coordination_drill(flags, existing_names: set[str]):
         if phase in [p.upper() for p in d.get("phases", [])]
         and d.get("placement", "conditioning").lower() == "conditioning"
         and d.get("name") not in existing_names
+        and is_injury_safe(d, injuries)
         and (
             not normalize_equipment_list(d.get("equipment", []))
             or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access)
@@ -260,6 +262,7 @@ def generate_conditioning_block(flags):
     technical = flags.get("style_technical", [])
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
+    injuries = flags.get("injuries", [])
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
@@ -350,6 +353,8 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
+        if not is_injury_safe(d, injuries):
+            continue
         if phase.upper() not in d.get("phases", []):
             continue
 
@@ -455,6 +460,8 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
+        if not is_injury_safe(d, injuries):
+            continue
         tags = [t.lower() for t in d.get("tags", [])]
         details = " ".join(
             [
@@ -726,6 +733,8 @@ def generate_conditioning_block(flags):
                 break
             if drill.get("name") in existing_cond_names:
                 continue
+            if not is_injury_safe(drill, injuries):
+                continue
             drill_eq = normalize_equipment_list(drill.get("equipment", []))
             if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                 continue
@@ -761,12 +770,24 @@ def generate_conditioning_block(flags):
         for d in style_taper_bank:
             if not style_set.intersection({t.lower() for t in d.get("tags", [])}):
                 continue
+            if not is_injury_safe(d, injuries):
+                continue
             eq = normalize_equipment_list(d.get("equipment", []))
             if eq and not set(eq).issubset(equipment_access_set):
                 continue
             taper_candidates.append(d)
         if not taper_candidates:
-            taper_candidates = [d for d in style_taper_bank if not normalize_equipment_list(d.get("equipment", [])) or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)]
+            taper_candidates = [
+                d
+                for d in style_taper_bank
+                if is_injury_safe(d, injuries)
+                and (
+                    not normalize_equipment_list(d.get("equipment", []))
+                    or set(normalize_equipment_list(d.get("equipment", []))).issubset(
+                        equipment_access_set
+                    )
+                )
+            ]
 
         if taper_candidates and len(selected_drill_names) < total_drills:
             drill = random.choice(taper_candidates)
@@ -790,6 +811,7 @@ def generate_conditioning_block(flags):
             d for d in conditioning_bank
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
             and "plyometric" in {t.lower() for t in d.get("tags", [])}
+            and is_injury_safe(d, injuries)
             and (
                 not normalize_equipment_list(d.get("equipment", []))
                 or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)
@@ -823,6 +845,7 @@ def generate_conditioning_block(flags):
             d for d in style_conditioning_bank
             if "skill_refinement" in {t.lower() for t in d.get("tags", [])}
             and phase.upper() in d.get("phases", [])
+            and is_injury_safe(d, injuries)
             and (
                 not normalize_equipment_list(d.get("equipment", []))
                 or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)
@@ -840,7 +863,9 @@ def generate_conditioning_block(flags):
 
     # --------- OPTIONAL COORDINATION DRILL INSERTION ---------
     existing_names = {d.get("name") for _, drills in final_drills for d in drills}
-    coord_drill = select_coordination_drill({**flags, "equipment": equipment_access}, existing_names)
+    coord_drill = select_coordination_drill(
+        {**flags, "equipment": equipment_access}, existing_names, injuries
+    )
     if coord_drill and len(selected_drill_names) < total_drills:
         system = SYSTEM_ALIASES.get(coord_drill.get("system", "").lower(), coord_drill.get("system", "misc"))
         final_drills.append((system, [coord_drill]))
@@ -869,6 +894,7 @@ def generate_conditioning_block(flags):
                 d
                 for d in conditioning_bank
                 if "neck" in {t.lower() for t in d.get("tags", [])}
+                and is_injury_safe(d, injuries)
                 and phase.upper() in d.get("phases", [])
                 and (
                     not normalize_equipment_list(d.get("equipment", []))

@@ -8,6 +8,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
+from .injury_filtering import is_injury_safe
 
 # Optional equipment boosts by training phase
 phase_equipment_boost = {
@@ -313,6 +314,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("movement", ""),
             ]
         )
+        if not is_injury_safe(ex, injuries):
+            continue
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
@@ -387,6 +390,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     ex.get("movement", ""),
                 ]
             )
+            if not is_injury_safe(ex, injuries):
+                continue
             if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
             if prev_exercises and ex.get("name") in prev_exercises:
@@ -450,6 +455,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 break
             if drill.get("name") in existing_names:
                 continue
+            if not is_injury_safe(drill, injuries):
+                continue
             for group in priority_strength_tags:
                 if any(tag in drill.get("tags", []) for tag in group) and not any(
                     tag in existing_tags for tag in group
@@ -495,6 +502,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     inserts: list[dict] = []
     for ex in STYLE_EXERCISES:
         if phase not in ex.get("phases", []):
+            continue
+        if not is_injury_safe(ex, injuries):
             continue
         ex_tags = set(ex.get("tags", []))
         if not ex_tags & athlete_style_set:
