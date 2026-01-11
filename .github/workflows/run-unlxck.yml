@@ -12,31 +12,35 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Install wkhtmltopdf (for PDFKit)
         run: |
           sudo apt-get update
           sudo apt-get install -y wkhtmltopdf
 
-      - name: Fix NumPy Crash (spacy + thinc)
+      - name: Pin NumPy + spaCy (avoid thinc/numpy crash)
         run: |
-          pip uninstall -y numpy spacy thinc
+          python -m pip install --upgrade pip
+          pip uninstall -y numpy spacy thinc || true
           pip install --no-cache-dir numpy==1.24.4
           pip install --no-cache-dir spacy==3.6.0 thinc==8.1.12
 
-      - name: Install Python dependencies
+      - name: Install Python dependencies + spaCy model
         run: |
           pip install --no-cache-dir -r requirements.txt
           pip install --no-cache-dir git+https://github.com/jenojp/negspacy
+          # Install spaCy model deterministically (DO NOT use `python -m spacy download ...`)
+          pip install --no-cache-dir "https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.6.0/en_core_web_lg-3.6.0-py3-none-any.whl"
+          # Smoke test: confirm the model loads
+          python -c "import spacy; spacy.load('en_core_web_lg'); print('spaCy model OK')"
           pip check
-
-      - name: Download spaCy model
-        run: python -m spacy download en_core_web_lg
 
       - name: Run fightcamp
         run: python -m fightcamp.main
