@@ -165,34 +165,26 @@ def _phrase_in_tokens(tokens: list[str], phrase_tokens: list[str]) -> bool:
     return False
 
 
-def _build_phrase_regex(phrase: str) -> re.Pattern[str] | None:
-    normalized = _normalize_text(phrase)
-    if not normalized:
-        return None
-    tokens = normalized.split()
-    if len(tokens) == 1 and tokens[0] in GENERIC_SINGLE_WORD_PATTERNS:
-        return None
-    escaped = [re.escape(token) for token in tokens]
-    pattern = r"\b" + r"\s+".join(escaped) + r"\b"
-    return re.compile(pattern)
-
-
 def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
     normalized_text = _normalize_text(text)
     if not normalized_text:
         return []
+    text_tokens = normalized_text.split()
     allowlist = allowlist or []
     for phrase in allowlist:
-        phrase_regex = _build_phrase_regex(phrase)
-        if phrase_regex and phrase_regex.search(normalized_text):
+        phrase_tokens = _normalize_text(phrase).split()
+        if phrase_tokens and _phrase_in_tokens(text_tokens, phrase_tokens):
             return []
     matches: list[str] = []
     seen: set[str] = set()
     for pattern in patterns:
-        phrase_regex = _build_phrase_regex(pattern)
-        if not phrase_regex:
+        normalized_pattern = _normalize_text(pattern)
+        if not normalized_pattern:
             continue
-        if phrase_regex.search(normalized_text):
+        phrase_tokens = normalized_pattern.split()
+        if len(phrase_tokens) == 1 and phrase_tokens[0] in GENERIC_SINGLE_WORD_PATTERNS:
+            continue
+        if _phrase_in_tokens(text_tokens, phrase_tokens):
             if pattern not in seen:
                 matches.append(pattern)
                 seen.add(pattern)

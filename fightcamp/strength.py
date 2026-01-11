@@ -10,8 +10,8 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .injury_filtering import (
+    injury_match_details,
     is_injury_safe_with_fields,
-    injury_violation_reasons_with_fields,
     log_injury_debug,
 )
 
@@ -575,8 +575,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict | None] = []
         for ex in ex_list:
-            reasons = injury_violation_reasons_with_fields(
-                ex, injuries, fields=("name", "notes")
+            reasons = injury_match_details(
+                ex,
+                injuries,
+                fields=("name", "notes"),
+                risk_levels=("exclude",),
             )
             if not reasons:
                 updated.append(ex)
@@ -586,8 +589,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 cand_name = cand.get("name")
                 if not cand_name or cand_name in used_names:
                     continue
-                if injury_violation_reasons_with_fields(
-                    cand, injuries, fields=("name", "notes")
+                if injury_match_details(
+                    cand,
+                    injuries,
+                    fields=("name", "notes"),
+                    risk_levels=("exclude",),
                 ):
                     continue
                 replacement = cand

@@ -1012,9 +1012,12 @@ def generate_conditioning_block(flags):
                 ok, reasons = cache[n]
                 return [] if ok else reasons
 
-            reasons = []
-            reasons.extend(injury_violation_reasons(d, injuries))
-            reasons.extend(_drill_text_injury_reasons(d, injuries))
+            reasons = injury_match_details(
+                d,
+                injuries,
+                fields=("name", "notes"),
+                risk_levels=("exclude",),
+            )
 
             ok = len(reasons) == 0
             cache[n] = (ok, reasons)

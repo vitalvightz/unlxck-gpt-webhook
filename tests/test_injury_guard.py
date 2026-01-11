@@ -110,6 +110,31 @@ def test_injury_guard_real_exclusions_still_apply():
     assert any("hip:keyword:hip hinge" in reason for reason in hip_reasons)
 
 
+def test_injury_guard_required_pass_fail_cases():
+    assert injury_violation_reasons(
+        {"name": "Pressure Fighter's Cutoff Circuit", "tags": []}, injuries=["shoulder"]
+    ) == []
+    assert injury_violation_reasons(
+        {"name": "Knee Pressure Drill", "tags": []}, injuries=["knee"]
+    ) == []
+
+    assert injury_violation_reasons(
+        {"name": "Bench Press", "tags": []}, injuries=["shoulder"]
+    )
+    assert injury_violation_reasons(
+        {"name": "Bench Isometric", "tags": []}, injuries=["shoulder"]
+    )
+    assert injury_violation_reasons(
+        {"name": "Overhead Carry Complex", "tags": []}, injuries=["shoulder"]
+    )
+    assert injury_violation_reasons(
+        {"name": "Gentle Mobility Flow", "tags": ["upper_push"]}, injuries=["shoulder"]
+    )
+    assert injury_violation_reasons(
+        {"name": "Gentle Mobility Flow", "tags": ["overhead"]}, injuries=["shoulder"]
+    )
+
+
 def test_injury_guard_region_false_positives():
     knee_false_positive = injury_violation_reasons(
         {"name": "Sandbox Jumper Conditioning", "tags": []}, injuries=["knee pain"]
