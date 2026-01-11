@@ -20,31 +20,62 @@ INJURY_MATCH_ALLOWLIST: list[str] = [
 GENERIC_SINGLE_WORD_PATTERNS = {"press", "overhead", "bench"}
 
 INFERRED_TAG_RULES = [
-    {"keywords": ["bench press", "floor press"], "tags": ["upper_push", "horizontal_push"]},
+    {"keywords": ["bench press", "floor press"], "tags": ["upper_push", "horizontal_push", "press_heavy"]},
     {
         "keywords": ["overhead press", "push press", "strict press", "military press"],
-        "tags": ["overhead", "upper_push"],
+        "tags": ["overhead", "upper_push", "dynamic_overhead", "press_heavy"],
     },
-    {"keywords": ["snatch", "jerk"], "tags": ["overhead", "shoulder_heavy"]},
-    {"keywords": ["ring dip", "bench dip", "parallel bar dip", "bar dip"], "tags": ["upper_push", "elbow_extension_heavy"]},
+    {"keywords": ["snatch", "jerk"], "tags": ["overhead", "shoulder_heavy", "dynamic_overhead"]},
+    {
+        "keywords": ["ring dip", "bench dip", "parallel bar dip", "bar dip", "dip"],
+        "tags": ["upper_push", "elbow_extension_heavy", "dip_loaded"],
+    },
     {"keywords": ["handstand"], "tags": ["overhead", "wrist_loaded_extension"]},
     {"keywords": ["push-up", "pushup"], "tags": ["upper_push", "wrist_loaded_extension"]},
     {"keywords": ["front rack"], "tags": ["front_rack", "wrist_loaded_extension"]},
     {"keywords": ["clean"], "tags": ["front_rack", "wrist_loaded_extension"]},
-    {"keywords": ["deadlift", "rdl", "good morning", "jefferson curl"], "tags": ["hinge_heavy", "axial_heavy"]},
+    {
+        "keywords": ["deadlift", "rdl", "good morning", "jefferson curl"],
+        "tags": ["hinge_heavy", "axial_heavy", "lumbar_loaded", "posterior_chain_heavy"],
+    },
     {"keywords": ["back squat", "front squat", "heavy squat"], "tags": ["knee_dominant_heavy", "axial_heavy"]},
     {"keywords": ["deep squat", "pistol", "cossack"], "tags": ["deep_flexion", "hip_irritant"]},
     {"keywords": ["lateral lunge", "adductor"], "tags": ["adductor_load_high"]},
     {"keywords": ["nordic", "ham curl"], "tags": ["hamstring_eccentric_high"]},
     {"keywords": ["sprint", "sprints", "max sprint", "acceleration", "accelerations"], "tags": ["max_velocity"]},
-    {"keywords": ["jump", "plyo", "depth jump", "drop jump", "bounds", "hops", "pogo"], "tags": ["high_impact_plyo"]},
+    {
+        "keywords": ["jump", "plyo", "depth jump", "drop jump", "bounds", "hops", "pogo"],
+        "tags": [
+            "high_impact_plyo",
+            "landing_stress_high",
+            "reactive_rebound_high",
+            "calf_rebound_high",
+            "forefoot_load_high",
+            "toe_extension_high",
+        ],
+    },
     {"keywords": ["jump rope"], "tags": ["impact_rebound_high", "foot_impact_high"]},
     {"keywords": ["bear crawl"], "tags": ["wrist_loaded_extension"]},
-    {"keywords": ["rope climb", "towel", "thick grip", "plate pinch", "farmer", "dead hang"], "tags": ["grip_max", "hand_crush"]},
+    {
+        "keywords": ["rope climb", "towel", "thick grip", "plate pinch", "farmer", "dead hang"],
+        "tags": ["grip_max", "hand_crush", "pinch_grip_high"],
+    },
     {"keywords": ["bridges", "wrestler bridge"], "tags": ["neck_loaded"]},
     {"keywords": ["lateral bounds", "hard cuts"], "tags": ["ankle_lateral_impact_high"]},
     {"keywords": ["barefoot sprint"], "tags": ["foot_impact_high"]},
     {"keywords": ["contact", "sparring"], "tags": ["contact"]},
+    {"keywords": ["carry", "yoke", "farmer", "suitcase carry"], "tags": ["carry_heavy"]},
+    {"keywords": ["row", "seal row", "t bar row", "t-bar row", "meadows row"], "tags": ["row_heavy", "upper_back_loaded"]},
+    {"keywords": ["back extension", "reverse hyper", "reverse hyperextension"], "tags": ["spine_extension_loaded", "lumbar_loaded"]},
+    {"keywords": ["jefferson curl"], "tags": ["spine_flexion_loaded", "lumbar_loaded"]},
+    {
+        "keywords": ["run", "running", "roadwork", "jog", "treadmill"],
+        "tags": ["running_volume_high", "shin_splints_risk", "calf_volume_high"],
+    },
+    {
+        "keywords": ["agility", "shuffle", "change of direction", "cut", "decel", "deceleration"],
+        "tags": ["cod_high", "decel_high"],
+    },
 ]
 
 AUTO_TAG_RULES = [
@@ -59,6 +90,63 @@ AUTO_TAG_RULES = [
     {"keywords": ["treadmill", "run", "running", "jog"], "tags": ["aerobic"]},
     {"keywords": ["mobility", "stretch", "recovery", "breathing"], "tags": ["mobility", "recovery"]},
 ]
+
+INJURY_TAG_ALIASES = {
+    "adductors": {"long_lever_adductor", "wide_stance_adductor_high"},
+    "aerobic": {"running_volume_high", "calf_volume_high"},
+    "agility": {"cod_high", "decel_high"},
+    "boxing": {"contact", "sparring", "head_impact", "striking_contact", "hard_contact", "live_rounds"},
+    "clinch": {"contact", "sparring", "head_impact", "striking_contact"},
+    "core": {"hip_flexion_loaded", "hip_flexor_strain_risk"},
+    "deadlift": {"posterior_chain_heavy", "lumbar_loaded"},
+    "endurance": {"running_volume_high", "calf_volume_high"},
+    "explosive": {"explosive_upper_push"},
+    "grappling": {"contact", "sparring", "head_impact"},
+    "grip": {
+        "finger_flexor_high",
+        "forearm_load_high",
+        "wrist_flexor_high",
+        "wrist_compression_high",
+        "finger_load_high",
+        "pinch_grip_high",
+    },
+    "hamstring": {"posterior_chain_eccentric_high"},
+    "high_cns": {"high_cns_upper"},
+    "hip_dominant": {
+        "hip_impingement_risk",
+        "hip_internal_rotation_stress",
+        "hip_extension_heavy",
+        "glute_load_high",
+        "pelvic_shear_risk",
+    },
+    "kickboxing": {"contact", "sparring", "head_impact", "striking_contact", "hard_contact", "live_rounds"},
+    "lateral": {"cod_high", "decel_high"},
+    "mma": {"contact", "sparring", "head_impact", "striking_contact", "hard_contact", "live_rounds"},
+    "muay_thai": {"contact", "sparring", "head_impact", "striking_contact", "hard_contact", "live_rounds"},
+    "neck": {"cervical_load", "cervical_extension_loaded", "cervical_flexion_loaded", "neck_bridge"},
+    "overhead": {"dynamic_overhead", "press_heavy", "wrist_extension_high"},
+    "plyometric": {"landing_stress_high", "reactive_rebound_high", "achilles_high_risk_impact", "forefoot_load_high"},
+    "posterior_chain": {"posterior_chain_heavy", "lumbar_loaded", "glute_load_high", "hip_extension_heavy"},
+    "pull": {"row_heavy", "deep_elbow_flexion_loaded"},
+    "push": {"press_heavy", "pec_loaded", "explosive_upper_push", "wrist_extension_high"},
+    "quad_dominant": {"quad_dominant_heavy", "deep_knee_flexion_loaded"},
+    "reactive": {"reactive_rebound_high", "achilles_high_risk_impact", "forefoot_load_high"},
+    "shoulders": {"press_heavy", "dynamic_overhead"},
+    "speed": {"max_velocity", "decel_high"},
+    "striking": {"contact", "sparring", "head_impact", "striking_contact", "hard_contact", "live_rounds"},
+    "triceps": {"triceps_tendon_heavy"},
+    "unilateral": {"asym_load_high"},
+    "upper_back": {"upper_back_loaded"},
+    "upper_body": {"pec_loaded"},
+    "wrestling": {"contact", "sparring", "head_impact"},
+}
+
+
+def expand_injury_tags(tags: Iterable[str]) -> set[str]:
+    expanded: set[str] = set()
+    for tag in tags:
+        expanded.update(INJURY_TAG_ALIASES.get(tag, ()))
+    return expanded
 
 
 def _normalize_text(text: str) -> str:
@@ -257,6 +345,7 @@ def injury_match_details(
     name = field_values.get("name", "")
     tags = set(ensure_tags(item))
     tags |= infer_tags_from_name(name)
+    tags |= expand_injury_tags(tags)
     reasons: list[dict] = []
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
@@ -361,6 +450,7 @@ def build_injury_exclusion_map() -> dict[str, list[str]]:
             item_id = f"{bank_name}:{name}"
             tags = set(ensure_tags(item))
             tags |= infer_tags_from_name(name)
+            tags |= expand_injury_tags(tags)
             for region, rule in INJURY_RULES.items():
                 ban_keywords = rule.get("exclude_keywords", rule.get("ban_keywords", []))
                 ban_tags = {t.lower() for t in rule.get("exclude_tags", rule.get("ban_tags", []))}
