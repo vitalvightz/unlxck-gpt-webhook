@@ -303,7 +303,14 @@ def _export_pdf_from_html(html, full_name):
     return path
 
 def _upload_to_supabase(pdf_path):
-    url = os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+    url = os.environ.get("SUPABASE_URL")
+    if url:
+        url = url.strip()
+        # Guard against accidentally passing "SUPABASE_URL=https://..." as the value
+        if url.lower().startswith("supabase_url="):
+            url = url.split("=", 1)[1].strip()
+        # Remove trailing slash if present
+        url = url.rstrip("/")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
     if not url or not key:
         raise RuntimeError("Missing Supabase credentials")
