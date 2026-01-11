@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from pathlib import Path
 from typing import Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+INJURY_MATCH_ALLOWLIST: list[str] = []
 
 INFERRED_TAG_RULES = [
     {"keywords": ["bench", "floor press"], "tags": ["upper_push", "horizontal_push"]},
@@ -36,7 +38,50 @@ INFERRED_TAG_RULES = [
 
 
 def _normalize_text(text: str) -> str:
-    return " ".join(text.lower().replace("-", " ").split())
+    cleaned = text.lower().replace("-", " ").replace("_", " ")
+    cleaned = re.sub(r"[^\w\s]", " ", cleaned)
+    return " ".join(cleaned.split())
+
+
+def _phrase_in_tokens(tokens: list[str], phrase_tokens: list[str]) -> bool:
+    if not phrase_tokens or len(phrase_tokens) > len(tokens):
+        return False
+    window = len(phrase_tokens)
+    for idx in range(len(tokens) - window + 1):
+        if tokens[idx : idx + window] == phrase_tokens:
+            return True
+    return False
+
+
+def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
+    tokens = _normalize_text(text).split()
+    if not tokens:
+        return []
+    allowlist = allowlist or []
+    for phrase in allowlist:
+        phrase_tokens = _normalize_text(phrase).split()
+        if _phrase_in_tokens(tokens, phrase_tokens):
+            return []
+    normalized_patterns: list[tuple[str, list[str]]] = []
+    for pattern in patterns:
+        normalized = _normalize_text(pattern)
+        if not normalized:
+            continue
+        normalized_patterns.append((pattern, normalized.split()))
+    matches: list[str] = []
+    seen: set[str] = set()
+    for original, parts in normalized_patterns:
+        if len(parts) > 1 and _phrase_in_tokens(tokens, parts):
+            if original not in seen:
+                matches.append(original)
+                seen.add(original)
+    token_set = set(tokens)
+    for original, parts in normalized_patterns:
+        if len(parts) == 1 and parts[0] in token_set:
+            if original not in seen:
+                matches.append(original)
+                seen.add(original)
+    return matches
 
 
 def infer_tags_from_name(name: str) -> set[str]:
@@ -61,7 +106,7 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
             continue
         matched = False
         for region, keywords in INJURY_REGION_KEYWORDS.items():
-            if any(keyword in normalized for keyword in keywords):
+            if match_forbidden(injury, keywords, allowlist=INJURY_MATCH_ALLOWLIST):
                 regions.add(region)
                 matched = True
         if not matched:
@@ -73,22 +118,20 @@ def injury_violation_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     if not injuries:
         return []
     name = item.get("name", "")
-    name_lower = name.lower()
     tags = {t.lower() for t in item.get("tags", [])}
     inferred = infer_tags_from_name(name)
     all_tags = tags | inferred
-    reasons: list[str] = []
+    reasons: set[str] = set()
 
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
-        ban_keywords = [kw.lower() for kw in rules.get("ban_keywords", [])]
+        ban_keywords = rules.get("ban_keywords", [])
         ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
-        for keyword in ban_keywords:
-            if keyword in name_lower:
-                reasons.append(f"{region}:keyword:{keyword}")
+        for keyword in match_forbidden(name, ban_keywords, allowlist=INJURY_MATCH_ALLOWLIST):
+            reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
         for tag in sorted(all_tags & ban_tags):
-            reasons.append(f"{region}:tag:{tag}")
-    return reasons
+            reasons.add(f"{region}:tag:{tag}")
+    return sorted(reasons)
 
 
 def is_injury_safe(item: dict, injuries: Iterable[str]) -> bool:
@@ -170,13 +213,12 @@ def build_injury_exclusion_map() -> dict[str, list[str]]:
         for item in items:
             name = item.get("name", "")
             item_id = f"{bank_name}:{name}"
-            name_lower = name.lower()
             tags = {t.lower() for t in item.get("tags", [])}
             tags |= infer_tags_from_name(name)
             for region, rule in INJURY_RULES.items():
-                ban_keywords = [kw.lower() for kw in rule.get("ban_keywords", [])]
+                ban_keywords = rule.get("ban_keywords", [])
                 ban_tags = {t.lower() for t in rule.get("ban_tags", [])}
-                if any(keyword in name_lower for keyword in ban_keywords) or tags & ban_tags:
+                if match_forbidden(name, ban_keywords, allowlist=INJURY_MATCH_ALLOWLIST) or tags & ban_tags:
                     exclusions[region].append(item_id)
     for region in exclusions:
         exclusions[region] = sorted(set(exclusions[region]))

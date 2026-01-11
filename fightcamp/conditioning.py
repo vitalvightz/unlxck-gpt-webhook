@@ -8,9 +8,11 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .injury_filtering import (
-    is_injury_safe,
+    INJURY_MATCH_ALLOWLIST,
     injury_violation_reasons,
+    is_injury_safe,
     log_injury_debug,
+    match_forbidden,
     normalize_injury_regions,
 )
 from .injury_exclusion_rules import INJURY_RULES
@@ -154,18 +156,29 @@ def _collect_drill_text_fields(drill: dict) -> dict[str, str]:
     }
 
 
-def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[str]:
+def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
     if not injuries:
         return []
     fields = _collect_drill_text_fields(drill)
-    reasons: list[str] = []
+    reasons: list[dict] = []
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
-        for keyword in rules.get("ban_keywords", []):
-            keyword_lower = keyword.lower()
-            for field_name, value in fields.items():
-                if keyword_lower and keyword_lower in value.lower():
-                    reasons.append(f"{region}:field:{field_name}:{keyword_lower}")
+        patterns = rules.get("ban_keywords", [])
+        field_hits: dict[str, list[str]] = {}
+        matched_patterns: set[str] = set()
+        for field_name, value in fields.items():
+            matches = match_forbidden(value, patterns, allowlist=INJURY_MATCH_ALLOWLIST)
+            if matches:
+                field_hits[field_name] = matches
+                matched_patterns.update(matches)
+        if field_hits:
+            reasons.append(
+                {
+                    "region": region,
+                    "fields": sorted(field_hits),
+                    "patterns": sorted(matched_patterns),
+                }
+            )
     return reasons
 
 
@@ -174,10 +187,12 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
     if not reasons:
         return True
     for reason in reasons:
-        region, _, field, keyword = reason.split(":", 3)
+        region = reason["region"]
+        fields = ", ".join(reason["fields"])
+        patterns = ", ".join(reason["patterns"])
         print(
             f"[injury-guard] {label} excluded '{drill.get('name')}' "
-            f"field={field} keyword={keyword} region={region}"
+            f"region={region} fields=[{fields}] patterns=[{patterns}]"
         )
     return False
 
