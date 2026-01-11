@@ -43,7 +43,8 @@ def infer_tags_from_name(name: str) -> set[str]:
     normalized = _normalize_text(name)
     inferred: set[str] = set()
     for rule in INFERRED_TAG_RULES:
-        if any(keyword in normalized for keyword in rule["keywords"]):
+        normalized_keywords = [_normalize_text(keyword) for keyword in rule["keywords"]]
+        if any(keyword in normalized for keyword in normalized_keywords):
             inferred.update(rule["tags"])
     return inferred
 
@@ -68,24 +69,30 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
     return regions
 
 
-def is_injury_safe(item: dict, injuries: Iterable[str]) -> bool:
+def injury_violation_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     if not injuries:
-        return True
+        return []
     name = item.get("name", "")
     name_lower = name.lower()
     tags = {t.lower() for t in item.get("tags", [])}
     inferred = infer_tags_from_name(name)
     all_tags = tags | inferred
+    reasons: list[str] = []
 
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
         ban_keywords = [kw.lower() for kw in rules.get("ban_keywords", [])]
         ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
-        if any(keyword in name_lower for keyword in ban_keywords):
-            return False
-        if all_tags & ban_tags:
-            return False
-    return True
+        for keyword in ban_keywords:
+            if keyword in name_lower:
+                reasons.append(f"{region}:keyword:{keyword}")
+        for tag in sorted(all_tags & ban_tags):
+            reasons.append(f"{region}:tag:{tag}")
+    return reasons
+
+
+def is_injury_safe(item: dict, injuries: Iterable[str]) -> bool:
+    return not injury_violation_reasons(item, injuries)
 
 
 def filter_items_for_injuries(items: Iterable[dict], injuries: Iterable[str]) -> list[dict]:
@@ -186,3 +193,15 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
 
     inferred_path.write_text(json.dumps(inferred, indent=2, sort_keys=True))
     exclusion_path.write_text(json.dumps(exclusion_map, indent=2, sort_keys=True))
+
+
+def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:
+    normalized = sorted(normalize_injury_regions(injuries))
+    print(f"[injury-debug] {label} normalized_injuries={normalized}")
+    for item in items:
+        name = item.get("name", "Unnamed")
+        reasons = injury_violation_reasons(item, injuries)
+        if reasons:
+            print(f"[injury-debug] {label} item={name} allowed=False reasons={reasons}")
+        else:
+            print(f"[injury-debug] {label} item={name} allowed=True")
