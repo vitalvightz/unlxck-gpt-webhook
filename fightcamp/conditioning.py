@@ -6,6 +6,11 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
+from .injury_filter import (
+    get_excluded_names,
+    is_item_excluded,
+    normalize_injury_regions,
+)
 
 # Map for tactical styles
 style_tag_map = {
@@ -215,6 +220,9 @@ def select_coordination_drill(flags, existing_names: set[str]):
     """Return a coordination drill matching the current phase if needed."""
     goals = [g.lower() for g in flags.get("key_goals", [])]
     weaknesses = [w.lower() for w in flags.get("weaknesses", [])]
+    injuries = flags.get("injuries", [])
+    injury_regions = normalize_injury_regions(injuries)
+    excluded_names = get_excluded_names(injury_regions)
     coord_terms = {"coordination", "coordination/proprioception", "coordination / proprioception"}
     if not any(g in coord_terms for g in goals) and not any(w in coord_terms for w in weaknesses):
         return None
@@ -227,6 +235,12 @@ def select_coordination_drill(flags, existing_names: set[str]):
         if phase in [p.upper() for p in d.get("phases", [])]
         and d.get("placement", "conditioning").lower() == "conditioning"
         and d.get("name") not in existing_names
+        and not is_item_excluded(
+            d.get("name", ""),
+            d.get("tags", []),
+            injury_regions=injury_regions,
+            excluded_names=excluded_names,
+        )
         and (
             not normalize_equipment_list(d.get("equipment", []))
             or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access)
@@ -308,9 +322,12 @@ def generate_conditioning_block(flags):
     technical = flags.get("style_technical", [])
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
+    injuries = flags.get("injuries", [])
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+    injury_regions = normalize_injury_regions(injuries)
+    excluded_names = get_excluded_names(injury_regions)
 
     # Normalize technical style(s)
     if isinstance(technical, str):
@@ -407,6 +424,13 @@ def generate_conditioning_block(flags):
             continue
 
         tags = [t.lower() for t in d.get("tags", [])]
+        if is_item_excluded(
+            d.get("name", ""),
+            tags,
+            injury_regions=injury_regions,
+            excluded_names=excluded_names,
+        ):
+            continue
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -504,6 +528,13 @@ def generate_conditioning_block(flags):
                 for t in d.get("tags", [])
             ]
         tags = [t.lower() for t in d.get("tags", [])]
+        if is_item_excluded(
+            d.get("name", ""),
+            tags,
+            injury_regions=injury_regions,
+            excluded_names=excluded_names,
+        ):
+            continue
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -797,6 +828,13 @@ def generate_conditioning_block(flags):
                 break
             if drill.get("name") in existing_cond_names:
                 continue
+            if is_item_excluded(
+                drill.get("name", ""),
+                drill.get("tags", []),
+                injury_regions=injury_regions,
+                excluded_names=excluded_names,
+            ):
+                continue
             drill_eq = normalize_equipment_list(drill.get("equipment", []))
             if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                 continue
@@ -832,12 +870,31 @@ def generate_conditioning_block(flags):
         for d in style_taper_bank:
             if not style_set.intersection({t.lower() for t in d.get("tags", [])}):
                 continue
+            if is_item_excluded(
+                d.get("name", ""),
+                d.get("tags", []),
+                injury_regions=injury_regions,
+                excluded_names=excluded_names,
+            ):
+                continue
             eq = normalize_equipment_list(d.get("equipment", []))
             if eq and not set(eq).issubset(equipment_access_set):
                 continue
             taper_candidates.append(d)
         if not taper_candidates:
-            taper_candidates = [d for d in style_taper_bank if not normalize_equipment_list(d.get("equipment", [])) or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)]
+            taper_candidates = [
+                d for d in style_taper_bank
+                if not is_item_excluded(
+                    d.get("name", ""),
+                    d.get("tags", []),
+                    injury_regions=injury_regions,
+                    excluded_names=excluded_names,
+                )
+                and (
+                    not normalize_equipment_list(d.get("equipment", []))
+                    or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)
+                )
+            ]
 
         if taper_candidates and len(selected_drill_names) < total_drills:
             drill = random.choice(taper_candidates)
@@ -868,8 +925,17 @@ def generate_conditioning_block(flags):
         ]
         if taper_plyos and len(selected_drill_names) < total_drills:
             existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
-            drill = random.choice(taper_plyos)
-            if drill.get("name") not in existing_cond_names:
+            taper_plyos = [
+                d for d in taper_plyos
+                if not is_item_excluded(
+                    d.get("name", ""),
+                    d.get("tags", []),
+                    injury_regions=injury_regions,
+                    excluded_names=excluded_names,
+                )
+            ]
+            drill = random.choice(taper_plyos) if taper_plyos else None
+            if drill and drill.get("name") not in existing_cond_names:
                 system = SYSTEM_ALIASES.get(
                     drill.get("system", "").lower(), drill.get("system", "misc")
                 )
@@ -902,6 +968,13 @@ def generate_conditioning_block(flags):
         random.shuffle(skill_drills)
         for drill in skill_drills:
             if drill.get("name") not in existing_names:
+                if is_item_excluded(
+                    drill.get("name", ""),
+                    drill.get("tags", []),
+                    injury_regions=injury_regions,
+                    excluded_names=excluded_names,
+                ):
+                    continue
                 system = SYSTEM_ALIASES.get(
                     drill.get("system", "").lower(), drill.get("system", "misc")
                 )
@@ -941,6 +1014,12 @@ def generate_conditioning_block(flags):
                 for d in conditioning_bank
                 if "neck" in {t.lower() for t in d.get("tags", [])}
                 and phase.upper() in d.get("phases", [])
+                and not is_item_excluded(
+                    d.get("name", ""),
+                    d.get("tags", []),
+                    injury_regions=injury_regions,
+                    excluded_names=excluded_names,
+                )
                 and (
                     not normalize_equipment_list(d.get("equipment", []))
                     or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)

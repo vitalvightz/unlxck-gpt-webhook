@@ -28,6 +28,7 @@ from .conditioning import generate_conditioning_block
 from .recovery import generate_recovery_block
 from .nutrition import generate_nutrition_block
 from .rehab_protocols import generate_rehab_protocols, generate_support_notes
+from .injury_filter import validate_injury_filter
 
 GOAL_NORMALIZER = {
     "Power & Explosiveness": "power",
@@ -279,6 +280,16 @@ async def generate_plan(data: dict):
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_cond_block, taper_cond_names, taper_cond_reasons = generate_conditioning_block({**training_context, "phase": "TAPER"})
         conditioning_reason_log["TAPER"] = taper_cond_reasons
+
+    selected_training_names = (
+        gpp_ex_names
+        + spp_ex_names
+        + taper_ex_names
+        + gpp_cond_names
+        + spp_cond_names
+        + taper_cond_names
+    )
+    validate_injury_filter(selected_training_names, training_context.get("injuries", []))
 
     gpp_rehab_block = ""
     spp_rehab_block = ""

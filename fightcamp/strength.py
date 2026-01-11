@@ -8,6 +8,11 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
+from .injury_filter import (
+    get_excluded_names,
+    is_item_excluded,
+    normalize_injury_regions,
+)
 
 # Optional equipment boosts by training phase
 phase_equipment_boost = {
@@ -217,6 +222,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
+    injury_regions = normalize_injury_regions(injuries)
+    excluded_names = get_excluded_names(injury_regions)
 
     style_tag_map = {
         "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
@@ -310,6 +317,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in exercise_bank:
         tags = ex.get("tags", [])
         tags_lower = {t.lower() for t in tags}
+        if is_item_excluded(
+            ex.get("name", ""),
+            tags,
+            injury_regions=injury_regions,
+            excluded_names=excluded_names,
+        ):
+            continue
         details = " ".join(
             [
                 ex.get("notes", ""),
@@ -384,6 +398,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
             tags = ex.get("tags", [])
             tags_lower = {t.lower() for t in tags}
+            if is_item_excluded(
+                ex.get("name", ""),
+                tags,
+                injury_regions=injury_regions,
+                excluded_names=excluded_names,
+            ):
+                continue
             details = " ".join(
                 [
                     ex.get("notes", ""),
@@ -454,6 +475,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 break
             if drill.get("name") in existing_names:
                 continue
+            if is_item_excluded(
+                drill.get("name", ""),
+                drill.get("tags", []),
+                injury_regions=injury_regions,
+                excluded_names=excluded_names,
+            ):
+                continue
             for group in priority_strength_tags:
                 if any(tag in drill.get("tags", []) for tag in group) and not any(
                     tag in existing_tags for tag in group
@@ -502,6 +530,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             continue
         ex_tags = set(ex.get("tags", []))
         if not ex_tags & athlete_style_set:
+            continue
+        if is_item_excluded(
+            ex.get("name", ""),
+            list(ex_tags),
+            injury_regions=injury_regions,
+            excluded_names=excluded_names,
+        ):
             continue
         ex_eq = set(normalize_equipment_list(ex.get("equipment", [])))
         if ex_eq and ex_eq != {"bodyweight"} and not ex_eq.issubset(available_eq):
