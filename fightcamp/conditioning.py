@@ -7,7 +7,13 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
-from .injury_filtering import is_injury_safe, injury_violation_reasons, log_injury_debug
+from .injury_filtering import (
+    is_injury_safe,
+    injury_violation_reasons,
+    log_injury_debug,
+    normalize_injury_regions,
+)
+from .injury_exclusion_rules import INJURY_RULES
 
 # Map for tactical styles
 style_tag_map = {
@@ -131,6 +137,50 @@ SYSTEM_ALIASES = {
     "cognitive": "alactic"
 }
 
+def _collect_drill_text_fields(drill: dict) -> dict[str, str]:
+    return {
+        "name": str(drill.get("name") or ""),
+        "purpose": str(
+            drill.get("purpose")
+            or drill.get("notes")
+            or drill.get("description")
+            or ""
+        ),
+        "timing": str(drill.get("timing") or drill.get("duration") or ""),
+        "equipment_note": str(
+            drill.get("equipment_note") or drill.get("equipment_notes") or ""
+        ),
+        "red_flags": str(drill.get("red_flags") or ""),
+    }
+
+
+def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[str]:
+    if not injuries:
+        return []
+    fields = _collect_drill_text_fields(drill)
+    reasons: list[str] = []
+    for region in normalize_injury_regions(injuries):
+        rules = INJURY_RULES.get(region, {})
+        for keyword in rules.get("ban_keywords", []):
+            keyword_lower = keyword.lower()
+            for field_name, value in fields.items():
+                if keyword_lower and keyword_lower in value.lower():
+                    reasons.append(f"{region}:field:{field_name}:{keyword_lower}")
+    return reasons
+
+
+def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool:
+    reasons = _drill_text_injury_reasons(drill, injuries)
+    if not reasons:
+        return True
+    for reason in reasons:
+        region, _, field, keyword = reason.split(":", 3)
+        print(
+            f"[injury-guard] {label} excluded '{drill.get('name')}' "
+            f"field={field} keyword={keyword} region={region}"
+        )
+    return False
+
 # Relative emphasis of each energy system by training phase
 PHASE_SYSTEM_RATIOS = {
     "GPP": {"aerobic": 0.5, "glycolytic": 0.3, "alactic": 0.2},
@@ -225,6 +275,7 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
         if phase in [p.upper() for p in d.get("phases", [])]
         and d.get("placement", "conditioning").lower() == "conditioning"
         and d.get("name") not in existing_names
+        and _is_drill_text_safe(d, injuries, label="conditioning")
         and is_injury_safe(d, injuries)
         and (
             not normalize_equipment_list(d.get("equipment", []))
@@ -354,6 +405,8 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
+        if not _is_drill_text_safe(d, injuries, label="conditioning"):
+            continue
         if not is_injury_safe(d, injuries):
             continue
         if phase.upper() not in d.get("phases", []):
@@ -461,6 +514,8 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
+        if not _is_drill_text_safe(d, injuries, label="conditioning"):
+            continue
         if not is_injury_safe(d, injuries):
             continue
         tags = [t.lower() for t in d.get("tags", [])]
@@ -740,6 +795,8 @@ def generate_conditioning_block(flags):
                 break
             if drill.get("name") in existing_cond_names:
                 continue
+            if not _is_drill_text_safe(drill, injuries, label="conditioning"):
+                continue
             if not is_injury_safe(drill, injuries):
                 continue
             drill_eq = normalize_equipment_list(drill.get("equipment", []))
@@ -777,6 +834,8 @@ def generate_conditioning_block(flags):
         for d in style_taper_bank:
             if not style_set.intersection({t.lower() for t in d.get("tags", [])}):
                 continue
+            if not _is_drill_text_safe(d, injuries, label="conditioning"):
+                continue
             if not is_injury_safe(d, injuries):
                 continue
             eq = normalize_equipment_list(d.get("equipment", []))
@@ -787,7 +846,8 @@ def generate_conditioning_block(flags):
             taper_candidates = [
                 d
                 for d in style_taper_bank
-                if is_injury_safe(d, injuries)
+                if _is_drill_text_safe(d, injuries, label="conditioning")
+                and is_injury_safe(d, injuries)
                 and (
                     not normalize_equipment_list(d.get("equipment", []))
                     or set(normalize_equipment_list(d.get("equipment", []))).issubset(
@@ -818,6 +878,7 @@ def generate_conditioning_block(flags):
             d for d in conditioning_bank
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
             and "plyometric" in {t.lower() for t in d.get("tags", [])}
+            and _is_drill_text_safe(d, injuries, label="conditioning")
             and is_injury_safe(d, injuries)
             and (
                 not normalize_equipment_list(d.get("equipment", []))
@@ -852,6 +913,7 @@ def generate_conditioning_block(flags):
             d for d in style_conditioning_bank
             if "skill_refinement" in {t.lower() for t in d.get("tags", [])}
             and phase.upper() in d.get("phases", [])
+            and _is_drill_text_safe(d, injuries, label="conditioning")
             and is_injury_safe(d, injuries)
             and (
                 not normalize_equipment_list(d.get("equipment", []))
@@ -902,6 +964,7 @@ def generate_conditioning_block(flags):
                 for d in conditioning_bank
                 if "neck" in {t.lower() for t in d.get("tags", [])}
                 and is_injury_safe(d, injuries)
+                and _is_drill_text_safe(d, injuries, label="conditioning")
                 and phase.upper() in d.get("phases", [])
                 and (
                     not normalize_equipment_list(d.get("equipment", []))
@@ -944,6 +1007,8 @@ def generate_conditioning_block(flags):
             while idx < len(drills):
                 drill = drills[idx]
                 reasons = injury_violation_reasons(drill, injuries)
+                text_reasons = _drill_text_injury_reasons(drill, injuries)
+                reasons.extend(text_reasons)
                 if not reasons:
                     idx += 1
                     continue
@@ -953,6 +1018,8 @@ def generate_conditioning_block(flags):
                     if not cand_name or cand_name in used_names:
                         continue
                     if injury_violation_reasons(cand, injuries):
+                        continue
+                    if _drill_text_injury_reasons(cand, injuries):
                         continue
                     replacement = cand
                     break
