@@ -8,15 +8,11 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .injury_filtering import (
-    INJURY_MATCH_ALLOWLIST,
+    injury_match_details,
     injury_violation_reasons,
     is_injury_safe,
-    infer_tags_from_name,
     log_injury_debug,
-    match_forbidden,
-    normalize_injury_regions,
 )
-from .injury_exclusion_rules import INJURY_RULES
 
 # Map for tactical styles
 style_tag_map = {
@@ -140,52 +136,11 @@ SYSTEM_ALIASES = {
     "cognitive": "alactic"
 }
 
-def _collect_drill_text_fields(drill: dict) -> dict[str, str]:
-    return {
-        "name": str(drill.get("name") or ""),
-        "purpose": str(
-            drill.get("purpose")
-            or drill.get("notes")
-            or drill.get("description")
-            or ""
-        ),
-        "timing": str(drill.get("timing") or drill.get("duration") or ""),
-        "equipment_note": str(
-            drill.get("equipment_note") or drill.get("equipment_notes") or ""
-        ),
-        "red_flags": str(drill.get("red_flags") or ""),
-    }
+_INJURY_GUARD_LOGGED: set[tuple] = set()
 
 
 def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
-    if not injuries:
-        return []
-    fields = _collect_drill_text_fields(drill)
-    tags = {t.lower() for t in drill.get("tags", []) if t}
-    tags |= infer_tags_from_name(fields.get("name", ""))
-    reasons: list[dict] = []
-    for region in normalize_injury_regions(injuries):
-        rules = INJURY_RULES.get(region, {})
-        patterns = rules.get("ban_keywords", [])
-        ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
-        field_hits: dict[str, list[str]] = {}
-        matched_patterns: set[str] = set()
-        for field_name, value in fields.items():
-            matches = match_forbidden(value, patterns, allowlist=INJURY_MATCH_ALLOWLIST)
-            if matches:
-                field_hits[field_name] = matches
-                matched_patterns.update(matches)
-        tag_hits = sorted(tags & ban_tags)
-        if field_hits or tag_hits:
-            reasons.append(
-                {
-                    "region": region,
-                    "fields": sorted(field_hits),
-                    "patterns": sorted(matched_patterns),
-                    "tags": tag_hits,
-                }
-            )
-    return reasons
+    return injury_match_details(drill, injuries, fields=("name",))
 
 
 def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool:
@@ -197,6 +152,17 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
         fields = ", ".join(reason["fields"])
         patterns = ", ".join(reason["patterns"])
         tags = ", ".join(reason["tags"])
+        log_key = (
+            label,
+            drill.get("name"),
+            region,
+            tuple(reason["fields"]),
+            tuple(reason["patterns"]),
+            tuple(reason["tags"]),
+        )
+        if log_key in _INJURY_GUARD_LOGGED:
+            continue
+        _INJURY_GUARD_LOGGED.add(log_key)
         print(
             f"[injury-guard] {label} excluded '{drill.get('name')}' "
             f"region={region} fields=[{fields}] patterns=[{patterns}] tags=[{tags}]"
