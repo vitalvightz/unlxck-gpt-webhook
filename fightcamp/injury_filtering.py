@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
+from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 INJURY_MATCH_ALLOWLIST: list[str] = []
@@ -97,6 +98,13 @@ def infer_tags_from_name(name: str) -> set[str]:
     return inferred
 
 
+def _map_text_to_region(text: str) -> str | None:
+    for region, keywords in INJURY_REGION_KEYWORDS.items():
+        if match_forbidden(text, keywords, allowlist=INJURY_MATCH_ALLOWLIST):
+            return region
+    return None
+
+
 def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
     regions: set[str] = set()
     for injury in injuries:
@@ -108,12 +116,24 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
             regions.add(direct_key)
             continue
         matched = False
-        for region, keywords in INJURY_REGION_KEYWORDS.items():
-            if match_forbidden(injury, keywords, allowlist=INJURY_MATCH_ALLOWLIST):
-                regions.add(region)
-                matched = True
+        for phrase in split_injury_text(injury):
+            injury_type, location = parse_injury_phrase(phrase)
+            for candidate in (location, injury_type, phrase):
+                if not candidate:
+                    continue
+                region = _map_text_to_region(candidate)
+                if region:
+                    regions.add(region)
+                    matched = True
+                    break
+            if matched:
+                break
         if not matched:
-            regions.add("unspecified")
+            region = _map_text_to_region(injury)
+            if region:
+                regions.add(region)
+            else:
+                regions.add("unspecified")
     return regions
 
 
