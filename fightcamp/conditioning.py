@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
 import random
+from typing import Callable, Iterable
 from .training_context import (
     allocate_sessions,
     normalize_equipment_list,
@@ -988,39 +991,79 @@ def generate_conditioning_block(flags):
     for system, drills in final_drills:
         grouped_drills.setdefault(system, []).extend(drills)
 
-    def _finalize_injury_safe_drills(grouped: dict[str, list[dict]]) -> None:
-        used_names = {d.get("name") for drills in grouped.values() for d in drills}
+    def _finalize_injury_safe_drills(
+        grouped: dict[str, list[dict]],
+        injuries: list[dict],
+        all_candidates_by_system: dict[str, list[dict]],
+        selected_drill_names: list[str],
+        reason_lookup: dict,
+        score_fn: Callable[[dict], float] | None = None,
+    ) -> None:
+        def _name(x: dict) -> str | None:
+            n = x.get("name")
+            return n.strip() if isinstance(n, str) and n.strip() else None
+
+        used_names = {n for drills in grouped.values() for d in drills if (n := _name(d))}
+        cache: dict[str, tuple[bool, list]] = {}
+
+        def _violations(d: dict) -> list:
+            n = _name(d) or f"__unnamed__:{id(d)}"
+            if n in cache:
+                ok, reasons = cache[n]
+                return [] if ok else reasons
+
+            reasons = []
+            reasons.extend(injury_violation_reasons(d, injuries))
+            reasons.extend(_drill_text_injury_reasons(d, injuries))
+
+            ok = len(reasons) == 0
+            cache[n] = (ok, reasons)
+            return [] if ok else reasons
+
         for system, drills in list(grouped.items()):
             idx = 0
+            candidates = all_candidates_by_system.get(system, [])
+
             while idx < len(drills):
                 drill = drills[idx]
-                reasons = injury_violation_reasons(drill, injuries)
-                text_reasons = _drill_text_injury_reasons(drill, injuries)
-                reasons.extend(text_reasons)
+                drill_name = _name(drill) or "(unnamed)"
+                reasons = _violations(drill)
+
                 if not reasons:
                     idx += 1
                     continue
-                replacement = None
-                for cand in all_candidates_by_system.get(system, []):
-                    cand_name = cand.get("name")
+
+                safe_pool: list[dict] = []
+                for cand in candidates:
+                    cand_name = _name(cand)
                     if not cand_name or cand_name in used_names:
                         continue
-                    if injury_violation_reasons(cand, injuries):
+                    if _violations(cand):
                         continue
-                    if _drill_text_injury_reasons(cand, injuries):
-                        continue
-                    replacement = cand
-                    break
+                    safe_pool.append(cand)
+
+                replacement = None
+                if safe_pool:
+                    if score_fn is None:
+                        replacement = safe_pool[0]
+                    else:
+                        replacement = max(safe_pool, key=score_fn)
+
                 if replacement:
+                    rep_name = _name(replacement) or "(unnamed)"
                     print(
                         "[injury-guard] conditioning replacing "
-                        f"'{drill.get('name')}' -> '{replacement.get('name')}' reasons={reasons}"
+                        f"'{drill_name}' -> '{rep_name}' reasons={reasons}"
                     )
-                    old_name = drill.get("name")
-                    used_names.discard(old_name)
-                    used_names.add(replacement.get("name"))
+
+                    old_name = _name(drill)
+                    if old_name:
+                        used_names.discard(old_name)
+                    used_names.add(rep_name)
+
                     drills[idx] = replacement
-                    reason_lookup.setdefault(replacement.get("name"), {
+
+                    reason_lookup.setdefault(rep_name, {
                         "goal_hits": 0,
                         "weakness_hits": 0,
                         "style_hits": 0,
@@ -1030,21 +1073,34 @@ def generate_conditioning_block(flags):
                         "penalties": 0,
                         "final_score": 0,
                     })
-                    if old_name in selected_drill_names:
-                        selected_drill_names[selected_drill_names.index(old_name)] = replacement.get("name")
+
+                    if old_name and old_name in selected_drill_names:
+                        selected_drill_names[selected_drill_names.index(old_name)] = rep_name
+
                     idx += 1
                 else:
                     print(
                         "[injury-guard] conditioning removing "
-                        f"'{drill.get('name')}' reasons={reasons}"
+                        f"'{drill_name}' reasons={reasons}"
                     )
-                    used_names.discard(drill.get("name"))
-                    if drill.get("name") in selected_drill_names:
-                        selected_drill_names.remove(drill.get("name"))
+
+                    old_name = _name(drill)
+                    if old_name:
+                        used_names.discard(old_name)
+                        if old_name in selected_drill_names:
+                            selected_drill_names.remove(old_name)
+
                     drills.pop(idx)
+
             grouped[system] = drills
 
-    _finalize_injury_safe_drills(grouped_drills)
+    _finalize_injury_safe_drills(
+        grouped_drills,
+        injuries,
+        all_candidates_by_system,
+        selected_drill_names,
+        reason_lookup,
+    )
 
     if os.getenv("INJURY_DEBUG") == "1":
         all_selected = [d for drills in grouped_drills.values() for d in drills]
