@@ -5,8 +5,10 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.conditioning import _INJURY_GUARD_LOGGED, _drill_text_injury_reasons, _is_drill_text_safe, select_coordination_drill
 from fightcamp.injury_filtering import (
+    audit_missing_tags,
     build_injury_exclusion_map,
     infer_tags_from_name,
+    injury_flag_reasons,
     injury_violation_reasons,
     is_injury_safe,
     match_forbidden,
@@ -84,7 +86,7 @@ def test_injury_guard_real_exclusions_still_apply():
     shoulder_reasons = injury_violation_reasons(
         {"name": "Bench Press", "tags": []}, injuries=["shoulder injury"]
     )
-    assert any("shoulder:keyword:bench press" in reason for reason in shoulder_reasons)
+    assert any("shoulder:tag:upper_push" in reason for reason in shoulder_reasons)
 
     overhead_reasons = injury_violation_reasons(
         {"name": "Overhead Carry", "tags": []}, injuries=["shoulder"]
@@ -100,7 +102,7 @@ def test_injury_guard_real_exclusions_still_apply():
     knee_reasons = injury_violation_reasons(
         {"name": "Box Jump", "tags": []}, injuries=["knee pain"]
     )
-    assert any("knee:keyword:box jump" in reason for reason in knee_reasons)
+    assert any("knee:tag:high_impact_plyo" in reason for reason in knee_reasons)
 
     hip_reasons = injury_violation_reasons(
         {"name": "Hip Hinge Progression", "tags": []}, injuries=["hip impingement"]
@@ -146,6 +148,12 @@ def test_drill_text_filter_matches_notes_and_tags():
 def test_injury_exclusion_map_contains_known_drill():
     exclusions = build_injury_exclusion_map()
     assert "exercise_bank:Barbell Overhead Press" in exclusions["shoulder"]
+
+
+def test_audit_missing_tags_reports_totals():
+    counts = audit_missing_tags()
+    total = counts.pop("total")
+    assert total == sum(counts.values())
 
 
 def _make_drill(name: str, **overrides: str):
@@ -302,3 +310,159 @@ def test_regression_shoulders_exclusion_allowlist():
         assert injury_violation_reasons({"name": name, "tags": []}, ["shoulder"])
     for name in allowed:
         assert injury_violation_reasons({"name": name, "tags": []}, ["shoulder"]) == []
+
+
+def test_risk_levels_distinguish_flag_from_exclude(monkeypatch):
+    test_rules = {
+        "demo": {
+            "ban_keywords": ["deadlift"],
+            "ban_tags": [],
+            "flag_keywords": ["carry"],
+            "flag_tags": ["loaded_carry"],
+        }
+    }
+    monkeypatch.setattr("fightcamp.injury_filtering.INJURY_RULES", test_rules)
+    assert injury_violation_reasons({"name": "Deadlift", "tags": []}, ["demo"])
+    assert injury_flag_reasons({"name": "Loaded Carry", "tags": ["loaded_carry"]}, ["demo"])
+    assert injury_violation_reasons({"name": "Loaded Carry", "tags": ["loaded_carry"]}, ["demo"]) == []
+
+
+def test_regression_sentinel_drills_per_region():
+    sentinels = {
+        "shoulder": {
+            "excluded": [
+                "Bench Press",
+                "Incline Press",
+                "Push Press",
+                "Overhead Press",
+                "Strict Press",
+                "Military Press",
+                "Overhead Carry",
+                "Ring Dip",
+                "Snatch Balance",
+                "Jerk Complex",
+                "Wall Ball Throws",
+            ],
+            "allowed": [
+                "Pressure Cooker",
+                "Pressure Fighter Stomp",
+                "Footwork Ladder",
+                "Bike Tempo Ride",
+                "Shadowboxing Drill",
+                "Core Rotation Flow",
+                "Low Impact Mobility",
+                "Breathing Reset",
+                "Recovery Walk",
+                "Skill Refinement Drill",
+            ],
+        },
+        "ankle": {
+            "excluded": [
+                "Hard Cuts Drill",
+                "Lateral Bounds Series",
+                "Uneven Surface Run",
+                "Depth Jump Series",
+                "Hard Cuts Reaction",
+                "Lateral Bounds Ladder",
+                "Uneven Surface Hops",
+                "Depth Jump Waves",
+                "Hard Cuts and Go",
+                "Lateral Bounds Repeats",
+            ],
+            "allowed": [
+                "Bike Tempo Ride",
+                "Rowing Tempo",
+                "Upper Body Cycle",
+                "Core Rotation Flow",
+                "Shadowboxing Drill",
+                "Mobility Reset",
+                "Breathing Reset",
+                "Low Impact Mobility",
+                "Recovery Walk",
+                "Pool Recovery",
+            ],
+        },
+        "knee": {
+            "excluded": [
+                "Depth Jump Series",
+                "Drop Jump Waves",
+                "Hard Landing Primer",
+                "Heavy Squat Waves",
+                "Walking Lunge Ladder",
+                "Split Squat Ladder",
+                "Box Jump Repeats",
+                "Jump Squat Waves",
+                "Depth Jump Ladder",
+                "Box Jump Series",
+            ],
+            "allowed": [
+                "Bike Tempo Ride",
+                "Upper Body Cycle",
+                "Core Rotation Flow",
+                "Shadowboxing Drill",
+                "Breathing Reset",
+                "Rowing Tempo",
+                "Mobility Reset",
+                "Recovery Walk",
+                "Pool Recovery",
+                "Low Impact Mobility",
+            ],
+        },
+        "wrist": {
+            "excluded": [
+                "Push-Up Ladder",
+                "Handstand Hold",
+                "Front Rack Carry",
+                "Power Clean",
+                "Hang Clean",
+                "Clean and Jerk",
+                "Snatch Balance",
+                "Bear Crawl",
+                "Bear Crawl Flow",
+                "Snatch Complex",
+            ],
+            "allowed": [
+                "Bike Tempo Ride",
+                "Rowing Tempo",
+                "Shadowboxing Drill",
+                "Footwork Ladder",
+                "Core Rotation Flow",
+                "Breathing Reset",
+                "Recovery Walk",
+                "Low Impact Mobility",
+                "Pool Recovery",
+                "Aerobic Bike",
+            ],
+        },
+        "lower_back": {
+            "excluded": [
+                "Deadlift",
+                "Romanian Deadlift",
+                "Back Squat",
+                "Good Morning",
+                "Jefferson Curl",
+                "Heavy Hinge Complex",
+                "Deadlift Holds",
+                "Romanian Deadlift Iso",
+                "Back Squat Waves",
+                "Good Morning Flow",
+            ],
+            "allowed": [
+                "Bike Tempo Ride",
+                "Rowing Tempo",
+                "Upper Body Cycle",
+                "Shadowboxing Drill",
+                "Breathing Reset",
+                "Footwork Ladder",
+                "Core Rotation Flow",
+                "Low Impact Mobility",
+                "Recovery Walk",
+                "Pool Recovery",
+            ],
+        },
+    }
+    for region, cases in sentinels.items():
+        for name in cases["excluded"]:
+            assert injury_violation_reasons({"name": name, "tags": []}, [region])
+        for name in cases["allowed"]:
+            assert injury_violation_reasons({"name": name, "tags": []}, [region]) == []
