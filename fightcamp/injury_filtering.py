@@ -10,7 +10,13 @@ from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-INJURY_MATCH_ALLOWLIST: list[str] = []
+INJURY_MATCH_ALLOWLIST: list[str] = [
+    "pressure fighter",
+    "pressure cooker",
+    "sandbox jumper",
+    "ship hinge",
+    "stomach ache",
+]
 GENERIC_SINGLE_WORD_PATTERNS = {"press", "overhead", "bench"}
 
 INFERRED_TAG_RULES = [
@@ -41,6 +47,19 @@ INFERRED_TAG_RULES = [
     {"keywords": ["contact", "sparring"], "tags": ["contact"]},
 ]
 
+AUTO_TAG_RULES = [
+    {
+        "keywords": ["assault bike", "air bike", "bike", "cycle", "spin bike"],
+        "tags": ["aerobic", "low_impact"],
+    },
+    {
+        "keywords": ["row", "rower", "erg", "ski erg", "ski-erg"],
+        "tags": ["aerobic", "low_impact"],
+    },
+    {"keywords": ["treadmill", "run", "running", "jog"], "tags": ["aerobic"]},
+    {"keywords": ["mobility", "stretch", "recovery", "breathing"], "tags": ["mobility", "recovery"]},
+]
+
 
 def _normalize_text(text: str) -> str:
     cleaned = text.lower().replace("-", " ").replace("_", " ")
@@ -58,39 +77,37 @@ def _phrase_in_tokens(tokens: list[str], phrase_tokens: list[str]) -> bool:
     return False
 
 
+def _build_phrase_regex(phrase: str) -> re.Pattern[str] | None:
+    normalized = _normalize_text(phrase)
+    if not normalized:
+        return None
+    tokens = normalized.split()
+    if len(tokens) == 1 and tokens[0] in GENERIC_SINGLE_WORD_PATTERNS:
+        return None
+    escaped = [re.escape(token) for token in tokens]
+    pattern = r"\b" + r"\s+".join(escaped) + r"\b"
+    return re.compile(pattern)
+
+
 def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
-    tokens = _normalize_text(text).split()
-    if not tokens:
+    normalized_text = _normalize_text(text)
+    if not normalized_text:
         return []
     allowlist = allowlist or []
     for phrase in allowlist:
-        phrase_tokens = _normalize_text(phrase).split()
-        if _phrase_in_tokens(tokens, phrase_tokens):
+        phrase_regex = _build_phrase_regex(phrase)
+        if phrase_regex and phrase_regex.search(normalized_text):
             return []
-    normalized_patterns: list[tuple[str, list[str]]] = []
-    for pattern in patterns:
-        normalized = _normalize_text(pattern)
-        if not normalized:
-            continue
-        parts = normalized.split()
-        if len(parts) == 1 and parts[0] in GENERIC_SINGLE_WORD_PATTERNS:
-            continue
-        normalized_patterns.append((pattern, parts))
     matches: list[str] = []
     seen: set[str] = set()
-    matched_phrase_tokens: set[str] = set()
-    for original, parts in normalized_patterns:
-        if len(parts) > 1 and _phrase_in_tokens(tokens, parts):
-            if original not in seen:
-                matches.append(original)
-                seen.add(original)
-                matched_phrase_tokens.update(parts)
-    token_set = set(tokens)
-    for original, parts in normalized_patterns:
-        if len(parts) == 1 and parts[0] in token_set and parts[0] not in matched_phrase_tokens:
-            if original not in seen:
-                matches.append(original)
-                seen.add(original)
+    for pattern in patterns:
+        phrase_regex = _build_phrase_regex(pattern)
+        if not phrase_regex:
+            continue
+        if phrase_regex.search(normalized_text):
+            if pattern not in seen:
+                matches.append(pattern)
+                seen.add(pattern)
     return matches
 
 
@@ -99,6 +116,33 @@ def infer_tags_from_name(name: str) -> set[str]:
     for rule in INFERRED_TAG_RULES:
         if match_forbidden(name, rule["keywords"], allowlist=INJURY_MATCH_ALLOWLIST):
             inferred.update(rule["tags"])
+    return inferred
+
+
+def auto_tag(item: dict) -> set[str]:
+    name = str(item.get("name", "") or "")
+    purpose = str(item.get("purpose", "") or "")
+    equipment = item.get("equipment", "")
+    if isinstance(equipment, (list, tuple, set)):
+        equipment_text = " ".join(str(e) for e in equipment if e)
+    else:
+        equipment_text = str(equipment or "")
+    fields_text = " ".join([name, purpose, equipment_text])
+    tags: set[str] = set(infer_tags_from_name(name))
+    for rule in AUTO_TAG_RULES:
+        if match_forbidden(fields_text, rule["keywords"], allowlist=INJURY_MATCH_ALLOWLIST):
+            tags.update(rule["tags"])
+    return {tag.lower() for tag in tags if tag}
+
+
+def ensure_tags(item: dict) -> list[str]:
+    raw_tags = [t for t in item.get("tags", []) if t]
+    if raw_tags:
+        return [t.lower() for t in raw_tags]
+    inferred = sorted(auto_tag(item))
+    if not inferred:
+        inferred = ["untagged"]
+    item["tags"] = inferred
     return inferred
 
 
@@ -143,7 +187,7 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
 
 def injury_violation_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     reasons: set[str] = set()
-    for detail in injury_match_details(item, injuries):
+    for detail in injury_match_details(item, injuries, risk_levels=("exclude",)):
         region = detail["region"]
         for keyword in detail["patterns"]:
             reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
@@ -163,7 +207,18 @@ def injury_violation_reasons_with_fields(
     fields: Iterable[str] | None = None,
 ) -> list[str]:
     reasons: set[str] = set()
-    for detail in injury_match_details(item, injuries, fields=fields):
+    for detail in injury_match_details(item, injuries, fields=fields, risk_levels=("exclude",)):
+        region = detail["region"]
+        for keyword in detail["patterns"]:
+            reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
+        for tag in detail["tags"]:
+            reasons.add(f"{region}:tag:{tag}")
+    return sorted(reasons)
+
+
+def injury_flag_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
+    reasons: set[str] = set()
+    for detail in injury_match_details(item, injuries, risk_levels=("flag",)):
         region = detail["region"]
         for keyword in detail["patterns"]:
             reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
@@ -192,36 +247,43 @@ def injury_match_details(
     injuries: Iterable[str],
     *,
     fields: Iterable[str] | None = None,
+    risk_levels: Iterable[str] | None = None,
 ) -> list[dict]:
     if not injuries:
         return []
     fields = fields or ("name",)
+    risk_levels = set(risk_levels or ("exclude",))
     field_values = {field: str(item.get(field, "") or "") for field in fields}
     name = field_values.get("name", "")
-    tags = {t.lower() for t in item.get("tags", []) if t}
+    tags = set(ensure_tags(item))
     tags |= infer_tags_from_name(name)
     reasons: list[dict] = []
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
-        patterns = rules.get("ban_keywords", [])
-        ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
-        field_hits: dict[str, list[str]] = {}
-        matched_patterns: set[str] = set()
-        for field_name, value in field_values.items():
-            matches = match_forbidden(value, patterns, allowlist=INJURY_MATCH_ALLOWLIST)
-            if matches:
-                field_hits[field_name] = matches
-                matched_patterns.update(matches)
-        tag_hits = sorted(tags & ban_tags)
-        if field_hits or tag_hits:
-            reasons.append(
-                {
-                    "region": region,
-                    "fields": sorted(field_hits),
-                    "patterns": sorted(matched_patterns),
-                    "tags": tag_hits,
-                }
-            )
+        for risk_level in ("exclude", "flag"):
+            if risk_level not in risk_levels:
+                continue
+            patterns = rules.get(f"{risk_level}_keywords", rules.get("ban_keywords", []) if risk_level == "exclude" else [])
+            risk_tags = {t.lower() for t in rules.get(f"{risk_level}_tags", rules.get("ban_tags", []) if risk_level == "exclude" else [])}
+            tag_hits = sorted(tags & risk_tags)
+            field_hits: dict[str, list[str]] = {}
+            matched_patterns: set[str] = set()
+            if not tag_hits:
+                for field_name, value in field_values.items():
+                    matches = match_forbidden(value, patterns, allowlist=INJURY_MATCH_ALLOWLIST)
+                    if matches:
+                        field_hits[field_name] = matches
+                        matched_patterns.update(matches)
+            if field_hits or tag_hits:
+                reasons.append(
+                    {
+                        "region": region,
+                        "fields": sorted(field_hits),
+                        "patterns": sorted(matched_patterns),
+                        "tags": tag_hits,
+                        "risk_level": risk_level,
+                    }
+                )
     return reasons
 
 
@@ -276,14 +338,15 @@ def build_bank_inferred_tags() -> list[dict]:
         for item in items:
             name = item.get("name", "")
             item_id = f"{bank_name}:{name}"
-            explicit_tags = [t.lower() for t in item.get("tags", [])]
+            explicit_tags = [t.lower() for t in item.get("tags", []) if t]
+            normalized_tags = ensure_tags(item)
             inferred_tags = sorted(infer_tags_from_name(name))
             entries.append(
                 {
                     "item_id": item_id,
                     "bank": bank_name,
                     "name": name,
-                    "explicit_tags": explicit_tags,
+                    "explicit_tags": explicit_tags or normalized_tags,
                     "inferred_tags": inferred_tags,
                 }
             )
@@ -296,16 +359,31 @@ def build_injury_exclusion_map() -> dict[str, list[str]]:
         for item in items:
             name = item.get("name", "")
             item_id = f"{bank_name}:{name}"
-            tags = {t.lower() for t in item.get("tags", [])}
+            tags = set(ensure_tags(item))
             tags |= infer_tags_from_name(name)
             for region, rule in INJURY_RULES.items():
-                ban_keywords = rule.get("ban_keywords", [])
-                ban_tags = {t.lower() for t in rule.get("ban_tags", [])}
+                ban_keywords = rule.get("exclude_keywords", rule.get("ban_keywords", []))
+                ban_tags = {t.lower() for t in rule.get("exclude_tags", rule.get("ban_tags", []))}
                 if match_forbidden(name, ban_keywords, allowlist=INJURY_MATCH_ALLOWLIST) or tags & ban_tags:
                     exclusions[region].append(item_id)
     for region in exclusions:
         exclusions[region] = sorted(set(exclusions[region]))
     return exclusions
+
+
+def audit_missing_tags() -> dict[str, int]:
+    counts: dict[str, int] = {}
+    total = 0
+    for bank_name, items in collect_banks().items():
+        missing = 0
+        for item in items:
+            raw_tags = [t for t in item.get("tags", []) if t]
+            if not raw_tags:
+                missing += 1
+                total += 1
+        counts[bank_name] = missing
+    counts["total"] = total
+    return counts
 
 
 def write_injury_exclusion_files(output_dir: Path | None = None) -> None:

@@ -54,6 +54,7 @@ INJURY_RULES = {
             "jerk",
             "handstand",
             "kipping",
+            "wall ball",
         ],
         "ban_tags": ["overhead", "upper_push", "shoulder_heavy", "high_cns_upper"],
     },
