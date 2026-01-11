@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import json
 import ast
 import random
@@ -8,7 +9,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
-from .injury_filtering import is_injury_safe
+from .injury_filtering import is_injury_safe, injury_violation_reasons, log_injury_debug
 
 # Optional equipment boosts by training phase
 phase_equipment_boost = {
@@ -565,6 +566,44 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     return
 
     _enforce_conflicts(base_exercises)
+
+    def _finalize_injury_safe_exercises(ex_list: list[dict]) -> list[dict]:
+        used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
+        updated: list[dict | None] = []
+        for ex in ex_list:
+            reasons = injury_violation_reasons(ex, injuries)
+            if not reasons:
+                updated.append(ex)
+                continue
+            replacement = None
+            for cand, _, cand_reasons in weighted_exercises:
+                cand_name = cand.get("name")
+                if not cand_name or cand_name in used_names:
+                    continue
+                if injury_violation_reasons(cand, injuries):
+                    continue
+                replacement = cand
+                reason_lookup[cand_name] = cand_reasons
+                used_names.add(cand_name)
+                break
+            if replacement:
+                print(
+                    "[injury-guard] strength replacing "
+                    f"'{ex.get('name')}' -> '{replacement.get('name')}' reasons={reasons}"
+                )
+                updated.append(replacement)
+            else:
+                print(
+                    "[injury-guard] strength removing "
+                    f"'{ex.get('name')}' reasons={reasons}"
+                )
+                updated.append(None)
+        return [ex for ex in updated if ex]
+
+    base_exercises = _finalize_injury_safe_exercises(base_exercises)
+
+    if os.getenv("INJURY_DEBUG") == "1":
+        log_injury_debug(base_exercises, injuries, label=f"strength:{phase}")
 
     for ex in base_exercises:
         normalize_exercise_movement(ex)
