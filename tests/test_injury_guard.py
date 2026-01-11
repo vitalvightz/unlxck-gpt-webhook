@@ -3,7 +3,11 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from fightcamp.injury_filtering import injury_violation_reasons, match_forbidden
+from fightcamp.injury_filtering import (
+    infer_tags_from_name,
+    injury_violation_reasons,
+    match_forbidden,
+)
 
 
 def test_match_forbidden_avoids_substrings():
@@ -11,6 +15,7 @@ def test_match_forbidden_avoids_substrings():
     assert match_forbidden("pressuring drills", ["press"]) == []
     assert match_forbidden("pressure cooker", ["press"]) == []
     assert match_forbidden("Pressure Fighter’s Cutoff Circuit", ["press"]) == []
+    assert match_forbidden("compression switch", ["press"]) == []
     assert match_forbidden("skipping rope", ["kipping"]) == []
     assert match_forbidden("membership plan", ["hip"]) == []
     assert match_forbidden("stomach ache", ["toe"]) == []
@@ -30,6 +35,10 @@ def test_match_forbidden_true_positives():
     assert match_forbidden("ring dip", ["ring dip"]) == ["ring dip"]
 
 
+def test_infer_tags_from_name_avoids_substrings():
+    assert infer_tags_from_name("Pressure Fighter's Cutoff Circuit") == set()
+
+
 def test_injury_guard_real_exclusions_still_apply():
     shoulder_reasons = injury_violation_reasons(
         {"name": "Bench Press", "tags": []}, injuries=["shoulder injury"]
@@ -42,7 +51,8 @@ def test_injury_guard_real_exclusions_still_apply():
     assert any("shoulder:keyword:overhead carry" in reason for reason in overhead_reasons)
 
     no_false_positive = injury_violation_reasons(
-        {"name": "Pressure Fighter", "tags": []}, injuries=["shoulder"]
+        {"name": "Pressure Fighter's Cutoff Circuit", "tags": []},
+        injuries=["shoulder"],
     )
     assert no_false_positive == []
 
@@ -55,3 +65,15 @@ def test_injury_guard_real_exclusions_still_apply():
         {"name": "Hip Hinge Progression", "tags": []}, injuries=["hip impingement"]
     )
     assert any("hip:keyword:hip hinge" in reason for reason in hip_reasons)
+
+
+def test_injury_guard_region_false_positives():
+    knee_false_positive = injury_violation_reasons(
+        {"name": "Sandbox Jumper Conditioning", "tags": []}, injuries=["knee pain"]
+    )
+    assert knee_false_positive == []
+
+    hip_false_positive = injury_violation_reasons(
+        {"name": "Ship Hinge Flow", "tags": []}, injuries=["hip impingement"]
+    )
+    assert hip_false_positive == []
