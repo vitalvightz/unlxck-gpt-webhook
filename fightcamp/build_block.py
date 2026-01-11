@@ -274,6 +274,10 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
         raise RuntimeError("Missing Supabase credentials")
+    if "SUPABASE_URL=" in url:
+        url = url.split("SUPABASE_URL=", 1)[1].strip()
+    if not url.startswith("http") and "http" in url:
+        url = url[url.index("http") :].strip()
 
     import mimetypes
     from urllib import request
@@ -299,4 +303,3 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
         raise RuntimeError("Supabase upload failed") from e
 
     return f"{url}/storage/v1/object/public/{bucket}/{filename}"
-
