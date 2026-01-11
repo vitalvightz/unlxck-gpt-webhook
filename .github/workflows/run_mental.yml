@@ -42,7 +42,7 @@ jobs:
           pip check
 
       - name: Verify spaCy model
-        run: python -c "import spacy; nlp=spacy.load('en_core_web_lg'); print('spacy model ok')"
+        run: python -c "import spacy; nlp=spacy.load('en_core_web_lg'); print(nlp('ok')[0].text)"
 
       - name: Run Mental Plan
         run: python -m mental.main tests/test_payload.json
