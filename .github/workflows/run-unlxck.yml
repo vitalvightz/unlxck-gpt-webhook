@@ -42,5 +42,22 @@ jobs:
           python -c "import spacy; spacy.load('en_core_web_lg'); print('spaCy model OK')"
           pip check
 
+      - name: Preflight Supabase URL
+        run: |
+          python - <<'PY'
+          import os
+
+          raw = os.environ["SUPABASE_URL"]
+          cleaned = raw.strip()
+          print(f"SUPABASE_URL_RAW={raw}")
+          if cleaned.lower().startswith("supabase_url="):
+              print(f"SUPABASE_URL_CLEANED={cleaned}")
+              raise SystemExit("GitHub var still contains prefix")
+          cleaned = cleaned.rstrip("/")
+          print(f"SUPABASE_URL_CLEANED={cleaned}")
+          if not cleaned.startswith("https://"):
+              raise SystemExit("SUPABASE_URL must start with https://")
+          PY
+
       - name: Run fightcamp
         run: python -m fightcamp.main
