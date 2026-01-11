@@ -12,10 +12,13 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 INJURY_MATCH_ALLOWLIST: list[str] = []
 
 INFERRED_TAG_RULES = [
-    {"keywords": ["bench", "floor press"], "tags": ["upper_push", "horizontal_push"]},
-    {"keywords": ["overhead", "push press", "strict press", "military press"], "tags": ["overhead", "upper_push"]},
+    {"keywords": ["bench press", "floor press"], "tags": ["upper_push", "horizontal_push"]},
+    {
+        "keywords": ["overhead press", "push press", "strict press", "military press"],
+        "tags": ["overhead", "upper_push"],
+    },
     {"keywords": ["snatch", "jerk"], "tags": ["overhead", "shoulder_heavy"]},
-    {"keywords": ["dip"], "tags": ["upper_push", "elbow_extension_heavy"]},
+    {"keywords": ["ring dip", "bench dip", "parallel bar dip", "bar dip"], "tags": ["upper_push", "elbow_extension_heavy"]},
     {"keywords": ["handstand"], "tags": ["overhead", "wrist_loaded_extension"]},
     {"keywords": ["push-up", "pushup"], "tags": ["upper_push", "wrist_loaded_extension"]},
     {"keywords": ["front rack"], "tags": ["front_rack", "wrist_loaded_extension"]},
@@ -70,14 +73,16 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
         normalized_patterns.append((pattern, normalized.split()))
     matches: list[str] = []
     seen: set[str] = set()
+    matched_phrase_tokens: set[str] = set()
     for original, parts in normalized_patterns:
         if len(parts) > 1 and _phrase_in_tokens(tokens, parts):
             if original not in seen:
                 matches.append(original)
                 seen.add(original)
+                matched_phrase_tokens.update(parts)
     token_set = set(tokens)
     for original, parts in normalized_patterns:
-        if len(parts) == 1 and parts[0] in token_set:
+        if len(parts) == 1 and parts[0] in token_set and parts[0] not in matched_phrase_tokens:
             if original not in seen:
                 matches.append(original)
                 seen.add(original)
@@ -85,11 +90,9 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
 
 
 def infer_tags_from_name(name: str) -> set[str]:
-    normalized = _normalize_text(name)
     inferred: set[str] = set()
     for rule in INFERRED_TAG_RULES:
-        normalized_keywords = [_normalize_text(keyword) for keyword in rule["keywords"]]
-        if any(keyword in normalized for keyword in normalized_keywords):
+        if match_forbidden(name, rule["keywords"], allowlist=INJURY_MATCH_ALLOWLIST):
             inferred.update(rule["tags"])
     return inferred
 

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from .conditioning import generate_conditioning_block
+from .injury_filtering import match_forbidden
 from .strength import generate_strength_block
 
 
 def _find_keyword_violations(names: list[str], keywords: list[str]) -> list[str]:
     violations: list[str] = []
     for name in names:
-        name_lower = name.lower()
-        if any(keyword in name_lower for keyword in keywords):
+        if match_forbidden(name, keywords):
             violations.append(name)
     return violations
 
@@ -36,7 +36,18 @@ def run_injury_self_checks() -> None:
     shoulder_strength = generate_strength_block(flags=shoulder_flags)
     shoulder_strength_names = [ex.get("name", "") for ex in shoulder_strength.get("exercises", [])]
     shoulder_violations = _find_keyword_violations(
-        shoulder_strength_names, ["bench", "overhead", "press", "dip"]
+        shoulder_strength_names,
+        [
+            "bench press",
+            "overhead press",
+            "push press",
+            "strict press",
+            "military press",
+            "ring dip",
+            "bench dip",
+            "parallel bar dip",
+            "bar dip",
+        ],
     )
     if shoulder_violations:
         violations.append(
