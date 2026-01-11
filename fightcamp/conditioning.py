@@ -11,6 +11,7 @@ from .injury_filtering import (
     INJURY_MATCH_ALLOWLIST,
     injury_violation_reasons,
     is_injury_safe,
+    infer_tags_from_name,
     log_injury_debug,
     match_forbidden,
     normalize_injury_regions,
@@ -160,10 +161,13 @@ def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
     if not injuries:
         return []
     fields = _collect_drill_text_fields(drill)
+    tags = {t.lower() for t in drill.get("tags", []) if t}
+    tags |= infer_tags_from_name(fields.get("name", ""))
     reasons: list[dict] = []
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
         patterns = rules.get("ban_keywords", [])
+        ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
         field_hits: dict[str, list[str]] = {}
         matched_patterns: set[str] = set()
         for field_name, value in fields.items():
@@ -171,12 +175,14 @@ def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
             if matches:
                 field_hits[field_name] = matches
                 matched_patterns.update(matches)
-        if field_hits:
+        tag_hits = sorted(tags & ban_tags)
+        if field_hits or tag_hits:
             reasons.append(
                 {
                     "region": region,
                     "fields": sorted(field_hits),
                     "patterns": sorted(matched_patterns),
+                    "tags": tag_hits,
                 }
             )
     return reasons
@@ -190,9 +196,10 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
         region = reason["region"]
         fields = ", ".join(reason["fields"])
         patterns = ", ".join(reason["patterns"])
+        tags = ", ".join(reason["tags"])
         print(
             f"[injury-guard] {label} excluded '{drill.get('name')}' "
-            f"region={region} fields=[{fields}] patterns=[{patterns}]"
+            f"region={region} fields=[{fields}] patterns=[{patterns}] tags=[{tags}]"
         )
     return False
 

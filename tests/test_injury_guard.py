@@ -3,10 +3,13 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from fightcamp.conditioning import _drill_text_injury_reasons
 from fightcamp.injury_filtering import (
+    build_injury_exclusion_map,
     infer_tags_from_name,
     injury_violation_reasons,
     match_forbidden,
+    normalize_injury_regions,
 )
 
 
@@ -77,3 +80,25 @@ def test_injury_guard_region_false_positives():
         {"name": "Ship Hinge Flow", "tags": []}, injuries=["hip impingement"]
     )
     assert hip_false_positive == []
+
+
+def test_normalize_injury_regions_parses_phrases():
+    assert normalize_injury_regions(["ACL tear"]) == {"knee"}
+    assert normalize_injury_regions(["lumbar strain"]) == {"lower_back"}
+
+
+def test_drill_text_filter_matches_notes_and_tags():
+    keyword_drill = {"name": "Landing Primer", "notes": "Avoid hard landing", "tags": []}
+    keyword_reasons = _drill_text_injury_reasons(keyword_drill, ["knee pain"])
+    assert keyword_reasons
+    assert any("hard landing" in reason["patterns"] for reason in keyword_reasons)
+
+    tag_drill = {"name": "Vertical Throw", "notes": "", "tags": ["overhead"]}
+    tag_reasons = _drill_text_injury_reasons(tag_drill, ["shoulder"])
+    assert tag_reasons
+    assert any("overhead" in reason["tags"] for reason in tag_reasons)
+
+
+def test_injury_exclusion_map_contains_known_drill():
+    exclusions = build_injury_exclusion_map()
+    assert "exercise_bank:Barbell Overhead Press" in exclusions["shoulder"]
