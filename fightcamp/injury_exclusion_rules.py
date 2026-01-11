@@ -35,11 +35,17 @@ INJURY_RULES = {
     "shoulder": {
         "ban_keywords": [
             "bench press",
+            "bench isometric",
             "incline press",
+            "incline db press",
+            "incline dumbbell press",
+            "clean & press",
+            "clean and press",
             "push press",
             "overhead press",
             "strict press",
             "military press",
+            "z press",
             "overhead carry",
             "ring dip",
             "bench dip",

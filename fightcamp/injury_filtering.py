@@ -30,7 +30,7 @@ INFERRED_TAG_RULES = [
     {"keywords": ["deep squat", "pistol", "cossack"], "tags": ["deep_flexion", "hip_irritant"]},
     {"keywords": ["lateral lunge", "adductor"], "tags": ["adductor_load_high"]},
     {"keywords": ["nordic", "ham curl"], "tags": ["hamstring_eccentric_high"]},
-    {"keywords": ["sprint", "max sprint"], "tags": ["max_velocity"]},
+    {"keywords": ["sprint", "sprints", "max sprint", "acceleration", "accelerations"], "tags": ["max_velocity"]},
     {"keywords": ["jump", "plyo", "depth jump", "drop jump", "bounds", "hops", "pogo"], "tags": ["high_impact_plyo"]},
     {"keywords": ["jump rope"], "tags": ["impact_rebound_high", "foot_impact_high"]},
     {"keywords": ["bear crawl"], "tags": ["wrist_loaded_extension"]},

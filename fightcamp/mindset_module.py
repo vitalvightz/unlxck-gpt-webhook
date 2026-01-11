@@ -1,8 +1,29 @@
-from rapidfuzz import fuzz
-import spacy
+import importlib.util
+from difflib import SequenceMatcher
 
-# load large English model once
-nlp = spacy.load("en_core_web_lg")
+_SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
+_RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
+
+if _RAPIDFUZZ_AVAILABLE:
+    from rapidfuzz import fuzz
+else:
+    class _FuzzFallback:
+        @staticmethod
+        def partial_ratio(a: str, b: str) -> int:
+            return int(SequenceMatcher(None, a, b).ratio() * 100)
+
+    fuzz = _FuzzFallback()
+
+if _SPACY_AVAILABLE:
+    import spacy
+
+    # load large English model once
+    try:  # pragma: no cover - model may be missing in CI
+        nlp = spacy.load("en_core_web_lg")
+    except Exception:  # pragma: no cover - fallback to blank model
+        nlp = spacy.blank("en")
+else:
+    nlp = None
 
 mindset_bank = {
     "GPP": {
@@ -123,6 +144,8 @@ mental_blocks = {
 def semantic_match_block(text: str, threshold: float = 0.78) -> str:
     """Use spaCy embeddings to match unknown input to nearest mental block category."""
     if not text.strip():
+        return "generic"
+    if nlp is None:
         return "generic"
 
     doc_input = nlp(text.strip().lower())
