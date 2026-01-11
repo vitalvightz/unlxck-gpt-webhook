@@ -11,6 +11,7 @@ from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 INJURY_MATCH_ALLOWLIST: list[str] = []
+GENERIC_SINGLE_WORD_PATTERNS = {"press", "overhead", "bench"}
 
 INFERRED_TAG_RULES = [
     {"keywords": ["bench press", "floor press"], "tags": ["upper_push", "horizontal_push"]},
@@ -71,7 +72,10 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
         normalized = _normalize_text(pattern)
         if not normalized:
             continue
-        normalized_patterns.append((pattern, normalized.split()))
+        parts = normalized.split()
+        if len(parts) == 1 and parts[0] in GENERIC_SINGLE_WORD_PATTERNS:
+            continue
+        normalized_patterns.append((pattern, parts))
     matches: list[str] = []
     seen: set[str] = set()
     matched_phrase_tokens: set[str] = set()
@@ -138,21 +142,12 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
 
 
 def injury_violation_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
-    if not injuries:
-        return []
-    name = item.get("name", "")
-    tags = {t.lower() for t in item.get("tags", [])}
-    inferred = infer_tags_from_name(name)
-    all_tags = tags | inferred
     reasons: set[str] = set()
-
-    for region in normalize_injury_regions(injuries):
-        rules = INJURY_RULES.get(region, {})
-        ban_keywords = rules.get("ban_keywords", [])
-        ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
-        for keyword in match_forbidden(name, ban_keywords, allowlist=INJURY_MATCH_ALLOWLIST):
+    for detail in injury_match_details(item, injuries):
+        region = detail["region"]
+        for keyword in detail["patterns"]:
             reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
-        for tag in sorted(all_tags & ban_tags):
+        for tag in detail["tags"]:
             reasons.add(f"{region}:tag:{tag}")
     return sorted(reasons)
 
@@ -163,6 +158,44 @@ def is_injury_safe(item: dict, injuries: Iterable[str]) -> bool:
 
 def filter_items_for_injuries(items: Iterable[dict], injuries: Iterable[str]) -> list[dict]:
     return [item for item in items if is_injury_safe(item, injuries)]
+
+
+def injury_match_details(
+    item: dict,
+    injuries: Iterable[str],
+    *,
+    fields: Iterable[str] | None = None,
+) -> list[dict]:
+    if not injuries:
+        return []
+    fields = fields or ("name",)
+    field_values = {field: str(item.get(field, "") or "") for field in fields}
+    name = field_values.get("name", "")
+    tags = {t.lower() for t in item.get("tags", []) if t}
+    tags |= infer_tags_from_name(name)
+    reasons: list[dict] = []
+    for region in normalize_injury_regions(injuries):
+        rules = INJURY_RULES.get(region, {})
+        patterns = rules.get("ban_keywords", [])
+        ban_tags = {t.lower() for t in rules.get("ban_tags", [])}
+        field_hits: dict[str, list[str]] = {}
+        matched_patterns: set[str] = set()
+        for field_name, value in field_values.items():
+            matches = match_forbidden(value, patterns, allowlist=INJURY_MATCH_ALLOWLIST)
+            if matches:
+                field_hits[field_name] = matches
+                matched_patterns.update(matches)
+        tag_hits = sorted(tags & ban_tags)
+        if field_hits or tag_hits:
+            reasons.append(
+                {
+                    "region": region,
+                    "fields": sorted(field_hits),
+                    "patterns": sorted(matched_patterns),
+                    "tags": tag_hits,
+                }
+            )
+    return reasons
 
 
 def _load_style_specific_exercises() -> list[dict]:
