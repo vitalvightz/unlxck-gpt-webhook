@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import os, json
 import asyncio
 from pathlib import Path
@@ -77,6 +77,35 @@ def get_value(label, fields):
             return str(value).strip() if value is not None else ""
     return ""
 
+def get_date_value(label, fields):
+    for field in fields:
+        if field.get("label", "").strip() == label.strip():
+            value = field.get("value")
+            if isinstance(value, dict):
+                for key in ("date", "value", "text", "label"):
+                    if key in value and value[key] is not None:
+                        return str(value[key]).strip()
+            if isinstance(value, list):
+                return ", ".join(str(v) for v in value)
+            return str(value).strip() if value is not None else ""
+    return ""
+
+def parse_fight_date(value: str) -> datetime | None:
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo:
+            return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        return parsed
+    except ValueError:
+        return None
+
 
 
 async def generate_plan(data: dict):
@@ -96,7 +125,7 @@ async def generate_plan(data: dict):
     stance = get_value("Stance", fields)
     status = get_value("Professional Status", fields)
     record = get_value("Current Record", fields)
-    next_fight_date = get_value("When is your next fight?", fields)
+    next_fight_date = get_date_value("When is your next fight?", fields)
     rounds_format = get_value("Rounds x Minutes", fields)
     frequency_raw = get_value("Weekly Training Frequency", fields)
     fatigue = get_value("Fatigue Level", fields)
@@ -119,10 +148,10 @@ async def generate_plan(data: dict):
     # Calculate weeks out from fight date
     weeks_out: int | str
     if next_fight_date:
-        try:
-            fight_date = datetime.strptime(next_fight_date, "%Y-%m-%d")
+        fight_date = parse_fight_date(next_fight_date)
+        if fight_date:
             weeks_out = max(1, (fight_date - datetime.now()).days // 7)
-        except Exception:
+        else:
             weeks_out = "N/A"
     else:
         weeks_out = "N/A"
