@@ -156,6 +156,33 @@ def is_injury_safe(item: dict, injuries: Iterable[str]) -> bool:
     return not injury_violation_reasons(item, injuries)
 
 
+def injury_violation_reasons_with_fields(
+    item: dict,
+    injuries: Iterable[str],
+    *,
+    fields: Iterable[str] | None = None,
+) -> list[str]:
+    reasons: set[str] = set()
+    for detail in injury_match_details(item, injuries, fields=fields):
+        region = detail["region"]
+        for keyword in detail["patterns"]:
+            reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
+        for tag in detail["tags"]:
+            reasons.add(f"{region}:tag:{tag}")
+    return sorted(reasons)
+
+
+def is_injury_safe_with_fields(
+    item: dict,
+    injuries: Iterable[str],
+    *,
+    fields: Iterable[str] | None = None,
+) -> bool:
+    return not injury_violation_reasons_with_fields(
+        item, injuries, fields=fields
+    )
+
+
 def filter_items_for_injuries(items: Iterable[dict], injuries: Iterable[str]) -> list[dict]:
     return [item for item in items if is_injury_safe(item, injuries)]
 
