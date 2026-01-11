@@ -59,5 +59,8 @@ jobs:
               raise SystemExit("SUPABASE_URL must start with https://")
           PY
 
+      - name: Validate test data JSON
+        run: python -m json.tool test_data.json
+
       - name: Run fightcamp
         run: python -m fightcamp.main
