@@ -8,6 +8,7 @@ from fightcamp.injury_filtering import (
     injury_violation_reasons,
     match_forbidden,
 )
+from fightcamp.conditioning import _drill_text_injury_reasons
 
 
 def test_match_forbidden_avoids_substrings():
@@ -33,6 +34,10 @@ def test_match_forbidden_true_positives():
     assert match_forbidden("push press", ["push press"]) == ["push press"]
     assert match_forbidden("snatch complex", ["snatch"]) == ["snatch"]
     assert match_forbidden("ring dip", ["ring dip"]) == ["ring dip"]
+
+
+def test_match_forbidden_does_not_match_substrings():
+    assert match_forbidden("pressure testing flow", ["press"]) == []
 
 
 def test_infer_tags_from_name_avoids_substrings():
@@ -77,3 +82,30 @@ def test_injury_guard_region_false_positives():
         {"name": "Ship Hinge Flow", "tags": []}, injuries=["hip impingement"]
     )
     assert hip_false_positive == []
+
+
+def test_injury_guard_ignores_narrative_fields_across_regions():
+    drill = {
+        "name": "Recovery Cruise",
+        "notes": "Includes bench press focus for confidence.",
+        "purpose": "Build tolerance for box jump landing mechanics.",
+        "timing": "5 minute hard cuts finisher.",
+    }
+    reasons = _drill_text_injury_reasons(
+        drill, injuries=["shoulder pain", "knee pain", "ankle sprain"]
+    )
+    assert reasons == []
+
+
+def test_injury_guard_flags_movement_identity_fields_across_regions():
+    cases = [
+        ("shoulder pain", {"name": "Bench Press Tempo"}, "shoulder", "bench press"),
+        ("knee pain", {"name": "Box Jump Series"}, "knee", "box jump"),
+        ("ankle sprain", {"name": "Hard Cuts Shuttle"}, "ankle", "hard cuts"),
+    ]
+    for injury, drill, region, pattern in cases:
+        reasons = _drill_text_injury_reasons(drill, injuries=[injury])
+        assert reasons
+        reason = reasons[0]
+        assert reason["region"] == region
+        assert pattern in reason["patterns"]

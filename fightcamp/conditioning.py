@@ -17,6 +17,8 @@ from .injury_filtering import (
 )
 from .injury_exclusion_rules import INJURY_RULES
 
+INJURY_GUARD_LOGGED_EXCLUSIONS: set[tuple[str, str, str]] = set()
+
 # Map for tactical styles
 style_tag_map = {
     "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
@@ -140,19 +142,25 @@ SYSTEM_ALIASES = {
 }
 
 def _collect_drill_text_fields(drill: dict) -> dict[str, str]:
+    equipment = drill.get("equipment")
+    if isinstance(equipment, list):
+        equipment_text = " ".join(str(item) for item in equipment if item)
+    else:
+        equipment_text = str(equipment or "")
+    tags = drill.get("tags")
+    if isinstance(tags, list):
+        tags_text = " ".join(str(item) for item in tags if item)
+    else:
+        tags_text = str(tags or "")
     return {
         "name": str(drill.get("name") or ""),
-        "purpose": str(
-            drill.get("purpose")
-            or drill.get("notes")
-            or drill.get("description")
-            or ""
-        ),
-        "timing": str(drill.get("timing") or drill.get("duration") or ""),
+        "movement": str(drill.get("movement") or ""),
+        "modality": str(drill.get("modality") or ""),
+        "equipment": equipment_text,
         "equipment_note": str(
             drill.get("equipment_note") or drill.get("equipment_notes") or ""
         ),
-        "red_flags": str(drill.get("red_flags") or ""),
+        "tags": tags_text,
     }
 
 
@@ -186,10 +194,20 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
     reasons = _drill_text_injury_reasons(drill, injuries)
     if not reasons:
         return True
+    name = str(drill.get("name") or "")
     for reason in reasons:
         region = reason["region"]
+        new_patterns = [
+            pattern
+            for pattern in reason["patterns"]
+            if (name, region, pattern) not in INJURY_GUARD_LOGGED_EXCLUSIONS
+        ]
+        if not new_patterns:
+            continue
+        for pattern in new_patterns:
+            INJURY_GUARD_LOGGED_EXCLUSIONS.add((name, region, pattern))
         fields = ", ".join(reason["fields"])
-        patterns = ", ".join(reason["patterns"])
+        patterns = ", ".join(new_patterns)
         print(
             f"[injury-guard] {label} excluded '{drill.get('name')}' "
             f"region={region} fields=[{fields}] patterns=[{patterns}]"
