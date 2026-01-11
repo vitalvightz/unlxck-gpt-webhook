@@ -1,4 +1,4 @@
-{
+#{
   "data": {
     "fields": [
       { "label": "Full name", "value": "Adrian Vega" },
@@ -11,7 +11,7 @@
       { "label": "Stance", "value": "Orthodox" },
       { "label": "Professional Status", "value": "Pro" },
       { "label": "Current Record", "value": "12-2-1" },
-      { "label": "When is your next fight?", "value": "2025-09-15" },
+      { "label": "When is your next fight?", "value": "2026-03-15" },
       { "label": "Rounds x Minutes", "value": "10x3" },
       { "label": "Weekly Training Frequency", "value": "6" },
       { "label": "Fatigue Level", "value": "Low" },
