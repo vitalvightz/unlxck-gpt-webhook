@@ -590,7 +590,14 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
         region_label = REGION_LABELS.get(region_key, REGION_LABELS["unspecified"])
         location_label = loc.title() if loc else "Unspecified"
-        lines.append(f"- {region_label} ({location_label}) — {itype.title()} ({severity})")
+        severity_color = {
+            "severe": "🔴",
+            "moderate": "🟠",
+            "mild": "🟡",
+        }.get(severity, "🟠")
+        lines.append(
+            f"- {region_label} ({location_label}) — {itype.title()} | Severity: {severity_color} {severity}"
+        )
         ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
             severity,
             REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
