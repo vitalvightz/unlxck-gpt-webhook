@@ -648,16 +648,6 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         )
         guardrails.append((region_label, location_label, ruleset))
 
-    lines += ["", "**Training Rules**"]
-    for region_label, location_label, ruleset in guardrails:
-        lines.append(f"- {region_label} ({location_label}):")
-        for allowed in ruleset.get("allowed", []):
-            lines.append(f"  - Allowed: {allowed}")
-        for avoid in ruleset.get("avoid", []):
-            lines.append(f"  - Avoid: {avoid}")
-        for replace in ruleset.get("replace", []):
-            lines.append(f"  - Replace-with: {replace}")
-
     if phase.upper() == "TAPER":
         lines.append("")
         lines.append("_TAPER note: Glycolytic conditioning is optional when injury risk exists._")
