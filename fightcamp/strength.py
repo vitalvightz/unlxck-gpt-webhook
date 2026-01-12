@@ -216,6 +216,58 @@ def normalize_exercise_movement(exercise: dict) -> str:
     exercise["movement"] = "unknown"
     return "unknown"
 
+
+def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> str:
+    """Return the formatted strength block for the given phase."""
+    phase = phase.upper()
+    phase_loads = {
+        "GPP": (
+            "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1",
+            "Build hypertrophy base, tendon durability, and general strength.",
+        ),
+        "SPP": (
+            "3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)",
+            "Max strength + explosive power. Contrast and triphasic methods emphasized.",
+        ),
+        "TAPER": (
+            "2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load",
+            "Maintain intensity, cut volume, CNS freshness. High bar speed focus.",
+        ),
+    }
+    base_block, focus = phase_loads.get(
+        phase, ("Default fallback block", "Ensure phase logic handled upstream.")
+    )
+
+    fatigue_note = ""
+    if fatigue == "high":
+        fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
+    elif fatigue == "moderate":
+        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
+
+    strength_output = [
+        "🏋️‍♂️ **Strength & Power Module**",
+        f"**Phase:** {phase}",
+        f"**Primary Focus:** {focus}",
+        "",
+        "**Top Exercises:**",
+    ]
+
+    for ex in exercises:
+        strength_output.append(f"• {ex['name']}")
+
+    strength_output += [
+        "",
+        f"**Prescription:** {base_block}",
+    ]
+
+    if fatigue_note:
+        strength_output += [
+            "",
+            f"**Adjustment:** {fatigue_note}",
+        ]
+
+    return "\n".join(strength_output)
+
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
     injuries = flags.get("injuries", [])
@@ -624,43 +676,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     used_days = training_days[:num_strength_sessions]
 
-    phase_loads = {
-        "GPP": ("3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1",
-                "Build hypertrophy base, tendon durability, and general strength."),
-        "SPP": ("3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)",
-                "Max strength + explosive power. Contrast and triphasic methods emphasized."),
-        "TAPER": ("2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load",
-                  "Maintain intensity, cut volume, CNS freshness. High bar speed focus."),
-    }
-    base_block, focus = phase_loads.get(phase, ("Default fallback block", "Ensure phase logic handled upstream."))
-
-    fatigue_note = ""
-    if fatigue == "high":
-        fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
-    elif fatigue == "moderate":
-        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
-
-    strength_output = [
-        "🏋️‍♂️ **Strength & Power Module**",
-        f"**Phase:** {phase}",
-        f"**Primary Focus:** {focus}",
-        "",
-        "**Top Exercises:**",
-    ]
-
-    for ex in base_exercises:
-        strength_output.append(f"• {ex['name']}")
-
-    strength_output += [
-        "",
-        f"**Prescription:** {base_block}",
-    ]
-
-    if fatigue_note:
-        strength_output += [
-            "",
-            f"**Adjustment:** {fatigue_note}",
-        ]
+    strength_output = format_strength_block(phase, fatigue, base_exercises)
 
     all_tags = []
     for ex in base_exercises:
@@ -688,7 +704,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         why_log.append({"name": name, "reasons": reasons, "explanation": explanation})
 
     return {
-        "block": "\n".join(strength_output),
+        "block": strength_output,
         "num_sessions": len(used_days),
         "preferred_tags": list(set(all_tags)),
         "exercises": base_exercises,

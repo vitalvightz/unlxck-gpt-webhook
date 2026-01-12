@@ -24,7 +24,12 @@ from .mindset_module import (
     get_mindset_by_phase,
 )
 from .strength import generate_strength_block
-from .conditioning import generate_conditioning_block
+from .conditioning import (
+    conditioning_bank,
+    generate_conditioning_block,
+    style_conditioning_bank,
+)
+from .coach_review import run_coach_review
 from .recovery import generate_recovery_block
 from .nutrition import generate_nutrition_block
 from .rehab_protocols import (
@@ -302,15 +307,33 @@ async def generate_plan(data: dict):
     taper_cond_names: list[str] = []
 
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
-        gpp_cond_block, gpp_cond_names, gpp_cond_reasons = generate_conditioning_block({**training_context, "phase": "GPP"})
+        (
+            gpp_cond_block,
+            gpp_cond_names,
+            gpp_cond_reasons,
+            gpp_cond_grouped,
+            gpp_cond_missing,
+        ) = generate_conditioning_block({**training_context, "phase": "GPP"})
         conditioning_reason_log["GPP"] = gpp_cond_reasons
 
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
-        spp_cond_block, spp_cond_names, spp_cond_reasons = generate_conditioning_block({**training_context, "phase": "SPP"})
+        (
+            spp_cond_block,
+            spp_cond_names,
+            spp_cond_reasons,
+            spp_cond_grouped,
+            spp_cond_missing,
+        ) = generate_conditioning_block({**training_context, "phase": "SPP"})
         conditioning_reason_log["SPP"] = spp_cond_reasons
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
-        taper_cond_block, taper_cond_names, taper_cond_reasons = generate_conditioning_block({**training_context, "phase": "TAPER"})
+        (
+            taper_cond_block,
+            taper_cond_names,
+            taper_cond_reasons,
+            taper_cond_grouped,
+            taper_cond_missing,
+        ) = generate_conditioning_block({**training_context, "phase": "TAPER"})
         conditioning_reason_log["TAPER"] = taper_cond_reasons
 
     gpp_rehab_block = ""
@@ -351,6 +374,94 @@ async def generate_plan(data: dict):
     )
     recovery_block = generate_recovery_block({**training_context, "phase": current_phase})
     nutrition_block = generate_nutrition_block(flags={**training_context, "phase": current_phase})
+
+    phase_colors = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}
+    conditioning_blocks = {}
+    if gpp_cond_block:
+        conditioning_blocks["GPP"] = {
+            "block": gpp_cond_block,
+            "names": gpp_cond_names,
+            "why_log": gpp_cond_reasons,
+            "grouped_drills": gpp_cond_grouped,
+            "missing_systems": gpp_cond_missing,
+            "phase_color": phase_colors["GPP"],
+        }
+    if spp_cond_block:
+        conditioning_blocks["SPP"] = {
+            "block": spp_cond_block,
+            "names": spp_cond_names,
+            "why_log": spp_cond_reasons,
+            "grouped_drills": spp_cond_grouped,
+            "missing_systems": spp_cond_missing,
+            "phase_color": phase_colors["SPP"],
+        }
+    if taper_cond_block:
+        conditioning_blocks["TAPER"] = {
+            "block": taper_cond_block,
+            "names": taper_cond_names,
+            "why_log": taper_cond_reasons,
+            "grouped_drills": taper_cond_grouped,
+            "missing_systems": taper_cond_missing,
+            "phase_color": phase_colors["TAPER"],
+        }
+
+    coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
+        injury_string=injuries,
+        phase=current_phase,
+        training_context=training_context,
+        exercise_bank=exercise_bank,
+        conditioning_banks=[conditioning_bank, style_conditioning_bank],
+        strength_blocks={"GPP": gpp_block, "SPP": spp_block, "TAPER": taper_block},
+        conditioning_blocks=conditioning_blocks,
+    )
+
+    gpp_block = strength_blocks.get("GPP")
+    spp_block = strength_blocks.get("SPP")
+    taper_block = strength_blocks.get("TAPER")
+    if gpp_block:
+        gpp_ex_names = [ex["name"] for ex in gpp_block["exercises"]]
+    if spp_block:
+        spp_ex_names = [ex["name"] for ex in spp_block["exercises"]]
+    if taper_block:
+        taper_ex_names = [ex["name"] for ex in taper_block["exercises"]]
+
+    def _names_from_grouped(grouped: dict[str, list[dict]]) -> list[str]:
+        return [
+            d.get("name")
+            for drills in grouped.values()
+            for d in drills
+            if d.get("name")
+        ]
+
+    if conditioning_blocks.get("GPP"):
+        gpp_cond_block = conditioning_blocks["GPP"]["block"]
+        gpp_cond_names = _names_from_grouped(conditioning_blocks["GPP"]["grouped_drills"])
+    if conditioning_blocks.get("SPP"):
+        spp_cond_block = conditioning_blocks["SPP"]["block"]
+        spp_cond_names = _names_from_grouped(conditioning_blocks["SPP"]["grouped_drills"])
+    if conditioning_blocks.get("TAPER"):
+        taper_cond_block = conditioning_blocks["TAPER"]["block"]
+        taper_cond_names = _names_from_grouped(conditioning_blocks["TAPER"]["grouped_drills"])
+
+    def _apply_substitution_log(reason_log: dict[str, list], module: str) -> None:
+        for sub in substitutions:
+            if sub["module"] != module:
+                continue
+            phase_key = sub["phase"]
+            logs = reason_log.get(phase_key, [])
+            logs = [entry for entry in logs if entry.get("name") != sub["old"]]
+            if sub.get("new"):
+                logs.append(
+                    {
+                        "name": sub["new"],
+                        "reasons": {},
+                        "explanation": "coach safety substitution",
+                    }
+                )
+            reason_log[phase_key] = logs
+
+    _apply_substitution_log(strength_reason_log, "Strength")
+    _apply_substitution_log(conditioning_reason_log, "Conditioning")
 
 
 # Mental Block Strategy Injection Per Phase
@@ -607,6 +718,8 @@ async def generate_plan(data: dict):
     coach_notes = (
         f"Novelty Summary: {len(novel_strength)} new strength moves, {len(novel_conditioning)} new conditioning drills."
     )
+    if coach_review_notes:
+        coach_notes = f"{coach_notes}\n\n{coach_review_notes}"
     reason_log = {
         "strength": strength_reason_log,
         "conditioning": conditioning_reason_log,

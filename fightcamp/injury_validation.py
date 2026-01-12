@@ -55,7 +55,7 @@ def run_injury_self_checks() -> None:
         )
 
     achilles_flags = {**base_flags, "injuries": ["achilles"]}
-    _, achilles_conditioning_names, _ = generate_conditioning_block(achilles_flags)
+    _, achilles_conditioning_names, _, _, _ = generate_conditioning_block(achilles_flags)
     achilles_violations = _find_keyword_violations(
         achilles_conditioning_names, ["depth jump", "drop jump", "max sprint"]
     )

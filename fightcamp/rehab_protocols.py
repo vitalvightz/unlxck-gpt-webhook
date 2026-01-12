@@ -521,6 +521,50 @@ def _normalize_injury_entries(injury_string: str) -> list[tuple[str, str | None]
     return unique_entries
 
 
+def build_coach_review_entries(injury_string: str, phase: str) -> list[dict]:
+    """Return moderate/severe injury summaries for coach review notes."""
+    entries = _normalize_injury_entries(injury_string)
+    if not entries:
+        return []
+
+    severity_rank = {"moderate": 1, "severe": 2}
+    region_entries: dict[str, dict] = {}
+    for itype, loc in entries:
+        severity = INJURY_TYPE_SEVERITY.get(itype, "moderate")
+        if severity not in {"moderate", "severe"}:
+            continue
+        region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
+        region_label = REGION_LABELS.get(region_key, REGION_LABELS["unspecified"])
+        location_label = loc.title() if loc else "Unspecified"
+        ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
+            severity,
+            REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
+        )
+        rehab_drills = _rehab_drills_for_phase(itype, loc, phase, limit=3)
+        existing = region_entries.get(region_key)
+        if existing:
+            existing["locations"].add(location_label)
+            if severity_rank.get(severity, 0) > severity_rank.get(existing["severity"], 0):
+                existing["severity"] = severity
+                existing["ruleset"] = ruleset
+            for drill in rehab_drills:
+                if drill not in existing["rehab_drills"]:
+                    existing["rehab_drills"].append(drill)
+                    if len(existing["rehab_drills"]) >= 3:
+                        break
+            continue
+        region_entries[region_key] = {
+            "region_key": region_key,
+            "region_label": region_label,
+            "locations": {location_label},
+            "severity": severity,
+            "ruleset": ruleset,
+            "rehab_drills": rehab_drills[:3],
+        }
+
+    return list(region_entries.values())
+
+
 def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int = 4) -> list[str]:
     phase = phase.upper()
     drills: list[str] = []

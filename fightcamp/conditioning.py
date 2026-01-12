@@ -297,6 +297,63 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
     ]
     return "".join(parts) + "\n"
 
+
+def render_conditioning_block(
+    grouped_drills: dict[str, list[dict]],
+    *,
+    phase: str,
+    phase_color: str,
+    missing_systems: Iterable[str] | None = None,
+) -> str:
+    output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
+    missing_systems = set(missing_systems or [])
+    for system_name in ["aerobic", "glycolytic", "alactic"]:
+        if system_name in missing_systems:
+            output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
+
+    ordered_keys = ["aerobic", "glycolytic", "alactic"]
+    ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
+
+    for system in ordered_keys:
+        drills = grouped_drills.get(system)
+        if not drills:
+            continue
+        output_lines.append(
+            f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
+        )
+        for d in drills:
+            name = d.get("name", "Unnamed Drill")
+            equipment = normalize_equipment_list(d.get("equipment", []))
+            extra_eq = [e for e in equipment if e not in name.lower()]
+            if extra_eq:
+                name = f"{name} ({', '.join(extra_eq)})"
+
+            timing = d.get("timing") or d.get("duration") or "—"
+            load = d.get("load") or d.get("intensity") or "—"
+            equip_note = d.get("equipment_note") or d.get("equipment_notes")
+
+            purpose = (
+                d.get("purpose")
+                or d.get("notes")
+                or d.get("description")
+                or "—"
+            )
+            rest = d.get("rest", "—")
+
+            drill_block = {
+                "system": system.upper(),
+                "name": name,
+                "load": load,
+                "equipment_note": equip_note,
+                "rest": rest,
+                "timing": timing,
+                "purpose": purpose,
+                "red_flags": d.get("red_flags", "None"),
+            }
+            output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
+
+    return "\n".join(output_lines)
+
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase.upper(), "#000")
@@ -1109,51 +1166,17 @@ def generate_conditioning_block(flags):
         all_selected = [d for drills in grouped_drills.values() for d in drills]
         log_injury_debug(all_selected, injuries, label=f"conditioning:{phase.upper()}")
 
-    output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
-    for system_name in ["aerobic", "glycolytic", "alactic"]:
-        if not system_drills[system_name]:
-            output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
-
-    ordered_keys = ["aerobic", "glycolytic", "alactic"]
-    ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
-
-    for system in ordered_keys:
-        drills = grouped_drills.get(system)
-        if not drills:
-            continue
-        output_lines.append(
-            f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
-        )
-        for d in drills:
-            name = d.get("name", "Unnamed Drill")
-            equipment = normalize_equipment_list(d.get("equipment", []))
-            extra_eq = [e for e in equipment if e not in name.lower()]
-            if extra_eq:
-                name = f"{name} ({', '.join(extra_eq)})"
-
-            timing = d.get("timing") or d.get("duration") or "—"
-            load = d.get("load") or d.get("intensity") or "—"
-            equip_note = d.get("equipment_note") or d.get("equipment_notes")
-
-            purpose = (
-                d.get("purpose")
-                or d.get("notes")
-                or d.get("description")
-                or "—"
-            )
-            rest = d.get("rest", "—")
-
-            drill_block = {
-                "system": system.upper(),
-                "name": name,
-                "load": load,
-                "equipment_note": equip_note,
-                "rest": rest,
-                "timing": timing,
-                "purpose": purpose,
-                "red_flags": d.get("red_flags", "None"),
-            }
-            output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
+    missing_systems = [
+        system_name
+        for system_name in ["aerobic", "glycolytic", "alactic"]
+        if not system_drills[system_name]
+    ]
+    output_lines = render_conditioning_block(
+        grouped_drills,
+        phase=phase,
+        phase_color=phase_color,
+        missing_systems=missing_systems,
+    )
 
     why_log = []
     for system, drills in grouped_drills.items():
@@ -1177,4 +1200,4 @@ def generate_conditioning_block(flags):
             reasons.setdefault("final_score", 0)
             why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
-    return "\n".join(output_lines), selected_drill_names, why_log
+    return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems
