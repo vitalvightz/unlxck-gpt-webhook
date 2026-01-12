@@ -2,11 +2,7 @@ acceleration
 aerobic
 adductors
 agility
-anaerobic_alactic
 anti_rotation
-arm_dominant
-athletic
-ATP-PCr
 balance
 bjj
 boxing
@@ -29,8 +25,6 @@ high_cns
 horizontal_power
 improvised
 intensity
-jump_rope
-kettlebell
 lateral_power
 low_impact
 mental_toughness
