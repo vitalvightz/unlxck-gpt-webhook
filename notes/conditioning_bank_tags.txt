@@ -1,8 +1,5 @@
 [
-  "phases",
-  "system",
   "intensity",
-  "tags",
   "explosive",
   "posterior_chain",
   "low_impact",

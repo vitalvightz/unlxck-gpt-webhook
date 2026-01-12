@@ -129,9 +129,7 @@
         "notes": "20% BW loading with 2s pulses"
       }
     ]
-  }
-]
-  [
+  },
   {
     "location": "heel",
     "type": "tendonitis",
@@ -255,8 +253,7 @@
         "notes": "Focus on silent ankle absorption"
       }
     ]
-  }
-[
+  },
   {
     "location": "ankle",
     "type": "impingement",
@@ -557,8 +554,8 @@
         "notes": "Quick tension cues before explosive movements"
       }
     ]
-  }
-]
+  },
+  {
     "location": "calf",
     "type": "strain",
     "phase_progression": "GPP",
