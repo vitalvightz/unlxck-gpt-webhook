@@ -3,6 +3,7 @@ from difflib import SequenceMatcher
 
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
+_NEGSPACY_AVAILABLE = _SPACY_AVAILABLE and importlib.util.find_spec("negspacy") is not None
 
 if _RAPIDFUZZ_AVAILABLE:
     from rapidfuzz import fuzz
@@ -17,13 +18,51 @@ else:
 if _SPACY_AVAILABLE:
     import spacy
     from spacy.matcher import PhraseMatcher
-    from negspacy.negation import Negex
+    if _NEGSPACY_AVAILABLE:
+        from negspacy.negation import Negex
+    else:
+        Negex = None
     from spacy.tokens import Token  # ✅ needed to register extensions
 else:
     spacy = None
     PhraseMatcher = None
     Negex = None
     Token = None
+
+_DEGRADED_LOGGED = False
+
+
+def _log_dependency_status() -> None:
+    global _DEGRADED_LOGGED
+    if _DEGRADED_LOGGED:
+        return
+    missing = []
+    if not _SPACY_AVAILABLE:
+        missing.append("spaCy")
+    if not _NEGSPACY_AVAILABLE:
+        missing.append("NegEx")
+    if not _RAPIDFUZZ_AVAILABLE:
+        missing.append("rapidfuzz")
+    if missing:
+        _DEGRADED_LOGGED = True
+        print(
+            "[injury-parse] Degraded parsing mode: missing "
+            + ", ".join(missing)
+            + ". Features disabled: "
+            + ", ".join(
+                feature
+                for feature, available in (
+                    ("phrase matching", _SPACY_AVAILABLE),
+                    ("negation detection", _NEGSPACY_AVAILABLE),
+                    ("fuzzy matching", _RAPIDFUZZ_AVAILABLE),
+                )
+                if not available
+            )
+            + "."
+        )
+
+
+_log_dependency_status()
 
 # Heavier weight to categories we want to prefer when there’s overlap
 TYPE_PRIORITY = {

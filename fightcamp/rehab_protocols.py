@@ -1,21 +1,6 @@
 from pathlib import Path
 import json
 
-
-def _load_json_strip_comments(path: Path):
-    """Load JSON file while ignoring lines that start with '//' comments."""
-    text = path.read_text()
-    cleaned_lines = []
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if stripped.startswith("//"):
-            continue
-        # Remove trailing comments on the same line if they exist
-        if "//" in stripped:
-            line = line[: line.index("//")]
-        cleaned_lines.append(line)
-    return json.loads("\n".join(cleaned_lines))
-
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -29,7 +14,7 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 #         {"name": "...", "notes": "..."}
 #     ]
 # }
-REHAB_BANK = _load_json_strip_comments(DATA_DIR / "rehab_bank.json")
+REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text())
 
 
 def _split_notes_by_phase(notes: str) -> list[tuple[str, str]]:
