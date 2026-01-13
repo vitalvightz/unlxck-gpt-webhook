@@ -1,162 +1,162 @@
-style_specific_exercises = [
-    {
-        "name": "Plate Pinch Holds",
-        "category": "grip",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "static_hold",
-        "type": "isometric",
-        "tags": ["grip", "clinch_fighter", "submission_hunter"],
-        "equipment": "plate"
-    },
-    {
-        "name": "Wrist Roller Extensions",
-        "category": "grip",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "wrist_extension",
-        "type": "bilateral",
-        "tags": ["grip", "isolation", "clinch_fighter", "submission_hunter"],
-        "equipment": "wrist_roller"
-    },
-    {
-        "name": "Barbell Thruster",
-        "category": "full_body",
-        "phases": ["SPP", "TAPER"],
-        "method": "strength",
-        "movement": "squat_to_press",
-        "type": "bilateral",
-        "tags": ["explosive", "triple_extension", "rate_of_force", "compound", "scrambler"],
-        "equipment": "barbell"
-    },
-    {
-        "name": "Turkish Get-Up",
-        "category": "core",
-        "phases": ["SPP"],
-        "method": "strength",
-        "movement": "complex",
-        "type": "unilateral",
-        "tags": ["coordination", "balance", "anti_rotation", "scrambler"],
-        "equipment": "kettlebell"
-    },
-    {
-        "name": "Bulgarian Split Squat",
-        "category": "lower_body",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "squat",
-        "type": "unilateral",
-        "tags": ["quad_dominant", "balance", "hip_dominant", "kicker"],
-        "equipment": "dumbbells"
-    },
-    {
-        "name": "Walking Lunges",
-        "category": "lower_body",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "lunge",
-        "type": "unilateral",
-        "tags": ["unilateral", "hip_dominant", "mobility", "kicker"],
-        "equipment": "dumbbells"
-    },
-    {
-        "name": "Weighted Pull-Up",
-        "category": "upper_body",
-        "phases": ["SPP"],
-        "method": "strength",
-        "movement": "pull",
-        "type": "bilateral",
-        "tags": ["pull", "grip", "upper_body", "submission_hunter", "clinch_fighter", "compound"],
-        "equipment": "pullup_bar"
-    },
-    {
-        "name": "Kettlebell Swing",
-        "category": "lower_body",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "hinge",
-        "type": "bilateral",
-        "tags": ["posterior_chain", "grip", "explosive", "submission_hunter", "ballistic"],
-        "equipment": "kettlebell"
-    },
-    {
-        "name": "Barbell Landmine Twist",
-        "category": "core",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "rotation",
-        "type": "bilateral",
-        "tags": ["rotational", "anti_rotation", "counter_striker"],
-        "equipment": "landmine"
-    },
-    {
-        "name": "Pallof Press",
-        "category": "core",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "anti_rotation",
-        "type": "isometric",
-        "tags": ["anti_rotation", "cognitive", "counter_striker", "distance_striker", "cornerstone"],
-        "equipment": "bands"
-    },
-    {
-        "name": "Overhead Med Ball Slam",
-        "category": "full_body",
-        "phases": ["SPP"],
-        "method": "strength",
-        "movement": "slam",
-        "type": "bilateral",
-        "tags": ["explosive", "overhead", "rate_of_force", "distance_striker", "ballistic"],
-        "equipment": "medicine_ball"
-    },
-    {
-        "name": "Farmer’s Carry",
-        "category": "grip",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "carry",
-        "type": "bilateral",
-        "tags": ["grip", "core", "cns_freshness", "clinch_fighter", "compound"],
-        "equipment": "dumbbells"
-    },
-    {
-        "name": "Weighted Sled Push",
-        "category": "full_body",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "push",
-        "type": "bilateral",
-        "tags": ["sled", "work_capacity", "posterior_chain", "pressure_fighter", "conditioning"],
-        "equipment": "sled"
-    },
-    {
-        "name": "Jumping Lunge",
-        "category": "lower_body",
-        "phases": ["SPP", "TAPER"],
-        "method": "strength",
-        "movement": "lunge",
-        "type": "unilateral",
-        "tags": ["explosive", "unilateral", "endurance", "pressure_fighter"],
-        "equipment": "bodyweight"
-    },
-    {
-        "name": "Sledgehammer Slam",
-        "category": "full_body",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "slam",
-        "type": "bilateral",
-        "tags": ["grip", "cognitive", "rotational", "brawler"],
-        "equipment": "sledgehammer"
-    },
-    {
-        "name": "Medicine Ball Slam",
-        "category": "full_body",
-        "phases": ["GPP", "SPP"],
-        "method": "strength",
-        "movement": "slam",
-        "type": "bilateral",
-        "tags": ["explosive", "cognitive", "brawler", "ballistic"],
-        "equipment": "medicine_ball"
-    }
+[
+  {
+    "name": "Plate Pinch Holds",
+    "category": "grip",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "static_hold",
+    "type": "isometric",
+    "tags": ["grip", "clinch_fighter", "submission_hunter"],
+    "equipment": "plate"
+  },
+  {
+    "name": "Wrist Roller Extensions",
+    "category": "grip",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "wrist_extension",
+    "type": "bilateral",
+    "tags": ["grip", "isolation", "clinch_fighter", "submission_hunter"],
+    "equipment": "wrist_roller"
+  },
+  {
+    "name": "Barbell Thruster",
+    "category": "full_body",
+    "phases": ["SPP", "TAPER"],
+    "method": "strength",
+    "movement": "squat_to_press",
+    "type": "bilateral",
+    "tags": ["explosive", "triple_extension", "rate_of_force", "compound", "scrambler"],
+    "equipment": "barbell"
+  },
+  {
+    "name": "Turkish Get-Up",
+    "category": "core",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "complex",
+    "type": "unilateral",
+    "tags": ["coordination", "balance", "anti_rotation", "scrambler"],
+    "equipment": "kettlebell"
+  },
+  {
+    "name": "Bulgarian Split Squat",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "squat",
+    "type": "unilateral",
+    "tags": ["quad_dominant", "balance", "hip_dominant", "kicker"],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Walking Lunges",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "lunge",
+    "type": "unilateral",
+    "tags": ["unilateral", "hip_dominant", "mobility", "kicker"],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Weighted Pull-Up",
+    "category": "upper_body",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": ["pull", "grip", "upper_body", "submission_hunter", "clinch_fighter", "compound"],
+    "equipment": "pullup_bar"
+  },
+  {
+    "name": "Kettlebell Swing",
+    "category": "lower_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "hinge",
+    "type": "bilateral",
+    "tags": ["posterior_chain", "grip", "explosive", "submission_hunter", "ballistic"],
+    "equipment": "kettlebell"
+  },
+  {
+    "name": "Barbell Landmine Twist",
+    "category": "core",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "rotation",
+    "type": "bilateral",
+    "tags": ["rotational", "anti_rotation", "counter_striker"],
+    "equipment": "landmine"
+  },
+  {
+    "name": "Pallof Press",
+    "category": "core",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "anti_rotation",
+    "type": "isometric",
+    "tags": ["anti_rotation", "cognitive", "counter_striker", "distance_striker", "cornerstone"],
+    "equipment": "bands"
+  },
+  {
+    "name": "Overhead Med Ball Slam",
+    "category": "full_body",
+    "phases": ["SPP"],
+    "method": "strength",
+    "movement": "slam",
+    "type": "bilateral",
+    "tags": ["explosive", "overhead", "rate_of_force", "distance_striker", "ballistic"],
+    "equipment": "medicine_ball"
+  },
+  {
+    "name": "Farmer’s Carry",
+    "category": "grip",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "carry",
+    "type": "bilateral",
+    "tags": ["grip", "core", "cns_freshness", "clinch_fighter", "compound"],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Weighted Sled Push",
+    "category": "full_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "push",
+    "type": "bilateral",
+    "tags": ["sled", "work_capacity", "posterior_chain", "pressure_fighter", "conditioning"],
+    "equipment": "sled"
+  },
+  {
+    "name": "Jumping Lunge",
+    "category": "lower_body",
+    "phases": ["SPP", "TAPER"],
+    "method": "strength",
+    "movement": "lunge",
+    "type": "unilateral",
+    "tags": ["explosive", "unilateral", "endurance", "pressure_fighter"],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Sledgehammer Slam",
+    "category": "full_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "slam",
+    "type": "bilateral",
+    "tags": ["grip", "cognitive", "rotational", "brawler"],
+    "equipment": "sledgehammer"
+  },
+  {
+    "name": "Medicine Ball Slam",
+    "category": "full_body",
+    "phases": ["GPP", "SPP"],
+    "method": "strength",
+    "movement": "slam",
+    "type": "bilateral",
+    "tags": ["explosive", "cognitive", "brawler", "ballistic"],
+    "equipment": "medicine_ball"
+  }
 ]

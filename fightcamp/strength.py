@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 import json
-import ast
 import random
 from .training_context import (
     normalize_equipment_list,
@@ -22,14 +21,10 @@ phase_equipment_boost = {
     "TAPER": {"medicine_ball", "bodyweight", "bands", "partner"}
 }
 
-# Load style specific exercises (file lacks closing brackets so we patch)
+# Load style specific exercises (JSON list)
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-_style_text = (DATA_DIR / "style_specific_exercises").read_text()
-_start = _style_text.find("[")
-_end = _style_text.rfind("}")
-_snippet = _style_text[_start:_end + 1] + "]" if _start != -1 and _end != -1 else "[]"
 try:
-    STYLE_EXERCISES = ast.literal_eval(_snippet)
+    STYLE_EXERCISES = json.loads((DATA_DIR / "style_specific_exercises").read_text())
 except Exception:
     STYLE_EXERCISES = []
 
@@ -398,7 +393,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
             if not any(t in taper_allowed for t in tags):
                 continue
-        if phase not in ex["phases"]:
+        if phase not in ex.get("phases", []):
             continue
 
         phase_dict = phase_tag_boost.get(phase, {})
@@ -450,7 +445,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         for ex in exercise_bank:
             if ex in [we[0] for we in weighted_exercises]:
                 continue
-            if phase not in ex["phases"]:
+            if phase not in ex.get("phases", []):
                 continue
             ex_equipment = normalize_equipment_list(ex.get("equipment", []))
             if not set(ex_equipment).issubset(set(equipment_access)):
