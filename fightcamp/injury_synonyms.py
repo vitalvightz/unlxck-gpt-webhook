@@ -68,6 +68,34 @@ FUZZY_THRESHOLDS = {
     # others default to 85
 }
 
+# Cues for deterministic disambiguation among pain/tightness/stiffness/soreness
+SORENESS_HINTS = {
+    "doms", "delayed onset", "next day", "next morning", "after workout",
+    "after training", "after session", "post workout", "post training", "post session",
+    "recovery", "recovering",
+}
+STIFFNESS_HINTS = {
+    "morning", "after rest", "after sitting", "after sleeping",
+    "won't bend", "won't extend", "limited motion", "limited range", "limited rom",
+    "can't bend", "can't extend", "can't move",
+}
+TIGHTNESS_HINTS = {
+    "tight", "tightness", "feels tight", "restricted", "warm up", "warming up",
+    "loosen", "loosen up", "loosened", "looser", "needs stretching",
+}
+
+TENDONITIS_REQUIRED_HINTS = {
+    "tendonitis", "tendinosis", "tendinopathy", "overuse", "repetitive",
+    "chronic", "recurring", "flare", "flare up", "activity pain", "use pain",
+}
+
+IMPINGEMENT_GATE_HINTS = {
+    "pinch", "pinching", "jam", "jamming", "block", "blocking", "stuck", "sticking",
+    "won't lift", "won't raise", "won't rotate", "won't turn", "won't reach",
+    "painful arc", "painful range", "bone on bone", "impinge", "impingement",
+}
+IMPINGEMENT_LOW_SPECIFICITY = {"click", "clicking", "clunk", "clunking", "catch", "catching"}
+
 # Spine/back context routing (phrase-level)
 SPINE_HINTS = {
     "neck": {"neck", "cervical", "c-spine"},
@@ -80,13 +108,11 @@ INJURY_SYNONYM_MAP = {
     # Ligament - now with every joint instability phrase imaginable
     "sprain": [
         "pop", "popped", "pop sound", "rolling", "rolled", "twist", "twisted",
-        "wobbly", "wobble", "unstable", "instability", "gave way", "gave out",
-        "folded", "buckled", "collapse", "loose", "shifty", "slippy", "sliding",
+        "folded", "buckled", "collapse",
         "tore ligament", "ligament pop", "ligament tear", "ligament gone",
         "joint separation", "joint shift", "knee went", "ankle went", "wrist went",
-        "partial dislocation", "sublux", "subluxation", "dislocate", "dislocated",
         "out of socket", "popped out", "click out", "shift out", "unhinged",
-        "grade 1", "grade 2", "grade 3", "hyperextend", "overstretched", "overextension",
+        "grade 1", "grade 2", "grade 3",
         "stretched ligament", "torn ligament", "ruptured ligament", "blown ligament",
         "sprain", "sprained", "inversion", "eversion", "rolled over", "turned over",
         "acl", "acl tear", "acl injury", "acl surgery", "acl reconstruction",
@@ -95,7 +121,7 @@ INJURY_SYNONYM_MAP = {
 
     # Muscle/Tendon - every possible pull/tear description
     "strain": [
-        "pull", "pulled", "tug", "tugged", "tear", "torn", "rip", "ripped",
+        "pull", "pulled", "tug", "tugged", "rip", "ripped",
         "cramp", "cramping", "charley horse", "dead leg", "seize", "seized",
         "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
         "ping", "pinged", "twinge", "twinging", "sharp pain", "acute pain",
@@ -108,12 +134,11 @@ INJURY_SYNONYM_MAP = {
 
     # Tightness - every stiffness phrase
     "tightness": [
-        "tight", "tightness", "stiff", "stiffness", "locked", "locking",
-        "won't move", "restricted", "stuck", "glued", "frozen", "rusty",
-        "needs cracking", "needs popping", "needs release", "needs stretching",
+        "tight", "tightness", "restricted", "glued",
+        "needs release", "needs stretching",
         "hard to move", "limited motion", "reduced range", "can't extend",
         "can't flex", "can't rotate", "can't reach", "can't stretch",
-        "morning stiffness", "first move", "warming up", "slow to loosen",
+        "warming up", "slow to loosen", "loosen", "loosen up", "looser",
         "like a rock", "like concrete", "like a board", "like a log",
         "needs massage", "needs foam roll", "needs lacrosse ball"
     ],
@@ -124,7 +149,7 @@ INJURY_SYNONYM_MAP = {
         "discoloration", "discolored", "kicked", "knee", "kneed", "elbow",
         "elbowed", "dead leg", "corked", "cork", "impact", "swollen",
         "dent", "dented", "indent", "indentation", "mark", "marked",
-        "hit", "hitted", "struck", "stricken", "banged", "banged up",
+        "hit", "struck", "banged", "banged up",
         "trauma", "traumatic", "blunt", "blunt force", "from strike",
         "from kick", "from knee", "from elbow", "from impact", "from hit"
     ],
@@ -146,7 +171,7 @@ INJURY_SYNONYM_MAP = {
         "tendonitis", "tendinosis", "tendinopathy", "grinding", "grind",
         "gritty", "grittiness", "achy", "aching", "flare", "flare up",
         "burn", "burning", "overuse", "repetitive", "chronic", "constant",
-        "tender", "tenderness", "angry", "irritated", "irritation",
+        "angry", "irritated", "irritation",
         "acting up", "playing up", "misbehaving", "problem area",
         "always sore", "always hurts", "never goes away", "persistent",
         "recurring", "comes and goes", "use pain", "activity pain"
@@ -191,7 +216,7 @@ INJURY_SYNONYM_MAP = {
 
     # General Pain - every pain descriptor
     "pain": [
-        "pain", "painful", "hurt", "hurting", "ache", "aching", "sore",
+        "pain", "painful", "hurt", "hurting", "ache", "aching",
         "soring", "sharp", "sharper", "stabbing", "sting", "stinging",
         "throb", "throbbing", "pulse", "pulsing", "burn", "burning",
         "nag", "nagging", "graze", "grazed", "constant", "persistent", "ongoing", "chronic",
@@ -595,6 +620,28 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     for cat, hints in EXCLUSIVE_HINTS.items():
         if any(h in text_no_neg for h in hints):
             candidates[cat] = candidates.get(cat, 0.0) + 1.0
+
+    # Conservative gating for low-specificity tokens
+    if "impingement" in candidates:
+        has_gate = any(h in text_no_neg for h in IMPINGEMENT_GATE_HINTS)
+        has_low = any(h in text_no_neg for h in IMPINGEMENT_LOW_SPECIFICITY)
+        if has_low and not has_gate:
+            candidates.pop("impingement", None)
+
+    if "tendonitis" in candidates:
+        if not any(h in text_no_neg for h in TENDONITIS_REQUIRED_HINTS):
+            candidates.pop("tendonitis", None)
+
+    # Deterministic precedence among soreness/stiffness/tightness/pain
+    if not (set(candidates.keys()) - {"soreness", "stiffness", "tightness", "pain"}):
+        if any(h in text_no_neg for h in SORENESS_HINTS):
+            return "soreness"
+        if any(h in text_no_neg for h in STIFFNESS_HINTS):
+            return "stiffness"
+        if any(h in text_no_neg for h in TIGHTNESS_HINTS):
+            return "tightness"
+        if "pain" in candidates:
+            return "pain"
 
     # 3) Fuzzy fallback on the cleaned text (non-negated tokens only)
     cleaned = text_no_neg.strip()
