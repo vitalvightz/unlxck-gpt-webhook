@@ -954,20 +954,19 @@ def generate_conditioning_block(flags):
             drill = random.choice(taper_candidates)
             if drill.get("name") not in existing_cond_names:
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
-                if system is None:
-                    continue
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(drill.get("name"))
-                reason_lookup[drill.get("name")] = {
-                    "goal_hits": 0,
-                    "weakness_hits": 0,
-                    "style_hits": 0,
-                    "phase_hits": 1,
-                    "load_adjustments": 0,
-                    "equipment_boost": 0,
-                    "penalties": 0,
-                    "final_score": 0,
-                }
+                if system is not None:
+                    final_drills.append((system, [drill]))
+                    selected_drill_names.append(drill.get("name"))
+                    reason_lookup[drill.get("name")] = {
+                        "goal_hits": 0,
+                        "weakness_hits": 0,
+                        "style_hits": 0,
+                        "phase_hits": 1,
+                        "load_adjustments": 0,
+                        "equipment_boost": 0,
+                        "penalties": 0,
+                        "final_score": 0,
+                    }
 
         # --------- TAPER PLYOMETRIC GUARANTEE ---------
         taper_plyos = [
@@ -986,20 +985,19 @@ def generate_conditioning_block(flags):
             drill = random.choice(taper_plyos)
             if drill.get("name") not in existing_cond_names:
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
-                if system is None:
-                    continue
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(drill.get("name"))
-                reason_lookup[drill.get("name")] = {
-                    "goal_hits": 0,
-                    "weakness_hits": 0,
-                    "style_hits": 0,
-                    "phase_hits": 1,
-                    "load_adjustments": 0,
-                    "equipment_boost": 0,
-                    "penalties": 0,
-                    "final_score": 0,
-                }
+                if system is not None:
+                    final_drills.append((system, [drill]))
+                    selected_drill_names.append(drill.get("name"))
+                    reason_lookup[drill.get("name")] = {
+                        "goal_hits": 0,
+                        "weakness_hits": 0,
+                        "style_hits": 0,
+                        "phase_hits": 1,
+                        "load_adjustments": 0,
+                        "equipment_boost": 0,
+                        "penalties": 0,
+                        "final_score": 0,
+                    }
 
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
     goal_set = {g.lower() for g in goals}
