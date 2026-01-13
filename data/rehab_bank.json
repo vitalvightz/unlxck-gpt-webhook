@@ -7305,7 +7305,6 @@
     ]
   },
 
-  // 2. Isometric Stability
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7322,7 +7321,6 @@
     ]
   },
 
-  // 3. Eccentric Focus
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7339,7 +7337,6 @@
     ]
   },
 
-  // 4. Unilateral Control
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7356,7 +7353,6 @@
     ]
   },
 
-  // 5. Taper-Specific
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7373,7 +7369,6 @@
     ]
   },
 
-  // 6. Grip Integration
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7390,7 +7385,6 @@
     ]
   },
 
-  // 7. Overhead Stability
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7407,7 +7401,6 @@
     ]
   },
 
-  // 8. Nerve Glides
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7424,7 +7417,6 @@
     ]
   },
 
-  // 9. Rotational Power
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7441,7 +7433,6 @@
     ]
   },
 
-  // 10. Bone Stress Management
   {
     "location": "elbow",
     "type": "unspecified",
@@ -7457,7 +7448,6 @@
       }
     ]
   },
-  // 1. Baseline Visual Acuity
   {
     "location": "eye",
     "type": "unspecified",
@@ -7474,7 +7464,6 @@
     ]
   },
 
-  // 2. Saccadic Training  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7491,7 +7480,6 @@
     ]
   },
 
-  // 3. Convergence/Divergence  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7508,7 +7496,6 @@
     ]
   },
 
-  // 4. Light Sensitivity  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7525,7 +7512,6 @@
     ]
   },
 
-  // 5. Sport-Specific  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7542,7 +7528,6 @@
     ]
   },
 
-  // 6. Post-Concussion  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7559,7 +7544,6 @@
     ]
   },
 
-  // 7. Dry Eye Management  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7576,7 +7560,6 @@
     ]
   },
 
-  // 8. Anti-Saccade Training  
   {
     "location": "eye",
     "type": "unspecified",
@@ -7592,7 +7575,6 @@
       }
     ]
   },
-  // 1. TMJ Basic Mobility
   {
     "location": "face",
     "type": "unspecified",
@@ -7609,7 +7591,6 @@
     ]
   },
 
-  // 2. Ocular Motor
   {
     "location": "face",
     "type": "unspecified",
@@ -7626,7 +7607,6 @@
     ]
   },
 
-  // 3. Facial Symmetry
   {
     "location": "face",
     "type": "unspecified",
@@ -7643,7 +7623,6 @@
     ]
   },
 
-  // 4. Postural Integration
   {
     "location": "face",
     "type": "unspecified",
@@ -7660,7 +7639,6 @@
     ]
   },
 
-  // 5. Taper-Specific
   {
     "location": "face",
     "type": "unspecified",
@@ -7677,7 +7655,6 @@
     ]
   },
 
-  // 6. Neural Glides
   {
     "location": "face",
     "type": "unspecified",
@@ -7694,7 +7671,6 @@
     ]
   },
 
-  // 7. Impact Protection
   {
     "location": "face",
     "type": "unspecified",
@@ -7711,7 +7687,6 @@
     ]
   },
 
-  // 8. Breathing Integration
   {
     "location": "face",
     "type": "unspecified",
@@ -7728,7 +7703,6 @@
     ]
   },
 
-  // 9. Vestibular-Facial
   {
     "location": "face",
     "type": "unspecified",
@@ -7745,7 +7719,6 @@
     ]
   },
 
-  // 10. Recovery Modalities
   {
     "location": "face",
     "type": "unspecified",
@@ -7911,7 +7884,6 @@
       }
     ]
   },
-  // 1. Wrist Isometrics
   {
     "location": "forearm",
     "type": "unspecified",
@@ -7928,7 +7900,6 @@
     ]
   },
 
-  // 2. Eccentric Loading
   {
     "location": "forearm",
     "type": "unspecified",
@@ -7945,7 +7916,6 @@
     ]
   },
 
-  // 3. Nerve Mobility
   {
     "location": "forearm",
     "type": "unspecified",
@@ -7962,7 +7932,6 @@
     ]
   },
 
-  // 4. Grip Integration
   {
     "location": "forearm",
     "type": "unspecified",
@@ -7979,7 +7948,6 @@
     ]
   },
 
-  // 5. Taper-Specific
   {
     "location": "forearm",
     "type": "unspecified",
@@ -7996,7 +7964,6 @@
     ]
   },
 
-  // 6. Blood Flow Restriction
   {
     "location": "forearm",
     "type": "unspecified",
@@ -8013,7 +7980,6 @@
     ]
   },
 
-  // 7. Functional ROM
   {
     "location": "forearm",
     "type": "unspecified",
@@ -8030,7 +7996,6 @@
     ]
   },
 
-  // 8. Extensor Focus
   {
     "location": "forearm",
     "type": "unspecified",
@@ -8047,7 +8012,6 @@
     ]
   },
 
-  // 9. Recovery Modalities
   {
     "location": "forearm",
     "type": "unspecified",
@@ -8064,7 +8028,6 @@
     ]
   },
 
-  // 10. Integrated Loading
   {
     "location": "forearm",
     "type": "unspecified",
@@ -8080,7 +8043,6 @@
       }
     ]
   },
-  // 1. Hip Extension Basics
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8097,7 +8059,6 @@
     ]
   },
 
-  // 2. Unilateral Strength
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8114,7 +8075,6 @@
     ]
   },
 
-  // 3. Rotational Stability
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8131,7 +8091,6 @@
     ]
   },
 
-  // 4. Taper-Specific
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8148,7 +8107,6 @@
     ]
   },
 
-  // 5. Eccentric Loading
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8165,7 +8123,6 @@
     ]
   },
 
-  // 6. Activation Circuits
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8182,7 +8139,6 @@
     ]
   },
 
-  // 7. Dynamic Stability
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8199,7 +8155,6 @@
     ]
   },
 
-  // 8. Mobility/Restoration
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8216,7 +8171,6 @@
     ]
   },
 
-  // 9. Loaded Carries
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8233,7 +8187,6 @@
     ]
   },
 
-  // 10. Neuromuscular
   {
     "location": "glutes",
     "type": "unspecified",
@@ -8249,7 +8202,6 @@
       }
     ]
   },
-  // 1. Adductor Strength
   {
     "location": "groin",
     "type": "unspecified",
@@ -8265,7 +8217,6 @@
       }
     ]
   },
-  // 2. Eccentric Loading
   {
     "location": "groin",
     "type": "unspecified",
@@ -8281,7 +8232,6 @@
       }
     ]
   },
-  // 3. Dynamic Mobility
   {
     "location": "groin",
     "type": "unspecified",
@@ -8297,7 +8247,6 @@
       }
     ]
   },
-  // 4. Unilateral Stability
   {
     "location": "groin",
     "type": "unspecified",
@@ -8313,7 +8262,6 @@
       }
     ]
   },
-  // 5. Taper-Specific
   {
     "location": "groin",
     "type": "unspecified",
@@ -8329,7 +8277,6 @@
       }
     ]
   },
-  // 6. Core Integration
   {
     "location": "groin",
     "type": "unspecified",
@@ -8345,7 +8292,6 @@
       }
     ]
   },
-  // 7. Multiplanar Loading
   {
     "location": "groin",
     "type": "unspecified",
@@ -8361,7 +8307,6 @@
       }
     ]
   },
-  // 8. Blood Flow Restriction
   {
     "location": "groin",
     "type": "unspecified",
@@ -8527,7 +8472,6 @@
       }
     ]
   },
-  // 1. Grip Foundations
   {
     "location": "hand",
     "type": "unspecified",
@@ -8559,7 +8503,6 @@
     ]
   },
 
-  // 2. Wrist Stability
   {
     "location": "hand",
     "type": "unspecified",
@@ -8591,7 +8534,6 @@
     ]
   },
 
-  // 3. Impact Prep
   {
     "location": "hand",
     "type": "unspecified",
@@ -8623,7 +8565,6 @@
     ]
   },
 
-  // 4. Thumb Specific
   {
     "location": "hand",
     "type": "unspecified",
@@ -8655,7 +8596,6 @@
     ]
   },
 
-  // 5. Recovery Modalities
   {
     "location": "hand",
     "type": "unspecified",
@@ -8687,7 +8627,6 @@
     ]
   },
 
-  // 6. Nerve Mobility
   {
     "location": "hand",
     "type": "unspecified",
@@ -8719,7 +8658,6 @@
     ]
   },
 
-  // 7. Combat-Specific Endurance
   {
     "location": "hand",
     "type": "unspecified",
@@ -9035,7 +8973,6 @@
       }
     ]
   },
-  // 1. Isometric Core Stabilization
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9052,7 +8989,6 @@
     ]
   },
 
-  // 2. Hip-Lumbar Dissociation
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9069,7 +9005,6 @@
     ]
   },
 
-  // 3. Eccentric Control
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9086,7 +9021,6 @@
     ]
   },
 
-  // 4. Multidirectional Stability
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9103,7 +9037,6 @@
     ]
   },
 
-  // 5. Taper-Specific
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9120,7 +9053,6 @@
     ]
   },
 
-  // 6. Neural Mobility
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9137,7 +9069,6 @@
     ]
   },
 
-  // 7. Load Transition
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9154,7 +9085,6 @@
     ]
   },
 
-  // 8. Anti-Flexion
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9171,7 +9101,6 @@
     ]
   },
 
-  // 9. Bedside Mobility
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9188,7 +9117,6 @@
     ]
   },
 
-  // 10. Bracing Integration
   {
     "location": "lower_back",
     "type": "unspecified",
@@ -9279,7 +9207,6 @@
       }
     ]
   },
-  // 1. Isometric Foundations
   {
     "location": "neck",
     "type": "unspecified",
@@ -9296,7 +9223,6 @@
     ]
   },
 
-  // 2. ROM Progressions
   {
     "location": "neck",
     "type": "unspecified",
@@ -9313,7 +9239,6 @@
     ]
   },
 
-  // 3. Scapulo-Cervical Integration
   {
     "location": "neck",
     "type": "unspecified",
@@ -9330,7 +9255,6 @@
     ]
   },
 
-  // 4. Taper-Specific
   {
     "location": "neck",
     "type": "unspecified",
@@ -9347,7 +9271,6 @@
     ]
   },
 
-  // 5. Eccentric Loading
   {
     "location": "neck",
     "type": "unspecified",
@@ -9364,7 +9287,6 @@
     ]
   },
 
-  // 6. Vestibular Integration
   {
     "location": "neck",
     "type": "unspecified",
@@ -9381,7 +9303,6 @@
     ]
   },
 
-  // 7. Neural Mobility
   {
     "location": "neck",
     "type": "unspecified",
@@ -9398,7 +9319,6 @@
     ]
   },
 
-  // 8. Rotation Control
   {
     "location": "neck",
     "type": "unspecified",
@@ -9415,7 +9335,6 @@
     ]
   },
 
-  // 9. Anti-Flexion
   {
     "location": "neck",
     "type": "unspecified",
@@ -9432,7 +9351,6 @@
     ]
   },
 
-  // 10. Recovery Modalities
   {
     "location": "neck",
     "type": "unspecified",
@@ -9598,7 +9516,6 @@
       }
     ]
   },
-  // 1. Basic Anterior Tibialis Strengthening
   {
     "location": "shin",
     "type": "unspecified",
@@ -9615,7 +9532,6 @@
     ]
   },
 
-  // 2. Eccentric Loading
   {
     "location": "shin",
     "type": "unspecified",
@@ -9632,7 +9548,6 @@
     ]
   },
 
-  // 3. Isometric Conditioning
   {
     "location": "shin",
     "type": "unspecified",
@@ -9649,7 +9564,6 @@
     ]
   },
 
-  // 4. Mobility/Flushing
   {
     "location": "shin",
     "type": "unspecified",
@@ -9666,7 +9580,6 @@
     ]
   },
 
-  // 5. Unilateral Control
   {
     "location": "shin",
     "type": "unspecified",
@@ -9683,7 +9596,6 @@
     ]
   },
 
-  // 6. Impact Prep
   {
     "location": "shin",
     "type": "unspecified",
@@ -9700,7 +9612,6 @@
     ]
   },
 
-  // 7. Taper-Specific
   {
     "location": "shin",
     "type": "unspecified",
@@ -9717,7 +9628,6 @@
     ]
   },
 
-  // 8. Blood Flow Restriction
   {
     "location": "shin",
     "type": "unspecified",
@@ -9734,7 +9644,6 @@
     ]
   },
 
-  // 9. Dynamic ROM
   {
     "location": "shin",
     "type": "unspecified",
@@ -9751,7 +9660,6 @@
     ]
   },
 
-  // 10. Night Recovery
   {
     "location": "shin",
     "type": "unspecified",
@@ -9767,7 +9675,6 @@
       }
     ]
   },
-  // 1. Punch-Specific Rehab
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9799,7 +9706,6 @@
     ]
   },
 
-  // 2. Grappling/Clinch Adaptations
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9831,7 +9737,6 @@
     ]
   },
 
-  // 3. Impact Absorption
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9863,7 +9768,6 @@
     ]
   },
 
-  // 4. Taper Protocols
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9895,7 +9799,6 @@
     ]
   },
 
-  // 5. Unilateral & Rotational
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9927,7 +9830,6 @@
     ]
   },
 
-  // 6. Recovery & Maintenance
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9958,7 +9860,6 @@
       }
     ]
   },
-  // 1. Thoracic Integration
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9975,7 +9876,6 @@
     ]
   },
 
-  // 2. Dynamic ROM
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -9992,7 +9892,6 @@
     ]
   },
 
-  // 3. Grappler-Specific
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -10009,7 +9908,6 @@
     ]
   },
 
-  // 4. Striker-Specific
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -10026,7 +9924,6 @@
     ]
   },
 
-  // 5. Recovery-Focused
   {
     "location": "shoulder",
     "type": "unspecified",
@@ -10192,7 +10089,6 @@
       }
     ]
   },
-  // 1. Isometric Foundations
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10209,7 +10105,6 @@
     ]
   },
 
-  // 2. Eccentric Focus
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10226,7 +10121,6 @@
     ]
   },
 
-  // 3. Unilateral Stability
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10243,7 +10137,6 @@
     ]
   },
 
-  // 4. Mobility/Restoration
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10260,7 +10153,6 @@
     ]
   },
 
-  // 5. Taper-Specific
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10277,7 +10169,6 @@
     ]
   },
 
-  // 6. Functional Patterns
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10294,7 +10185,6 @@
     ]
   },
 
-  // 7. Nerve Mobility
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10311,7 +10201,6 @@
     ]
   },
 
-  // 8. Blood Flow Restriction
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10328,7 +10217,6 @@
     ]
   },
 
-  // 9. Isolated Endurance
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10345,7 +10233,6 @@
     ]
   },
 
-  // 10. Recovery Modalities
   {
     "location": "triceps",
     "type": "unspecified",
@@ -10511,7 +10398,6 @@
       }
     ]
   },
-  // 16. Wrist Proprioception
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10528,7 +10414,6 @@
     ]
   },
 
-  // 17. Flexor/Extensor Balance
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10545,7 +10430,6 @@
     ]
   },
 
-  // 18. Clinch-Specific
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10562,7 +10446,6 @@
     ]
   },
 
-  // 19. Dynamic Loading
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10579,7 +10462,6 @@
     ]
   },
 
-  // 20. TAPER Recovery
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10596,7 +10478,6 @@
     ]
   },
 
-  // 21. Guard-Specific
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10613,7 +10494,6 @@
     ]
   },
 
-  // 22. Weapon Retention
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10630,7 +10510,6 @@
     ]
   },
 
-  // 23. Fatigue Resistance
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10647,7 +10526,6 @@
     ]
   },
 
-  // 24. Combined Movements
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10664,7 +10542,6 @@
     ]
   },
 
-  // 25. Ancient Weapons Prep
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10681,7 +10558,6 @@
     ]
   },
 
-  // 26. TAPER Activation
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10698,7 +10574,6 @@
     ]
   },
 
-  // 27. Trauma Recovery
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10715,7 +10590,6 @@
     ]
   },
 
-  // 28. Wrist/Hand Synergy
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10732,7 +10606,6 @@
     ]
   },
 
-  // 29. Striking Accuracy
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10749,7 +10622,6 @@
     ]
   },
 
-  // 30. Traditional Methods
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10765,7 +10637,6 @@
       }
     ]
   },
-  // 1. Fundamental Mobility
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10782,7 +10653,6 @@
     ]
   },
 
-  // 2. Grip Endurance
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10799,7 +10669,6 @@
     ]
   },
 
-  // 3. Impact Absorption
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10816,7 +10685,6 @@
     ]
   },
 
-  // 4. Weapon/Grip Simulation
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10833,7 +10701,6 @@
     ]
   },
 
-  // 5. TAPER-Specific
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10850,7 +10717,6 @@
     ]
   },
 
-  // 6. Nerve Glides
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10867,7 +10733,6 @@
     ]
   },
 
-  // 7. Wrist Extension Focus
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10884,7 +10749,6 @@
     ]
   },
 
-  // 8. Closed-Chain Stability
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10901,7 +10765,6 @@
     ]
   },
 
-  // 9. Combat-Specific ROM
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10918,7 +10781,6 @@
     ]
   },
 
-  // 10. Recovery Modalities
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10935,7 +10797,6 @@
     ]
   },
 
-  // 11. Radial/Ulnar Focus
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10952,7 +10813,6 @@
     ]
   },
 
-  // 12. Finger/Wrist Integration
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10969,7 +10829,6 @@
     ]
   },
 
-  // 13. TAPER-Specific Mobility
   {
     "location": "wrist",
     "type": "unspecified",
@@ -10986,7 +10845,6 @@
     ]
   },
 
-  // 14. Impact Prep
   {
     "location": "wrist",
     "type": "unspecified",
@@ -11003,7 +10861,6 @@
     ]
   },
 
-  // 15. Bone Density
   {
     "location": "wrist",
     "type": "unspecified",

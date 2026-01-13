@@ -10,12 +10,14 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
+from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES
 from .injury_filtering import (
     injury_match_details,
     injury_violation_reasons,
     is_injury_safe,
     log_injury_debug,
 )
+from .tagging import normalize_item_tags, normalize_tags
 
 # Map for tactical styles
 style_tag_map = {
@@ -107,15 +109,32 @@ weakness_tag_map = {
     "coordination/proprioception": ["coordination"]
 }
 
+def _load_bank(path: Path, *, source: str) -> list[dict]:
+    bank = json.loads(path.read_text())
+    if isinstance(bank, list):
+        for item in bank:
+            normalize_item_tags(item)
+    else:
+        for items in bank.values():
+            if isinstance(items, list):
+                for item in items:
+                    normalize_item_tags(item)
+    return bank
+
+
 # Load banks
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-conditioning_bank = json.loads((DATA_DIR / "conditioning_bank.json").read_text())
-style_conditioning_bank = json.loads((DATA_DIR / "style_conditioning_bank.json").read_text())
+conditioning_bank = _load_bank(
+    DATA_DIR / "conditioning_bank.json", source="conditioning_bank.json"
+)
+style_conditioning_bank = _load_bank(
+    DATA_DIR / "style_conditioning_bank.json", source="style_conditioning_bank.json"
+)
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
 # Load coordination bank and flatten drills
 try:
-    _coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text())
+    _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")
 except Exception:
     _coord_data = []
 
@@ -133,14 +152,8 @@ STYLE_CONDITIONING_RATIO = {
     "TAPER": 0.05,
 }
 
-SYSTEM_ALIASES = {
-    "atp-pcr": "alactic",
-    "anaerobic_alactic": "alactic",
-    "cognitive": "alactic"
-}
-KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}
-
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
+_UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
 
 _INJURY_GUARD_LOGGED: set[tuple] = set()
 
@@ -158,6 +171,21 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
                 f"normalized='{normalized}' source={source}"
             )
     return normalized
+
+
+def get_system_or_warn(drill: dict, *, source: str) -> str | None:
+    system = normalize_system(drill.get("system"), source=source)
+    if system in KNOWN_SYSTEMS:
+        return system
+    name = drill.get("name", "Unnamed Drill")
+    log_key = (source, system, name)
+    if log_key not in _UNKNOWN_SYSTEM_DRILL_LOGGED:
+        _UNKNOWN_SYSTEM_DRILL_LOGGED.add(log_key)
+        print(
+            f"[conditioning] Dropping drill with unknown system "
+            f"bank={source} name='{name}' system='{system}'"
+        )
+    return None
 
 
 def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
@@ -202,7 +230,7 @@ def expand_tags(input_list, tag_map):
     for item in input_list:
         tags = tag_map.get(item.lower(), [])
         expanded.extend(tags)
-    return [t.lower() for t in expanded]
+    return normalize_tags(expanded)
 
 def is_banned_drill(
     name: str,
@@ -214,7 +242,7 @@ def is_banned_drill(
 ) -> bool:
     """Return True if the drill should be removed for the given sport."""
     name = name.lower()
-    tags = [t.lower() for t in tags]
+    tags = normalize_tags(tags)
     details = details.lower()
 
     tactical_styles = [s.lower().replace(" ", "_") for s in tactical_styles or []]
@@ -407,7 +435,7 @@ def generate_conditioning_block(flags):
         style_names = tech_style_tags
 
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
-    style_tags = [t for s in style_tags for t in style_tag_map.get(s, [])]
+    style_tags = normalize_tags([t for s in style_tags for t in style_tag_map.get(s, [])])
 
     goal_tags = expand_tags(goals, goal_tag_map)
     weak_tags = expand_tags(weaknesses, weakness_tag_map)
@@ -478,11 +506,11 @@ def generate_conditioning_block(flags):
         if phase.upper() not in d.get("phases", []):
             continue
 
-        system = normalize_system(d.get("system"), source="conditioning_bank")
-        if system not in system_drills:
+        system = get_system_or_warn(d, source="conditioning_bank.json")
+        if system is None:
             continue
 
-        tags = [t.lower() for t in d.get("tags", [])]
+        tags = normalize_tags(d.get("tags", []))
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -583,7 +611,7 @@ def generate_conditioning_block(flags):
             continue
         if not is_injury_safe(d, injuries):
             continue
-        tags = [t.lower() for t in d.get("tags", [])]
+        tags = normalize_tags(d.get("tags", []))
         details = " ".join(
             [
                 d.get("duration", ""),
@@ -614,8 +642,8 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        system = normalize_system(d.get("system"), source="style_conditioning_bank")
-        if system not in style_system_drills:
+        system = get_system_or_warn(d, source="style_conditioning_bank.json")
+        if system is None:
             continue
 
         # Apply same fatigue/CNS suppression rules
@@ -717,7 +745,7 @@ def generate_conditioning_block(flags):
         drills = source.get(system, [])
         for idx, (drill, _, reasons) in enumerate(drills):
             name = drill.get("name")
-            tags = [t.lower() for t in drill.get("tags", [])]
+            tags = normalize_tags(drill.get("tags", []))
             allow_repeat = (
                 phase.upper() == "TAPER"
                 and system == "alactic"
@@ -736,7 +764,7 @@ def generate_conditioning_block(flags):
             drills = style_drills_by_style.get(style, {}).get(system, [])
             for idx, (drill, _, reasons) in enumerate(drills):
                 name = drill.get("name")
-                tags = [t.lower() for t in drill.get("tags", [])]
+                tags = normalize_tags(drill.get("tags", []))
                 allow_repeat = (
                     phase.upper() == "TAPER"
                     and system == "alactic"
@@ -866,8 +894,10 @@ def generate_conditioning_block(flags):
             drill_eq = normalize_equipment_list(drill.get("equipment", []))
             if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                 continue
-            system = normalize_system(drill.get("system"), source="universal_gpp_conditioning")
-            drill_tags = set(drill.get("tags", []))
+            system = get_system_or_warn(drill, source="universal_gpp_conditioning.json")
+            if system is None:
+                continue
+            drill_tags = set(normalize_tags(drill.get("tags", [])))
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
@@ -896,7 +926,7 @@ def generate_conditioning_block(flags):
         style_set = set(style_names)
         taper_candidates = []
         for d in style_taper_bank:
-            if not style_set.intersection({t.lower() for t in d.get("tags", [])}):
+            if not style_set.intersection(set(normalize_tags(d.get("tags", [])))):
                 continue
             if not _is_drill_text_safe(d, injuries, label="conditioning"):
                 continue
@@ -923,7 +953,9 @@ def generate_conditioning_block(flags):
         if taper_candidates and len(selected_drill_names) < total_drills:
             drill = random.choice(taper_candidates)
             if drill.get("name") not in existing_cond_names:
-                system = normalize_system(drill.get("system"), source="style_taper_conditioning")
+                system = get_system_or_warn(drill, source="style_taper_conditioning.json")
+                if system is None:
+                    continue
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 reason_lookup[drill.get("name")] = {
@@ -941,7 +973,7 @@ def generate_conditioning_block(flags):
         taper_plyos = [
             d for d in conditioning_bank
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
-            and "plyometric" in {t.lower() for t in d.get("tags", [])}
+            and "plyometric" in set(normalize_tags(d.get("tags", [])))
             and _is_drill_text_safe(d, injuries, label="conditioning")
             and is_injury_safe(d, injuries)
             and (
@@ -953,7 +985,9 @@ def generate_conditioning_block(flags):
             existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
             drill = random.choice(taper_plyos)
             if drill.get("name") not in existing_cond_names:
-                system = normalize_system(drill.get("system"), source="conditioning_taper_plyo")
+                system = get_system_or_warn(drill, source="conditioning_taper_plyo")
+                if system is None:
+                    continue
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 reason_lookup[drill.get("name")] = {
@@ -973,7 +1007,7 @@ def generate_conditioning_block(flags):
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
         skill_drills = [
             d for d in style_conditioning_bank
-            if "skill_refinement" in {t.lower() for t in d.get("tags", [])}
+            if "skill_refinement" in set(normalize_tags(d.get("tags", [])))
             and phase.upper() in d.get("phases", [])
             and _is_drill_text_safe(d, injuries, label="conditioning")
             and is_injury_safe(d, injuries)
@@ -985,7 +1019,9 @@ def generate_conditioning_block(flags):
         random.shuffle(skill_drills)
         for drill in skill_drills:
             if drill.get("name") not in existing_names:
-                system = normalize_system(drill.get("system"), source="skill_refinement")
+                system = get_system_or_warn(drill, source="skill_refinement")
+                if system is None:
+                    continue
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 break
@@ -996,25 +1032,26 @@ def generate_conditioning_block(flags):
         {**flags, "equipment": equipment_access}, existing_names, injuries
     )
     if coord_drill and len(selected_drill_names) < total_drills:
-        system = normalize_system(coord_drill.get("system"), source="coordination")
-        final_drills.append((system, [coord_drill]))
-        selected_drill_names.append(coord_drill.get("name"))
-        reason_lookup[coord_drill.get("name")] = {
-            "goal_hits": 0,
-            "weakness_hits": 0,
-            "style_hits": 0,
-            "phase_hits": 1,
-            "load_adjustments": 0,
-            "equipment_boost": 0,
-            "penalties": 0,
-            "final_score": 0,
-        }
+        system = get_system_or_warn(coord_drill, source="coordination")
+        if system is not None:
+            final_drills.append((system, [coord_drill]))
+            selected_drill_names.append(coord_drill.get("name"))
+            reason_lookup[coord_drill.get("name")] = {
+                "goal_hits": 0,
+                "weakness_hits": 0,
+                "style_hits": 0,
+                "phase_hits": 1,
+                "load_adjustments": 0,
+                "equipment_boost": 0,
+                "penalties": 0,
+                "final_score": 0,
+            }
 
     # --------- PRO NECK DRILL GUARANTEE ---------
     status = flags.get("status", "").strip().lower()
     if status in {"professional", "pro"}:
         has_neck = any(
-            "neck" in {t.lower() for t in d.get("tags", [])}
+            "neck" in set(normalize_tags(d.get("tags", [])))
             for _, drills in final_drills
             for d in drills
         )
@@ -1022,7 +1059,7 @@ def generate_conditioning_block(flags):
             neck_candidates = [
                 d
                 for d in conditioning_bank
-                if "neck" in {t.lower() for t in d.get("tags", [])}
+                if "neck" in set(normalize_tags(d.get("tags", [])))
                 and is_injury_safe(d, injuries)
                 and _is_drill_text_safe(d, injuries, label="conditioning")
                 and phase.upper() in d.get("phases", [])

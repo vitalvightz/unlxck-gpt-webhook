@@ -8,6 +8,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
+from .tagging import normalize_item_tags, normalize_tags
 from .injury_filtering import (
     injury_match_details,
     is_injury_safe_with_fields,
@@ -27,6 +28,9 @@ try:
     STYLE_EXERCISES = json.loads((DATA_DIR / "style_specific_exercises").read_text())
 except Exception:
     STYLE_EXERCISES = []
+else:
+    for item in STYLE_EXERCISES:
+        normalize_item_tags(item)
 
 
 CANONICAL_STYLE_TAGS = {
@@ -156,7 +160,7 @@ def score_exercise(
 def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: str = "") -> bool:
     """Return True if the exercise should be removed for the given sport."""
     name = name.lower()
-    tags = [t.lower() for t in tags]
+    tags = normalize_tags(tags)
     details = details.lower()
 
     grappling_terms = {
@@ -184,6 +188,8 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
     return False
 
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+for item in exercise_bank:
+    normalize_item_tags(item)
 
 # Load universal strength list for cross-phase novelty exemptions
 try:
@@ -192,6 +198,9 @@ try:
     )
 except Exception:
     _universal_strength = []
+else:
+    for item in _universal_strength:
+        normalize_item_tags(item)
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
 def normalize_exercise_movement(exercise: dict) -> str:
@@ -375,7 +384,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
-        tags_lower = {t.lower() for t in tags}
+        tags_lower = set(normalize_tags(tags))
         details = " ".join(
             [
                 ex.get("notes", ""),
@@ -451,7 +460,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not set(ex_equipment).issubset(set(equipment_access)):
                 continue
             tags = ex.get("tags", [])
-            tags_lower = {t.lower() for t in tags}
+            tags_lower = set(normalize_tags(tags))
             details = " ".join(
                 [
                     ex.get("notes", ""),
@@ -594,7 +603,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _enforce_conflicts(ex_list):
         has_med_ball_rot = any(
             "medicine_ball" in normalize_equipment_list(ex.get("equipment", []))
-            and "rotational" in {t.lower() for t in ex.get("tags", [])}
+            and "rotational" in set(normalize_tags(ex.get("tags", [])))
             for ex in ex_list
         )
         if not has_med_ball_rot:
@@ -606,7 +615,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     cand_name = cand.get("name", "").lower()
                     if cand_name == name_lower:
                         continue
-                    cand_tags = {t.lower() for t in cand.get("tags", [])}
+                    cand_tags = set(normalize_tags(cand.get("tags", [])))
                     cand_eq = normalize_equipment_list(cand.get("equipment", []))
                     if (
                         "medicine_ball" in cand_eq and "rotational" in cand_tags

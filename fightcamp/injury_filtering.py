@@ -7,6 +7,7 @@ from typing import Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .tagging import normalize_item_tags, normalize_tags
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 INJURY_MATCH_ALLOWLIST: list[str] = [
@@ -195,7 +196,7 @@ def infer_tags_from_name(name: str) -> set[str]:
     for rule in INFERRED_TAG_RULES:
         if match_forbidden(name, rule["keywords"], allowlist=INJURY_MATCH_ALLOWLIST):
             inferred.update(rule["tags"])
-    return inferred
+    return {t for t in normalize_tags(inferred) if t}
 
 
 def auto_tag(item: dict) -> set[str]:
@@ -211,13 +212,14 @@ def auto_tag(item: dict) -> set[str]:
     for rule in AUTO_TAG_RULES:
         if match_forbidden(fields_text, rule["keywords"], allowlist=INJURY_MATCH_ALLOWLIST):
             tags.update(rule["tags"])
-    return {tag.lower() for tag in tags if tag}
+    return {tag for tag in normalize_tags(tags) if tag}
 
 
 def ensure_tags(item: dict) -> list[str]:
-    raw_tags = [t for t in item.get("tags", []) if t]
+    raw_tags = normalize_tags([t for t in item.get("tags", []) if t])
     if raw_tags:
-        return [t.lower() for t in raw_tags]
+        item["tags"] = raw_tags
+        return raw_tags
     inferred = sorted(auto_tag(item))
     if not inferred:
         inferred = ["untagged"]
@@ -370,39 +372,59 @@ def injury_match_details(
 def _load_style_specific_exercises() -> list[dict]:
     source = DATA_DIR / "style_specific_exercises"
     try:
-        return json.loads(source.read_text())
+        items = json.loads(source.read_text())
     except Exception:
         return []
+    if isinstance(items, list):
+        for item in items:
+            normalize_item_tags(item)
+    return items
 
 
 def collect_banks() -> dict[str, list[dict]]:
     banks: dict[str, list[dict]] = {}
     banks["exercise_bank"] = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+    for item in banks["exercise_bank"]:
+        normalize_item_tags(item)
     banks["conditioning_bank"] = json.loads(
         (DATA_DIR / "conditioning_bank.json").read_text()
     )
+    for item in banks["conditioning_bank"]:
+        normalize_item_tags(item)
     banks["style_conditioning_bank"] = json.loads(
         (DATA_DIR / "style_conditioning_bank.json").read_text()
     )
+    for item in banks["style_conditioning_bank"]:
+        normalize_item_tags(item)
     banks["universal_gpp_strength"] = json.loads(
         (DATA_DIR / "universal_gpp_strength.json").read_text()
     )
+    for item in banks["universal_gpp_strength"]:
+        normalize_item_tags(item)
     banks["universal_gpp_conditioning"] = json.loads(
         (DATA_DIR / "universal_gpp_conditioning.json").read_text()
     )
+    for item in banks["universal_gpp_conditioning"]:
+        normalize_item_tags(item)
     banks["style_taper_conditioning"] = json.loads(
         (DATA_DIR / "style_taper_conditioning.json").read_text()
     )
+    for item in banks["style_taper_conditioning"]:
+        normalize_item_tags(item)
     banks["style_specific_exercises"] = _load_style_specific_exercises()
 
     coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text())
     coordination_bank: list[dict] = []
     if isinstance(coord_data, list):
-        coordination_bank.extend(coord_data)
+        for item in coord_data:
+            normalize_item_tags(item)
+            coordination_bank.append(item)
     elif isinstance(coord_data, dict):
         for val in coord_data.values():
             if isinstance(val, list):
-                coordination_bank.extend(val)
+                for item in val:
+                    normalize_item_tags(item)
+                    coordination_bank.append(item)
     banks["coordination_bank"] = coordination_bank
 
     return banks
@@ -414,7 +436,7 @@ def build_bank_inferred_tags() -> list[dict]:
         for item in items:
             name = item.get("name", "")
             item_id = f"{bank_name}:{name}"
-            explicit_tags = [t.lower() for t in item.get("tags", []) if t]
+            explicit_tags = normalize_tags(item.get("tags", []))
             normalized_tags = ensure_tags(item)
             inferred_tags = sorted(infer_tags_from_name(name))
             entries.append(
