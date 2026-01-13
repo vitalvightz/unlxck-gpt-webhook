@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from .conditioning import SYSTEM_ALIASES, is_banned_drill, render_conditioning_block
+from .conditioning import is_banned_drill, normalize_system, render_conditioning_block
 from .injury_exclusion_rules import INJURY_RULES
 from .injury_filtering import ensure_tags, match_forbidden
 from .rehab_protocols import build_coach_review_entries
@@ -76,8 +76,7 @@ def _safe_conditioning_candidate(
             continue
         if phase.upper() not in cand.get("phases", []):
             continue
-        raw_system = cand.get("system", "").lower()
-        cand_system = SYSTEM_ALIASES.get(raw_system, raw_system)
+        cand_system = normalize_system(cand.get("system"), source="coach_review")
         if cand_system != system:
             continue
         cand_eq = normalize_equipment_list(cand.get("equipment", []))

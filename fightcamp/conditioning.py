@@ -138,8 +138,26 @@ SYSTEM_ALIASES = {
     "anaerobic_alactic": "alactic",
     "cognitive": "alactic"
 }
+KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}
+
+_UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 
 _INJURY_GUARD_LOGGED: set[tuple] = set()
+
+
+def normalize_system(raw_system: str | None, *, source: str) -> str:
+    """Return a normalized system name and log unknown values once."""
+    system = (raw_system or "").strip().lower()
+    normalized = SYSTEM_ALIASES.get(system, system or "misc")
+    if normalized not in KNOWN_SYSTEMS:
+        log_key = (source, normalized)
+        if log_key not in _UNKNOWN_SYSTEM_LOGGED:
+            _UNKNOWN_SYSTEM_LOGGED.add(log_key)
+            print(
+                f"[conditioning] Unknown energy system '{system or 'unknown'}' "
+                f"normalized='{normalized}' source={source}"
+            )
+    return normalized
 
 
 def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
@@ -460,8 +478,7 @@ def generate_conditioning_block(flags):
         if phase.upper() not in d.get("phases", []):
             continue
 
-        raw_system = d.get("system", "").lower()
-        system = SYSTEM_ALIASES.get(raw_system, raw_system)
+        system = normalize_system(d.get("system"), source="conditioning_bank")
         if system not in system_drills:
             continue
 
@@ -597,8 +614,7 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        raw_system = d.get("system", "").lower()
-        system = SYSTEM_ALIASES.get(raw_system, raw_system)
+        system = normalize_system(d.get("system"), source="style_conditioning_bank")
         if system not in style_system_drills:
             continue
 
@@ -850,7 +866,7 @@ def generate_conditioning_block(flags):
             drill_eq = normalize_equipment_list(drill.get("equipment", []))
             if drill_eq and not set(drill_eq).issubset(equipment_access_set):
                 continue
-            system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
+            system = normalize_system(drill.get("system"), source="universal_gpp_conditioning")
             drill_tags = set(drill.get("tags", []))
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
                 final_drills.append((system, [drill]))
@@ -907,7 +923,7 @@ def generate_conditioning_block(flags):
         if taper_candidates and len(selected_drill_names) < total_drills:
             drill = random.choice(taper_candidates)
             if drill.get("name") not in existing_cond_names:
-                system = SYSTEM_ALIASES.get(drill.get("system", "").lower(), drill.get("system", "misc"))
+                system = normalize_system(drill.get("system"), source="style_taper_conditioning")
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 reason_lookup[drill.get("name")] = {
@@ -937,9 +953,7 @@ def generate_conditioning_block(flags):
             existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
             drill = random.choice(taper_plyos)
             if drill.get("name") not in existing_cond_names:
-                system = SYSTEM_ALIASES.get(
-                    drill.get("system", "").lower(), drill.get("system", "misc")
-                )
+                system = normalize_system(drill.get("system"), source="conditioning_taper_plyo")
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 reason_lookup[drill.get("name")] = {
@@ -971,9 +985,7 @@ def generate_conditioning_block(flags):
         random.shuffle(skill_drills)
         for drill in skill_drills:
             if drill.get("name") not in existing_names:
-                system = SYSTEM_ALIASES.get(
-                    drill.get("system", "").lower(), drill.get("system", "misc")
-                )
+                system = normalize_system(drill.get("system"), source="skill_refinement")
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 break
@@ -984,7 +996,7 @@ def generate_conditioning_block(flags):
         {**flags, "equipment": equipment_access}, existing_names, injuries
     )
     if coord_drill and len(selected_drill_names) < total_drills:
-        system = SYSTEM_ALIASES.get(coord_drill.get("system", "").lower(), coord_drill.get("system", "misc"))
+        system = normalize_system(coord_drill.get("system"), source="coordination")
         final_drills.append((system, [coord_drill]))
         selected_drill_names.append(coord_drill.get("name"))
         reason_lookup[coord_drill.get("name")] = {
@@ -1021,9 +1033,7 @@ def generate_conditioning_block(flags):
             ]
             if neck_candidates and len(selected_drill_names) < total_drills:
                 drill = random.choice(neck_candidates)
-                system = SYSTEM_ALIASES.get(
-                    drill.get("system", "").lower(), drill.get("system", "misc")
-                )
+                system = normalize_system(drill.get("system"), source="pro_neck")
                 final_drills.append((system, [drill]))
                 selected_drill_names.append(drill.get("name"))
                 reason_lookup[drill.get("name")] = {

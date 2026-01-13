@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 import json
 import re
 from pathlib import Path
@@ -370,12 +369,8 @@ def injury_match_details(
 
 def _load_style_specific_exercises() -> list[dict]:
     source = DATA_DIR / "style_specific_exercises"
-    text = source.read_text()
-    start = text.find("[")
-    end = text.rfind("}")
-    snippet = text[start : end + 1] + "]" if start != -1 and end != -1 else "[]"
     try:
-        return ast.literal_eval(snippet)
+        return json.loads(source.read_text())
     except Exception:
         return []
 
