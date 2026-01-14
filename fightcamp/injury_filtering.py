@@ -18,6 +18,31 @@ INJURY_MATCH_ALLOWLIST: list[str] = [
     "stomach ache",
 ]
 GENERIC_SINGLE_WORD_PATTERNS = {"press", "overhead", "bench"}
+MAX_VELOCITY_EXCLUDE_KEYWORDS = [
+    "assault bike",
+    "echo bike",
+    "air bike",
+    "rower",
+    "ski erg",
+    "ski-erg",
+    "battle rope",
+    "rope wave",
+]
+MAX_VELOCITY_RUNNING_KEYWORDS = [
+    "sprint",
+    "sprints",
+    "sprint start",
+    "acceleration",
+    "accelerations",
+    "hill sprint",
+    "treadmill sprint",
+    "10m",
+    "20m",
+    "30m",
+    "track",
+    "shuttle sprint",
+    "shuttle run",
+]
 
 INFERRED_TAG_RULES = [
     {"keywords": ["bench press", "floor press"], "tags": ["upper_push", "horizontal_push", "press_heavy"]},
@@ -195,8 +220,16 @@ def infer_tags_from_name(name: str) -> set[str]:
     inferred: set[str] = set()
     for rule in INFERRED_TAG_RULES:
         if match_forbidden(name, rule["keywords"], allowlist=INJURY_MATCH_ALLOWLIST):
+            if "max_velocity" in rule["tags"] and not _should_apply_max_velocity(name):
+                continue
             inferred.update(rule["tags"])
     return {t for t in normalize_tags(inferred) if t}
+
+
+def _should_apply_max_velocity(name: str) -> bool:
+    if match_forbidden(name, MAX_VELOCITY_EXCLUDE_KEYWORDS, allowlist=INJURY_MATCH_ALLOWLIST):
+        return False
+    return bool(match_forbidden(name, MAX_VELOCITY_RUNNING_KEYWORDS, allowlist=INJURY_MATCH_ALLOWLIST))
 
 
 def auto_tag(item: dict) -> set[str]:
