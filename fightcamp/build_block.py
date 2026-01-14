@@ -79,13 +79,40 @@ def _md_to_html(text: str) -> str:
     """Convert Markdown text to HTML with simple bullet support."""
     if markdown2 is None:  # fallback to stripping bold markers
         text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    time_short_pattern = re.compile(
+        r"(?i)(\*\*If Time Short:\*\*|If Time Short:)\s*If time short:\s*"
+    )
+    system_header_pattern = re.compile(r"System:\s*\w+", re.IGNORECASE)
+    red_flags_none_pattern = re.compile(
+        r"^(?:⚠️\s*)?Red Flags:\s*None\s*$", re.IGNORECASE
+    )
+    code_only_pattern = re.compile(
+        r"^(?:[-•]\s*)?(?:\*\*)?(tags?|equipment)(?:\*\*)?\s*:\s*"
+        r"[\[\(]?[a-z0-9_ ,/+.-]+[\]\)]?\s*$",
+        re.IGNORECASE,
+    )
     cleaned_lines = []
+    in_system_section = False
+    red_flags_none_written = False
     for line in text.splitlines():
         stripped = line.lstrip()
+        if code_only_pattern.match(stripped):
+            continue
+        line = time_short_pattern.sub(r"\1 ", line)
+        stripped = line.lstrip()
+        if system_header_pattern.search(stripped):
+            in_system_section = True
+            red_flags_none_written = False
         if stripped.startswith("•"):
             line = re.sub(r"^\s*•", "-", line)
-        # Skip standalone "Flags: None" lines but keep drills containing it
-        if re.fullmatch(r"(?:Red\s+)?Flags:\s*None", stripped, re.IGNORECASE):
+        if red_flags_none_pattern.match(stripped):
+            if in_system_section and not red_flags_none_written:
+                cleaned_lines.append(
+                    red_flags_none_pattern.sub(
+                        "Red Flags: none noted unless listed", line
+                    )
+                )
+                red_flags_none_written = True
             continue
         if stripped.startswith("- **Drill:") and cleaned_lines:
             cleaned_lines.append("")
