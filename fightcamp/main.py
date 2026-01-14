@@ -758,10 +758,23 @@ async def generate_plan(data: dict):
     )
 
     safe = full_name.replace(" ", "_") or "plan"
+    skip_upload = os.environ.get("FIGHTCAMP_SKIP_UPLOAD") == "1"
     pdf_path = html_to_pdf(html, f"{safe}_fight_plan.pdf")
-    pdf_url = upload_to_supabase(pdf_path) if pdf_path else "PDF generation failed"
+    if pdf_path and not skip_upload:
+        pdf_url = upload_to_supabase(pdf_path)
+    elif pdf_path:
+        pdf_url = "PDF upload skipped"
+    else:
+        pdf_url = "PDF generation failed"
 
-    return {"pdf_url": pdf_url, "why_log": reason_log, "coach_notes": coach_notes}
+    return {
+        "pdf_url": pdf_url,
+        "why_log": reason_log,
+        "coach_notes": coach_notes,
+        "markdown": fight_plan_text,
+        "html": html,
+        "pdf_path": pdf_path,
+    }
 
 
 def main():
