@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 import os, json
+import re
 import asyncio
 from pathlib import Path
 from .build_block import (
@@ -524,6 +525,7 @@ async def generate_plan(data: dict):
             gpp_cond_block,
             "",
             "### Injury Guardrails",
+            "Phase: GPP",
             gpp_guardrails,
             "",
         ]
@@ -543,6 +545,7 @@ async def generate_plan(data: dict):
             spp_cond_block,
             "",
             "### Injury Guardrails",
+            "Phase: SPP",
             spp_guardrails,
             "",
         ]
@@ -562,6 +565,7 @@ async def generate_plan(data: dict):
             taper_cond_block,
             "",
             "### Injury Guardrails",
+            "Phase: TAPER",
             taper_guardrails,
             "",
         ]
@@ -617,6 +621,7 @@ async def generate_plan(data: dict):
     ]
      
     fight_plan_text = "\n".join(fight_plan_lines)
+    fight_plan_text = re.sub(r"\n{3,}", "\n\n", fight_plan_text)
 
     print("✅ Plan generated locally (First 500 chars):\n", fight_plan_text[:500])
 
