@@ -13,7 +13,7 @@
   {
     "phase": "GPP",
     "name": "Jump Rope Endurance (Footwork Conditioning)",
-    "system": "aerobic + coordination",
+    "system": "aerobic",
     "duration": "3–5 rounds × 3–5 minutes",
     "intensity": "Moderate steady pace",
     "volume": "2–4x/week",
@@ -24,7 +24,7 @@
   {
     "phase": "GPP",
     "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
-    "system": "Alactic → Glycolytic",
+    "system": "glycolytic",
     "duration": "6–8 × 20–30s max effort",
     "intensity": "Maximal sprint",
     "volume": "1–2x/week",

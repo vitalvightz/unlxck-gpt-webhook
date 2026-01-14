@@ -2692,7 +2692,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr + Glycolytic",
+    "system": "glycolytic",
     "modality": "power endurance",
     "duration": "3min work, 1min rest x 3-5 rounds",
     "intensity": "high",
@@ -2893,7 +2893,7 @@
     "phases": [
       "SPP"
     ],
-    "system": "ATP-PCr + Glycolytic",
+    "system": "glycolytic",
     "modality": "compound lifts + sprints",
     "duration": "5 cleans + 20m sprint, 4 rounds",
     "intensity": "high",

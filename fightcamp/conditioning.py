@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import random
+import re
 from typing import Callable, Iterable
 from .training_context import (
     allocate_sessions,
@@ -109,26 +110,113 @@ weakness_tag_map = {
     "coordination/proprioception": ["coordination"]
 }
 
-def _load_bank(path: Path, *, source: str) -> list[dict]:
+_MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
+_UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
+_UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
+
+_INJURY_GUARD_LOGGED: set[tuple] = set()
+
+
+def normalize_system(raw_system: str | None, *, source: str) -> str:
+    """Return a normalized system name and log unknown values once."""
+    system = (raw_system or "").strip().lower()
+    if not system:
+        normalized = "misc"
+    else:
+        normalized = SYSTEM_ALIASES.get(system, system)
+
+    if any(sep in system for sep in ("+", "→", "/", "&")) or "->" in system:
+        parts = [
+            part.strip()
+            for part in re.split(r"\s*(?:\+|/|→|->|&)\s*", system)
+            if part.strip()
+        ]
+        mapped_parts = [SYSTEM_ALIASES.get(part, part) for part in parts]
+        known_parts = [part for part in mapped_parts if part in KNOWN_SYSTEMS]
+        if known_parts:
+            if "glycolytic" in known_parts:
+                normalized = "glycolytic"
+            else:
+                normalized = known_parts[0]
+            log_key = (source, system)
+            if log_key not in _MIXED_SYSTEM_LOGGED and len(known_parts) > 1:
+                _MIXED_SYSTEM_LOGGED.add(log_key)
+                print(
+                    f"[conditioning] Mixed energy system '{system}' "
+                    f"normalized='{normalized}' source={source}"
+                )
+        else:
+            normalized = SYSTEM_ALIASES.get(system, system or "misc")
+    if normalized not in KNOWN_SYSTEMS:
+        log_key = (source, normalized)
+        if log_key not in _UNKNOWN_SYSTEM_LOGGED:
+            _UNKNOWN_SYSTEM_LOGGED.add(log_key)
+            print(
+                f"[conditioning] Unknown energy system '{system or 'unknown'}' "
+                f"normalized='{normalized}' source={source}"
+            )
+    return normalized
+
+
+def _sanitize_conditioning_bank(bank, *, source: str):
+    def normalize_items(items: list[dict]) -> list[dict]:
+        cleaned: list[dict] = []
+        for item in items:
+            normalize_item_tags(item)
+            placement = item.get("placement", "conditioning").lower()
+            if placement != "conditioning":
+                cleaned.append(item)
+                continue
+            normalized = normalize_system(item.get("system"), source=source)
+            if normalized not in KNOWN_SYSTEMS:
+                name = item.get("name", "Unnamed Drill")
+                print(
+                    f"[conditioning] Removing drill with invalid system "
+                    f"bank={source} name='{name}' system='{item.get('system')}'"
+                )
+                continue
+            if item.get("system") != normalized:
+                item["system"] = normalized
+            cleaned.append(item)
+        return cleaned
+
+    if isinstance(bank, list):
+        return normalize_items(bank)
+    cleaned_bank = {}
+    for key, items in bank.items():
+        if isinstance(items, list):
+            cleaned_bank[key] = normalize_items(items)
+        else:
+            cleaned_bank[key] = items
+    return cleaned_bank
+
+
+def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = False):
     bank = json.loads(path.read_text())
+    if enforce_conditioning_systems:
+        return _sanitize_conditioning_bank(bank, source=source)
     if isinstance(bank, list):
         for item in bank:
             normalize_item_tags(item)
-    else:
-        for items in bank.values():
-            if isinstance(items, list):
-                for item in items:
-                    normalize_item_tags(item)
+        return bank
+    for items in bank.values():
+        if isinstance(items, list):
+            for item in items:
+                normalize_item_tags(item)
     return bank
 
 
 # Load banks
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 conditioning_bank = _load_bank(
-    DATA_DIR / "conditioning_bank.json", source="conditioning_bank.json"
+    DATA_DIR / "conditioning_bank.json",
+    source="conditioning_bank.json",
+    enforce_conditioning_systems=True,
 )
 style_conditioning_bank = _load_bank(
-    DATA_DIR / "style_conditioning_bank.json", source="style_conditioning_bank.json"
+    DATA_DIR / "style_conditioning_bank.json",
+    source="style_conditioning_bank.json",
+    enforce_conditioning_systems=True,
 )
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
@@ -151,26 +239,6 @@ STYLE_CONDITIONING_RATIO = {
     "SPP": 0.60,
     "TAPER": 0.05,
 }
-
-_UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
-_UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
-
-_INJURY_GUARD_LOGGED: set[tuple] = set()
-
-
-def normalize_system(raw_system: str | None, *, source: str) -> str:
-    """Return a normalized system name and log unknown values once."""
-    system = (raw_system or "").strip().lower()
-    normalized = SYSTEM_ALIASES.get(system, system or "misc")
-    if normalized not in KNOWN_SYSTEMS:
-        log_key = (source, normalized)
-        if log_key not in _UNKNOWN_SYSTEM_LOGGED:
-            _UNKNOWN_SYSTEM_LOGGED.add(log_key)
-            print(
-                f"[conditioning] Unknown energy system '{system or 'unknown'}' "
-                f"normalized='{normalized}' source={source}"
-            )
-    return normalized
 
 
 def get_system_or_warn(drill: dict, *, source: str) -> str | None:
@@ -493,6 +561,8 @@ def generate_conditioning_block(flags):
 
     for drill in conditioning_bank:
         d = drill.copy()
+        if d.get("placement", "conditioning").lower() != "conditioning":
+            continue
         if fight_format == "boxing":
             d["name"] = rename_map.get(d.get("name"), d.get("name"))
             d["tags"] = [
@@ -601,6 +671,8 @@ def generate_conditioning_block(flags):
     target_style_tags = set(style_names + tech_style_tags)
     for drill in style_conditioning_bank:
         d = drill.copy()
+        if d.get("placement", "conditioning").lower() != "conditioning":
+            continue
         if fight_format == "boxing":
             d["name"] = rename_map.get(d.get("name"), d.get("name"))
             d["tags"] = [
@@ -865,8 +937,11 @@ def generate_conditioning_block(flags):
     # --------- UNIVERSAL CONDITIONING INSERTION ---------
     if phase == "GPP":
         try:
-            with open(DATA_DIR / "universal_gpp_conditioning.json", "r") as f:
-                universal_conditioning = json.load(f)
+            universal_conditioning = _load_bank(
+                DATA_DIR / "universal_gpp_conditioning.json",
+                source="universal_gpp_conditioning.json",
+                enforce_conditioning_systems=True,
+            )
         except Exception:
             universal_conditioning = []
 
@@ -886,6 +961,8 @@ def generate_conditioning_block(flags):
             if injected >= injected_target or len(selected_drill_names) >= total_drills:
                 break
             if drill.get("name") in existing_cond_names:
+                continue
+            if drill.get("placement", "conditioning").lower() != "conditioning":
                 continue
             if not _is_drill_text_safe(drill, injuries, label="conditioning"):
                 continue
@@ -917,8 +994,11 @@ def generate_conditioning_block(flags):
     # --------- STYLE TAPER DRILL INSERTION ---------
     if phase == "TAPER":
         try:
-            with open(DATA_DIR / "style_taper_conditioning.json", "r") as f:
-                style_taper_bank = json.load(f)
+            style_taper_bank = _load_bank(
+                DATA_DIR / "style_taper_conditioning.json",
+                source="style_taper_conditioning.json",
+                enforce_conditioning_systems=True,
+            )
         except Exception:
             style_taper_bank = []
 
@@ -926,6 +1006,8 @@ def generate_conditioning_block(flags):
         style_set = set(style_names)
         taper_candidates = []
         for d in style_taper_bank:
+            if d.get("placement", "conditioning").lower() != "conditioning":
+                continue
             if not style_set.intersection(set(normalize_tags(d.get("tags", [])))):
                 continue
             if not _is_drill_text_safe(d, injuries, label="conditioning"):
@@ -940,7 +1022,8 @@ def generate_conditioning_block(flags):
             taper_candidates = [
                 d
                 for d in style_taper_bank
-                if _is_drill_text_safe(d, injuries, label="conditioning")
+                if d.get("placement", "conditioning").lower() == "conditioning"
+                and _is_drill_text_safe(d, injuries, label="conditioning")
                 and is_injury_safe(d, injuries)
                 and (
                     not normalize_equipment_list(d.get("equipment", []))
@@ -972,6 +1055,7 @@ def generate_conditioning_block(flags):
         taper_plyos = [
             d for d in conditioning_bank
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
+            and d.get("placement", "conditioning").lower() == "conditioning"
             and "plyometric" in set(normalize_tags(d.get("tags", [])))
             and _is_drill_text_safe(d, injuries, label="conditioning")
             and is_injury_safe(d, injuries)
@@ -1006,6 +1090,7 @@ def generate_conditioning_block(flags):
         skill_drills = [
             d for d in style_conditioning_bank
             if "skill_refinement" in set(normalize_tags(d.get("tags", [])))
+            and d.get("placement", "conditioning").lower() == "conditioning"
             and phase.upper() in d.get("phases", [])
             and _is_drill_text_safe(d, injuries, label="conditioning")
             and is_injury_safe(d, injuries)
