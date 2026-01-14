@@ -309,22 +309,20 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
         fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
 
     strength_output = [
-        "🏋️‍♂️ **Strength & Power Module**",
-        f"**Session Title:** Session 1 — {phase_titles.get(phase, 'Strength & Power')}",
         f"**Phase:** {phase}",
         f"**Primary Focus:** {focus}",
         f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly with small load jumps.')}",
         f"**If Time Short:** {time_short_note.get(phase, 'Keep top 2 lifts.')}",
         "",
-        "**Top Exercises:**",
     ]
 
-    for ex in exercises:
-        strength_output.append(f"• {ex['name']}")
+    top_exercises = "; ".join(ex["name"] for ex in exercises)
+    strength_output.append(f"**Top Exercises:** {top_exercises}")
 
     strength_output += [
         "",
-        f"**Prescription:** {base_block}",
+        "**Prescription:**",
+        base_block,
     ]
 
     if fatigue_note:
