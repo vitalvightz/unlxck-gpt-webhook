@@ -10,6 +10,7 @@ from .training_context import (
 )
 from .tagging import normalize_item_tags, normalize_tags
 from .injury_filtering import (
+    _load_style_specific_exercises,
     injury_match_details,
     is_injury_safe_with_fields,
     log_injury_debug,
@@ -24,13 +25,7 @@ phase_equipment_boost = {
 
 # Load style specific exercises (JSON list)
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-try:
-    STYLE_EXERCISES = json.loads((DATA_DIR / "style_specific_exercises").read_text())
-except Exception:
-    STYLE_EXERCISES = []
-else:
-    for item in STYLE_EXERCISES:
-        normalize_item_tags(item)
+STYLE_EXERCISES = _load_style_specific_exercises()
 
 
 CANONICAL_STYLE_TAGS = {
@@ -81,6 +76,7 @@ def score_exercise(
     weakness_tags,
     goal_tags,
     style_tags,
+    must_have_tags,
     phase_tags,
     current_phase,
     fatigue_level,
@@ -94,6 +90,7 @@ def score_exercise(
         "goal_hits": 0,
         "weakness_hits": 0,
         "style_hits": 0,
+        "must_have_hits": 0,
         "phase_hits": 0,
         "load_adjustments": 0.0,
         "equipment_boost": 0.0,
@@ -116,6 +113,11 @@ def score_exercise(
         style_score += 0.1
     score += style_score
     reasons["style_hits"] = len(matched_style_tags)
+
+    must_have_matches = len(set(exercise_tags) & set(must_have_tags))
+    if must_have_matches:
+        score += must_have_matches * 0.35
+    reasons["must_have_hits"] = must_have_matches
 
     total_matches = len(
         set(exercise_tags) & set(weakness_tags + goal_tags + style_tags)
@@ -241,6 +243,21 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     base_block, focus = phase_loads.get(
         phase, ("Default fallback block", "Ensure phase logic handled upstream.")
     )
+    phase_titles = {
+        "GPP": "Foundation Strength – Base Build",
+        "SPP": "Fight-Specific Strength – Power Conversion",
+        "TAPER": "Neural Primer – Sharpness & Freshness",
+    }
+    weekly_progression = {
+        "GPP": "Add 1 set or ~5–10% load weekly; deload final week by ~20%.",
+        "SPP": "Hold volume, increase intensity or bar speed weekly; deload final week by ~20%.",
+        "TAPER": "Cut total volume 40–60%, keep intensity crisp; last 3–5 days very light.",
+    }
+    time_short_note = {
+        "GPP": "If time short: keep top 2 lifts + 1 trunk/neck drill.",
+        "SPP": "If time short: keep heavy lift + paired explosive + trunk.",
+        "TAPER": "If time short: keep 1 neural primer + 1 trunk/neck drill.",
+    }
 
     fatigue_note = ""
     if fatigue == "high":
@@ -250,8 +267,11 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
     strength_output = [
         "🏋️‍♂️ **Strength & Power Module**",
+        f"**Session Title:** {phase_titles.get(phase, 'Strength & Power')}",
         f"**Phase:** {phase}",
         f"**Primary Focus:** {focus}",
+        f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly with small load jumps.')}",
+        f"**If Time Short:** {time_short_note.get(phase, 'Keep top 2 lifts.')}",
         "",
         "**Top Exercises:**",
     ]
@@ -354,6 +374,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     style_tags = [t for s in style_list for t in style_tag_map.get(s, [])]
     goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
+    must_have_by_phase = {
+        "GPP": ["core", "posterior_chain", "neck", "stability"],
+        "SPP": ["core", "posterior_chain", "neck", "stability"],
+        "TAPER": ["core", "neck", "stability", "reactive"],
+    }
+    must_have_tags = must_have_by_phase.get(phase, [])
 
     phase_tag_boost = {
         "GPP": {"triphasic": 1, "tempo": 1, "eccentric": 1},
@@ -414,6 +440,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             weakness_tags=weaknesses or [],
             goal_tags=goal_tags,
             style_tags=style_tags,
+            must_have_tags=must_have_tags,
             phase_tags=phase_tags,
             current_phase=phase,
             fatigue_level=fatigue,
@@ -503,10 +530,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # Remove any duplicate exercise names that slipped through scoring
     seen_exercises: set[str] = set()
     unique_top: list[dict] = []
+    movement_counts: dict[str, int] = {}
     for ex in top_exercises:
         name = ex.get("name")
         if name not in seen_exercises:
+            movement = normalize_exercise_movement(ex)
+            if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
+                continue
             seen_exercises.add(name)
+            movement_counts[movement] = movement_counts.get(movement, 0) + 1
             unique_top.append(ex)
     top_exercises = unique_top
 
