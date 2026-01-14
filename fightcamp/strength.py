@@ -85,12 +85,19 @@ def score_exercise(
     is_rehab,
 ):
     """Return a weighted score and breakdown for a candidate exercise."""
+    exercise_tags = normalize_tags(exercise_tags or [])
+    weakness_tags = normalize_tags(weakness_tags or [])
+    goal_tags = normalize_tags(goal_tags or [])
+    style_tags = normalize_tags(style_tags or [])
+    must_have_tags = normalize_tags(must_have_tags or [])
+    phase_tags = normalize_tags(phase_tags or [])
     score = 0.0
     reasons = {
         "goal_hits": 0,
         "weakness_hits": 0,
         "style_hits": 0,
         "must_have_hits": 0,
+        "must_have_bonus": 0.0,
         "phase_hits": 0,
         "load_adjustments": 0.0,
         "equipment_boost": 0.0,
@@ -118,6 +125,10 @@ def score_exercise(
     if must_have_matches:
         score += must_have_matches * 0.35
     reasons["must_have_hits"] = must_have_matches
+    must_have_bonus_tags = {"core", "posterior_chain", "neck", "stability"}
+    must_have_bonus = len(set(exercise_tags) & must_have_bonus_tags) * 0.15
+    score += must_have_bonus
+    reasons["must_have_bonus"] = round(must_have_bonus, 2)
 
     total_matches = len(
         set(exercise_tags) & set(weakness_tags + goal_tags + style_tags)
@@ -205,22 +216,54 @@ else:
         normalize_item_tags(item)
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
+MOVEMENT_PATTERN_TAGS = {
+    "squat": {"squat", "quad_dominant"},
+    "hinge": {"hinge", "posterior_chain", "hip_dominant", "deadlift"},
+    "push": {"push", "upper_body", "press"},
+    "pull": {"pull"},
+    "lunge": {"lunge", "unilateral"},
+    "rotation": {"rotational", "anti_rotation"},
+    "carry": {"carry", "loaded_carry", "grip"},
+    "core": {"core"},
+    "neck": {"neck"},
+}
+
+MOVEMENT_PATTERN_KEYWORDS = {
+    "squat": ["squat"],
+    "hinge": ["hinge", "deadlift", "rdl", "hip hinge"],
+    "push": ["press", "push", "bench"],
+    "pull": ["row", "pull", "chin"],
+    "lunge": ["lunge", "split squat", "step-up", "step up"],
+    "rotation": ["rotation", "rotational", "anti-rotation", "anti rotation"],
+    "carry": ["carry", "farmer", "suitcase"],
+    "core": ["core", "trunk", "ab"],
+    "neck": ["neck"],
+}
+
+
+def _detect_movement_pattern(exercise: dict) -> str:
+    tags = set(normalize_tags(exercise.get("tags") or []))
+    for pattern, tag_set in MOVEMENT_PATTERN_TAGS.items():
+        if tags & tag_set:
+            return pattern
+    text_fields = [
+        exercise.get("name", ""),
+        exercise.get("movement", ""),
+        exercise.get("category", ""),
+        exercise.get("type", ""),
+    ]
+    haystack = " ".join(str(val) for val in text_fields).lower()
+    for pattern, keywords in MOVEMENT_PATTERN_KEYWORDS.items():
+        if any(keyword in haystack for keyword in keywords):
+            return pattern
+    return "unknown"
+
+
 def normalize_exercise_movement(exercise: dict) -> str:
     """Ensure exercises expose a canonical movement key."""
-    movement = exercise.get("movement")
-    if movement:
-        return movement
-    for key in ("category", "type"):
-        value = exercise.get(key)
-        if value:
-            exercise["movement"] = value
-            return value
-    tags = exercise.get("tags") or []
-    if tags:
-        exercise["movement"] = tags[0]
-        return tags[0]
-    exercise["movement"] = "unknown"
-    return "unknown"
+    movement = _detect_movement_pattern(exercise)
+    exercise["movement"] = movement
+    return movement
 
 
 def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> str:
@@ -267,7 +310,7 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
     strength_output = [
         "🏋️‍♂️ **Strength & Power Module**",
-        f"**Session Title:** {phase_titles.get(phase, 'Strength & Power')}",
+        f"**Session Title:** Session 1 — {phase_titles.get(phase, 'Strength & Power')}",
         f"**Phase:** {phase}",
         f"**Primary Focus:** {focus}",
         f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly with small load jumps.')}",
@@ -630,6 +673,32 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = inserts + base_exercises
     if len(base_exercises) > target_exercises:
         base_exercises = base_exercises[:target_exercises]
+
+    def _apply_movement_caps(exercises: list[dict]) -> list[dict]:
+        movement_counts: dict[str, int] = {}
+        capped: list[dict] = []
+        for ex in exercises:
+            movement = normalize_exercise_movement(ex)
+            if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
+                continue
+            movement_counts[movement] = movement_counts.get(movement, 0) + 1
+            capped.append(ex)
+
+        if len(capped) < target_exercises:
+            for cand, _, cand_reasons in weighted_exercises:
+                if cand in capped:
+                    continue
+                movement = normalize_exercise_movement(cand)
+                if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
+                    continue
+                movement_counts[movement] = movement_counts.get(movement, 0) + 1
+                capped.append(cand)
+                reason_lookup.setdefault(cand.get("name"), cand_reasons)
+                if len(capped) >= target_exercises:
+                    break
+        return capped
+
+    base_exercises = _apply_movement_caps(base_exercises)
 
     # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------
     def _enforce_conflicts(ex_list):

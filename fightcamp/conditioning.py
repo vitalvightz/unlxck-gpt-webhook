@@ -290,7 +290,7 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
 PHASE_SYSTEM_RATIOS = {
     "GPP": {"aerobic": 0.5, "glycolytic": 0.3, "alactic": 0.2},
     "SPP": {"glycolytic": 0.5, "alactic": 0.3, "aerobic": 0.2},
-    "TAPER": {"alactic": 0.6, "aerobic": 0.4, "glycolytic": 0.0},
+    "TAPER": {"alactic": 0.7, "aerobic": 0.3, "glycolytic": 0.0},
 }
 
 def expand_tags(input_list, tag_map):
@@ -418,6 +418,7 @@ def render_conditioning_block(
     phase: str,
     phase_color: str,
     missing_systems: Iterable[str] | None = None,
+    num_sessions: int = 1,
 ) -> str:
     phase = phase.upper()
     phase_titles = {
@@ -452,12 +453,6 @@ def render_conditioning_block(
     }
 
     output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase}**"]
-    output_lines.append(f"**Session Title:** {phase_titles.get(phase, 'Conditioning')}")
-    output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
-    output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
-    output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
-    output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
-    output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
     missing_systems = set(missing_systems or [])
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if system_name in missing_systems:
@@ -466,43 +461,82 @@ def render_conditioning_block(
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
 
+    session_count = max(1, num_sessions or 1)
+    total_drills = sum(len(drills or []) for drills in grouped_drills.values())
+    if total_drills:
+        session_count = min(session_count, total_drills)
+    sessions = [{"drills": {}, "systems": set()} for _ in range(session_count)]
+    drill_index = 0
     for system in ordered_keys:
-        drills = grouped_drills.get(system)
-        if not drills:
-            continue
-        output_lines.append(
-            f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
-        )
+        drills = grouped_drills.get(system, [])
         for d in drills:
-            name = d.get("name", "Unnamed Drill")
-            equipment = normalize_equipment_list(d.get("equipment", []))
-            extra_eq = [e for e in equipment if e not in name.lower()]
-            if extra_eq:
-                name = f"{name} ({', '.join(extra_eq)})"
+            target = sessions[drill_index % session_count]
+            target["drills"].setdefault(system, []).append(d)
+            target["systems"].add(system)
+            drill_index += 1
 
-            timing = d.get("timing") or d.get("duration") or "—"
-            load = d.get("load") or d.get("intensity") or "—"
-            equip_note = d.get("equipment_note") or d.get("equipment_notes")
+    system_labels = {
+        "alactic": "Alactic Speed",
+        "glycolytic": "Glycolytic Power",
+        "aerobic": "Aerobic Base",
+    }
+    phase_suffix = {
+        "GPP": " + Repeatability",
+        "SPP": " + Fight-Pace Density",
+        "TAPER": " + Skill Rhythm",
+    }
 
-            purpose = (
-                d.get("purpose")
-                or d.get("notes")
-                or d.get("description")
-                or "—"
+    for idx, session in enumerate(sessions, start=1):
+        if not session["drills"]:
+            continue
+        systems = session["systems"]
+        title_bits = [system_labels[s] for s in ordered_keys if s in systems]
+        title = " + ".join(title_bits) if title_bits else phase_titles.get(phase, "Conditioning")
+        title += phase_suffix.get(phase, "")
+        output_lines.append(f"\n### Session {idx} — {title}")
+        output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
+        output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
+        output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
+        output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
+        output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
+
+        for system in ordered_keys:
+            drills = session["drills"].get(system)
+            if not drills:
+                continue
+            output_lines.append(
+                f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
             )
-            rest = d.get("rest", "—")
+            for d in drills:
+                name = d.get("name", "Unnamed Drill")
+                equipment = normalize_equipment_list(d.get("equipment", []))
+                extra_eq = [e for e in equipment if e not in name.lower()]
+                if extra_eq:
+                    name = f"{name} ({', '.join(extra_eq)})"
 
-            drill_block = {
-                "system": system.upper(),
-                "name": name,
-                "load": load,
-                "equipment_note": equip_note,
-                "rest": rest,
-                "timing": timing,
-                "purpose": purpose,
-                "red_flags": d.get("red_flags", "None"),
-            }
-            output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
+                timing = d.get("timing") or d.get("duration") or "—"
+                load = d.get("load") or d.get("intensity") or "—"
+                equip_note = d.get("equipment_note") or d.get("equipment_notes")
+
+                purpose = (
+                    d.get("purpose")
+                    or d.get("notes")
+                    or d.get("description")
+                    or "—"
+                )
+                rest = d.get("rest", "—")
+
+                drill_block = {
+                    "system": system.upper(),
+                    "name": name,
+                    "load": load,
+                    "equipment_note": equip_note,
+                    "rest": rest,
+                    "timing": timing,
+                    "purpose": purpose,
+                    "red_flags": d.get("red_flags", "None"),
+                }
+                output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
 
     return "\n".join(output_lines)
 
@@ -518,6 +552,7 @@ def generate_conditioning_block(flags):
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
+    days_until_fight = flags.get("days_until_fight")
 
     # Normalize technical style(s)
     if isinstance(technical, str):
@@ -544,6 +579,7 @@ def generate_conditioning_block(flags):
     style_tags = normalize_tags([t for s in style_tags for t in style_tag_map.get(s, [])])
 
     goal_tags = expand_tags(goals, goal_tag_map)
+    goal_list = [g.lower() for g in goals]
     weak_tags = expand_tags(weaknesses, weakness_tag_map)
     shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
         'shoulder' in w.lower() for w in weaknesses
@@ -893,6 +929,33 @@ def generate_conditioning_block(flags):
     style_remaining = min(style_target, sum(len(v) for v in style_system_drills.values()))
     general_remaining = total_drills - style_remaining
 
+    allow_glycolytic = False
+    if phase.upper() == "TAPER":
+        lactic_goal_tags = {"glycolytic", "anaerobic_lactic", "lactic"}
+        has_conditioning_goal = any(g in {"conditioning", "endurance"} for g in goal_list)
+        has_lactic_goal = bool(set(goal_tags) & lactic_goal_tags)
+        allow_glycolytic = (
+            fatigue == "low"
+            and (has_conditioning_goal or has_lactic_goal)
+            and isinstance(days_until_fight, int)
+            and days_until_fight > 7
+        )
+
+    def _allow_system_insert(system: str) -> bool:
+        if phase.upper() != "TAPER" or system != "glycolytic":
+            return True
+        return allow_glycolytic and selected_counts["glycolytic"] < 1
+
+    def _append_drill(system: str, drill: dict, reasons: dict | None) -> None:
+        if not _allow_system_insert(system):
+            return
+        final_drills.append((system, [drill]))
+        selected_drill_names.append(drill.get("name"))
+        if system in selected_counts:
+            selected_counts[system] += 1
+        if reasons is not None:
+            reason_lookup[drill.get("name")] = reasons
+
     def blended_pick(system: str):
         nonlocal style_remaining, general_remaining
         drill = None
@@ -910,15 +973,8 @@ def generate_conditioning_block(flags):
         return None, None
 
     if phase.upper() == "TAPER":
-        style_list = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
-        combined_focus = [w.lower() for w in weaknesses] + [g.lower() for g in goals]
+        combined_focus = [w.lower() for w in weaknesses] + goal_list
         allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
-        explicit_lactic_goal = any(g in ["conditioning", "endurance"] for g in combined_focus)
-        allow_glycolytic = (
-            fatigue == "low"
-            and explicit_lactic_goal
-            and any(s in ["pressure fighter", "scrambler"] for s in style_list)
-        )
 
         d, r = blended_pick("alactic")
         if d:
@@ -935,7 +991,7 @@ def generate_conditioning_block(flags):
                 selected_counts["aerobic"] += 1
                 taper_selected += 1
 
-        if allow_glycolytic and taper_selected < 2:
+        if allow_glycolytic and taper_selected < 2 and _allow_system_insert("glycolytic"):
             d, r = blended_pick("glycolytic")
             if d:
                 final_drills.append(("glycolytic", [d]))
@@ -1079,9 +1135,7 @@ def generate_conditioning_block(flags):
             if drill.get("name") not in existing_cond_names:
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
-                    final_drills.append((system, [drill]))
-                    selected_drill_names.append(drill.get("name"))
-                    reason_lookup[drill.get("name")] = {
+                    _append_drill(system, drill, {
                         "goal_hits": 0,
                         "weakness_hits": 0,
                         "style_hits": 0,
@@ -1090,7 +1144,7 @@ def generate_conditioning_block(flags):
                         "equipment_boost": 0,
                         "penalties": 0,
                         "final_score": 0,
-                    }
+                    })
 
         # --------- TAPER PLYOMETRIC GUARANTEE ---------
         taper_plyos = [
@@ -1111,9 +1165,7 @@ def generate_conditioning_block(flags):
             if drill.get("name") not in existing_cond_names:
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
                 if system is not None:
-                    final_drills.append((system, [drill]))
-                    selected_drill_names.append(drill.get("name"))
-                    reason_lookup[drill.get("name")] = {
+                    _append_drill(system, drill, {
                         "goal_hits": 0,
                         "weakness_hits": 0,
                         "style_hits": 0,
@@ -1122,7 +1174,7 @@ def generate_conditioning_block(flags):
                         "equipment_boost": 0,
                         "penalties": 0,
                         "final_score": 0,
-                    }
+                    })
 
     # --------- SKILL REFINEMENT DRILL GUARANTEE ---------
     goal_set = {g.lower() for g in goals}
@@ -1146,8 +1198,7 @@ def generate_conditioning_block(flags):
                 system = get_system_or_warn(drill, source="skill_refinement")
                 if system is None:
                     continue
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(drill.get("name"))
+                _append_drill(system, drill, None)
                 break
 
     # --------- OPTIONAL COORDINATION DRILL INSERTION ---------
@@ -1158,9 +1209,7 @@ def generate_conditioning_block(flags):
     if coord_drill and len(selected_drill_names) < total_drills:
         system = get_system_or_warn(coord_drill, source="coordination")
         if system is not None:
-            final_drills.append((system, [coord_drill]))
-            selected_drill_names.append(coord_drill.get("name"))
-            reason_lookup[coord_drill.get("name")] = {
+            _append_drill(system, coord_drill, {
                 "goal_hits": 0,
                 "weakness_hits": 0,
                 "style_hits": 0,
@@ -1169,7 +1218,7 @@ def generate_conditioning_block(flags):
                 "equipment_boost": 0,
                 "penalties": 0,
                 "final_score": 0,
-            }
+            })
 
     # --------- PRO NECK DRILL GUARANTEE ---------
     status = flags.get("status", "").strip().lower()
@@ -1196,9 +1245,7 @@ def generate_conditioning_block(flags):
                 drill = random.choice(neck_candidates)
                 system = get_system_or_warn(drill, source="pro_neck")
                 if system is not None:
-                    final_drills.append((system, [drill]))
-                    selected_drill_names.append(drill.get("name"))
-                    reason_lookup[drill.get("name")] = {
+                    _append_drill(system, drill, {
                         "goal_hits": 0,
                         "weakness_hits": 0,
                         "style_hits": 0,
@@ -1207,7 +1254,7 @@ def generate_conditioning_block(flags):
                         "equipment_boost": 0,
                         "penalties": 0,
                         "final_score": 0,
-                    }
+                    })
 
     # Trim any extras beyond the recommended count
     if len(selected_drill_names) > total_drills:
@@ -1348,6 +1395,7 @@ def generate_conditioning_block(flags):
         phase=phase,
         phase_color=phase_color,
         missing_systems=missing_systems,
+        num_sessions=num_conditioning_sessions,
     )
 
     why_log = []

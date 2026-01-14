@@ -156,10 +156,12 @@ async def generate_plan(data: dict):
 
     # Calculate weeks out from fight date
     weeks_out: int | str
+    days_until_fight = None
     if next_fight_date:
         fight_date = parse_fight_date(next_fight_date)
         if fight_date:
-            weeks_out = max(1, (fight_date - datetime.now()).days // 7)
+            days_until_fight = (fight_date - datetime.now()).days
+            weeks_out = max(1, days_until_fight // 7)
         else:
             weeks_out = "N/A"
     else:
@@ -230,6 +232,7 @@ async def generate_plan(data: dict):
         "prev_exercises": [],
         "recent_exercises": [],
         "phase_weeks": phase_weeks,
+        "days_until_fight": days_until_fight,
     }
 
     # Module generation
