@@ -396,20 +396,31 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
 
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
+    gap = f"{br}{br}"
     bullet = "•"
-    load_line = f"  {bullet} Load: {drill['load']}"
+    load_line = f"{drill['load']}"
     if drill.get("equipment_note"):
         load_line += f" ({drill['equipment_note']})"
-    load_line += br
     parts = [
-        f"- **Drill: {drill['name']}**",
-        load_line,
-        f"  {bullet} Rest: {drill['rest']}{br}",
-        f"  {bullet} Timing: {drill['timing']}{br}",
-        f"  {bullet} Purpose: {drill['purpose']}{br}",
-        f"  ⚠️ Red Flags: {drill['red_flags']}",
+        "- Drill:",
+        f"  {drill['name']}",
+        "",
+        f"  {bullet} Load:",
+        f"    {load_line}",
+        "",
+        f"  {bullet} Rest:",
+        f"    {drill['rest']}",
+        "",
+        f"  {bullet} Timing:",
+        f"    {drill['timing']}",
+        "",
+        f"  {bullet} Purpose:",
+        f"    {drill['purpose']}",
+        "",
+        "  ⚠️ Red Flags:",
+        f"    {drill['red_flags']}",
     ]
-    return "".join(parts) + "\n"
+    return br.join(parts) + gap + "\n"
 
 
 def render_conditioning_block(
@@ -451,6 +462,9 @@ def render_conditioning_block(
         "SPP": "If fatigue high: drop volume, keep rest longer.",
         "TAPER": "If fatigue high: keep only 4–6 low-impact bursts.",
     }
+
+    def append_label_block(lines: list[str], label: str, value: str) -> None:
+        lines.extend([f"{label}:", f"  {value}", ""])
 
     output_lines = []
     missing_systems = set(missing_systems or [])
@@ -494,19 +508,28 @@ def render_conditioning_block(
         title = " + ".join(title_bits) if title_bits else phase_titles.get(phase, "Conditioning")
         title += phase_suffix.get(phase, "")
         output_lines.append(f"\n#### Conditioning Block ({phase}) — {title}")
-        output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
-        output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
-        output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
-        output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
-        output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
+        append_label_block(output_lines, "Intent", phase_intent.get(phase, "Match phase intent."))
+        append_label_block(
+            output_lines, "Dosage Template", dosage_template.get(phase, "Match system goals.")
+        )
+        append_label_block(
+            output_lines, "Weekly Progression", weekly_progression.get(phase, "Progress weekly.")
+        )
+        append_label_block(
+            output_lines, "If Time Short", time_short.get(phase, "Keep top 2 drills.")
+        )
+        append_label_block(
+            output_lines, "If Fatigue High", fatigue_note.get(phase, "Reduce volume.")
+        )
 
         for system in ordered_keys:
             drills = session["drills"].get(system)
             if not drills:
                 continue
-            output_lines.append(
-                f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
-            )
+            output_lines.append("")
+            output_lines.append("📌 System:")
+            output_lines.append(f"  {system.upper()} (scaled by format emphasis)")
+            output_lines.append("")
             for d in drills:
                 name = d.get("name", "Unnamed Drill")
                 equipment = normalize_equipment_list(d.get("equipment", []))

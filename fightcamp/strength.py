@@ -308,27 +308,37 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     elif fatigue == "moderate":
         fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
 
-    strength_output = [
-        f"**Phase:** {phase}",
-        f"**Primary Focus:** {focus}",
-        f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly with small load jumps.')}",
-        f"**If Time Short:** {time_short_note.get(phase, 'Keep top 2 lifts.')}",
-        "",
-    ]
+    def append_label_block(lines: list[str], label: str, value: str) -> None:
+        lines.extend([f"{label}:", f"  {value}", ""])
+
+    strength_output: list[str] = []
+    append_label_block(strength_output, "Phase", phase)
+    append_label_block(strength_output, "Primary Focus", focus)
+    append_label_block(
+        strength_output,
+        "Weekly Progression",
+        weekly_progression.get(phase, "Progress weekly with small load jumps."),
+    )
+    append_label_block(
+        strength_output,
+        "If Time Short",
+        time_short_note.get(phase, "Keep top 2 lifts."),
+    )
 
     top_exercises = "; ".join(ex["name"] for ex in exercises)
-    strength_output.append(f"**Top Exercises:** {top_exercises}")
+    append_label_block(strength_output, "Top Exercises", top_exercises)
 
     strength_output += [
+        "**Prescription**",
+        f"  {base_block}",
         "",
-        "**Prescription:**",
-        base_block,
     ]
 
     if fatigue_note:
         strength_output += [
             "",
-            f"**Adjustment:** {fatigue_note}",
+            "**Adjustment**",
+            f"  {fatigue_note}",
         ]
 
     return "\n".join(strength_output)
