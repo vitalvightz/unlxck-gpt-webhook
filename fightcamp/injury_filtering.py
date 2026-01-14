@@ -432,36 +432,21 @@ def _load_style_specific_exercises() -> list[dict]:
     return []
 
 
+def _load_bank_items(filename: str) -> list[dict]:
+    items = json.loads((DATA_DIR / filename).read_text())
+    for item in items:
+        normalize_item_tags(item)
+    return items
+
+
 def collect_banks() -> dict[str, list[dict]]:
     banks: dict[str, list[dict]] = {}
-    banks["exercise_bank"] = json.loads((DATA_DIR / "exercise_bank.json").read_text())
-    for item in banks["exercise_bank"]:
-        normalize_item_tags(item)
-    banks["conditioning_bank"] = json.loads(
-        (DATA_DIR / "conditioning_bank.json").read_text()
-    )
-    for item in banks["conditioning_bank"]:
-        normalize_item_tags(item)
-    banks["style_conditioning_bank"] = json.loads(
-        (DATA_DIR / "style_conditioning_bank.json").read_text()
-    )
-    for item in banks["style_conditioning_bank"]:
-        normalize_item_tags(item)
-    banks["universal_gpp_strength"] = json.loads(
-        (DATA_DIR / "universal_gpp_strength.json").read_text()
-    )
-    for item in banks["universal_gpp_strength"]:
-        normalize_item_tags(item)
-    banks["universal_gpp_conditioning"] = json.loads(
-        (DATA_DIR / "universal_gpp_conditioning.json").read_text()
-    )
-    for item in banks["universal_gpp_conditioning"]:
-        normalize_item_tags(item)
-    banks["style_taper_conditioning"] = json.loads(
-        (DATA_DIR / "style_taper_conditioning.json").read_text()
-    )
-    for item in banks["style_taper_conditioning"]:
-        normalize_item_tags(item)
+    banks["exercise_bank"] = _load_bank_items("exercise_bank.json")
+    banks["conditioning_bank"] = _load_bank_items("conditioning_bank.json")
+    banks["style_conditioning_bank"] = _load_bank_items("style_conditioning_bank.json")
+    banks["universal_gpp_strength"] = _load_bank_items("universal_gpp_strength.json")
+    banks["universal_gpp_conditioning"] = _load_bank_items("universal_gpp_conditioning.json")
+    banks["style_taper_conditioning"] = _load_bank_items("style_taper_conditioning.json")
     banks["style_specific_exercises"] = _load_style_specific_exercises()
 
     coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text())
