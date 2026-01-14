@@ -290,7 +290,7 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
 PHASE_SYSTEM_RATIOS = {
     "GPP": {"aerobic": 0.5, "glycolytic": 0.3, "alactic": 0.2},
     "SPP": {"glycolytic": 0.5, "alactic": 0.3, "aerobic": 0.2},
-    "TAPER": {"alactic": 0.5, "aerobic": 0.35, "glycolytic": 0.15},
+    "TAPER": {"alactic": 0.6, "aerobic": 0.4, "glycolytic": 0.0},
 }
 
 def expand_tags(input_list, tag_map):
@@ -419,7 +419,45 @@ def render_conditioning_block(
     phase_color: str,
     missing_systems: Iterable[str] | None = None,
 ) -> str:
-    output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase.upper()}**"]
+    phase = phase.upper()
+    phase_titles = {
+        "GPP": "Aerobic Base & Durability",
+        "SPP": "Fight-Specific Conditioning",
+        "TAPER": "Neural Sharpness & Rhythm",
+    }
+    phase_intent = {
+        "GPP": "Build aerobic base, improve repeatability, low damage.",
+        "SPP": "Match fight demands with intervals and skill-relevant density.",
+        "TAPER": "Speed + alactic sharpness, neural freshness, low damage.",
+    }
+    dosage_template = {
+        "GPP": "3–5 rounds of 3–5 min @ RPE 6–7, work:rest 1:1–1:0.5 (cap 20–30 min).",
+        "SPP": "4–6 rounds of 2–5 min @ RPE 7–8, work:rest 1:1–1:0.5 (cap 18–25 min).",
+        "TAPER": "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min).",
+    }
+    weekly_progression = {
+        "GPP": "Add 1 round or ~5–10% volume weekly; deload final week by ~20%.",
+        "SPP": "Increase density or intensity weekly; keep volume flat; deload final week by ~20%.",
+        "TAPER": "Reduce volume 40–60%; keep speed sharp; last 3–5 days very light.",
+    }
+    time_short = {
+        "GPP": "If time short: keep 2 aerobic rounds + 1 alactic pop.",
+        "SPP": "If time short: keep 2 fight-pace rounds (system priority).",
+        "TAPER": "If time short: keep 4–6 alactic bursts + shadowboxing rhythm.",
+    }
+    fatigue_note = {
+        "GPP": "If fatigue high: drop 1–2 rounds, keep intensity easy.",
+        "SPP": "If fatigue high: drop volume, keep rest longer.",
+        "TAPER": "If fatigue high: keep only 4–6 low-impact bursts.",
+    }
+
+    output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase}**"]
+    output_lines.append(f"**Session Title:** {phase_titles.get(phase, 'Conditioning')}")
+    output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
+    output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
+    output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
+    output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
+    output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
     missing_systems = set(missing_systems or [])
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if system_name in missing_systems:
@@ -875,8 +913,11 @@ def generate_conditioning_block(flags):
         style_list = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
         combined_focus = [w.lower() for w in weaknesses] + [g.lower() for g in goals]
         allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
+        explicit_lactic_goal = any(g in ["conditioning", "endurance"] for g in combined_focus)
         allow_glycolytic = (
-            fatigue == "low" and any(s in ["pressure fighter", "scrambler"] for s in style_list)
+            fatigue == "low"
+            and explicit_lactic_goal
+            and any(s in ["pressure fighter", "scrambler"] for s in style_list)
         )
 
         d, r = blended_pick("alactic")
@@ -1153,19 +1194,20 @@ def generate_conditioning_block(flags):
             ]
             if neck_candidates and len(selected_drill_names) < total_drills:
                 drill = random.choice(neck_candidates)
-                system = normalize_system(drill.get("system"), source="pro_neck")
-                final_drills.append((system, [drill]))
-                selected_drill_names.append(drill.get("name"))
-                reason_lookup[drill.get("name")] = {
-                    "goal_hits": 0,
-                    "weakness_hits": 0,
-                    "style_hits": 0,
-                    "phase_hits": 1,
-                    "load_adjustments": 0,
-                    "equipment_boost": 0,
-                    "penalties": 0,
-                    "final_score": 0,
-                }
+                system = get_system_or_warn(drill, source="pro_neck")
+                if system is not None:
+                    final_drills.append((system, [drill]))
+                    selected_drill_names.append(drill.get("name"))
+                    reason_lookup[drill.get("name")] = {
+                        "goal_hits": 0,
+                        "weakness_hits": 0,
+                        "style_hits": 0,
+                        "phase_hits": 1,
+                        "load_adjustments": 0,
+                        "equipment_boost": 0,
+                        "penalties": 0,
+                        "final_score": 0,
+                    }
 
     # Trim any extras beyond the recommended count
     if len(selected_drill_names) > total_drills:

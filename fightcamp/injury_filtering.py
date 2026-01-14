@@ -404,14 +404,30 @@ def injury_match_details(
 
 def _load_style_specific_exercises() -> list[dict]:
     source = DATA_DIR / "style_specific_exercises"
-    try:
-        items = json.loads(source.read_text())
-    except Exception:
-        return []
-    if isinstance(items, list):
+    fallback = DATA_DIR / "style_specific_exercises.json"
+    for path in (source, fallback):
+        if not path.exists():
+            continue
+        try:
+            items = json.loads(path.read_text())
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "style_specific_exercises must be valid JSON (list of exercises). "
+                f"Check {path} for trailing commas or invalid syntax."
+            ) from exc
+        if not isinstance(items, list):
+            raise ValueError(
+                "style_specific_exercises must be a JSON list of exercise objects. "
+                f"Check {path}."
+            )
         for item in items:
             normalize_item_tags(item)
-    return items
+        return items
+    print(
+        "[bank] style_specific_exercises missing. Add data/style_specific_exercises "
+        "or data/style_specific_exercises.json to enable style-specific lifts."
+    )
+    return []
 
 
 def collect_banks() -> dict[str, list[dict]]:
