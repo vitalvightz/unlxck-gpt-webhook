@@ -9,11 +9,16 @@ from .build_block import (
     upload_to_supabase,
     _md_to_html,
 )
+from .bank_schema import validate_training_item
+from .tagging import normalize_item_tags
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
 # Load exercise bank
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+for item in exercise_bank:
+    validate_training_item(item, source="exercise_bank.json", require_phases=True)
+    normalize_item_tags(item)
 
 # Modules
 from .training_context import allocate_sessions, normalize_equipment_list

@@ -8,6 +8,7 @@ from .training_context import (
     allocate_sessions,
     calculate_exercise_numbers,
 )
+from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 from .injury_filtering import (
     _load_style_specific_exercises,
@@ -202,6 +203,7 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
 
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 for item in exercise_bank:
+    validate_training_item(item, source="exercise_bank.json", require_phases=True)
     normalize_item_tags(item)
 
 # Load universal strength list for cross-phase novelty exemptions
@@ -213,6 +215,7 @@ except Exception:
     _universal_strength = []
 else:
     for item in _universal_strength:
+        validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
         normalize_item_tags(item)
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
