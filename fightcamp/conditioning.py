@@ -452,7 +452,7 @@ def render_conditioning_block(
         "TAPER": "If fatigue high: keep only 4–6 low-impact bursts.",
     }
 
-    output_lines = [f"\n🏃‍♂️ **Conditioning Block – {phase}**"]
+    output_lines = []
     missing_systems = set(missing_systems or [])
     for system_name in ["aerobic", "glycolytic", "alactic"]:
         if system_name in missing_systems:
@@ -493,7 +493,7 @@ def render_conditioning_block(
         title_bits = [system_labels[s] for s in ordered_keys if s in systems]
         title = " + ".join(title_bits) if title_bits else phase_titles.get(phase, "Conditioning")
         title += phase_suffix.get(phase, "")
-        output_lines.append(f"\n### Session {idx} — {title}")
+        output_lines.append(f"\n#### Conditioning Block ({phase}) — {title}")
         output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
         output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
         output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
