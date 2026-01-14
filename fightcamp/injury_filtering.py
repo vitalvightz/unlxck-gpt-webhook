@@ -7,6 +7,7 @@ from typing import Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -423,6 +424,7 @@ def _load_style_specific_exercises() -> list[dict]:
                 f"Check {path}."
             )
         for item in items:
+            validate_training_item(item, source=str(path), require_phases=True)
             normalize_item_tags(item)
         return items
     print(
@@ -435,6 +437,7 @@ def _load_style_specific_exercises() -> list[dict]:
 def _load_bank_items(filename: str) -> list[dict]:
     items = json.loads((DATA_DIR / filename).read_text())
     for item in items:
+        validate_training_item(item, source=filename, require_phases=True)
         normalize_item_tags(item)
     return items
 
@@ -453,12 +456,14 @@ def collect_banks() -> dict[str, list[dict]]:
     coordination_bank: list[dict] = []
     if isinstance(coord_data, list):
         for item in coord_data:
+            validate_training_item(item, source="coordination_bank.json", require_phases=True)
             normalize_item_tags(item)
             coordination_bank.append(item)
     elif isinstance(coord_data, dict):
         for val in coord_data.values():
             if isinstance(val, list):
                 for item in val:
+                    validate_training_item(item, source="coordination_bank.json", require_phases=True)
                     normalize_item_tags(item)
                     coordination_bank.append(item)
     banks["coordination_bank"] = coordination_bank

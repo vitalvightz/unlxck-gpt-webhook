@@ -11,7 +11,7 @@ from .training_context import (
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
-from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES
+from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import (
     injury_match_details,
     injury_violation_reasons,
@@ -162,8 +162,14 @@ def _sanitize_conditioning_bank(bank, *, source: str):
     def normalize_items(items: list[dict]) -> list[dict]:
         cleaned: list[dict] = []
         for item in items:
-            normalize_item_tags(item)
             placement = item.get("placement", "conditioning").lower()
+            validate_training_item(
+                item,
+                source=source,
+                require_phases=True,
+                require_system=placement == "conditioning",
+            )
+            normalize_item_tags(item)
             if placement != "conditioning":
                 cleaned.append(item)
                 continue
@@ -197,11 +203,13 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
         return _sanitize_conditioning_bank(bank, source=source)
     if isinstance(bank, list):
         for item in bank:
+            validate_training_item(item, source=source, require_phases=True)
             normalize_item_tags(item)
         return bank
     for items in bank.values():
         if isinstance(items, list):
             for item in items:
+                validate_training_item(item, source=source, require_phases=True)
                 normalize_item_tags(item)
     return bank
 
