@@ -2987,6 +2987,7 @@
       "SPP"
     ],
     "system": "hypertrophy",
+    "placement": "strength",
     "modality": "durability",
     "duration": "4x15 reps (flexion/extension)",
     "intensity": "moderate",
