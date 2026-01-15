@@ -286,7 +286,7 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
             "Maintain intensity, cut volume, CNS freshness. High bar speed focus.",
         ),
     }
-    base_block, focus = phase_loads.get(
+    base_block, _focus = phase_loads.get(
         phase, ("Default fallback block", "Ensure phase logic handled upstream.")
     )
     phase_titles = {
@@ -313,7 +313,6 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
     strength_output = [
         f"**Phase:** {phase}",
-        f"**Primary Focus:** {focus}",
         f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly with small load jumps.')}",
         f"**If Time Short:** {time_short_note.get(phase, 'Keep top 2 lifts.')}",
         "",
