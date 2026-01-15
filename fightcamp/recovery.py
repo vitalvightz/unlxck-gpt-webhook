@@ -92,7 +92,7 @@ def generate_recovery_block(training_context: dict) -> str:
     recovery_block.append("**Core Recovery Strategies:**")
     recovery_block += [
         "- Daily breathwork (5–10 mins post-session)",
-        "- Post-session constant showers (1 min hot/1min cold 5x)",
+        "- Optional contrast shower: 1 min hot / 1 min cold × 5 (comfort-based; avoid if it disrupts sleep).",
         "- 8–9 hours of sleep/night + 90-min blue light cutoff",
         "- Cold exposure 2–3x/week (if needed)",
         "- Mobility circuits/light recovery work daily"
