@@ -709,7 +709,7 @@ def main():
     with open(data_file, "r") as f:
         data = json.load(f)
     result = asyncio.run(generate_plan(data))
-    print(f"::notice title=Plan PDF::URL: {result.get('pdf_url')}")
+    print(f"::notice title=Plan PDF::{result.get('pdf_url')}")
 
 
 if __name__ == "__main__":
