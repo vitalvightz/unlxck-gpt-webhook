@@ -760,6 +760,7 @@ async def generate_plan(data: dict):
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries_display}",
         f"- Training Availability: {available_days}",
+        f"- Equipment Access: {equipment_access_display}",
         f"- Weaknesses: {weak_areas}",
         f"- Key Goals: {key_goals}",
         f"- Mindset Challenges: {', '.join(training_context.mental_block)}",
