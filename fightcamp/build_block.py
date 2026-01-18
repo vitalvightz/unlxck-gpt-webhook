@@ -50,6 +50,22 @@ _CHAR_MAP = {
     ord("️"): "",
 }
 
+_KNOWN_HEADINGS = [
+    "Coach Notes",
+    "Selection Rationale",
+    "Nutrition",
+    "Recovery",
+    "Rehab Protocols",
+    "Mindset Overview",
+    "Sparring & Conditioning Adjustments Table",
+    "Nutrition Adjustments for Unknown Sparring Load",
+    "Athlete Profile",
+    "Mindset Focus",
+    "Strength & Power",
+    "Conditioning",
+    "Injury Guardrails",
+]
+
 
 def _clean_text(text: str) -> str:
     """Return UTF-8 cleaned text without unwanted emoji."""
@@ -74,9 +90,39 @@ def _upgrade_symbols(text: str) -> str:
         .replace("'", "’")
     )
 
+def _sanitize_markdown(text: str) -> str:
+    """Normalize markdown to avoid merged headings or duplicate labels."""
+    if not text:
+        return text
+    heading_pattern = "|".join(re.escape(h) for h in _KNOWN_HEADINGS)
+    if heading_pattern:
+        text = re.sub(
+            rf"([A-Za-z0-9])(?=({heading_pattern}))",
+            r"\1\n",
+            text,
+        )
+        text = re.sub(
+            rf"({heading_pattern})(?=\1)",
+            r"\1\n",
+            text,
+        )
+
+    lines: list[str] = []
+    last_label = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        label = stripped.lower()
+        if stripped and label == last_label:
+            continue
+        lines.append(line)
+        if stripped:
+            last_label = label
+    return "\n".join(lines)
+
 
 def _md_to_html(text: str) -> str:
     """Convert Markdown text to HTML with simple bullet support."""
+    text = _sanitize_markdown(text)
     if markdown2 is None:  # fallback to stripping bold markers
         text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
     time_short_pattern = re.compile(
@@ -191,6 +237,7 @@ def build_html_document(
     athlete_profile_html: str = "",
     coach_notes: str = "",
     selection_rationale_html: str = "",
+    short_notice: bool = False,
 ) -> str:
     """Assemble the full HTML string."""
 
@@ -226,6 +273,8 @@ def build_html_document(
     )
     if record:
         header_line += f' | <b>Record:</b> {_clean_text(record)}'
+    if short_notice:
+        header_line += " | <b>SHORT-NOTICE CAMP</b>"
     header_line += '</p><hr>'
     lines.append(header_line)
 
@@ -242,7 +291,7 @@ def build_html_document(
             _subheading("Injury Guardrails"),
             _md_to_html(block.guardrails),
         ]
-        return "\n".join(parts)
+        return "\n\n".join(parts)
 
     if gpp:
         lines.append(phase_html(gpp, "#4CAF50"))
@@ -281,7 +330,7 @@ def build_html_document(
         "</body></html>",
     ]
 
-    html = "\n".join(lines)
+    html = "\n\n".join(lines)
 
     return html
 

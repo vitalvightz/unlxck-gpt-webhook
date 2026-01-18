@@ -291,6 +291,11 @@ RED_FLAG_TYPES = [
     "infection/inflammatory",
 ]
 
+BFR_SAFETY_GATE = (
+    "Use only if already experienced with BFR and medically appropriate; "
+    "stop if numbness/tingling occurs."
+)
+
 def generate_rehab_protocols(
     *, injury_string: str, exercise_data: list, current_phase: str, seen_drills: set | None = None
 ) -> tuple[str, set]:
@@ -416,6 +421,9 @@ def generate_rehab_protocols(
                 lines.extend([f"  • {d}" for d in drills])
     if not lines:
         return "\n⚠️ No rehab options for this phase.", seen_drills
+
+    if any("bfr" in line.lower() for line in lines):
+        lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines), seen_drills
 
@@ -667,5 +675,8 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
 
     lines += ["", "**Red Flags**"]
     lines.extend([f"- {flag}" for flag in red_flags])
+
+    if any("bfr" in line.lower() for line in lines):
+        lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines).strip()

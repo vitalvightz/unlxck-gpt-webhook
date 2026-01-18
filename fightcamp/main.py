@@ -47,11 +47,81 @@ from .rehab_protocols import (
     generate_support_notes,
 )
 
+GRAPPLING_STYLES = {
+    "mma",
+    "bjj",
+    "wrestler",
+    "wrestling",
+    "grappler",
+    "grappling",
+    "judo",
+    "sambo",
+}
+
+MUAY_THAI_REPLACEMENTS = {
+    "Philly Shell Torture": "High-Guard + Long-Guard Defense Rounds",
+    "Band-Resisted Sprawl to Sprint": "Band-Resisted Check-to-Cross Burst",
+    "Grapple Circuits (High Pace)": "Clinch Pummel + Knee Burst Circuits",
+    "Judo Throw Simulation": "Clinch Off-balance + Knee Entry Patterning",
+}
+
+MUAY_THAI_TERM_REPLACEMENTS = {
+    "Philly Shell": "High-Guard + Long-Guard Defense",
+    "Sprawl": "Check-to-Cross Burst",
+    "Judo Throw": "Clinch Off-balance + Knee Entry",
+    "Grapple Circuit": "Clinch Pummel + Knee Burst Circuit",
+    "cage": "ring",
+}
+
+
+def _normalize_selection_format(sport: str) -> str:
+    if sport == "muay_thai":
+        return "kickboxing"
+    return sport
+
+
+def _is_pure_striker(tech_styles: list[str], tactical_styles: list[str]) -> bool:
+    all_styles = {s.strip().lower() for s in (tech_styles + tactical_styles) if s.strip()}
+    return not any(style in GRAPPLING_STYLES for style in all_styles)
+
+
+def _sanitize_phase_text(text: str, labels: list[str]) -> str:
+    if not text:
+        return text
+    heading_pattern = "|".join(re.escape(label) for label in labels)
+    if heading_pattern:
+        text = re.sub(rf"([A-Za-z0-9])(?=({heading_pattern}))", r"\1\n", text)
+        text = re.sub(rf"({heading_pattern})(?=\1)", r"\1\n", text)
+
+    lines = []
+    last_label = ""
+    for line in text.splitlines():
+        stripped = line.strip()
+        label = stripped.lower()
+        if stripped and label == last_label:
+            continue
+        lines.append(line)
+        if stripped:
+            last_label = label
+    return "\n".join(lines)
+
+
+def _apply_muay_thai_filters(text: str, *, allow_grappling: bool) -> str:
+    if not text or allow_grappling:
+        return text
+    for source, replacement in MUAY_THAI_REPLACEMENTS.items():
+        text = re.sub(re.escape(source), replacement, text, flags=re.IGNORECASE)
+    for source, replacement in MUAY_THAI_TERM_REPLACEMENTS.items():
+        pattern = re.compile(rf"\b{re.escape(source)}\b", re.IGNORECASE)
+        text = pattern.sub(replacement, text)
+    return text
+
 
 async def generate_plan(data: dict):
     configure_logging()
     logger = logging.getLogger(__name__)
     plan_input = PlanInput.from_payload(data)
+    random_seed = data.get("random_seed")
 
     full_name = plan_input.full_name
     age = plan_input.age
@@ -99,6 +169,7 @@ async def generate_plan(data: dict):
     tech_styles = plan_input.tech_styles
     primary_tech = tech_styles[0] if tech_styles else ""
     mapped_format = style_map.get(primary_tech, "mma")
+    selection_format = _normalize_selection_format(mapped_format)
     tactical_styles = plan_input.tactical_styles
     if stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:
         tactical_styles.append("hybrid")
@@ -119,7 +190,9 @@ async def generate_plan(data: dict):
         weight_cut_risk_flag,
         mental_block_class,
         weight_cut_pct_val,
+        days_until_fight,
     )
+    short_notice = days_until_fight is not None and days_until_fight <= 14
 
     # Core context
     training_context = TrainingContext(
@@ -138,7 +211,7 @@ async def generate_plan(data: dict):
         equipment=normalize_equipment_list(equipment_access),
         weight_cut_risk=weight_cut_risk_flag,
         weight_cut_pct=weight_cut_pct_val,
-        fight_format=mapped_format,
+        fight_format=selection_format,
         status=status.strip().lower(),
         training_split=allocate_sessions(training_frequency),
         key_goals=[
@@ -237,7 +310,9 @@ async def generate_plan(data: dict):
             gpp_cond_reasons,
             gpp_cond_grouped,
             gpp_cond_missing,
-        ) = generate_conditioning_block({**training_context.to_flags(), "phase": "GPP"})
+        ) = generate_conditioning_block(
+            {**training_context.to_flags(), "phase": "GPP", "random_seed": random_seed}
+        )
         conditioning_reason_log["GPP"] = gpp_cond_reasons
 
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
@@ -247,7 +322,9 @@ async def generate_plan(data: dict):
             spp_cond_reasons,
             spp_cond_grouped,
             spp_cond_missing,
-        ) = generate_conditioning_block({**training_context.to_flags(), "phase": "SPP"})
+        ) = generate_conditioning_block(
+            {**training_context.to_flags(), "phase": "SPP", "random_seed": random_seed}
+        )
         conditioning_reason_log["SPP"] = spp_cond_reasons
 
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
@@ -257,7 +334,9 @@ async def generate_plan(data: dict):
             taper_cond_reasons,
             taper_cond_grouped,
             taper_cond_missing,
-        ) = generate_conditioning_block({**training_context.to_flags(), "phase": "TAPER"})
+        ) = generate_conditioning_block(
+            {**training_context.to_flags(), "phase": "TAPER", "random_seed": random_seed}
+        )
         conditioning_reason_log["TAPER"] = taper_cond_reasons
 
     gpp_rehab_block = ""
@@ -298,6 +377,21 @@ async def generate_plan(data: dict):
     )
     recovery_block = generate_recovery_block({**training_context.to_flags(), "phase": current_phase})
     nutrition_block = generate_nutrition_block(flags={**training_context.to_flags(), "phase": current_phase})
+
+    if apply_muay_thai_filters:
+        gpp_rehab_block = _apply_muay_thai_filters(gpp_rehab_block, allow_grappling=False)
+        spp_rehab_block = _apply_muay_thai_filters(spp_rehab_block, allow_grappling=False)
+        taper_rehab_block = _apply_muay_thai_filters(taper_rehab_block, allow_grappling=False)
+        gpp_guardrails = _apply_muay_thai_filters(gpp_guardrails, allow_grappling=False)
+        spp_guardrails = _apply_muay_thai_filters(spp_guardrails, allow_grappling=False)
+        taper_guardrails = _apply_muay_thai_filters(taper_guardrails, allow_grappling=False)
+
+    gpp_rehab_block = _sanitize_phase_text(gpp_rehab_block, sanitize_labels)
+    spp_rehab_block = _sanitize_phase_text(spp_rehab_block, sanitize_labels)
+    taper_rehab_block = _sanitize_phase_text(taper_rehab_block, sanitize_labels)
+    gpp_guardrails = _sanitize_phase_text(gpp_guardrails, sanitize_labels)
+    spp_guardrails = _sanitize_phase_text(spp_guardrails, sanitize_labels)
+    taper_guardrails = _sanitize_phase_text(taper_guardrails, sanitize_labels)
 
     phase_colors = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}
     conditioning_blocks = {}
@@ -410,6 +504,9 @@ async def generate_plan(data: dict):
     if taper_rehab_block:
         rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
     support_notes = generate_support_notes(injuries)
+    if apply_muay_thai_filters:
+        support_notes = _apply_muay_thai_filters(support_notes, allow_grappling=False)
+    support_notes = _sanitize_phase_text(support_notes, sanitize_labels)
     if support_notes:
         rehab_sections += ["", support_notes]
 
@@ -535,8 +632,31 @@ async def generate_plan(data: dict):
     ]
      
     phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
+    pure_striker = _is_pure_striker(tech_styles, tactical_styles)
+    apply_muay_thai_filters = mapped_format == "muay_thai" and pure_striker
+    sanitize_labels = [
+        "Mindset Focus",
+        "Strength & Power",
+        "Conditioning",
+        "Injury Guardrails",
+        "Selection Rationale",
+        "Nutrition",
+        "Recovery",
+        "Rehab Protocols",
+        "Mindset Overview",
+        "Coach Notes",
+    ]
 
     def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
+        if apply_muay_thai_filters:
+            mindset = _apply_muay_thai_filters(mindset, allow_grappling=False)
+            strength = _apply_muay_thai_filters(strength, allow_grappling=False)
+            cond = _apply_muay_thai_filters(cond, allow_grappling=False)
+            guardrails = _apply_muay_thai_filters(guardrails, allow_grappling=False)
+        mindset = _sanitize_phase_text(mindset, sanitize_labels)
+        strength = _sanitize_phase_text(strength, sanitize_labels)
+        cond = _sanitize_phase_text(cond, sanitize_labels)
+        guardrails = _sanitize_phase_text(guardrails, sanitize_labels)
         return PhaseBlock(
             name=name,
             weeks=weeks,
@@ -642,6 +762,9 @@ async def generate_plan(data: dict):
     )
     if coach_review_notes:
         coach_notes = f"{coach_notes}\n\n{coach_review_notes}"
+    if apply_muay_thai_filters:
+        coach_notes = _apply_muay_thai_filters(coach_notes, allow_grappling=False)
+    coach_notes = _sanitize_phase_text(coach_notes, sanitize_labels)
     reason_log = {
         "strength": strength_reason_log,
         "conditioning": conditioning_reason_log,
@@ -660,17 +783,20 @@ async def generate_plan(data: dict):
                     lines.append(f"- {name}")
         return lines
 
-    selection_rationale_lines = [
-        "## Selection Rationale",
-        "",
-        *_format_rationale_section("Strength Selection", strength_reason_log),
-        "",
-        *_format_rationale_section("Conditioning Selection", conditioning_reason_log),
-        "",
+    selection_rationale_sections = [
+        "\n".join(_format_rationale_section("Strength Selection", strength_reason_log)),
+        "\n".join(_format_rationale_section("Conditioning Selection", conditioning_reason_log)),
     ]
-    selection_rationale_md = "\n".join(selection_rationale_lines)
+    selection_rationale_md = "\n\n".join(section for section in selection_rationale_sections if section)
+    if apply_muay_thai_filters:
+        selection_rationale_md = _apply_muay_thai_filters(
+            selection_rationale_md,
+            allow_grappling=False,
+        )
+    selection_rationale_md = _sanitize_phase_text(selection_rationale_md, sanitize_labels)
+    selection_rationale_lines = [selection_rationale_md]
     fight_plan_lines += selection_rationale_lines
-    fight_plan_text = "\n".join(fight_plan_lines)
+    fight_plan_text = "\n\n".join(fight_plan_lines)
     fight_plan_text = re.sub(r"\n{3,}", "\n\n", fight_plan_text)
 
     logger.info("plan generated locally (first 500 chars): %s", fight_plan_text[:500])
@@ -693,6 +819,7 @@ async def generate_plan(data: dict):
         athlete_profile_html=athlete_profile_html,
         coach_notes=coach_notes,
         selection_rationale_html=_md_to_html(selection_rationale_md),
+        short_notice=short_notice,
     )
 
     safe = full_name.replace(" ", "_") or "plan"

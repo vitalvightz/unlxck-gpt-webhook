@@ -197,6 +197,12 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
 
     return False
 
+
+def _normalize_fight_format(fight_format: str) -> str:
+    if fight_format == "muay_thai":
+        return "kickboxing"
+    return fight_format
+
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 for item in exercise_bank:
     validate_training_item(item, source="exercise_bank.json", require_phases=True)
@@ -338,7 +344,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
-    fight_format = flags.get("fight_format", "mma")
+    fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
     style_input = flags.get("style_tactical", [])
     if isinstance(style_input, str):
         style_list = [style_input.lower()]
