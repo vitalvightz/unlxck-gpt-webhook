@@ -175,6 +175,7 @@ def calculate_phase_weeks(
     weight_cut_risk: bool | None = None,
     mental_block: str | list[str] | None = None,
     weight_cut_pct: float | None = None,
+    days_until_fight: int | None = None,
 ) -> dict:
     """Return weeks per phase for a fight camp.
 
@@ -277,9 +278,11 @@ def calculate_phase_weeks(
 
     _rebalance(weeks)
 
-    if camp_length >= 3:
+    short_notice = days_until_fight is not None and days_until_fight <= 14
+    if not short_notice:
         weeks["GPP"] = max(1, weeks["GPP"])
-        weeks["SPP"] = max(1, weeks["SPP"])
+        if camp_length >= 2:
+            weeks["SPP"] = max(1, weeks["SPP"])
         _rebalance(weeks)
 
     # 6. Apply post-conversion style rules when relevant

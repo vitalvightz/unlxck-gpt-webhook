@@ -343,6 +343,26 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
     return "".join(parts) + "\n"
 
 
+def _normalize_fight_format(fight_format: str) -> str:
+    if fight_format == "muay_thai":
+        return "kickboxing"
+    return fight_format
+
+
+def _glycolytic_fallback(phase: str) -> dict:
+    phase = phase.upper()
+    intensity = "RPE 7–8" if phase == "SPP" else "RPE 6–7"
+    return {
+        "system": "GLYCOLYTIC",
+        "name": "Fight-Pace Rounds: 6–10 x (2–3 min on / 1 min off)",
+        "load": f"{intensity} fight-pace",
+        "rest": "1 min between rounds",
+        "timing": "2–3 min work / 1 min rest",
+        "purpose": "Maintain glycolytic conditioning with clear work:rest structure.",
+        "red_flags": "None",
+    }
+
+
 def render_conditioning_block(
     grouped_drills: dict[str, list[dict]],
     *,
@@ -386,6 +406,8 @@ def render_conditioning_block(
     output_lines = []
     missing_systems = set(missing_systems or [])
     for system_name in ["aerobic", "glycolytic", "alactic"]:
+        if system_name == "glycolytic":
+            continue
         if system_name in missing_systems:
             output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
 
@@ -484,6 +506,9 @@ def generate_conditioning_block(flags):
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
+    random_seed = flags.get("random_seed")
+    if random_seed is not None:
+        random.seed(random_seed)
 
     # Normalize technical style(s)
     if isinstance(technical, str):
@@ -532,10 +557,11 @@ def generate_conditioning_block(flags):
         "karate": "kickboxing",
     }
     fight_format = style_map.get(primary_tech, "mma")
-    energy_weights = format_weights.get(fight_format, {})
+    selection_format = _normalize_fight_format(fight_format)
+    energy_weights = format_weights.get(selection_format, {})
 
     rename_map = {}
-    if fight_format == "boxing":
+    if selection_format == "boxing":
         rename_map = {
             "Clinch Frame Throws": "Frame-and-Pop Chest Throw",
             "Thai Clinch EMOM": "Inside Hand-Fight EMOM",
@@ -547,7 +573,7 @@ def generate_conditioning_block(flags):
         "kickboxing": ["kickboxing", "muay_thai"],
         "muay_thai": ["muay_thai"]
     }
-    fight_format_tags = flags.get("fight_format_tags") or format_tag_map.get(fight_format, [])
+    fight_format_tags = flags.get("fight_format_tags") or format_tag_map.get(selection_format, [])
 
     phase_priority = {
         "GPP": ["aerobic", "glycolytic", "alactic"],
@@ -568,7 +594,7 @@ def generate_conditioning_block(flags):
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
-        if fight_format == "boxing":
+        if selection_format == "boxing":
             d["name"] = rename_map.get(d.get("name"), d.get("name"))
             d["tags"] = [
                 "boxing" if t.lower() == "muay_thai" else t
@@ -597,7 +623,7 @@ def generate_conditioning_block(flags):
         if is_banned_drill(
             d.get("name", ""),
             tags,
-            fight_format,
+            selection_format,
             details,
             style_names,
             tech_style_tags,
@@ -605,7 +631,7 @@ def generate_conditioning_block(flags):
             continue
 
         if (
-            fight_format == "boxing"
+            selection_format == "boxing"
             and phase.upper() == "TAPER"
             and {"overhead", "rotational", "heavy_load"}.issubset(tags)
             and not (shoulder_focus and fatigue == "low")
@@ -678,7 +704,7 @@ def generate_conditioning_block(flags):
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
-        if fight_format == "boxing":
+        if selection_format == "boxing":
             d["name"] = rename_map.get(d.get("name"), d.get("name"))
             d["tags"] = [
                 "boxing" if t.lower() == "muay_thai" else t
@@ -700,7 +726,7 @@ def generate_conditioning_block(flags):
         if is_banned_drill(
             d.get("name", ""),
             tags,
-            fight_format,
+            selection_format,
             details,
             style_names,
             tech_style_tags,
@@ -712,7 +738,7 @@ def generate_conditioning_block(flags):
             continue
 
         if (
-            fight_format == "boxing"
+            selection_format == "boxing"
             and phase.upper() == "TAPER"
             and {"overhead", "rotational", "heavy_load"}.issubset(tags)
             and not (shoulder_focus and fatigue == "low")
@@ -1319,10 +1345,15 @@ def generate_conditioning_block(flags):
         all_selected = [d for drills in grouped_drills.values() for d in drills]
         log_injury_debug(all_selected, injuries, label=f"conditioning:{phase.upper()}")
 
+    if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic"):
+        fallback = _glycolytic_fallback(phase)
+        grouped_drills["glycolytic"] = [fallback]
+        selected_drill_names.append(fallback["name"])
+
     missing_systems = [
         system_name
         for system_name in ["aerobic", "glycolytic", "alactic"]
-        if not system_drills[system_name]
+        if not grouped_drills.get(system_name)
     ]
     output_lines = render_conditioning_block(
         grouped_drills,
