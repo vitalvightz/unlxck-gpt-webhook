@@ -143,6 +143,7 @@ async def generate_plan(data: dict):
     training_days = plan_input.training_days
     training_frequency = plan_input.training_frequency
     injuries = plan_input.injuries
+    injuries_display = injuries or "None"
     key_goals = plan_input.key_goals
     weak_areas = plan_input.weak_areas
     training_preference = plan_input.training_preference
@@ -648,7 +649,7 @@ async def generate_plan(data: dict):
         f"- Phase Weeks: {phase_week_summary}",
         f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {fatigue}",
-        f"- Injuries: {injuries}",
+        f"- Injuries: {injuries_display}",
         f"- Training Availability: {available_days}",
         f"- Weaknesses: {weak_areas}",
         f"- Key Goals: {key_goals}",
@@ -741,7 +742,7 @@ async def generate_plan(data: dict):
         f"- Phase Weeks: {phase_week_summary}",
         f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {fatigue}",
-        f"- Injuries: {injuries}",
+        f"- Injuries: {injuries_display}",
         f"- Training Availability: {available_days}",
         f"- Weaknesses: {weak_areas}",
         f"- Key Goals: {key_goals}",

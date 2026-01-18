@@ -8,6 +8,38 @@ def _normalize_list(field: str | None) -> list[str]:
     return [w.strip().lower() for w in field.split(",") if w.strip()] if field else []
 
 
+_EMPTY_INJURY_MARKERS = {
+    "none",
+    "no",
+    "no injury",
+    "no injuries",
+    "n/a",
+    "na",
+    "nil",
+    "none reported",
+    "none noted",
+    "no issues",
+}
+
+
+def normalize_injury_text(raw: str | None) -> str:
+    if not raw:
+        return ""
+    cleaned = raw.strip()
+    lowered = cleaned.lower().strip(".")
+    if lowered in _EMPTY_INJURY_MARKERS:
+        return ""
+
+    parts = [part.strip() for part in cleaned.split(",") if part.strip()]
+    remaining: list[str] = []
+    for part in parts:
+        lowered_part = part.lower().strip(".")
+        if lowered_part in _EMPTY_INJURY_MARKERS:
+            continue
+        remaining.append(part)
+    return ", ".join(remaining)
+
+
 def get_value(label: str, fields: list[dict]) -> str:
     for field in fields:
         if field.get("label", "").strip() == label.strip():
@@ -102,7 +134,9 @@ class PlanInput:
         fatigue = get_value("Fatigue Level", fields)
         equipment_access = get_value("Equipment Access", fields)
         available_days = get_value("Training Availability", fields)
-        injuries = get_value("Any injuries or areas you need to work around?", fields)
+        injuries = normalize_injury_text(
+            get_value("Any injuries or areas you need to work around?", fields)
+        )
         key_goals = get_value("What are your key performance goals?", fields)
         weak_areas = get_value("Where do you feel weakest right now?", fields)
         training_preference = get_value("Do you prefer certain training styles?", fields)
