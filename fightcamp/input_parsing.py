@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import re
 
 
 def _normalize_list(field: str | None) -> list[str]:
@@ -22,21 +23,41 @@ _EMPTY_INJURY_MARKERS = {
 }
 
 
+def _normalize_injury_marker(value: str) -> str:
+    cleaned = re.sub(r"[^\w\s-]", "", value.lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+_EMPTY_INJURY_MARKERS_NORMALIZED = {
+    _normalize_injury_marker(marker) for marker in _EMPTY_INJURY_MARKERS
+}
+
+
 def normalize_injury_text(raw: str | None) -> str:
     if not raw:
         return ""
     cleaned = raw.strip()
-    lowered = cleaned.lower().strip(".")
-    if lowered in _EMPTY_INJURY_MARKERS:
+    if not cleaned:
+        return ""
+    normalized_full = _normalize_injury_marker(cleaned)
+    if normalized_full in _EMPTY_INJURY_MARKERS_NORMALIZED:
         return ""
 
-    parts = [part.strip() for part in cleaned.split(",") if part.strip()]
+    parts = [
+        part.strip()
+        for part in re.split(r"\s*(?:,|/|\+| and )\s*", cleaned, flags=re.IGNORECASE)
+        if part.strip()
+    ]
     remaining: list[str] = []
     for part in parts:
-        lowered_part = part.lower().strip(".")
-        if lowered_part in _EMPTY_INJURY_MARKERS:
+        normalized_part = _normalize_injury_marker(part)
+        if not normalized_part:
+            continue
+        if normalized_part in _EMPTY_INJURY_MARKERS_NORMALIZED:
             continue
         remaining.append(part)
+    if not remaining:
+        return ""
     return ", ".join(remaining)
 
 

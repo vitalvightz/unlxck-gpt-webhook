@@ -389,6 +389,7 @@ async def generate_plan(data: dict):
     gpp_guardrails = format_injury_guardrails("GPP", injuries)
     spp_guardrails = format_injury_guardrails("SPP", injuries)
     taper_guardrails = format_injury_guardrails("TAPER", injuries)
+    has_injuries = bool(injuries)
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
         "GPP",
@@ -514,19 +515,22 @@ async def generate_plan(data: dict):
     spp_mindset = build_mindset_prompt("SPP")
     taper_mindset = build_mindset_prompt("TAPER")
 
-    rehab_sections = ["## Rehab Protocols"]
-    if gpp_rehab_block:
-        rehab_sections += ["### GPP", gpp_rehab_block.strip(), ""]
-    if spp_rehab_block:
-        rehab_sections += ["### SPP", spp_rehab_block.strip(), ""]
-    if taper_rehab_block:
-        rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
-    support_notes = generate_support_notes(injuries)
-    if apply_muay_thai_filters:
-        support_notes = _apply_muay_thai_filters(support_notes, allow_grappling=False)
-    support_notes = _sanitize_phase_text(support_notes, sanitize_labels)
-    if support_notes:
-        rehab_sections += ["", support_notes]
+    rehab_sections: list[str] = []
+    support_notes = ""
+    if has_injuries:
+        rehab_sections = ["## Rehab Protocols"]
+        if gpp_rehab_block:
+            rehab_sections += ["### GPP", gpp_rehab_block.strip(), ""]
+        if spp_rehab_block:
+            rehab_sections += ["### SPP", spp_rehab_block.strip(), ""]
+        if taper_rehab_block:
+            rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
+        support_notes = generate_support_notes(injuries)
+        if apply_muay_thai_filters:
+            support_notes = _apply_muay_thai_filters(support_notes, allow_grappling=False)
+        support_notes = _sanitize_phase_text(support_notes, sanitize_labels)
+        if support_notes:
+            rehab_sections += ["", support_notes]
 
     def _week_str(weeks: int, days: int) -> str:
         """Return a display string for weeks, avoiding zero for short phases."""
@@ -566,10 +570,7 @@ async def generate_plan(data: dict):
             "### Conditioning",
             gpp_cond_block,
             "",
-            "### Injury Guardrails",
-            "Phase: GPP",
-            gpp_guardrails,
-            "",
+            *(["### Injury Guardrails", "Phase: GPP", gpp_guardrails, ""] if has_injuries else []),
         ]
         phase_num += 1
 
@@ -586,10 +587,7 @@ async def generate_plan(data: dict):
             "### Conditioning",
             spp_cond_block,
             "",
-            "### Injury Guardrails",
-            "Phase: SPP",
-            spp_guardrails,
-            "",
+            *(["### Injury Guardrails", "Phase: SPP", spp_guardrails, ""] if has_injuries else []),
         ]
         phase_num += 1
 
@@ -606,10 +604,7 @@ async def generate_plan(data: dict):
             "### Conditioning",
             taper_cond_block,
             "",
-            "### Injury Guardrails",
-            "Phase: TAPER",
-            taper_guardrails,
-            "",
+            *(["### Injury Guardrails", "Phase: TAPER", taper_guardrails, ""] if has_injuries else []),
         ]
 
     fight_plan_lines += [
@@ -619,7 +614,10 @@ async def generate_plan(data: dict):
         "## Recovery",
         recovery_block,
         "",
-    ] + rehab_sections + [
+    ]
+    if rehab_sections:
+        fight_plan_lines += rehab_sections
+    fight_plan_lines += [
         "",
         "## Mindset Overview",
         f"Primary Block(s): {', '.join(training_context.mental_block).title()}",
@@ -667,11 +665,13 @@ async def generate_plan(data: dict):
             mindset = _apply_muay_thai_filters(mindset, allow_grappling=False)
             strength = _apply_muay_thai_filters(strength, allow_grappling=False)
             cond = _apply_muay_thai_filters(cond, allow_grappling=False)
-            guardrails = _apply_muay_thai_filters(guardrails, allow_grappling=False)
+            if guardrails:
+                guardrails = _apply_muay_thai_filters(guardrails, allow_grappling=False)
         mindset = _sanitize_phase_text(mindset, sanitize_labels)
         strength = _sanitize_phase_text(strength, sanitize_labels)
         cond = _sanitize_phase_text(cond, sanitize_labels)
-        guardrails = _sanitize_phase_text(guardrails, sanitize_labels)
+        if guardrails:
+            guardrails = _sanitize_phase_text(guardrails, sanitize_labels)
         return PhaseBlock(
             name=name,
             weeks=weeks,
@@ -693,7 +693,7 @@ async def generate_plan(data: dict):
             gpp_mindset,
             gpp_block["block"] if gpp_block else "",
             gpp_cond_block,
-            gpp_guardrails,
+            gpp_guardrails if has_injuries else "",
         )
     if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
         spp_phase = build_phase(
@@ -703,7 +703,7 @@ async def generate_plan(data: dict):
             spp_mindset,
             spp_block["block"] if spp_block else "",
             spp_cond_block,
-            spp_guardrails,
+            spp_guardrails if has_injuries else "",
         )
     if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
         taper_phase = build_phase(
@@ -713,22 +713,24 @@ async def generate_plan(data: dict):
             taper_mindset,
             taper_block["block"] if taper_block else "",
             taper_cond_block,
-            taper_guardrails,
+            taper_guardrails if has_injuries else "",
         )
 
-    rehab_parts = []
-    if gpp_rehab_block:
-        rehab_parts.append("<h3>GPP</h3>")
-        rehab_parts.append(_md_to_html(gpp_rehab_block.strip()))
-    if spp_rehab_block:
-        rehab_parts.append("<h3>SPP</h3>")
-        rehab_parts.append(_md_to_html(spp_rehab_block.strip()))
-    if taper_rehab_block:
-        rehab_parts.append("<h3>TAPER</h3>")
-        rehab_parts.append(_md_to_html(taper_rehab_block.strip()))
-    if support_notes:
-        rehab_parts.append(_md_to_html(support_notes))
-    rehab_html = "\n".join(rehab_parts)
+    rehab_html = ""
+    if has_injuries:
+        rehab_parts = []
+        if gpp_rehab_block:
+            rehab_parts.append("<h3>GPP</h3>")
+            rehab_parts.append(_md_to_html(gpp_rehab_block.strip()))
+        if spp_rehab_block:
+            rehab_parts.append("<h3>SPP</h3>")
+            rehab_parts.append(_md_to_html(spp_rehab_block.strip()))
+        if taper_rehab_block:
+            rehab_parts.append("<h3>TAPER</h3>")
+            rehab_parts.append(_md_to_html(taper_rehab_block.strip()))
+        if support_notes:
+            rehab_parts.append(_md_to_html(support_notes))
+        rehab_html = "\n".join(rehab_parts)
 
     profile_lines = [
         f"- **Name:** <b>{full_name}</b><br>",
@@ -828,6 +830,7 @@ async def generate_plan(data: dict):
         nutrition_block=nutrition_block,
         recovery_block=recovery_block,
         rehab_html=rehab_html,
+        include_injury_sections=has_injuries,
         mindset_overview=f"Primary Block(s): {', '.join(training_context.mental_block).title()}",
         adjustments_table=adjustments_table,
         sparring_nutrition_html=sparring_nutrition_html,
