@@ -341,6 +341,19 @@ async def generate_plan(data: dict):
         )
         conditioning_reason_log["TAPER"] = taper_cond_reasons
 
+    sanitize_labels = [
+        "Mindset Focus",
+        "Strength & Power",
+        "Conditioning",
+        "Injury Guardrails",
+        "Selection Rationale",
+        "Nutrition",
+        "Recovery",
+        "Rehab Protocols",
+        "Mindset Overview",
+        "Coach Notes",
+    ]
+
     gpp_rehab_block = ""
     spp_rehab_block = ""
     taper_rehab_block = ""
@@ -634,18 +647,6 @@ async def generate_plan(data: dict):
     ]
      
     phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
-    sanitize_labels = [
-        "Mindset Focus",
-        "Strength & Power",
-        "Conditioning",
-        "Injury Guardrails",
-        "Selection Rationale",
-        "Nutrition",
-        "Recovery",
-        "Rehab Protocols",
-        "Mindset Overview",
-        "Coach Notes",
-    ]
 
     def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
         if apply_muay_thai_filters:
