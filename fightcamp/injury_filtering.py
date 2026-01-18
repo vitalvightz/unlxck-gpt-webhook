@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Iterable
@@ -166,6 +167,8 @@ INJURY_TAG_ALIASES = {
     "upper_body": {"pec_loaded"},
     "wrestling": {"contact", "sparring", "head_impact"},
 }
+
+logger = logging.getLogger(__name__)
 
 
 def expand_injury_tags(tags: Iterable[str]) -> set[str]:
@@ -427,7 +430,7 @@ def _load_style_specific_exercises() -> list[dict]:
             validate_training_item(item, source=str(path), require_phases=True)
             normalize_item_tags(item)
         return items
-    print(
+    logger.warning(
         "[bank] style_specific_exercises missing. Add data/style_specific_exercises.json "
         "or data/style_specific_exercises to enable style-specific lifts."
     )
@@ -540,11 +543,16 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
 
 def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:
     normalized = sorted(normalize_injury_regions(injuries))
-    print(f"[injury-debug] {label} normalized_injuries={normalized}")
+    logger.info("[injury-debug] %s normalized_injuries=%s", label, normalized)
     for item in items:
         name = item.get("name", "Unnamed")
         reasons = injury_violation_reasons(item, injuries)
         if reasons:
-            print(f"[injury-debug] {label} item={name} allowed=False reasons={reasons}")
+            logger.info(
+                "[injury-debug] %s item=%s allowed=False reasons=%s",
+                label,
+                name,
+                reasons,
+            )
         else:
-            print(f"[injury-debug] {label} item={name} allowed=True")
+            logger.info("[injury-debug] %s item=%s allowed=True", label, name)

@@ -1,3 +1,5 @@
+import logging
+
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
     "anaerobic_alactic": "alactic",
@@ -9,13 +11,15 @@ KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}
 DEFAULT_PHASES = ["GPP", "SPP", "TAPER"]
 _SCHEMA_WARNINGS_LOGGED: set[tuple[str, str, str]] = set()
 
+logger = logging.getLogger(__name__)
+
 
 def _warn_once(source: str, name: str, issue: str, message: str) -> None:
     key = (source, name, issue)
     if key in _SCHEMA_WARNINGS_LOGGED:
         return
     _SCHEMA_WARNINGS_LOGGED.add(key)
-    print(message)
+    logger.warning(message)
 
 
 def validate_training_item(

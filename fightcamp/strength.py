@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 import os
 import json
 import random
@@ -10,19 +11,14 @@ from .training_context import (
 )
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
+from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
+from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST
 from .injury_filtering import (
     _load_style_specific_exercises,
     injury_match_details,
     is_injury_safe_with_fields,
     log_injury_debug,
 )
-
-# Optional equipment boosts by training phase
-phase_equipment_boost = {
-    "GPP": {"barbell", "trap_bar", "sled", "pullup_bar"},
-    "SPP": {"landmine", "cable", "medicine_ball", "bands"},
-    "TAPER": {"medicine_ball", "bodyweight", "bands", "partner"}
-}
 
 # Load style specific exercises (JSON list)
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -152,7 +148,7 @@ def score_exercise(
     if not set(required_equipment).issubset(set(available_equipment)):
         return -999, reasons
 
-    phase_boost = phase_equipment_boost.get(current_phase, set())
+    phase_boost = PHASE_EQUIPMENT_BOOST.get(current_phase, set())
     equipment_bonus = 0.25 if any(eq in phase_boost for eq in available_equipment) else 0.0
     score += equipment_bonus
     reasons["equipment_boost"] = equipment_bonus
@@ -219,6 +215,8 @@ else:
         normalize_item_tags(item)
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
+logger = logging.getLogger(__name__)
+
 MOVEMENT_PATTERN_TAGS = {
     "squat": {"squat", "quad_dominant"},
     "hinge": {"hinge", "posterior_chain", "hip_dominant", "deadlift"},
@@ -245,10 +243,6 @@ MOVEMENT_PATTERN_KEYWORDS = {
 
 
 def _detect_movement_pattern(exercise: dict) -> str:
-    tags = set(normalize_tags(exercise.get("tags") or []))
-    for pattern, tag_set in MOVEMENT_PATTERN_TAGS.items():
-        if tags & tag_set:
-            return pattern
     text_fields = [
         exercise.get("name", ""),
         exercise.get("movement", ""),
@@ -258,6 +252,10 @@ def _detect_movement_pattern(exercise: dict) -> str:
     haystack = " ".join(str(val) for val in text_fields).lower()
     for pattern, keywords in MOVEMENT_PATTERN_KEYWORDS.items():
         if any(keyword in haystack for keyword in keywords):
+            return pattern
+    tags = set(normalize_tags(exercise.get("tags") or []))
+    for pattern, tag_set in MOVEMENT_PATTERN_TAGS.items():
+        if tags & tag_set:
             return pattern
     return "unknown"
 
@@ -360,75 +358,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
 
-    style_tag_map = {
-        "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
-        "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
-        "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
-        "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
-        "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
-        "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
-        "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
-        "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
-    }
-
-    goal_tag_map = {
-        "power": [
-            "explosive", "rate_of_force", "triple_extension", "horizontal_power",
-            "plyometric", "elastic", "lateral_power", "deadlift",
-            "ATP-PCr", "anaerobic_alactic", "speed_strength"
-        ],
-        "strength": [
-            "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
-            "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric"
-        ],
-        "endurance": [
-            "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
-            "conditioning", "improvised", "volume_tolerance"
-        ],
-        "speed": [
-            "speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
-            "visual_processing", "reactive_decision"
-        ],
-        "mobility": [
-            "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
-            "stability", "movement_quality", "range", "rehab_friendly"
-        ],
-        "grappling": [
-            "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
-            "manual_resistance", "positioning"
-        ],
-        "striking": [
-            "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
-            "coordination", "visual_processing", "rhythm", "timing"
-        ],
-        "injury_prevention": [
-            "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
-            "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
-        ],
-        "mental_resilience": [
-            "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
-            "focus", "environmental", "pressure_tolerance"
-        ],
-        "skill_refinement": [
-            "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
-        ],
-        "coordination": ["coordination"]
-    }
-
-    style_tags = [t for s in style_list for t in style_tag_map.get(s, [])]
-    goal_tags = [tag for g in goals for tag in goal_tag_map.get(g, [])]
+    style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
+    goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]
     must_have_by_phase = {
         "GPP": ["core", "posterior_chain", "neck", "stability"],
         "SPP": ["core", "posterior_chain", "neck", "stability"],
         "TAPER": ["core", "neck", "stability", "reactive"],
     }
     must_have_tags = must_have_by_phase.get(phase, [])
-
-    phase_tag_boost = {
-        "GPP": {"triphasic": 1, "tempo": 1, "eccentric": 1},
-        "SPP": {"contrast": 1.5, "explosive": 1.5},
-        "TAPER": {"neural_primer": 2, "cluster": 2, "speed": 2},
-    }
 
 
     weighted_exercises = []
@@ -474,7 +411,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if phase not in ex.get("phases", []):
             continue
 
-        phase_dict = phase_tag_boost.get(phase, {})
+        phase_dict = PHASE_TAG_BOOST.get(phase, {})
         phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
         method = ex.get("method", "").lower()
 
@@ -758,15 +695,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 used_names.add(cand_name)
                 break
             if replacement:
-                print(
-                    "[injury-guard] strength replacing "
-                    f"'{ex.get('name')}' -> '{replacement.get('name')}' reasons={reasons}"
+                logger.warning(
+                    "[injury-guard] strength replacing '%s' -> '%s' reasons=%s",
+                    ex.get("name"),
+                    replacement.get("name"),
+                    reasons,
                 )
                 updated.append(replacement)
             else:
-                print(
-                    "[injury-guard] strength removing "
-                    f"'{ex.get('name')}' reasons={reasons}"
+                logger.warning(
+                    "[injury-guard] strength removing '%s' reasons=%s",
+                    ex.get("name"),
+                    reasons,
                 )
                 updated.append(None)
         return [ex for ex in updated if ex]

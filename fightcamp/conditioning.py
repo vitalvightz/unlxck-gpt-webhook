@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 import random
@@ -12,25 +13,10 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
-from .injury_filtering import (
-    injury_match_details,
-    injury_violation_reasons,
-    is_injury_safe,
-    log_injury_debug,
-)
+from .injury_filtering import injury_match_details, is_injury_safe, log_injury_debug
 from .tagging import normalize_item_tags, normalize_tags
-
-# Map for tactical styles
-style_tag_map = {
-    "brawler": ["compound", "posterior_chain", "power", "rate_of_force", "grip", "core"],
-    "pressure fighter": ["conditioning", "core", "rate_of_force", "endurance", "mental_toughness", "anaerobic_alactic"],
-    "clinch fighter": ["grip", "core", "unilateral", "shoulders", "rotational", "balance"],
-    "distance striker": ["explosive", "reactive", "balance", "footwork", "coordination", "visual_processing"],
-    "counter striker": ["reactive", "core", "anti_rotation", "cognitive", "visual_processing", "balance"],
-    "submission hunter": ["grip", "mobility", "core", "stability", "anti_rotation", "rotational"],
-    "kicker": ["hinge", "posterior_chain", "balance", "mobility", "unilateral", "hip_dominant"],
-    "scrambler": ["core", "rotational", "balance", "endurance", "agility", "reactive"]
-}
+from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
+from .config import PHASE_SYSTEM_RATIOS, STYLE_CONDITIONING_RATIO
 
 # Extra explosive or high-load tags to avoid during TAPER when fatigue isn't low
 TAPER_AVOID_TAGS = {
@@ -44,77 +30,13 @@ TAPER_AVOID_TAGS = {
     
 }
 
-# Goal tags
-goal_tag_map = {
-    "power": [
-        "explosive", "rate_of_force", "triple_extension", "horizontal_power",
-        "plyometric", "elastic", "lateral_power", "deadlift",
-        "ATP-PCr", "anaerobic_alactic", "speed_strength"
-    ],
-    "strength": [
-        "posterior_chain", "quad_dominant", "upper_body", "core", "pull", "hamstring",
-        "hip_dominant", "eccentric", "deadlift", "compound", "manual_resistance", "isometric"
-    ],
-    "endurance": [
-        "aerobic", "glycolytic", "anaerobic_lactic", "work_capacity", "mental_toughness",
-        "conditioning", "improvised", "volume_tolerance"
-    ],
-    "speed": [
-        "speed", "agility", "footwork", "reactive", "acceleration", "ATP-PCr", "anaerobic_alactic",
-        "visual_processing", "reactive_decision"
-    ],
-    "mobility": [
-        "mobility", "hip_dominant", "balance", "eccentric", "unilateral", "adductors",
-        "stability", "movement_quality", "range", "rehab_friendly"
-    ],
-    "grappler": [
-        "wrestler", "bjj", "grip", "rotational", "core", "unilateral", "tactical",
-        "manual_resistance", "positioning"
-    ],
-    "striking": [
-        "striking", "boxing", "muay_thai", "shoulders", "rate_of_force",
-        "coordination", "visual_processing", "rhythm", "timing"
-    ],
-    "injury_prevention": [
-        "recovery", "balance", "eccentric", "zero_impact", "parasympathetic",
-        "cns_freshness", "unilateral", "movement_quality", "stability", "neck"
-    ],
-    "mental_resilience": [
-        "mental_toughness", "cognitive", "parasympathetic", "visual_processing",
-        "focus", "environmental", "pressure_tolerance"
-    ],
-    "skill_refinement": [
-        "coordination", "skill", "footwork", "cognitive", "focus", "reactive", "decision_speed", "skill_refinement"
-    ],
-    "coordination": ["coordination"]
-}
-
-
-# Weakness tags (based directly on the form's checkbox labels)
-weakness_tag_map = {
-    "core stability": ["core", "anti_rotation"],
-    "cns fatigue": ["cns_freshness", "parasympathetic"],
-    "speed / reaction": ["speed", "reaction", "reactive", "coordination"],
-    "lateral movement": ["lateral_power", "agility", "balance"],
-    "conditioning": ["aerobic", "glycolytic", "work_capacity"],
-    "rotation": ["rotational", "anti_rotation"],
-    "balance": ["balance", "stability", "unilateral"],
-    "explosiveness": ["explosive", "rate_of_force", "plyometric"],
-    "shoulders": ["shoulders", "upper_body"],
-    "shoulder": ["shoulders", "upper_body"],
-    "hip mobility": ["hip_dominant", "mobility"],
-    "grip strength": ["grip", "pull"],
-    "posterior chain": ["posterior_chain", "hip_dominant"],
-    "knees": ["quad_dominant", "eccentric"],
-    "coordination / proprioception": ["coordination"],
-    "coordination/proprioception": ["coordination"]
-}
-
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
 
 _INJURY_GUARD_LOGGED: set[tuple] = set()
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_system(raw_system: str | None, *, source: str) -> str:
@@ -141,9 +63,11 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
             log_key = (source, system)
             if log_key not in _MIXED_SYSTEM_LOGGED and len(known_parts) > 1:
                 _MIXED_SYSTEM_LOGGED.add(log_key)
-                print(
-                    f"[conditioning] Mixed energy system '{system}' "
-                    f"normalized='{normalized}' source={source}"
+                logger.warning(
+                    "[conditioning] Mixed energy system '%s' normalized='%s' source=%s",
+                    system,
+                    normalized,
+                    source,
                 )
         else:
             normalized = SYSTEM_ALIASES.get(system, system or "misc")
@@ -151,9 +75,11 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
         log_key = (source, normalized)
         if log_key not in _UNKNOWN_SYSTEM_LOGGED:
             _UNKNOWN_SYSTEM_LOGGED.add(log_key)
-            print(
-                f"[conditioning] Unknown energy system '{system or 'unknown'}' "
-                f"normalized='{normalized}' source={source}"
+            logger.warning(
+                "[conditioning] Unknown energy system '%s' normalized='%s' source=%s",
+                system or "unknown",
+                normalized,
+                source,
             )
     return normalized
 
@@ -176,9 +102,11 @@ def _sanitize_conditioning_bank(bank, *, source: str):
             normalized = normalize_system(item.get("system"), source=source)
             if normalized not in KNOWN_SYSTEMS:
                 name = item.get("name", "Unnamed Drill")
-                print(
-                    f"[conditioning] Removing drill with invalid system "
-                    f"bank={source} name='{name}' system='{item.get('system')}'"
+                logger.warning(
+                    "[conditioning] Removing drill with invalid system bank=%s name='%s' system='%s'",
+                    source,
+                    name,
+                    item.get("system"),
                 )
                 continue
             if item.get("system") != normalized:
@@ -242,12 +170,6 @@ elif isinstance(_coord_data, dict):
         if isinstance(val, list):
             coordination_bank.extend(val)
 
-STYLE_CONDITIONING_RATIO = {
-    "GPP": 0.20,
-    "SPP": 0.60,
-    "TAPER": 0.05,
-}
-
 
 def get_system_or_warn(drill: dict, *, source: str) -> str | None:
     system = normalize_system(drill.get("system"), source=source)
@@ -257,9 +179,11 @@ def get_system_or_warn(drill: dict, *, source: str) -> str | None:
     log_key = (source, system, name)
     if log_key not in _UNKNOWN_SYSTEM_DRILL_LOGGED:
         _UNKNOWN_SYSTEM_DRILL_LOGGED.add(log_key)
-        print(
-            f"[conditioning] Dropping drill with unknown system "
-            f"bank={source} name='{name}' system='{system}'"
+        logger.warning(
+            "[conditioning] Dropping drill with unknown system bank=%s name='%s' system='%s'",
+            source,
+            name,
+            system,
         )
     return None
 
@@ -288,19 +212,18 @@ def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool
         if log_key in _INJURY_GUARD_LOGGED:
             continue
         _INJURY_GUARD_LOGGED.add(log_key)
-        print(
-            f"[injury-guard] {label} excluded '{drill.get('name')}' "
-            f"region={region} fields=[{fields}] patterns=[{patterns}] tags=[{tags}]"
+        logger.warning(
+            "[injury-guard] %s excluded '%s' region=%s fields=[%s] patterns=[%s] tags=[%s]",
+            label,
+            drill.get("name"),
+            region,
+            fields,
+            patterns,
+            tags,
         )
     return False
 
 # Relative emphasis of each energy system by training phase
-PHASE_SYSTEM_RATIOS = {
-    "GPP": {"aerobic": 0.5, "glycolytic": 0.3, "alactic": 0.2},
-    "SPP": {"glycolytic": 0.5, "alactic": 0.3, "aerobic": 0.2},
-    "TAPER": {"alactic": 0.7, "aerobic": 0.3, "glycolytic": 0.0},
-}
-
 def expand_tags(input_list, tag_map):
     expanded = []
     for item in input_list:
@@ -584,11 +507,11 @@ def generate_conditioning_block(flags):
         style_names = tech_style_tags
 
     style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
-    style_tags = normalize_tags([t for s in style_tags for t in style_tag_map.get(s, [])])
+    style_tags = normalize_tags([t for s in style_tags for t in STYLE_TAG_MAP.get(s, [])])
 
-    goal_tags = expand_tags(goals, goal_tag_map)
+    goal_tags = expand_tags(goals, GOAL_TAG_MAP)
     goal_list = [g.lower() for g in goals]
-    weak_tags = expand_tags(weaknesses, weakness_tag_map)
+    weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
     shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
         'shoulder' in w.lower() for w in weaknesses
     )
@@ -1338,9 +1261,11 @@ def generate_conditioning_block(flags):
 
                 if replacement:
                     rep_name = _name(replacement) or "(unnamed)"
-                    print(
-                        "[injury-guard] conditioning replacing "
-                        f"'{drill_name}' -> '{rep_name}' reasons={reasons}"
+                    logger.warning(
+                        "[injury-guard] conditioning replacing '%s' -> '%s' reasons=%s",
+                        drill_name,
+                        rep_name,
+                        reasons,
                     )
 
                     old_name = _name(drill)
@@ -1366,9 +1291,10 @@ def generate_conditioning_block(flags):
 
                     idx += 1
                 else:
-                    print(
-                        "[injury-guard] conditioning removing "
-                        f"'{drill_name}' reasons={reasons}"
+                    logger.warning(
+                        "[injury-guard] conditioning removing '%s' reasons=%s",
+                        drill_name,
+                        reasons,
                     )
 
                     old_name = _name(drill)
@@ -1429,3 +1355,4 @@ def generate_conditioning_block(flags):
             why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems
+# Map for tactical styles

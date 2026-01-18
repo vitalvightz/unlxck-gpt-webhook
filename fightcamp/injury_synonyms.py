@@ -1,4 +1,5 @@
 import importlib.util
+import logging
 from difflib import SequenceMatcher
 
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
@@ -30,6 +31,7 @@ else:
     Token = None
 
 _DEGRADED_LOGGED = False
+logger = logging.getLogger(__name__)
 
 
 def _log_dependency_status() -> None:
@@ -45,11 +47,10 @@ def _log_dependency_status() -> None:
         missing.append("rapidfuzz")
     if missing:
         _DEGRADED_LOGGED = True
-        print(
-            "[injury-parse] Degraded parsing mode: missing "
-            + ", ".join(missing)
-            + ". Features disabled: "
-            + ", ".join(
+        logger.warning(
+            "[injury-parse] Degraded parsing mode: missing %s. Features disabled: %s.",
+            ", ".join(missing),
+            ", ".join(
                 feature
                 for feature, available in (
                     ("phrase matching", _SPACY_AVAILABLE),
@@ -57,8 +58,7 @@ def _log_dependency_status() -> None:
                     ("fuzzy matching", _RAPIDFUZZ_AVAILABLE),
                 )
                 if not available
-            )
-            + "."
+            ),
         )
 
 

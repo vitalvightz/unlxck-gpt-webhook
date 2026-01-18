@@ -190,6 +190,7 @@ def build_html_document(
     sparring_nutrition_html: str = "",
     athlete_profile_html: str = "",
     coach_notes: str = "",
+    selection_rationale_html: str = "",
 ) -> str:
     """Assemble the full HTML string."""
 
@@ -259,6 +260,8 @@ def build_html_document(
 
     if coach_notes:
         lines += [_section_title("Coach Notes"), _md_to_html(coach_notes)]
+    if selection_rationale_html:
+        lines += [_section_title("Selection Rationale"), selection_rationale_html]
 
     lines += [
         _section_title("Nutrition"),
