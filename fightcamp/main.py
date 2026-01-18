@@ -92,6 +92,8 @@ def _sanitize_phase_text(text: str, labels: list[str]) -> str:
     if heading_pattern:
         text = re.sub(rf"([A-Za-z0-9])(?=({heading_pattern}))", r"\1\n", text)
         text = re.sub(rf"({heading_pattern})(?=\1)", r"\1\n", text)
+    label_pattern = r"[A-Z][A-Za-z0-9 /+&'’-]*:"
+    text = re.sub(rf"(\\S)(?=({label_pattern}))", r"\1\n", text)
 
     lines = []
     last_label = ""
