@@ -833,7 +833,12 @@ async def generate_plan(data: dict):
     pdf_path = html_to_pdf(html, f"{safe}_fight_plan.pdf")
     pdf_url = upload_to_supabase(pdf_path) if pdf_path else "PDF generation failed"
 
-    return {"pdf_url": pdf_url, "why_log": reason_log, "coach_notes": coach_notes}
+    return {
+        "pdf_url": pdf_url,
+        "why_log": reason_log,
+        "coach_notes": coach_notes,
+        "plan_text": fight_plan_text,
+    }
 
 
 def main():

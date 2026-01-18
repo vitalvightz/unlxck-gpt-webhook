@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 
+from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -485,32 +486,28 @@ def generate_support_notes(injury_string: str) -> str:
     return "\n".join(lines).strip()
 
 
-def _normalize_injury_entries(injury_string: str) -> list[tuple[str, str | None]]:
+def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]:
     injury_phrases = split_injury_text(injury_string)
     parsed_entries = []
     for phrase in injury_phrases:
-        itype, loc = parse_injury_phrase(phrase)
-        if not itype:
-            if loc:
-                itype = "unspecified"
-            else:
-                continue
-        parsed_entries.append((itype, loc))
-
-    if any(loc for _, loc in parsed_entries):
-        parsed_entries = [p for p in parsed_entries if p[1] is not None]
+        entry = parse_injury_entry(phrase)
+        if entry:
+            parsed_entries.append(entry)
 
     seen_pairs = set()
     seen_locations = set()
     unique_entries = []
-    for itype, loc in parsed_entries:
-        if (itype, loc) in seen_pairs:
+    for entry in parsed_entries:
+        itype = entry.get("injury_type")
+        loc = entry.get("canonical_location")
+        laterality = entry.get("laterality")
+        if (itype, loc, laterality) in seen_pairs:
             continue
-        if loc in seen_locations:
+        if (loc, laterality) in seen_locations:
             continue
-        seen_pairs.add((itype, loc))
-        seen_locations.add(loc)
-        unique_entries.append((itype, loc))
+        seen_pairs.add((itype, loc, laterality))
+        seen_locations.add((loc, laterality))
+        unique_entries.append(entry)
     return unique_entries
 
 
@@ -522,24 +519,34 @@ def build_coach_review_entries(injury_string: str, phase: str) -> list[dict]:
 
     severity_rank = {"moderate": 1, "severe": 2}
     region_entries: dict[str, dict] = {}
-    for itype, loc in entries:
-        severity = INJURY_TYPE_SEVERITY.get(itype, "moderate")
+    for entry in entries:
+        itype = entry.get("injury_type")
+        loc = entry.get("canonical_location")
+        laterality = entry.get("laterality")
+        severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
         if severity not in {"moderate", "severe"}:
             continue
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
-        region_label = REGION_LABELS.get(region_key, REGION_LABELS["unspecified"])
-        location_label = loc.title() if loc else "Unspecified"
         ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
             severity,
             REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
         )
+        summary = format_injury_summary(
+            {
+                "canonical_location": loc,
+                "laterality": laterality,
+                "injury_type": itype,
+                "severity": severity,
+            }
+        )
         rehab_drills = _rehab_drills_for_phase(itype, loc, phase, limit=3)
         existing = region_entries.get(region_key)
         if existing:
-            existing["locations"].add(location_label)
             if severity_rank.get(severity, 0) > severity_rank.get(existing["severity"], 0):
                 existing["severity"] = severity
                 existing["ruleset"] = ruleset
+            if summary not in existing["injury_summaries"]:
+                existing["injury_summaries"].append(summary)
             for drill in rehab_drills:
                 if drill not in existing["rehab_drills"]:
                     existing["rehab_drills"].append(drill)
@@ -548,8 +555,8 @@ def build_coach_review_entries(injury_string: str, phase: str) -> list[dict]:
             continue
         region_entries[region_key] = {
             "region_key": region_key,
-            "region_label": region_label,
-            "locations": {location_label},
+            "label": "Injury safety",
+            "injury_summaries": [summary],
             "severity": severity,
             "ruleset": ruleset,
             "rehab_drills": rehab_drills[:3],
@@ -621,40 +628,46 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         return "✅ No injury guardrails required."
 
     lines = ["**Injury Summary**"]
-    guardrails: list[tuple[str, str, dict]] = []
-    for itype, loc in entries:
-        severity = INJURY_TYPE_SEVERITY.get(itype, "moderate")
+    guardrails: list[tuple[str | None, str | None, dict]] = []
+    for entry in entries:
+        itype = entry.get("injury_type")
+        loc = entry.get("canonical_location")
+        laterality = entry.get("laterality")
+        severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
-        region_label = REGION_LABELS.get(region_key, REGION_LABELS["unspecified"])
-        location_label = loc.title() if loc else "Unspecified"
-        severity_color = {
-            "severe": "🔴",
-            "moderate": "🟠",
-            "mild": "🟡",
-        }.get(severity, "🟠")
         lines.append(
-            f"- {region_label} ({location_label}) — {itype.title()} | Severity: {severity_color} {severity}"
+            f"- {format_injury_summary({'canonical_location': loc, 'laterality': laterality, 'injury_type': itype, 'severity': severity})}"
         )
         ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
             severity,
             REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
         )
-        guardrails.append((region_label, location_label, ruleset))
+        guardrails.append((loc, laterality, ruleset))
 
     if phase.upper() == "TAPER":
         lines.append("")
         lines.append("_TAPER note: Glycolytic conditioning is optional when injury risk exists._")
 
     lines += ["", "**Rehab Priority**"]
-    for itype, loc in entries:
+    for entry in entries:
+        itype = entry.get("injury_type")
+        loc = entry.get("canonical_location")
+        laterality = entry.get("laterality")
+        severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
         drills = _rehab_drills_for_phase(itype, loc, phase, limit=4)
-        location_label = loc.title() if loc else "Unspecified"
-        type_label = itype.title() if itype else "Unspecified"
+        summary = format_injury_summary(
+            {
+                "canonical_location": loc,
+                "laterality": laterality,
+                "injury_type": itype,
+                "severity": severity,
+            }
+        )
         if drills:
-            lines.append(f"- {location_label} ({type_label}):")
+            lines.append(f"- {summary}:")
             lines.extend([f"  - {d}" for d in drills[:4]])
         else:
-            lines.append(f"- {location_label} ({type_label}): No rehab drills available for this phase.")
+            lines.append(f"- {summary}: No rehab drills available for this phase.")
 
     base_red_flags = [
         "Pain that worsens and stays elevated the next morning.",

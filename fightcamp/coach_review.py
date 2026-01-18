@@ -111,12 +111,8 @@ def build_coach_review_notes(entries: list[dict], substitutions: list[dict]) -> 
         return ""
     lines = ["### Coach Review & Safety Pass"]
     for entry in entries:
-        severity = entry["severity"]
-        severity_color = {"severe": "🔴", "moderate": "🟠"}.get(severity, "🟠")
-        locations = ", ".join(sorted(entry["locations"]))
-        lines.append(
-            f"- {entry['region_label']} ({locations}) — Severity: {severity_color} {severity}"
-        )
+        for summary in entry.get("injury_summaries", []):
+            lines.append(f"- {summary}")
         allowed = entry["ruleset"].get("allowed", [])
         avoid = entry["ruleset"].get("avoid", [])
         rehab = entry["rehab_drills"]
@@ -132,11 +128,11 @@ def build_coach_review_notes(entries: list[dict], substitutions: list[dict]) -> 
         for sub in substitutions:
             if sub.get("new"):
                 lines.append(
-                    f"- {sub['phase']} {sub['module']}: {sub['old']} → {sub['new']} ({sub['region_label']})"
+                    f"- {sub['phase']} {sub['module']}: {sub['old']} → {sub['new']} ({sub['label']})"
                 )
             else:
                 lines.append(
-                    f"- {sub['phase']} {sub['module']}: removed {sub['old']} ({sub['region_label']})"
+                    f"- {sub['phase']} {sub['module']}: removed {sub['old']} ({sub['label']})"
                 )
 
     return "\n".join(lines)
@@ -160,7 +156,7 @@ def run_coach_review(
         entry["region_key"]: INJURY_RULES.get(entry["region_key"], {})
         for entry in entries
     }
-    region_labels = {entry["region_key"]: entry["region_label"] for entry in entries}
+    region_labels = {entry["region_key"]: entry.get("label", "Injury safety") for entry in entries}
     substitutions: list[dict] = []
 
     equipment_access = training_context.get("equipment", [])
@@ -200,7 +196,7 @@ def run_coach_review(
                         "old": ex.get("name", "Unnamed"),
                         "new": replacement.get("name", "Unnamed"),
                         "region_key": region_key,
-                        "region_label": region_labels.get(region_key, "Injury"),
+                        "label": region_labels.get(region_key, "Injury safety"),
                     }
                 )
             else:
@@ -211,7 +207,7 @@ def run_coach_review(
                         "old": ex.get("name", "Unnamed"),
                         "new": "",
                         "region_key": region_key,
-                        "region_label": region_labels.get(region_key, "Injury"),
+                        "label": region_labels.get(region_key, "Injury safety"),
                     }
                 )
         block["exercises"] = updated_exercises
@@ -266,7 +262,7 @@ def run_coach_review(
                             "old": drill.get("name", "Unnamed"),
                             "new": replacement.get("name", "Unnamed"),
                             "region_key": region_key,
-                            "region_label": region_labels.get(region_key, "Injury"),
+                            "label": region_labels.get(region_key, "Injury safety"),
                         }
                     )
                     idx += 1
@@ -278,7 +274,7 @@ def run_coach_review(
                             "old": drill.get("name", "Unnamed"),
                             "new": "",
                             "region_key": region_key,
-                            "region_label": region_labels.get(region_key, "Injury"),
+                            "label": region_labels.get(region_key, "Injury safety"),
                         }
                     )
                     drills.pop(idx)
