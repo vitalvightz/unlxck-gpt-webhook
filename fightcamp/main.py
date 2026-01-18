@@ -533,6 +533,14 @@ async def generate_plan(data: dict):
         phase: _week_str(phase_weeks[phase], phase_weeks["days"][phase])
         for phase in ("GPP", "SPP", "TAPER")
     }
+    phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
+    phase_week_summary = (
+        f"{week_str['GPP']} GPP / {week_str['SPP']} SPP / {week_str['TAPER']} Taper"
+    )
+    phase_day_summary = (
+        f"{phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / "
+        f"{phase_weeks['days']['TAPER']} Taper"
+    )
 
     fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_num = 1
@@ -635,8 +643,8 @@ async def generate_plan(data: dict):
         f"- Fight Format: {rounds_format}",
         f"- Fight Date: {next_fight_date}",
         f"- Weeks Out: {weeks_out}",
-        f"- Phase Weeks: {week_str['GPP']} GPP / {week_str['SPP']} SPP / {week_str['TAPER']} Taper",
-        f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
+        f"- Phase Weeks: {phase_week_summary}",
+        f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries}",
         f"- Training Availability: {available_days}",
@@ -646,8 +654,6 @@ async def generate_plan(data: dict):
         f"- Notes: {notes}",
     ]
      
-    phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
-
     def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
         if apply_muay_thai_filters:
             mindset = _apply_muay_thai_filters(mindset, allow_grappling=False)
@@ -730,8 +736,8 @@ async def generate_plan(data: dict):
         f"- Fight Format: {rounds_format}",
         f"- Fight Date: {next_fight_date}",
         f"- Weeks Out: {weeks_out}",
-        f"- Phase Weeks: {week_str['GPP']} GPP / {week_str['SPP']} SPP / {week_str['TAPER']} Taper",
-        f"- Phase Days: {phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / {phase_weeks['days']['TAPER']} Taper",
+        f"- Phase Weeks: {phase_week_summary}",
+        f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries}",
         f"- Training Availability: {available_days}",
