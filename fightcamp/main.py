@@ -173,6 +173,8 @@ async def generate_plan(data: dict):
     tactical_styles = plan_input.tactical_styles
     if stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:
         tactical_styles.append("hybrid")
+    pure_striker = _is_pure_striker(tech_styles, tactical_styles)
+    apply_muay_thai_filters = mapped_format == "muay_thai" and pure_striker
 
     weight_val = float(weight) if weight.replace('.', '', 1).isdigit() else 0.0
     target_val = float(target_weight) if target_weight.replace('.', '', 1).isdigit() else 0.0
@@ -632,8 +634,6 @@ async def generate_plan(data: dict):
     ]
      
     phase_split = f"{week_str['GPP']} / {week_str['SPP']} / {week_str['TAPER']}"
-    pure_striker = _is_pure_striker(tech_styles, tactical_styles)
-    apply_muay_thai_filters = mapped_format == "muay_thai" and pure_striker
     sanitize_labels = [
         "Mindset Focus",
         "Strength & Power",
