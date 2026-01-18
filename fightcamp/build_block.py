@@ -106,6 +106,8 @@ def _sanitize_markdown(text: str) -> str:
             r"\1\n",
             text,
         )
+    label_pattern = r"[A-Z][A-Za-z0-9 /+&'’-]*:"
+    text = re.sub(rf"(\\S)(?=({label_pattern}))", r"\1\n", text)
 
     lines: list[str] = []
     last_label = ""
