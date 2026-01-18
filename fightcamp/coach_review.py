@@ -286,6 +286,8 @@ def run_coach_review(
             phase=phase_key,
             phase_color=cond.get("phase_color", "#000"),
             missing_systems=cond.get("missing_systems", []),
+            diagnostic_context=cond.get("diagnostic_context", {}),
+            sport=cond.get("sport"),
         )
         updated_conditioning[phase_key] = cond
 

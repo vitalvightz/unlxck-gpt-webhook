@@ -14,6 +14,7 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, is_injury_safe, log_injury_debug
+from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 from .config import PHASE_SYSTEM_RATIOS, STYLE_CONDITIONING_RATIO
@@ -370,6 +371,8 @@ def render_conditioning_block(
     phase_color: str,
     missing_systems: Iterable[str] | None = None,
     num_sessions: int = 1,
+    diagnostic_context: dict | None = None,
+    sport: str | None = None,
 ) -> str:
     phase = phase.upper()
     phase_titles = {
@@ -405,11 +408,20 @@ def render_conditioning_block(
 
     output_lines = []
     missing_systems = set(missing_systems or [])
-    for system_name in ["aerobic", "glycolytic", "alactic"]:
-        if system_name == "glycolytic":
-            continue
-        if system_name in missing_systems:
-            output_lines.append(f"\n⚠️ No {system_name.upper()} drills available for this phase.")
+    diagnostic_context = diagnostic_context or {}
+    if missing_systems:
+        diagnostic_blocks = [
+            format_missing_system_block(
+                system_name,
+                phase=phase,
+                sport=sport or "",
+                context=diagnostic_context,
+            )
+            for system_name in ["aerobic", "glycolytic", "alactic"]
+            if system_name in missing_systems
+        ]
+        if diagnostic_blocks:
+            output_lines.append("\n\n".join(diagnostic_blocks))
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
@@ -1355,12 +1367,24 @@ def generate_conditioning_block(flags):
         for system_name in ["aerobic", "glycolytic", "alactic"]
         if not grouped_drills.get(system_name)
     ]
+    diagnostic_context = {
+        "phase": phase,
+        "sport": flags.get("sport"),
+        "time_to_fight_days": flags.get("time_to_fight_days"),
+        "days_until_fight": days_until_fight,
+        "weeks_out": flags.get("weeks_out"),
+        "fatigue_level": fatigue,
+        "injuries": injuries,
+        "fight_format": fight_format,
+    }
     output_lines = render_conditioning_block(
         grouped_drills,
         phase=phase,
         phase_color=phase_color,
         missing_systems=missing_systems,
         num_sessions=num_conditioning_sessions,
+        diagnostic_context=diagnostic_context,
+        sport=flags.get("sport"),
     )
 
     why_log = []
