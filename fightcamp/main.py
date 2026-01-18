@@ -544,6 +544,11 @@ async def generate_plan(data: dict):
         f"{phase_weeks['days']['GPP']} GPP / {phase_weeks['days']['SPP']} SPP / "
         f"{phase_weeks['days']['TAPER']} Taper"
     )
+    days_out_line = (
+        f"- Days Out: {days_until_fight}"
+        if isinstance(days_until_fight, int)
+        else f"- Weeks Out: {weeks_out}"
+    )
 
     fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_num = 1
@@ -645,7 +650,7 @@ async def generate_plan(data: dict):
         f"- Record: {record}",
         f"- Fight Format: {rounds_format}",
         f"- Fight Date: {next_fight_date}",
-        f"- Weeks Out: {weeks_out}",
+        days_out_line,
         f"- Phase Weeks: {phase_week_summary}",
         f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {fatigue}",
@@ -738,7 +743,7 @@ async def generate_plan(data: dict):
         f"- Record: {record}",
         f"- Fight Format: {rounds_format}",
         f"- Fight Date: {next_fight_date}",
-        f"- Weeks Out: {weeks_out}",
+        days_out_line,
         f"- Phase Weeks: {phase_week_summary}",
         f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {fatigue}",
