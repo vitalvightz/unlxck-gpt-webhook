@@ -295,7 +295,26 @@ def calculate_phase_weeks(
     _rebalance(weeks)
 
     # Translate final week splits into day counts for reporting
-    days = {phase: weeks[phase] * 7 for phase in ("GPP", "SPP", "TAPER")}
+    total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight > 0 else camp_length * 7
+    days = {
+        phase: max(0, round(total_days * (weeks[phase] / camp_length)))
+        for phase in ("GPP", "SPP", "TAPER")
+    }
+
+    def _rebalance_days(days_dict: dict) -> None:
+        total = days_dict["GPP"] + days_dict["SPP"] + days_dict["TAPER"]
+        if total < total_days:
+            days_dict["SPP"] += total_days - total
+        elif total > total_days:
+            excess = total - total_days
+            for phase in ("TAPER", "GPP", "SPP"):
+                if excess <= 0:
+                    break
+                cut = min(days_dict[phase], excess)
+                days_dict[phase] -= cut
+                excess -= cut
+
+    _rebalance_days(days)
 
     # 7. Return dictionary with both weeks and estimated days
     return {
