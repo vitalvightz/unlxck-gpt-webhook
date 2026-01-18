@@ -302,14 +302,14 @@ def test_cross_bank_guard_consistency(monkeypatch):
     assert not any(d["name"] in strength_names for d in press_drills)
 
 
-def test_injury_guard_log_deduped(capsys):
+def test_injury_guard_log_deduped(caplog):
     _INJURY_GUARD_LOGGED.clear()
     drill = _make_drill("Bench Press Isometric")
     injuries = ["shoulder"]
-    _is_drill_text_safe(drill, injuries, label="conditioning")
-    _is_drill_text_safe(drill, injuries, label="conditioning")
-    output = capsys.readouterr().out.strip().splitlines()
-    guard_lines = [line for line in output if "[injury-guard]" in line]
+    with caplog.at_level("WARNING"):
+        _is_drill_text_safe(drill, injuries, label="conditioning")
+        _is_drill_text_safe(drill, injuries, label="conditioning")
+    guard_lines = [rec.message for rec in caplog.records if "[injury-guard]" in rec.message]
     assert len(guard_lines) == 1
 
 

@@ -1,4 +1,9 @@
+from __future__ import annotations
+
 import re
+from dataclasses import asdict, dataclass
+
+from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
 
 EQUIP_ALIASES = {
     "med balls": "medicine_ball",
@@ -50,6 +55,36 @@ known_equipment = [
     "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
     "elliptical", "bodyweight", "battle_rope", "kettlebells"
 ]
+
+
+@dataclass(frozen=True)
+class TrainingContext:
+    fatigue: str
+    training_frequency: int
+    days_available: int
+    training_days: list[str]
+    injuries: list[str]
+    style_technical: list[str]
+    style_tactical: list[str]
+    weaknesses: list[str]
+    equipment: list[str]
+    weight_cut_risk: bool
+    weight_cut_pct: float
+    fight_format: str
+    status: str
+    training_split: dict
+    key_goals: list[str]
+    training_preference: str
+    mental_block: list[str] | str
+    age: int
+    weight: float
+    prev_exercises: list[str]
+    recent_exercises: list[str]
+    phase_weeks: dict
+    days_until_fight: int | None
+
+    def to_flags(self) -> dict:
+        return asdict(self)
 
 def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
     """Return weekly session counts based on frequency and phase."""
@@ -103,12 +138,9 @@ def calculate_exercise_numbers(training_frequency: int, phase: str) -> dict:
     sessions = allocate_sessions(training_frequency, phase)
     phase = phase.upper()
 
-    strength_per_day = {"GPP": 7, "SPP": 6, "TAPER": 4}
-    conditioning_per_day = {"GPP": 4, "SPP": 3, "TAPER": 3}
-
     return {
-        "strength": strength_per_day.get(phase, 0) * sessions.get("strength", 0),
-        "conditioning": conditioning_per_day.get(phase, 0) * sessions.get(
+        "strength": STRENGTH_PER_DAY.get(phase, 0) * sessions.get("strength", 0),
+        "conditioning": CONDITIONING_PER_DAY.get(phase, 0) * sessions.get(
             "conditioning", 0
         ),
     }
