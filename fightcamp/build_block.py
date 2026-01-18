@@ -240,6 +240,7 @@ def build_html_document(
     coach_notes: str = "",
     selection_rationale_html: str = "",
     short_notice: bool = False,
+    include_injury_sections: bool = True,
 ) -> str:
     """Assemble the full HTML string."""
 
@@ -290,9 +291,14 @@ def build_html_document(
             _md_to_html(block.strength),
             _subheading("Conditioning"),
             _md_to_html(block.conditioning),
-            _subheading("Injury Guardrails"),
-            _md_to_html(block.guardrails),
         ]
+        if include_injury_sections and block.guardrails:
+            parts.extend(
+                [
+                    _subheading("Injury Guardrails"),
+                    _md_to_html(block.guardrails),
+                ]
+            )
         return "\n\n".join(parts)
 
     if gpp:
@@ -319,8 +325,13 @@ def build_html_document(
         _md_to_html(nutrition_block),
         _section_title("Recovery"),
         _md_to_html(recovery_block),
-        _section_title("Rehab Protocols"),
-        rehab_html,
+    ]
+    if include_injury_sections and rehab_html:
+        lines += [
+            _section_title("Rehab Protocols"),
+            rehab_html,
+        ]
+    lines += [
         _section_title("Mindset Overview"),
         _md_to_html(mindset_overview),
         _section_title("Sparring & Conditioning Adjustments Table"),
