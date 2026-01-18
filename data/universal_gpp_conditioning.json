@@ -1,6 +1,6 @@
 [
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Steady-State Cardio (Run / Bike / Row)",
     "system": "aerobic",
     "duration": "30–60 minutes",
@@ -11,7 +11,7 @@
     "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Jump Rope Endurance (Footwork Conditioning)",
     "system": "aerobic",
     "duration": "3–5 rounds × 3–5 minutes",
@@ -22,7 +22,7 @@
     "notes": "Improves foot speed, rhythm, and aerobic fitness. Versatile as warm-up or standalone."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
     "system": "glycolytic",
     "duration": "6–8 × 20–30s max effort",
@@ -33,7 +33,7 @@
     "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Battle Rope Circuits",
     "system": "glycolytic",
     "duration": "4–6 rounds × 30s work",
@@ -44,7 +44,7 @@
     "notes": "Builds shoulder endurance, core control, and lactic threshold. Safe option for upper-body dominant day."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Bodyweight MetCon Circuit",
     "system": "glycolytic",
     "duration": "3–4 rounds of 3–5 exercises × 30s each",
@@ -55,7 +55,7 @@
     "notes": "Full-body circuit mimicking MMA scramble effort. Effective as conditioning block or session finisher."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Explosive Medicine Ball Throws",
     "system": "Alactic",
     "duration": "5–8 sets × 3–5 throws",
@@ -66,7 +66,7 @@
     "notes": "Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Plyometric Depth Jumps",
     "system": "Alactic",
     "duration": "6–10 × 3–5 jumps",
@@ -77,7 +77,7 @@
     "notes": "Drop-jump rebounds for ground reaction power. Critical for sprawls/shot defense. Rest 2min+ between sets."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Band-Resisted Takedown Explosions",
     "system": "Alactic",
     "duration": "8–10 × 3–5s bursts",
@@ -88,7 +88,7 @@
     "notes": "Sport-specific shots against band resistance. <10s efforts w/ 1:5 work:rest ratio. Enhances first-step quickness."
   },
   {
-    "phase": "GPP",
+    "phases": ["GPP"],
     "name": "Clap Push-Up Sprints",
     "system": "Alactic",
     "duration": "5–8 × 3–5 reps",
