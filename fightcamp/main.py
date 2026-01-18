@@ -151,6 +151,14 @@ async def generate_plan(data: dict):
     notes = plan_input.notes
     weeks_out = plan_input.weeks_out
     days_until_fight = plan_input.days_until_fight
+    normalized_equipment_access = normalize_equipment_list(equipment_access)
+    equipment_access_display = (
+        ", ".join(
+            eq.replace("_", " ").title() for eq in normalized_equipment_access
+        )
+        if normalized_equipment_access
+        else "None listed"
+    )
 
     logger.info(
         "plan_input loaded",
@@ -654,6 +662,7 @@ async def generate_plan(data: dict):
         f"- Fatigue Level: {fatigue}",
         f"- Injuries: {injuries_display}",
         f"- Training Availability: {available_days}",
+        f"- Equipment Access: {equipment_access_display}",
         f"- Weaknesses: {weak_areas}",
         f"- Key Goals: {key_goals}",
         f"- Mindset Challenges: {', '.join(training_context.mental_block)}",
