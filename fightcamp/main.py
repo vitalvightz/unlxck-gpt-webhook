@@ -85,6 +85,15 @@ def _is_pure_striker(tech_styles: list[str], tactical_styles: list[str]) -> bool
     return not any(style in GRAPPLING_STYLES for style in all_styles)
 
 
+def _filter_mindset_blocks(blocks: list[str], tech_styles: list[str], tactical_styles: list[str]) -> list[str]:
+    if not blocks:
+        return ["generic"]
+    if not _is_pure_striker(tech_styles, tactical_styles):
+        return blocks
+    filtered = [block for block in blocks if block != "fear of takedowns"]
+    return filtered or ["generic"]
+
+
 def _sanitize_phase_text(text: str, labels: list[str]) -> str:
     if not text:
         return text
@@ -190,6 +199,7 @@ async def generate_plan(data: dict):
     weight_cut_risk_flag = weight_val - target_val >= 0.05 * target_val if target_val else False
     weight_cut_pct_val = round((weight_val - target_val) / target_val * 100, 1) if target_val else 0.0
     mental_block_class = classify_mental_block(mental_block or "")
+    mental_block_class = _filter_mindset_blocks(mental_block_class, tech_styles, tactical_styles)
 
     camp_len = weeks_out if isinstance(weeks_out, int) else 8
     phase_weeks = calculate_phase_weeks(

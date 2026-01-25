@@ -1,5 +1,6 @@
 import importlib.util
 import logging
+import re
 from difflib import SequenceMatcher
 
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
@@ -70,6 +71,7 @@ TYPE_PRIORITY = {
     "sprain": 0.90,
     "impingement": 0.85,
     "tendonitis": 0.80,
+    "shin splints": 0.79,
     "strain": 0.78,
     "hyperextension": 0.75,
     "stiffness": 0.70,
@@ -163,7 +165,7 @@ INJURY_SYNONYM_MAP = {
         "pull", "pulled", "tug", "tugged", "rip", "ripped",
         "cramp", "cramping", "charley horse", "dead leg", "seize", "seized",
         "lock", "locked", "knot", "knotted", "ball", "balled", "grab", "grabbed",
-        "ping", "pinged", "twinge", "twinging", "sharp pain", "acute pain",
+        "pinged", "twinge", "twinging", "sharp pain", "acute pain",
         "muscle tear", "muscle rupture", "muscle pop", "muscle snap", "muscle went",
         "tendon tear", "tendon pop", "tendon snap", "tendon rupture",
         "hamstring", "calf", "quad", "groin", "pec", "bicep", "tricep",
@@ -186,11 +188,11 @@ INJURY_SYNONYM_MAP = {
     "contusion": [
         "bruise", "bruised", "abrase", "abrasion", "black", "blue", "black and blue", "purple",
         "discoloration", "discolored", "kicked", "knee", "kneed", "elbow",
-        "elbowed", "dead leg", "corked", "cork", "impact", "swollen",
+        "elbowed", "dead leg", "corked", "cork", "swollen",
         "dent", "dented", "indent", "indentation", "mark", "marked",
         "hit", "struck", "banged", "banged up",
         "trauma", "traumatic", "blunt", "blunt force", "from strike",
-        "from kick", "from knee", "from elbow", "from impact", "from hit"
+        "from kick", "from knee", "from elbow", "from hit"
     ],
 
     # Swelling - every fluid retention phrase
@@ -214,6 +216,14 @@ INJURY_SYNONYM_MAP = {
         "acting up", "playing up", "misbehaving", "problem area",
         "always sore", "always hurts", "never goes away", "persistent",
         "recurring", "comes and goes", "use pain", "activity pain"
+    ],
+
+    # Shin splints - medial tibial stress syndrome
+    "shin splints": [
+        "shin splint",
+        "shin splints",
+        "medial tibial stress syndrome",
+        "mtss",
     ],
 
     # Pinching - every joint catching phrase
@@ -793,12 +803,14 @@ def split_injury_text(raw_text: str) -> list[str]:
         if not raw_text:
             return []
         text = raw_text.lower()
-        for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also "]:
+        text = re.sub(r"[()]", " ", text)
+        for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also ", " + ", "+", "/", "|"]:
             text = text.replace(sep, ". ")
         return [chunk.strip() for chunk in text.split(".") if chunk.strip()]
     text = raw_text.lower()
+    text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
-    for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also "]:
+    for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also ", " + ", "+", "/", "|"]:
         text = text.replace(sep, ". ")
     doc = nlp(text)
     return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
