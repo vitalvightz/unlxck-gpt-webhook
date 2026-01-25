@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 from typing import Any
 from .config import DATA_DIR
-from .bank_schema import validate_training_item, KNOWN_SYSTEMS, SYSTEM_ALIASES
 
 logger = logging.getLogger(__name__)
 
