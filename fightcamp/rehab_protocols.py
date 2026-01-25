@@ -667,7 +667,9 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
             lines.append(f"- {summary}:")
             lines.extend([f"  - {d}" for d in drills[:4]])
         else:
-            lines.append(f"- {summary}: No rehab drills available for this phase.")
+            lines.append(
+                f"- {summary}: Maintain pain-free mobility and follow clinician guidance."
+            )
 
     base_red_flags = [
         "Pain that worsens and stays elevated the next morning.",
