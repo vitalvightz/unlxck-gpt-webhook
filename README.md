@@ -98,9 +98,39 @@ These constraints ensure fighters with those styles emphasize the most relevant 
 
 The `hybrid` style tag refers to stance-switching ability rather than mixing multiple sports. Drills labeled with this tag focus on unilateral movements, footwork or rapid transitions between orthodox and southpaw. Exercises that simply blend striking and grappling no longer carry `hybrid`.
 
-**Mindset module** (`mindset_module.py`)
+### Injury Modules
 
-Keyword counts determine the top mental blocks using fuzzy matching. If no clear keyword hits are found, the module falls back to a semantic similarity check via spaCy. The two highest scoring blocks feed into the phase mindset cues.
+The injury pipeline turns free-form injury notes into guardrails, rehab drills, and coach review callouts.
+
+**Parsing and canonicalization** (`injury_synonyms.py`, `injury_formatting.py`)
+
+- Free-form injury notes are split into phrases with `split_injury_text()`, handling punctuation, conjunctions, and common separators before falling back to spaCy sentence segmentation when available.【F:fightcamp/injury_synonyms.py†L861-L887】
+- Each phrase is normalized into a canonical injury type and body location via `parse_injury_phrase()`, which routes through injury type and location canonicalizers after stripping negated phrases.【F:fightcamp/injury_synonyms.py†L848-L859】
+- Laterality is extracted separately (`left`/`right`) so summaries can be labeled as “Left Shoulder,” “Right Knee,” etc.【F:fightcamp/injury_formatting.py†L10-L38】
+
+**Scoring and flags** (`injury_scoring.py`)
+
+- `score_injury_phrase()` applies a deterministic scan for medical terms and mechanical red flags, then scores canonical injury types against a synonym map to pick the best match.【F:fightcamp/injury_scoring.py†L11-L170】
+- Urgent medical terms (fracture, dislocation, infection, nerve) add escalation flags without blocking downstream rehab lookup.【F:fightcamp/injury_scoring.py†L11-L45】
+
+**Rehab selection + guardrails** (`rehab_protocols.py`)
+
+- Parsed entries are deduplicated by location and type, then matched against the rehab bank by type, location, and phase progression to return up to two drills per injury per phase.【F:fightcamp/rehab_protocols.py†L123-L236】
+- `format_injury_guardrails()` builds the injury summary, phase rehab priorities, and red-flag list used in the plan output; taper phases add a glycolytic conditioning caution when injuries are present.【F:fightcamp/rehab_protocols.py†L365-L445】
+- Support notes aggregate type-specific recovery guidance for any injuries detected.【F:fightcamp/rehab_protocols.py†L256-L336】
+
+### Mental Modules
+
+The mental workflow focuses on classifying intake blockers, filtering them for style fit, and surfacing phase cues in the plan output.
+
+**Mental block intake + filtering** (`main.py`)
+
+- The intake’s mental blocker text is classified into one or more blocks, then filtered so pure strikers do not receive a “fear of takedowns” cue.【F:fightcamp/main.py†L157-L214】
+- Mental blocks are stored in the training context so they can be reused across the phase summaries, coach review notes, and plan header sections.【F:fightcamp/main.py†L240-L267】【F:fightcamp/main.py†L650-L706】
+
+**Phase cues** (`main.py`, `mindset_module.py`)
+
+- Phase mindset cues are retrieved from the mindset module and injected into each phase’s strength block so the plan surfaces a targeted mental focus alongside the physical work.【F:fightcamp/main.py†L254-L312】
 
 **Training context** (`training_context.py`)
 
