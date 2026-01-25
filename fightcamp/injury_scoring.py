@@ -68,7 +68,7 @@ def _build_location_map(location_map: dict[str, str]) -> dict[str, list[str]]:
 LOCATION_MAP: dict[str, list[str]] = _build_location_map(LOCATION_MAP)
 
 
-def _first_location_hit(t_clean: str) -> str:
+def _first_location_hit(t_clean: str) -> str | None:
     """
     Returns first matched canonical location.
     Deterministic: iterates LOCATION_MAP in insertion order.
@@ -77,7 +77,7 @@ def _first_location_hit(t_clean: str) -> str:
         for s in syns:
             if safe_phrase_search(s, t_clean):
                 return loc
-    return "unspecified"
+    return None
 
 
 def _detect_side(t_clean: str) -> str:
@@ -156,7 +156,7 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
         injury_type = max(type_scores.items(), key=lambda x: x[1])[0]
 
     # E) Location detection (deterministic)
-    location = _first_location_hit(t_clean)
+    location = _first_location_hit(t_clean) or "unspecified"
 
     # F) Extra defensive: if medical term hit but location is missing, keep unspecified
     # (do not invent location)

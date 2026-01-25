@@ -664,15 +664,32 @@ def _has_negated_injury(text: str) -> bool:
     return False
 
 
+def _regex_negation_window(text: str, window: int = 3) -> bool:
+    lowered = text.lower()
+    if not _NEGATION_CUE_PATTERN.search(lowered):
+        return False
+    window_pattern = rf"(?:\\W+\\w+){{0,{window}}}\\W+"
+    for term in _NEGATION_TARGETS:
+        if len(term) < 3:
+            continue
+        pattern = rf"{_NEGATION_CUE_PATTERN.pattern}{window_pattern}{re.escape(term)}\\b"
+        if re.search(pattern, lowered):
+            return True
+    return False
+
+
 def remove_negated_phrases(text: str) -> str:
     """Strip words marked as negated by Negex from the text."""
     if not text:
         return ""
-    if _SPACY_AVAILABLE and _NEGSPACY_AVAILABLE:
+    if _SPACY_AVAILABLE and _NEGSPACY_AVAILABLE and "negex" in getattr(nlp, "pipe_names", []):
         doc = nlp(text)
         tokens = [tok.text for tok in doc if not tok._.negex]
-        return " ".join(tokens).strip()
-    if _has_negated_injury(text):
+        cleaned = " ".join(tokens).strip()
+        if not any(tok._.negex for tok in doc) and _regex_negation_window(text):
+            return ""
+        return cleaned
+    if _regex_negation_window(text) or _has_negated_injury(text):
         return ""
     return text.strip()
 
@@ -834,39 +851,50 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     return best
 
 
+def _fallback_location_match(text: str) -> str | None:
+    lowered = text.lower()
+    for key in sorted(LOCATION_MAP.keys(), key=len, reverse=True):
+        if len(key) < 2:
+            continue
+        pattern = rf"(?:^|\\b){re.escape(key)}(?:\\b|$)"
+        if re.search(pattern, lowered):
+            return LOCATION_MAP[key]
+    return None
+
+
 def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     """Extract canonical injury type and location from an injury phrase."""
     cleaned = remove_negated_phrases(phrase.lower())
     cleaned = _strip_surrounding_punct(cleaned)
+    cleaned = re.sub(r"[()\\[\\]{}]", " ", cleaned)
+    cleaned = re.sub(r"[,:;]+", " ", cleaned)
+    cleaned = " ".join(cleaned.split())
     if not cleaned:
         return None, None
     doc_text = cleaned
     injury_type = canonicalize_injury_type(doc_text)
     location = canonicalize_location(doc_text)
+    if not location:
+        location = _fallback_location_match(doc_text)
     return injury_type, location
 
 
 def split_injury_text(raw_text: str) -> list[str]:
     """Normalize free-form injury text into a list of phrases using spaCy."""
+    if not raw_text:
+        return []
+    text = raw_text.lower()
+    text = re.sub(r"[()]", " ", text)
+    text = re.sub(r"(?m)^[\\s>*-]*[•*\\-]\\s+", ". ", text)
+    text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
+    for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
+        text = text.replace(sep, ". ")
     if not _SPACY_AVAILABLE:
-        if not raw_text:
-            return []
-        text = raw_text.lower()
-        text = re.sub(r"[()]", " ", text)
-        text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-        for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-            text = text.replace(sep, ". ")
         return [
             cleaned
             for chunk in text.split(".")
             if (cleaned := _strip_surrounding_punct(chunk))
         ]
-    text = raw_text.lower()
-    text = re.sub(r"[()]", " ", text)
-    # Replace common connectors with punctuation so spaCy can split sentences
-    text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-    for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-        text = text.replace(sep, ". ")
     doc = nlp(text)
     return [
         cleaned

@@ -94,6 +94,10 @@ INJURY_TYPE_SEVERITY = {
     "unspecified": "moderate",
 }
 
+
+def get_injury_severity(injury_type: str | None) -> str:
+    return INJURY_TYPE_SEVERITY.get(injury_type or "", "moderate")
+
 REGION_GUARDRAILS = {
     "upper_limb": {
         "mild": {
@@ -560,7 +564,7 @@ def build_coach_review_entries(injury_string: str, phase: str) -> list[dict]:
         itype = entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
-        severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
+        severity = get_injury_severity(itype)
         if severity not in {"moderate", "severe"}:
             continue
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
@@ -667,7 +671,7 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         itype = entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
-        severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
+        severity = get_injury_severity(itype)
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
         lines.append(
             f"- {format_injury_summary({'canonical_location': loc, 'laterality': laterality, 'injury_type': itype, 'severity': severity})}"
@@ -687,7 +691,7 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         itype = entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
-        severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
+        severity = get_injury_severity(itype)
         drills = _rehab_drills_for_phase(itype, loc, phase, limit=4)
         summary = format_injury_summary(
             {
