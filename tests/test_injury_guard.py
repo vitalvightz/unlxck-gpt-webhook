@@ -177,6 +177,14 @@ def test_drill_text_filter_matches_notes_and_tags():
     assert any("overhead" in reason["tags"] for reason in tag_reasons)
 
 
+def test_shin_injury_allows_low_impact_aerobic():
+    row_drill = {"name": "Rower Tempo", "notes": "", "tags": []}
+    bike_drill = {"name": "Stationary Bike Tempo", "notes": "", "tags": []}
+    swim_drill = {"name": "Pool Swim Intervals", "notes": "", "tags": []}
+    for drill in [row_drill, bike_drill, swim_drill]:
+        assert injury_violation_reasons(drill, ["shin splints"]) == []
+
+
 def test_injury_exclusion_map_contains_known_drill():
     exclusions = build_injury_exclusion_map()
     assert "exercise_bank:Barbell Overhead Press" in exclusions["shoulder"]

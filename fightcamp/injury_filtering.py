@@ -120,13 +120,13 @@ AUTO_TAG_RULES = [
 
 INJURY_TAG_ALIASES = {
     "adductors": {"long_lever_adductor", "wide_stance_adductor_high"},
-    "aerobic": {"running_volume_high", "calf_volume_high"},
+    "aerobic": set(),
     "agility": {"cod_high", "decel_high"},
     "boxing": {"contact", "sparring", "head_impact", "striking_contact", "hard_contact", "live_rounds"},
     "clinch": {"contact", "sparring", "head_impact", "striking_contact"},
     "core": {"hip_flexion_loaded", "hip_flexor_strain_risk"},
     "deadlift": {"posterior_chain_heavy", "lumbar_loaded"},
-    "endurance": {"running_volume_high", "calf_volume_high"},
+    "endurance": set(),
     "explosive": {"explosive_upper_push"},
     "grappling": {"contact", "sparring", "head_impact"},
     "grip": {
@@ -376,6 +376,8 @@ def injury_match_details(
     tags = set(ensure_tags(item))
     tags |= infer_tags_from_name(name)
     tags |= expand_injury_tags(tags)
+    if "low_impact" in tags:
+        tags.discard("running_volume_high")
     reasons: list[dict] = []
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
