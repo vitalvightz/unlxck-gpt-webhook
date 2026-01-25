@@ -15,7 +15,7 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
-from .injury_filtering import _load_style_specific_exercises, log_injury_debug
+from .injury_filtering import _load_style_specific_exercises, _log_exclusion
 # Refactored: Import factory function for guarded decision making
 from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
 
@@ -700,15 +700,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated.append(ex)
                 continue
             _record_exclusion(ex, decision)
-            # Log exclusion
-            reason = decision.reason if isinstance(decision.reason, dict) else {}
-            logger.warning(
-                "Excluded strength exercise '%s': region=%s severity=%s risk_score=%.3f",
-                ex.get("name", "<unnamed>"),
-                reason.get("region", "unknown"),
-                reason.get("severity", "unknown"),
-                decision.risk_score,
-            )
+            # Log exclusion with detailed info
+            _log_exclusion(f"strength:{phase}", ex, decision)
             replacement = None
             replacement_decision = None
             candidate_pool: list[dict] = []
@@ -731,6 +724,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 if rep_name:
                     reason_lookup[rep_name] = safe_reasons.get(rep_name, {})
                     used_names.add(rep_name)
+                # Log replacement when INJURY_DEBUG is enabled
+                if os.getenv("INJURY_DEBUG") == "1":
+                    print(f"[INJURY_DEBUG] REPLACEMENT strength:{phase}")
+                    print(f"  excluded: {ex.get('name', '<unnamed>')}")
+                    print(f"  replacement: {rep_name}")
+                    print()
                 updated.append(replacement)
             else:
                 updated.append(None)
@@ -741,23 +740,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             final_decision = _guarded_injury_decision(ex)
             if final_decision.action == "exclude":
                 _record_exclusion(ex, final_decision)
-                # Log exclusion
-                reason = final_decision.reason if isinstance(final_decision.reason, dict) else {}
-                logger.warning(
-                    "Excluded strength exercise '%s': region=%s severity=%s risk_score=%.3f",
-                    ex.get("name", "<unnamed>"),
-                    reason.get("region", "unknown"),
-                    reason.get("severity", "unknown"),
-                    final_decision.risk_score,
-                )
+                # Log exclusion with detailed info
+                _log_exclusion(f"strength:{phase}", ex, final_decision)
                 continue
             finalized.append(ex)
         return finalized
 
     base_exercises = _finalize_injury_safe_exercises(base_exercises)
-
-    if os.getenv("INJURY_DEBUG") == "1":
-        log_injury_debug(base_exercises, injuries, label=f"strength:{phase}")
 
     for ex in base_exercises:
         normalize_exercise_movement(ex)

@@ -612,18 +612,61 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
     exclusion_path.write_text(json.dumps(exclusion_map, indent=2, sort_keys=True))
 
 
-def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:
-    normalized = sorted(normalize_injury_regions(injuries))
-    logger.info("[injury-debug] %s normalized_injuries=%s", label, normalized)
-    for item in items:
-        name = item.get("name", "Unnamed")
-        reasons = injury_violation_reasons(item, injuries)
-        if reasons:
-            logger.info(
-                "[injury-debug] %s item=%s allowed=False reasons=%s",
-                label,
-                name,
-                reasons,
-            )
-        else:
-            logger.info("[injury-debug] %s item=%s allowed=True", label, name)
+def _log_exclusion(context: str, item: dict, decision) -> None:
+    """
+    Log detailed information about excluded items when INJURY_DEBUG is enabled.
+    Only logs when decision.action == 'exclude'.
+    
+    Args:
+        context: Context string (e.g., "strength:GPP", "conditioning:SPP")
+        item: Item dictionary with 'name', 'drill', or other name fields
+        decision: Decision object from injury_decision with action, reason, etc.
+    """
+    import os
+    if os.environ.get("INJURY_DEBUG", "0") != "1":
+        return
+    
+    if decision.action != "exclude":
+        return
+    
+    # Extract item name from various possible fields
+    name = item.get("name") or item.get("drill") or item.get("title") or "Unnamed"
+    
+    # Extract decision details
+    reason = decision.reason if isinstance(decision.reason, dict) else {}
+    region = reason.get("region", "unknown")
+    severity = reason.get("severity", "unknown")
+    bucket = reason.get("bucket", "default")
+    
+    # Extract triggers (tags and patterns from matches)
+    matches = reason.get("matches", [])
+    all_tags = set()
+    all_patterns = set()
+    
+    for match in matches:
+        if isinstance(match, dict):
+            all_tags.update(match.get("tags", []))
+            all_patterns.update(match.get("patterns", []))
+    
+    # Format trigger information
+    trigger_tags = sorted(all_tags) if all_tags else []
+    trigger_patterns = sorted(all_patterns) if all_patterns else []
+    
+    # Print detailed exclusion log
+    print(f"[INJURY_DEBUG] EXCLUDE {context}")
+    print(f"  item: {name}")
+    print(f"  region: {region}")
+    print(f"  severity: {severity}")
+    print(f"  risk_score: {decision.risk_score:.3f}")
+    
+    if trigger_tags:
+        print(f"  trigger_tags: {trigger_tags}")
+    if trigger_patterns:
+        print(f"  trigger_patterns: {trigger_patterns}")
+    
+    # Also get exclusion reasons from the item directly
+    exclusion_reasons = injury_violation_reasons(item, [region] if region != "unknown" else [])
+    if exclusion_reasons:
+        print(f"  exclusion_reasons: {exclusion_reasons}")
+    
+    print()
