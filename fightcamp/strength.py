@@ -15,7 +15,7 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
-from .injury_filtering import _load_style_specific_exercises, _log_exclusion, INJURY_DEBUG
+from .injury_filtering import _load_style_specific_exercises, _log_exclusion, _log_replacement
 # Refactored: Import factory function for guarded decision making
 from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
 
@@ -725,13 +725,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     reason_lookup[rep_name] = safe_reasons.get(rep_name, {})
                     used_names.add(rep_name)
                 # Log replacement when INJURY_DEBUG is enabled
-                if INJURY_DEBUG:
-                    logger.info(
-                        "[INJURY_REPLACEMENT] %s | excluded=%s | replacement=%s",
-                        f"strength:{phase}",
-                        ex.get("name", "<unnamed>"),
-                        rep_name,
-                    )
+                _log_replacement(f"strength:{phase}", ex.get("name", "<unnamed>"), rep_name or "<unnamed>")
                 updated.append(replacement)
             else:
                 updated.append(None)

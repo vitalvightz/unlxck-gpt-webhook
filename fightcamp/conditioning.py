@@ -13,7 +13,7 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
-from .injury_filtering import injury_match_details, _log_exclusion, INJURY_DEBUG
+from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
@@ -1351,13 +1351,7 @@ def generate_conditioning_block(flags):
                     drills[idx] = replacement
                     
                     # Log replacement when INJURY_DEBUG is enabled
-                    if INJURY_DEBUG:
-                        logger.info(
-                            "[INJURY_REPLACEMENT] %s | excluded=%s | replacement=%s",
-                            f"conditioning:{phase.upper()}",
-                            old_name or "<unnamed>",
-                            rep_name,
-                        )
+                    _log_replacement(f"conditioning:{phase.upper()}", old_name or "<unnamed>", rep_name)
 
                     reason_lookup.setdefault(rep_name, {
                         "goal_hits": 0,
