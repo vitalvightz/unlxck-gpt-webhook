@@ -300,14 +300,22 @@ def auto_tag(item: dict) -> set[str]:
 
 
 def ensure_tags(item: dict) -> list[str]:
+    # If already processed, return existing tags
+    if "_tag_source" in item:
+        return item.get("tags", [])
+    
     raw_tags = normalize_tags([t for t in item.get("tags", []) if t])
     if raw_tags:
         item["tags"] = raw_tags
+        item["_tag_source"] = "explicit"
         return raw_tags
+
     inferred = sorted(auto_tag(item))
     if not inferred:
         inferred = ["untagged"]
+
     item["tags"] = inferred
+    item["_tag_source"] = "inferred"
     return inferred
 
 
@@ -429,10 +437,12 @@ def injury_match_details(
     field_values = {field: str(item.get(field, "") or "") for field in fields}
     name = field_values.get("name", "")
     tags = set(ensure_tags(item))
+    tag_source = item.get("_tag_source", "explicit")
     tags |= infer_tags_from_name(name)
-    tags |= expand_injury_tags(tags, item=item)
-    if "low_impact" in tags:
-        tags.discard("running_volume_high")
+    expanded = expand_injury_tags(tags, item=item)
+    tags_for_matching = tags | expanded
+    if "low_impact" in tags_for_matching:
+        tags_for_matching.discard("running_volume_high")
     reasons: list[dict] = []
     module = _module_for_item(item)
     allow_keyword_match = module == "strength"
@@ -443,7 +453,9 @@ def injury_match_details(
                 continue
             patterns = rules.get(f"{risk_level}_keywords", rules.get("ban_keywords", []) if risk_level == "exclude" else [])
             risk_tags = {t.lower() for t in rules.get(f"{risk_level}_tags", rules.get("ban_tags", []) if risk_level == "exclude" else [])}
-            tag_hits = sorted(tags & risk_tags)
+            tag_hits_raw = sorted(tags_for_matching & risk_tags)
+            # Only allow explicit tags to trigger exclusion
+            tag_hits = tag_hits_raw if tag_source == "explicit" else []
             field_hits: dict[str, list[str]] = {}
             matched_patterns: set[str] = set()
             if not tag_hits and allow_keyword_match:
