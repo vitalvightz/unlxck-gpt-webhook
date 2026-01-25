@@ -14,12 +14,10 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, log_injury_debug
-# Refactored: Import factory function for guarded decision making
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
-# Refactored: Import centralized constants and utilities from config
 from .config import (
     PHASE_SYSTEM_RATIOS,
     STYLE_CONDITIONING_RATIO,
@@ -28,7 +26,6 @@ from .config import (
     trim_to_injury_guard_shortlist,
 )
 
-# Extra explosive or high-load tags to avoid during TAPER when fatigue isn't low
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
     "triple_extension",
@@ -37,7 +34,6 @@ TAPER_AVOID_TAGS = {
     "mental_toughness",
     "work_capacity",
     "eccentric",
-    
 }
 
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
@@ -181,7 +177,6 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
     return bank
 
 
-# Load banks
 conditioning_bank = _load_bank(
     DATA_DIR / "conditioning_bank.json",
     source="conditioning_bank.json",
@@ -194,7 +189,6 @@ style_conditioning_bank = _load_bank(
 )
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
-# Load coordination bank and flatten drills
 try:
     _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")
 except Exception:
