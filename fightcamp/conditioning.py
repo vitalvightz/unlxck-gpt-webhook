@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 from typing import Callable, Iterable
+from collections import Counter
 from .training_context import (
     allocate_sessions,
     normalize_equipment_list,
@@ -38,6 +39,35 @@ _UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
 _INJURY_GUARD_LOGGED: set[tuple] = set()
 
 logger = logging.getLogger(__name__)
+
+
+def _log_injury_guard_summary(phase: str, exclusions: list[dict]) -> None:
+    if not exclusions:
+        return
+    log_key = ("injury_guard_summary", phase)
+    if log_key in _INJURY_GUARD_LOGGED:
+        return
+    _INJURY_GUARD_LOGGED.add(log_key)
+    region_counts = Counter(
+        (exclusion.get("region") or "unknown") for exclusion in exclusions
+    )
+    top_drills = Counter(
+        exclusion.get("name")
+        for exclusion in exclusions
+        if exclusion.get("name")
+    ).most_common(5)
+    logger.warning(
+        "[injury-guard] %s excluded counts by region: %s",
+        phase.upper(),
+        dict(region_counts),
+    )
+    if top_drills:
+        formatted = ", ".join(f"{name} ({count})" for name, count in top_drills)
+        logger.warning(
+            "[injury-guard] %s top excluded drills: %s",
+            phase.upper(),
+            formatted,
+        )
 
 
 def normalize_system(raw_system: str | None, *, source: str) -> str:
@@ -204,16 +234,6 @@ def _is_drill_text_safe(
     decision = injury_decision(drill, injuries, phase, fatigue)
     if decision.action != "exclude":
         return True
-    log_key = (label, drill.get("name"), decision.reason.get("region"), decision.action)
-    if log_key in _INJURY_GUARD_LOGGED:
-        return False
-    _INJURY_GUARD_LOGGED.add(log_key)
-    logger.warning(
-        "[injury-guard] %s excluded '%s' decision=%s",
-        label,
-        drill.get("name"),
-        decision,
-    )
     return False
 
 # Relative emphasis of each energy system by training phase
@@ -592,6 +612,13 @@ def generate_conditioning_block(flags):
     }
     selected_drill_names = []
     reason_lookup: dict[str, dict] = {}
+    injury_exclusions: list[dict] = []
+
+    def _record_injury_exclusion(drill_name: str, decision: Decision) -> None:
+        region = None
+        if isinstance(decision.reason, dict):
+            region = decision.reason.get("region")
+        injury_exclusions.append({"name": drill_name, "region": region or "unknown"})
 
     for drill in conditioning_bank:
         d = drill.copy()
@@ -1253,6 +1280,7 @@ def generate_conditioning_block(flags):
                 if decision.action != "exclude":
                     idx += 1
                     continue
+                _record_injury_exclusion(drill_name, decision)
 
                 safe_pool: list[dict] = []
                 for cand in candidates:
@@ -1276,12 +1304,6 @@ def generate_conditioning_block(flags):
 
                 if replacement:
                     rep_name = _name(replacement) or "(unnamed)"
-                    logger.warning(
-                        "[injury-guard] conditioning replacing '%s' -> '%s' decision=%s",
-                        drill_name,
-                        rep_name,
-                        decision,
-                    )
 
                     old_name = _name(drill)
                     if old_name:
@@ -1306,12 +1328,6 @@ def generate_conditioning_block(flags):
 
                     idx += 1
                 else:
-                    logger.warning(
-                        "[injury-guard] conditioning removing '%s' decision=%s",
-                        drill_name,
-                        decision,
-                    )
-
                     old_name = _name(drill)
                     if old_name:
                         used_names.discard(old_name)
@@ -1329,6 +1345,7 @@ def generate_conditioning_block(flags):
         selected_drill_names,
         reason_lookup,
     )
+    _log_injury_guard_summary(phase, injury_exclusions)
 
     if os.getenv("INJURY_DEBUG") == "1":
         all_selected = [d for drills in grouped_drills.values() for d in drills]

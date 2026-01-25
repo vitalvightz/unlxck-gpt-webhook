@@ -5,7 +5,6 @@ import re
 from collections import Counter
 from difflib import SequenceMatcher
 
-_SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
 
 __all__ = [
@@ -26,20 +25,6 @@ except Exception:  # pragma: no cover - fallback when rapidfuzz missing/invalid
             return int(SequenceMatcher(None, a, b).ratio() * 100)
 
     fuzz = _FuzzFallback()
-
-try:  # pragma: no cover - optional dependency
-    if _SPACY_AVAILABLE:
-        import spacy
-
-        # load large English model once
-        try:  # pragma: no cover - model may be missing in CI
-            nlp = spacy.load("en_core_web_lg")
-        except Exception:  # pragma: no cover - fallback to blank model
-            nlp = spacy.blank("en")
-    else:
-        nlp = None
-except Exception:  # pragma: no cover - spacy import/model load failed
-    nlp = None
 
 BLOCK_PRIORITY = [
     "confidence",
