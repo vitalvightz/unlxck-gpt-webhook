@@ -466,7 +466,13 @@ INJURY_RULES = {
             "forward lunge long stride",
             "long stride lunge",
         ],
-        "ban_tags": ["hip_flexion_loaded", "max_velocity", "hip_flexor_strain_risk"],
+        "ban_tags": [
+            "hip_flexion_loaded",
+            "max_velocity",
+            "mech_max_velocity",
+            "mech_acceleration",
+            "hip_flexor_strain_risk",
+        ],
     },
     "hamstring": {
         "ban_keywords": [
@@ -493,7 +499,15 @@ INJURY_RULES = {
             "bounds",
             "bounding",
         ],
-        "ban_tags": ["hamstring_eccentric_high", "max_velocity", "posterior_chain_eccentric_high"],
+        "ban_tags": [
+            "hamstring_eccentric_high",
+            "max_velocity",
+            "mech_max_velocity",
+            "mech_acceleration",
+            "mech_change_of_direction",
+            "mech_hinge_eccentric",
+            "posterior_chain_eccentric_high",
+        ],
     },
     "quad": {
         "ban_keywords": [
@@ -541,7 +555,15 @@ INJURY_RULES = {
             "hard deceleration",
             "violent decel",
         ],
-        "ban_tags": ["high_impact_plyo", "knee_dominant_heavy", "decel_high", "landing_stress_high"],
+        "ban_tags": [
+            "high_impact_plyo",
+            "knee_dominant_heavy",
+            "decel_high",
+            "mech_deceleration",
+            "mech_change_of_direction",
+            "landing_stress_high",
+            "mech_landing_impact",
+        ],
     },
     "shin": {
         "ban_keywords": [
@@ -557,7 +579,12 @@ INJURY_RULES = {
             "hard track running",
             "hard surface running",
         ],
-        "ban_tags": ["impact_rebound_high", "running_volume_high", "shin_splints_risk"],
+        "ban_tags": [
+            "impact_rebound_high",
+            "mech_reactive_rebound",
+            "running_volume_high",
+            "shin_splints_risk",
+        ],
     },
     "calf": {
         "ban_keywords": [
@@ -574,7 +601,13 @@ INJURY_RULES = {
             "high volume calf raises",
             "calf raises high volume",
         ],
-        "ban_tags": ["calf_rebound_high", "max_velocity", "calf_volume_high"],
+        "ban_tags": [
+            "calf_rebound_high",
+            "mech_reactive_rebound",
+            "max_velocity",
+            "mech_max_velocity",
+            "calf_volume_high",
+        ],
     },
     "achilles": {
         "ban_keywords": [
@@ -593,7 +626,13 @@ INJURY_RULES = {
             "reactive hops",
             "reactive hopping",
         ],
-        "ban_tags": ["achilles_high_risk_impact", "max_velocity", "reactive_rebound_high"],
+        "ban_tags": [
+            "achilles_high_risk_impact",
+            "max_velocity",
+            "mech_max_velocity",
+            "reactive_rebound_high",
+            "mech_reactive_rebound",
+        ],
     },
     "ankle": {
         "ban_keywords": [
@@ -611,7 +650,15 @@ INJURY_RULES = {
             "hard decel",
             "hard deceleration",
         ],
-        "ban_tags": ["ankle_lateral_impact_high", "high_impact_plyo", "cod_high", "decel_high"],
+        "ban_tags": [
+            "ankle_lateral_impact_high",
+            "high_impact_plyo",
+            "cod_high",
+            "mech_change_of_direction",
+            "decel_high",
+            "mech_deceleration",
+            "mech_landing_impact",
+        ],
     },
     "foot": {
         "ban_keywords": [
