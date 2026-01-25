@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Iterable
+# Refactored: Import centralized DATA_DIR from config
+from .config import DATA_DIR
 
 
 TAG_SYNONYMS = {
@@ -60,8 +62,8 @@ def load_tag_vocabulary() -> set[str]:
     global _TAG_VOCAB_CACHE
     if _TAG_VOCAB_CACHE is not None:
         return _TAG_VOCAB_CACHE
-    data_dir = Path(__file__).resolve().parents[1] / "data"
-    vocab_path = data_dir / "tag_vocabulary.json"
+    # Refactored: Use centralized DATA_DIR instead of recomputing
+    vocab_path = DATA_DIR / "tag_vocabulary.json"
     if not vocab_path.exists():
         _TAG_VOCAB_CACHE = set()
         return _TAG_VOCAB_CACHE
