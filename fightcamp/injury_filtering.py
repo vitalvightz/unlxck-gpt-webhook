@@ -531,9 +531,35 @@ def expand_injury_tags(tags: Iterable[str], *, item: dict | None = None) -> set[
 
 
 def _normalize_text(text: str) -> str:
+    """
+    Normalize text for matching by:
+    - Converting to lowercase
+    - Replacing hyphens and underscores with spaces
+    - Removing all punctuation/parentheses
+    - Collapsing whitespace
+    
+    This is used for word-boundary based matching.
+    """
     cleaned = text.lower().replace("-", " ").replace("_", " ")
     cleaned = re.sub(r"[^\w\s]", " ", cleaned)
     return " ".join(cleaned.split())
+
+
+def normalize_for_substring_match(text: str) -> str:
+    """
+    Normalize text for substring matching by:
+    - Converting to lowercase  
+    - Removing all non-alphanumeric characters (including spaces)
+    - This allows 'rdl' to match in 'RomanianDeadlift', 'myRDL', etc.
+    
+    Returns:
+        Normalized string with only lowercase alphanumeric characters.
+    """
+    # Convert to lowercase
+    cleaned = text.lower()
+    # Remove all non-alphanumeric characters (including spaces, hyphens, underscores, parentheses)
+    cleaned = re.sub(r"[^a-z0-9]", "", cleaned)
+    return cleaned
 
 
 def _module_for_item(item: dict) -> str:
@@ -572,27 +598,85 @@ def _infer_mechanism_tags_from_name(name: str) -> set[str]:
 
 
 def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
+    """
+    Check if text contains any forbidden patterns using multi-strategy matching.
+    
+    Matching strategies:
+    1. Word-boundary matching (primary) - handles most cases including proper word boundaries
+    2. Substring matching for multi-word patterns (fallback) - handles compound words like 'RomanianDeadlift'
+    
+    The substring matching is only used as a fallback when word-boundary matching finds no matches.
+    This prevents "toe tap" from matching via substring when "toe taps" already matched via word boundary.
+    
+    Examples:
+    - 'Romanian Deadlift' matches 'romanian deadlift' (word boundary)
+    - 'Romanian Deadlift (RDL)' matches 'romanian deadlift' and 'rdl' (word boundary after normalization)
+    - 'RomanianDeadlift' matches 'romanian deadlift' (substring for multi-word pattern, fallback)
+    - 'toe taps' with patterns ['toe tap', 'toe taps'] matches only 'toe taps' (word boundary, no fallback needed)
+    - 'kipping pull-up' matches 'kipping' (word boundary)
+    - 'skipping rope' does NOT match 'kipping' (not a word boundary, and single-word patterns don't use substring)
+    
+    Args:
+        text: Text to check (e.g., exercise name)
+        patterns: List of forbidden patterns (e.g., ban_keywords)
+        allowlist: Optional list of allowed phrases that bypass all checks
+        
+    Returns:
+        List of matched patterns (original form, not normalized)
+    """
     normalized_text = _normalize_text(text)
     if not normalized_text:
         return []
+    
+    # Check allowlist first with word-boundary matching to avoid false positives
     allowlist = allowlist or []
     for phrase in allowlist:
         if _phrase_in_text(normalized_text, phrase):
             return []
-    matches: list[str] = []
+    
+    # First pass: try word-boundary matching for all patterns
+    word_boundary_matches: list[str] = []
     seen: set[str] = set()
+    substring_candidates: list[tuple[str, str, str]] = []  # (pattern, normalized_pattern, pattern_for_substring)
+    
     for pattern in patterns:
         normalized_pattern = _normalize_text(pattern)
         if not normalized_pattern:
             continue
+        
         phrase_tokens = normalized_pattern.split()
+        
+        # Skip single generic words to avoid false positives
         if len(phrase_tokens) == 1 and phrase_tokens[0] in GENERIC_SINGLE_WORD_PATTERNS:
             continue
+        
+        # Try word-boundary matching
         if _phrase_in_text(normalized_text, normalized_pattern):
             if pattern not in seen:
-                matches.append(pattern)
+                word_boundary_matches.append(pattern)
                 seen.add(pattern)
-    return matches
+        elif len(phrase_tokens) > 1:
+            # This is a multi-word pattern that didn't match via word boundary
+            # Save it as a candidate for substring matching
+            substring_candidates.append((pattern, normalized_pattern, ""))
+    
+    # If we found any word-boundary matches, return them (primary strategy succeeded)
+    if word_boundary_matches:
+        return word_boundary_matches
+    
+    # Second pass: try substring matching for multi-word patterns (fallback)
+    # Only reach here if NO word-boundary matches were found
+    normalized_for_substring = normalize_for_substring_match(text)
+    substring_matches: list[str] = []
+    
+    for pattern, normalized_pattern, _ in substring_candidates:
+        pattern_for_substring = normalize_for_substring_match(pattern)
+        if pattern_for_substring and pattern_for_substring in normalized_for_substring:
+            if pattern not in seen:
+                substring_matches.append(pattern)
+                seen.add(pattern)
+    
+    return substring_matches
 
 
 def infer_tags_from_name(name: str) -> set[str]:
@@ -800,6 +884,16 @@ def injury_match_details(
                     if matches:
                         field_hits[field_name] = matches
                         matched_patterns.update(matches)
+                        # Log exclusion for each matched ban_keyword
+                        for matched_pattern in matches:
+                            logger.info(
+                                "[injury-exclusion] Excluding '%s' for %s injury: ban_keyword '%s' found in %s='%s'",
+                                name,
+                                region,
+                                matched_pattern,
+                                field_name,
+                                value,
+                            )
             if field_hits or tag_hits:
                 reasons.append(
                     {
