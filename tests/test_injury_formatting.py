@@ -18,10 +18,10 @@ def test_format_injury_summary_basics():
                 "canonical_location": "ankle",
                 "laterality": None,
                 "injury_type": "stiffness",
-                "severity": "mild",
+                "severity": "low",
             }
         )
-        == "Ankle — Stiffness (Severity: Mild)"
+        == "Ankle — Stiffness (Severity: Low)"
     )
     assert (
         format_injury_summary(

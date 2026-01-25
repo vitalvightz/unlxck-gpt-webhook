@@ -9,7 +9,7 @@ from fightcamp.conditioning import (
     _is_drill_text_safe,
     select_coordination_drill,
 )
-from fightcamp.injury_guard import injury_decision, pick_safe_replacement
+from fightcamp.injury_guard import _injury_context, injury_decision, normalize_severity, pick_safe_replacement
 from fightcamp.injury_filtering import (
     audit_missing_tags,
     build_injury_exclusion_map,
@@ -215,6 +215,40 @@ def test_audit_missing_tags_reports_totals():
     counts = audit_missing_tags()
     total = counts.pop("total")
     assert total == sum(counts.values())
+
+
+def test_normalize_severity_synonyms():
+    severity, hits = normalize_severity("hamstring tightness")
+    assert severity == "low"
+    assert hits == ["tightness"]
+
+    severity, hits = normalize_severity("hamstring really tight")
+    assert severity == "moderate"
+    assert hits == ["really tight"]
+
+    severity, hits = normalize_severity("felt a pop")
+    assert severity == "high"
+    assert hits == ["pop"]
+
+    severity, hits = normalize_severity("unknown phrasing")
+    assert severity == "moderate"
+    assert hits == []
+
+
+def test_dict_severity_normalization():
+    injury = {"region": "hamstring", "severity": "really tight"}
+    injury_decision({"name": "Bike Tempo Ride", "tags": []}, [injury], "GPP", "low")
+    assert injury["severity"] == "moderate"
+
+    injury = {"region": "hamstring", "severity": "high"}
+    injury_decision({"name": "Bike Tempo Ride", "tags": []}, [injury], "GPP", "low")
+    assert injury["severity"] == "high"
+
+
+def test_duplicate_region_severity_keeps_strictest():
+    injuries = [{"region": "hamstring", "severity": "low"}, {"region": "hamstring", "severity": "high"}]
+    region_severity = _injury_context(injuries)
+    assert region_severity["hamstring"] == "high"
 
 
 def _make_drill(name: str, **overrides: str):
