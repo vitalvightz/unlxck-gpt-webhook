@@ -26,6 +26,7 @@ from .config import (
     trim_to_injury_guard_shortlist,
 )
 from .bank_loader import load_format_energy_weights
+from .logging_dedup import SingleWarningLogger
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -37,11 +38,7 @@ TAPER_AVOID_TAGS = {
     "eccentric",
 }
 
-_MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
-_UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
-_UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
-
-_INJURY_GUARD_LOGGED: set[tuple] = set()
+_conditioning_logger = SingleWarningLogger()
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +47,9 @@ def _log_injury_guard_summary(phase: str, exclusions: list[dict]) -> None:
     if not exclusions:
         return
     log_key = ("injury_guard_summary", phase)
-    if log_key in _INJURY_GUARD_LOGGED:
+    if _conditioning_logger.has_logged(log_key):
         return
-    _INJURY_GUARD_LOGGED.add(log_key)
+    
     region_counts = Counter(
         (exclusion.get("region") or "unknown") for exclusion in exclusions
     )
@@ -61,11 +58,10 @@ def _log_injury_guard_summary(phase: str, exclusions: list[dict]) -> None:
         for exclusion in exclusions
         if exclusion.get("name")
     ).most_common(5)
-    logger.warning(
-        "[injury-guard] %s excluded counts by region: %s",
-        phase.upper(),
-        dict(region_counts),
-    )
+    
+    msg = f"[injury-guard] {phase.upper()} excluded counts by region: {dict(region_counts)}"
+    _conditioning_logger.warn_once_keyed(log_key, msg, logger)
+    
     if top_drills:
         formatted = ", ".join(f"{name} ({count})" for name, count in top_drills)
         logger.warning(
@@ -97,26 +93,15 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
             else:
                 normalized = known_parts[0]
             log_key = (source, system)
-            if log_key not in _MIXED_SYSTEM_LOGGED and len(known_parts) > 1:
-                _MIXED_SYSTEM_LOGGED.add(log_key)
-                logger.warning(
-                    "[conditioning] Mixed energy system '%s' normalized='%s' source=%s",
-                    system,
-                    normalized,
-                    source,
-                )
+            if len(known_parts) > 1:
+                msg = f"[conditioning] Mixed energy system '{system}' normalized='{normalized}' source={source}"
+                _conditioning_logger.warn_once_keyed(log_key, msg, logger)
         else:
             normalized = SYSTEM_ALIASES.get(system, system or "misc")
     if normalized not in KNOWN_SYSTEMS:
         log_key = (source, normalized)
-        if log_key not in _UNKNOWN_SYSTEM_LOGGED:
-            _UNKNOWN_SYSTEM_LOGGED.add(log_key)
-            logger.warning(
-                "[conditioning] Unknown energy system '%s' normalized='%s' source=%s",
-                system or "unknown",
-                normalized,
-                source,
-            )
+        msg = f"[conditioning] Unknown energy system '{system or 'unknown'}' normalized='{normalized}' source={source}"
+        _conditioning_logger.warn_once_keyed(log_key, msg, logger)
     return normalized
 
 
@@ -210,14 +195,8 @@ def get_system_or_warn(drill: dict, *, source: str) -> str | None:
         return system
     name = drill.get("name", "Unnamed Drill")
     log_key = (source, system, name)
-    if log_key not in _UNKNOWN_SYSTEM_DRILL_LOGGED:
-        _UNKNOWN_SYSTEM_DRILL_LOGGED.add(log_key)
-        logger.warning(
-            "[conditioning] Dropping drill with unknown system bank=%s name='%s' system='%s'",
-            source,
-            name,
-            system,
-        )
+    msg = f"[conditioning] Dropping drill with unknown system bank={source} name='{name}' system='{system}'"
+    _conditioning_logger.warn_once_keyed(log_key, msg, logger)
     return None
 
 

@@ -1,4 +1,5 @@
 import logging
+from .logging_dedup import SingleWarningLogger
 
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
@@ -9,17 +10,14 @@ SYSTEM_ALIASES = {
 KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}
 
 DEFAULT_PHASES = ["GPP", "SPP", "TAPER"]
-_SCHEMA_WARNINGS_LOGGED: set[tuple[str, str, str]] = set()
+_schema_logger = SingleWarningLogger()
 
 logger = logging.getLogger(__name__)
 
 
 def _warn_once(source: str, name: str, issue: str, message: str) -> None:
     key = (source, name, issue)
-    if key in _SCHEMA_WARNINGS_LOGGED:
-        return
-    _SCHEMA_WARNINGS_LOGGED.add(key)
-    logger.warning(message)
+    _schema_logger.warn_once_keyed(key, message, logger)
 
 
 def validate_training_item(
