@@ -119,33 +119,11 @@ class Decision:
 
 
 def _normalize_injury_list(injuries: Iterable[str | dict] | str | dict | None) -> list[str | dict]:
-    """
-    Normalize injuries to a list, handling both string and dictionary formats.
-    
-    Args:
-        injuries: Can be:
-            - None or empty: returns []
-            - A single string: returns [string]
-            - A single dict with 'region' and 'severity': returns [dict]
-            - An iterable of strings: returns list of strings
-            - An iterable of dicts: returns list of dicts
-            
-    Returns:
-        List of injury strings or injury dictionaries
-    """
     if not injuries:
         return []
-    if isinstance(injuries, str):
+    if isinstance(injuries, (str, dict)):
         return [injuries]
-    if isinstance(injuries, dict):
-        # Single dictionary injury
-        return [injuries]
-    # Iterable case - preserve both strings and dicts
-    result = []
-    for i in injuries:
-        if i:  # Filter out None/empty values
-            result.append(i)
-    return result
+    return [item for item in injuries if item]
 
 
 def _map_text_to_region(text: str) -> str | None:
@@ -156,35 +134,20 @@ def _map_text_to_region(text: str) -> str | None:
 
 
 def _injury_context(injuries: Iterable[str | dict]) -> dict[str, str]:
-    """
-    Build a mapping of region -> severity from injuries.
-    
-    Args:
-        injuries: List of injury strings or dictionaries with 'region' and 'severity' keys
-        
-    Returns:
-        Dictionary mapping region names to severity levels
-    """
     region_severity: dict[str, str] = {}
     string_injuries: list[str] = []
-    
     for injury in injuries:
         if not injury:
             continue
-            
-        # Handle dictionary format with explicit region and severity
         if isinstance(injury, dict):
             region = injury.get("region")
             severity = injury.get("severity", "moderate")
             if region:
-                # Normalize severity to valid values
                 severity = severity if severity in SEVERITY_RANK else "moderate"
                 current = region_severity.get(region)
                 if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
                     region_severity[region] = severity
             continue
-        
-        # Handle string format (existing logic)
         string_injuries.append(str(injury))
         for phrase in split_injury_text(str(injury)):
             cleaned = remove_negated_phrases(phrase)
@@ -202,12 +165,9 @@ def _injury_context(injuries: Iterable[str | dict]) -> dict[str, str]:
                     if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
                         region_severity[region] = severity
                     break
-    
-    # For string injuries, add any regions not yet in the map
     if string_injuries:
         for region in normalize_injury_regions(string_injuries):
             region_severity.setdefault(region, "moderate")
-    
     return region_severity
 
 
