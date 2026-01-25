@@ -13,7 +13,7 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
-from .injury_filtering import injury_match_details, log_injury_debug
+from .injury_filtering import injury_match_details, _log_exclusion
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
@@ -1051,15 +1051,8 @@ def generate_conditioning_block(flags):
                 break
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
-                # Log exclusion
-                reason = decision.reason if isinstance(decision.reason, dict) else {}
-                logger.warning(
-                    "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
-                    drill.get("name", "<unnamed>"),
-                    reason.get("region", "unknown"),
-                    reason.get("severity", "unknown"),
-                    decision.risk_score,
-                )
+                # Log exclusion using new helper
+                _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                 continue
             drill_tags = set(normalize_tags(drill.get("tags", [])))
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
@@ -1122,15 +1115,8 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
-                    # Log exclusion
-                    reason = decision.reason if isinstance(decision.reason, dict) else {}
-                    logger.warning(
-                        "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
-                        drill.get("name", "<unnamed>"),
-                        reason.get("region", "unknown"),
-                        reason.get("severity", "unknown"),
-                        decision.risk_score,
-                    )
+                    # Log exclusion using new helper
+                    _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                     continue
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
@@ -1166,15 +1152,8 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
-                    # Log exclusion
-                    reason = decision.reason if isinstance(decision.reason, dict) else {}
-                    logger.warning(
-                        "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
-                        drill.get("name", "<unnamed>"),
-                        reason.get("region", "unknown"),
-                        reason.get("severity", "unknown"),
-                        decision.risk_score,
-                    )
+                    # Log exclusion using new helper
+                    _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                     continue
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
                 if system is not None:
@@ -1210,15 +1189,8 @@ def generate_conditioning_block(flags):
                 continue
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
-                # Log exclusion
-                reason = decision.reason if isinstance(decision.reason, dict) else {}
-                logger.warning(
-                    "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
-                    drill.get("name", "<unnamed>"),
-                    reason.get("region", "unknown"),
-                    reason.get("severity", "unknown"),
-                    decision.risk_score,
-                )
+                # Log exclusion using new helper
+                _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                 continue
             system = get_system_or_warn(drill, source="skill_refinement")
             if system is None:
@@ -1270,15 +1242,8 @@ def generate_conditioning_block(flags):
                 )[:INJURY_GUARD_SHORTLIST]:
                     decision = _guarded_injury_decision(drill)
                     if decision.action == "exclude":
-                        # Log exclusion
-                        reason = decision.reason if isinstance(decision.reason, dict) else {}
-                        logger.warning(
-                            "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
-                            drill.get("name", "<unnamed>"),
-                            reason.get("region", "unknown"),
-                            reason.get("severity", "unknown"),
-                            decision.risk_score,
-                        )
+                        # Log exclusion using new helper
+                        _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
                         continue
                     system = get_system_or_warn(drill, source="pro_neck")
                     if system is not None:
@@ -1351,15 +1316,8 @@ def generate_conditioning_block(flags):
                     idx += 1
                     continue
                 _record_injury_exclusion(drill, decision)
-                # Log exclusion
-                reason = decision.reason if isinstance(decision.reason, dict) else {}
-                logger.warning(
-                    "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
-                    drill.get("name", "<unnamed>"),
-                    reason.get("region", "unknown"),
-                    reason.get("severity", "unknown"),
-                    decision.risk_score,
-                )
+                # Log exclusion using new helper
+                _log_exclusion(f"conditioning:{phase.upper()}", drill, decision)
 
                 safe_pool: list[dict] = []
                 for cand in candidates:
@@ -1425,10 +1383,6 @@ def generate_conditioning_block(flags):
         selected_drill_names,
         reason_lookup,
     )
-
-    if os.getenv("INJURY_DEBUG") == "1":
-        all_selected = [d for drills in grouped_drills.values() for d in drills]
-        log_injury_debug(all_selected, injuries, label=f"conditioning:{phase.upper()}")
 
     if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic"):
         fallback = _glycolytic_fallback(phase)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Iterable
@@ -169,6 +170,62 @@ INJURY_TAG_ALIASES = {
 }
 
 logger = logging.getLogger(__name__)
+
+INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
+
+
+def _log_exclusion(context: str, item: dict, decision) -> None:
+    """
+    Log exclusion details when INJURY_DEBUG is enabled and item is excluded.
+    
+    Args:
+        context: Context string (e.g. "strength:GPP", "conditioning:SPP")
+        item: Item being excluded
+        decision: Decision object with action, reason, matched_tags, etc.
+    """
+    if not INJURY_DEBUG:
+        return
+    
+    if decision.action != "exclude":
+        return
+    
+    # Extract item name
+    name = item.get("name") or item.get("drill") or item.get("title") or "<unnamed>"
+    
+    # Extract decision details
+    reason = decision.reason if isinstance(decision.reason, dict) else {}
+    region = reason.get("region", "unknown")
+    severity = reason.get("severity", "unknown")
+    matched_tags = decision.matched_tags or []
+    
+    # Extract triggers (tags and patterns from matches)
+    matches = reason.get("matches", [])
+    all_tags = set()
+    all_patterns = set()
+    
+    for match in matches:
+        if isinstance(match, dict):
+            all_tags.update(match.get("tags", []))
+            all_patterns.update(match.get("patterns", []))
+    
+    trigger_tags = sorted(all_tags) if all_tags else []
+    trigger_patterns = sorted(all_patterns) if all_patterns else []
+    
+    # Log exclusion with context
+    logger.info(
+        "[INJURY_EXCLUSION] %s | name=%s | region=%s | severity=%s | risk_score=%.3f | triggers=%s",
+        context,
+        name,
+        region,
+        severity,
+        decision.risk_score,
+        {
+            "tags": trigger_tags,
+            "patterns": trigger_patterns,
+            "matched_tags": matched_tags,
+        }
+    )
+
 
 LOWER_BODY_CNS_TAGS = {
     "plyometric",
@@ -613,17 +670,8 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
 
 
 def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:
-    normalized = sorted(normalize_injury_regions(injuries))
-    logger.info("[injury-debug] %s normalized_injuries=%s", label, normalized)
-    for item in items:
-        name = item.get("name", "Unnamed")
-        reasons = injury_violation_reasons(item, injuries)
-        if reasons:
-            logger.info(
-                "[injury-debug] %s item=%s allowed=False reasons=%s",
-                label,
-                name,
-                reasons,
-            )
-        else:
-            logger.info("[injury-debug] %s item=%s allowed=True", label, name)
+    """
+    DEPRECATED: This function is kept for backward compatibility but does nothing.
+    Use _log_exclusion() instead for logging excluded items only.
+    """
+    pass
