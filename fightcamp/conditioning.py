@@ -1080,6 +1080,11 @@ def generate_conditioning_block(flags):
                 break
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
+                logger.warning(
+                    "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
+                    drill.get("name", "<unnamed>"),
+                    decision,
+                )
                 continue
             drill_tags = set(normalize_tags(drill.get("tags", [])))
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
@@ -1142,6 +1147,11 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
+                    logger.warning(
+                        "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
+                        drill.get("name", "<unnamed>"),
+                        decision,
+                    )
                     continue
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
@@ -1177,6 +1187,11 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
+                    logger.warning(
+                        "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
+                        drill.get("name", "<unnamed>"),
+                        decision,
+                    )
                     continue
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
                 if system is not None:
@@ -1212,6 +1227,11 @@ def generate_conditioning_block(flags):
                 continue
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
+                logger.warning(
+                    "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
+                    drill.get("name", "<unnamed>"),
+                    decision,
+                )
                 continue
             system = get_system_or_warn(drill, source="skill_refinement")
             if system is None:
@@ -1263,6 +1283,11 @@ def generate_conditioning_block(flags):
                 )[:INJURY_GUARD_SHORTLIST]:
                     decision = _guarded_injury_decision(drill)
                     if decision.action == "exclude":
+                        logger.warning(
+                            "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
+                            drill.get("name", "<unnamed>"),
+                            decision,
+                        )
                         continue
                     system = get_system_or_warn(drill, source="pro_neck")
                     if system is not None:
