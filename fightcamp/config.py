@@ -1,3 +1,7 @@
+# Refactored: Centralized shared constants to reduce duplication across modules
+# Previously defined separately in main.py, strength.py, conditioning.py, etc.
+from pathlib import Path
+
 PHASE_EQUIPMENT_BOOST = {
     "GPP": {"barbell", "trap_bar", "sled", "pullup_bar"},
     "SPP": {"landmine", "cable", "medicine_ball", "bands"},
@@ -24,10 +28,6 @@ STYLE_CONDITIONING_RATIO = {
 
 STRENGTH_PER_DAY = {"GPP": 7, "SPP": 6, "TAPER": 4}
 CONDITIONING_PER_DAY = {"GPP": 4, "SPP": 3, "TAPER": 3}
-
-# Refactored: Centralized shared constants to reduce duplication across modules
-# Previously defined separately in main.py, strength.py, conditioning.py, etc.
-from pathlib import Path
 
 # Central data directory path - used by multiple modules to access JSON data files
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
