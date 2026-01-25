@@ -229,7 +229,8 @@ async def generate_plan(data: dict):
     # Parse and canonicalize injuries BEFORE strength/conditioning generation
     timer_start = perf_counter()
     raw_injury_list = [w.strip().lower() for w in injuries.split(",") if w.strip()] if injuries else []
-    canonical_injuries = list(normalize_injury_regions(raw_injury_list))
+    # Convert to list to maintain compatibility with existing code that expects a list
+    canonical_injuries = sorted(normalize_injury_regions(raw_injury_list))
     _record_timing("parse_injuries", timer_start)
 
     # Core context
