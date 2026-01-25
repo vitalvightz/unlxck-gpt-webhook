@@ -14,7 +14,13 @@
     "tags": [
       "boxing",
       "mma",
-      "counter_striker"
+      "counter_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Trains quick reset after defensive moves (50% effort)",
     "equipment_note": "Mat or grass surface"
@@ -34,7 +40,10 @@
     "tags": [
       "muay_thai",
       "mma",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_ballistic"
     ],
     "notes": "Simulates framing explosiveness in clinch (60% power)",
     "equipment_note": "Wall target at chest height"
@@ -54,7 +63,10 @@
     "tags": [
       "wrestler",
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_reactive"
     ],
     "notes": "Mimics shot recovery movements (50% effort)",
     "equipment_note": "Mark landing zones 3ft apart"
@@ -74,7 +86,13 @@
     "tags": [
       "kickboxing",
       "kicker",
-      "mma"
+      "mma",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Primes teep/kick retraction speed (40% effort)",
     "equipment_note": "Flat surface only"
@@ -94,7 +112,9 @@
       "mma",
       "kickboxing",
       "muay thai",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Develops forward knee drive for cutting off ring (50% height)",
     "equipment_note": "12\" box height",
@@ -113,7 +133,13 @@
     "tags": [
       "grappler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Trains explosive hip elevation for subs (Light explosiveness)",
     "equipment_note": "Mat surface required",
@@ -134,7 +160,9 @@
       "boxing",
       "muay thai",
       "kickboxing",
-      "hybrid"
+      "hybrid",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Sharpens stance transition reflexes (60% speed)",
     "equipment_note": "Ladder optional",
@@ -152,7 +180,14 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "brawler"
+      "brawler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "notes": "Mimics overhand right mechanics (70% power)",
     "equipment_note": "Concrete wall target",
@@ -172,7 +207,13 @@
       "kickboxing",
       "mma",
       "boxing",
-      "distance_striker"
+      "distance_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Trains defensive footwork elasticity (50% effort)",
     "equipment_note": "Grass/turf preferred",
@@ -191,7 +232,15 @@
     "tags": [
       "wrestler",
       "grappler",
-      "mma"
+      "mma",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Primes shot explosiveness (40% explosion)",
     "equipment_note": "Knee sleeves optional",
@@ -209,7 +258,10 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Simulates cage scramble rebounds (50% power)",
     "equipment_note": "Padded wall ideal",
@@ -227,7 +279,13 @@
     "intensity": "low",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Maintains clinch knee timing (30% power)",
     "equipment_note": "Focus on rhythm",
@@ -246,7 +304,13 @@
     "tags": [
       "boxing",
       "mma",
-      "counter_striker"
+      "counter_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Links head movement to counter explosiveness (50% height)",
     "equipment_note": "Soft surface",
@@ -264,7 +328,10 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_reactive"
     ],
     "notes": "Develops forward pressure mechanics (60% power)",
     "equipment_note": "300lb tire",
@@ -283,7 +350,13 @@
     "tags": [
       "muay_thai",
       "mma",
-      "kicker"
+      "kicker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Trains kick setup footwork (40% effort)",
     "equipment_note": "Mark stance width",
@@ -302,7 +375,14 @@
     "tags": [
       "grappler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_intensive"
     ],
     "notes": "Maintains explosive bridging for subs (Light explosiveness)",
     "equipment_note": "Mat required",
@@ -320,7 +400,13 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "distance_fighter"
+      "distance_fighter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
     "notes": "Links TDD to stand-up explosiveness (50% height)",
     "equipment_note": "Grass/turf",
@@ -338,7 +424,14 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "brawler"
+      "brawler",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Mimics hook/uppercut chain explosiveness (60% power)",
     "equipment_note": "10lb ball",
@@ -358,7 +451,15 @@
       "muay_thai",
       "kicker",
       "mma",
-      "distance_striker"
+      "distance_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_ballistic"
     ],
     "notes": "Primes teep retraction speed (40% effort)",
     "equipment_note": "Wall for balance",
@@ -377,7 +478,13 @@
     "tags": [
       "wrestler",
       "mma",
-      "grappler"
+      "grappler",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_intensive"
     ],
     "notes": "Sharpens rolling explosiveness (Light explosiveness)",
     "equipment_note": "BJJ mat",
@@ -395,7 +502,13 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
     "notes": "Trains shot defense to re-engagement (50% distance)",
     "equipment_note": "Mark 3ft jump target",
@@ -413,7 +526,14 @@
     "intensity": "low",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_ballistic"
     ],
     "notes": "Maintains clinch posture explosiveness (30% power)",
     "equipment_note": "Light contact only",
@@ -431,7 +551,13 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "counter_striker"
+      "counter_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Links defensive pulls to counter bursts (50% height)",
     "equipment_note": "Mirror for form",
@@ -449,7 +575,13 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Trains angle-cutting footwork (50% effort)",
     "equipment_note": "Ladder optional",
@@ -468,7 +600,13 @@
     "tags": [
       "kickboxing",
       "mma",
-      "kicker"
+      "kicker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Primes southpaw-orthodox kick transitions (40% effort)",
     "equipment_note": "Wall support",
@@ -487,7 +625,14 @@
     "tags": [
       "grappler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_intensive"
     ],
     "notes": "Maintains explosive stand-ups (Light explosiveness)",
     "equipment_note": "Mat required",
@@ -506,7 +651,13 @@
     "tags": [
       "mma",
       "wrestler",
-      "grappler"
+      "grappler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
     "notes": "Sharpens level-change timing (50% distance)",
     "equipment_note": "Mark 3ft target",
@@ -525,7 +676,10 @@
     "tags": [
       "boxing",
       "mma",
-      "brawler"
+      "brawler",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Mimics body shot absorption/recovery (60% power)",
     "equipment_note": "20lb ball to floor",
@@ -543,7 +697,13 @@
     "intensity": "zone 2",
     "tags": [
       "kickboxing",
-      "distance_striker"
+      "distance_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Trains blitz entry elasticity (50% effort)",
     "equipment_note": "Even surface",
@@ -562,7 +722,14 @@
     "tags": [
       "wrestler",
       "mma",
-      "grappler"
+      "grappler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_intensive"
     ],
     "notes": "Maintains mat return explosiveness (Light explosiveness)",
     "equipment_note": "Mat required",
@@ -580,7 +747,13 @@
     "intensity": "low",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_trunk_rotation",
+      "mech_change_of_direction"
     ],
     "notes": "Trains cage scramble reorientation (40% power)",
     "equipment_note": "Open space",
@@ -598,7 +771,13 @@
     "intensity": "low",
     "tags": [
       "muay_thai",
-      "distance_striker"
+      "distance_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "notes": "Maintains teep-ready footwork (30% effort)",
     "equipment_note": "Wall for balance",
@@ -616,7 +795,13 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "counter_striker"
+      "counter_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Links pull counters to lateral movement (50% height)",
     "equipment_note": "Mirror for form",
@@ -635,7 +820,13 @@
     "tags": [
       "kickboxing",
       "mma",
-      "kicker"
+      "kicker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Maintains kick torque mechanics (40% effort)",
     "equipment_note": "Wall support",
@@ -654,7 +845,14 @@
     "tags": [
       "grappler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_intensive"
     ],
     "notes": "Sharpens explosive entries to subs (Light explosiveness)",
     "equipment_note": "Mat required",
@@ -671,7 +869,12 @@
     "duration": "3x5 sprawl-to-spin jumps",
     "intensity": "low",
     "tags": [
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_change_of_direction"
     ],
     "notes": "Trains TDD to back-take transitions (40% rotation)",
     "equipment_note": "Open space",
@@ -689,7 +892,13 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "brawler"
+      "brawler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Mimics flurry-to-reset explosiveness (50% power)",
     "equipment_note": "1.5\" ropes",
@@ -707,7 +916,13 @@
     "intensity": "zone 2",
     "tags": [
       "kickboxing",
-      "distance_striker"
+      "distance_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Maintains angle-cutting explosiveness (50% effort)",
     "equipment_note": "Mark 3ft zones",
@@ -726,7 +941,15 @@
     "tags": [
       "wrestler",
       "mma",
-      "grappler"
+      "grappler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Sharpens guard pass entries (Light explosiveness)",
     "equipment_note": "Mat required",
@@ -744,7 +967,12 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_trunk_stability"
     ],
     "notes": "Trains cage rebound explosiveness (50% height)",
     "equipment_note": "Padded wall",
@@ -762,7 +990,13 @@
     "intensity": "low",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Maintains clinch knee timing (30% power)",
     "equipment_note": "Focus on rhythm",
@@ -780,7 +1014,13 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "counter_striker"
+      "counter_striker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Links defensive rolls to counters (50% height)",
     "equipment_note": "Soft surface",
@@ -798,7 +1038,11 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Trains pressure footwork transitions (50% speed)",
     "equipment_note": "200lb tire",
@@ -816,7 +1060,13 @@
     "intensity": "low",
     "tags": [
       "muay_thai",
-      "kicker"
+      "kicker",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Maintains teep versatility (40% effort)",
     "equipment_note": "Wall support",
@@ -835,7 +1085,14 @@
     "tags": [
       "grappler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_intensive"
     ],
     "notes": "Sharpens explosive stand-ups from guard (Light explosiveness)",
     "equipment_note": "Mat required",
@@ -852,7 +1109,13 @@
     "duration": "3x5 shot to jump transitions",
     "intensity": "zone 2",
     "tags": [
-      "mma"
+      "mma",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
     "notes": "Links takedowns to stand-up bursts (50% height)",
     "equipment_note": "Mark 3ft target",
@@ -874,7 +1137,11 @@
     "tags": [
       "boxing",
       "counter_striker",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Partner throws ball unpredictably; react with jab or parry (70% speed)",
     "equipment_note": "Uneven bounce ball required"
@@ -894,7 +1161,11 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Pre-recorded beeps signal underhook/overhook switches (50% effort)",
     "equipment_note": "Random interval timer (5-15s)"
@@ -915,7 +1186,9 @@
     "tags": [
       "wrestling",
       "scrambler",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Alternate wrestling rounds with chess moves to drain mental stamina (60% effort)",
     "equipment_note": "Portable chess set"
@@ -935,7 +1208,11 @@
     "tags": [
       "kickboxing",
       "kicker",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo (40% power)",
     "equipment_note": "Pre-printed kick codes"
@@ -954,7 +1231,11 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Random cone colors force adaptive takedown chains (50% speed)",
     "equipment_note": "2+ cone colors"
@@ -974,7 +1255,11 @@
     "tags": [
       "boxing",
       "brawler",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Disrupts rhythm to simulate in-fight chaos (60% power)",
     "equipment_note": "4-piece jigsaw"
@@ -994,7 +1279,9 @@
     "tags": [
       "muay_thai",
       "distance_striker",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
@@ -1014,7 +1301,11 @@
     "tags": [
       "grappling",
       "submission_hunter",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Forces reliance on grip/body feel over sight (30% effort)",
     "equipment_note": "Non-slip mat"
@@ -1034,7 +1325,11 @@
     "tags": [
       "mma",
       "pressure_fighter",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Coach whispers riddles through earbuds (50% power)",
     "equipment_note": "Wireless mic for coach"
@@ -1054,7 +1349,10 @@
     "tags": [
       "mma",
       "hybrid",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_change_of_direction"
     ],
     "notes": "Forces stance switches under fatigue (60% speed)",
     "equipment_note": "Traffic light system"
