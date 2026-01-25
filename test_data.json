@@ -1,29 +1,53 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Jalen Ortiz" },
-      { "label": "Age", "value": "29" },
-      { "label": "Weight (kg)", "value": "68" },
-      { "label": "Target Weight (kg)", "value": "66" },
-      { "label": "Height (cm)", "value": "172" },
-      { "label": "Fighting Style (Technical)", "value": ["Boxing"] },
-      { "label": "Fighting Style (Tactical)", "value": ["Pressure Fighter", "Counter Striker"] },
-      { "label": "Stance", "value": "Orthodox" },
+      { "label": "Full name", "value": "Kieran Salim" },
+      { "label": "Age", "value": "24" },
+      { "label": "Weight (kg)", "value": "77" },
+      { "label": "Target Weight (kg)", "value": "75" },
+      { "label": "Height (cm)", "value": "180" },
+      { "label": "Fighting Style (Technical)", "value": ["Kickboxer"] },
+      { "label": "Fighting Style (Tactical)", "value": ["Distance Striker", "Counter Striker"] },
+      { "label": "Stance", "value": "Southpaw" },
       { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "8-2-0" },
-      { "label": "When is your next fight?", "value": "2026-05-03" },
-      { "label": "Rounds x Minutes", "value": "6x3" },
-      { "label": "Weekly Training Frequency", "value": "5" },
-      { "label": "Fatigue Level", "value": "Low" },
-      { "label": "Training Phase", "value": "Early-Camp" },
-      { "label": "Equipment Access", "value": ["Dumbbells", "Bands", "Jump Rope"] },
-      { "label": "Training Availability", "value": ["Monday", "Tuesday", "Wednesday", "Friday", "Saturday"] },
-      { "label": "Any injuries or areas you need to work around?", "value": "None" },
-      { "label": "What are your key performance goals?", "value": ["Power & Explosiveness", "Conditioning / Endurance", "Skill Refinement"] },
-      { "label": "Where do you feel weakest right now?", "value": ["core stability", "lateral movement"] },
-      { "label": "Do you prefer certain training styles?", "value": "short round-based circuits and mitt intervals" },
-      { "label": "Do you struggle with any mental blockers or mindset challenges?", "value": "tightens up early in rounds" },
-      { "label": "Are there any parts of your previous plan you hated or loved?", "value": "Loved pad rounds, hated long steady-state runs" }
+      { "label": "Current Record", "value": "5-1-0" },
+      { "label": "When is your next fight?", "value": "2026-03-21" },
+      { "label": "Rounds x Minutes", "value": "3x3" },
+      { "label": "Weekly Training Frequency", "value": "6" },
+      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Training Phase", "value": "Mid-Camp" },
+      {
+        "label": "Equipment Access",
+        "value": ["Barbell", "Dumbbells", "Kettlebells", "Bands", "Sled", "Jump Rope"]
+      },
+      {
+        "label": "Training Availability",
+        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+      },
+      {
+        "label": "Any injuries or areas you need to work around?",
+        "value": "Right shin splints (mild) + left shoulder impingement (mild). Avoid high-volume impact running and heavy overhead pressing."
+      },
+      {
+        "label": "What are your key performance goals?",
+        "value": ["Speed", "Power & Explosiveness", "Conditioning / Endurance", "Mobility", "Skill Refinement"]
+      },
+      {
+        "label": "Where do you feel weakest right now?",
+        "value": ["conditioning", "rotation", "shoulders", "speed / reaction"]
+      },
+      {
+        "label": "Do you prefer certain training styles?",
+        "value": "short sharp intervals, reactive footwork, and pad rounds; hates long slow runs"
+      },
+      {
+        "label": "Do you struggle with any mental blockers or mindset challenges?",
+        "value": "overthinks after getting hit clean; hesitates to throw the next shot"
+      },
+      {
+        "label": "Are there any parts of your previous plan you hated or loved?",
+        "value": "Loved contrast work (heavy + explosive). Hated long roadwork and high-rep overhead work."
+      }
     ]
   },
   "options": {
