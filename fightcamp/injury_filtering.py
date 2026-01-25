@@ -5,7 +5,10 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .injury_guard import Decision
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
@@ -174,7 +177,7 @@ logger = logging.getLogger(__name__)
 INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
 
 
-def _log_exclusion(context: str, item: dict, decision) -> None:
+def _log_exclusion(context: str, item: dict, decision: Decision) -> None:
     """
     Log exclusion details when INJURY_DEBUG is enabled and item is excluded.
     
@@ -211,6 +214,13 @@ def _log_exclusion(context: str, item: dict, decision) -> None:
     trigger_tags = sorted(all_tags) if all_tags else []
     trigger_patterns = sorted(all_patterns) if all_patterns else []
     
+    # Format trigger information
+    triggers = {
+        "tags": trigger_tags,
+        "patterns": trigger_patterns,
+        "matched_tags": matched_tags,
+    }
+    
     # Log exclusion with context
     logger.info(
         "[INJURY_EXCLUSION] %s | name=%s | region=%s | severity=%s | risk_score=%.3f | triggers=%s",
@@ -219,11 +229,27 @@ def _log_exclusion(context: str, item: dict, decision) -> None:
         region,
         severity,
         decision.risk_score,
-        {
-            "tags": trigger_tags,
-            "patterns": trigger_patterns,
-            "matched_tags": matched_tags,
-        }
+        triggers,
+    )
+
+
+def _log_replacement(context: str, excluded_name: str, replacement_name: str) -> None:
+    """
+    Log replacement details when INJURY_DEBUG is enabled.
+    
+    Args:
+        context: Context string (e.g. "strength:GPP", "conditioning:SPP")
+        excluded_name: Name of the excluded item
+        replacement_name: Name of the replacement item
+    """
+    if not INJURY_DEBUG:
+        return
+    
+    logger.info(
+        "[INJURY_REPLACEMENT] %s | excluded=%s | replacement=%s",
+        context,
+        excluded_name,
+        replacement_name,
     )
 
 
