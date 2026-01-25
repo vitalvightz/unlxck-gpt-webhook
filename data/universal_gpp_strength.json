@@ -2,84 +2,84 @@
   {
     "phases": ["GPP"],
     "name": "Barbell Back Squat",
-    "tags": ["compound", "posterior_chain", "quad_dominant"],
+    "tags": ["compound", "posterior_chain", "quad_dominant", "mech_lower_squat", "mech_trunk_stability"],
     "prescription": "3x5 @ 75–85% 1RM",
     "notes": "Foundational strength builder for lower body and trunk."
   },
   {
     "phases": ["GPP"],
     "name": "Trap Bar Deadlift",
-    "tags": ["compound", "hip_dominant", "posterior_chain", "deadlift"],
+    "tags": ["compound", "hip_dominant", "posterior_chain", "deadlift", "mech_lower_hip_hinge", "mech_trunk_stability", "mech_grip_support"],
     "prescription": "3x5 @ 75–85% 1RM",
     "notes": "Safe hinge pattern to develop full-body strength and grip."
   },
   {
     "phases": ["GPP"],
     "name": "Push-Up or Bench Press",
-    "tags": ["push", "upper_body", "rate_of_force", "compound"],
+    "tags": ["push", "upper_body", "rate_of_force", "compound", "mech_upper_press", "mech_trunk_stability"],
     "prescription": "3x8–10 controlled tempo",
     "notes": "Builds pressing strength and midline control."
   },
   {
     "phases": ["GPP"],
     "name": "Barbell or DB Overhead Press",
-    "tags": ["upper_body", "shoulders", "core", "overhead"],
+    "tags": ["upper_body", "shoulders", "core", "overhead", "mech_upper_press", "mech_shoulder_overhead", "mech_trunk_stability"],
     "prescription": "3x5 @ 70–85% 1RM",
     "notes": "Improves posture, overhead strength, and core integration."
   },
   {
     "phases": ["GPP"],
     "name": "DB Split Squat",
-    "tags": ["unilateral", "posterior_chain", "balance"],
+    "tags": ["unilateral", "posterior_chain", "balance", "mech_lower_lunge", "mech_trunk_stability"],
     "prescription": "3x6/leg",
     "notes": "Builds single-leg strength and knee stability."
   },
   {
     "phases": ["GPP"],
     "name": "Pull-Up or Inverted Row",
-    "tags": ["pull", "upper_body", "grip"],
+    "tags": ["pull", "upper_body", "grip", "mech_upper_pull", "mech_grip_support", "mech_trunk_stability"],
     "prescription": "3x5–10 controlled reps",
     "notes": "Develops pulling strength, grip, and scapular control."
   },
   {
     "phases": ["GPP"],
     "name": "Sled Push or Drag",
-    "tags": ["sled", "posterior_chain", "work_capacity"],
+    "tags": ["sled", "posterior_chain", "work_capacity", "mech_lower_hip_hinge", "mech_trunk_stability", "mech_systemic_fatigue"],
     "prescription": "4x15m heavy, rest 90s",
     "notes": "Concentric-only drill to build force output with low injury risk."
   },
   {
     "phases": ["GPP"],
     "name": "Trap Bar or DB Shrugs",
-    "tags": ["grip", "upper_body"],
+    "tags": ["grip", "upper_body", "mech_grip_support", "mech_trunk_stability"],
     "prescription": "3x10–12 heavy",
     "notes": "Reinforces shrug mechanics and neck support for impact sports."
   },
   {
     "phases": ["GPP"],
     "name": "Neck Harness Isometrics",
-    "tags": ["neck", "cns_freshness", "resilience"],
+    "tags": ["neck", "cns_freshness", "resilience", "mech_trunk_stability"],
     "prescription": "3x30s in each direction",
     "notes": "Improves cervical strength and reduces concussion risk."
   },
   {
     "phases": ["GPP"],
     "name": "Landmine Rotations",
-    "tags": ["rotational", "core", "coordination"],
+    "tags": ["rotational", "core", "coordination", "mech_trunk_rotation", "mech_trunk_stability"],
     "prescription": "3x8/side slow tempo",
     "notes": "Develops rotational strength and trunk transfer efficiency."
   },
   {
     "phases": ["GPP"],
     "name": "90/90 Banded Shoulder CARs (Controlled Articular Rotations)",
-    "tags": ["mobility", "stability", "shoulders"],
+    "tags": ["mobility", "stability", "shoulders", "mech_trunk_stability"],
     "prescription": "2x8/side, slow tempo",
     "notes": "Improves glenohumeral rhythm and scapulohumeral coordination without load."
   },
   {
     "phases": ["GPP"],
     "name": "Low Hurdle Hop (Rhythm Focus)",
-    "tags": ["reactive", "elastic", "coordination"],
+    "tags": ["reactive", "elastic", "coordination", "mech_reactive", "mech_lower_jump", "mech_landing_impact"],
     "prescription": "3x5 over low hurdles",
     "notes": "Rebuilds bounce, rhythm, and landing coordination."
   }

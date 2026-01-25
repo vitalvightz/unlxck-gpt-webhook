@@ -6,7 +6,7 @@
     "method": "strength",
     "movement": "static_hold",
     "type": "isometric",
-    "tags": ["grip", "clinch_fighter", "submission_hunter"],
+    "tags": ["grip", "clinch_fighter", "submission_hunter", "mech_grip_crush", "mech_grip_support"],
     "equipment": "plate"
   },
   {
@@ -16,7 +16,7 @@
     "method": "strength",
     "movement": "wrist_extension",
     "type": "bilateral",
-    "tags": ["grip", "isolation", "clinch_fighter", "submission_hunter"],
+    "tags": ["grip", "isolation", "clinch_fighter", "submission_hunter", "mech_grip_crush", "mech_trunk_stability"],
     "equipment": "wrist_roller"
   },
   {
@@ -26,7 +26,7 @@
     "method": "strength",
     "movement": "squat_to_press",
     "type": "bilateral",
-    "tags": ["explosive", "triple_extension", "rate_of_force", "compound", "scrambler"],
+    "tags": ["explosive", "triple_extension", "rate_of_force", "compound", "scrambler", "mech_lower_squat", "mech_upper_press", "mech_shoulder_overhead", "mech_ballistic", "mech_cns_high", "mech_trunk_stability", "mech_systemic_fatigue"],
     "equipment": "barbell"
   },
   {
@@ -36,7 +36,7 @@
     "method": "strength",
     "movement": "complex",
     "type": "unilateral",
-    "tags": ["coordination", "balance", "anti_rotation", "scrambler"],
+    "tags": ["coordination", "balance", "anti_rotation", "scrambler", "mech_shoulder_overhead", "mech_trunk_stability", "mech_trunk_rotation", "mech_grip_support"],
     "equipment": "kettlebell"
   },
   {
@@ -46,7 +46,7 @@
     "method": "strength",
     "movement": "squat",
     "type": "unilateral",
-    "tags": ["quad_dominant", "balance", "hip_dominant", "kicker"],
+    "tags": ["quad_dominant", "balance", "hip_dominant", "kicker", "mech_lower_lunge", "mech_trunk_stability"],
     "equipment": "dumbbells"
   },
   {
@@ -56,7 +56,7 @@
     "method": "strength",
     "movement": "lunge",
     "type": "unilateral",
-    "tags": ["unilateral", "hip_dominant", "mobility", "kicker"],
+    "tags": ["unilateral", "hip_dominant", "mobility", "kicker", "mech_lower_lunge", "mech_trunk_stability"],
     "equipment": "dumbbells"
   },
   {
@@ -66,7 +66,7 @@
     "method": "strength",
     "movement": "pull",
     "type": "bilateral",
-    "tags": ["pull", "grip", "upper_body", "submission_hunter", "clinch_fighter", "compound"],
+    "tags": ["pull", "grip", "upper_body", "submission_hunter", "clinch_fighter", "compound", "mech_upper_pull", "mech_grip_support", "mech_trunk_stability"],
     "equipment": "pullup_bar"
   },
   {
@@ -76,7 +76,7 @@
     "method": "strength",
     "movement": "hinge",
     "type": "bilateral",
-    "tags": ["posterior_chain", "grip", "explosive", "submission_hunter", "ballistic"],
+    "tags": ["posterior_chain", "grip", "explosive", "submission_hunter", "ballistic", "mech_lower_hip_hinge", "mech_ballistic", "mech_grip_support", "mech_trunk_stability"],
     "equipment": "kettlebell"
   },
   {
@@ -86,7 +86,7 @@
     "method": "strength",
     "movement": "rotation",
     "type": "bilateral",
-    "tags": ["rotational", "anti_rotation", "counter_striker"],
+    "tags": ["rotational", "anti_rotation", "counter_striker", "mech_trunk_rotation", "mech_trunk_stability", "mech_grip_support"],
     "equipment": "landmine"
   },
   {
@@ -96,7 +96,7 @@
     "method": "strength",
     "movement": "anti_rotation",
     "type": "isometric",
-    "tags": ["anti_rotation", "cognitive", "counter_striker", "distance_striker", "cornerstone"],
+    "tags": ["anti_rotation", "cognitive", "counter_striker", "distance_striker", "cornerstone", "mech_trunk_stability"],
     "equipment": "bands"
   },
   {
@@ -106,7 +106,7 @@
     "method": "strength",
     "movement": "slam",
     "type": "bilateral",
-    "tags": ["explosive", "overhead", "rate_of_force", "distance_striker", "ballistic"],
+    "tags": ["explosive", "overhead", "rate_of_force", "distance_striker", "ballistic", "mech_shoulder_overhead", "mech_ballistic", "mech_trunk_flexion", "mech_trunk_stability", "mech_cns_high"],
     "equipment": "medicine_ball"
   },
   {
@@ -116,7 +116,7 @@
     "method": "strength",
     "movement": "carry",
     "type": "bilateral",
-    "tags": ["grip", "core", "cns_freshness", "clinch_fighter", "compound"],
+    "tags": ["grip", "core", "cns_freshness", "clinch_fighter", "compound", "mech_grip_support", "mech_upper_carry", "mech_trunk_stability"],
     "equipment": "dumbbells"
   },
   {
@@ -126,7 +126,7 @@
     "method": "strength",
     "movement": "push",
     "type": "bilateral",
-    "tags": ["sled", "work_capacity", "posterior_chain", "pressure_fighter", "conditioning"],
+    "tags": ["sled", "work_capacity", "posterior_chain", "pressure_fighter", "conditioning", "mech_lower_hip_hinge", "mech_trunk_stability", "mech_systemic_fatigue"],
     "equipment": "sled"
   },
   {
@@ -136,7 +136,7 @@
     "method": "strength",
     "movement": "lunge",
     "type": "unilateral",
-    "tags": ["explosive", "unilateral", "endurance", "pressure_fighter"],
+    "tags": ["explosive", "unilateral", "endurance", "pressure_fighter", "mech_lower_lunge", "mech_lower_jump", "mech_ballistic", "mech_reactive", "mech_landing_impact", "mech_trunk_stability"],
     "equipment": "bodyweight"
   },
   {
@@ -146,7 +146,7 @@
     "method": "strength",
     "movement": "slam",
     "type": "bilateral",
-    "tags": ["grip", "cognitive", "rotational", "brawler"],
+    "tags": ["grip", "cognitive", "rotational", "brawler", "mech_trunk_rotation", "mech_trunk_flexion", "mech_grip_support", "mech_trunk_stability", "mech_ballistic"],
     "equipment": "sledgehammer"
   },
   {
@@ -156,7 +156,7 @@
     "method": "strength",
     "movement": "slam",
     "type": "bilateral",
-    "tags": ["explosive", "cognitive", "brawler", "ballistic"],
+    "tags": ["explosive", "cognitive", "brawler", "ballistic", "mech_trunk_flexion", "mech_ballistic", "mech_trunk_stability", "mech_cns_high"],
     "equipment": "medicine_ball"
   }
 ]
