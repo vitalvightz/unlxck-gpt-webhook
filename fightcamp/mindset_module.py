@@ -8,6 +8,12 @@ from difflib import SequenceMatcher
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
 
+__all__ = [
+    "classify_mental_block",
+    "get_phase_mindset_cues",
+    "get_mindset_by_phase",
+]
+
 try:  # pragma: no cover - optional dependency
     if _RAPIDFUZZ_AVAILABLE:
         from rapidfuzz import fuzz
@@ -233,6 +239,10 @@ def classify_mental_block(raw_text: str) -> list[str]:
 
     ordered = sorted(counts.items(), key=sort_key)
     return [block for block, _ in ordered[:2]]
+
+
+# Backwards compatible alias if older code used an alternate helper name.
+classify_blocks = classify_mental_block
 
 
 def get_phase_mindset_cues(blocks: list[str] | str | None) -> dict[str, str]:
