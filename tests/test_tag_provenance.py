@@ -130,7 +130,7 @@ def test_severity_normalization_to_moderate():
 def test_severity_normalization_preserves_existing():
     """PATCH 3: Existing severity values should be preserved"""
     # Injury dict with explicit severity
-    injury = {"region": "shoulder", "severity": "severe"}
+    injury = {"region": "shoulder", "severity": "high"}
     exercise = {"name": "Light Movement", "tags": []}
     
     # Call injury_decision
@@ -138,9 +138,9 @@ def test_severity_normalization_preserves_existing():
     
     # The decision should have been made (no error)
     assert decision is not None
-    # Verify the severity was used (severe should have higher risk)
+    # Verify the severity was used (high should have higher risk)
     if decision.reason.get("region") == "shoulder":
-        assert decision.reason.get("severity") == "severe"
+        assert decision.reason.get("severity") == "high"
 
 
 def test_pattern_match_with_inferred_tags_excludes():

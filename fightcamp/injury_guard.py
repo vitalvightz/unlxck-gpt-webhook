@@ -32,18 +32,204 @@ INJURY_TYPE_SEVERITY = {
     "unspecified": "moderate",
 }
 
-SEVERITY_WEIGHTS = {"mild": 0.7, "moderate": 1.0, "severe": 1.35}
-SEVERITY_RANK = {"mild": 0, "moderate": 1, "severe": 2}
-SEVERITY_ALIASES = {
-    "low": "mild",
-    "mild": "mild",
-    "medium": "moderate",
-    "med": "moderate",
-    "mod": "moderate",
-    "moderate": "moderate",
-    "high": "severe",
-    "severe": "severe",
+SEVERITY_SYNONYMS = {
+    "high": [
+        "pop",
+        "popped",
+        "snap",
+        "snapped",
+        "crack",
+        "cracked",
+        "crunch",
+        "rupture",
+        "ruptured",
+        "tear",
+        "torn",
+        "complete tear",
+        "full tear",
+        "grade 3",
+        "fracture",
+        "broken",
+        "bone",
+        "dislocated",
+        "out of socket",
+        "separation",
+        "detached",
+        "blown out",
+        "swelling",
+        "swollen",
+        "ballooned",
+        "puffy",
+        "inflammation",
+        "inflamed",
+        "hot",
+        "heat",
+        "bruise",
+        "bruised",
+        "bruising",
+        "black and blue",
+        "hematoma",
+        "discoloration",
+        "limp",
+        "limping",
+        "cannot walk",
+        "cant walk",
+        "can't walk",
+        "painful to walk",
+        "cannot stand",
+        "cant stand",
+        "can't stand",
+        "cannot move",
+        "cant move",
+        "can't move",
+        "cannot extend",
+        "cant extend",
+        "can't extend",
+        "cannot bend",
+        "cant bend",
+        "can't bend",
+        "giving way",
+        "gave way",
+        "buckled",
+        "collapsed",
+        "locked",
+        "stuck",
+        "frozen",
+        "cannot sprint",
+        "cant sprint",
+        "can't sprint",
+        "no power",
+        "leg went",
+        "knee went",
+        "totally gone",
+        "dead leg",
+        "cannot rotate",
+        "cant rotate",
+        "can't rotate",
+        "sharp",
+        "stabbing",
+        "shooting",
+        "electric",
+        "shocker",
+        "agonizing",
+        "screaming",
+        "unbearable",
+        "intense",
+        "10/10",
+        "9/10",
+        "8/10",
+        "severe",
+        "extreme",
+    ],
+    "moderate": [
+        "pull",
+        "pulled",
+        "strain",
+        "strained",
+        "grade 2",
+        "partial tear",
+        "fibers",
+        "fibres",
+        "torn slightly",
+        "torn a bit",
+        "meat tear",
+        "muscle pull",
+        "really tight",
+        "very tight",
+        "proper tight",
+        "super tight",
+        "dead tight",
+        "locked up",
+        "clamped",
+        "seized",
+        "spasm",
+        "cramp",
+        "cramping",
+        "knot",
+        "knotted",
+        "limited rom",
+        "limited range",
+        "cannot fully",
+        "cant fully",
+        "can't fully",
+        "painful to load",
+        "painful to press",
+        "painful to hinge",
+        "hurts to",
+        "restricted",
+        "restriction",
+        "heavy",
+        "stodgy",
+        "burning",
+        "nerve pain",
+        "cannot go 100",
+        "cant go 100",
+        "can't go 100",
+        "half speed",
+        "70%",
+        "80%",
+        "throbbing",
+        "aching",
+        "constant pain",
+        "always there",
+        "recurring",
+        "always comes back",
+        "aggravated",
+        "flared up",
+        "acting up",
+        "nagging",
+        "7/10",
+        "6/10",
+        "5/10",
+        "4/10",
+    ],
+    "low": [
+        "niggle",
+        "niggling",
+        "twinge",
+        "tweak",
+        "tweaked",
+        "bit sore",
+        "slight",
+        "mild",
+        "minor",
+        "stiff",
+        "stiffness",
+        "tightness",
+        "tightish",
+        "bit tight",
+        "feels a bit",
+        "feels off",
+        "feels funny",
+        "awareness",
+        "annoying",
+        "bit of a",
+        "touch of",
+        "doms",
+        "workout soreness",
+        "training soreness",
+        "post workout",
+        "tender",
+        "tenderness",
+        "dull",
+        "manageable",
+        "little bit",
+        "small",
+        "achy",
+        "fatigued",
+        "tired",
+        "1/10",
+        "2/10",
+        "3/10",
+        "just a bit",
+        "okay but",
+        "stable",
+        "fine but",
+    ],
 }
+
+SEVERITY_WEIGHTS = {"low": 0.7, "moderate": 1.0, "high": 1.35}
+SEVERITY_RANK = {"low": 0, "moderate": 1, "high": 2}
 RISK_LEVEL_WEIGHTS = {"exclude": 1.0, "flag": 0.65}
 
 REGION_RISK_WEIGHTS = {
@@ -121,6 +307,7 @@ FALLBACK_TAG_ORDER: dict[str, dict[str, list[list[str]]]] = {
 
 _INJURY_DECISION_LOGGED: set[tuple] = set()
 _INJURY_DECISION_CACHE: dict[tuple[str, str, str, str], dict[str, object]] = {}
+_INJURY_SEVERITY_DEBUGGED = False
 
 
 @dataclass(frozen=True)
@@ -141,6 +328,42 @@ def _normalize_injury_list(injuries: Iterable[str | dict] | str | dict | None) -
     return [item for item in injuries if item]
 
 
+def normalize_severity(text: str) -> tuple[str, list[str]]:
+    if not text:
+        return "moderate", []
+    lowered = text.lower()
+    hits: list[str] = []
+    severity = None
+    for level in ("high", "moderate", "low"):
+        for synonym in SEVERITY_SYNONYMS[level]:
+            if synonym in lowered:
+                hits.append(synonym)
+                if severity is None:
+                    severity = level
+    return severity or "moderate", hits
+
+
+def _strictest_severity(current: str | None, candidate: str) -> str:
+    if current is None:
+        return candidate
+    if SEVERITY_RANK[candidate] > SEVERITY_RANK[current]:
+        return candidate
+    return current
+
+
+def _normalize_dict_severity(injury: dict) -> tuple[str, list[str]]:
+    severity_raw = injury.get("severity")
+    region = injury.get("region")
+    if severity_raw:
+        severity_text = str(severity_raw).lower()
+        if severity_text in SEVERITY_RANK:
+            return severity_text, []
+        return normalize_severity(severity_text)
+    if region:
+        return normalize_severity(str(region))
+    return "moderate", []
+
+
 def _map_text_to_region(text: str) -> str | None:
     for region, keywords in INJURY_REGION_KEYWORDS.items():
         if match_forbidden(text, keywords):
@@ -148,42 +371,51 @@ def _map_text_to_region(text: str) -> str | None:
     return None
 
 
-def _injury_context(injuries: Iterable[str | dict]) -> dict[str, str]:
+def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | None = None) -> dict[str, str]:
     region_severity: dict[str, str] = {}
-    string_injuries: list[str] = []
     for injury in injuries:
         if not injury:
             continue
         if isinstance(injury, dict):
             region = injury.get("region")
             severity_raw = injury.get("severity")
-            severity = SEVERITY_ALIASES.get(str(severity_raw).lower(), "mild") if severity_raw else "mild"
+            severity_text = str(severity_raw).lower() if severity_raw else "moderate"
+            severity = severity_text if severity_text in SEVERITY_RANK else "moderate"
             if region:
-                severity = severity if severity in SEVERITY_RANK else "mild"
-                current = region_severity.get(region)
-                if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
-                    region_severity[region] = severity
+                region_severity[region] = _strictest_severity(region_severity.get(region), severity)
             continue
-        string_injuries.append(str(injury))
-        for phrase in split_injury_text(str(injury)):
+
+        raw_text = str(injury)
+        severity, hits = normalize_severity(raw_text)
+        regions: set[str] = set()
+        for phrase in split_injury_text(raw_text):
             cleaned = remove_negated_phrases(phrase)
             if not cleaned:
                 continue
             itype, loc = parse_injury_phrase(phrase)
             itype = itype or ("unspecified" if loc else None)
-            severity = INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
             for candidate in (loc, itype, phrase):
                 if not candidate:
                     continue
                 region = _map_text_to_region(str(candidate))
                 if region:
-                    current = region_severity.get(region)
-                    if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
-                        region_severity[region] = severity
+                    regions.add(region)
+                    region_severity[region] = _strictest_severity(region_severity.get(region), severity)
                     break
-    if string_injuries:
-        for region in normalize_injury_regions(string_injuries):
-            region_severity.setdefault(region, "moderate")
+
+        fallback_regions = normalize_injury_regions([raw_text])
+        for region in fallback_regions:
+            regions.add(region)
+            region_severity[region] = _strictest_severity(region_severity.get(region), severity)
+
+        if debug_entries is not None:
+            if regions:
+                for region in sorted(regions):
+                    debug_entries.append(
+                        {"raw": raw_text, "region": region, "severity": severity, "hits": hits}
+                    )
+            else:
+                debug_entries.append({"raw": raw_text, "region": None, "severity": severity, "hits": hits})
     return region_severity
 
 
@@ -294,11 +526,24 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         Decision object with action, risk_score, matched_tags, mods, and reason
     """
     injuries_list = _normalize_injury_list(injuries)
-    # Normalize missing severity to "moderate"
-    # Note: This modifies the injury dicts in-place as per requirements
+    debug_entries: list[dict] | None = None
+    global _INJURY_SEVERITY_DEBUGGED
+    if INJURY_DEBUG and not _INJURY_SEVERITY_DEBUGGED:
+        debug_entries = []
     for inj in injuries_list:
-        if isinstance(inj, dict) and not inj.get("severity"):
-            inj["severity"] = "moderate"
+        if isinstance(inj, dict):
+            raw_snapshot = dict(inj)
+            severity, hits = _normalize_dict_severity(inj)
+            inj["severity"] = severity
+            if debug_entries is not None:
+                debug_entries.append(
+                    {
+                        "raw": raw_snapshot,
+                        "region": raw_snapshot.get("region"),
+                        "severity": severity,
+                        "hits": hits,
+                    }
+                )
     if not injuries_list:
         return Decision(
             action="allow",
@@ -311,7 +556,14 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
 
     name = str(exercise.get("name", "") or "") or "Unnamed"
     item_id = str(exercise.get("id") or name or id(exercise))
-    region_severity = _injury_context(injuries_list)
+    region_severity = _injury_context(injuries_list, debug_entries=debug_entries)
+    if debug_entries is not None:
+        for entry in debug_entries:
+            print(
+                "[injury-severity] raw=%r normalized={'region': %r, 'severity': %r} hits=%s"
+                % (entry["raw"], entry["region"], entry["severity"], entry["hits"])
+            )
+        _INJURY_SEVERITY_DEBUGGED = True
     modify_band, threshold = _thresholds(phase, fatigue)
     threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
 
