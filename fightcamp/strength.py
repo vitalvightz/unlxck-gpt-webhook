@@ -17,7 +17,7 @@ from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
 from .injury_filtering import _load_style_specific_exercises, log_injury_debug
 # Refactored: Import factory function for guarded decision making
-from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
+from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory, _injury_debug_log_exclude
 
 # Load style specific exercises (JSON list)
 STYLE_EXERCISES = _load_style_specific_exercises()
@@ -731,6 +731,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated.append(ex)
                 continue
             _record_exclusion(ex, decision)
+            _injury_debug_log_exclude("strength", ex, decision)
             replacement = None
             replacement_decision = None
             candidate_pool: list[dict] = []
@@ -776,6 +777,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             final_decision = _guarded_injury_decision(ex)
             if final_decision.action == "exclude":
                 _record_exclusion(ex, final_decision)
+                _injury_debug_log_exclude("strength", ex, final_decision)
                 if os.getenv("INJURY_DEBUG", "0") == "1":
                     logger.warning(
                         "[injury-guard] strength removing '%s' decision=%s",
