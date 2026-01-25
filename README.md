@@ -1,16 +1,234 @@
 # UNLXCK Fight Camp Builder
 
-This repository generates fight camp programs by combining local training modules. The main script reads athlete data, assembles strength, conditioning, recovery and other blocks, then exports the result directly to Google Docs.
+This repository generates fight camp programs by combining local training modules. The main script reads athlete data, assembles strength, conditioning, recovery and other blocks, then exports the result directly to PDF and markdown formats.
+
+## Quick Start
+
+The application reads athlete data from a JSON file and generates a complete training plan. Example invocations:
+
+### Local Usage
+
+```bash
+# Generate plan with default test data (outputs markdown, HTML, and PDF)
+python -m fightcamp.main
+```
+
+The `generate_plan()` function returns a dictionary with:
+- `plan_text` - Full training plan in markdown format
+- `pdf_url` - URL to uploaded PDF (if Supabase credentials configured) 
+- `coach_notes` - Coach review notes and selection rationale
+- `why_log` - Reason log for exercise/drill selections
+
+Input data format (see `test_data.json`):
+```json
+{
+  "data": {
+    "fields": [
+      { "label": "Full name", "value": "Luca Mensah" },
+      { "label": "Age", "value": "22" },
+      { "label": "Fighting Style (Technical)", "value": ["boxer"] },
+      { "label": "Any injuries or areas you need to work around?", "value": "right hamstring tightness" }
+    ]
+  }
+}
+```
 
 ### Repository Structure
 
 ```
-data/      → JSON banks and other static assets
+data/      → JSON banks (exercise_bank.json, conditioning_bank.json, rehab_bank.json)
 fightcamp/ → Python package with all modules and API entrypoint
+tests/     → Test suite (pytest)
 notes/     → Reference JSON and tag documentation
 ```
 
+## Module Map
+
+The `fightcamp` package contains the complete plan generation pipeline:
+
+### Core Modules
+
+- **`main.py`** - Entry point and orchestration. Loads athlete data via `PlanInput`, calculates phase weeks, generates all training blocks (strength, conditioning, rehab, recovery, nutrition), assembles the final markdown plan, and exports to HTML/PDF. Returns plan text, PDF URL, and coach notes.
+
+- **`strength.py`** - Strength exercise selection and scoring. Loads `exercise_bank.json`, scores exercises based on weakness tags (+0.6 each), goal tags (+0.5), style tags (+0.3), phase tags (+0.4), and equipment availability. Applies fatigue penalties (-0.75 high, -0.35 moderate) and rehab penalties (-0.7 GPP, -1.0 SPP, -0.75 TAPER). Passes shortlist through injury guard for final selection.
+
+- **`conditioning.py`** - Conditioning drill selection and scoring. Uses both `conditioning_bank.json` (general drills) and `style_conditioning_bank.json` (style-specific drills). Scoring: style match +1.5, phase match +1.0, energy system match +0.75, equipment match +0.5, weakness/goal tags +0.6/+0.5 each. Applies fatigue penalty (-1.0 high, -0.5 moderate) for high CNS drills. Energy system ratios vary by phase (GPP: 50% aerobic, SPP: 50% glycolytic, TAPER: 70% alactic).
+
+- **`injury_guard.py`** - Injury exclusion and safe replacement logic. Implements `injury_decision()` which scores exercises against parsed injuries using region-specific thresholds, tag-based risk multipliers, and pattern matching. Returns EXCLUDE, CAUTION, or ALLOW decisions. `pick_safe_replacement()` finds safer alternatives by matching fallback tag hierarchies. Logs all exclusions when `INJURY_DEBUG=1`.
+
+- **`rehab_protocols.py`** - Rehab drill selection and injury guardrails generation. Matches parsed injuries against `rehab_bank.json` by type, location, and phase progression. Returns up to 2 drills per injury per phase. `format_injury_guardrails()` builds injury summary, phase-specific rehab priorities, red-flag warnings, and taper conditioning cautions.
+
+- **`mindset_module.py`** - Mental block classification and phase-specific cues. `classify_mental_block()` parses free-text mental challenges into categories (motivation, confidence, focus, gas_tank, injury_fear, rushing). Filters out style-inappropriate blocks (e.g., "fear of takedowns" for pure strikers). `get_phase_mindset_cues()` returns targeted mental guidance for each training phase.
+
+### Supporting Modules
+
+- **`camp_phases.py`** - Phase week calculation using `BASE_PHASE_RATIOS` with style-specific adjustments. Professional status shifts 5-10% from GPP to SPP based on fatigue, weight cut, and mindset. Style rules enforce minimums/maximums (e.g., pressure fighters require ≥45% SPP).
+
+- **`training_context.py`** - Session allocation logic via `allocate_sessions()`. Returns phase-appropriate split of strength, conditioning, and recovery sessions based on weekly frequency (1-6 sessions/week). Calculates exercise counts per session using `calculate_exercise_numbers()`.
+
+- **`input_parsing.py`** - Input validation and normalization via `PlanInput` dataclass. Parses Tally form fields into structured data, normalizes equipment lists, validates dates, and handles optional fields.
+
+- **`injury_scoring.py`** - Injury phrase scoring and medical term detection. Scans for urgent terms (fracture, dislocation, infection, nerve) and mechanical red flags. Scores canonical injury types against synonym maps.
+
+- **`injury_filtering.py`** - Injury matching and exclusion mapping. `build_injury_exclusion_map()` constructs region→tag/pattern exclusions. `match_forbidden()` checks exercise names/tags against exclusion lists with word boundary enforcement.
+
+- **`injury_formatting.py`** - Injury parsing and laterality extraction. `parse_injury_entry()` splits injury text, extracts left/right side, and returns formatted summaries.
+
+- **`injury_synonyms.py`** - Injury text normalization and canonicalization. `split_injury_text()` handles punctuation, conjunctions, and spaCy segmentation. `parse_injury_phrase()` routes through injury type and location canonicalizers.
+
+### Shared Utilities
+
+- **`bank_schema.py`** - Training item validation. `validate_training_item()` checks required fields (name, tags, phases, systems) and logs schema violations once per source file.
+
+- **`tagging.py`** - Tag normalization and synonym handling. `normalize_tag()` converts `"muay thai"` → `"muay_thai"`, `"skill refinement"` → `"skill_refinement"`, etc. `normalize_item_tags()` marks tags as explicit or inferred for injury exclusion logic.
+
+- **`config.py`** - Centralized constants. Defines `DATA_DIR`, phase equipment boosts, phase tag boosts, energy system ratios, style conditioning ratios, exercise counts per session, and injury guard shortlist size.
+
+- **`build_block.py`** - HTML/PDF export. `build_html_document()` constructs semantic HTML from phase blocks. `html_to_pdf()` converts HTML to PDF using pdfkit. `upload_to_supabase()` uploads PDFs to Supabase storage (requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` env vars).
+
 Run the application with `python -m fightcamp.main` from the project root.
+
+## Injury Risk Scoring
+
+The injury pipeline transforms free-form injury notes into exercise exclusions and safe replacements that appear in the final plan.
+
+### How It Works
+
+1. **Parsing** - `injury_synonyms.py` splits injury text into phrases, extracts laterality (left/right), and canonicalizes injury type and body location.
+
+2. **Scoring** - `injury_scoring.py` scans for medical urgency terms (fracture, dislocation, nerve damage) and mechanical flags (swelling, instability, pain descriptors). Each parsed injury gets a severity level (mild/moderate/severe).
+
+3. **Exclusion Rules** - `injury_guard.py` scores each exercise against active injuries:
+   - Base risk score combines region severity multipliers (e.g., knee: 1.15, shoulder: 1.2)
+   - Tag-based multipliers (e.g., `high_impact_plyo`: 1.5x, `overhead`: 1.1x)
+   - Pattern matching in exercise names (e.g., "bench press" for shoulder injuries)
+   - Thresholds: EXCLUDE (>1.8), CAUTION (>1.2), ALLOW (≤1.2)
+
+4. **Replacement** - When an exercise is excluded, `pick_safe_replacement()` searches fallback tag hierarchies to find safer alternatives. For example, shoulder injuries replace overhead presses with rows or core work.
+
+5. **Guardrails** - `rehab_protocols.py` generates phase-specific injury guardrails that appear in the final plan output, listing excluded patterns, recommended modifications, and rehab priorities.
+
+### Logging
+
+When `INJURY_DEBUG=1` environment variable is set, the injury pipeline logs detailed exclusion decisions:
+
+```bash
+export INJURY_DEBUG=1
+python -m fightcamp.main
+```
+
+Log format:
+```
+[INJURY_EXCLUSION] strength_GPP | name=Barbell Overhead Press | region=shoulder | severity=moderate | risk_score=2.640 | triggers=['overhead', 'press_heavy']
+[INJURY_REPLACEMENT] strength_GPP | excluded=Barbell Overhead Press | replacement=Chest-Supported Dumbbell Row
+```
+
+All logged exclusions and replacements reflect the final plan contents - the injury guard runs after initial scoring but before final selection, so the markdown/PDF output matches the logged decisions.
+
+## Logging & Debugging
+
+### INJURY_DEBUG Environment Variable
+
+Set `INJURY_DEBUG=1` to enable detailed logging of injury exclusion decisions:
+
+```bash
+export INJURY_DEBUG=1
+python -m fightcamp.main
+```
+
+This enables logging in:
+- `injury_guard.py` - Exclusion decisions with risk scores and triggers
+- `injury_filtering.py` - Pattern matching details and replacement selections  
+- `strength.py` - Replacement context for strength exercises
+- `conditioning.py` - Replacement context for conditioning drills
+
+### Log Output Format
+
+Exclusion logs show:
+- Context (module and phase, e.g., `strength_GPP`, `conditioning_SPP`)
+- Exercise/drill name
+- Matched injury region and severity
+- Calculated risk score
+- Triggering tags/patterns
+
+Replacement logs show:
+- Context (module and phase)
+- Excluded exercise name
+- Selected replacement name
+
+### Verifying Logs Match Final Output
+
+The injury guard processes exercises in the same order they appear in the final plan. To verify:
+
+1. Run with `INJURY_DEBUG=1` and capture logs
+2. Open generated markdown plan or PDF
+3. Search for exercise names in the phase blocks
+4. Confirm excluded exercises are absent and replacements are present
+5. Check injury guardrails section for documented exclusion patterns
+
+The logs reflect the exact state after injury filtering but before markdown formatting, so there is 1:1 correspondence between logged replacements and final plan contents.
+
+## Testing
+
+The test suite uses pytest to validate core functionality across injury guardrails, tag provenance, and plan generation.
+
+### Running Tests
+
+```bash
+# Install pytest if not already installed
+pip install pytest
+
+# Run all tests
+pytest
+
+# Run specific test files
+pytest tests/test_injury_guard.py
+pytest tests/test_tag_provenance.py
+
+# Run with verbose output
+pytest -v
+
+# Run tests matching a pattern
+pytest -k "injury"
+```
+
+### Core Test Coverage
+
+**Injury Guardrail Tests** (`test_injury_guard.py`)
+- Pattern matching with word boundaries (avoids "pressure fighter" matching "press")
+- Tag-based exclusion logic
+- Severity normalization (mild/moderate/severe)
+- Replacement selection and fallback hierarchies
+- Risk score calculations with regional multipliers
+- Integration with strength and conditioning modules
+
+**Tag Provenance Tests** (`test_tag_provenance.py`)
+- Explicit vs. inferred tag marking
+- Tag-based exclusion only triggers on explicit tags
+- Pattern/keyword exclusions work independently of tag source
+- `ensure_tags()` correctly labels tag origins
+
+**Plan Output Tests** (`test_mindset_module.py`, `test_style_logic.py`)
+- Mental block classification and filtering
+- Phase mindset cue generation
+- Style-specific phase rules and ratios
+- Session allocation logic
+
+**Input Parsing Tests** (`test_input_parsing.py`)
+- Field validation and normalization
+- Equipment list parsing
+- Date handling and fight date calculations
+
+**Injury Pipeline Tests** (`test_injury_pipeline.py`, `test_injury_formatting.py`, `test_injury_scoring.py`)
+- Free-text injury parsing
+- Laterality extraction (left/right)
+- Canonical injury type mapping
+- Medical urgency detection
+- Phrase splitting and negation handling
+
+### Test Data
+
+Tests use fixtures from `tests/conftest.py` and sample data that mirrors the structure in `test_data.json`. The test suite validates that changes to scoring logic, injury rules, and module weightings don't break existing behavior.
 
 Recent updates removed the OpenAI dependency and now build plans entirely from the module outputs. Short-camp handling and style-specific rules still adjust the phase weeks correctly via the helper `_apply_style_rules()`.
 
