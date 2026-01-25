@@ -283,6 +283,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     """
     injuries_list = _normalize_injury_list(injuries)
     # Normalize missing severity to "moderate"
+    # Note: This modifies the injury dicts in-place as per requirements
     for inj in injuries_list:
         if isinstance(inj, dict) and not inj.get("severity"):
             inj["severity"] = "moderate"
