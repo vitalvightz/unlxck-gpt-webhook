@@ -1,52 +1,52 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Kieran Salim" },
-      { "label": "Age", "value": "24" },
-      { "label": "Weight (kg)", "value": "77" },
-      { "label": "Target Weight (kg)", "value": "75" },
-      { "label": "Height (cm)", "value": "180" },
-      { "label": "Fighting Style (Technical)", "value": ["Kickboxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["Distance Striker", "Counter Striker"] },
-      { "label": "Stance", "value": "Southpaw" },
+      { "label": "Full name", "value": "Luca Mensah" },
+      { "label": "Age", "value": "22" },
+      { "label": "Weight (kg)", "value": "69" },
+      { "label": "Target Weight (kg)", "value": "67" },
+      { "label": "Height (cm)", "value": "176" },
+      { "label": "Fighting Style (Technical)", "value": ["boxer"] },
+      { "label": "Fighting Style (Tactical)", "value": ["pressure fighter", "counter striker"] },
+      { "label": "Stance", "value": "Orthodox" },
       { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "5-1-0" },
-      { "label": "When is your next fight?", "value": "2026-03-21" },
+      { "label": "Current Record", "value": "8-2-0" },
+      { "label": "When is your next fight?", "value": "2026-04-18" },
       { "label": "Rounds x Minutes", "value": "3x3" },
-      { "label": "Weekly Training Frequency", "value": "6" },
-      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Weekly Training Frequency", "value": "5" },
+      { "label": "Fatigue Level", "value": "Low" },
       { "label": "Training Phase", "value": "Mid-Camp" },
       {
         "label": "Equipment Access",
-        "value": ["Barbell", "Dumbbells", "Kettlebells", "Bands", "Sled", "Jump Rope"]
+        "value": ["Barbell", "Dumbbells", "Kettlebells", "Med Balls / Bands", "Sled", "Battle Ropes", "Sandbag"]
       },
       {
         "label": "Training Availability",
-        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
       },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "Right shin splints (mild) + left shoulder impingement (mild). Avoid high-volume impact running and heavy overhead pressing."
+        "value": "Mild right wrist soreness + mild left knee tendonitis. Avoid heavy straight-bar wrist loading and high-impact plyometrics; use neutral-grip pressing and low-impact conditioning."
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Speed", "Power & Explosiveness", "Conditioning / Endurance", "Mobility", "Skill Refinement"]
+        "value": ["Power & Explosiveness", "Conditioning / Endurance", "Speed", "Mobility", "Skill Refinement", "Mental Resilience"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["conditioning", "rotation", "shoulders", "speed / reaction"]
+        "value": ["core stability", "conditioning", "speed / reaction", "rotation"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "short sharp intervals, reactive footwork, and pad rounds; hates long slow runs"
+        "value": "loves short hard intervals, bag sprints, and heavy-to-explosive contrast; dislikes long steady roadwork"
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "overthinks after getting hit clean; hesitates to throw the next shot"
+        "value": "after taking a clean shot, he rushes exchanges to 'get it back' instead of resetting; loses breath control and composure"
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "Loved contrast work (heavy + explosive). Hated long roadwork and high-rep overhead work."
+        "value": "Loved heavy + jump/throw contrasts and sled work. Hated long runs and high-volume push-ups that flared the wrist."
       }
     ]
   },
