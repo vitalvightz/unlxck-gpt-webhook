@@ -6,7 +6,14 @@ import os
 from typing import Callable, Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
-from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
+from .injury_filtering import (
+    filter_injury_details_by_severity,
+    injury_match_details,
+    match_forbidden,
+    normalize_injury_regions,
+    normalize_region_key,
+    normalize_severity_tier,
+)
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .tagging import normalize_tags
 
@@ -151,9 +158,9 @@ def _injury_context(injuries: Iterable[str | dict]) -> dict[str, str]:
         if not injury:
             continue
         if isinstance(injury, dict):
-            region = injury.get("region")
+            region = normalize_region_key(injury.get("region"))
             severity_raw = injury.get("severity")
-            severity = SEVERITY_ALIASES.get(str(severity_raw).lower(), "mild") if severity_raw else "mild"
+            severity = SEVERITY_ALIASES.get(str(severity_raw).lower(), "moderate") if severity_raw else "moderate"
             if region:
                 severity = severity if severity in SEVERITY_RANK else "mild"
                 current = region_severity.get(region)
@@ -309,7 +316,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     for injury in injuries_list:
         if isinstance(injury, dict):
             # For dictionary injuries, use the region as the injury string for matching
-            region = injury.get("region")
+            region = normalize_region_key(injury.get("region"))
             if region:
                 string_injuries_for_matching.append(region)
         else:
@@ -320,6 +327,9 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         string_injuries_for_matching,
         risk_levels=("exclude", "flag"),
     )
+    if details:
+        severity_tiers = {region: normalize_severity_tier(severity) for region, severity in region_severity.items()}
+        details = filter_injury_details_by_severity(exercise, details, region_severity=severity_tiers)
     if not details:
         return Decision(
             action="allow",

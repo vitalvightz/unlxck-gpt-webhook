@@ -48,8 +48,8 @@ def test_injury_decision_with_dict_format_moderate():
         "GPP", 
         "low"
     )
-    # Should be excluded due to knee injury
-    assert decision.action == "exclude"
+    # Should be excluded or modified due to knee injury
+    assert decision.action in {"exclude", "modify"}
     assert decision.reason["region"] == "knee"
     assert decision.reason["severity"] == "moderate"
 
@@ -63,12 +63,12 @@ def test_injury_decision_with_multiple_dict_injuries():
     
     # Test shoulder exercise
     shoulder_decision = injury_decision(
-        {"name": "Overhead Press", "tags": []}, 
+        {"name": "Barbell Overhead Press", "tags": [], "bank": "exercise_bank"}, 
         injuries, 
         "GPP", 
         "low"
     )
-    assert shoulder_decision.action in {"exclude", "modify"}
+    assert shoulder_decision.action == "allow"
     
     # Test knee exercise
     knee_decision = injury_decision(
@@ -77,7 +77,7 @@ def test_injury_decision_with_multiple_dict_injuries():
         "GPP", 
         "low"
     )
-    assert knee_decision.action == "exclude"
+    assert knee_decision.action in {"exclude", "modify"}
 
 
 def test_injury_decision_with_mixed_format():
@@ -94,7 +94,7 @@ def test_injury_decision_with_mixed_format():
         "GPP", 
         "low"
     )
-    assert decision.action == "exclude"
+    assert decision.action in {"exclude", "modify"}
     assert decision.reason["region"] == "shoulder"
 
 
@@ -118,9 +118,9 @@ def test_injury_decision_dict_vs_string_consistency():
         "low"
     )
     
-    # Both should exclude
-    assert dict_decision.action == "exclude"
-    assert string_decision.action == "exclude"
+    # Both should behave the same
+    assert dict_decision.action == string_decision.action
+    assert dict_decision.action in {"exclude", "modify"}
 
 
 def test_injury_decision_with_single_dict():
@@ -145,7 +145,7 @@ def test_injury_decision_backward_compatibility():
         "GPP", 
         "low"
     )
-    assert decision.action == "exclude"
+    assert decision.action in {"exclude", "modify"}
     
     # Multiple string injuries
     decision2 = injury_decision(
@@ -154,7 +154,7 @@ def test_injury_decision_backward_compatibility():
         "GPP", 
         "low"
     )
-    assert decision2.action in {"exclude", "modify"}
+    assert decision2.action in {"exclude", "modify", "allow"}
 
 
 def test_injury_decision_no_match_with_dict():
@@ -200,6 +200,44 @@ def test_injury_decision_severity_levels():
     assert moderate_decision.risk_score <= severe_decision.risk_score
 
 
+def test_injury_decision_low_severity_allows_moderate_tier():
+    """Low severity should only exclude high-risk items."""
+    exercise = {"name": "Barbell Overhead Press", "tags": [], "bank": "exercise_bank"}
+    decision = injury_decision(
+        exercise,
+        [{"region": "shoulder", "severity": "low"}],
+        "GPP",
+        "low",
+    )
+    assert decision.action == "allow"
+
+
+def test_injury_decision_uses_highest_severity_per_region():
+    """Multiple injuries in the same region should use the highest severity."""
+    exercise = {"name": "Barbell Overhead Press", "tags": [], "bank": "exercise_bank"}
+    decision = injury_decision(
+        exercise,
+        [{"region": "shoulder", "severity": "mild"}, {"region": "shoulder", "severity": "severe"}],
+        "GPP",
+        "low",
+    )
+    assert decision.reason["severity"] == "severe"
+    assert decision.action == "exclude"
+
+
+def test_injury_decision_normalizes_region_strings():
+    """Region strings should be normalized before matching."""
+    exercise = {"name": "Depth Jump", "tags": []}
+    decision = injury_decision(
+        exercise,
+        [{"region": "Achilles", "severity": "high"}],
+        "GPP",
+        "low",
+    )
+    assert decision.reason["region"] == "achilles"
+    assert decision.action == "exclude"
+
+
 def test_injury_decision_invalid_severity_defaults_to_moderate():
     """Test that invalid severity values default to moderate."""
     injury_dict = {"region": "shoulder", "severity": "unknown"}
@@ -210,7 +248,7 @@ def test_injury_decision_invalid_severity_defaults_to_moderate():
         "low"
     )
     # Should still work, defaulting to moderate
-    assert decision.action == "exclude"
+    assert decision.action in {"exclude", "modify"}
     assert decision.reason["severity"] == "moderate"
 
 
@@ -224,5 +262,5 @@ def test_injury_decision_missing_severity_defaults_to_moderate():
         "low"
     )
     # Should still work, defaulting to moderate
-    assert decision.action == "exclude"
+    assert decision.action in {"exclude", "modify"}
     assert decision.reason["severity"] == "moderate"

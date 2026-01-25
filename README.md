@@ -119,6 +119,11 @@ The injury pipeline turns free-form injury notes into guardrails, rehab drills, 
 - `format_injury_guardrails()` builds the injury summary, phase rehab priorities, and red-flag list used in the plan output; taper phases add a glycolytic conditioning caution when injuries are present.【F:fightcamp/rehab_protocols.py†L365-L445】
 - Support notes aggregate type-specific recovery guidance for any injuries detected.【F:fightcamp/rehab_protocols.py†L256-L336】
 
+**Injury exclusions + severity tiers** (`injury_filtering.py`, `injury_guard.py`)
+
+- The v2 exclusion map (`data/injury_exclusion_map_v2.json`) buckets each region’s excluded items into `low`, `moderate`, and `high` risk tiers; `injury_guard` filters matches by severity so low-severity injuries only exclude high-risk drills, moderate excludes moderate+high, and high excludes all tiers.【F:fightcamp/injury_filtering.py†L35-L199】【F:fightcamp/injury_guard.py†L146-L365】
+- When severity is omitted or invalid in dict-style injuries, the guardrails default to `moderate`. Region strings are normalized (e.g., “Achilles” → `achilles`) before matching for consistent behavior.【F:fightcamp/injury_guard.py†L146-L214】
+
 ### Mental Modules
 
 The mental workflow focuses on classifying intake blockers, filtering them for style fit, and surfacing phase cues in the plan output.

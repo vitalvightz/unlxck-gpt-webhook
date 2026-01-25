@@ -160,10 +160,29 @@ def _sanitize_conditioning_bank(bank, *, source: str):
     return cleaned_bank
 
 
-def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = False):
+def _load_bank(
+    path: Path,
+    *,
+    source: str,
+    bank_name: str,
+    enforce_conditioning_systems: bool = False,
+):
     bank = json.loads(path.read_text())
     if enforce_conditioning_systems:
-        return _sanitize_conditioning_bank(bank, source=source)
+        bank = _sanitize_conditioning_bank(bank, source=source)
+    def _attach_bank(item: dict) -> None:
+        item.setdefault("bank", bank_name)
+    if isinstance(bank, list):
+        for item in bank:
+            _attach_bank(item)
+        if enforce_conditioning_systems:
+            return bank
+    if enforce_conditioning_systems and not isinstance(bank, list):
+        for items in bank.values():
+            if isinstance(items, list):
+                for item in items:
+                    _attach_bank(item)
+        return bank
     if isinstance(bank, list):
         for item in bank:
             validate_training_item(item, source=source, require_phases=True)
@@ -172,6 +191,7 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
     for items in bank.values():
         if isinstance(items, list):
             for item in items:
+                _attach_bank(item)
                 validate_training_item(item, source=source, require_phases=True)
                 normalize_item_tags(item)
     return bank
@@ -180,17 +200,23 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
 conditioning_bank = _load_bank(
     DATA_DIR / "conditioning_bank.json",
     source="conditioning_bank.json",
+    bank_name="conditioning_bank",
     enforce_conditioning_systems=True,
 )
 style_conditioning_bank = _load_bank(
     DATA_DIR / "style_conditioning_bank.json",
     source="style_conditioning_bank.json",
+    bank_name="style_conditioning_bank",
     enforce_conditioning_systems=True,
 )
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
 try:
-    _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")
+    _coord_data = _load_bank(
+        DATA_DIR / "coordination_bank.json",
+        source="coordination_bank.json",
+        bank_name="coordination_bank",
+    )
 except Exception:
     _coord_data = []
 

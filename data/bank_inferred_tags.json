@@ -7,7 +7,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Trap Bar Deadlift",
     "name": "Trap Bar Deadlift"
@@ -43,7 +45,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Romanian Deadlift (RDL)",
     "name": "Romanian Deadlift (RDL)"
@@ -68,7 +72,12 @@
       "explosive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Trap Bar Jump (Light)",
     "name": "Trap Bar Jump (Light)"
@@ -119,7 +128,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Cluster Set Trap Bar Deadlift",
     "name": "Cluster Set Trap Bar Deadlift"
@@ -133,8 +144,13 @@
     ],
     "inferred_tags": [
       "axial_heavy",
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "knee_dominant_heavy"
+      "knee_dominant_heavy",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Back Squat \u2192 Box Jump",
     "name": "Back Squat \u2192 Box Jump"
@@ -147,9 +163,16 @@
       "upper_body"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
       "horizontal_push",
-      "upper_push"
+      "landing_stress_high",
+      "press_heavy",
+      "reactive_rebound_high",
+      "toe_extension_high",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "exercise_bank:DB Bench Press \u2192 Plyo Push-Up",
     "name": "DB Bench Press \u2192 Plyo Push-Up"
@@ -163,8 +186,15 @@
     ],
     "inferred_tags": [
       "axial_heavy",
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "hinge_heavy"
+      "hinge_heavy",
+      "landing_stress_high",
+      "lumbar_loaded",
+      "posterior_chain_heavy",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Heavy RDL \u2192 Broad Jump",
     "name": "Heavy RDL \u2192 Broad Jump"
@@ -199,7 +229,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Iso Deadlift Hold",
     "name": "Iso Deadlift Hold"
@@ -234,7 +266,12 @@
       "tactical"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Zercher Squat \u2192 Sprawl Jump",
     "name": "Zercher Squat \u2192 Sprawl Jump"
@@ -302,7 +339,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Romanian Deadlift (RDL)",
     "name": "Romanian Deadlift (RDL)"
@@ -327,7 +366,12 @@
       "power"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Trap Bar Jump Squat",
     "name": "Trap Bar Jump Squat"
@@ -339,7 +383,12 @@
       "power"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Box Jump",
     "name": "Box Jump"
@@ -383,7 +432,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Single-Leg RDL",
     "name": "Single-Leg RDL"
@@ -449,7 +500,10 @@
     "explicit_tags": [
       "posterior_chain"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "lumbar_loaded",
+      "spine_extension_loaded"
+    ],
     "item_id": "exercise_bank:Reverse Hyperextension",
     "name": "Reverse Hyperextension"
   },
@@ -473,7 +527,12 @@
       "balance"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Jump Lunge (Alternating)",
     "name": "Jump Lunge (Alternating)"
@@ -495,7 +554,9 @@
       "compound"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "exercise_bank:Barbell Overhead Press",
@@ -507,7 +568,10 @@
       "upper_body",
       "compound"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "upper_push",
+      "wrist_loaded_extension"
+    ],
     "item_id": "exercise_bank:Push-Up (Weighted)",
     "name": "Push-Up (Weighted)"
   },
@@ -538,7 +602,8 @@
       "compound"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "exercise_bank:DB Plyometric Push-Up (Hands on Dumbbells)",
     "name": "DB Plyometric Push-Up (Hands on Dumbbells)"
@@ -569,7 +634,10 @@
       "explosive",
       "upper_body"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "upper_push",
+      "wrist_loaded_extension"
+    ],
     "item_id": "exercise_bank:Clap Push-Up",
     "name": "Clap Push-Up"
   },
@@ -580,7 +648,9 @@
       "shoulders"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "exercise_bank:Push Press",
@@ -616,7 +686,9 @@
       "shoulders"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "exercise_bank:Band-Resisted Push Press",
@@ -628,7 +700,10 @@
       "pull",
       "posterior_chain"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "row_heavy",
+      "upper_back_loaded"
+    ],
     "item_id": "exercise_bank:Bent-Over Row",
     "name": "Bent-Over Row"
   },
@@ -650,7 +725,8 @@
     ],
     "inferred_tags": [
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "exercise_bank:Towel Pull-Up",
     "name": "Towel Pull-Up"
@@ -691,7 +767,10 @@
       "pull",
       "rehab_friendly"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "row_heavy",
+      "upper_back_loaded"
+    ],
     "item_id": "exercise_bank:TRX Row",
     "name": "TRX Row"
   },
@@ -721,7 +800,10 @@
       "explosive",
       "posterior_chain"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "row_heavy",
+      "upper_back_loaded"
+    ],
     "item_id": "exercise_bank:Banded Row (Speed Focus)",
     "name": "Banded Row (Speed Focus)"
   },
@@ -752,7 +834,9 @@
       "anti_rotation",
       "rehab_friendly"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "exercise_bank:Suitcase Carry (Heavy)",
     "name": "Suitcase Carry (Heavy)"
   },
@@ -892,7 +976,10 @@
       "anti_rotation",
       "rehab_friendly"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "row_heavy",
+      "upper_back_loaded"
+    ],
     "item_id": "exercise_bank:Side Plank Row(Band or DB)",
     "name": "Side Plank Row(Band or DB)"
   },
@@ -1044,7 +1131,8 @@
     ],
     "inferred_tags": [
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "exercise_bank:Towel Hang",
     "name": "Towel Hang"
@@ -1065,8 +1153,10 @@
       "grip"
     ],
     "inferred_tags": [
+      "carry_heavy",
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "exercise_bank:Plate Pinch Carry",
     "name": "Plate Pinch Carry"
@@ -1077,10 +1167,7 @@
       "grip",
       "core"
     ],
-    "inferred_tags": [
-      "grip_max",
-      "hand_crush"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Farmers Walk (Fat Grip)",
     "name": "Farmers Walk (Fat Grip)"
   },
@@ -1130,7 +1217,9 @@
       "grip",
       "core"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "exercise_bank:Water Jug Carry",
     "name": "Water Jug Carry"
   },
@@ -1150,10 +1239,7 @@
       "endurance",
       "explosive"
     ],
-    "inferred_tags": [
-      "front_rack",
-      "wrist_loaded_extension"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:EMOM: 5 Squat Cleans + 5 Burpees",
     "name": "EMOM: 5 Squat Cleans + 5 Burpees"
   },
@@ -1163,7 +1249,9 @@
       "grip",
       "core"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "exercise_bank:Death by Carry (Sandbag/Sled)",
     "name": "Death by Carry (Sandbag/Sled)"
   },
@@ -1174,7 +1262,12 @@
       "power"
     ],
     "inferred_tags": [
-      "max_velocity"
+      "calf_volume_high",
+      "max_velocity",
+      "row_heavy",
+      "running_volume_high",
+      "shin_splints_risk",
+      "upper_back_loaded"
     ],
     "item_id": "exercise_bank:Tabata Sprints (Treadmill/Row)",
     "name": "Tabata Sprints (Treadmill/Row)"
@@ -1195,9 +1288,7 @@
       "power",
       "endurance"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
     "name": "5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)"
   },
@@ -1229,7 +1320,8 @@
     ],
     "inferred_tags": [
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "exercise_bank:Dead Hang",
     "name": "Dead Hang"
@@ -1360,7 +1452,10 @@
       "balance",
       "endurance"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "exercise_bank:Boxing Shuffle Drill (Ladder)",
     "name": "Boxing Shuffle Drill (Ladder)"
   },
@@ -1430,7 +1525,10 @@
       "rate_of_force",
       "upper_body"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "upper_push",
+      "wrist_loaded_extension"
+    ],
     "item_id": "exercise_bank:Explosive Push-Up (Clap-to-Tap)",
     "name": "Explosive Push-Up (Clap-to-Tap)"
   },
@@ -1440,10 +1538,7 @@
       "rotational",
       "core"
     ],
-    "inferred_tags": [
-      "overhead",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Overhead Slam (Rotational)",
     "name": "Overhead Slam (Rotational)"
   },
@@ -1535,7 +1630,8 @@
     ],
     "inferred_tags": [
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "exercise_bank:Plate Pinch Rotations",
     "name": "Plate Pinch Rotations"
@@ -1576,9 +1672,7 @@
       "endurance",
       "balance"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Rope Jumping (Weighted Vest)",
     "name": "Rope Jumping (Weighted Vest)"
   },
@@ -1613,6 +1707,8 @@
       "high_cns"
     ],
     "inferred_tags": [
+      "cod_high",
+      "decel_high",
       "max_velocity"
     ],
     "item_id": "exercise_bank:Lateral Shuffle Sprint",
@@ -1625,7 +1721,12 @@
       "explosive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Alternating Skater Hops",
     "name": "Alternating Skater Hops"
@@ -1637,8 +1738,13 @@
       "explosive"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "max_velocity"
+      "landing_stress_high",
+      "max_velocity",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Depth Jump to Sprint",
     "name": "Depth Jump to Sprint"
@@ -1650,9 +1756,12 @@
       "reactive"
     ],
     "inferred_tags": [
-      "axial_heavy",
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "hinge_heavy"
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Rapid Hurdle Hops (2-foot)",
     "name": "Rapid Hurdle Hops (2-foot)"
@@ -1686,7 +1795,12 @@
       "reactive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Jump-in-Place (Max Frequency)",
     "name": "Jump-in-Place (Max Frequency)"
@@ -1720,8 +1834,7 @@
       "explosive"
     ],
     "inferred_tags": [
-      "adductor_load_high",
-      "high_impact_plyo"
+      "adductor_load_high"
     ],
     "item_id": "exercise_bank:Lateral Lunge (Plyometric)",
     "name": "Lateral Lunge (Plyometric)"
@@ -1806,7 +1919,12 @@
       "reactive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Depth Jump (Stick Landing)",
     "name": "Depth Jump (Stick Landing)"
@@ -1817,10 +1935,7 @@
       "high_cns",
       "reactive"
     ],
-    "inferred_tags": [
-      "axial_heavy",
-      "hinge_heavy"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Reactive Hurdle Hop (Single-Leg)",
     "name": "Reactive Hurdle Hop (Single-Leg)"
   },
@@ -1831,8 +1946,13 @@
       "explosive"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
       "contact",
-      "high_impact_plyo"
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Ballistic Box Jump (Min Ground Contact)",
     "name": "Ballistic Box Jump (Min Ground Contact)"
@@ -1863,9 +1983,7 @@
       "high_cns",
       "rate_of_force"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Plyometric Shadow Boxing",
     "name": "Plyometric Shadow Boxing"
   },
@@ -1875,9 +1993,7 @@
       "high_cns",
       "reactive"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Staggered-Stance Reactive Jumps",
     "name": "Staggered-Stance Reactive Jumps"
   },
@@ -1970,7 +2086,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Single-Leg Deadlift Hold",
     "name": "Single-Leg Deadlift Hold"
@@ -2072,8 +2190,10 @@
       "work_capacity"
     ],
     "inferred_tags": [
+      "carry_heavy",
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "exercise_bank:Single-Leg Farmer Carry Hold",
     "name": "Single-Leg Farmer Carry Hold"
@@ -2107,7 +2227,12 @@
       "acceleration"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Single-Leg Forward Hops",
     "name": "Single-Leg Forward Hops"
@@ -2119,7 +2244,12 @@
       "lateral_power"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Single-Leg Lateral Hops",
     "name": "Single-Leg Lateral Hops"
@@ -2141,7 +2271,12 @@
       "triple_extension"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Single-Leg Box Jump",
     "name": "Single-Leg Box Jump"
@@ -2163,7 +2298,12 @@
       "agility"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Single-Leg Zig-Zag Hops",
     "name": "Single-Leg Zig-Zag Hops"
@@ -2175,7 +2315,12 @@
       "upper_body"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:Single-Leg Medicine Ball Chest Push Jump",
     "name": "Single-Leg Medicine Ball Chest Push Jump"
@@ -2186,7 +2331,10 @@
       "plyometric",
       "footwork"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "exercise_bank:Single-Leg Reactive Shuffle",
     "name": "Single-Leg Reactive Shuffle"
   },
@@ -2208,7 +2356,12 @@
       "reactive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "exercise_bank:\ud83d\udd25 Single-Leg Combat Stance Switch Jump",
     "name": "\ud83d\udd25 Single-Leg Combat Stance Switch Jump"
@@ -2233,7 +2386,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Deadlift Isometric (120% 1RM @ knee height)",
     "name": "Deadlift Isometric (120% 1RM @ knee height)"
@@ -2245,10 +2400,7 @@
       "horizontal_power",
       "triphasic"
     ],
-    "inferred_tags": [
-      "horizontal_push",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Bench Isometric (130% 1RM @ mid-range)",
     "name": "Bench Isometric (130% 1RM @ mid-range)"
   },
@@ -2285,7 +2437,9 @@
       "shoulders"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "exercise_bank:Overhead Press Isometric (120% 1RM @ forehead)",
@@ -2311,7 +2465,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Deficit Deadlift Isometric (115% 1RM @ floor)",
     "name": "Deficit Deadlift Isometric (115% 1RM @ floor)"
@@ -2323,10 +2479,7 @@
       "horizontal_power",
       "shoulders"
     ],
-    "inferred_tags": [
-      "horizontal_push",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Incline Bench Isometric (125% 1RM @ 45\u00b0)",
     "name": "Incline Bench Isometric (125% 1RM @ 45\u00b0)"
   },
@@ -2350,7 +2503,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
     "name": "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)"
@@ -2364,6 +2519,7 @@
     ],
     "inferred_tags": [
       "horizontal_push",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "exercise_bank:Floor Press Isometric (130% 1RM @ lockout)",
@@ -2389,8 +2545,11 @@
     ],
     "inferred_tags": [
       "axial_heavy",
+      "dynamic_overhead",
       "hinge_heavy",
+      "lumbar_loaded",
       "overhead",
+      "posterior_chain_heavy",
       "shoulder_heavy"
     ],
     "item_id": "exercise_bank:Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
@@ -2403,10 +2562,7 @@
       "horizontal_power",
       "triceps"
     ],
-    "inferred_tags": [
-      "horizontal_push",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Close-Grip Bench Isometric (120% 1RM @ mid-range)",
     "name": "Close-Grip Bench Isometric (120% 1RM @ mid-range)"
   },
@@ -2450,7 +2606,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "exercise_bank:Deadlift Isometric (110% 1RM @ Mid-Shin)",
     "name": "Deadlift Isometric (110% 1RM @ Mid-Shin)"
@@ -2461,10 +2619,7 @@
       "isometric",
       "horizontal_power"
     ],
-    "inferred_tags": [
-      "horizontal_push",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "exercise_bank:Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
     "name": "Bench Isometric (110% 1RM @ 90\u00b0 Elbow)"
   },
@@ -2498,7 +2653,9 @@
       "overhead"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "exercise_bank:Overhead Press Isometric (105% 1RM @ Chin)",
@@ -2510,7 +2667,9 @@
       "grip",
       "core"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "exercise_bank:KB Suitcase Carry",
     "name": "KB Suitcase Carry"
   },
@@ -2532,9 +2691,7 @@
       "posterior_chain",
       "low_impact"
     ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Assault Bike Sprint Intervals",
     "name": "Assault Bike Sprint Intervals"
   },
@@ -2578,7 +2735,11 @@
       "low_impact",
       "recovery"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "calf_volume_high",
+      "running_volume_high",
+      "shin_splints_risk"
+    ],
     "item_id": "conditioning_bank:Nasal Jog",
     "name": "Nasal Jog"
   },
@@ -2614,9 +2775,14 @@
       "aerobic"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
       "foot_impact_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "impact_rebound_high"
+      "impact_rebound_high",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Jump Rope Conditioning",
     "name": "Jump Rope Conditioning"
@@ -2657,7 +2823,11 @@
     "explicit_tags": [
       "zero_impact"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "calf_volume_high",
+      "running_volume_high",
+      "shin_splints_risk"
+    ],
     "item_id": "conditioning_bank:Pool Running (Weight Belt)",
     "name": "Pool Running (Weight Belt)"
   },
@@ -2721,9 +2891,14 @@
       "footwork"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
       "foot_impact_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "impact_rebound_high"
+      "impact_rebound_high",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Jump Rope (Recovery Pace)",
     "name": "Jump Rope (Recovery Pace)"
@@ -2769,10 +2944,7 @@
     "explicit_tags": [
       "grip"
     ],
-    "inferred_tags": [
-      "grip_max",
-      "hand_crush"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Farmers Walk (Light)",
     "name": "Farmers Walk (Light)"
   },
@@ -2817,7 +2989,9 @@
     "explicit_tags": [
       "core"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "conditioning_bank:Sandbag Carry (Light)",
     "name": "Sandbag Carry (Light)"
   },
@@ -2826,7 +3000,10 @@
     "explicit_tags": [
       "footwork"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "conditioning_bank:Agility Ladder (Recovery)",
     "name": "Agility Ladder (Recovery)"
   },
@@ -2837,7 +3014,12 @@
       "lower_body"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Band-Resisted Broad Jump",
     "name": "Band-Resisted Broad Jump"
@@ -2859,8 +3041,13 @@
       "plyometric"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "max_velocity"
+      "landing_stress_high",
+      "max_velocity",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Depth Jump to Sprint",
     "name": "Depth Jump to Sprint"
@@ -2872,8 +3059,15 @@
       "contrast_pairing"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "max_velocity"
+      "landing_stress_high",
+      "max_velocity",
+      "reactive_rebound_high",
+      "toe_extension_high",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "conditioning_bank:Plyo Push-Up to Sprint",
     "name": "Plyo Push-Up to Sprint"
@@ -2897,7 +3091,12 @@
       "quad_dominant"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Box Jump (Stick Landing)",
     "name": "Box Jump (Stick Landing)"
@@ -2938,10 +3137,7 @@
       "reactive",
       "plyometric"
     ],
-    "inferred_tags": [
-      "axial_heavy",
-      "hinge_heavy"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Hurdle Hop (Stick Landing)",
     "name": "Hurdle Hop (Stick Landing)"
   },
@@ -3004,7 +3200,12 @@
       "eccentric"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Broad Jump (Stick Landing)",
     "name": "Broad Jump (Stick Landing)"
@@ -3016,7 +3217,12 @@
       "elastic"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Split Jump (Alternating)",
     "name": "Split Jump (Alternating)"
@@ -3038,7 +3244,12 @@
       "elastic"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Box Jump-Over (Continuous)",
     "name": "Box Jump-Over (Continuous)"
@@ -3142,6 +3353,7 @@
       "overhead"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
       "shoulder_heavy"
     ],
@@ -3177,7 +3389,8 @@
     "inferred_tags": [
       "grip_max",
       "hand_crush",
-      "max_velocity"
+      "max_velocity",
+      "pinch_grip_high"
     ],
     "item_id": "conditioning_bank:Rope Climb Sprints",
     "name": "Rope Climb Sprints"
@@ -3220,7 +3433,11 @@
       "quad_dominant",
       "plyometric"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "calf_volume_high",
+      "running_volume_high",
+      "shin_splints_risk"
+    ],
     "item_id": "conditioning_bank:Stair Running Intervals",
     "name": "Stair Running Intervals"
   },
@@ -3293,7 +3510,8 @@
     "inferred_tags": [
       "grip_max",
       "hand_crush",
-      "max_velocity"
+      "max_velocity",
+      "pinch_grip_high"
     ],
     "item_id": "conditioning_bank:Towel Pull-Up Sprints",
     "name": "Towel Pull-Up Sprints"
@@ -3305,7 +3523,14 @@
       "upper_body"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "conditioning_bank:Plyo Push-Up Burpee",
     "name": "Plyo Push-Up Burpee"
@@ -3336,7 +3561,10 @@
       "footwork",
       "reactive"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "conditioning_bank:Agility Ladder Power Drills",
     "name": "Agility Ladder Power Drills"
   },
@@ -3346,7 +3574,9 @@
       "core",
       "grip"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "conditioning_bank:Sandbag Bearhug Carry",
     "name": "Sandbag Bearhug Carry"
   },
@@ -3387,7 +3617,12 @@
       "explosive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Plyo Step-Up Jumps",
     "name": "Plyo Step-Up Jumps"
@@ -3398,9 +3633,7 @@
       "shoulders",
       "grip"
     ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Rope Wave Sprints",
     "name": "Rope Wave Sprints"
   },
@@ -3411,8 +3644,7 @@
       "core"
     ],
     "inferred_tags": [
-      "overhead",
-      "upper_push"
+      "carry_heavy"
     ],
     "item_id": "conditioning_bank:Overhead Carry Complex",
     "name": "Overhead Carry Complex"
@@ -3446,6 +3678,7 @@
       "overhead"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
       "shoulder_heavy"
     ],
@@ -3459,6 +3692,7 @@
       "explosive"
     ],
     "inferred_tags": [
+      "carry_heavy",
       "front_rack",
       "wrist_loaded_extension"
     ],
@@ -3585,9 +3819,7 @@
       "explosive",
       "low_impact"
     ],
-    "inferred_tags": [
-      "max_velocity"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Assault Bike :10s Sprints (ATP-PCr)",
     "name": "Assault Bike :10s Sprints (ATP-PCr)"
   },
@@ -3629,9 +3861,7 @@
       "explosive",
       "unilateral"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Band-Resisted Broad Jumps (ATP-PCr)",
     "name": "Band-Resisted Broad Jumps (ATP-PCr)"
   },
@@ -3642,7 +3872,10 @@
       "eccentric"
     ],
     "inferred_tags": [
-      "max_velocity"
+      "calf_volume_high",
+      "max_velocity",
+      "running_volume_high",
+      "shin_splints_risk"
     ],
     "item_id": "conditioning_bank:Treadmill Hill Sprints (Glycolytic)",
     "name": "Treadmill Hill Sprints (Glycolytic)"
@@ -3695,9 +3928,7 @@
       "compound",
       "explosive"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Burpee Broad Jumps (Glycolytic)",
     "name": "Burpee Broad Jumps (Glycolytic)"
   },
@@ -3708,7 +3939,9 @@
       "contrast"
     ],
     "inferred_tags": [
-      "max_velocity"
+      "max_velocity",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "conditioning_bank:Clap Push-Up Sprints (ATP-PCr)",
     "name": "Clap Push-Up Sprints (ATP-PCr)"
@@ -3740,7 +3973,12 @@
       "explosive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Box Jump Repeats (ATP-PCr)",
     "name": "Box Jump Repeats (ATP-PCr)"
@@ -3774,7 +4012,12 @@
       "explosive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Jump Squat Intervals (Glycolytic)",
     "name": "Jump Squat Intervals (Glycolytic)"
@@ -3808,6 +4051,7 @@
       "grip"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
       "shoulder_heavy"
     ],
@@ -3821,6 +4065,8 @@
       "coordination"
     ],
     "inferred_tags": [
+      "cod_high",
+      "decel_high",
       "max_velocity"
     ],
     "item_id": "conditioning_bank:Agility Ladder Sprints (Glycolytic)",
@@ -3856,7 +4102,12 @@
       "explosive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Plyo Step-Up Intervals (Glycolytic)",
     "name": "Plyo Step-Up Intervals (Glycolytic)"
@@ -3870,7 +4121,8 @@
     "inferred_tags": [
       "grip_max",
       "hand_crush",
-      "max_velocity"
+      "max_velocity",
+      "pinch_grip_high"
     ],
     "item_id": "conditioning_bank:Rope Climb Sprints (ATP-PCr)",
     "name": "Rope Climb Sprints (ATP-PCr)"
@@ -3914,7 +4166,12 @@
       "eccentric"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Broad Jump Repeats (ATP-PCr)",
     "name": "Broad Jump Repeats (ATP-PCr)"
@@ -4107,7 +4364,11 @@
       "zero_impact",
       "rehab_friendly"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "calf_volume_high",
+      "running_volume_high",
+      "shin_splints_risk"
+    ],
     "item_id": "conditioning_bank:Pool Running (No Impact)",
     "name": "Pool Running (No Impact)"
   },
@@ -4131,7 +4392,9 @@
       "core",
       "work_capacity"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "conditioning_bank:Sandbag Carry (Bearhug)",
     "name": "Sandbag Carry (Bearhug)"
   },
@@ -4191,9 +4454,14 @@
       "recovery"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
       "foot_impact_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "impact_rebound_high"
+      "impact_rebound_high",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Meditative Jump Rope (Eyes Closed)",
     "name": "Meditative Jump Rope (Eyes Closed)"
@@ -4230,7 +4498,10 @@
       "striking",
       "footwork"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "conditioning_bank:Lateral Shuffle + Strike Drills",
     "name": "Lateral Shuffle + Strike Drills"
   },
@@ -4301,7 +4572,12 @@
       "low_cns"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Low Box Jump (Fast Reset)",
     "name": "Low Box Jump (Fast Reset)"
@@ -4313,7 +4589,12 @@
       "elastic"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Pogo Jump Series (Mini Bounce)",
     "name": "Pogo Jump Series (Mini Bounce)"
@@ -4325,7 +4606,12 @@
       "hip_dominant"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Band-Resisted Vertical Jump",
     "name": "Band-Resisted Vertical Jump"
@@ -4346,10 +4632,7 @@
       "plyometric",
       "coordination"
     ],
-    "inferred_tags": [
-      "axial_heavy",
-      "hinge_heavy"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Mini Hurdle Quick Steps",
     "name": "Mini Hurdle Quick Steps"
   },
@@ -4360,7 +4643,12 @@
       "upper_body"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Med Ball Drop Catch to Jump",
     "name": "Med Ball Drop Catch to Jump"
@@ -4382,7 +4670,12 @@
       "reactive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Band-Assisted Jump Reset",
     "name": "Band-Assisted Jump Reset"
@@ -4394,7 +4687,12 @@
       "reactive"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Wall Reactive Jump (Cue Start)",
     "name": "Wall Reactive Jump (Cue Start)"
@@ -4416,7 +4714,12 @@
       "core"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Tuck Jump (Submax)",
     "name": "Tuck Jump (Submax)"
@@ -4428,7 +4731,12 @@
       "hip_dominant"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Band-Resisted Split Jump",
     "name": "Band-Resisted Split Jump"
@@ -4440,7 +4748,12 @@
       "core"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "conditioning_bank:Single-Leg Med Ball Toss Jump",
     "name": "Single-Leg Med Ball Toss Jump"
@@ -4482,7 +4795,14 @@
       "upper_body"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "conditioning_bank:Plyo Push-Up on Knees",
     "name": "Plyo Push-Up on Knees"
@@ -4503,10 +4823,7 @@
       "plyometric",
       "core"
     ],
-    "inferred_tags": [
-      "overhead",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "conditioning_bank:Overhead Med Ball Slam (Snappy)",
     "name": "Overhead Med Ball Slam (Snappy)"
   },
@@ -5459,7 +5776,10 @@
       "kickboxing",
       "mma"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "style_conditioning_bank:Matrix Shuffle",
     "name": "Matrix Shuffle"
   },
@@ -5875,9 +6195,7 @@
       "muay_thai",
       "jumping_kick"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "style_conditioning_bank:Jumping Roundhouse",
     "name": "Jumping Roundhouse"
   },
@@ -5976,6 +6294,8 @@
       "boxing"
     ],
     "inferred_tags": [
+      "cod_high",
+      "decel_high",
       "max_velocity"
     ],
     "item_id": "style_conditioning_bank:Ring-Cut Sprint",
@@ -6969,7 +7289,12 @@
       "mma"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_conditioning_bank:Lateral Escape Plyo Pushoffs",
     "name": "Lateral Escape Plyo Pushoffs"
@@ -7017,9 +7342,12 @@
       "mma"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "upper_push",
-      "wrist_loaded_extension"
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_conditioning_bank:Cross-Counter Plyo Pushups",
     "name": "Cross-Counter Plyo Pushups"
@@ -7055,7 +7383,12 @@
       "hybrid"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_conditioning_bank:Lateral Plyo Pushoffs",
     "name": "Lateral Plyo Pushoffs"
@@ -7079,7 +7412,9 @@
       "distance_striker",
       "hybrid"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "max_velocity"
+    ],
     "item_id": "style_conditioning_bank:Switch-Kick Acceleration",
     "name": "Switch-Kick Acceleration"
   },
@@ -7135,7 +7470,9 @@
       "distance_striker",
       "kicker"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "max_velocity"
+    ],
     "item_id": "style_conditioning_bank:MT Teep Acceleration Drill",
     "name": "MT Teep Acceleration Drill"
   },
@@ -7146,9 +7483,7 @@
       "scrambler",
       "wrestler"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "style_conditioning_bank:Reactive Sprawl Jumps",
     "name": "Reactive Sprawl Jumps"
   },
@@ -7184,9 +7519,7 @@
       "distance_striker",
       "hybrid"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "style_conditioning_bank:Switch-Kick Plyos",
     "name": "Switch-Kick Plyos"
   },
@@ -7275,7 +7608,9 @@
       "kicker",
       "distance_striker"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "max_velocity"
+    ],
     "item_id": "style_conditioning_bank:Axe Kick Acceleration",
     "name": "Axe Kick Acceleration"
   },
@@ -7376,7 +7711,9 @@
       "kicker",
       "distance_striker"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "max_velocity"
+    ],
     "item_id": "style_conditioning_bank:Spinning Back Kick Accelerations",
     "name": "Spinning Back Kick Accelerations"
   },
@@ -7874,7 +8211,9 @@
     ],
     "inferred_tags": [
       "axial_heavy",
-      "hinge_heavy"
+      "hinge_heavy",
+      "lumbar_loaded",
+      "posterior_chain_heavy"
     ],
     "item_id": "universal_gpp_strength:Trap Bar Deadlift",
     "name": "Trap Bar Deadlift"
@@ -7889,7 +8228,9 @@
     ],
     "inferred_tags": [
       "horizontal_push",
-      "upper_push"
+      "press_heavy",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "universal_gpp_strength:Push-Up or Bench Press",
     "name": "Push-Up or Bench Press"
@@ -7903,7 +8244,9 @@
       "overhead"
     ],
     "inferred_tags": [
+      "dynamic_overhead",
       "overhead",
+      "press_heavy",
       "upper_push"
     ],
     "item_id": "universal_gpp_strength:Barbell or DB Overhead Press",
@@ -7927,7 +8270,10 @@
       "upper_body",
       "grip"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "row_heavy",
+      "upper_back_loaded"
+    ],
     "item_id": "universal_gpp_strength:Pull-Up or Inverted Row",
     "name": "Pull-Up or Inverted Row"
   },
@@ -7992,10 +8338,7 @@
       "elastic",
       "coordination"
     ],
-    "inferred_tags": [
-      "axial_heavy",
-      "hinge_heavy"
-    ],
+    "inferred_tags": [],
     "item_id": "universal_gpp_strength:Low Hurdle Hop (Rhythm Focus)",
     "name": "Low Hurdle Hop (Rhythm Focus)"
   },
@@ -8007,7 +8350,13 @@
       "recovery",
       "conditioning"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "calf_volume_high",
+      "row_heavy",
+      "running_volume_high",
+      "shin_splints_risk",
+      "upper_back_loaded"
+    ],
     "item_id": "universal_gpp_conditioning:Steady-State Cardio (Run / Bike / Row)",
     "name": "Steady-State Cardio (Run / Bike / Row)"
   },
@@ -8021,9 +8370,14 @@
       "conditioning"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
       "foot_impact_high",
+      "forefoot_load_high",
       "high_impact_plyo",
-      "impact_rebound_high"
+      "impact_rebound_high",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)",
     "name": "Jump Rope Endurance (Footwork Conditioning)"
@@ -8092,9 +8446,7 @@
       "elastic",
       "high_cns"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "universal_gpp_conditioning:Plyometric Depth Jumps",
     "name": "Plyometric Depth Jumps"
   },
@@ -8121,7 +8473,9 @@
       "conditioning"
     ],
     "inferred_tags": [
-      "max_velocity"
+      "max_velocity",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "universal_gpp_conditioning:Clap Push-Up Sprints",
     "name": "Clap Push-Up Sprints"
@@ -8134,7 +8488,12 @@
       "counter_striker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Counter-Striker Snap Hops",
     "name": "Counter-Striker Snap Hops"
@@ -8178,7 +8537,7 @@
       "boxing",
       "mma",
       "kickboxing",
-      "muay thai",
+      "muay_thai",
       "pressure_fighter"
     ],
     "inferred_tags": [],
@@ -8201,7 +8560,7 @@
     "explicit_tags": [
       "mma",
       "boxing",
-      "muay thai",
+      "muay_thai",
       "kickboxing",
       "hybrid"
     ],
@@ -8270,7 +8629,12 @@
       "counter_striker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Counter Striker Slip-Jump",
     "name": "Counter Striker Slip-Jump"
@@ -8314,7 +8678,12 @@
       "distance_fighter"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Hybrid Sprawl-Jump",
     "name": "Hybrid Sprawl-Jump"
@@ -8379,7 +8748,12 @@
       "counter_striker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Counter Striker Pull-Jump",
     "name": "Counter Striker Pull-Jump"
@@ -8413,7 +8787,12 @@
       "submission_hunter"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Submission Hunter Sit-Out Jump",
     "name": "Submission Hunter Sit-Out Jump"
@@ -8458,7 +8837,12 @@
       "grappler"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Grappler Hip Heist Jump",
     "name": "Grappler Hip Heist Jump"
@@ -8470,7 +8854,12 @@
       "scrambler"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:MMA Spin-Jump",
     "name": "MMA Spin-Jump"
@@ -8514,7 +8903,12 @@
       "submission_hunter"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Submission Hunter Arm Drag Jump",
     "name": "Submission Hunter Arm Drag Jump"
@@ -8555,7 +8949,10 @@
       "mma",
       "grappler"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "style_taper_conditioning:Grappler Knee Cut Pop",
     "name": "Grappler Knee Cut Pop"
   },
@@ -8566,7 +8963,12 @@
       "scrambler"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:MMA Cage Jump",
     "name": "MMA Cage Jump"
@@ -8588,7 +8990,12 @@
       "counter_striker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Counter Striker Roll-Jump",
     "name": "Counter Striker Roll-Jump"
@@ -8621,7 +9028,12 @@
       "submission_hunter"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Submission Hunter Bridge-Jump",
     "name": "Submission Hunter Bridge-Jump"
@@ -8632,7 +9044,12 @@
       "mma"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "style_taper_conditioning:Shot-Jump",
     "name": "Shot-Jump"
@@ -8755,7 +9172,8 @@
     ],
     "inferred_tags": [
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "style_specific_exercises:Plate Pinch Holds",
     "name": "Plate Pinch Holds"
@@ -8881,10 +9299,7 @@
       "distance_striker",
       "ballistic"
     ],
-    "inferred_tags": [
-      "overhead",
-      "upper_push"
-    ],
+    "inferred_tags": [],
     "item_id": "style_specific_exercises:Overhead Med Ball Slam",
     "name": "Overhead Med Ball Slam"
   },
@@ -8898,8 +9313,10 @@
       "compound"
     ],
     "inferred_tags": [
+      "carry_heavy",
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "style_specific_exercises:Farmer\u2019s Carry",
     "name": "Farmer\u2019s Carry"
@@ -8925,9 +9342,7 @@
       "endurance",
       "pressure_fighter"
     ],
-    "inferred_tags": [
-      "high_impact_plyo"
-    ],
+    "inferred_tags": [],
     "item_id": "style_specific_exercises:Jumping Lunge",
     "name": "Jumping Lunge"
   },
@@ -9372,7 +9787,9 @@
       "mma",
       "clinch_fighter"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "carry_heavy"
+    ],
     "item_id": "coordination_bank:Sandbag Clinch Carry",
     "name": "Sandbag Clinch Carry"
   },
@@ -9507,9 +9924,15 @@
       "pressure_fighter"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "grip_max",
       "hand_crush",
-      "high_impact_plyo"
+      "high_impact_plyo",
+      "landing_stress_high",
+      "pinch_grip_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "coordination_bank:Towel Tug Stance Hops",
     "name": "Towel Tug Stance Hops"
@@ -9576,7 +9999,10 @@
       "boxing",
       "pressure_fighter"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "coordination_bank:Shadow Cut-Offs",
     "name": "Shadow Cut-Offs"
   },
@@ -9609,7 +10035,10 @@
       "mma",
       "pressure_fighter"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "upper_push",
+      "wrist_loaded_extension"
+    ],
     "item_id": "coordination_bank:Clap Push-Up to Guard",
     "name": "Clap Push-Up to Guard"
   },
@@ -9735,9 +10164,15 @@
       "pressure_fighter"
     ],
     "inferred_tags": [
+      "calf_rebound_high",
+      "forefoot_load_high",
       "grip_max",
       "hand_crush",
-      "high_impact_plyo"
+      "high_impact_plyo",
+      "landing_stress_high",
+      "pinch_grip_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "coordination_bank:Towel Tug Stance Hops",
     "name": "Towel Tug Stance Hops"
@@ -9804,7 +10239,10 @@
       "boxing",
       "pressure_fighter"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "coordination_bank:Shadow Cut-Offs",
     "name": "Shadow Cut-Offs"
   },
@@ -9837,7 +10275,10 @@
       "mma",
       "pressure_fighter"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "upper_push",
+      "wrist_loaded_extension"
+    ],
     "item_id": "coordination_bank:Clap Push-Up to Guard",
     "name": "Clap Push-Up to Guard"
   },
@@ -10020,7 +10461,12 @@
       "counter_striker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "coordination_bank:Plyo-Clap Parry Drills",
     "name": "Plyo-Clap Parry Drills"
@@ -10243,7 +10689,12 @@
       "kicker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "coordination_bank:Plyo Box Level Change Kick",
     "name": "Plyo Box Level Change Kick"
@@ -10377,7 +10828,12 @@
       "scrambler"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "coordination_bank:Plyo Mat Level Changes",
     "name": "Plyo Mat Level Changes"
@@ -10621,7 +11077,14 @@
       "distance_striker"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high",
+      "upper_push",
+      "wrist_loaded_extension"
     ],
     "item_id": "coordination_bank:Plyo Push-Up to Cross",
     "name": "Plyo Push-Up to Cross"
@@ -10701,7 +11164,8 @@
     ],
     "inferred_tags": [
       "grip_max",
-      "hand_crush"
+      "hand_crush",
+      "pinch_grip_high"
     ],
     "item_id": "coordination_bank:Towel Snap Reflex",
     "name": "Towel Snap Reflex"
@@ -10791,7 +11255,10 @@
       "submission_hunter",
       "scrambler"
     ],
-    "inferred_tags": [],
+    "inferred_tags": [
+      "cod_high",
+      "decel_high"
+    ],
     "item_id": "coordination_bank:Knee-Cut Ankle Pick",
     "name": "Knee-Cut Ankle Pick"
   },
@@ -11240,10 +11707,7 @@
       "kicker",
       "scrambler"
     ],
-    "inferred_tags": [
-      "axial_heavy",
-      "hinge_heavy"
-    ],
+    "inferred_tags": [],
     "item_id": "coordination_bank:Hurdle Hop-Kick Combo",
     "name": "Hurdle Hop-Kick Combo"
   },
@@ -11357,7 +11821,12 @@
       "pressure_fighter"
     ],
     "inferred_tags": [
-      "high_impact_plyo"
+      "calf_rebound_high",
+      "forefoot_load_high",
+      "high_impact_plyo",
+      "landing_stress_high",
+      "reactive_rebound_high",
+      "toe_extension_high"
     ],
     "item_id": "coordination_bank:Resisted Angle Jump",
     "name": "Resisted Angle Jump"

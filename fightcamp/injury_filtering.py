@@ -19,6 +19,18 @@ INJURY_MATCH_ALLOWLIST: list[str] = [
     "ship hinge",
     "stomach ache",
 ]
+INJURY_EXCLUSION_MAP_V2_FILENAME = "injury_exclusion_map_v2.json"
+SEVERITY_TIER_ORDER = ("low", "moderate", "high")
+SEVERITY_TIER_ALIASES = {
+    "low": "low",
+    "mild": "low",
+    "moderate": "moderate",
+    "medium": "moderate",
+    "med": "moderate",
+    "mod": "moderate",
+    "high": "high",
+    "severe": "high",
+}
 GENERIC_SINGLE_WORD_PATTERNS = {"press", "overhead", "bench"}
 MAX_VELOCITY_EXCLUDE_KEYWORDS = [
     "assault bike",
@@ -194,6 +206,125 @@ SHOULDER_TAG_EXCLUSIONS = {
     "dead hang",
     "scapular pull-up",
 }
+UPPER_BODY_PLYO_KEYWORDS = {
+    "push-up",
+    "push up",
+    "press",
+    "punch",
+    "uppercut",
+    "jab",
+    "cross",
+    "slam",
+    "throw",
+    "med ball",
+    "medicine ball",
+    "clap push-up",
+}
+LOWER_BODY_PLYO_KEYWORDS = {
+    "jump",
+    "bound",
+    "hop",
+    "sprint",
+    "shuffle",
+    "cut",
+    "lunge",
+    "squat",
+    "box",
+    "hurdle",
+    "skip",
+    "pogo",
+}
+
+HIGH_RISK_TAGS = {
+    "max_velocity",
+    "high_impact_plyo",
+    "landing_stress_high",
+    "reactive_rebound_high",
+    "impact_rebound_high",
+    "foot_impact_high",
+    "achilles_high_risk_impact",
+    "forefoot_load_high",
+    "toe_extension_high",
+    "ankle_lateral_impact_high",
+    "cod_high",
+    "decel_high",
+    "running_volume_high",
+    "shin_splints_risk",
+}
+
+MODERATE_RISK_TAGS = {
+    "press_heavy",
+    "dynamic_overhead",
+    "hinge_heavy",
+    "axial_heavy",
+    "posterior_chain_heavy",
+    "knee_dominant_heavy",
+    "quad_dominant_heavy",
+    "deep_knee_flexion_loaded",
+    "row_heavy",
+    "upper_back_loaded",
+    "carry_heavy",
+    "lumbar_loaded",
+    "hip_extension_heavy",
+    "glute_load_high",
+    "hip_impingement_risk",
+    "hip_internal_rotation_stress",
+    "hip_flexion_loaded",
+    "hip_flexor_strain_risk",
+    "hamstring_eccentric_high",
+    "posterior_chain_eccentric_high",
+    "adductor_load_high",
+    "wide_stance_adductor_high",
+    "long_lever_adductor",
+    "wrist_loaded_extension",
+    "wrist_extension_high",
+    "neck_loaded",
+    "cervical_load",
+    "cervical_flexion_loaded",
+    "cervical_extension_loaded",
+    "pelvic_shear_risk",
+    "asym_load_high",
+    "pec_loaded",
+    "deep_flexion",
+    "hip_irritant",
+}
+
+HIGH_RISK_KEYWORDS = {
+    "sprint",
+    "sprints",
+    "jump",
+    "jumps",
+    "depth jump",
+    "drop jump",
+    "bounds",
+    "bounding",
+    "pogo",
+    "pogos",
+    "rebound",
+    "hard landing",
+    "hard decel",
+    "hard deceleration",
+    "acceleration",
+    "max sprint",
+    "maximal sprint",
+    "all-out sprint",
+}
+
+MODERATE_RISK_KEYWORDS = {
+    "heavy",
+    "loaded",
+    "carry",
+    "press",
+    "deadlift",
+    "squat",
+    "lunge",
+    "split squat",
+    "row",
+    "extension",
+    "bridge",
+}
+
+_INJURY_EXCLUSION_MAP_V2_CACHE: dict[str, dict] = {}
 
 
 def expand_injury_tags(tags: Iterable[str], *, item: dict | None = None) -> set[str]:
@@ -201,6 +332,22 @@ def expand_injury_tags(tags: Iterable[str], *, item: dict | None = None) -> set[
     expanded: set[str] = set()
     for tag in tag_set:
         expanded.update(INJURY_TAG_ALIASES.get(tag, ()))
+    if item and tag_set & {"plyometric", "reactive"}:
+        name = str(item.get("name", "") or "").lower()
+        upper_body = any(key in name for key in UPPER_BODY_PLYO_KEYWORDS)
+        lower_body = any(key in name for key in LOWER_BODY_PLYO_KEYWORDS)
+        if upper_body and not lower_body:
+            expanded.difference_update(
+                {
+                    "achilles_high_risk_impact",
+                    "forefoot_load_high",
+                    "toe_extension_high",
+                    "landing_stress_high",
+                    "reactive_rebound_high",
+                    "impact_rebound_high",
+                    "foot_impact_high",
+                }
+            )
     if "high_cns" in tag_set:
         name = str(item.get("name", "") or "") if item else ""
         if not (tag_set & LOWER_BODY_CNS_TAGS) and not match_forbidden(
@@ -219,6 +366,25 @@ def _normalize_text(text: str) -> str:
     cleaned = text.lower().replace("-", " ").replace("_", " ")
     cleaned = re.sub(r"[^\w\s]", " ", cleaned)
     return " ".join(cleaned.split())
+
+
+def normalize_region_key(region: str | None) -> str | None:
+    if not region:
+        return None
+    normalized = _normalize_text(str(region)).replace(" ", "_")
+    if normalized in INJURY_RULES:
+        return normalized
+    mapped = _map_text_to_region(str(region))
+    if mapped:
+        return mapped
+    return normalized
+
+
+def normalize_severity_tier(severity: str | None) -> str:
+    if not severity:
+        return "moderate"
+    normalized = str(severity).strip().lower()
+    return SEVERITY_TIER_ALIASES.get(normalized, "moderate")
 
 
 def _module_for_item(item: dict) -> str:
@@ -265,6 +431,38 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
                 matches.append(pattern)
                 seen.add(pattern)
     return matches
+
+
+def _risk_tier_for_match(*, tags: Iterable[str], patterns: Iterable[str]) -> str:
+    tag_set = {t.lower() for t in tags if t}
+    if tag_set & HIGH_RISK_TAGS:
+        return "high"
+    if tag_set & MODERATE_RISK_TAGS:
+        return "moderate"
+    pattern_text = " ".join(patterns).lower()
+    if any(keyword in pattern_text for keyword in HIGH_RISK_KEYWORDS):
+        return "high"
+    if any(keyword in pattern_text for keyword in MODERATE_RISK_KEYWORDS):
+        return "moderate"
+    return "low"
+
+
+def _allowed_risk_tiers(severity_tier: str) -> set[str]:
+    severity_tier = normalize_severity_tier(severity_tier)
+    if severity_tier == "low":
+        return {"high"}
+    if severity_tier == "high":
+        return {"low", "moderate", "high"}
+    return {"moderate", "high"}
+
+
+def _item_id_for_map(item: dict) -> str | None:
+    name = item.get("name")
+    bank = item.get("bank") or item.get("source")
+    if not name or not bank:
+        return None
+    bank_name = str(bank).removesuffix(".json")
+    return f"{bank_name}:{name}"
 
 
 def infer_tags_from_name(name: str) -> set[str]:
@@ -542,6 +740,9 @@ def collect_banks() -> dict[str, list[dict]]:
                     coordination_bank.append(item)
     banks["coordination_bank"] = coordination_bank
 
+    for bank_name, items in banks.items():
+        for item in items:
+            item.setdefault("bank", bank_name)
     return banks
 
 
@@ -585,6 +786,115 @@ def build_injury_exclusion_map() -> dict[str, list[str]]:
     return exclusions
 
 
+def build_injury_exclusion_map_v2() -> dict[str, dict[str, list[str]]]:
+    exclusions: dict[str, dict[str, list[str]]] = {
+        region: {tier: [] for tier in SEVERITY_TIER_ORDER} for region in INJURY_RULES
+    }
+    for bank_name, items in collect_banks().items():
+        for item in items:
+            name = item.get("name", "")
+            item_id = f"{bank_name}:{name}"
+            tags = set(ensure_tags(item))
+            tags |= infer_tags_from_name(name)
+            tags |= expand_injury_tags(tags, item=item)
+            for region, rule in INJURY_RULES.items():
+                ban_keywords = rule.get("exclude_keywords", rule.get("ban_keywords", []))
+                ban_tags = {t.lower() for t in rule.get("exclude_tags", rule.get("ban_tags", []))}
+                matched_keywords = match_forbidden(name, ban_keywords, allowlist=INJURY_MATCH_ALLOWLIST)
+                matched_tags = sorted(tags & ban_tags)
+                if not matched_keywords and not matched_tags:
+                    continue
+                tier = _risk_tier_for_match(tags=matched_tags, patterns=matched_keywords)
+                exclusions[region][tier].append(item_id)
+    for region, tiers in exclusions.items():
+        for tier in tiers:
+            tiers[tier] = sorted(set(tiers[tier]))
+    return exclusions
+
+
+def load_injury_exclusion_map_v2() -> dict[str, dict[str, list[str]]]:
+    cached = _INJURY_EXCLUSION_MAP_V2_CACHE.get("data")
+    if cached is not None:
+        return cached
+    path = DATA_DIR / INJURY_EXCLUSION_MAP_V2_FILENAME
+    if not path.exists():
+        _INJURY_EXCLUSION_MAP_V2_CACHE["data"] = {}
+        return {}
+    raw = json.loads(path.read_text())
+    _INJURY_EXCLUSION_MAP_V2_CACHE["data"] = raw
+    return raw
+
+
+def filter_injury_details_by_severity(
+    item: dict,
+    details: list[dict],
+    *,
+    region_severity: dict[str, str],
+) -> list[dict]:
+    if not details:
+        return []
+    exclusion_map = load_injury_exclusion_map_v2()
+    if not exclusion_map:
+        return details
+    item_id = _item_id_for_map(item)
+    if not item_id:
+        return details
+    filtered: list[dict] = []
+    for detail in details:
+        region = detail.get("region")
+        if not region:
+            filtered.append(detail)
+            continue
+        tiered = exclusion_map.get(region, {})
+        if not tiered:
+            filtered.append(detail)
+            continue
+        severity = region_severity.get(region, "moderate")
+        allowed_tiers = _allowed_risk_tiers(severity)
+        in_allowed = False
+        for tier in allowed_tiers:
+            if item_id in tiered.get(tier, []):
+                in_allowed = True
+                break
+        if in_allowed:
+            filtered.append(detail)
+    return filtered
+
+
+def validate_injury_exclusion_map_v2(
+    exclusion_map: dict[str, dict[str, list[str]]],
+    *,
+    banks: dict[str, list[dict]] | None = None,
+) -> list[str]:
+    issues: list[str] = []
+    if banks is None:
+        banks = collect_banks()
+    valid_items: set[str] = set()
+    for bank_name, items in banks.items():
+        for item in items:
+            name = item.get("name")
+            if name:
+                valid_items.add(f"{bank_name}:{name}")
+    for region, tiers in exclusion_map.items():
+        if not isinstance(tiers, dict):
+            issues.append(f"{region} has invalid tier mapping")
+            continue
+        seen: dict[str, set[str]] = {}
+        for tier in SEVERITY_TIER_ORDER:
+            items = tiers.get(tier, [])
+            if not isinstance(items, list):
+                issues.append(f"{region}:{tier} must be a list")
+                continue
+            for item_id in items:
+                if item_id not in valid_items:
+                    issues.append(f"{region}:{tier} references unknown item {item_id}")
+                seen.setdefault(item_id, set()).add(tier)
+        for item_id, tiers_seen in seen.items():
+            if len(tiers_seen) > 1:
+                issues.append(f"{region} duplicates {item_id} across tiers {sorted(tiers_seen)}")
+    return issues
+
+
 def audit_missing_tags() -> dict[str, int]:
     counts: dict[str, int] = {}
     total = 0
@@ -604,12 +914,15 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
     output_dir = output_dir or DATA_DIR
     inferred_path = output_dir / "bank_inferred_tags.json"
     exclusion_path = output_dir / "injury_exclusion_map.json"
+    exclusion_path_v2 = output_dir / INJURY_EXCLUSION_MAP_V2_FILENAME
 
     inferred = build_bank_inferred_tags()
     exclusion_map = build_injury_exclusion_map()
+    exclusion_map_v2 = build_injury_exclusion_map_v2()
 
     inferred_path.write_text(json.dumps(inferred, indent=2, sort_keys=True))
     exclusion_path.write_text(json.dumps(exclusion_map, indent=2, sort_keys=True))
+    exclusion_path_v2.write_text(json.dumps(exclusion_map_v2, indent=2, sort_keys=True))
 
 
 def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:

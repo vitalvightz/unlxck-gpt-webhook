@@ -204,6 +204,7 @@ def _normalize_fight_format(fight_format: str) -> str:
 
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 for item in exercise_bank:
+    item.setdefault("bank", "exercise_bank")
     validate_training_item(item, source="exercise_bank.json", require_phases=True)
     normalize_item_tags(item)
 
@@ -216,6 +217,7 @@ except Exception:
     _universal_strength = []
 else:
     for item in _universal_strength:
+        item.setdefault("bank", "universal_gpp_strength")
         validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
         normalize_item_tags(item)
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
