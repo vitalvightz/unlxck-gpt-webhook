@@ -61,7 +61,9 @@ def add_mechanism_tags_to_exercises(exercise_bank_path: str) -> dict:
         # Only add tags that weren't already present
         tags_to_add = new_tags - existing_mech_tags
         if tags_to_add:
-            # Combine with existing non-mechanism tags
+            # Combine ALL existing tags (mechanism + non-mechanism) with newly inferred mechanism tags
+            # existing_tags already contains all tags, inferred_mech_tags only contains new mechanism tags
+            # The set union preserves all original tags and adds new mechanism tags
             all_tags = sorted(existing_tags | inferred_mech_tags)
             exercise['tags'] = all_tags
             stats['updated'] += 1
