@@ -1,4 +1,3 @@
-import random
 import sys
 from pathlib import Path
 
@@ -37,13 +36,13 @@ def test_no_legacy_token_in_data():
 
 
 def test_boxer_avoids_grappling_terms():
-    random.seed(0)
     flags = {
         "phase": "GPP",
         "fight_format": "boxing",
         "style_tactical": ["clinch fighter"],
         "training_days": ["mon", "wed", "fri"],
         "training_frequency": 3,
+        "random_seed": 0,
         "equipment": [
             "plate",
             "wrist_roller",
@@ -65,13 +64,13 @@ def test_boxer_avoids_grappling_terms():
 
 
 def test_dedupe_against_general_bank():
-    random.seed(0)
     flags = {
         "phase": "SPP",
         "fight_format": "mma",
         "style_tactical": ["clinch fighter"],
         "training_days": ["mon", "wed"],
         "training_frequency": 2,
+        "random_seed": 0,
         "equipment": ["pullup_bar", "dumbbells", "bands", "kettlebell", "landmine"],
         "key_goals": [],
     }
@@ -81,13 +80,13 @@ def test_dedupe_against_general_bank():
 
 
 def test_novelty_with_cornerstone():
-    random.seed(0)
     # Non-cornerstone should not repeat
     clinch_flags = {
         "fight_format": "mma",
         "style_tactical": ["clinch fighter"],
         "training_days": ["mon", "wed"],
         "training_frequency": 2,
+        "random_seed": 0,
         "equipment": ["plate", "wrist_roller", "dumbbells", "pullup_bar"],
         "key_goals": [],
     }
@@ -109,6 +108,7 @@ def test_novelty_with_cornerstone():
         "style_tactical": ["counter striker"],
         "training_days": ["mon", "wed"],
         "training_frequency": 2,
+        "random_seed": 0,
         "equipment": ["bands", "landmine"],
         "key_goals": [],
     }

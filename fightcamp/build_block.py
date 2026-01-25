@@ -106,18 +106,16 @@ def _sanitize_markdown(text: str) -> str:
             r"\1\n",
             text,
         )
-    label_pattern = r"[A-Z][A-Za-z0-9 /+&'’-]*:"
-    text = re.sub(rf"(\\S)(?=({label_pattern}))", r"\1\n", text)
-
+    headings_lower = {h.lower() for h in _KNOWN_HEADINGS}
     lines: list[str] = []
     last_label = ""
     for line in text.splitlines():
         stripped = line.strip()
         label = stripped.lower()
-        if stripped and label == last_label:
+        if stripped and label in headings_lower and label == last_label:
             continue
         lines.append(line)
-        if stripped:
+        if stripped and label in headings_lower:
             last_label = label
     return "\n".join(lines)
 
