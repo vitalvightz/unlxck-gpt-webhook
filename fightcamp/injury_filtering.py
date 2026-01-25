@@ -50,6 +50,238 @@ MAX_VELOCITY_RUNNING_KEYWORDS = [
     "shuttle run",
 ]
 
+MECH_KEYWORDS: list[tuple[str, list[str]]] = [
+    (
+        "mech_max_velocity",
+        [
+            "fly sprint",
+            "flying sprint",
+            "max sprint",
+            "top speed",
+            "40yd",
+            "20m",
+            "10m",
+            "sprints",
+            "sprint",
+            "flying",
+        ],
+    ),
+    (
+        "mech_acceleration",
+        [
+            "drive phase",
+            "hill sprint",
+            "acceleration",
+            "accel",
+            "start",
+            "burst",
+        ],
+    ),
+    (
+        "mech_deceleration",
+        [
+            "stick landing",
+            "deceleration",
+            "decel",
+            "brake",
+            "stop",
+        ],
+    ),
+    (
+        "mech_change_of_direction",
+        [
+            "change of direction",
+            "pro agility",
+            "shuffle cut",
+            "cut",
+            "cod",
+            "pivot",
+            "turn",
+        ],
+    ),
+    (
+        "mech_landing_impact",
+        [
+            "land and stick",
+            "depth drop",
+            "depth jump",
+            "drop jump",
+            "hard landing",
+            "stick landing",
+            "stick",
+        ],
+    ),
+    (
+        "mech_reactive_rebound",
+        [
+            "repeated hops",
+            "ankle hops",
+            "reactive",
+            "rebound",
+            "pogo",
+            "bounce",
+        ],
+    ),
+    (
+        "mech_hinge_eccentric",
+        [
+            "tempo hinge",
+            "slow lower",
+            "stiff leg",
+            "stiff-leg",
+            "romanian",
+            "good morning",
+            "nordic",
+            "rdl",
+        ],
+    ),
+    (
+        "mech_hinge_isometric",
+        [
+            "rack pull isometric",
+            "isometric deadlift",
+            "deadlift isometric",
+            "mid-thigh iso",
+            "mid thigh iso",
+            "iso hinge",
+        ],
+    ),
+    (
+        "mech_squat_deep",
+        [
+            "pause squat",
+            "deep squat",
+            "full squat",
+            "atg",
+        ],
+    ),
+    (
+        "mech_knee_over_toe",
+        [
+            "knees over toes",
+            "step down",
+            "sissy",
+            "pistol",
+            "atg",
+        ],
+    ),
+    (
+        "mech_lateral_shift",
+        [
+            "lateral lunge",
+            "side lunge",
+            "cossack",
+            "skater",
+        ],
+    ),
+    (
+        "mech_rotation_high_torque",
+        [
+            "sledgehammer",
+            "scoop toss",
+            "woodchop",
+            "rotational",
+            "rotation",
+            "twist",
+        ],
+    ),
+    (
+        "mech_anti_rotation",
+        [
+            "anti-rotation",
+            "pressout",
+            "pallof",
+        ],
+    ),
+    (
+        "mech_axial_heavy",
+        [
+            "overhead press",
+            "back squat",
+            "front squat",
+            "zercher",
+            "yoke",
+        ],
+    ),
+    (
+        "mech_overhead_dynamic",
+        [
+            "push press",
+            "thruster",
+            "snatch",
+            "jerk",
+        ],
+    ),
+    (
+        "mech_overhead_static",
+        [
+            "overhead hold",
+            "waiter carry",
+            "strict press",
+            "z press",
+        ],
+    ),
+    (
+        "mech_horizontal_push",
+        [
+            "chest press",
+            "db press",
+            "push-up",
+            "push up",
+            "bench",
+        ],
+    ),
+    (
+        "mech_horizontal_pull",
+        [
+            "inverted row",
+            "cable row",
+            "trx row",
+            "row",
+        ],
+    ),
+    (
+        "mech_vertical_pull_heavy",
+        [
+            "pull-up",
+            "pull up",
+            "chin-up",
+            "chin up",
+            "lat pulldown",
+        ],
+    ),
+    (
+        "mech_grip_intensive",
+        [
+            "wrist roller",
+            "fat grip",
+            "towel",
+            "pinch",
+            "hang",
+            "rope",
+        ],
+    ),
+    (
+        "mech_grip_static",
+        [
+            "static hold",
+            "dead hang",
+            "hold",
+        ],
+    ),
+    (
+        "mech_loaded_carry",
+        [
+            "suitcase carry",
+            "sandbag carry",
+            "yoke carry",
+            "farmers",
+            "farmer",
+            "carry",
+        ],
+    ),
+]
+
 INFERRED_TAG_RULES = [
     {"keywords": ["bench press", "floor press"], "tags": ["upper_push", "horizontal_push", "press_heavy"]},
     {
@@ -326,6 +558,19 @@ def _phrase_in_text(text: str, phrase: str) -> bool:
     return re.search(pattern, text) is not None
 
 
+def _infer_mechanism_tags_from_name(name: str) -> set[str]:
+    normalized_name = _normalize_text(name)
+    if not normalized_name:
+        return set()
+    inferred: set[str] = set()
+    for tag, keywords in MECH_KEYWORDS:
+        for phrase in keywords:
+            if _phrase_in_text(normalized_name, phrase):
+                inferred.add(tag)
+                break
+    return inferred
+
+
 def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
     normalized_text = _normalize_text(text)
     if not normalized_text:
@@ -357,6 +602,7 @@ def infer_tags_from_name(name: str) -> set[str]:
             if "max_velocity" in rule["tags"] and not _should_apply_max_velocity(name):
                 continue
             inferred.update(rule["tags"])
+    inferred.update(_infer_mechanism_tags_from_name(name))
     return {t for t in normalize_tags(inferred) if t}
 
 
@@ -389,6 +635,10 @@ def ensure_tags(item: dict) -> list[str]:
     
     raw_tags = normalize_tags([t for t in item.get("tags", []) if t])
     if raw_tags:
+        name = str(item.get("name", "") or "")
+        mech_tags = _infer_mechanism_tags_from_name(name)
+        if mech_tags:
+            raw_tags = normalize_tags([*raw_tags, *mech_tags])
         item["tags"] = raw_tags
         item["_tag_source"] = "explicit"
         return raw_tags
@@ -537,8 +787,11 @@ def injury_match_details(
             patterns = rules.get(f"{risk_level}_keywords", rules.get("ban_keywords", []) if risk_level == "exclude" else [])
             risk_tags = {t.lower() for t in rules.get(f"{risk_level}_tags", rules.get("ban_tags", []) if risk_level == "exclude" else [])}
             tag_hits_raw = sorted(tags_for_matching & risk_tags)
-            # Only allow explicit tags to trigger exclusion
-            tag_hits = tag_hits_raw if tag_source == "explicit" else []
+            # Only allow explicit tags to trigger exclusion, except mech_* tags
+            if tag_source == "explicit":
+                tag_hits = tag_hits_raw
+            else:
+                tag_hits = [tag for tag in tag_hits_raw if tag.startswith("mech_")]
             field_hits: dict[str, list[str]] = {}
             matched_patterns: set[str] = set()
             if not tag_hits and allow_keyword_match:
