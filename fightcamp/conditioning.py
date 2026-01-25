@@ -25,6 +25,7 @@ from .config import (
     INJURY_GUARD_SHORTLIST,
     trim_to_injury_guard_shortlist,
 )
+from .bank_loader import load_format_energy_weights
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -187,7 +188,7 @@ style_conditioning_bank = _load_bank(
     source="style_conditioning_bank.json",
     enforce_conditioning_systems=True,
 )
-format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
+format_weights = load_format_energy_weights()
 
 try:
     _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")

@@ -109,7 +109,7 @@
     "equipment": "bands"
   },
   {
-    "name": "Depth Drop → 5m Sprint",
+    "name": "Depth Drop \u2192 5m Sprint",
     "category": "locomotion",
     "phases": [
       "TAPER"
@@ -157,7 +157,7 @@
     "equipment": "trap_bar"
   },
   {
-    "name": "Back Squat → Box Jump",
+    "name": "Back Squat \u2192 Box Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -173,7 +173,7 @@
     "equipment": "barbell,box"
   },
   {
-    "name": "DB Bench Press → Plyo Push-Up",
+    "name": "DB Bench Press \u2192 Plyo Push-Up",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -189,7 +189,7 @@
     "equipment": "dumbbells"
   },
   {
-    "name": "Heavy RDL → Broad Jump",
+    "name": "Heavy RDL \u2192 Broad Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -205,7 +205,7 @@
     "equipment": "barbell"
   },
   {
-    "name": "Landmine Press → Med Ball Chest Pass",
+    "name": "Landmine Press \u2192 Med Ball Chest Pass",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -282,7 +282,7 @@
     "equipment": "landmine"
   },
   {
-    "name": "Zercher Squat → Sprawl Jump",
+    "name": "Zercher Squat \u2192 Sprawl Jump",
     "category": "wrestler",
     "phases": [
       "SPP"
@@ -342,68 +342,6 @@
       "grip"
     ],
     "equipment": "pullup_bar"
-  },
-  {
-    "name": "Back Squat",
-    "category": "lower_body",
-    "phases": [
-      "GPP",
-      "SPP"
-    ],
-    "method": "strength",
-    "movement": "squat",
-    "type": "bilateral",
-    "tags": [
-      "quad_dominant",
-      "compound"
-    ],
-    "equipment": "barbell"
-  },
-  {
-    "name": "Bulgarian Split Squat",
-    "category": "lower_body",
-    "phases": [
-      "SPP",
-      "TAPER"
-    ],
-    "method": "strength",
-    "movement": "squat",
-    "type": "unilateral",
-    "tags": [
-      "quad_dominant",
-      "balance"
-    ],
-    "equipment": "dumbbells"
-  },
-  {
-    "name": "Romanian Deadlift (RDL)",
-    "category": "lower_body",
-    "phases": [
-      "GPP"
-    ],
-    "method": "strength",
-    "movement": "hinge",
-    "type": "bilateral",
-    "tags": [
-      "posterior_chain",
-      "hamstring"
-    ],
-    "equipment": "barbell"
-  },
-  {
-    "name": "Front Squat",
-    "category": "lower_body",
-    "phases": [
-      "SPP"
-    ],
-    "method": "strength",
-    "movement": "squat",
-    "type": "bilateral",
-    "tags": [
-      "quad_dominant",
-      "core"
-    ],
-    "equipment": "barbell"
   },
   {
     "name": "Trap Bar Jump Squat",
@@ -681,38 +619,53 @@
     "tags": [
       "shoulders",
       "anti_rotation"
-  ],
-  "equipment": "landmine"
+    ],
+    "equipment": "landmine"
   },
   {
-    "name": "DB Alternating Incline Press (30-45°)",
+    "name": "DB Alternating Incline Press (30-45\u00b0)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "horizontal_push",
     "type": "unilateral",
-    "tags": ["upper_body", "compound"],
+    "tags": [
+      "upper_body",
+      "compound"
+    ],
     "equipment": "dumbbells"
   },
   {
     "name": "DB Plyometric Push-Up (Hands on Dumbbells)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["upper_body", "compound"],
+    "tags": [
+      "upper_body",
+      "compound"
+    ],
     "equipment": "dumbbells"
   },
   {
-  "name": "Kneeling Single-Arm Medicine Ball Slam",
-  "category": "upper_body",
-  "phases": ["GPP"],
-  "method": "power",
-  "movement": "horizontal_push",
-  "type": "unilateral",
-  "tags": ["upper_body", "compound"],
-  "equipment": "medicine_ball"
+    "name": "Kneeling Single-Arm Medicine Ball Slam",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "power",
+    "movement": "horizontal_push",
+    "type": "unilateral",
+    "tags": [
+      "upper_body",
+      "compound"
+    ],
+    "equipment": "medicine_ball"
   },
   {
     "name": "Incline DB Press",
@@ -1808,7 +1761,7 @@
     "equipment": "foam_roller"
   },
   {
-    "name": "Grappler’s Bridge (Weighted)",
+    "name": "Grappler\u2019s Bridge (Weighted)",
     "category": "combat",
     "phases": [
       "SPP"
@@ -2658,7 +2611,7 @@
       "rehab_friendly"
     ],
     "equipment": "bosu_ball",
-    "notes": "Keep squats shallow (30° knee bend)"
+    "notes": "Keep squats shallow (30\u00b0 knee bend)"
   },
   {
     "name": "Foam Pad Alphabet Tracing",
@@ -2695,515 +2648,796 @@
     "notes": "Partner gently tugs band in random directions during single-leg stance"
   },
   {
-    "name": "Single-Leg Wall Sit (60°)",
+    "name": "Single-Leg Wall Sit (60\u00b0)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Bridge Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Spanish Squat Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "eccentric"],
+    "tags": [
+      "isometric",
+      "eccentric"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Deadlift Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "hip_dominant"],
+    "tags": [
+      "isometric",
+      "hip_dominant"
+    ],
     "equipment": "kettlebell"
   },
   {
     "name": "Single-Leg Calf Raise Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "elastic"],
+    "tags": [
+      "isometric",
+      "elastic"
+    ],
     "equipment": "step_mill"
   },
   {
     "name": "Single-Leg Quadruped Hip Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain"
+    ],
     "equipment": "swiss_ball"
   },
   {
     "name": "Single-Leg Step-Up Hold (Mid-Range)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant"
+    ],
     "equipment": "box"
   },
   {
     "name": "Single-Leg Lateral Squat Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "adductors"],
+    "tags": [
+      "isometric",
+      "adductors"
+    ],
     "equipment": "sandbag"
   },
   {
     "name": "Single-Leg Sled Press Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "horizontal_power"],
+    "tags": [
+      "isometric",
+      "horizontal_power"
+    ],
     "equipment": "sled"
   },
   {
     "name": "Single-Leg Kneeling Hip Flexor Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "mobility"],
+    "tags": [
+      "isometric",
+      "mobility"
+    ],
     "equipment": "foam_roller"
   },
   {
     "name": "Single-Leg Banded Anti-Extension Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "core"],
+    "tags": [
+      "isometric",
+      "core"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Single-Leg Glute Medius Hold (Side-Lying)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "hip_dominant"],
+    "tags": [
+      "isometric",
+      "hip_dominant"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg TRX Suspension Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "balance"],
+    "tags": [
+      "isometric",
+      "balance"
+    ],
     "equipment": "trx"
   },
   {
     "name": "Single-Leg Farmer Carry Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "work_capacity"],
+    "tags": [
+      "isometric",
+      "work_capacity"
+    ],
     "equipment": "kettlebells"
   },
   {
-    "name": "🔥 Single-Leg Rotational Med Ball Hold",
+    "name": "\ud83d\udd25 Single-Leg Rotational Med Ball Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "rotational", "core"],
+    "tags": [
+      "isometric",
+      "rotational",
+      "core"
+    ],
     "equipment": "medicine_ball"
   },
   {
-    "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Hold (Weighted)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "striking", "balance"],
+    "tags": [
+      "isometric",
+      "striking",
+      "balance"
+    ],
     "equipment": "weight_vest"
   },
   {
     "name": "Single-Leg Forward Hops",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "sagittal",
     "type": "unilateral",
-    "tags": ["plyometric", "acceleration"],
+    "tags": [
+      "plyometric",
+      "acceleration"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Lateral Hops",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "frontal",
     "type": "unilateral",
-    "tags": ["plyometric", "lateral_power"],
+    "tags": [
+      "plyometric",
+      "lateral_power"
+    ],
     "equipment": "agility_ladder"
   },
   {
-    "name": "Single-Leg 45° Bound",
+    "name": "Single-Leg 45\u00b0 Bound",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "transverse",
     "type": "unilateral",
-    "tags": ["plyometric", "rotational"],
+    "tags": [
+      "plyometric",
+      "rotational"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Box Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "unilateral",
-    "tags": ["plyometric", "triple_extension"],
+    "tags": [
+      "plyometric",
+      "triple_extension"
+    ],
     "equipment": "box"
   },
   {
     "name": "Single-Leg Depth Drop (Stick Landing)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "eccentric",
     "type": "unilateral",
-    "tags": ["plyometric", "reactive"],
+    "tags": [
+      "plyometric",
+      "reactive"
+    ],
     "equipment": "box"
   },
   {
     "name": "Single-Leg Zig-Zag Hops",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "multiplanar",
     "type": "unilateral",
-    "tags": ["plyometric", "agility"],
+    "tags": [
+      "plyometric",
+      "agility"
+    ],
     "equipment": "cones"
   },
   {
     "name": "Single-Leg Medicine Ball Chest Push Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "horizontal",
     "type": "unilateral",
-    "tags": ["plyometric", "upper_body"],
+    "tags": [
+      "plyometric",
+      "upper_body"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Single-Leg Reactive Shuffle",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "frontal",
     "type": "unilateral",
-    "tags": ["plyometric", "footwork"],
+    "tags": [
+      "plyometric",
+      "footwork"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Rotational Hop to Balance",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "transverse",
     "type": "unilateral",
-    "tags": ["plyometric", "balance"],
+    "tags": [
+      "plyometric",
+      "balance"
+    ],
     "equipment": "bodyweight"
   },
   {
-    "name": "🔥 Single-Leg Combat Stance Switch Jump",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Switch Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["plyometric", "striking", "reactive"],
+    "tags": [
+      "plyometric",
+      "striking",
+      "reactive"
+    ],
     "equipment": "thai_pads"
   },
   {
-    "name": "Squat Isometric (110% 1RM @ 90°)",
+    "name": "Squat Isometric (110% 1RM @ 90\u00b0)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "triphasic"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "triphasic"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Deadlift Isometric (120% 1RM @ knee height)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "triphasic"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "triphasic"
+    ],
     "equipment": "trap_bar"
   },
   {
     "name": "Bench Isometric (130% 1RM @ mid-range)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "triphasic"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "triphasic"
+    ],
     "equipment": "barbell"
   },
   {
-    "name": "Front Squat Isometric (115% 1RM @ 100°)",
+    "name": "Front Squat Isometric (115% 1RM @ 100\u00b0)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "core"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "core"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Rack Pull Isometric (125% 1RM @ mid-shin)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "grip"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "grip"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Overhead Press Isometric (120% 1RM @ forehead)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "overhead", "shoulders"],
+    "tags": [
+      "isometric",
+      "overhead",
+      "shoulders"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Box Squat Isometric (110% 1RM @ parallel)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "hip_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "hip_dominant"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Deficit Deadlift Isometric (115% 1RM @ floor)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "eccentric"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "eccentric"
+    ],
     "equipment": "barbell"
   },
   {
-    "name": "Incline Bench Isometric (125% 1RM @ 45°)",
+    "name": "Incline Bench Isometric (125% 1RM @ 45\u00b0)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "shoulders"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "shoulders"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Zercher Squat Isometric (110% 1RM @ bottom)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "core"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "core"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "adductors"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "adductors"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Floor Press Isometric (130% 1RM @ lockout)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "triceps"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "triceps"
+    ],
     "equipment": "barbell"
   },
   {
-    "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)",
+    "name": "Safety Bar Squat Isometric (115% 1RM @ 90\u00b0)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "upper_back"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "upper_back"
+    ],
     "equipment": "trap_bar"
   },
   {
     "name": "Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "upper_back"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "upper_back"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Close-Grip Bench Isometric (120% 1RM @ mid-range)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "triceps"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "triceps"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Atlas Stone Load Isometric (120% max stone @ lap)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "grip"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "grip"
+    ],
     "equipment": "atlas_stone"
   },
   {
     "name": "Sled Push Isometric (130% max push @ start position)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "work_capacity"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "work_capacity"
+    ],
     "equipment": "sled"
   },
   {
     "name": "Squat Isometric (110% 1RM @ Parallel)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Deadlift Isometric (110% 1RM @ Mid-Shin)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain"
+    ],
     "equipment": "trap_bar"
   },
   {
-    "name": "Bench Isometric (110% 1RM @ 90° Elbow)",
+    "name": "Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power"],
+    "tags": [
+      "isometric",
+      "horizontal_power"
+    ],
     "equipment": "barbell"
   },
   {
-    "name": "Front Squat Isometric (105% 1RM @ 100°)",
+    "name": "Front Squat Isometric (105% 1RM @ 100\u00b0)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Rack Pull Isometric (115% 1RM @ Knees)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Overhead Press Isometric (105% 1RM @ Chin)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "overhead"],
+    "tags": [
+      "isometric",
+      "overhead"
+    ],
     "equipment": "barbell"
-   },
-{
-  "name": "KB Suitcase Carry",
-  "category": "full_body",
-  "phases": ["GPP", "SPP"],
-  "method": "strength_conditioning",
-  "movement": "dynamic",
-  "type": "unilateral",
-  "tags": ["grip", "core"],
-  "equipment": "kettlebell",
-  "pro_tip": "Hold KB opposite side of working leg to maximize oblique engagement - mimics sprawl recovery mechanics",
-  "combat_carryover": "Develops clinch grip endurance and cross-body power transfer for hooks"
- },
- {
+  },
+  {
+    "name": "KB Suitcase Carry",
+    "category": "full_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "grip",
+      "core"
+    ],
+    "equipment": "kettlebell",
+    "pro_tip": "Hold KB opposite side of working leg to maximize oblique engagement - mimics sprawl recovery mechanics",
+    "combat_carryover": "Develops clinch grip endurance and cross-body power transfer for hooks"
+  },
+  {
     "name": "Slow-Lowered Pull-Up",
     "category": "upper_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "eccentric",
     "type": "compound",
-    "tags": ["eccentric", "grip", "shoulders"],
+    "tags": [
+      "eccentric",
+      "grip",
+      "shoulders"
+    ],
     "equipment": "bodyweight"
   }
 ]

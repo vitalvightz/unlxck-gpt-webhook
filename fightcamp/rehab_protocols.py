@@ -1,11 +1,9 @@
-from pathlib import Path
-import json
-
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY
 from .injury_synonyms import parse_injury_phrase, split_injury_text
-# Refactored: Import centralized DATA_DIR from config
-from .config import DATA_DIR
+# Refactored: Import centralized bank loader
+from .bank_loader import load_rehab_bank
+
 # Rehab bank stores entries with fields like:
 # {
 #     "location": "ankle",
@@ -16,7 +14,7 @@ from .config import DATA_DIR
 #         {"name": "...", "notes": "..."}
 #     ]
 # }
-REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text())
+REHAB_BANK = load_rehab_bank()
 REHAB_LOCATIONS = {entry.get("location") for entry in REHAB_BANK if entry.get("location")}
 REHAB_LOCATION_ALIASES = {
     "biceps": ["bicep"],

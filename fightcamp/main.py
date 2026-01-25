@@ -14,11 +14,11 @@ from .build_block import (
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
-# Refactored: Import centralized DATA_DIR from config instead of redefining
-from .config import DATA_DIR
+# Refactored: Import centralized bank loader
+from .bank_loader import load_exercise_bank
 
 # Load exercise bank
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+exercise_bank = load_exercise_bank()
 for item in exercise_bank:
     validate_training_item(item, source="exercise_bank.json", require_phases=True)
     normalize_item_tags(item)
