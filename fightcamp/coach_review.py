@@ -1,12 +1,48 @@
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 from .conditioning import is_banned_drill, normalize_system, render_conditioning_block
+from .injury_filtering import injury_match_details
 from .injury_guard import choose_injury_replacement, injury_decision
 from .rehab_protocols import build_coach_review_entries
 from .strength import format_strength_block, is_banned_exercise
 from .training_context import normalize_equipment_list
+
+logger = logging.getLogger(__name__)
+
+
+def _format_log_list(values: Iterable[str]) -> str:
+    items = [str(value) for value in values if value]
+    if not items:
+        return "[]"
+    return f"[{', '.join(items)}]"
+
+
+def _injury_log_details(
+    item: dict,
+    injuries: list[str],
+    *,
+    fields: Iterable[str],
+    region: str | None,
+) -> tuple[list[str], list[str], list[str]]:
+    matches = injury_match_details(item, injuries, fields=fields, risk_levels=("exclude", "flag"))
+    match = None
+    if region:
+        for detail in matches:
+            if detail.get("region") == region:
+                match = detail
+                break
+    if match is None and matches:
+        match = matches[0]
+    if not match:
+        return [], [], []
+    return (
+        match.get("fields", []),
+        match.get("patterns", []),
+        match.get("tags", []),
+    )
 
 
 def _decision_for_item(
@@ -220,6 +256,24 @@ def run_coach_review(
             if decision.action != "exclude":
                 updated_exercises.append(ex)
                 continue
+            decision_reason = decision.reason if isinstance(decision.reason, dict) else {}
+            region = decision_reason.get("region")
+            fields, patterns, tags = _injury_log_details(
+                ex,
+                injuries,
+                fields=("name", "method", "movement"),
+                region=region,
+            )
+            logger.warning(
+                "[injury-guard] coach_review strength excluded '%s' phase=%s action=%s region=%s fields=%s patterns=%s tags=%s",
+                ex.get("name", "Unnamed"),
+                phase_key,
+                decision.action,
+                region,
+                _format_log_list(fields),
+                _format_log_list(patterns),
+                _format_log_list(tags),
+            )
             replacement = _safe_strength_candidate(
                 used_names=used_names,
                 exercise_bank=exercise_bank,
@@ -287,6 +341,25 @@ def run_coach_review(
                 if decision.action != "exclude":
                     idx += 1
                     continue
+                decision_reason = decision.reason if isinstance(decision.reason, dict) else {}
+                region = decision_reason.get("region")
+                fields, patterns, tags = _injury_log_details(
+                    drill,
+                    injuries,
+                    fields=("name", "purpose", "description", "modality"),
+                    region=region,
+                )
+                logger.warning(
+                    "[injury-guard] coach_review conditioning excluded '%s' phase=%s system=%s action=%s region=%s fields=%s patterns=%s tags=%s",
+                    drill.get("name", "Unnamed"),
+                    phase_key,
+                    system,
+                    decision.action,
+                    region,
+                    _format_log_list(fields),
+                    _format_log_list(patterns),
+                    _format_log_list(tags),
+                )
                 replacement = _safe_conditioning_candidate(
                     used_names=used_names,
                     candidates=candidate_pool,
