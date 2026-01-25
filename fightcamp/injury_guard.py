@@ -105,6 +105,7 @@ FALLBACK_TAG_ORDER: dict[str, dict[str, list[list[str]]]] = {
 }
 
 _INJURY_DECISION_LOGGED: set[tuple] = set()
+_INJURY_DECISION_CACHE: dict[tuple[str, str, str, str], dict[str, object]] = {}
 
 
 @dataclass(frozen=True)
@@ -248,18 +249,15 @@ def injury_decision(exercise: dict, injuries: Iterable[str], phase: str, fatigue
             reason={"region": None, "severity": None, "bucket": "default", "matches": []},
         )
 
-    field_values = {
-        "name": str(exercise.get("name", "") or ""),
-        "notes": str(exercise.get("notes", "") or ""),
-    }
-    name = field_values["name"] or "Unnamed"
+    name = str(exercise.get("name", "") or "") or "Unnamed"
+    item_id = str(exercise.get("id") or name or id(exercise))
     region_severity = _injury_context(injuries_list)
     modify_band, threshold = _thresholds(phase, fatigue)
+    threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
 
     details = injury_match_details(
         exercise,
         injuries_list,
-        fields=("name", "notes"),
         risk_levels=("exclude", "flag"),
     )
     if not details:
@@ -272,36 +270,65 @@ def injury_decision(exercise: dict, injuries: Iterable[str], phase: str, fatigue
             reason={"region": None, "severity": None, "bucket": "default", "matches": []},
         )
 
-    max_detail = None
+    max_detail_meta: dict[str, object] | None = None
     max_risk = 0.0
+    details_by_region: dict[str, list[dict]] = {}
     for detail in details:
-        region = detail["region"]
+        details_by_region.setdefault(detail["region"], []).append(detail)
+
+    for region, region_details in details_by_region.items():
         severity = region_severity.get(region, "moderate")
-        region_weight = REGION_RISK_WEIGHTS.get(region, 1.0)
-        severity_weight = SEVERITY_WEIGHTS.get(severity, 1.0)
-        risk_level_weight = RISK_LEVEL_WEIGHTS.get(detail["risk_level"], 0.8)
-        match_multiplier = _match_multiplier(detail.get("tags", []))
-        risk = region_weight * severity_weight * risk_level_weight * match_multiplier
+        cache_key = (item_id, region, severity, threshold_version)
+        cached = _INJURY_DECISION_CACHE.get(cache_key)
+        if cached:
+            risk = float(cached["risk"])
+            matched_tags = list(cached["matched_tags"])
+            bucket = str(cached["bucket"])
+            action = str(cached["action"])
+        else:
+            region_weight = REGION_RISK_WEIGHTS.get(region, 1.0)
+            severity_weight = SEVERITY_WEIGHTS.get(severity, 1.0)
+            max_region_detail = None
+            max_region_risk = 0.0
+            for detail in region_details:
+                risk_level_weight = RISK_LEVEL_WEIGHTS.get(detail["risk_level"], 0.8)
+                match_multiplier = _match_multiplier(detail.get("tags", []))
+                risk = region_weight * severity_weight * risk_level_weight * match_multiplier
+                if risk > max_region_risk:
+                    max_region_risk = risk
+                    max_region_detail = detail
+            if not max_region_detail:
+                continue
+            matched_tags = _match_tags_from_detail(max_region_detail)
+            bucket = _bucket_from_match(max_region_detail.get("tags", []), max_region_detail.get("patterns", []))
+            if max_region_risk > threshold:
+                action = "exclude"
+            elif max_region_risk >= modify_band:
+                action = "modify"
+            else:
+                action = "allow"
+            _log_decision(
+                item_name=name,
+                region=region,
+                severity=severity,
+                risk=max_region_risk,
+                threshold=threshold,
+                matched_tags=matched_tags,
+                action=action,
+            )
+            _INJURY_DECISION_CACHE[cache_key] = {
+                "risk": max_region_risk,
+                "matched_tags": matched_tags,
+                "bucket": bucket,
+                "action": action,
+            }
+            risk = max_region_risk
+
         if risk > max_risk:
             max_risk = risk
-            max_detail = detail
-        matched_tags = _match_tags_from_detail(detail)
-        action = "allow"
-        if risk >= threshold:
-            action = "exclude"
-        elif risk >= modify_band:
-            action = "modify"
-        _log_decision(
-            item_name=name,
-            region=region,
-            severity=severity,
-            risk=risk,
-            threshold=threshold,
-            matched_tags=matched_tags,
-            action=action,
-        )
+            max_detail_meta = {"region": region, "severity": severity, "bucket": bucket, "matched_tags": matched_tags}
 
-    if not max_detail:
+    if not max_detail_meta:
         return Decision(
             action="allow",
             risk_score=0.0,
@@ -311,11 +338,11 @@ def injury_decision(exercise: dict, injuries: Iterable[str], phase: str, fatigue
             reason={"region": None, "severity": None, "bucket": "default", "matches": details},
         )
 
-    region = max_detail["region"]
-    severity = region_severity.get(region, "moderate")
-    matched_tags = _match_tags_from_detail(max_detail)
-    bucket = _bucket_from_match(max_detail.get("tags", []), max_detail.get("patterns", []))
-    if max_risk >= threshold:
+    region = str(max_detail_meta["region"])
+    severity = str(max_detail_meta["severity"])
+    matched_tags = list(max_detail_meta["matched_tags"])
+    bucket = str(max_detail_meta["bucket"])
+    if max_risk > threshold:
         action = "exclude"
     elif max_risk >= modify_band:
         action = "modify"
