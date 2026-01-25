@@ -47,6 +47,7 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
+from .injury_filtering import normalize_injury_regions
 
 GRAPPLING_STYLES = {
     "mma",
@@ -225,13 +226,19 @@ async def generate_plan(data: dict):
     )
     short_notice = days_until_fight is not None and days_until_fight <= 14
 
+    # Parse and canonicalize injuries BEFORE strength/conditioning generation
+    timer_start = perf_counter()
+    raw_injury_list = [w.strip().lower() for w in injuries.split(",") if w.strip()] if injuries else []
+    canonical_injuries = list(normalize_injury_regions(raw_injury_list))
+    _record_timing("parse_injuries", timer_start)
+
     # Core context
     training_context = TrainingContext(
         fatigue=fatigue.lower(),
         training_frequency=training_frequency,
         days_available=len(training_days),
         training_days=training_days,
-        injuries=[w.strip().lower() for w in injuries.split(",") if w.strip()] if injuries else [],
+        injuries=canonical_injuries,
         style_technical=tech_styles,
         style_tactical=tactical_styles,
         weaknesses=[
@@ -437,7 +444,6 @@ async def generate_plan(data: dict):
     gpp_guardrails = format_injury_guardrails("GPP", injuries)
     spp_guardrails = format_injury_guardrails("SPP", injuries)
     taper_guardrails = format_injury_guardrails("TAPER", injuries)
-    _record_timing("parse_injuries", timer_start)
     has_injuries = bool(injuries)
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
