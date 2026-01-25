@@ -34,6 +34,14 @@ else:
 _DEGRADED_LOGGED = False
 logger = logging.getLogger(__name__)
 
+_NLP = None
+_NLP_INITIALIZED = False
+_MATCHERS_INITIALIZED = False
+INJURY_MATCHER = None
+INJURY_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
+LOCATION_MATCHER = None
+LOC_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
+
 
 def _log_dependency_status() -> None:
     global _DEGRADED_LOGGED
@@ -64,6 +72,56 @@ def _log_dependency_status() -> None:
 
 
 _log_dependency_status()
+
+
+def get_nlp():
+    global _NLP, _NLP_INITIALIZED
+    if _NLP_INITIALIZED:
+        return _NLP
+    _NLP_INITIALIZED = True
+    if not _SPACY_AVAILABLE:
+        _NLP = None
+        return _NLP
+    try:
+        _NLP = spacy.load("en_core_web_sm")
+    except Exception:
+        _NLP = None
+        return _NLP
+    if Token is not None:
+        Token.set_extension("negex", default=False, force=True)
+    if _NEGSPACY_AVAILABLE and _NLP is not None and "negex" not in _NLP.pipe_names:
+        try:
+            _NLP.add_pipe("negex", last=True)
+        except Exception:  # pragma: no cover - Negex might not be registered
+            _NLP.add_pipe(Negex(_NLP), last=True)
+    return _NLP
+
+
+def get_matchers(nlp):
+    global _MATCHERS_INITIALIZED
+    global INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
+    if _MATCHERS_INITIALIZED:
+        return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
+    _MATCHERS_INITIALIZED = True
+    if not nlp or PhraseMatcher is None:
+        return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
+    INJURY_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
+    INJURY_MATCH_ID_TO_CANONICAL = {}
+    for _canonical, _syns in INJURY_SYNONYM_MAP.items():
+        patterns = [_canonical] + _syns
+        docs = [nlp(p) for p in patterns]
+        match_id = nlp.vocab.strings.add(_canonical)
+        INJURY_MATCHER.add(_canonical, docs)
+        INJURY_MATCH_ID_TO_CANONICAL[match_id] = _canonical
+
+    LOCATION_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
+    LOC_MATCH_ID_TO_CANONICAL = {}
+    for _key, _canonical in LOCATION_MAP.items():
+        doc = nlp(_key)
+        match_id = nlp.vocab.strings.add(_key)
+        LOCATION_MATCHER.add(_key, [doc])
+        LOC_MATCH_ID_TO_CANONICAL[match_id] = _canonical
+    return INJURY_MATCHER, INJURY_MATCH_ID_TO_CANONICAL, LOCATION_MATCHER, LOC_MATCH_ID_TO_CANONICAL
 
 # Heavier weight to categories we want to prefer when there’s overlap
 TYPE_PRIORITY = {
@@ -589,45 +647,6 @@ LOCATION_MAP = {
 }
 
 
-if _SPACY_AVAILABLE:
-    # load the large english model once
-    try:
-        nlp = spacy.load("en_core_web_lg")
-    except Exception:  # pragma: no cover - model might not be available in tests
-        nlp = spacy.blank("en")
-
-    # register the .negex extension (avoid AttributeError)
-    Token.set_extension("negex", default=False, force=True)
-
-    # add Negex for negation detection
-    if _NEGSPACY_AVAILABLE:
-        try:
-            nlp.add_pipe("negex", last=True)
-        except Exception:  # pragma: no cover - Negex might not be registered
-            nlp.add_pipe(Negex(nlp), last=True)
-    # Build phrase matchers for injury and location keywords
-    INJURY_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
-    INJURY_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
-    for _canonical, _syns in INJURY_SYNONYM_MAP.items():
-        patterns = [_canonical] + _syns
-        docs = [nlp(p) for p in patterns]
-        match_id = nlp.vocab.strings.add(_canonical)
-        INJURY_MATCHER.add(_canonical, docs)
-        INJURY_MATCH_ID_TO_CANONICAL[match_id] = _canonical
-
-    LOCATION_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
-    LOC_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
-    for _key, _canonical in LOCATION_MAP.items():
-        doc = nlp(_key)
-        match_id = nlp.vocab.strings.add(_key)
-        LOCATION_MATCHER.add(_key, [doc])
-        LOC_MATCH_ID_TO_CANONICAL[match_id] = _canonical
-else:
-    nlp = None
-    INJURY_MATCHER = None
-    INJURY_MATCH_ID_TO_CANONICAL = {}
-    LOCATION_MATCHER = None
-    LOC_MATCH_ID_TO_CANONICAL = {}
 
 _NEGATION_TARGETS = sorted(
     {
@@ -668,7 +687,8 @@ def remove_negated_phrases(text: str) -> str:
     """Strip words marked as negated by Negex from the text."""
     if not text:
         return ""
-    if _SPACY_AVAILABLE and _NEGSPACY_AVAILABLE:
+    nlp = get_nlp()
+    if nlp and _NEGSPACY_AVAILABLE:
         doc = nlp(text)
         tokens = [tok.text for tok in doc if not tok._.negex]
         return " ".join(tokens).strip()
@@ -684,7 +704,8 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     3) Fuzzy fallback with per-category thresholds,
     4) Priority tie-breaks via TYPE_PRIORITY.
     """
-    if not _SPACY_AVAILABLE:
+    nlp = get_nlp()
+    if not nlp:
         lowered = text.lower()
         for canonical, syns in INJURY_SYNONYM_MAP.items():
             for phrase in [canonical] + syns:
@@ -692,16 +713,19 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
                     return canonical
         return None
     doc = nlp(text.lower())
+    injury_matcher, injury_map, _, _ = get_matchers(nlp)
+    if not injury_matcher:
+        return None
 
     candidates: dict[str, float] = {}
 
     # 1) Phrase matcher first (fast / precise), ignore negated spans
     hits = []
-    for match_id, start, end in INJURY_MATCHER(doc):
+    for match_id, start, end in injury_matcher(doc):
         span = doc[start:end]
         if any(tok._.negex for tok in span):
             continue
-        hits.append(INJURY_MATCH_ID_TO_CANONICAL.get(match_id))
+        hits.append(injury_map.get(match_id))
 
     for c in hits:
         if not c:
@@ -776,20 +800,24 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     2) Context routing for 'spine/back' mentions into neck / upper_back / lower_back,
     3) Fuzzy fallback (partial-ratio).
     """
-    if not _SPACY_AVAILABLE:
+    nlp = get_nlp()
+    if not nlp:
         lowered = text.lower()
         for key in sorted(LOCATION_MAP.keys(), key=len, reverse=True):
             if key in lowered:
                 return LOCATION_MAP[key]
         return None
     doc = nlp(text.lower())
+    _, _, location_matcher, location_map = get_matchers(nlp)
+    if not location_matcher:
+        return None
 
     # 1) Phrase match (fast), ignore negated spans
-    for match_id, start, end in LOCATION_MATCHER(doc):
+    for match_id, start, end in location_matcher(doc):
         span = doc[start:end]
         if any(tok._.negex for tok in span):
             continue
-        loc = LOC_MATCH_ID_TO_CANONICAL.get(match_id)
+        loc = location_map.get(match_id)
 
         # 2) Context routing if spine/back-ish
         txt = text.lower()
@@ -848,7 +876,8 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
 
 def split_injury_text(raw_text: str) -> list[str]:
     """Normalize free-form injury text into a list of phrases using spaCy."""
-    if not _SPACY_AVAILABLE:
+    nlp = get_nlp()
+    if not nlp:
         if not raw_text:
             return []
         text = raw_text.lower()

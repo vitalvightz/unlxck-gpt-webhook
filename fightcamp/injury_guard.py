@@ -220,11 +220,13 @@ def _log_decision(
     matched_tags: list[str],
     action: str,
 ) -> None:
+    if not logger.isEnabledFor(logging.DEBUG):
+        return
     log_key = (item_name, region, severity, round(risk, 3), round(threshold, 3), action, tuple(matched_tags))
     if log_key in _INJURY_DECISION_LOGGED:
         return
     _INJURY_DECISION_LOGGED.add(log_key)
-    logger.warning(
+    logger.debug(
         "[injury-guard] item='%s' region=%s severity=%s risk=%.2f threshold=%.2f matched_tags=%s action=%s",
         item_name,
         region,

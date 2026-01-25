@@ -3,6 +3,7 @@ import json
 import logging
 import re
 from pathlib import Path
+from time import perf_counter
 from .build_block import (
     PhaseBlock,
     build_html_document,
@@ -129,7 +130,16 @@ def _apply_muay_thai_filters(text: str, *, allow_grappling: bool) -> str:
 async def generate_plan(data: dict):
     configure_logging()
     logger = logging.getLogger(__name__)
+    timings: dict[str, float] = {}
+
+    def _record_timing(label: str, start: float) -> None:
+        elapsed = perf_counter() - start
+        timings[label] = elapsed
+        logger.info("[timing] %s=%.2fs", label, elapsed)
+
+    timer_start = perf_counter()
     plan_input = PlanInput.from_payload(data)
+    _record_timing("parse_input", timer_start)
     random_seed = data.get("random_seed")
 
     full_name = plan_input.full_name
@@ -250,10 +260,26 @@ async def generate_plan(data: dict):
         days_until_fight=days_until_fight,
     )
 
-    # Module generation
+    timer_start = perf_counter()
     phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
 
+    # Mental Block Strategy Injection Per Phase
+    def build_mindset_prompt(phase_name: str):
+        blocks = training_context.mental_block
+        if isinstance(blocks, str):
+            blocks = [blocks]
+
+        if blocks[0].lower() != "generic":
+            return get_mindset_by_phase(phase_name, training_context.to_flags())
+        return get_mindset_by_phase(phase_name, {"mental_block": ["generic"]})
+
+    gpp_mindset = build_mindset_prompt("GPP")
+    spp_mindset = build_mindset_prompt("SPP")
+    taper_mindset = build_mindset_prompt("TAPER")
+    _record_timing("mindset", timer_start)
+
     # === Strength blocks per phase with repeat filtering ===
+    timer_start = perf_counter()
     strength_blocks = []
     gpp_ex_names = []
     spp_ex_names = []
@@ -315,8 +341,10 @@ async def generate_plan(data: dict):
         strength_reason_log["TAPER"] = taper_block.get("why_log", [])
 
     strength_block = "\n\n".join(strength_blocks)
+    _record_timing("strength", timer_start)
 
     # Generate conditioning blocks per phase
+    timer_start = perf_counter()
     gpp_cond_block = ""
     spp_cond_block = ""
     taper_cond_block = ""
@@ -361,6 +389,7 @@ async def generate_plan(data: dict):
             {**training_context.to_flags(), "phase": "TAPER", "random_seed": random_seed}
         )
         conditioning_reason_log["TAPER"] = taper_cond_reasons
+    _record_timing("conditioning", timer_start)
 
     sanitize_labels = [
         "Mindset Focus",
@@ -375,6 +404,7 @@ async def generate_plan(data: dict):
         "Coach Notes",
     ]
 
+    timer_start = perf_counter()
     gpp_rehab_block = ""
     spp_rehab_block = ""
     taper_rehab_block = ""
@@ -407,6 +437,7 @@ async def generate_plan(data: dict):
     gpp_guardrails = format_injury_guardrails("GPP", injuries)
     spp_guardrails = format_injury_guardrails("SPP", injuries)
     taper_guardrails = format_injury_guardrails("TAPER", injuries)
+    _record_timing("parse_injuries", timer_start)
     has_injuries = bool(injuries)
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
@@ -517,22 +548,6 @@ async def generate_plan(data: dict):
 
     _apply_substitution_log(strength_reason_log, "Strength")
     _apply_substitution_log(conditioning_reason_log, "Conditioning")
-
-
-# Mental Block Strategy Injection Per Phase
-    def build_mindset_prompt(phase_name: str):
-        blocks = training_context.mental_block
-        if isinstance(blocks, str):
-            blocks = [blocks]
-
-        if blocks[0].lower() != "generic":
-            return get_mindset_by_phase(phase_name, training_context.to_flags())
-        return get_mindset_by_phase(phase_name, {"mental_block": ["generic"]})
-
-    gpp_mindset = build_mindset_prompt("GPP")
-    spp_mindset = build_mindset_prompt("SPP")
-    taper_mindset = build_mindset_prompt("TAPER")
-
     rehab_sections: list[str] = []
     support_notes = ""
     if has_injuries:
@@ -849,6 +864,7 @@ async def generate_plan(data: dict):
 
     logger.info("plan generated locally (first 500 chars): %s", fight_plan_text[:500])
 
+    timer_start = perf_counter()
     html = build_html_document(
         full_name=full_name,
         sport=mapped_format,
@@ -874,6 +890,11 @@ async def generate_plan(data: dict):
     safe = full_name.replace(" ", "_") or "plan"
     pdf_path = html_to_pdf(html, f"{safe}_fight_plan.pdf")
     pdf_url = upload_to_supabase(pdf_path) if pdf_path else "PDF generation failed"
+    _record_timing("export_pdf", timer_start)
+
+    if timings:
+        slowest_label = max(timings, key=timings.get)
+        logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
 
     return {
         "pdf_url": pdf_url,
