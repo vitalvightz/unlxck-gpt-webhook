@@ -8,6 +8,7 @@ from typing import Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from .injury_severity import detect_severity_hint
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 
@@ -171,22 +172,6 @@ INJURY_TAG_ALIASES = {
 
 logger = logging.getLogger(__name__)
 
-_SEVERITY_HINTS = {
-    "mild": {"mild", "minor", "light", "low"},
-    "moderate": {"moderate", "medium"},
-    "severe": {"severe", "serious", "high"},
-}
-
-
-def _detect_severity_hint(text: str) -> str | None:
-    normalized = _normalize_text(text)
-    tokens = set(normalized.split())
-    for severity, hints in _SEVERITY_HINTS.items():
-        if tokens.intersection(hints):
-            return severity
-    return None
-
-
 def expand_injury_tags(tags: Iterable[str]) -> set[str]:
     expanded: set[str] = set()
     for tag in tags:
@@ -292,7 +277,7 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
     for injury in injuries:
         if not injury:
             continue
-        severity_hint = _detect_severity_hint(injury)
+        severity_hint = detect_severity_hint(injury)
         normalized = _normalize_text(injury)
         direct_key = normalized.replace(" ", "_")
         if direct_key in INJURY_RULES:
@@ -304,8 +289,10 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
             cleaned = remove_negated_phrases(phrase)
             if not cleaned:
                 continue
-            non_negated_phrases.append(phrase)
             injury_type, location = parse_injury_phrase(phrase)
+            if not injury_type and not location:
+                continue
+            non_negated_phrases.append(phrase)
             for candidate in (location, injury_type, phrase):
                 if not candidate:
                     continue

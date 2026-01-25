@@ -1355,8 +1355,24 @@ def generate_conditioning_block(flags):
 
     if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic"):
         fallback = _glycolytic_fallback(phase)
-        grouped_drills["glycolytic"] = [fallback]
-        selected_drill_names.append(fallback["name"])
+        fallback_safe = is_injury_safe(fallback, injuries) and _is_drill_text_safe(
+            fallback, injuries, label="conditioning"
+        )
+        if not fallback_safe:
+            candidates = all_candidates_by_system.get("glycolytic", [])
+            for cand in candidates:
+                if cand.get("name") in selected_drill_names:
+                    continue
+                if not is_injury_safe(cand, injuries):
+                    continue
+                if not _is_drill_text_safe(cand, injuries, label="conditioning"):
+                    continue
+                fallback = cand
+                fallback_safe = True
+                break
+        if fallback_safe:
+            grouped_drills["glycolytic"] = [fallback]
+            selected_drill_names.append(fallback["name"])
 
     missing_systems = [
         system_name

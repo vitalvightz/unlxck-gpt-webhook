@@ -682,6 +682,14 @@ def remove_negated_phrases(text: str) -> str:
     """Strip words marked as negated by Negex from the text."""
     if not text:
         return ""
+    if _SPACY_AVAILABLE and _NEGSPACY_AVAILABLE and "negex" not in getattr(nlp, "pipe_names", []):
+        try:
+            nlp.add_pipe("negex", last=True)
+        except Exception:  # pragma: no cover - Negex might not be registered
+            try:
+                nlp.add_pipe(Negex(nlp), last=True)
+            except Exception:
+                pass
     if _SPACY_AVAILABLE and _NEGSPACY_AVAILABLE and "negex" in getattr(nlp, "pipe_names", []):
         doc = nlp(text)
         tokens = [tok.text for tok in doc if not tok._.negex]
@@ -868,6 +876,7 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     cleaned = _strip_surrounding_punct(cleaned)
     cleaned = re.sub(r"[()\\[\\]{}]", " ", cleaned)
     cleaned = re.sub(r"[,:;]+", " ", cleaned)
+    cleaned = re.sub(r"[.!?]+", " ", cleaned)
     cleaned = " ".join(cleaned.split())
     if not cleaned:
         return None, None
@@ -876,28 +885,25 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     location = canonicalize_location(doc_text)
     if not location:
         location = _fallback_location_match(doc_text)
+    if not location and ("shin splint" in doc_text or "shin splints" in doc_text):
+        location = "shin"
     return injury_type, location
 
 
 def split_injury_text(raw_text: str) -> list[str]:
-    """Normalize free-form injury text into a list of phrases using spaCy."""
+    """Normalize free-form injury text into a list of phrases."""
     if not raw_text:
         return []
     text = raw_text.lower()
     text = re.sub(r"[()]", " ", text)
-    text = re.sub(r"(?m)^[\\s>*-]*[•*\\-]\\s+", ". ", text)
+    text = re.sub(r"(?m)^[\s>*-]*[•*\-]\s+", ". ", text)
     text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-    for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-        text = text.replace(sep, ". ")
-    if not _SPACY_AVAILABLE:
-        return [
-            cleaned
-            for chunk in text.split(".")
-            if (cleaned := _strip_surrounding_punct(chunk))
-        ]
-    doc = nlp(text)
+    text = re.sub(r"[|/+]", ". ", text)
+    text = re.sub(r"\s+(?:-|–|—)\s+", ". ", text)
+    split_pattern = re.compile(r"(?:\.|;|,|\n|\band\b)\s*")
+    chunks = split_pattern.split(text)
     return [
         cleaned
-        for sent in doc.sents
-        if (cleaned := _strip_surrounding_punct(sent.text))
+        for chunk in chunks
+        if (cleaned := _strip_surrounding_punct(chunk))
     ]

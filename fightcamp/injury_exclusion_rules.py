@@ -580,7 +580,17 @@ INJURY_RULES = {
             "hard track running",
             "hard surface running",
         ],
-        "ban_tags": ["impact_rebound_high", "running_volume_high", "shin_splints_risk"],
+        "ban_tags": [
+            "impact_rebound_high",
+            "running_volume_high",
+            "shin_splints_risk",
+            "high_impact_plyo",
+            "reactive_rebound_high",
+            "calf_rebound_high",
+            "landing_stress_high",
+            "forefoot_load_high",
+            "foot_impact_high",
+        ],
     },
     "calf": {
         "ban_keywords": [
