@@ -10,8 +10,8 @@ from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
-
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+# Refactored: Import centralized DATA_DIR from config
+from .config import DATA_DIR
 INJURY_MATCH_ALLOWLIST: list[str] = [
     "pressure fighter",
     "pressure cooker",

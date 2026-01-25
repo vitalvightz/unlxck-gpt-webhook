@@ -14,11 +14,19 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, log_injury_debug
-from .injury_guard import Decision, choose_injury_replacement, injury_decision
+# Refactored: Import factory function for guarded decision making
+from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
-from .config import PHASE_SYSTEM_RATIOS, STYLE_CONDITIONING_RATIO
+# Refactored: Import centralized constants and utilities from config
+from .config import (
+    PHASE_SYSTEM_RATIOS,
+    STYLE_CONDITIONING_RATIO,
+    DATA_DIR,
+    INJURY_GUARD_SHORTLIST,
+    trim_to_injury_guard_shortlist,
+)
 
 # Extra explosive or high-load tags to avoid during TAPER when fatigue isn't low
 TAPER_AVOID_TAGS = {
@@ -174,7 +182,6 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
 
 
 # Load banks
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 conditioning_bank = _load_bank(
     DATA_DIR / "conditioning_bank.json",
     source="conditioning_bank.json",
@@ -186,8 +193,6 @@ style_conditioning_bank = _load_bank(
     enforce_conditioning_systems=True,
 )
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
-
-INJURY_GUARD_SHORTLIST = 125
 
 # Load coordination bank and flatten drills
 try:
@@ -840,13 +845,11 @@ def generate_conditioning_block(flags):
         for drills in style_lists.values():
             drills.sort(key=lambda x: x[1], reverse=True)
 
-    def _trim_drills(drills: list[tuple[dict, float, dict]]) -> list[tuple[dict, float, dict]]:
-        return drills[:INJURY_GUARD_SHORTLIST]
-
-    system_drills = {system: _trim_drills(drills) for system, drills in system_drills.items()}
-    style_system_drills = {system: _trim_drills(drills) for system, drills in style_system_drills.items()}
+    # Refactored: Use utility function instead of local duplicate implementation
+    system_drills = {system: trim_to_injury_guard_shortlist(drills) for system, drills in system_drills.items()}
+    style_system_drills = {system: trim_to_injury_guard_shortlist(drills) for system, drills in style_system_drills.items()}
     style_drills_by_style = {
-        style: {system: _trim_drills(drills) for system, drills in systems.items()}
+        style: {system: trim_to_injury_guard_shortlist(drills) for system, drills in systems.items()}
         for style, systems in style_drills_by_style.items()
     }
 
@@ -863,14 +866,10 @@ def generate_conditioning_block(flags):
         if d.get("name")
     }
 
-    def _ensure_guard_candidate(drill: dict) -> None:
-        name = drill.get("name")
-        if name:
-            injury_guard_names.add(name)
-
-    def _guarded_injury_decision(drill: dict) -> Decision:
-        _ensure_guard_candidate(drill)
-        return injury_decision(drill, injuries, phase, fatigue)
+    # Refactored: Use factory function instead of local duplicate implementation
+    _guarded_injury_decision = make_guarded_decision_factory(
+        injuries, phase, fatigue, injury_guard_names
+    )
 
     all_candidates_by_system = {
         system: [drill for drill, _, _ in system_drills.get(system, [])]

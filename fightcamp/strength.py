@@ -12,12 +12,13 @@ from .training_context import (
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
-from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST
+# Refactored: Import centralized constants from config
+from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
 from .injury_filtering import _load_style_specific_exercises, log_injury_debug
-from .injury_guard import Decision, injury_decision, pick_safe_replacement
+# Refactored: Import factory function for guarded decision making
+from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
 
 # Load style specific exercises (JSON list)
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 STYLE_EXERCISES = _load_style_specific_exercises()
 
 
@@ -33,8 +34,6 @@ CANONICAL_STYLE_TAGS = {
     "grappler",
     "wrestler",
 }
-
-INJURY_GUARD_SHORTLIST = 125
 
 
 def normalize_style_tags(tags):
@@ -514,15 +513,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     guard_exercises = [ex for ex, _, _ in guard_pairs]
     guard_names = {ex.get("name") for ex in guard_exercises if ex.get("name")}
 
-    def _ensure_guard_candidate(item: dict) -> None:
-        name = item.get("name")
-        if name and name not in guard_names:
-            guard_exercises.append(item)
-            guard_names.add(name)
-
-    def _guarded_injury_decision(item: dict) -> Decision:
-        _ensure_guard_candidate(item)
-        return injury_decision(item, injuries, phase, fatigue)
+    # Refactored: Use factory function instead of local duplicate implementation
+    _guarded_injury_decision = make_guarded_decision_factory(
+        injuries, phase, fatigue, guard_names, guard_exercises
+    )
 
     top_pairs = weighted_exercises[:target_exercises]
     top_exercises = [ex for ex, _, _ in top_pairs]
