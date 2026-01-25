@@ -10,6 +10,7 @@ jobs:
       GOOGLE_CREDS_B64: ${{ secrets.GOOGLE_CREDS_B64 }}
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INJURY_DEBUG: "1"
 
     steps:
       - name: Checkout repo
