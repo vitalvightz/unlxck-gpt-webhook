@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+import json
 import logging
 import os
 from typing import Callable, Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
+from .injury_formatting import parse_injury_entry
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .tagging import normalize_tags
 
@@ -308,6 +310,7 @@ FALLBACK_TAG_ORDER: dict[str, dict[str, list[list[str]]]] = {
 _INJURY_DECISION_LOGGED: set[tuple] = set()
 _INJURY_DECISION_CACHE: dict[tuple[str, str, str, str], dict[str, object]] = {}
 _INJURY_SEVERITY_DEBUGGED = False
+_INJURY_PARSED_DEBUGGED = False
 
 
 @dataclass(frozen=True)
@@ -341,6 +344,41 @@ def normalize_severity(text: str) -> tuple[str, list[str]]:
                 if severity is None:
                     severity = level
     return severity or "moderate", hits
+
+
+def _build_parsed_injury_dump(injuries: Iterable[str | dict]) -> list[dict]:
+    parsed: list[dict] = []
+    for injury in injuries:
+        if not injury:
+            continue
+        if isinstance(injury, dict):
+            severity, _ = _normalize_dict_severity(injury)
+            parsed.append(
+                {
+                    "region": injury.get("region") or injury.get("canonical_location"),
+                    "side": injury.get("side") or injury.get("laterality"),
+                    "injury_type": injury.get("injury_type"),
+                    "severity": severity,
+                    "original_phrase": injury.get("original_phrase") or injury.get("raw"),
+                }
+            )
+            continue
+        raw_text = str(injury)
+        for phrase in split_injury_text(raw_text):
+            entry = parse_injury_entry(phrase)
+            if not entry:
+                continue
+            severity, _ = normalize_severity(phrase)
+            parsed.append(
+                {
+                    "region": entry.get("canonical_location"),
+                    "side": entry.get("side"),
+                    "injury_type": entry.get("injury_type"),
+                    "severity": severity,
+                    "original_phrase": phrase,
+                }
+            )
+    return parsed
 
 
 def _strictest_severity(current: str | None, candidate: str) -> str:
@@ -527,7 +565,11 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     """
     injuries_list = _normalize_injury_list(injuries)
     debug_entries: list[dict] | None = None
-    global _INJURY_SEVERITY_DEBUGGED
+    global _INJURY_SEVERITY_DEBUGGED, _INJURY_PARSED_DEBUGGED
+    if INJURY_DEBUG and not _INJURY_PARSED_DEBUGGED:
+        parsed_dump = _build_parsed_injury_dump(injuries_list)
+        print("[injury-parse] parsed=%s" % json.dumps(parsed_dump, sort_keys=True))
+        _INJURY_PARSED_DEBUGGED = True
     if INJURY_DEBUG and not _INJURY_SEVERITY_DEBUGGED:
         debug_entries = []
     for inj in injuries_list:

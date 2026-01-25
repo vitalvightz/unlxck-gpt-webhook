@@ -21,7 +21,7 @@
     "equipment_note": "Requires: Assault Bike"
   },
   {
-    "name": "Zone 2 Sled Circuit",
+    "name": "Aerobic power circuits",
     "equipment": [
       "sled"
     ],
@@ -31,7 +31,7 @@
     "system": "aerobic",
     "modality": "sled",
     "duration": "25–30min continuous",
-    "intensity": "zone 2",
+    "intensity": "low",
     "tags": [
       "aerobic",
       "conditioning",
@@ -424,7 +424,7 @@
     "equipment_note": "Requires: Elliptical"
   },
   {
-    "name": "Padded Circuit (Zone 2)",
+    "name": "Low-intensity capacity circuits (non-steady)",
     "equipment": [],
     "phases": [
       "GPP"

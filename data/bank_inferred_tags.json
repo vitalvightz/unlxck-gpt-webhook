@@ -2546,8 +2546,8 @@
       "core"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Zone 2 Sled Circuit",
-    "name": "Zone 2 Sled Circuit"
+    "item_id": "conditioning_bank:Aerobic power circuits",
+    "name": "Aerobic power circuits"
   },
   {
     "bank": "conditioning_bank",
@@ -2800,8 +2800,8 @@
       "skill"
     ],
     "inferred_tags": [],
-    "item_id": "conditioning_bank:Padded Circuit (Zone 2)",
-    "name": "Padded Circuit (Zone 2)"
+    "item_id": "conditioning_bank:Low-intensity capacity circuits (non-steady)",
+    "name": "Low-intensity capacity circuits (non-steady)"
   },
   {
     "bank": "conditioning_bank",
