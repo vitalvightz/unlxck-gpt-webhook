@@ -31,8 +31,8 @@
     "tags": [
       "quad_dominant",
       "compound",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -49,8 +49,8 @@
     "tags": [
       "quad_dominant",
       "balance",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "dumbbells"
   },
@@ -84,8 +84,8 @@
     "tags": [
       "quad_dominant",
       "core",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -101,13 +101,13 @@
     "tags": [
       "neural_primer",
       "explosive",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
       "mech_ballistic",
-      "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
       "mech_lower_squat",
-      "mech_landing_impact"
+      "mech_lower_jump"
     ],
     "equipment": "trap_bar"
   },
@@ -124,12 +124,12 @@
       "neural_primer",
       "explosive",
       "reactive",
-      "mech_cns_high",
+      "mech_max_velocity",
       "mech_upper_press",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_max_velocity",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "bands"
   },
@@ -146,15 +146,15 @@
       "neural_primer",
       "reactive",
       "speed",
+      "mech_max_velocity",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
-      "mech_deceleration",
       "mech_lower_hip_hinge",
-      "mech_max_velocity",
-      "mech_landing_impact"
+      "mech_deceleration"
     ],
     "equipment": "box"
   },
@@ -171,11 +171,11 @@
       "neural_primer",
       "rotational",
       "rate_of_force",
-      "mech_cns_high",
       "mech_upper_press",
-      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_cns_high",
       "mech_ballistic",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -192,10 +192,10 @@
       "neural_primer",
       "cluster",
       "posterior_chain",
-      "mech_cns_high",
+      "mech_trunk_stability",
       "mech_grip_support",
       "mech_systemic_fatigue",
-      "mech_trunk_stability",
+      "mech_cns_high",
       "mech_lower_hip_hinge"
     ],
     "equipment": "trap_bar"
@@ -213,13 +213,13 @@
       "contrast",
       "explosive",
       "quad_dominant",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
       "mech_ballistic",
-      "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
       "mech_lower_squat",
-      "mech_landing_impact"
+      "mech_lower_jump"
     ],
     "equipment": "barbell,box"
   },
@@ -236,11 +236,11 @@
       "contrast",
       "rate_of_force",
       "upper_body",
-      "mech_cns_high",
       "mech_upper_press",
       "mech_landing_impact",
-      "mech_ballistic",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_ballistic"
     ],
     "equipment": "dumbbells"
   },
@@ -257,9 +257,9 @@
       "contrast",
       "explosive",
       "posterior_chain",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "barbell"
   },
@@ -276,8 +276,8 @@
       "contrast",
       "shoulders",
       "anti_rotation",
-      "mech_ballistic",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_ballistic"
     ],
     "equipment": "landmine,medicine_ball"
   },
@@ -294,8 +294,8 @@
       "triphasic",
       "eccentric",
       "unilateral",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "dumbbells"
   },
@@ -329,11 +329,11 @@
     "tags": [
       "explosive",
       "triple_extension",
-      "mech_cns_high",
+      "mech_upper_pull",
       "mech_grip_support",
+      "mech_cns_high",
       "mech_ballistic",
-      "mech_lower_hip_hinge",
-      "mech_upper_pull"
+      "mech_lower_hip_hinge"
     ],
     "equipment": "barbell"
   },
@@ -349,8 +349,8 @@
     "tags": [
       "explosive",
       "anti_rotation",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_trunk_rotation"
     ],
     "equipment": "landmine"
@@ -368,13 +368,13 @@
       "explosive",
       "tactical",
       "mech_upper_press",
-      "mech_ballistic",
-      "mech_lower_jump",
       "mech_trunk_stability",
+      "mech_landing_impact",
       "mech_reactive",
+      "mech_ballistic",
       "mech_lower_squat",
-      "mech_lower_hip_hinge",
-      "mech_landing_impact"
+      "mech_lower_jump",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "sandbag"
   },
@@ -389,7 +389,10 @@
     "type": "unilateral",
     "tags": [
       "rate_of_force",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "bands"
   },
@@ -406,11 +409,11 @@
       "neural_primer",
       "anti_rotation",
       "core",
-      "mech_cns_high",
       "mech_upper_press",
-      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_cns_high",
       "mech_ballistic",
-      "mech_trunk_stability"
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -445,8 +448,8 @@
     "tags": [
       "quad_dominant",
       "compound",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -463,8 +466,8 @@
     "tags": [
       "quad_dominant",
       "balance",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "dumbbells"
   },
@@ -498,8 +501,8 @@
     "tags": [
       "quad_dominant",
       "core",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -515,12 +518,12 @@
     "tags": [
       "explosive",
       "power",
-      "mech_ballistic",
-      "mech_lower_jump",
       "mech_trunk_stability",
+      "mech_landing_impact",
       "mech_reactive",
+      "mech_ballistic",
       "mech_lower_squat",
-      "mech_landing_impact"
+      "mech_lower_jump"
     ],
     "equipment": "trap_bar"
   },
@@ -536,13 +539,13 @@
     "tags": [
       "explosive",
       "power",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
       "mech_ballistic",
-      "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
       "mech_lower_squat",
-      "mech_landing_impact"
+      "mech_lower_jump"
     ],
     "equipment": "box"
   },
@@ -560,10 +563,10 @@
     "tags": [
       "posterior_chain",
       "explosive",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_ballistic",
       "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_cns_high",
+      "mech_ballistic",
       "mech_lower_hip_hinge"
     ],
     "equipment": "kettlebell"
@@ -580,8 +583,8 @@
     "tags": [
       "explosive",
       "power",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -597,8 +600,8 @@
     "tags": [
       "posterior_chain",
       "conditioning",
-      "mech_systemic_fatigue",
       "mech_trunk_stability",
+      "mech_systemic_fatigue",
       "mech_lower_hip_hinge"
     ],
     "equipment": "sled"
@@ -635,8 +638,8 @@
     "tags": [
       "quad_dominant",
       "rehab_friendly",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "kettlebell"
   },
@@ -652,8 +655,8 @@
     "tags": [
       "quad_dominant",
       "rehab_friendly",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "box"
   },
@@ -670,9 +673,9 @@
     "tags": [
       "posterior_chain",
       "rehab_friendly",
-      "mech_lower_lateral",
+      "mech_lower_squat",
       "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_lateral"
     ],
     "equipment": "bands"
   },
@@ -689,8 +692,8 @@
       "quad_dominant",
       "balance",
       "rehab_friendly",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "trx"
   },
@@ -740,10 +743,10 @@
     "tags": [
       "quad_dominant",
       "mobility",
-      "mech_lower_lunge",
-      "mech_lower_lateral",
+      "mech_lower_squat",
       "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_lateral",
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -759,12 +762,12 @@
     "tags": [
       "explosive",
       "balance",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
-      "mech_lower_lunge",
-      "mech_landing_impact"
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -780,8 +783,8 @@
     "tags": [
       "quad_dominant",
       "rehab_friendly",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -797,8 +800,8 @@
     "tags": [
       "shoulders",
       "compound",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
@@ -867,11 +870,11 @@
     "tags": [
       "upper_body",
       "compound",
-      "mech_cns_high",
       "mech_upper_press",
       "mech_landing_impact",
-      "mech_ballistic",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_ballistic"
     ],
     "equipment": "dumbbells"
   },
@@ -887,8 +890,8 @@
     "tags": [
       "upper_body",
       "compound",
-      "mech_ballistic",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_ballistic"
     ],
     "equipment": "medicine_ball"
   },
@@ -920,11 +923,11 @@
     "tags": [
       "explosive",
       "upper_body",
-      "mech_cns_high",
       "mech_upper_press",
       "mech_landing_impact",
-      "mech_ballistic",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_ballistic"
     ],
     "equipment": "bodyweight"
   },
@@ -957,8 +960,8 @@
     "tags": [
       "shoulders",
       "core",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
@@ -975,13 +978,13 @@
     "tags": [
       "explosive",
       "shoulders",
-      "mech_cns_high",
       "mech_upper_press",
-      "mech_grip_support",
-      "mech_ballistic",
-      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
       "mech_upper_pull",
-      "mech_shoulder_overhead"
+      "mech_grip_support",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "dumbbells"
   },
@@ -1220,9 +1223,9 @@
       "core",
       "anti_rotation",
       "rehab_friendly",
-      "mech_grip_support",
+      "mech_upper_carry",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_grip_support"
     ],
     "equipment": "bodyweight"
   },
@@ -1238,8 +1241,8 @@
     "tags": [
       "core",
       "anti_rotation",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "equipment": "cable"
   },
@@ -1255,8 +1258,8 @@
     "tags": [
       "core",
       "anti_rotation",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_trunk_rotation"
     ],
     "equipment": "cable"
@@ -1373,10 +1376,10 @@
     "tags": [
       "core",
       "explosive",
-      "mech_ballistic",
-      "mech_trunk_stability",
       "mech_upper_press",
-      "mech_trunk_rotation"
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "equipment": "medicine_ball"
   },
@@ -1443,8 +1446,8 @@
       "core",
       "anti_rotation",
       "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_grip_support"
     ],
     "equipment": "pullup_bar"
   },
@@ -1497,10 +1500,10 @@
     "tags": [
       "core",
       "explosive",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_trunk_stability",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "cable"
   },
@@ -1534,8 +1537,8 @@
     "tags": [
       "core",
       "rehab_friendly",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "equipment": "swiss_ball"
   },
@@ -1551,10 +1554,10 @@
     "tags": [
       "explosive",
       "conditioning",
-      "mech_trunk_stability",
+      "mech_reactive",
       "mech_upper_press",
-      "mech_lower_hip_hinge",
-      "mech_reactive"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "weighted_vest"
   },
@@ -1569,7 +1572,10 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "bands"
   },
@@ -1584,7 +1590,12 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "balance"
+      "balance",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
     "equipment": "partner/dummy"
   },
@@ -1599,7 +1610,11 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "thai_pads"
   },
@@ -1614,7 +1629,10 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "equipment": "bands"
   },
@@ -1630,8 +1648,8 @@
     "tags": [
       "explosive",
       "upper_body",
-      "mech_ballistic",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_ballistic"
     ],
     "equipment": "medicine_ball"
   },
@@ -1647,10 +1665,10 @@
     "tags": [
       "explosive",
       "upper_body",
-      "mech_ballistic",
       "mech_reactive",
       "mech_upper_press",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
     "equipment": "barbell"
   },
@@ -1667,10 +1685,10 @@
     "tags": [
       "core",
       "rotational",
-      "mech_systemic_fatigue",
-      "mech_lower_hip_hinge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "sledgehammer"
   },
@@ -1685,7 +1703,12 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "core"
+      "core",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "sandbag"
   },
@@ -1702,11 +1725,11 @@
     "tags": [
       "shoulders",
       "conditioning",
-      "mech_grip_support",
       "mech_upper_press",
-      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_grip_support",
       "mech_systemic_fatigue",
-      "mech_trunk_stability"
+      "mech_ballistic"
     ],
     "equipment": "battle_ropes"
   },
@@ -1722,6 +1745,7 @@
     "tags": [
       "grip",
       "posterior_chain",
+      "mech_trunk_stability",
       "mech_grip_support"
     ],
     "equipment": "towel/bar"
@@ -1755,9 +1779,9 @@
     "tags": [
       "grip",
       "mech_grip_crush",
-      "mech_grip_support",
+      "mech_upper_carry",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_grip_support"
     ],
     "equipment": "plates"
   },
@@ -1773,9 +1797,9 @@
     "tags": [
       "grip",
       "core",
-      "mech_grip_support",
+      "mech_upper_carry",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_grip_support"
     ],
     "equipment": "fat_grip"
   },
@@ -1790,7 +1814,10 @@
     "type": "unilateral",
     "tags": [
       "grip",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_wrist_extension",
+      "mech_grip_support"
     ],
     "equipment": "wrist_roller"
   },
@@ -1806,8 +1833,8 @@
     "tags": [
       "shoulders",
       "grip",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_shoulder_overhead"
     ],
     "equipment": "log"
@@ -1824,10 +1851,10 @@
     "tags": [
       "posterior_chain",
       "explosive",
-      "mech_grip_support",
       "mech_upper_press",
-      "mech_ballistic",
+      "mech_grip_support",
       "mech_systemic_fatigue",
+      "mech_ballistic",
       "mech_lower_hip_hinge"
     ],
     "equipment": "tire"
@@ -1843,7 +1870,12 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "grip"
+      "grip",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_grip_crush",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "atlas_stone"
   },
@@ -1859,9 +1891,9 @@
     "tags": [
       "grip",
       "core",
-      "mech_grip_support",
+      "mech_upper_carry",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_grip_support"
     ],
     "equipment": "water_jug"
   },
@@ -1895,15 +1927,15 @@
     "tags": [
       "endurance",
       "explosive",
-      "mech_cns_high",
-      "mech_grip_support",
       "mech_upper_press",
-      "mech_ballistic",
-      "mech_systemic_fatigue",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge",
+      "mech_upper_pull",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_cns_high",
+      "mech_ballistic",
       "mech_lower_squat",
-      "mech_upper_pull"
+      "mech_lower_hip_hinge"
     ],
     "equipment": "barbell"
   },
@@ -1919,11 +1951,11 @@
     "tags": [
       "grip",
       "core",
+      "mech_trunk_stability",
       "mech_grip_support",
       "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_upper_carry"
+      "mech_upper_carry",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "sandbag/sled"
   },
@@ -1939,13 +1971,13 @@
     "tags": [
       "endurance",
       "power",
+      "mech_max_velocity",
+      "mech_trunk_stability",
+      "mech_upper_pull",
       "mech_grip_support",
       "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_max_velocity",
       "mech_reactive",
-      "mech_upper_pull"
+      "mech_lower_hip_hinge"
     ],
     "equipment": "treadmill/rower"
   },
@@ -1977,8 +2009,8 @@
     "tags": [
       "power",
       "endurance",
-      "mech_systemic_fatigue",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ],
     "equipment": "box/kettlebell"
   },
@@ -2167,11 +2199,11 @@
       "explosive",
       "core",
       "mech_upper_press",
-      "mech_systemic_fatigue",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_reactive",
       "mech_lower_squat",
-      "mech_reactive"
+      "mech_lower_hip_hinge"
     ],
     "equipment": "bodyweight"
   },
@@ -2202,7 +2234,12 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "quad_dominant"
+      "quad_dominant",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -2218,12 +2255,12 @@
     "tags": [
       "core",
       "rotational",
-      "mech_grip_support",
-      "mech_trunk_rotation",
       "mech_upper_press",
-      "mech_ballistic",
       "mech_trunk_stability",
-      "mech_upper_pull"
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
     "equipment": "bands"
   },
@@ -2255,7 +2292,10 @@
     "type": "unilateral",
     "tags": [
       "anti_rotation",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "bands/rope"
   },
@@ -2287,10 +2327,12 @@
     "tags": [
       "explosive",
       "balance",
-      "mech_lower_jump",
       "mech_lower_lateral",
+      "mech_trunk_stability",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -2322,7 +2364,10 @@
     "type": "unilateral",
     "tags": [
       "rate_of_force",
-      "explosive"
+      "explosive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "equipment": "bands"
   },
@@ -2338,12 +2383,12 @@
     "tags": [
       "rotational",
       "shoulders",
-      "mech_grip_support",
-      "mech_trunk_rotation",
       "mech_upper_press",
-      "mech_ballistic",
       "mech_trunk_stability",
-      "mech_upper_pull"
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -2359,11 +2404,11 @@
     "tags": [
       "rate_of_force",
       "upper_body",
-      "mech_cns_high",
       "mech_upper_press",
       "mech_landing_impact",
-      "mech_ballistic",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_ballistic"
     ],
     "equipment": "bodyweight"
   },
@@ -2380,11 +2425,11 @@
       "rotational",
       "core",
       "mech_upper_press",
-      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_shoulder_overhead",
       "mech_ballistic",
       "mech_trunk_flexion",
-      "mech_trunk_stability",
-      "mech_shoulder_overhead"
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -2399,7 +2444,11 @@
     "type": "unilateral",
     "tags": [
       "rate_of_force",
-      "shoulders"
+      "shoulders",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_ballistic"
     ],
     "equipment": "weighted_ball"
   },
@@ -2433,8 +2482,10 @@
     "tags": [
       "rotational",
       "rate_of_force",
+      "mech_upper_press",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "equipment": "cable"
   },
@@ -2450,8 +2501,11 @@
     "tags": [
       "core",
       "rotational",
+      "mech_upper_press",
       "mech_trunk_stability",
-      "mech_grip_support"
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
     "equipment": "pullup_bar"
   },
@@ -2467,7 +2521,10 @@
     "tags": [
       "anti_rotation",
       "rate_of_force",
-      "mech_trunk_stability"
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "equipment": "bodyweight"
   },
@@ -2483,10 +2540,10 @@
     "tags": [
       "rotational",
       "grip",
-      "mech_systemic_fatigue",
-      "mech_lower_hip_hinge",
       "mech_trunk_stability",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "sledgehammer/tire"
   },
@@ -2538,8 +2595,8 @@
       "rotational",
       "mech_grip_crush",
       "mech_trunk_stability",
-      "mech_grip_support",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_grip_support"
     ],
     "equipment": "plates"
   },
@@ -2573,8 +2630,8 @@
     "tags": [
       "endurance",
       "rate_of_force",
-      "mech_systemic_fatigue",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "equipment": "weighted_gloves"
   },
@@ -2590,10 +2647,12 @@
     "tags": [
       "endurance",
       "explosive",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
       "mech_upper_press",
-      "mech_lower_squat"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -2626,13 +2685,13 @@
     "tags": [
       "endurance",
       "shoulders",
+      "mech_max_velocity",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_grip_support",
       "mech_systemic_fatigue",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_max_velocity",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "battle_ropes"
   },
@@ -2648,11 +2707,11 @@
     "tags": [
       "explosive",
       "high_cns",
-      "mech_cns_high",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
       "mech_max_velocity",
-      "mech_reactive"
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "open_space"
   },
@@ -2668,13 +2727,13 @@
     "tags": [
       "agility",
       "high_cns",
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_trunk_stability",
-      "mech_lower_lateral",
-      "mech_lower_hip_hinge",
       "mech_max_velocity",
-      "mech_reactive"
+      "mech_lower_lateral",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "open_space"
   },
@@ -2690,10 +2749,10 @@
     "tags": [
       "agility",
       "explosive",
-      "mech_lower_jump",
       "mech_lower_lateral",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -2709,15 +2768,15 @@
     "tags": [
       "high_cns",
       "explosive",
+      "mech_max_velocity",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
-      "mech_deceleration",
       "mech_lower_hip_hinge",
-      "mech_max_velocity",
-      "mech_landing_impact"
+      "mech_deceleration"
     ],
     "equipment": "box"
   },
@@ -2733,10 +2792,10 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "hurdles"
   },
@@ -2752,11 +2811,11 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
       "mech_max_velocity",
-      "mech_reactive"
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "open_space"
   },
@@ -2772,10 +2831,10 @@
     "tags": [
       "high_cns",
       "explosive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "open_space"
   },
@@ -2791,10 +2850,10 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "bodyweight"
   },
@@ -2810,12 +2869,12 @@
     "tags": [
       "agility",
       "high_cns",
-      "mech_cns_high",
-      "mech_trunk_rotation",
-      "mech_trunk_stability",
-      "mech_lower_hip_hinge",
       "mech_max_velocity",
-      "mech_reactive"
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "equipment": "open_space"
   },
@@ -2831,10 +2890,10 @@
     "tags": [
       "agility",
       "reactive",
-      "mech_lower_jump",
       "mech_lower_lateral",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -2850,13 +2909,13 @@
     "tags": [
       "agility",
       "explosive",
+      "mech_lower_lateral",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_trunk_stability",
-      "mech_reactive",
-      "mech_lower_lunge",
-      "mech_lower_lateral",
-      "mech_landing_impact"
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -2873,11 +2932,11 @@
     "tags": [
       "agility",
       "mobility",
-      "mech_trunk_stability",
-      "mech_lower_lunge",
       "mech_lower_lateral",
+      "mech_trunk_stability",
+      "mech_reactive",
       "mech_lower_squat",
-      "mech_reactive"
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -2893,10 +2952,10 @@
     "tags": [
       "agility",
       "reactive",
-      "mech_lower_jump",
       "mech_lower_lateral",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact"
     ],
     "equipment": "line/tape"
   },
@@ -2912,13 +2971,13 @@
     "tags": [
       "agility",
       "high_cns",
-      "mech_cns_high",
-      "mech_upper_press",
-      "mech_trunk_rotation",
-      "mech_ballistic",
-      "mech_trunk_stability",
       "mech_lower_lateral",
-      "mech_reactive"
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -2951,11 +3010,11 @@
     "tags": [
       "agility",
       "explosive",
-      "mech_cns_high",
-      "mech_lower_jump",
-      "mech_reactive",
       "mech_lower_lateral",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high",
+      "mech_lower_jump"
     ],
     "equipment": "box"
   },
@@ -2972,10 +3031,10 @@
     "tags": [
       "agility",
       "balance",
-      "mech_lower_lunge",
-      "mech_trunk_stability",
       "mech_reactive",
-      "mech_trunk_rotation"
+      "mech_trunk_stability",
+      "mech_trunk_rotation",
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -3008,12 +3067,12 @@
     "tags": [
       "high_cns",
       "reactive",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_reactive",
-      "mech_deceleration",
-      "mech_landing_impact"
+      "mech_deceleration"
     ],
     "equipment": "box"
   },
@@ -3029,10 +3088,10 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "hurdles"
   },
@@ -3048,10 +3107,10 @@
     "tags": [
       "high_cns",
       "explosive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "box"
   },
@@ -3067,10 +3126,10 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "agility_dots"
   },
@@ -3086,10 +3145,10 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "bands"
   },
@@ -3105,12 +3164,12 @@
     "tags": [
       "high_cns",
       "rate_of_force",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_cns_high",
-      "mech_trunk_rotation",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_reactive",
-      "mech_landing_impact"
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -3126,10 +3185,10 @@
     "tags": [
       "high_cns",
       "reactive",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "bodyweight"
   },
@@ -3145,7 +3204,8 @@
     "type": "unilateral",
     "tags": [
       "balance",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight",
     "notes": "Progress by adding head turns or unstable surface"
@@ -3178,8 +3238,8 @@
     "tags": [
       "balance",
       "rehab_friendly",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "bosu_ball",
     "notes": "Keep squats shallow (30° knee bend)"
@@ -3195,7 +3255,8 @@
     "type": "unilateral",
     "tags": [
       "balance",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "foam_pad",
     "notes": "Trace letters with toes while standing on one leg"
@@ -3229,7 +3290,9 @@
     "type": "unilateral",
     "tags": [
       "isometric",
-      "quad_dominant"
+      "quad_dominant",
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -3261,8 +3324,8 @@
     "tags": [
       "isometric",
       "eccentric",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "bodyweight"
   },
@@ -3328,8 +3391,8 @@
     "tags": [
       "isometric",
       "quad_dominant",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "box"
   },
@@ -3345,8 +3408,8 @@
     "tags": [
       "isometric",
       "adductors",
-      "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_lunge"
     ],
     "equipment": "sandbag"
   },
@@ -3362,9 +3425,9 @@
     "tags": [
       "isometric",
       "horizontal_power",
-      "mech_systemic_fatigue",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
       "mech_lower_hip_hinge"
     ],
     "equipment": "sled"
@@ -3446,9 +3509,9 @@
     "tags": [
       "isometric",
       "work_capacity",
-      "mech_grip_support",
+      "mech_upper_carry",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_grip_support"
     ],
     "equipment": "kettlebells"
   },
@@ -3500,9 +3563,9 @@
     "tags": [
       "plyometric",
       "acceleration",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -3519,10 +3582,10 @@
     "tags": [
       "plyometric",
       "lateral_power",
-      "mech_lower_jump",
       "mech_lower_lateral",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact"
     ],
     "equipment": "agility_ladder"
   },
@@ -3538,9 +3601,9 @@
     "tags": [
       "plyometric",
       "rotational",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -3556,10 +3619,10 @@
     "tags": [
       "plyometric",
       "triple_extension",
-      "mech_cns_high",
+      "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_reactive"
+      "mech_cns_high"
     ],
     "equipment": "box"
   },
@@ -3575,11 +3638,11 @@
     "tags": [
       "plyometric",
       "reactive",
+      "mech_landing_impact",
+      "mech_reactive",
       "mech_ballistic",
       "mech_lower_jump",
-      "mech_reactive",
-      "mech_deceleration",
-      "mech_landing_impact"
+      "mech_deceleration"
     ],
     "equipment": "box"
   },
@@ -3596,9 +3659,9 @@
     "tags": [
       "plyometric",
       "agility",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "cones"
   },
@@ -3614,9 +3677,9 @@
     "tags": [
       "plyometric",
       "upper_body",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "medicine_ball"
   },
@@ -3632,9 +3695,9 @@
     "tags": [
       "plyometric",
       "footwork",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -3650,11 +3713,11 @@
     "tags": [
       "plyometric",
       "balance",
-      "mech_trunk_rotation",
-      "mech_lower_jump",
       "mech_trunk_stability",
+      "mech_landing_impact",
       "mech_reactive",
-      "mech_landing_impact"
+      "mech_lower_jump",
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -3671,9 +3734,9 @@
       "plyometric",
       "striking",
       "reactive",
+      "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact",
-      "mech_reactive"
+      "mech_landing_impact"
     ],
     "equipment": "thai_pads"
   },
@@ -3690,8 +3753,8 @@
       "isometric",
       "quad_dominant",
       "triphasic",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3726,8 +3789,8 @@
       "isometric",
       "horizontal_power",
       "triphasic",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3744,8 +3807,8 @@
       "isometric",
       "quad_dominant",
       "core",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3781,8 +3844,8 @@
       "isometric",
       "overhead",
       "shoulders",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
@@ -3800,8 +3863,8 @@
       "isometric",
       "quad_dominant",
       "hip_dominant",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3836,8 +3899,8 @@
       "isometric",
       "horizontal_power",
       "shoulders",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3854,8 +3917,8 @@
       "isometric",
       "quad_dominant",
       "core",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3890,8 +3953,8 @@
       "isometric",
       "horizontal_power",
       "triceps",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -3908,8 +3971,8 @@
       "isometric",
       "quad_dominant",
       "upper_back",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "trap_bar"
   },
@@ -3926,12 +3989,12 @@
       "isometric",
       "posterior_chain",
       "upper_back",
-      "mech_cns_high",
-      "mech_grip_support",
-      "mech_ballistic",
       "mech_trunk_stability",
-      "mech_lower_hip_hinge",
-      "mech_upper_pull"
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "barbell"
   },
@@ -3948,9 +4011,9 @@
       "isometric",
       "horizontal_power",
       "triceps",
-      "mech_grip_support",
+      "mech_upper_press",
       "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_grip_support"
     ],
     "equipment": "barbell"
   },
@@ -3967,7 +4030,11 @@
       "isometric",
       "posterior_chain",
       "grip",
-      "mech_trunk_stability"
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_grip_crush",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "atlas_stone"
   },
@@ -3984,8 +4051,8 @@
       "isometric",
       "horizontal_power",
       "work_capacity",
-      "mech_systemic_fatigue",
       "mech_trunk_stability",
+      "mech_systemic_fatigue",
       "mech_lower_hip_hinge"
     ],
     "equipment": "sled"
@@ -4002,8 +4069,8 @@
     "tags": [
       "isometric",
       "quad_dominant",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -4036,8 +4103,8 @@
     "tags": [
       "isometric",
       "horizontal_power",
-      "mech_trunk_stability",
-      "mech_upper_press"
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -4053,8 +4120,8 @@
     "tags": [
       "isometric",
       "quad_dominant",
-      "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -4088,8 +4155,8 @@
     "tags": [
       "isometric",
       "overhead",
-      "mech_trunk_stability",
       "mech_upper_press",
+      "mech_trunk_stability",
       "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
@@ -4107,9 +4174,9 @@
     "tags": [
       "grip",
       "core",
-      "mech_grip_support",
+      "mech_upper_carry",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_grip_support"
     ],
     "equipment": "kettlebell",
     "pro_tip": "Hold KB opposite side of working leg to maximize oblique engagement - mimics sprawl recovery mechanics",
