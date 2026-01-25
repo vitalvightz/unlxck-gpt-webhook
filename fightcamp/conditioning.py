@@ -14,7 +14,7 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, log_injury_debug
-from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
+from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory, _injury_debug_log_exclude
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
@@ -1081,6 +1081,7 @@ def generate_conditioning_block(flags):
                 break
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
+                _injury_debug_log_exclude("conditioning", drill, decision)
                 if os.getenv("INJURY_DEBUG", "0") == "1":
                     logger.warning(
                         "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
@@ -1149,6 +1150,7 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
+                    _injury_debug_log_exclude("conditioning", drill, decision)
                     if os.getenv("INJURY_DEBUG", "0") == "1":
                         logger.warning(
                             "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
@@ -1190,6 +1192,7 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
+                    _injury_debug_log_exclude("conditioning", drill, decision)
                     if os.getenv("INJURY_DEBUG", "0") == "1":
                         logger.warning(
                             "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
@@ -1231,6 +1234,7 @@ def generate_conditioning_block(flags):
                 continue
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
+                _injury_debug_log_exclude("conditioning", drill, decision)
                 if os.getenv("INJURY_DEBUG", "0") == "1":
                     logger.warning(
                         "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
@@ -1288,6 +1292,7 @@ def generate_conditioning_block(flags):
                 )[:INJURY_GUARD_SHORTLIST]:
                     decision = _guarded_injury_decision(drill)
                     if decision.action == "exclude":
+                        _injury_debug_log_exclude("conditioning", drill, decision)
                         if os.getenv("INJURY_DEBUG", "0") == "1":
                             logger.warning(
                                 "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
