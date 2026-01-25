@@ -185,6 +185,18 @@ def test_shin_injury_allows_low_impact_aerobic():
         assert injury_violation_reasons(drill, ["shin splints"]) == []
 
 
+def test_shin_mild_blocks_jump_rope():
+    rope_drill = {"name": "Jump Rope Intervals", "notes": "", "tags": []}
+    reasons = injury_violation_reasons(rope_drill, ["shin splints (mild)"])
+    assert any("shin_mild" in reason for reason in reasons)
+
+
+def test_shin_mild_blocks_pogo_hops():
+    pogo_drill = {"name": "Pogo Hops", "notes": "", "tags": []}
+    reasons = injury_violation_reasons(pogo_drill, ["shin splints (mild)"])
+    assert any("shin_mild" in reason for reason in reasons)
+
+
 def test_injury_exclusion_map_contains_known_drill():
     exclusions = build_injury_exclusion_map()
     assert "exercise_bank:Barbell Overhead Press" in exclusions["shoulder"]

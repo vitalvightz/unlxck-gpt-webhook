@@ -73,6 +73,7 @@ INFERRED_TAG_RULES = [
     {
         "keywords": ["jump", "plyo", "depth jump", "drop jump", "bounds", "hops", "pogo"],
         "tags": [
+            "impact_rebound_high",
             "high_impact_plyo",
             "landing_stress_high",
             "reactive_rebound_high",
@@ -169,6 +170,21 @@ INJURY_TAG_ALIASES = {
 }
 
 logger = logging.getLogger(__name__)
+
+_SEVERITY_HINTS = {
+    "mild": {"mild", "minor", "light", "low"},
+    "moderate": {"moderate", "medium"},
+    "severe": {"severe", "serious", "high"},
+}
+
+
+def _detect_severity_hint(text: str) -> str | None:
+    normalized = _normalize_text(text)
+    tokens = set(normalized.split())
+    for severity, hints in _SEVERITY_HINTS.items():
+        if tokens.intersection(hints):
+            return severity
+    return None
 
 
 def expand_injury_tags(tags: Iterable[str]) -> set[str]:
@@ -276,6 +292,7 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
     for injury in injuries:
         if not injury:
             continue
+        severity_hint = _detect_severity_hint(injury)
         normalized = _normalize_text(injury)
         direct_key = normalized.replace(" ", "_")
         if direct_key in INJURY_RULES:
@@ -294,7 +311,10 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
                     continue
                 region = _map_text_to_region(candidate)
                 if region:
-                    regions.add(region)
+                    if region == "shin" and severity_hint == "mild":
+                        regions.add("shin_mild")
+                    else:
+                        regions.add(region)
                     matched = True
                     break
             if matched:
@@ -303,7 +323,10 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
             for phrase in non_negated_phrases:
                 region = _map_text_to_region(phrase)
                 if region:
-                    regions.add(region)
+                    if region == "shin" and severity_hint == "mild":
+                        regions.add("shin_mild")
+                    else:
+                        regions.add(region)
                     matched = True
                     break
         if not matched and non_negated_phrases:
