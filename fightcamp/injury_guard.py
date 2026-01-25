@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import os
 from typing import Callable, Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
@@ -29,6 +30,16 @@ INJURY_TYPE_SEVERITY = {
 
 SEVERITY_WEIGHTS = {"mild": 0.7, "moderate": 1.0, "severe": 1.35}
 SEVERITY_RANK = {"mild": 0, "moderate": 1, "severe": 2}
+SEVERITY_ALIASES = {
+    "low": "mild",
+    "mild": "mild",
+    "medium": "moderate",
+    "med": "moderate",
+    "mod": "moderate",
+    "moderate": "moderate",
+    "high": "severe",
+    "severe": "severe",
+}
 RISK_LEVEL_WEIGHTS = {"exclude": 1.0, "flag": 0.65}
 
 REGION_RISK_WEIGHTS = {
@@ -141,9 +152,10 @@ def _injury_context(injuries: Iterable[str | dict]) -> dict[str, str]:
             continue
         if isinstance(injury, dict):
             region = injury.get("region")
-            severity = injury.get("severity", "moderate")
+            severity_raw = injury.get("severity")
+            severity = SEVERITY_ALIASES.get(str(severity_raw).lower(), "mild") if severity_raw else "mild"
             if region:
-                severity = severity if severity in SEVERITY_RANK else "moderate"
+                severity = severity if severity in SEVERITY_RANK else "mild"
                 current = region_severity.get(region)
                 if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
                     region_severity[region] = severity
@@ -393,6 +405,11 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         action = "allow"
 
     mods = MODS_BY_REGION.get(region, []) if action == "modify" else []
+    if action == "exclude" and os.environ.get("INJURY_DEBUG", "0") == "1":
+        print(f"[INJURY_DEBUG] EXCLUDE item={exercise.get('name')}")
+        print(f"[INJURY_DEBUG] injuries_list={injuries_list!r}")
+        print(f"[INJURY_DEBUG] details={details!r}")
+        print(f"[INJURY_DEBUG] tags={normalize_tags(exercise.get('tags', []))!r}")
     return Decision(
         action=action,
         risk_score=round(max_risk, 3),
