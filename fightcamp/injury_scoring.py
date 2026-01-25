@@ -11,17 +11,19 @@ from .injury_synonyms import INJURY_SYNONYM_MAP, LOCATION_MAP
 # Only these injury_type keys exist in your rehab protocol database
 CANONICAL_TYPES: List[str] = list(INJURY_SYNONYM_MAP.keys())
 
-# Map medical terms to (canonical_type, flag, is_urgent)
-# - Urgent terms should trigger a clear escalation flag without breaking rehab lookup.
-MEDICAL_MAP: Dict[str, tuple[str, str, bool]] = {
-    "fracture": ("unspecified", "urgent_fracture", True),
-    "dislocation": ("unspecified", "urgent_dislocation", True),
-    "infection": ("unspecified", "urgent_infection", True),
-    "nerve": ("unspecified", "urgent_nerve", True),
-    "hernia": ("unspecified", "urgent_hernia", True),
-    "bursitis": ("tendonitis", "bursitis_variant", False),
-    "shin splints": ("shin splints", "shin_splints_variant", False),
+# Map medical terms to (canonical_type, flag)
+MEDICAL_MAP: Dict[str, tuple[str, str]] = {
+    "fracture": ("unspecified", "urgent_fracture"),
+    "dislocation": ("unspecified", "urgent_dislocation"),
+    "infection": ("unspecified", "urgent_infection"),
+    "nerve": ("unspecified", "urgent_nerve"),
+    "hernia": ("unspecified", "urgent_hernia"),
+    "bursitis": ("tendonitis", "bursitis_variant"),
+    "shin splints": ("shin splints", "shin_splints_variant"),
 }
+
+# Urgent terms should trigger a clear escalation flag without breaking rehab lookup.
+URGENT_TERMS = {"fracture", "dislocation", "infection", "nerve"}
 
 # Optional: lightweight mechanical red-flags (no NegEx here; assume pre-cleaned text)
 RED_FLAG_TERMS: Dict[str, str] = {
@@ -112,12 +114,12 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
     medical_hit = False
 
     # B) Medical terms first (can set canonical type + flags)
-    for term, (canon, flag, urgent) in MEDICAL_MAP.items():
+    for term, (canon, flag) in MEDICAL_MAP.items():
         if safe_phrase_search(term, t_clean):
             medical_hit = True
             injury_type = canon
             flags.append(flag)
-            if urgent:
+            if term in URGENT_TERMS:
                 flags.append("urgent")
 
     # C) Red flags (independent of type)
@@ -125,7 +127,7 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
         if safe_phrase_search(term, t_clean):
             flags.append(flag)
 
-    # D) Canonical type scoring (cap at 1 hit per category; no stacking)
+    # D) Canonical type scoring (cap at 1.5 per category; no stacking)
     # If medical term already matched, we STILL compute scores, but we only override
     # if injury_type is unspecified (prevents "fracture" being replaced by "strain").
     type_scores: Dict[str, float] = {k: 0.0 for k in CANONICAL_TYPES}
@@ -137,7 +139,7 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
         # Match on canonical label OR any synonym (first hit wins for that category)
         for s in [cat] + list(syns or []):
             if safe_phrase_search(s, t_clean):
-                type_scores[cat] = 1.0
+                type_scores[cat] = 1.5
                 break
 
     # If we have no medical type set (or it's still unspecified), use best score

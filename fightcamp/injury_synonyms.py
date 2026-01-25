@@ -595,10 +595,11 @@ if _SPACY_AVAILABLE:
     Token.set_extension("negex", default=False, force=True)
 
     # add Negex for negation detection
-    try:
-        nlp.add_pipe("negex", last=True)
-    except Exception:  # pragma: no cover - Negex might not be registered
-        nlp.add_pipe(Negex(nlp), last=True)
+    if _NEGSPACY_AVAILABLE:
+        try:
+            nlp.add_pipe("negex", last=True)
+        except Exception:  # pragma: no cover - Negex might not be registered
+            nlp.add_pipe(Negex(nlp), last=True)
     # Build phrase matchers for injury and location keywords
     INJURY_MATCHER = PhraseMatcher(nlp.vocab, attr="LOWER")
     INJURY_MATCH_ID_TO_CANONICAL: dict[int, str] = {}
@@ -804,13 +805,15 @@ def split_injury_text(raw_text: str) -> list[str]:
             return []
         text = raw_text.lower()
         text = re.sub(r"[()]", " ", text)
-        for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also ", " + ", "+", "/", "|"]:
+        text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
+        for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
             text = text.replace(sep, ". ")
         return [chunk.strip() for chunk in text.split(".") if chunk.strip()]
     text = raw_text.lower()
     text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
-    for sep in [",", ";", "\n", " - ", " – ", " — ", " and ", " but ", " then ", " also ", " + ", "+", "/", "|"]:
+    text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
+    for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
         text = text.replace(sep, ". ")
     doc = nlp(text)
     return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
