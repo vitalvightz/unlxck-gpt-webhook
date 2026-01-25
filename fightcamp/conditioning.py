@@ -518,10 +518,6 @@ def generate_conditioning_block(flags):
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
-    random_seed = flags.get("random_seed")
-    if random_seed is not None:
-        random.seed(random_seed)
-
     # Normalize technical style(s)
     if isinstance(technical, str):
         tech_styles = [t.strip().lower() for t in technical.split(',') if t.strip()]

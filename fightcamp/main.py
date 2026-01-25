@@ -92,18 +92,16 @@ def _sanitize_phase_text(text: str, labels: list[str]) -> str:
     if heading_pattern:
         text = re.sub(rf"([A-Za-z0-9])(?=({heading_pattern}))", r"\1\n", text)
         text = re.sub(rf"({heading_pattern})(?=\1)", r"\1\n", text)
-    label_pattern = r"[A-Z][A-Za-z0-9 /+&'’-]*:"
-    text = re.sub(rf"(\\S)(?=({label_pattern}))", r"\1\n", text)
-
+    labels_lower = {label.lower() for label in labels}
     lines = []
     last_label = ""
     for line in text.splitlines():
         stripped = line.strip()
         label = stripped.lower()
-        if stripped and label == last_label:
+        if stripped and label in labels_lower and label == last_label:
             continue
         lines.append(line)
-        if stripped:
+        if stripped and label in labels_lower:
             last_label = label
     return "\n".join(lines)
 
@@ -258,7 +256,7 @@ async def generate_plan(data: dict):
     strength_reason_log: dict[str, list] = {}
 
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
-        gpp_flags = {**training_context.to_flags(), "phase": "GPP"}
+        gpp_flags = {**training_context.to_flags(), "phase": "GPP", "random_seed": random_seed}
         gpp_block = generate_strength_block(
             flags=gpp_flags,
             weaknesses=training_context.weaknesses,
@@ -275,6 +273,7 @@ async def generate_plan(data: dict):
             "phase": "SPP",
             "prev_exercises": gpp_ex_names,
             "recent_exercises": list(gpp_movements),
+            "random_seed": random_seed,
         }
         spp_block = generate_strength_block(
             flags=spp_flags,
@@ -294,6 +293,7 @@ async def generate_plan(data: dict):
             "phase": "TAPER",
             "prev_exercises": combined_prev,
             "recent_exercises": combined_recent,
+            "random_seed": random_seed,
         }
         taper_block = generate_strength_block(
             flags=taper_flags,
@@ -540,6 +540,23 @@ async def generate_plan(data: dict):
         if support_notes:
             rehab_sections += ["", support_notes]
 
+    if apply_muay_thai_filters:
+        gpp_mindset = _apply_muay_thai_filters(gpp_mindset, allow_grappling=False)
+        spp_mindset = _apply_muay_thai_filters(spp_mindset, allow_grappling=False)
+        taper_mindset = _apply_muay_thai_filters(taper_mindset, allow_grappling=False)
+        if gpp_block:
+            gpp_block["block"] = _apply_muay_thai_filters(gpp_block["block"], allow_grappling=False)
+        if spp_block:
+            spp_block["block"] = _apply_muay_thai_filters(spp_block["block"], allow_grappling=False)
+        if taper_block:
+            taper_block["block"] = _apply_muay_thai_filters(taper_block["block"], allow_grappling=False)
+        if gpp_cond_block:
+            gpp_cond_block = _apply_muay_thai_filters(gpp_cond_block, allow_grappling=False)
+        if spp_cond_block:
+            spp_cond_block = _apply_muay_thai_filters(spp_cond_block, allow_grappling=False)
+        if taper_cond_block:
+            taper_cond_block = _apply_muay_thai_filters(taper_cond_block, allow_grappling=False)
+
     def _week_str(weeks: int, days: int) -> str:
         """Return a display string for weeks, avoiding zero for short phases."""
         return "~1" if weeks == 0 and days > 0 else str(weeks)
@@ -670,12 +687,6 @@ async def generate_plan(data: dict):
     ]
      
     def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
-        if apply_muay_thai_filters:
-            mindset = _apply_muay_thai_filters(mindset, allow_grappling=False)
-            strength = _apply_muay_thai_filters(strength, allow_grappling=False)
-            cond = _apply_muay_thai_filters(cond, allow_grappling=False)
-            if guardrails:
-                guardrails = _apply_muay_thai_filters(guardrails, allow_grappling=False)
         mindset = _sanitize_phase_text(mindset, sanitize_labels)
         strength = _sanitize_phase_text(strength, sanitize_labels)
         cond = _sanitize_phase_text(cond, sanitize_labels)

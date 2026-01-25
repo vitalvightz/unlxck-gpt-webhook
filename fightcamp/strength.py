@@ -80,6 +80,7 @@ def score_exercise(
     available_equipment,
     required_equipment,
     is_rehab,
+    rng: random.Random | None = None,
 ):
     """Return a weighted score and breakdown for a candidate exercise."""
     exercise_tags = normalize_tags(exercise_tags or [])
@@ -160,7 +161,8 @@ def score_exercise(
         score += rehab_penalty
     reasons["penalties"] = rehab_penalty
 
-    noise = random.uniform(-0.15, 0.15)
+    noise_source = rng if rng else random
+    noise = noise_source.uniform(-0.15, 0.15)
     score += noise
     reasons["randomness"] = round(noise, 4)
     reasons["final_score"] = round(score, 4)
@@ -341,6 +343,8 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
+    seed = flags.get("random_seed")
+    rng = random.Random(seed) if seed is not None else None
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
@@ -433,6 +437,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=ex_equipment,
             is_rehab=method == "rehab",
+            rng=rng,
         )
         if score == -999:
             continue
