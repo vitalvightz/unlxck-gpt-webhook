@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
+
 from fightcamp.injury_scoring import score_injury_phrase
 
 
@@ -20,7 +25,8 @@ def test_score_injury_phrase_handles_shin_splints():
     result = score_injury_phrase("Bilateral shin splints after runs.")
     assert result["side"] == "both"
     assert result["location"] == "shin"
-    assert result["injury_type"] == "shin splints"
+    assert result["injury_type"] == "pain"
+    assert "shin_splints_variant" in result["flags"]
 
 
 def test_score_injury_phrase_records_red_flags():
