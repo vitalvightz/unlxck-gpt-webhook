@@ -16,6 +16,38 @@ DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 #     ]
 # }
 REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text())
+REHAB_LOCATIONS = {entry.get("location") for entry in REHAB_BANK if entry.get("location")}
+REHAB_LOCATION_ALIASES = {
+    "biceps": ["bicep"],
+    "bicep": ["biceps"],
+    "hamstring": ["hamstrings"],
+    "hamstrings": ["hamstring"],
+    "lower back": ["lower_back"],
+    "lower_back": ["lower back"],
+    "upper back": ["upper_back"],
+    "upper_back": ["upper back"],
+}
+
+
+def normalize_rehab_location(location: str | None) -> list[str]:
+    if not location:
+        return ["unspecified"]
+    candidates: list[str] = []
+
+    def _add(value: str | None) -> None:
+        if value and value not in candidates:
+            candidates.append(value)
+
+    _add(location)
+    for alias in REHAB_LOCATION_ALIASES.get(location, []):
+        _add(alias)
+    if "_" in location:
+        _add(location.replace("_", " "))
+    if " " in location:
+        _add(location.replace(" ", "_"))
+
+    filtered = [candidate for candidate in candidates if candidate in REHAB_LOCATIONS]
+    return filtered or candidates
 
 
 def _split_notes_by_phase(notes: str) -> list[tuple[str, str]]:
@@ -37,7 +69,6 @@ INJURY_TYPES = [
     "contusion",
     "swelling",
     "tendonitis",
-    "shin splints",
     "impingement",
     "instability",
     "stiffness",
@@ -56,7 +87,6 @@ INJURY_TYPE_SEVERITY = {
     "sprain": "moderate",
     "strain": "moderate",
     "tendonitis": "moderate",
-    "shin splints": "moderate",
     "impingement": "moderate",
     "hyperextension": "moderate",
     "swelling": "severe",
@@ -374,6 +404,7 @@ def generate_rehab_protocols(
         return [p.strip().upper() for p in progress.split("→") if p.strip()]
 
     for itype, loc in unique_entries:
+        loc_candidates = normalize_rehab_location(loc)
         matches = [
             entry
             for entry in REHAB_BANK
@@ -383,9 +414,8 @@ def generate_rehab_protocols(
                 or itype is None
             )
             and (
-                entry.get("location") == loc
+                entry.get("location") in loc_candidates
                 or entry.get("location") == "unspecified"
-                or loc is None
             )
             and current_phase.upper() in _phases(entry)
         ]
@@ -434,6 +464,7 @@ def generate_rehab_protocols(
 def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
     """Return drills covering GPP, SPP and TAPER for the location/type pair."""
     phases = {"GPP": None, "SPP": None, "TAPER": None}
+    location_candidates = normalize_rehab_location(location)
 
     def apply_entry(entry: dict) -> None:
         progress = entry.get("phase_progression", "")
@@ -449,13 +480,17 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
             phases[phase_list[1]] = drills[1]
 
     for entry in REHAB_BANK:
-        if entry.get("location") == location and entry.get("type") == injury_type:
+        if entry.get("type") != injury_type:
+            continue
+        if entry.get("location") in location_candidates:
             apply_entry(entry)
             if all(phases.values()):
                 break
     if not all(phases.values()):
         for entry in REHAB_BANK:
-            if entry.get("location") == location and entry.get("type") == "unspecified":
+            if entry.get("type") != "unspecified":
+                continue
+            if entry.get("location") in location_candidates:
                 apply_entry(entry)
                 if all(phases.values()):
                     break
@@ -596,27 +631,24 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
             if len(drills) >= limit:
                 return
 
-    candidates = [
-        (itype, loc),
-        ("unspecified", loc),
-        (itype, "unspecified"),
-        ("unspecified", "unspecified"),
-    ]
+    loc_candidates = normalize_rehab_location(loc)
+    type_candidates = [itype, "unspecified"]
     seen_keys = set()
-    for c_type, c_loc in candidates:
-        if (c_type, c_loc) in seen_keys:
-            continue
-        seen_keys.add((c_type, c_loc))
-        for entry in REHAB_BANK:
-            if entry.get("type") != c_type:
+    for c_type in type_candidates:
+        for c_loc in loc_candidates + ["unspecified"]:
+            if (c_type, c_loc) in seen_keys:
                 continue
-            if c_loc is not None and entry.get("location") != c_loc:
-                continue
-            if phase not in _phases(entry):
-                continue
-            _append_drills(entry)
-            if len(drills) >= limit:
-                return drills[:limit]
+            seen_keys.add((c_type, c_loc))
+            for entry in REHAB_BANK:
+                if entry.get("type") != c_type:
+                    continue
+                if entry.get("location") != c_loc:
+                    continue
+                if phase not in _phases(entry):
+                    continue
+                _append_drills(entry)
+                if len(drills) >= limit:
+                    return drills[:limit]
     return drills[:limit]
 
 

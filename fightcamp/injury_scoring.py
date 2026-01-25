@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Dict, List
 
-from .injury_synonyms import INJURY_SYNONYM_MAP, LOCATION_MAP
+from .injury_synonyms import INJURY_SYNONYM_MAP, LOCATION_MAP, remove_negated_phrases
 
 # -----------------------------
 # 1) CANONICAL ALIGNMENT
@@ -19,7 +19,7 @@ MEDICAL_MAP: Dict[str, tuple[str, str]] = {
     "nerve": ("unspecified", "urgent_nerve"),
     "hernia": ("unspecified", "urgent_hernia"),
     "bursitis": ("tendonitis", "bursitis_variant"),
-    "shin splints": ("shin splints", "shin_splints_variant"),
+    "shin splints": ("pain", "shin_splints_variant"),
 }
 
 # Urgent terms should trigger a clear escalation flag without breaking rehab lookup.
@@ -104,7 +104,16 @@ def score_injury_phrase(t_clean: str, synonym_map: Dict[str, List[str]] | None =
     Expected `synonym_map` format:
       { canonical_type: ["syn1", "syn2", ...], ... }
     """
+    t_clean = remove_negated_phrases(t_clean or "")
     t_clean = _normalize(t_clean)
+    if not t_clean:
+        return {
+            "injury_type": "unspecified",
+            "location": "unspecified",
+            "side": "unspecified",
+            "flags": [],
+            "raw_text": "",
+        }
 
     # A) Defaults (schema-stable)
     side = _detect_side(t_clean)

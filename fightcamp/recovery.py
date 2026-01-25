@@ -1,4 +1,4 @@
-from .rehab_protocols import REHAB_BANK, INJURY_SUPPORT_NOTES
+from .rehab_protocols import REHAB_BANK, INJURY_SUPPORT_NOTES, normalize_rehab_location
 from .injury_synonyms import (
     parse_injury_phrase,
 )
@@ -30,7 +30,7 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
         if itype:
             injury_types.add(itype)
             if loc:
-                locations.add(loc)
+                locations.update(normalize_rehab_location(loc))
 
     drills = []
 

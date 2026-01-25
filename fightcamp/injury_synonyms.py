@@ -71,7 +71,6 @@ TYPE_PRIORITY = {
     "sprain": 0.90,
     "impingement": 0.85,
     "tendonitis": 0.80,
-    "shin splints": 0.79,
     "strain": 0.78,
     "hyperextension": 0.75,
     "stiffness": 0.70,
@@ -143,6 +142,19 @@ SPINE_HINTS = {
     "upper_back": {"upper back", "upper-back", "thoracic", "t-spine", "mid back", "mid-back"},
     "lower_back": {"lower back", "lower-back", "lumbar", "l-spine", "sciatic", "sciatica", "sacrum"},
 }
+
+NEGATION_CUES = {
+    "no",
+    "not",
+    "never",
+    "without",
+    "deny",
+    "denies",
+    "denied",
+    "neither",
+}
+
+_NEGATION_CUE_PATTERN = re.compile(r"\b(?:no|not|never|without|deny|denies|denied|neither)\b")
 
 
 INJURY_SYNONYM_MAP = {
@@ -218,14 +230,6 @@ INJURY_SYNONYM_MAP = {
         "recurring", "comes and goes", "use pain", "activity pain"
     ],
 
-    # Shin splints - medial tibial stress syndrome
-    "shin splints": [
-        "shin splint",
-        "shin splints",
-        "medial tibial stress syndrome",
-        "mtss",
-    ],
-
     # Pinching - every joint catching phrase
     "impingement": [
         "pinch", "pinching", "click", "clicking", "clunk", "clunking",
@@ -272,7 +276,8 @@ INJURY_SYNONYM_MAP = {
         "acute", "radiating", "radiate", "shooting", "traveling", "moving",
         "deep", "superficial", "surface", "internal", "external", "localized",
         "diffuse", "spread", "spreading", "widespread", "focused", "focal",
-        "point", "specific", "general", "all over", "everywhere", "nowhere"
+        "point", "specific", "general", "all over", "everywhere", "nowhere",
+        "shin splint", "shin splints", "medial tibial stress syndrome", "mtss",
     ],
 
     # Soreness - every recovery phrase
@@ -559,7 +564,7 @@ LOCATION_MAP = {
     "rotator cuff": "shoulder",
     "shoulder blade": "shoulder",
     "scapula": "shoulder",
-    "clavicle": "shoulder",
+    "clavicle": "chest",
     "humerus head": "shoulder",
     "arm ball": "shoulder",
     "tricep": "triceps",
@@ -624,13 +629,52 @@ else:
     LOCATION_MATCHER = None
     LOC_MATCH_ID_TO_CANONICAL = {}
 
+_NEGATION_TARGETS = sorted(
+    {
+        term.strip()
+        for term in (
+            list(INJURY_SYNONYM_MAP.keys())
+            + [syn for syns in INJURY_SYNONYM_MAP.values() for syn in syns]
+            + list(LOCATION_MAP.keys())
+            + ["injury", "injured", "issue", "issues", "problem", "problems"]
+        )
+        if term and term.strip()
+    },
+    key=len,
+    reverse=True,
+)
+
+
+def _strip_surrounding_punct(text: str) -> str:
+    if not text:
+        return ""
+    return re.sub(r"^[\W_]+|[\W_]+$", "", text.strip())
+
+
+def _has_negated_injury(text: str) -> bool:
+    lowered = text.lower()
+    if not _NEGATION_CUE_PATTERN.search(lowered):
+        return False
+    for term in _NEGATION_TARGETS:
+        if len(term) < 3:
+            continue
+        pattern = rf"(?:^|\b){re.escape(term)}(?:\b|$)"
+        if re.search(pattern, lowered):
+            return True
+    return False
+
+
 def remove_negated_phrases(text: str) -> str:
     """Strip words marked as negated by Negex from the text."""
-    if not _SPACY_AVAILABLE:
-        return text
-    doc = nlp(text)
-    tokens = [tok.text for tok in doc if not tok._.negex]
-    return " ".join(tokens).strip()
+    if not text:
+        return ""
+    if _SPACY_AVAILABLE and _NEGSPACY_AVAILABLE:
+        doc = nlp(text)
+        tokens = [tok.text for tok in doc if not tok._.negex]
+        return " ".join(tokens).strip()
+    if _has_negated_injury(text):
+        return ""
+    return text.strip()
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     """
@@ -792,7 +836,11 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
 
 def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     """Extract canonical injury type and location from an injury phrase."""
-    doc_text = phrase.lower()
+    cleaned = remove_negated_phrases(phrase.lower())
+    cleaned = _strip_surrounding_punct(cleaned)
+    if not cleaned:
+        return None, None
+    doc_text = cleaned
     injury_type = canonicalize_injury_type(doc_text)
     location = canonicalize_location(doc_text)
     return injury_type, location
@@ -808,7 +856,11 @@ def split_injury_text(raw_text: str) -> list[str]:
         text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
         for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
             text = text.replace(sep, ". ")
-        return [chunk.strip() for chunk in text.split(".") if chunk.strip()]
+        return [
+            cleaned
+            for chunk in text.split(".")
+            if (cleaned := _strip_surrounding_punct(chunk))
+        ]
     text = raw_text.lower()
     text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
@@ -816,4 +868,8 @@ def split_injury_text(raw_text: str) -> list[str]:
     for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
         text = text.replace(sep, ". ")
     doc = nlp(text)
-    return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+    return [
+        cleaned
+        for sent in doc.sents
+        if (cleaned := _strip_surrounding_punct(sent.text))
+    ]

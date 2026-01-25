@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
-from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 
@@ -282,7 +282,12 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
             regions.add(direct_key)
             continue
         matched = False
+        non_negated_phrases: list[str] = []
         for phrase in split_injury_text(injury):
+            cleaned = remove_negated_phrases(phrase)
+            if not cleaned:
+                continue
+            non_negated_phrases.append(phrase)
             injury_type, location = parse_injury_phrase(phrase)
             for candidate in (location, injury_type, phrase):
                 if not candidate:
@@ -294,12 +299,15 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
                     break
             if matched:
                 break
-        if not matched:
-            region = _map_text_to_region(injury)
-            if region:
-                regions.add(region)
-            else:
-                regions.add("unspecified")
+        if not matched and non_negated_phrases:
+            for phrase in non_negated_phrases:
+                region = _map_text_to_region(phrase)
+                if region:
+                    regions.add(region)
+                    matched = True
+                    break
+        if not matched and non_negated_phrases:
+            regions.add("unspecified")
     return regions
 
 
