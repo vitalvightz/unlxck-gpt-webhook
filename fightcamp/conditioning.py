@@ -1371,13 +1371,16 @@ def generate_conditioning_block(flags):
                     idx += 1
                     continue
                 _record_injury_exclusion(drill, decision)
+                _injury_debug_log_exclude("conditioning", drill, decision)
 
                 safe_pool: list[dict] = []
                 for cand in candidates:
                     cand_name = _name(cand)
                     if not cand_name or cand_name in used_names:
                         continue
-                    if _decision(cand).action == "exclude":
+                    cand_decision = _decision(cand)
+                    if cand_decision.action == "exclude":
+                        _injury_debug_log_exclude("conditioning", cand, cand_decision)
                         continue
                     safe_pool.append(cand)
 
