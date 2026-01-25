@@ -4,8 +4,8 @@ import json
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY
 from .injury_synonyms import parse_injury_phrase, split_injury_text
-
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+# Refactored: Import centralized DATA_DIR from config
+from .config import DATA_DIR
 # Rehab bank stores entries with fields like:
 # {
 #     "location": "ankle",

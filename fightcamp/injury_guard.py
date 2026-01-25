@@ -448,6 +448,47 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     )
 
 
+def make_guarded_decision_factory(
+    injuries: Iterable[str | dict] | str | dict,
+    phase: str,
+    fatigue: str,
+    guard_pool: set[str],
+    guard_list: list[dict] | None = None,
+) -> Callable[[dict], Decision]:
+    """
+    Refactored: Create a closure factory for guarded injury decisions.
+    
+    This factory function replaces duplicate implementations of _guarded_injury_decision
+    that were previously defined separately in strength.py and conditioning.py.
+    
+    The returned function ensures candidates are added to the guard pool
+    (and optionally to a guard list) before making an injury decision.
+    
+    Args:
+        injuries: Injury list to check against
+        phase: Training phase (GPP, SPP, TAPER)
+        fatigue: Fatigue level (low, medium, high)
+        guard_pool: Set of exercise/drill names already in guard list (for deduplication)
+        guard_list: Optional list to append new candidates to (used in strength.py)
+    
+    Returns:
+        A function that takes an item dict and returns a Decision,
+        while also ensuring the item is added to the guard pool.
+    """
+    def _guarded_injury_decision(item: dict) -> Decision:
+        # Add item name to guard pool if not already present
+        name = item.get("name")
+        if name and name not in guard_pool:
+            guard_pool.add(name)
+            # Also add to list if one was provided
+            if guard_list is not None:
+                guard_list.append(item)
+        # Make and return the injury decision
+        return injury_decision(item, injuries, phase, fatigue)
+    
+    return _guarded_injury_decision
+
+
 def choose_injury_replacement(
     *,
     excluded_item: dict,

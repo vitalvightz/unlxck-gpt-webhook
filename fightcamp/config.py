@@ -24,3 +24,30 @@ STYLE_CONDITIONING_RATIO = {
 
 STRENGTH_PER_DAY = {"GPP": 7, "SPP": 6, "TAPER": 4}
 CONDITIONING_PER_DAY = {"GPP": 4, "SPP": 3, "TAPER": 3}
+
+# Refactored: Centralized shared constants to reduce duplication across modules
+# Previously defined separately in main.py, strength.py, conditioning.py, etc.
+from pathlib import Path
+
+# Central data directory path - used by multiple modules to access JSON data files
+DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+
+# Maximum number of exercises/drills to consider for injury guard evaluation
+# Used in both strength.py and conditioning.py for consistent shortlist sizing
+INJURY_GUARD_SHORTLIST = 125
+
+
+def trim_to_injury_guard_shortlist(items: list) -> list:
+    """
+    Refactored: Utility to trim a list to the injury guard shortlist size.
+    
+    This replaces duplicate implementations of _trim_drills in conditioning.py
+    and ensures consistent shortlist sizing across modules.
+    
+    Args:
+        items: List of items (exercises, drills, or tuples) to trim
+        
+    Returns:
+        Trimmed list limited to INJURY_GUARD_SHORTLIST items
+    """
+    return items[:INJURY_GUARD_SHORTLIST]

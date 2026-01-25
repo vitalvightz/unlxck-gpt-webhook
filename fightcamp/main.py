@@ -14,8 +14,8 @@ from .build_block import (
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
-
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+# Refactored: Import centralized DATA_DIR from config instead of redefining
+from .config import DATA_DIR
 
 # Load exercise bank
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
