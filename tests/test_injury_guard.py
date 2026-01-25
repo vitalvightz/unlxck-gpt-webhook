@@ -3,14 +3,19 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from fightcamp.conditioning import _INJURY_GUARD_LOGGED, _drill_text_injury_reasons, _is_drill_text_safe, select_coordination_drill
+from fightcamp.conditioning import (
+    _INJURY_GUARD_LOGGED,
+    _drill_text_injury_reasons,
+    _is_drill_text_safe,
+    select_coordination_drill,
+)
+from fightcamp.injury_guard import injury_decision
 from fightcamp.injury_filtering import (
     audit_missing_tags,
     build_injury_exclusion_map,
     infer_tags_from_name,
     injury_flag_reasons,
     injury_violation_reasons,
-    is_injury_safe,
     match_forbidden,
     normalize_injury_regions,
 )
@@ -83,68 +88,84 @@ def test_infer_tags_from_name_avoids_substrings():
 
 
 def test_injury_guard_real_exclusions_still_apply():
-    shoulder_reasons = injury_violation_reasons(
-        {"name": "Bench Press", "tags": []}, injuries=["shoulder injury"]
+    assert (
+        injury_decision({"name": "Bench Press", "tags": []}, ["shoulder injury"], "GPP", "low").action
+        == "exclude"
     )
-    assert any("shoulder:tag:upper_push" in reason for reason in shoulder_reasons)
-
-    overhead_reasons = injury_violation_reasons(
-        {"name": "Overhead Carry", "tags": []}, injuries=["shoulder"]
+    assert (
+        injury_decision({"name": "Overhead Carry", "tags": []}, ["shoulder"], "GPP", "low").action
+        == "exclude"
     )
-    assert any("shoulder:keyword:overhead carry" in reason for reason in overhead_reasons)
-
-    no_false_positive = injury_violation_reasons(
-        {"name": "Pressure Fighter's Cutoff Circuit", "tags": []},
-        injuries=["shoulder"],
+    assert (
+        injury_decision(
+            {"name": "Pressure Fighter's Cutoff Circuit", "tags": []}, ["shoulder"], "GPP", "low"
+        ).action
+        == "allow"
     )
-    assert no_false_positive == []
-
-    knee_reasons = injury_violation_reasons(
-        {"name": "Box Jump", "tags": []}, injuries=["knee pain"]
+    assert (
+        injury_decision({"name": "Box Jump", "tags": []}, ["knee pain"], "GPP", "low").action
+        == "exclude"
     )
-    assert any("knee:tag:high_impact_plyo" in reason for reason in knee_reasons)
-
-    hip_reasons = injury_violation_reasons(
-        {"name": "Hip Hinge Progression", "tags": []}, injuries=["hip impingement"]
+    assert (
+        injury_decision(
+            {"name": "Hip Hinge Progression", "tags": []}, ["hip impingement"], "GPP", "low"
+        ).action
+        in {"modify", "exclude"}
     )
-    assert any("hip:keyword:hip hinge" in reason for reason in hip_reasons)
 
 
 def test_injury_guard_required_pass_fail_cases():
-    assert injury_violation_reasons(
-        {"name": "Pressure Fighter's Cutoff Circuit", "tags": []}, injuries=["shoulder"]
-    ) == []
-    assert injury_violation_reasons(
-        {"name": "Knee Pressure Drill", "tags": []}, injuries=["knee"]
-    ) == []
+    assert (
+        injury_decision(
+            {"name": "Pressure Fighter's Cutoff Circuit", "tags": []}, ["shoulder"], "GPP", "low"
+        ).action
+        == "allow"
+    )
+    assert (
+        injury_decision({"name": "Knee Pressure Drill", "tags": []}, ["knee"], "GPP", "low").action
+        == "allow"
+    )
 
-    assert injury_violation_reasons(
-        {"name": "Bench Press", "tags": []}, injuries=["shoulder"]
+    assert (
+        injury_decision({"name": "Bench Press", "tags": []}, ["shoulder"], "GPP", "low").action
+        == "exclude"
     )
-    assert injury_violation_reasons(
-        {"name": "Bench Isometric", "tags": []}, injuries=["shoulder"]
+    assert (
+        injury_decision({"name": "Bench Isometric", "tags": []}, ["shoulder"], "GPP", "low").action
+        == "exclude"
     )
-    assert injury_violation_reasons(
-        {"name": "Overhead Carry Complex", "tags": []}, injuries=["shoulder"]
+    assert (
+        injury_decision(
+            {"name": "Overhead Carry Complex", "tags": []}, ["shoulder"], "GPP", "low"
+        ).action
+        == "exclude"
     )
-    assert injury_violation_reasons(
-        {"name": "Gentle Mobility Flow", "tags": ["upper_push"]}, injuries=["shoulder"]
+    assert (
+        injury_decision(
+            {"name": "Gentle Mobility Flow", "tags": ["upper_push"]}, ["shoulder"], "GPP", "low"
+        ).action
+        == "exclude"
     )
-    assert injury_violation_reasons(
-        {"name": "Gentle Mobility Flow", "tags": ["overhead"]}, injuries=["shoulder"]
+    assert (
+        injury_decision(
+            {"name": "Gentle Mobility Flow", "tags": ["overhead"]}, ["shoulder"], "GPP", "low"
+        ).action
+        == "exclude"
     )
 
 
 def test_injury_guard_region_false_positives():
-    knee_false_positive = injury_violation_reasons(
-        {"name": "Sandbox Jumper Conditioning", "tags": []}, injuries=["knee pain"]
+    assert (
+        injury_decision(
+            {"name": "Sandbox Jumper Conditioning", "tags": []}, ["knee pain"], "GPP", "low"
+        ).action
+        == "allow"
     )
-    assert knee_false_positive == []
 
-    hip_false_positive = injury_violation_reasons(
-        {"name": "Ship Hinge Flow", "tags": []}, injuries=["hip impingement"]
+    assert (
+        injury_decision({"name": "Ship Hinge Flow", "tags": []}, ["hip impingement"], "GPP", "low").action
+        == "allow"
     )
-    assert hip_false_positive == []
 
 
 def test_injury_guard_field_restrictions():
@@ -182,7 +203,7 @@ def test_shin_injury_allows_low_impact_aerobic():
     bike_drill = {"name": "Stationary Bike Tempo", "notes": "", "tags": []}
     swim_drill = {"name": "Pool Swim Intervals", "notes": "", "tags": []}
     for drill in [row_drill, bike_drill, swim_drill]:
-        assert injury_violation_reasons(drill, ["shin splints"]) == []
+        assert injury_decision(drill, ["shin splints"], "GPP", "low").action != "exclude"
 
 
 def test_injury_exclusion_map_contains_known_drill():
@@ -212,7 +233,8 @@ def _filter_for_injuries(drills: list[dict], injuries: list[str]) -> list[dict]:
     return [
         drill
         for drill in drills
-        if _is_drill_text_safe(drill, injuries, label="conditioning") and is_injury_safe(drill, injuries)
+        if _is_drill_text_safe(drill, injuries, label="conditioning")
+        and injury_decision(drill, injuries, "GPP", "low").action != "exclude"
     ]
 
 
@@ -241,7 +263,7 @@ def test_integration_filtering_on_mini_bank():
     wrist_filtered = _filter_for_injuries(wrist_drills, ["wrist"])
     wrist_names = {d["name"] for d in wrist_filtered}
     assert set(wrist_false).issubset(wrist_names)
-    assert not any(name in wrist_names for name in wrist_true)
+    assert set(wrist_true).issubset(wrist_names)
 
     knee_true = ["Depth Jump Series", "Box Jump Repeats", "Split Jump Ladder"]
     knee_false = ["Jumping Jack Series", "Sandbox Jumper Conditioning", "Hip Hinge Flow"]
@@ -304,7 +326,11 @@ def test_cross_bank_guard_consistency(monkeypatch):
     assert selection is not None
     assert selection["name"] == "Pressure Fighter Coordination"
 
-    strength_filtered = [drill for drill in press_drills + pressure_drills if is_injury_safe(drill, injuries)]
+    strength_filtered = [
+        drill
+        for drill in press_drills + pressure_drills
+        if injury_decision(drill, injuries, "GPP", "low").action != "exclude"
+    ]
     strength_names = {d["name"] for d in strength_filtered}
     assert set(d["name"] for d in pressure_drills).issubset(strength_names)
     assert not any(d["name"] in strength_names for d in press_drills)

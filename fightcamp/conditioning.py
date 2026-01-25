@@ -4,7 +4,6 @@ import json
 import logging
 import os
 from pathlib import Path
-import random
 import re
 from typing import Callable, Iterable
 from .training_context import (
@@ -13,7 +12,8 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
-from .injury_filtering import injury_match_details, is_injury_safe, log_injury_debug
+from .injury_filtering import injury_match_details, log_injury_debug
+from .injury_guard import Decision, choose_injury_replacement, injury_decision
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
@@ -193,35 +193,27 @@ def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
     return injury_match_details(drill, injuries, fields=("name", "notes"))
 
 
-def _is_drill_text_safe(drill: dict, injuries: list[str], *, label: str) -> bool:
-    reasons = _drill_text_injury_reasons(drill, injuries)
-    if not reasons:
+def _is_drill_text_safe(
+    drill: dict,
+    injuries: list[str],
+    *,
+    label: str,
+    phase: str = "GPP",
+    fatigue: str = "moderate",
+) -> bool:
+    decision = injury_decision(drill, injuries, phase, fatigue)
+    if decision.action != "exclude":
         return True
-    for reason in reasons:
-        region = reason["region"]
-        fields = ", ".join(reason["fields"])
-        patterns = ", ".join(reason["patterns"])
-        tags = ", ".join(reason["tags"])
-        log_key = (
-            label,
-            drill.get("name"),
-            region,
-            tuple(reason["fields"]),
-            tuple(reason["patterns"]),
-            tuple(reason["tags"]),
-        )
-        if log_key in _INJURY_GUARD_LOGGED:
-            continue
-        _INJURY_GUARD_LOGGED.add(log_key)
-        logger.warning(
-            "[injury-guard] %s excluded '%s' region=%s fields=[%s] patterns=[%s] tags=[%s]",
-            label,
-            drill.get("name"),
-            region,
-            fields,
-            patterns,
-            tags,
-        )
+    log_key = (label, drill.get("name"), decision.reason.get("region"), decision.action)
+    if log_key in _INJURY_GUARD_LOGGED:
+        return False
+    _INJURY_GUARD_LOGGED.add(log_key)
+    logger.warning(
+        "[injury-guard] %s excluded '%s' decision=%s",
+        label,
+        drill.get("name"),
+        decision,
+    )
     return False
 
 # Relative emphasis of each energy system by training phase
@@ -306,21 +298,24 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
 
     phase = flags.get("phase", "GPP").upper()
     equipment_access = set(normalize_equipment_list(flags.get("equipment", [])))
-    candidates = [
-        d
-        for d in coordination_bank
-        if phase in [p.upper() for p in d.get("phases", [])]
-        and d.get("placement", "conditioning").lower() == "conditioning"
-        and d.get("name") not in existing_names
-        and _is_drill_text_safe(d, injuries, label="conditioning")
-        and is_injury_safe(d, injuries)
-        and (
-            not normalize_equipment_list(d.get("equipment", []))
-            or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access)
-        )
-    ]
+    candidates = []
+    for drill in coordination_bank:
+        if phase not in [p.upper() for p in drill.get("phases", [])]:
+            continue
+        if drill.get("placement", "conditioning").lower() != "conditioning":
+            continue
+        if drill.get("name") in existing_names:
+            continue
+        decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
+        if decision.action == "exclude":
+            continue
+        equipment = normalize_equipment_list(drill.get("equipment", []))
+        if equipment and not set(equipment).issubset(equipment_access):
+            continue
+        candidates.append(drill)
 
-    return random.choice(candidates) if candidates else None
+    candidates = sorted(candidates, key=lambda d: d.get("name") or "")
+    return candidates[0] if candidates else None
 
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
@@ -608,9 +603,8 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
-        if not _is_drill_text_safe(d, injuries, label="conditioning"):
-            continue
-        if not is_injury_safe(d, injuries):
+        decision = injury_decision(d, injuries, phase, fatigue)
+        if decision.action == "exclude":
             continue
         if phase.upper() not in d.get("phases", []):
             continue
@@ -718,9 +712,8 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
-        if not _is_drill_text_safe(d, injuries, label="conditioning"):
-            continue
-        if not is_injury_safe(d, injuries):
+        decision = injury_decision(d, injuries, phase, fatigue)
+        if decision.action == "exclude":
             continue
         tags = normalize_tags(d.get("tags", []))
         details = " ".join(
@@ -799,9 +792,6 @@ def generate_conditioning_block(flags):
             elif fatigue == "moderate":
                 score -= 0.5
                 penalty = -0.5
-        noise = random.uniform(-0.2, 0.2)
-        score += noise
-
         reasons = {
             "weakness_hits": weak_matches,
             "goal_hits": goal_matches,
@@ -810,7 +800,6 @@ def generate_conditioning_block(flags):
             "load_adjustments": 0.75 if system == top_system else 0.0,
             "equipment_boost": equip_bonus,
             "penalties": penalty,
-            "randomness": round(noise, 4),
             "final_score": round(score, 4),
         }
 
@@ -1026,9 +1015,8 @@ def generate_conditioning_block(flags):
                 continue
             if drill.get("placement", "conditioning").lower() != "conditioning":
                 continue
-            if not _is_drill_text_safe(drill, injuries, label="conditioning"):
-                continue
-            if not is_injury_safe(drill, injuries):
+            decision = injury_decision(drill, injuries, phase, fatigue)
+            if decision.action == "exclude":
                 continue
             drill_eq = normalize_equipment_list(drill.get("equipment", []))
             if drill_eq and not set(drill_eq).issubset(equipment_access_set):
@@ -1072,9 +1060,8 @@ def generate_conditioning_block(flags):
                 continue
             if not style_set.intersection(set(normalize_tags(d.get("tags", [])))):
                 continue
-            if not _is_drill_text_safe(d, injuries, label="conditioning"):
-                continue
-            if not is_injury_safe(d, injuries):
+            decision = injury_decision(d, injuries, phase, fatigue)
+            if decision.action == "exclude":
                 continue
             eq = normalize_equipment_list(d.get("equipment", []))
             if eq and not set(eq).issubset(equipment_access_set):
@@ -1085,8 +1072,7 @@ def generate_conditioning_block(flags):
                 d
                 for d in style_taper_bank
                 if d.get("placement", "conditioning").lower() == "conditioning"
-                and _is_drill_text_safe(d, injuries, label="conditioning")
-                and is_injury_safe(d, injuries)
+                and injury_decision(d, injuries, phase, fatigue).action != "exclude"
                 and (
                     not normalize_equipment_list(d.get("equipment", []))
                     or set(normalize_equipment_list(d.get("equipment", []))).issubset(
@@ -1096,7 +1082,8 @@ def generate_conditioning_block(flags):
             ]
 
         if taper_candidates and len(selected_drill_names) < total_drills:
-            drill = random.choice(taper_candidates)
+            taper_candidates = sorted(taper_candidates, key=lambda d: d.get("name") or "")
+            drill = taper_candidates[0]
             if drill.get("name") not in existing_cond_names:
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
@@ -1117,8 +1104,7 @@ def generate_conditioning_block(flags):
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
             and d.get("placement", "conditioning").lower() == "conditioning"
             and "plyometric" in set(normalize_tags(d.get("tags", [])))
-            and _is_drill_text_safe(d, injuries, label="conditioning")
-            and is_injury_safe(d, injuries)
+            and injury_decision(d, injuries, phase, fatigue).action != "exclude"
             and (
                 not normalize_equipment_list(d.get("equipment", []))
                 or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)
@@ -1126,7 +1112,8 @@ def generate_conditioning_block(flags):
         ]
         if taper_plyos and len(selected_drill_names) < total_drills:
             existing_cond_names = {d.get("name") for _, drills in final_drills for d in drills}
-            drill = random.choice(taper_plyos)
+            taper_plyos = sorted(taper_plyos, key=lambda d: d.get("name") or "")
+            drill = taper_plyos[0]
             if drill.get("name") not in existing_cond_names:
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
                 if system is not None:
@@ -1150,14 +1137,13 @@ def generate_conditioning_block(flags):
             if "skill_refinement" in set(normalize_tags(d.get("tags", [])))
             and d.get("placement", "conditioning").lower() == "conditioning"
             and phase.upper() in d.get("phases", [])
-            and _is_drill_text_safe(d, injuries, label="conditioning")
-            and is_injury_safe(d, injuries)
+            and injury_decision(d, injuries, phase, fatigue).action != "exclude"
             and (
                 not normalize_equipment_list(d.get("equipment", []))
                 or set(normalize_equipment_list(d.get("equipment", []))).issubset(equipment_access_set)
             )
         ]
-        random.shuffle(skill_drills)
+        skill_drills = sorted(skill_drills, key=lambda d: d.get("name") or "")
         for drill in skill_drills:
             if drill.get("name") not in existing_names:
                 system = get_system_or_warn(drill, source="skill_refinement")
@@ -1198,8 +1184,7 @@ def generate_conditioning_block(flags):
                 d
                 for d in conditioning_bank
                 if "neck" in set(normalize_tags(d.get("tags", [])))
-                and is_injury_safe(d, injuries)
-                and _is_drill_text_safe(d, injuries, label="conditioning")
+                and injury_decision(d, injuries, phase, fatigue).action != "exclude"
                 and phase.upper() in d.get("phases", [])
                 and (
                     not normalize_equipment_list(d.get("equipment", []))
@@ -1207,7 +1192,8 @@ def generate_conditioning_block(flags):
                 )
             ]
             if neck_candidates and len(selected_drill_names) < total_drills:
-                drill = random.choice(neck_candidates)
+                neck_candidates = sorted(neck_candidates, key=lambda d: d.get("name") or "")
+                drill = neck_candidates[0]
                 system = get_system_or_warn(drill, source="pro_neck")
                 if system is not None:
                     _append_drill(system, drill, {
@@ -1245,24 +1231,15 @@ def generate_conditioning_block(flags):
             return n.strip() if isinstance(n, str) and n.strip() else None
 
         used_names = {n for drills in grouped.values() for d in drills if (n := _name(d))}
-        cache: dict[str, tuple[bool, list]] = {}
+        cache: dict[str, tuple[str, Decision]] = {}
 
-        def _violations(d: dict) -> list:
+        def _decision(d: dict) -> Decision:
             n = _name(d) or f"__unnamed__:{id(d)}"
             if n in cache:
-                ok, reasons = cache[n]
-                return [] if ok else reasons
-
-            reasons = injury_match_details(
-                d,
-                injuries,
-                fields=("name", "notes"),
-                risk_levels=("exclude",),
-            )
-
-            ok = len(reasons) == 0
-            cache[n] = (ok, reasons)
-            return [] if ok else reasons
+                return cache[n][1]
+            decision = injury_decision(d, injuries, phase, fatigue)
+            cache[n] = (n, decision)
+            return decision
 
         for system, drills in list(grouped.items()):
             idx = 0
@@ -1271,9 +1248,9 @@ def generate_conditioning_block(flags):
             while idx < len(drills):
                 drill = drills[idx]
                 drill_name = _name(drill) or "(unnamed)"
-                reasons = _violations(drill)
+                decision = _decision(drill)
 
-                if not reasons:
+                if decision.action != "exclude":
                     idx += 1
                     continue
 
@@ -1282,24 +1259,28 @@ def generate_conditioning_block(flags):
                     cand_name = _name(cand)
                     if not cand_name or cand_name in used_names:
                         continue
-                    if _violations(cand):
+                    if _decision(cand).action == "exclude":
                         continue
                     safe_pool.append(cand)
 
                 replacement = None
                 if safe_pool:
-                    if score_fn is None:
-                        replacement = safe_pool[0]
-                    else:
-                        replacement = max(safe_pool, key=score_fn)
+                    replacement = choose_injury_replacement(
+                        excluded_item=drill,
+                        candidates=safe_pool,
+                        injuries=injuries,
+                        phase=phase,
+                        fatigue=fatigue,
+                        score_fn=score_fn,
+                    )
 
                 if replacement:
                     rep_name = _name(replacement) or "(unnamed)"
                     logger.warning(
-                        "[injury-guard] conditioning replacing '%s' -> '%s' reasons=%s",
+                        "[injury-guard] conditioning replacing '%s' -> '%s' decision=%s",
                         drill_name,
                         rep_name,
-                        reasons,
+                        decision,
                     )
 
                     old_name = _name(drill)
@@ -1326,9 +1307,9 @@ def generate_conditioning_block(flags):
                     idx += 1
                 else:
                     logger.warning(
-                        "[injury-guard] conditioning removing '%s' reasons=%s",
+                        "[injury-guard] conditioning removing '%s' decision=%s",
                         drill_name,
-                        reasons,
+                        decision,
                     )
 
                     old_name = _name(drill)

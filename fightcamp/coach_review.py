@@ -3,36 +3,45 @@ from __future__ import annotations
 from typing import Iterable
 
 from .conditioning import is_banned_drill, normalize_system, render_conditioning_block
-from .injury_exclusion_rules import INJURY_RULES
-from .injury_filtering import ensure_tags, match_forbidden
+from .injury_guard import choose_injury_replacement, injury_decision
 from .rehab_protocols import build_coach_review_entries
 from .strength import format_strength_block, is_banned_exercise
 from .training_context import normalize_equipment_list
 
 
-def _region_violation(item: dict, region_rules: dict[str, dict], fields: Iterable[str]) -> str | None:
-    tags = {t.lower() for t in ensure_tags(item)}
-    text = " ".join(str(item.get(field, "") or "") for field in fields)
-    for region_key, rules in region_rules.items():
-        ban_keywords = rules.get("exclude_keywords", rules.get("ban_keywords", []))
-        ban_tags = {t.lower() for t in rules.get("exclude_tags", rules.get("ban_tags", []))}
-        if tags & ban_tags:
-            return region_key
-        if match_forbidden(text, ban_keywords):
-            return region_key
-    return None
+def _decision_for_item(
+    item: dict,
+    injuries: list[str],
+    *,
+    phase: str,
+    fatigue: str,
+    extra_fields: Iterable[str] | None = None,
+) -> tuple[str | None, dict]:
+    if extra_fields:
+        notes = " ".join(str(item.get(field, "") or "") for field in extra_fields)
+        combined = {**item, "notes": f"{item.get('notes', '')} {notes}".strip()}
+    else:
+        combined = item
+    decision = injury_decision(combined, injuries, phase, fatigue)
+    region = None
+    if isinstance(decision.reason, dict):
+        region = decision.reason.get("region")
+    return region, decision
 
 
 def _safe_strength_candidate(
     *,
     used_names: set[str],
-    region_rules: dict[str, dict],
     exercise_bank: list[dict],
     phase: str,
+    fatigue: str,
+    injuries: list[str],
     equipment_access: list[str],
     fight_format: str,
+    excluded_item: dict,
 ) -> dict | None:
     eq_set = set(normalize_equipment_list(equipment_access))
+    candidates: list[dict] = []
     for cand in exercise_bank:
         name = cand.get("name")
         if not name or name in used_names:
@@ -51,25 +60,42 @@ def _safe_strength_candidate(
         )
         if is_banned_exercise(name, cand.get("tags", []), fight_format, details):
             continue
-        if _region_violation(cand, region_rules, ("name", "notes", "method", "movement")):
+        _, decision = _decision_for_item(
+            cand,
+            injuries,
+            phase=phase,
+            fatigue=fatigue,
+            extra_fields=("method", "movement"),
+        )
+        if decision.action == "exclude":
             continue
-        return cand
-    return None
+        candidates.append(cand)
+    return choose_injury_replacement(
+        excluded_item=excluded_item,
+        candidates=candidates,
+        injuries=injuries,
+        phase=phase,
+        fatigue=fatigue,
+        score_fn=None,
+    )
 
 
 def _safe_conditioning_candidate(
     *,
     used_names: set[str],
-    region_rules: dict[str, dict],
     candidates: list[dict],
     phase: str,
+    fatigue: str,
+    injuries: list[str],
     equipment_access: list[str],
     fight_format: str,
     tactical_styles: list[str],
     technical_styles: list[str],
     system: str,
+    excluded_item: dict,
 ) -> dict | None:
     eq_set = set(normalize_equipment_list(equipment_access))
+    pool: list[dict] = []
     for cand in candidates:
         name = cand.get("name")
         if not name or name in used_names:
@@ -93,10 +119,24 @@ def _safe_conditioning_candidate(
         )
         if is_banned_drill(name, tags, fight_format, details, tactical_styles, technical_styles):
             continue
-        if _region_violation(cand, region_rules, ("name", "notes", "purpose", "description", "modality")):
+        _, decision = _decision_for_item(
+            cand,
+            injuries,
+            phase=phase,
+            fatigue=fatigue,
+            extra_fields=("purpose", "description", "modality"),
+        )
+        if decision.action == "exclude":
             continue
-        return cand
-    return None
+        pool.append(cand)
+    return choose_injury_replacement(
+        excluded_item=excluded_item,
+        candidates=pool,
+        injuries=injuries,
+        phase=phase,
+        fatigue=fatigue,
+        score_fn=None,
+    )
 
 
 def _build_conditioning_pool(banks: Iterable[list[dict]]) -> list[dict]:
@@ -152,10 +192,6 @@ def run_coach_review(
     if not entries:
         return "", strength_blocks, conditioning_blocks, []
 
-    region_rules = {
-        entry["region_key"]: INJURY_RULES.get(entry["region_key"], {})
-        for entry in entries
-    }
     region_labels = {entry["region_key"]: entry.get("label", "Injury safety") for entry in entries}
     substitutions: list[dict] = []
 
@@ -163,6 +199,8 @@ def run_coach_review(
     fight_format = training_context.get("fight_format", "mma")
     tactical_styles = training_context.get("style_tactical", [])
     technical_styles = training_context.get("style_technical", [])
+    fatigue = training_context.get("fatigue", "low")
+    injuries = training_context.get("injuries", [])
 
     updated_strength: dict[str, dict | None] = {}
     for phase_key, block in strength_blocks.items():
@@ -172,19 +210,25 @@ def run_coach_review(
         used_names = {ex.get("name") for ex in block.get("exercises", []) if ex.get("name")}
         updated_exercises: list[dict] = []
         for ex in block.get("exercises", []):
-            region_key = _region_violation(
-                ex, region_rules, ("name", "notes", "method", "movement")
+            region_key, decision = _decision_for_item(
+                ex,
+                injuries,
+                phase=phase_key,
+                fatigue=fatigue,
+                extra_fields=("method", "movement"),
             )
-            if not region_key:
+            if decision.action != "exclude":
                 updated_exercises.append(ex)
                 continue
             replacement = _safe_strength_candidate(
                 used_names=used_names,
-                region_rules=region_rules,
                 exercise_bank=exercise_bank,
                 phase=phase_key,
+                fatigue=fatigue,
+                injuries=injuries,
                 equipment_access=equipment_access,
                 fight_format=fight_format,
+                excluded_item=ex,
             )
             if replacement:
                 used_names.add(replacement.get("name"))
@@ -233,24 +277,28 @@ def run_coach_review(
             idx = 0
             while idx < len(drills):
                 drill = drills[idx]
-                region_key = _region_violation(
+                region_key, decision = _decision_for_item(
                     drill,
-                    region_rules,
-                    ("name", "notes", "purpose", "description", "modality"),
+                    injuries,
+                    phase=phase_key,
+                    fatigue=fatigue,
+                    extra_fields=("purpose", "description", "modality"),
                 )
-                if not region_key:
+                if decision.action != "exclude":
                     idx += 1
                     continue
                 replacement = _safe_conditioning_candidate(
                     used_names=used_names,
-                    region_rules=region_rules,
                     candidates=candidate_pool,
                     phase=phase_key,
+                    fatigue=fatigue,
+                    injuries=injuries,
                     equipment_access=equipment_access,
                     fight_format=fight_format,
                     tactical_styles=tactical_styles,
                     technical_styles=technical_styles,
                     system=system,
+                    excluded_item=drill,
                 )
                 if replacement:
                     used_names.add(replacement.get("name"))
