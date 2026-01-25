@@ -282,6 +282,10 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         Decision object with action, risk_score, matched_tags, mods, and reason
     """
     injuries_list = _normalize_injury_list(injuries)
+    # Normalize missing severity to "moderate"
+    for inj in injuries_list:
+        if isinstance(inj, dict) and not inj.get("severity"):
+            inj["severity"] = "moderate"
     if not injuries_list:
         return Decision(
             action="allow",
