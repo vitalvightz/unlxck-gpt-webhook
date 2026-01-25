@@ -15,7 +15,10 @@
     "tags": [
       "explosive",
       "posterior_chain",
-      "low_impact"
+      "low_impact",
+      "mech_cns_high",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Good for posterior-chain drive without joint pounding (max effort)",
     "equipment_note": "Requires: Assault Bike"
@@ -35,7 +38,10 @@
     "tags": [
       "aerobic",
       "conditioning",
-      "core"
+      "core",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Great for building base without CNS load",
     "equipment_note": "Requires: Sled"
@@ -53,7 +59,11 @@
     "tags": [
       "glycolytic",
       "shoulders",
-      "reactive"
+      "reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "Simulates fight pacing under fatigue"
   },
@@ -72,7 +82,9 @@
     "tags": [
       "coordination",
       "cns_freshness",
-      "sharpness"
+      "sharpness",
+      "mech_cns_high",
+      "mech_reactive"
     ],
     "notes": "Pre-fight CNS sharpening"
   },
@@ -90,7 +102,8 @@
     "tags": [
       "aerobic",
       "low_impact",
-      "recovery"
+      "recovery",
+      "mech_systemic_fatigue"
     ],
     "notes": "Low load; good for mental reset and recovery flush (low (zone 2))"
   },
@@ -107,7 +120,10 @@
     "tags": [
       "grip",
       "core",
-      "conditioning"
+      "conditioning",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Grip-taxing & skill-based fatigue drill"
   },
@@ -126,7 +142,10 @@
     "tags": [
       "posterior_chain",
       "explosive",
-      "low_impact"
+      "low_impact",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_cns_high"
     ],
     "notes": "Safe CNS explosive work when sprinting is contraindicated",
     "equipment_note": "Requires: Sled"
@@ -145,7 +164,9 @@
     "tags": [
       "coordination",
       "light_impact",
-      "aerobic"
+      "aerobic",
+      "mech_reactive_rebound",
+      "mech_landing_impact"
     ],
     "notes": "Low barrier to entry; rhythm & footwork focused"
   },
@@ -162,7 +183,10 @@
     "tags": [
       "posterior_chain",
       "conditioning",
-      "intensity"
+      "intensity",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
     "notes": "High intensity, not ideal with hamstring injuries (hard)"
   },
@@ -180,7 +204,10 @@
     "tags": [
       "reactive",
       "shoulders",
-      "conditioning"
+      "conditioning",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead"
     ],
     "notes": "Fight-specific movement without CNS drag"
   },
@@ -193,7 +220,10 @@
     "system": "aerobic",
     "duration": "45-60min zone 2",
     "tags": [
-      "low_cns"
+      "low_cns",
+      "mech_systemic_fatigue",
+      "mech_upper_carry",
+      "mech_trunk_stability"
     ],
     "notes": "After lower body strength days only",
     "intensity": "zone 2"
@@ -208,7 +238,8 @@
     "system": "aerobic",
     "duration": "30min continuous",
     "tags": [
-      "zero_impact"
+      "zero_impact",
+      "mech_systemic_fatigue"
     ],
     "notes": "Mandatory for lower body injuries"
   },
@@ -224,7 +255,8 @@
     "system": "aerobic",
     "duration": "40min",
     "tags": [
-      "low_impact"
+      "low_impact",
+      "mech_systemic_fatigue"
     ],
     "notes": "Primary hamstring rehab modality",
     "equipment_note": "Requires: Stationary Bike"
@@ -238,7 +270,10 @@
     "system": "aerobic",
     "duration": "20x50m, 30s rest",
     "tags": [
-      "upper_body"
+      "upper_body",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Active recovery after shoulder strength"
   },
@@ -253,7 +288,9 @@
     "system": "aerobic",
     "duration": "30min tempo",
     "tags": [
-      "quad_dominant"
+      "quad_dominant",
+      "mech_lower_squat",
+      "mech_systemic_fatigue"
     ],
     "notes": "Contraindicated with knee pain",
     "equipment_note": "Requires: Step Mill"
@@ -268,7 +305,9 @@
     "system": "aerobic",
     "duration": "3x10min rounds",
     "tags": [
-      "skill"
+      "skill",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Focus on technique, not intensity"
   },
@@ -283,7 +322,11 @@
     "system": "aerobic",
     "duration": "30min",
     "tags": [
-      "posterior_chain"
+      "posterior_chain",
+      "mech_upper_pull",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Low-impact deadlift alternative",
     "equipment_note": "Requires: Rower"
@@ -297,7 +340,10 @@
     "system": "aerobic",
     "duration": "60min",
     "tags": [
-      "work_capacity"
+      "work_capacity",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_axial_heavy"
     ],
     "notes": "Terrain variation recommended"
   },
@@ -311,7 +357,9 @@
     "system": "aerobic",
     "duration": "15min continuous",
     "tags": [
-      "footwork"
+      "footwork",
+      "mech_reactive_rebound",
+      "mech_landing_impact"
     ],
     "notes": "Focus on rhythm, not speed"
   },
@@ -326,7 +374,10 @@
     "system": "aerobic",
     "duration": "4x100yds",
     "tags": [
-      "posterior_chain"
+      "posterior_chain",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_grip_support"
     ],
     "notes": "25% BW load max",
     "equipment_note": "Requires: Sled"
@@ -343,7 +394,8 @@
     "system": "aerobic",
     "duration": "45min",
     "tags": [
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_systemic_fatigue"
     ],
     "notes": "For acute lower back pain",
     "equipment_note": "Requires: Recumbent Bike"
@@ -359,7 +411,9 @@
     "system": "aerobic",
     "duration": "30min",
     "tags": [
-      "upper_body"
+      "upper_body",
+      "mech_upper_pull",
+      "mech_systemic_fatigue"
     ],
     "notes": "Leg injury alternative",
     "equipment_note": "Requires: Arm Ergometer"
@@ -374,7 +428,8 @@
     "system": "aerobic",
     "duration": "45min",
     "tags": [
-      "mobility"
+      "mobility",
+      "mech_trunk_stability"
     ],
     "notes": "Emphasize hip/shoulder ROM"
   },
@@ -389,7 +444,10 @@
     "system": "aerobic",
     "duration": "5x100yds",
     "tags": [
-      "grip"
+      "grip",
+      "mech_upper_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
     ],
     "notes": "50% max grip duration"
   },
@@ -402,7 +460,9 @@
     "system": "aerobic",
     "duration": "20min",
     "tags": [
-      "quad_dominant"
+      "quad_dominant",
+      "mech_lower_squat",
+      "mech_systemic_fatigue"
     ],
     "notes": "Skip every other step"
   },
@@ -418,7 +478,8 @@
     "system": "aerobic",
     "duration": "30min",
     "tags": [
-      "low_impact"
+      "low_impact",
+      "mech_systemic_fatigue"
     ],
     "notes": "Backward motion for hamstrings",
     "equipment_note": "Requires: Elliptical"
@@ -432,7 +493,9 @@
     "system": "aerobic",
     "duration": "5x3min rounds",
     "tags": [
-      "skill"
+      "skill",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "30% intensity technique work"
   },
@@ -461,7 +524,10 @@
     "system": "aerobic",
     "duration": "5x60yds",
     "tags": [
-      "core"
+      "core",
+      "mech_upper_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
     ],
     "notes": "25% BW load",
     "equipment_note": "Requires: Sandbag"
@@ -476,7 +542,8 @@
     "system": "aerobic",
     "duration": "10min",
     "tags": [
-      "footwork"
+      "footwork",
+      "mech_reactive"
     ],
     "notes": "50% speed, perfect form"
   },
@@ -492,7 +559,11 @@
     "duration": "6x3 reps, 1:8 rest",
     "tags": [
       "explosive",
-      "lower_body"
+      "lower_body",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high"
     ],
     "notes": "POSTERIOR CHAIN WARNING: Only program after upper body days. HAMSTRING ALERT: Disable if tightness >3/10"
   },
@@ -508,7 +579,10 @@
     "duration": "8x5/side, 1:6 rest",
     "tags": [
       "rotational",
-      "core"
+      "core",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "SPINE LOAD RULE: No same week as max deadlifts. TAPER: Reduce to 3/side"
   },
@@ -522,7 +596,11 @@
     "duration": "5x3 reps, 2min rest",
     "tags": [
       "reactive",
-      "plyometric"
+      "plyometric",
+      "mech_landing_impact",
+      "mech_reactive_rebound",
+      "mech_acceleration",
+      "mech_cns_high"
     ],
     "notes": "CNS LOAD: Requires 48h recovery after. BOX HEIGHT: 12-18\" based on experience"
   },
@@ -536,7 +614,11 @@
     "duration": "6x5 reps + 10m sprint, 1:6 rest",
     "tags": [
       "upper_body",
-      "contrast_pairing"
+      "contrast_pairing",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_acceleration",
+      "mech_cns_high"
     ],
     "notes": "BENCH PRESS PAIRING: Ideal 48h post heavy bench. SHOULDER INJURY: Replace with med ball throws"
   },
@@ -552,7 +634,11 @@
     "duration": "8x15yds, 1:6 rest",
     "tags": [
       "posterior_chain",
-      "low_impact"
+      "low_impact",
+      "mech_acceleration",
+      "mech_max_velocity",
+      "mech_lower_hip_hinge",
+      "mech_cns_high"
     ],
     "notes": "DEADLIFT RECOVERY: Safe 48h post pulls at <30% intensity. HAMSTRING: Preferred over hill sprints",
     "equipment_note": "Requires: Sled"
@@ -567,7 +653,11 @@
     "duration": "6x3 reps, 90s rest",
     "tags": [
       "explosive",
-      "quad_dominant"
+      "quad_dominant",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "KNEE RULE: Depth must match competition squat. FATIGUE: Disable if vertical jump drops >10%"
   },
@@ -583,7 +673,11 @@
     "duration": "8x8 reps, 1:5 rest",
     "tags": [
       "posterior_chain",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_grip_support",
+      "mech_cns_high"
     ],
     "notes": "DEADLIFT SUB: Use when axial loading contraindicated. WEIGHT: 24-32kg for athletes"
   },
@@ -597,7 +691,11 @@
     "duration": "4x5/side, 2min rest",
     "tags": [
       "unilateral",
-      "elastic"
+      "elastic",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact",
+      "mech_cns_high"
     ],
     "notes": "ANKLE STABILITY: Not for acute sprains. SURFACE: Grass preferred"
   },
@@ -613,7 +711,11 @@
     "duration": "10x3 reps, 45s rest",
     "tags": [
       "upper_body",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "BENCH PRESS SYNERGY: Program 24h post volume bench. BALL WEIGHT: 4-6kg"
   },
@@ -627,7 +729,11 @@
     "duration": "5x5 reps, 2min rest",
     "tags": [
       "reactive",
-      "plyometric"
+      "plyometric",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive_rebound",
+      "mech_cns_high"
     ],
     "notes": "HEIGHT: 20-24\". CONTRAINDICATED with hip impingement"
   },
@@ -643,7 +749,10 @@
     "duration": "8x10m, 1:8 rest",
     "tags": [
       "acceleration",
-      "low_volume"
+      "low_volume",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_cns_high"
     ],
     "notes": "HAMSTRING PROTECTION: Lighter band if posterior tightness"
   },
@@ -657,7 +766,11 @@
     "duration": "6x3 reps, 2min rest",
     "tags": [
       "eccentric",
-      "reactive"
+      "reactive",
+      "mech_landing_impact",
+      "mech_reactive_rebound",
+      "mech_lower_jump",
+      "mech_cns_high"
     ],
     "notes": "BOX HEIGHT: 50% max vertical jump. CNS LOAD: Max 2x/week"
   },
@@ -673,7 +786,10 @@
     "duration": "6x20yds, 1:6 rest",
     "tags": [
       "posterior_chain",
-      "concentric"
+      "concentric",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "LOAD: 25% BW. DEADLIFT RECOVERY: Safe 48h post max effort",
     "equipment_note": "Requires: Sled"
@@ -688,7 +804,11 @@
     "duration": "4x5/side, 90s rest",
     "tags": [
       "unilateral",
-      "balance"
+      "balance",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "KNEE RULE: Must pass single-leg squat test first"
   },
@@ -704,7 +824,11 @@
     "duration": "8x3 reps, 90s rest",
     "tags": [
       "triple_extension",
-      "overhead"
+      "overhead",
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_lower_squat",
+      "mech_cns_high"
     ],
     "notes": "TARGET: 10-12ft. SHOULDER CAUTION: Reduce volume if impingement"
   },
@@ -718,7 +842,11 @@
     "duration": "6x3 reps, 2min rest",
     "tags": [
       "horizontal_power",
-      "eccentric"
+      "eccentric",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "LANDING RULE: Must demonstrate proper mechanics first"
   },
@@ -732,7 +860,12 @@
     "duration": "5x5/side, 90s rest",
     "tags": [
       "lunge_pattern",
-      "elastic"
+      "elastic",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "KNEE ALIGNMENT: Monitor valgus. DEPTH: Match fighting stance"
   },
@@ -748,7 +881,11 @@
     "duration": "8x3/side, 1min rest",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_cns_high"
     ],
     "notes": "WEIGHT: 6-8kg. SPINE RULE: No flexion under load"
   },
@@ -762,7 +899,11 @@
     "duration": "4x8 reps, 2min rest",
     "tags": [
       "reactive",
-      "elastic"
+      "elastic",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive_rebound",
+      "mech_cns_high"
     ],
     "notes": "HEIGHT: 12-16\". CONTRAINDICATED with hip replacements"
   },
@@ -778,7 +919,12 @@
     "duration": "5x4/side, 90s rest",
     "tags": [
       "lateral_power",
-      "adductors"
+      "adductors",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "GROIN STRAIN WARNING: Reduce ROM if tender"
   },
@@ -792,7 +938,11 @@
     "duration": "10x1min (knee every 15s), 30s rest",
     "tags": [
       "clinch",
-      "muay_thai"
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "HIP FLEXOR WARNING: Monitor fatigue. ALTERNATE weekly with sprawl drills"
   },
@@ -806,7 +956,11 @@
     "duration": "5x30s max reps, 90s rest",
     "tags": [
       "wrestler",
-      "eccentric"
+      "eccentric",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "POSTERIOR CHAIN: 72h after deadlifts. GPP: Limit to 3 sets"
   },
@@ -820,7 +974,11 @@
     "duration": "8x3min (power shots every 30s), 1min rest",
     "tags": [
       "striking",
-      "shoulders"
+      "shoulders",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "SHOULDER RECOVERY: Reduce volume if bench press >85% 1RM that week"
   },
@@ -834,7 +992,10 @@
     "duration": "6x4min (escape every 45s), 90s rest",
     "tags": [
       "bjj",
-      "grip"
+      "grip",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "GRIP WARNING: No same day as pull-ups. TAPER: Remove if hands torn"
   },
@@ -848,7 +1009,10 @@
     "duration": "12x30s (strike combo every 5s), 45s rest",
     "tags": [
       "striking",
-      "footwork"
+      "footwork",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_cns_high"
     ],
     "notes": "LOWER BODY: Contraindicated with ankle sprains <2 weeks"
   },
@@ -864,7 +1028,11 @@
     "duration": "5x90s (alternate sides), 2min rest",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_lower_squat",
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "SPINE LOAD: Not same week as heavy cleans. WEIGHT: 25-35% BW",
     "equipment_note": "Requires: Sandbag"
@@ -882,7 +1050,11 @@
     "duration": "4x2min (30s waves/30s slams), 90s rest",
     "tags": [
       "shoulders",
-      "grip"
+      "grip",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_grip_intensive",
+      "mech_systemic_fatigue"
     ],
     "notes": "UPPER BODY: Program before rest day. FATIGUE: Reduce waves if bench press drops >10%",
     "equipment_note": "Requires: Battle Ropes"
@@ -899,7 +1071,11 @@
     "duration": "6x(2 flips + 20yd sprint), 2min rest",
     "tags": [
       "posterior_chain",
-      "explosive"
+      "explosive",
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "DEADLIFT RECOVERY: 72h minimum after max effort. TIRE WEIGHT: 50-70% deadlift 1RM",
     "equipment_note": "Requires: Tire"
@@ -916,7 +1092,12 @@
     "duration": "10min AMRAP (switch every min)",
     "tags": [
       "grip",
-      "overhead"
+      "overhead",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_grip_support",
+      "mech_cns_high"
     ],
     "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. WEIGHT: 16-24kg"
   },
@@ -932,7 +1113,11 @@
     "duration": "8x45s (walk back recovery), 90s rest",
     "tags": [
       "posterior_chain",
-      "low_impact"
+      "low_impact",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
     ],
     "notes": "HAMSTRING FRIENDLY: Preferred over sprints with tightness. LOAD: 30-40% BW",
     "equipment_note": "Requires: Sled"
@@ -947,7 +1132,11 @@
     "duration": "5x(5 sprawls + 5 burpees), 2min rest",
     "tags": [
       "compound",
-      "explosive"
+      "explosive",
+      "mech_lower_hip_hinge",
+      "mech_upper_press",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "CNS LOAD: Max 2x/week. GPP: Reduce to 3 sets"
   },
@@ -964,7 +1153,10 @@
     "duration": "6x15ft climb + 20yd sprint, 3min rest",
     "tags": [
       "grip",
-      "pull"
+      "pull",
+      "mech_upper_pull",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Towel hangs if rope unavailable",
     "equipment_note": "Requires: Climbing Rope"
@@ -981,7 +1173,11 @@
     "duration": "4 rounds: 10 slams, 10 throws, 10 twists",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "SPINE LOAD: Contraindicated with disc issues. WEIGHT: 6-10kg"
   },
@@ -995,7 +1191,11 @@
     "duration": "8x8sec max effort, 2min rest",
     "tags": [
       "posterior_chain",
-      "eccentric"
+      "eccentric",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_deceleration",
+      "mech_cns_high"
     ],
     "notes": "HAMSTRING ALERT: Replace with bike sprints if tight. GRADE: 15-20% incline"
   },
@@ -1009,7 +1209,12 @@
     "duration": "10x10sec max shots, 50sec rest",
     "tags": [
       "quad_dominant",
-      "explosive"
+      "explosive",
+      "mech_acceleration",
+      "mech_lower_lunge",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "KNEE LOAD: Must pass bodyweight squat depth test first"
   },
@@ -1023,7 +1228,10 @@
     "duration": "12x15sec max effort, 45sec rest",
     "tags": [
       "quad_dominant",
-      "plyometric"
+      "plyometric",
+      "mech_acceleration",
+      "mech_lower_squat",
+      "mech_systemic_fatigue"
     ],
     "notes": "ACHILLES WARNING: Not for acute tendonitis. STEP HEIGHT: 6-8 inches"
   },
@@ -1039,7 +1247,12 @@
     "duration": "5x3min (10sec power/20sec pace), 1min rest",
     "tags": [
       "striking",
-      "shoulders"
+      "shoulders",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_cns_high"
     ],
     "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz",
     "equipment_note": "Requires: Heavy Bag"
@@ -1056,7 +1269,11 @@
     "duration": "4x(5/side), 90sec rest",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_lower_squat",
+      "mech_trunk_stability",
+      "mech_shoulder_overhead",
+      "mech_grip_intensive"
     ],
     "notes": "SPINE LOAD: Reduce reps if form breaks. WEIGHT: 20-25% BW",
     "equipment_note": "Requires: Sandbag"
@@ -1073,7 +1290,11 @@
     "duration": "5x1min (alternate sides), 1min rest",
     "tags": [
       "rotational",
-      "grip"
+      "grip",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_grip_intensive"
     ],
     "notes": "ELBOW WARNING: Not for golfers elbow. HAMMER WEIGHT: 6-8lbs",
     "equipment_note": "Requires: Sledgehammer"
@@ -1088,7 +1309,9 @@
     "duration": "8x30sec (slips/rolls/ducks), 30sec rest",
     "tags": [
       "footwork",
-      "reactive"
+      "reactive",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up"
   },
@@ -1102,7 +1325,10 @@
     "duration": "5x90s (strike combo every 15s), 2min rest",
     "tags": [
       "mma",
-      "top_control"
+      "top_control",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "SHOULDER ENDURANCE: Reduce volume if bench press >85% 1RM that week"
   },
@@ -1116,7 +1342,10 @@
     "duration": "8x45s (alternate knees), 75s rest",
     "tags": [
       "muay_thai",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_lower_hip_hinge",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "HIP FLEXOR RECOVERY: Follow with couch stretch series"
   },
@@ -1130,7 +1359,10 @@
     "duration": "6x(5 pull-ups + 20yd sprint), 3min rest",
     "tags": [
       "grip",
-      "pull"
+      "pull",
+      "mech_upper_pull",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "GRIP WARNING: No same week as heavy deadlifts. SUB: Rope climbs if available"
   },
@@ -1144,7 +1376,11 @@
     "duration": "5x10 reps, 90s rest",
     "tags": [
       "explosive",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "CHEST RECOVERY: Minimum 48h after heavy bench"
   },
@@ -1160,7 +1396,11 @@
     "duration": "4x(30yd push + 30yd pull), 3min rest",
     "tags": [
       "posterior_chain",
-      "concentric"
+      "concentric",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight",
     "equipment_note": "Requires: Sled"
@@ -1177,7 +1417,11 @@
     "duration": "5x2min (shot every 10s), 1min rest",
     "tags": [
       "triple_extension",
-      "overhead"
+      "overhead",
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. BALL WEIGHT: 6-8kg"
   },
@@ -1191,7 +1435,10 @@
     "duration": "8x30s max effort, 45s rest",
     "tags": [
       "footwork",
-      "reactive"
+      "reactive",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_cns_high"
     ],
     "notes": "ANKLE STABILITY: Not for acute sprains. PATTERN: Change every 2 sets"
   },
@@ -1207,7 +1454,11 @@
     "duration": "4x60yds, 2min rest",
     "tags": [
       "core",
-      "grip"
+      "grip",
+      "mech_upper_carry",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_axial_heavy"
     ],
     "notes": "SPINE LOAD: Maintain neutral alignment. WEIGHT: 25-35% BW",
     "equipment_note": "Requires: Sandbag"
@@ -1222,7 +1473,11 @@
     "duration": "6x3min (combo every 30s), 1min rest",
     "tags": [
       "boxing",
-      "shoulders"
+      "shoulders",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz"
   },
@@ -1239,7 +1494,11 @@
     "duration": "8x45s (alternate sides), 75s rest",
     "tags": [
       "rotational",
-      "core"
+      "core",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_grip_intensive"
     ],
     "notes": "ELBOW WARNING: Not for golfers elbow. SLEDGEHAMMER: 6-8lbs",
     "equipment_note": "Requires: Tire + Sledgehammer"
@@ -1254,7 +1513,11 @@
     "duration": "10x20s max reps, 40s rest",
     "tags": [
       "wrestler",
-      "eccentric"
+      "eccentric",
+      "mech_lower_squat",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "QUAD LOAD: Must pass bodyweight squat depth test first"
   },
@@ -1268,7 +1531,11 @@
     "duration": "6x8/side, 90s rest",
     "tags": [
       "unilateral",
-      "explosive"
+      "explosive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "BOX HEIGHT: 12-16\". KNEE ALIGNMENT: Monitor valgus"
   },
@@ -1284,7 +1551,10 @@
     "duration": "5x(30s waves + 20yd sprint), 2min rest",
     "tags": [
       "shoulders",
-      "grip"
+      "grip",
+      "mech_shoulder_overhead",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Battle ropes if rope unavailable"
   },
@@ -1302,7 +1572,11 @@
     "duration": "4x(30yd walk + 10 presses), 3min rest",
     "tags": [
       "shoulders",
-      "core"
+      "core",
+      "mech_upper_carry",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_grip_support"
     ],
     "notes": "LOAD: 20-25% BW. SHOULDER STABILITY: Must pass overhead squat test"
   },
@@ -1316,7 +1590,11 @@
     "duration": "8x(5 reps + 15yd sprint), 90s rest",
     "tags": [
       "explosive",
-      "compound"
+      "compound",
+      "mech_lower_hip_hinge",
+      "mech_acceleration",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "POSTERIOR CHAIN: 48h after deadlifts. GPP: Reduce to 5 sets"
   },
@@ -1332,7 +1610,11 @@
     "duration": "10x15s max catches, 45s rest",
     "tags": [
       "reactive",
-      "core"
+      "core",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "BALL WEIGHT: 2-4kg. SPACE: Minimum 10x10ft area"
   },
@@ -1348,7 +1630,12 @@
     "duration": "5x(5/side + 10 swings), 2min rest",
     "tags": [
       "grip",
-      "overhead"
+      "overhead",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_grip_support",
+      "mech_cns_high"
     ],
     "notes": "SHOULDER PREHAB: Must pass Turkish get-up test first. WEIGHT: 16-24kg"
   },
@@ -1364,7 +1651,12 @@
     "duration": "6x(3 cleans + 30yd walk), 3min rest",
     "tags": [
       "compound",
-      "explosive"
+      "explosive",
+      "mech_lower_squat",
+      "mech_ballistic",
+      "mech_upper_carry",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "LOAD: 25-30% BW. SPINE LOAD: Maintain neutral alignment"
   },
@@ -1378,7 +1670,11 @@
     "duration": "6x3min (slip/roll/parry combo), 1min rest",
     "tags": [
       "footwork",
-      "reactive"
+      "reactive",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ],
     "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up. FATIGUE: Stop if form breaks"
   },
@@ -1394,7 +1690,11 @@
     "duration": "5x(30yd drag + 20yd sprint), 3min rest",
     "tags": [
       "posterior_chain",
-      "low_impact"
+      "low_impact",
+      "mech_upper_pull",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight"
   },
@@ -1408,7 +1708,11 @@
     "duration": "5x3min stations",
     "tags": [
       "mma",
-      "transition"
+      "transition",
+      "mech_upper_press",
+      "mech_grip_intensive",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "ORDER: Boxing → Takedown → Ground strikes. REST: 1min between. NO HEAD IMPACT"
   },
@@ -1422,7 +1726,11 @@
     "duration": "6x2min (start each round fatigued)",
     "tags": [
       "boxing",
-      "mental_toughness"
+      "mental_toughness",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "SIMULATION: Begin rounds already at 70% fatigue"
   },
@@ -1436,7 +1744,11 @@
     "duration": "8x90s (live transitions)",
     "tags": [
       "wrestler",
-      "reactive"
+      "reactive",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "PARTNER REQUIRED: Switch attacker/defender every round"
   },
@@ -1450,7 +1762,8 @@
     "duration": "3x5min in heated room",
     "tags": [
       "environmental",
-      "work_capacity"
+      "work_capacity",
+      "mech_systemic_fatigue"
     ],
     "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post"
   },
@@ -1464,7 +1777,10 @@
     "duration": "5x60yds",
     "tags": [
       "grip",
-      "core"
+      "core",
+      "mech_upper_carry",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "SUBSTITUTE: 5-gallon jugs @ 25-40lbs. GRIP: Switch hands every 20yds"
   },
@@ -1480,7 +1796,11 @@
     "duration": "6x40yds",
     "tags": [
       "posterior_chain",
-      "improvised"
+      "improvised",
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_systemic_fatigue"
     ],
     "notes": "TIRE WEIGHT: 50-70% deadlift max. FORM: Maintain neutral spine"
   },
@@ -1494,7 +1814,10 @@
     "duration": "4x50/side",
     "tags": [
       "quad_dominant",
-      "improvised"
+      "improvised",
+      "mech_lower_squat",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "notes": "LOAD: 15-20% BW. STEP HEIGHT: Match competition knee angle"
   },
@@ -1508,7 +1831,8 @@
     "duration": "3x3min (track moving objects)",
     "tags": [
       "visual_processing",
-      "reaction"
+      "reaction",
+      "mech_reactive"
     ],
     "notes": "OBJECTS: Use 2-3 colored balls. SPEED: Progress from slow to fast"
   },
@@ -1541,7 +1865,9 @@
     "intensity": "max",
     "tags": [
       "explosive",
-      "low_impact"
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "mech_cns_high"
     ],
     "notes": "Maintain RPM >90. Ideal post-upper body days (max effort)",
     "equipment_note": "Requires: Assault Bike"
@@ -1560,7 +1886,11 @@
     "intensity": "high",
     "tags": [
       "hip_dominant",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
     ],
     "notes": "24-32kg. Focus on hip snap, not arm pull (RPE 8)"
   },
@@ -1578,7 +1908,11 @@
     "intensity": "max",
     "tags": [
       "low_impact",
-      "concentric"
+      "concentric",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Load: 30% BW. No braking phase (max effort)",
     "equipment_note": "Requires: Sled"
@@ -1597,7 +1931,11 @@
     "intensity": "moderate",
     "tags": [
       "core",
-      "triple_extension"
+      "triple_extension",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "6-10kg. Full extension on release (RPE 7-8)"
   },
@@ -1615,7 +1953,11 @@
     "intensity": "max",
     "tags": [
       "explosive",
-      "unilateral"
+      "unilateral",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Band tension: 20-30% BW. Land softly (max effort)"
   },
@@ -1631,7 +1973,10 @@
     "intensity": "max",
     "tags": [
       "posterior_chain",
-      "eccentric"
+      "eccentric",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
     "notes": "Contraindicated with hamstring tweaks (RPE 9)"
   },
@@ -1649,7 +1994,11 @@
     "intensity": "high",
     "tags": [
       "shoulders",
-      "grip"
+      "grip",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_grip_intensive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Double waves only. No same day as bench (RPE 8)",
     "equipment_note": "Requires: Battle Ropes"
@@ -1666,7 +2015,11 @@
     "intensity": "max",
     "tags": [
       "reactive",
-      "eccentric"
+      "eccentric",
+      "mech_landing_impact",
+      "mech_reactive_rebound",
+      "mech_lower_jump",
+      "mech_cns_high"
     ],
     "notes": "Box height: 12-18\". No rebound (max effort)"
   },
@@ -1684,7 +2037,11 @@
     "intensity": "moderate",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_lower_squat",
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_systemic_fatigue"
     ],
     "notes": "20-25% BW. Alternate sides (RPE 7)",
     "equipment_note": "Requires: Sandbag"
@@ -1704,7 +2061,11 @@
     "intensity": "max",
     "tags": [
       "low_impact",
-      "concentric"
+      "concentric",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Empty sled. No brakes at end (max effort)",
     "equipment_note": "Requires: Prowler"
@@ -1721,7 +2082,12 @@
     "intensity": "high",
     "tags": [
       "compound",
-      "explosive"
+      "explosive",
+      "mech_upper_press",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Minimize ground contact time (RPE 8)"
   },
@@ -1737,7 +2103,12 @@
     "intensity": "max",
     "tags": [
       "upper_body",
-      "contrast"
+      "contrast",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "No same day as heavy pressing (max effort)"
   },
@@ -1753,7 +2124,12 @@
     "intensity": "high",
     "tags": [
       "adductors",
-      "reactive"
+      "reactive",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on stability, not max distance (RPE 8)"
   },
@@ -1771,7 +2147,12 @@
     "intensity": "moderate",
     "tags": [
       "rotational",
-      "grip"
+      "grip",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_grip_intensive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Alternate sides. 6-8lb hammer (RPE 7)",
     "equipment_note": "Requires: Sledgehammer"
@@ -1788,7 +2169,11 @@
     "intensity": "max",
     "tags": [
       "quad_dominant",
-      "explosive"
+      "explosive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Box height: 24-30\". Full reset between reps (max effort)"
   },
@@ -1806,7 +2191,11 @@
     "intensity": "high",
     "tags": [
       "triple_extension",
-      "overhead"
+      "overhead",
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "6-8kg ball. Target 10ft+ (RPE 8)"
   },
@@ -1824,7 +2213,10 @@
     "intensity": "max",
     "tags": [
       "acceleration",
-      "low_volume"
+      "low_volume",
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_cns_high"
     ],
     "notes": "Light band tension only (max effort)"
   },
@@ -1840,7 +2232,12 @@
     "intensity": "high",
     "tags": [
       "quad_dominant",
-      "explosive"
+      "explosive",
+      "mech_lower_jump",
+      "mech_lower_squat",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Depth: Parallel only. No countermovement (RPE 8)"
   },
@@ -1858,7 +2255,11 @@
     "intensity": "max",
     "tags": [
       "posterior_chain",
-      "compound"
+      "compound",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "Tire weight: 50-70% deadlift max (max effort)",
     "equipment_note": "Requires: Tire"
@@ -1875,7 +2276,11 @@
     "intensity": "high",
     "tags": [
       "eccentric",
-      "reactive"
+      "reactive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on hip pop, not max speed (RPE 8)"
   },
@@ -1893,7 +2298,13 @@
     "intensity": "max",
     "tags": [
       "overhead",
-      "grip"
+      "grip",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_grip_support",
+      "mech_anti_rotation",
+      "mech_cns_high"
     ],
     "notes": "16-24kg. No press-out at top (max effort)"
   },
@@ -1909,7 +2320,10 @@
     "intensity": "high",
     "tags": [
       "reactive",
-      "coordination"
+      "coordination",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
     ],
     "notes": "Change pattern every 2 rounds (RPE 8)"
   },
@@ -1927,7 +2341,12 @@
     "intensity": "high",
     "tags": [
       "shoulders",
-      "rotational"
+      "rotational",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "16oz gloves. Power shots only (RPE 8)",
     "equipment_note": "Requires: Heavy Bag"
@@ -1946,7 +2365,13 @@
     "intensity": "max",
     "tags": [
       "compound",
-      "overhead"
+      "overhead",
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_upper_press",
+      "mech_shoulder_overhead",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "20-25% BW. No press-out (max effort)",
     "equipment_note": "Requires: Sandbag"
@@ -1963,7 +2388,11 @@
     "intensity": "high",
     "tags": [
       "unilateral",
-      "explosive"
+      "explosive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Box height: 12-16\". Alternate legs (RPE 8)"
   },
@@ -1982,7 +2411,10 @@
     "intensity": "max",
     "tags": [
       "grip",
-      "pull"
+      "pull",
+      "mech_upper_pull",
+      "mech_grip_intensive",
+      "mech_cns_high"
     ],
     "notes": "Sub towel hangs if no rope (max effort)",
     "equipment_note": "Requires: Climbing Rope"
@@ -1999,7 +2431,12 @@
     "intensity": "max",
     "tags": [
       "shoulders",
-      "reactive"
+      "reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "Max-speed combos. No pacing (RPE 9)"
   },
@@ -2017,7 +2454,12 @@
     "intensity": "max",
     "tags": [
       "posterior_chain",
-      "low_impact"
+      "low_impact",
+      "mech_upper_pull",
+      "mech_acceleration",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_cns_high"
     ],
     "notes": "Load: 30% BW. Walk back = rest (max effort)",
     "equipment_note": "Requires: Sled"
@@ -2036,7 +2478,11 @@
     "intensity": "high",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "6-8kg ball. 30s rest between rounds (RPE 8)"
   },
@@ -2052,7 +2498,11 @@
     "intensity": "max",
     "tags": [
       "horizontal_power",
-      "eccentric"
+      "eccentric",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Stick landings. Full reset between reps (max effort)"
   },
@@ -2068,7 +2518,10 @@
     "intensity": "high",
     "tags": [
       "grip",
-      "reactive"
+      "reactive",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner drills only. No live sparring (RPE 8)"
   },
@@ -2088,7 +2541,10 @@
       "striking",
       "footwork",
       "low_cns",
-      "skill"
+      "skill",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on breathing/technique; no power output (zone 2 (50-60% effort))"
   },
@@ -2109,7 +2565,8 @@
       "aerobic",
       "low_impact",
       "parasympathetic",
-      "recovery"
+      "recovery",
+      "mech_systemic_fatigue"
     ],
     "equipment_note": "Requires: Stationary Bike",
     "notes": ""
@@ -2128,7 +2585,10 @@
       "aerobic",
       "zero_impact",
       "upper_body",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Ideal for shoulder recovery post-sparring"
   },
@@ -2148,7 +2608,9 @@
       "aerobic",
       "low_impact",
       "recovery",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "15% incline, hands behind head to reinforce posture (zone 1-2)"
   },
@@ -2167,7 +2629,11 @@
     "tags": [
       "aerobic",
       "posterior_chain",
-      "low_cns"
+      "low_cns",
+      "mech_upper_pull",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "equipment_note": "Requires: Rower",
     "notes": ""
@@ -2188,7 +2654,9 @@
       "aerobic",
       "footwork",
       "coordination",
-      "skill"
+      "skill",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "No rest; focus on smooth transitions (low-moderate)"
   },
@@ -2208,7 +2676,9 @@
       "aerobic",
       "striking",
       "conditioning",
-      "low_cns"
+      "low_cns",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Emphasize volume over power (30% power)"
   },
@@ -2228,7 +2698,9 @@
       "aerobic",
       "footwork",
       "reactive",
-      "skill"
+      "skill",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Slips, pivots, rolls at conversational pace"
   },
@@ -2246,7 +2718,9 @@
       "aerobic",
       "striking",
       "mma",
-      "recovery"
+      "recovery",
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "notes": "No power shots; pure technique (30% effort)"
   },
@@ -2266,7 +2740,9 @@
       "aerobic",
       "clinch",
       "muay_thai",
-      "low_impact"
+      "low_impact",
+      "mech_grip_support",
+      "mech_trunk_stability"
     ],
     "notes": "Focus on balance/positioning, not strength"
   },
@@ -2286,7 +2762,11 @@
       "aerobic",
       "glycolytic",
       "striking",
-      "work_capacity"
+      "work_capacity",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "Pace like a fight, but lower output (50% effort)"
   },
@@ -2304,7 +2784,9 @@
       "aerobic",
       "striking",
       "shoulders",
-      "skill"
+      "skill",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Focus on crisp technique, not speed/power (light)"
   },
@@ -2325,7 +2807,8 @@
       "aerobic",
       "mobility",
       "recovery",
-      "parasympathetic"
+      "parasympathetic",
+      "mech_trunk_stability"
     ],
     "notes": "Hip/shoulder focus for combat athletes"
   },
@@ -2343,7 +2826,8 @@
       "aerobic",
       "recovery",
       "cognitive",
-      "mental_toughness"
+      "mental_toughness",
+      "mech_upper_press"
     ],
     "notes": "Nasal breathing only; no mouth"
   },
@@ -2363,7 +2847,8 @@
     "tags": [
       "aerobic",
       "zero_impact",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_systemic_fatigue"
     ],
     "notes": "Weight belt optional for buoyancy"
   },
@@ -2383,7 +2868,10 @@
       "aerobic",
       "posterior_chain",
       "low_impact",
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Forward/backward alternating; no spikes in effort",
     "equipment_note": "Requires: Prowler"
@@ -2404,7 +2892,11 @@
       "aerobic",
       "grip",
       "core",
-      "work_capacity"
+      "work_capacity",
+      "mech_upper_carry",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_axial_heavy"
     ],
     "notes": "Grappler-specific grip endurance (light)"
   },
@@ -2424,7 +2916,10 @@
       "aerobic",
       "low_cns",
       "mental_toughness",
-      "environmental"
+      "environmental",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "notes": "Outdoors only; nasal breathing encouraged"
   },
@@ -2442,7 +2937,10 @@
       "aerobic",
       "cognitive",
       "mental_toughness",
-      "striking"
+      "striking",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Exhale fully before rounds; recover between (50% effort)"
   },
@@ -2462,7 +2960,11 @@
       "aerobic",
       "hip_dominant",
       "low_cns",
-      "recovery"
+      "recovery",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on hip snap, not power (light)"
   },
@@ -2481,7 +2983,11 @@
     "tags": [
       "aerobic",
       "posterior_chain",
-      "low_impact"
+      "low_impact",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_systemic_fatigue"
     ],
     "equipment_note": "Requires: Sled",
     "notes": ""
@@ -2502,7 +3008,9 @@
       "aerobic",
       "coordination",
       "cognitive",
-      "recovery"
+      "recovery",
+      "mech_reactive_rebound",
+      "mech_landing_impact"
     ],
     "notes": "Eyes closed for 10-20sec intervals"
   },
@@ -2521,7 +3029,9 @@
       "aerobic",
       "skill",
       "striking",
-      "parasympathetic"
+      "parasympathetic",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Cooldown flow; zero fatigue"
   },
@@ -2541,7 +3051,9 @@
       "aerobic",
       "bjj",
       "recovery",
-      "transition"
+      "transition",
+      "mech_grip_support",
+      "mech_trunk_stability"
     ],
     "notes": "No grinding; pure movement (30% effort)"
   },
@@ -2559,7 +3071,10 @@
       "aerobic",
       "lateral_power",
       "striking",
-      "footwork"
+      "footwork",
+      "mech_lower_lateral",
+      "mech_upper_press",
+      "mech_change_of_direction"
     ],
     "notes": "Emphasize angles, not explosiveness (light)"
   },
@@ -2579,7 +3094,10 @@
       "aerobic",
       "wrestler",
       "transition",
-      "skill"
+      "skill",
+      "mech_lower_hip_hinge",
+      "mech_grip_support",
+      "mech_trunk_stability"
     ],
     "notes": "No resistance; technique only"
   },
@@ -2599,7 +3117,9 @@
       "aerobic",
       "muay_thai",
       "coordination",
-      "light_impact"
+      "light_impact",
+      "mech_reactive_rebound",
+      "mech_landing_impact"
     ],
     "notes": "Alternate foot patterns (e.g., skip-kick)"
   },
@@ -2619,7 +3139,9 @@
       "aerobic",
       "shoulders",
       "striking",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Bands anchored at chest height (40% effort)"
   },
@@ -2637,7 +3159,8 @@
       "aerobic",
       "unilateral",
       "rehab_friendly",
-      "low_impact"
+      "low_impact",
+      "mech_systemic_fatigue"
     ],
     "notes": "Tibialis/calf endurance for kick defense"
   },
@@ -2670,7 +3193,11 @@
     "duration": "6x3 reps, 60s rest",
     "tags": [
       "plyometric",
-      "low_cns"
+      "low_cns",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "BOX HEIGHT: 12–18”. Focus on snap-down and fast reset."
   },
@@ -2684,7 +3211,11 @@
     "duration": "3x10 reps, 30s rest",
     "tags": [
       "plyometric",
-      "elastic"
+      "elastic",
+      "mech_reactive_rebound",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_cns_high"
     ],
     "notes": "Keep ground contact <150ms. Prioritize rhythm and posture."
   },
@@ -2700,7 +3231,11 @@
     "duration": "5x3 reps, 90s rest",
     "tags": [
       "plyometric",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Use light resistance bands. Emphasize speed over height."
   },
@@ -2714,7 +3249,11 @@
     "duration": "4x4 reps, 1min rest",
     "tags": [
       "plyometric",
-      "reactive"
+      "reactive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_cns_high"
     ],
     "notes": "Sharp hinge into immediate mini-hop. Avoid max effort."
   },
@@ -2728,7 +3267,11 @@
     "duration": "4x10s, 30s rest",
     "tags": [
       "plyometric",
-      "coordination"
+      "coordination",
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_cns_high"
     ],
     "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts."
   },
@@ -2744,7 +3287,12 @@
     "duration": "4x3 reps, 90s rest",
     "tags": [
       "plyometric",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_cns_high"
     ],
     "notes": "Partner drops ball → athlete catches + jumps. Use 2–4kg."
   },
@@ -2758,7 +3306,11 @@
     "duration": "4x3 reps, 1min rest",
     "tags": [
       "plyometric",
-      "eccentric"
+      "eccentric",
+      "mech_landing_impact",
+      "mech_reactive_rebound",
+      "mech_lower_jump",
+      "mech_cns_high"
     ],
     "notes": "Height = 6–12”. Cue soft land + quick reset. No rebound."
   },
@@ -2774,7 +3326,11 @@
     "duration": "4x4 reps, 75s rest",
     "tags": [
       "plyometric",
-      "reactive"
+      "reactive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Attach band overhead. Reduces load to maintain sharpness."
   },
@@ -2788,7 +3344,11 @@
     "duration": "5x3 reps, 1min rest",
     "tags": [
       "plyometric",
-      "reactive"
+      "reactive",
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_cns_high"
     ],
     "notes": "Start facing wall, coach gives go-cue. Jump straight up."
   },
@@ -2802,7 +3362,12 @@
     "duration": "4x6/side, 30s rest",
     "tags": [
       "plyometric",
-      "lateral"
+      "lateral",
+      "mech_lower_lateral",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Short-distance side hops. Reset after each rep."
   },
@@ -2816,7 +3381,11 @@
     "duration": "3x4 reps, 90s rest",
     "tags": [
       "plyometric",
-      "core"
+      "core",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Cue: sharp tuck, soft land. No max height intention."
   },
@@ -2832,7 +3401,12 @@
     "duration": "4x3/side, 1min rest",
     "tags": [
       "plyometric",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Use light band tension. Stay upright with fast exchange."
   },
@@ -2848,7 +3422,12 @@
     "duration": "3x4/side, 90s rest",
     "tags": [
       "plyometric",
-      "core"
+      "core",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Toss ball forward during jump. 2kg ball max."
   },
@@ -2862,7 +3441,10 @@
     "duration": "4x10s, 30s rest",
     "tags": [
       "plyometric",
-      "ankle"
+      "ankle",
+      "mech_reactive_rebound",
+      "mech_landing_impact",
+      "mech_cns_high"
     ],
     "notes": "Bounce on midfoot. No knee bend. High frequency bounce."
   },
@@ -2876,7 +3458,12 @@
     "duration": "4x4 reps, 60s rest",
     "tags": [
       "plyometric",
-      "hip_dominant"
+      "hip_dominant",
+      "mech_lower_lunge",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Switch stance in air. Light contact, fast rhythm."
   },
@@ -2892,7 +3479,11 @@
     "duration": "6x3 reps, 45s rest",
     "tags": [
       "plyometric",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Partner gives unpredictable toss cue. Ball: 3–5kg. Emphasize snap."
   },
@@ -2906,7 +3497,12 @@
     "duration": "4x4 reps, 60s rest",
     "tags": [
       "plyometric",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Push explosively, hands leave floor. Submax only. Full rest between sets."
   },
@@ -2922,7 +3518,11 @@
     "duration": "3x5/side, 30s rest",
     "tags": [
       "plyometric",
-      "reactive"
+      "reactive",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed."
   },
@@ -2938,7 +3538,11 @@
     "duration": "6x3 reps, 1min rest",
     "tags": [
       "plyometric",
-      "core"
+      "core",
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Use 2–4kg ball. Minimize effort, maximize intent and speed."
   },
@@ -2954,7 +3558,11 @@
     "duration": "4x5 reps, 45s rest",
     "tags": [
       "plyometric",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Seated on floor, rapid chest-level throws. Partner return or wall."
   },
@@ -2973,7 +3581,8 @@
     "intensity": "moderate",
     "tags": [
       "neck",
-      "eccentric"
+      "eccentric",
+      "mech_trunk_stability"
     ],
     "notes": "Partner applies progressive resistance in all directions to simulate fight-level impacts"
   },
@@ -2993,7 +3602,8 @@
     "intensity": "moderate",
     "tags": [
       "neck",
-      "eccentric"
+      "eccentric",
+      "mech_trunk_stability"
     ],
     "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight"
   }
