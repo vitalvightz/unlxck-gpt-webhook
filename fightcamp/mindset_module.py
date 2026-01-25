@@ -31,4 +31,6 @@ mindset_bank = {
         "gas tank": "Anchor slow nasal breathwork post-cardio, record HR drop time to reinforce progress.",
         "injury fear": "Set weekly exposure targets with graded contact drills and track pain-free sessions.",
         "pressure": "Reframe pressure as privilege via journaling; write 'why I'm prepared' before each session.",
-        "attention": "Use 
+        "attention": "Use ",
+    },
+}
