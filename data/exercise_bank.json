@@ -11,7 +11,10 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "compound"
+      "compound",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "trap_bar"
   },
@@ -27,7 +30,9 @@
     "type": "bilateral",
     "tags": [
       "quad_dominant",
-      "compound"
+      "compound",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "barbell"
   },
@@ -43,7 +48,9 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "balance"
+      "balance",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "equipment": "dumbbells"
   },
@@ -58,7 +65,10 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "hamstring"
+      "hamstring",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "barbell"
   },
@@ -73,7 +83,9 @@
     "type": "bilateral",
     "tags": [
       "quad_dominant",
-      "core"
+      "core",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "barbell"
   },
@@ -88,7 +100,14 @@
     "type": "bilateral",
     "tags": [
       "neural_primer",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_landing_impact"
     ],
     "equipment": "trap_bar"
   },
@@ -104,7 +123,13 @@
     "tags": [
       "neural_primer",
       "explosive",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
     ],
     "equipment": "bands"
   },
@@ -120,7 +145,16 @@
     "tags": [
       "neural_primer",
       "reactive",
-      "speed"
+      "speed",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_landing_impact"
     ],
     "equipment": "box"
   },
@@ -136,7 +170,12 @@
     "tags": [
       "neural_primer",
       "rotational",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_trunk_stability"
     ],
     "equipment": "medicine_ball"
   },
@@ -152,7 +191,12 @@
     "tags": [
       "neural_primer",
       "cluster",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "trap_bar"
   },
@@ -168,7 +212,14 @@
     "tags": [
       "contrast",
       "explosive",
-      "quad_dominant"
+      "quad_dominant",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_landing_impact"
     ],
     "equipment": "barbell,box"
   },
@@ -184,7 +235,12 @@
     "tags": [
       "contrast",
       "rate_of_force",
-      "upper_body"
+      "upper_body",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_landing_impact",
+      "mech_ballistic",
+      "mech_reactive"
     ],
     "equipment": "dumbbells"
   },
@@ -200,7 +256,10 @@
     "tags": [
       "contrast",
       "explosive",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "barbell"
   },
@@ -216,7 +275,9 @@
     "tags": [
       "contrast",
       "shoulders",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_ballistic",
+      "mech_upper_press"
     ],
     "equipment": "landmine,medicine_ball"
   },
@@ -232,7 +293,9 @@
     "tags": [
       "triphasic",
       "eccentric",
-      "unilateral"
+      "unilateral",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "equipment": "dumbbells"
   },
@@ -247,7 +310,10 @@
     "type": "bilateral",
     "tags": [
       "isometric",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "barbell"
   },
@@ -262,7 +328,12 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "triple_extension"
+      "triple_extension",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull"
     ],
     "equipment": "barbell"
   },
@@ -277,7 +348,10 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "equipment": "landmine"
   },
@@ -292,7 +366,15 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "tactical"
+      "tactical",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_lower_hip_hinge",
+      "mech_landing_impact"
     ],
     "equipment": "sandbag"
   },
@@ -323,7 +405,12 @@
     "tags": [
       "neural_primer",
       "anti_rotation",
-      "core"
+      "core",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_trunk_stability"
     ],
     "equipment": "medicine_ball"
   },
@@ -339,7 +426,9 @@
     "tags": [
       "triphasic",
       "eccentric",
-      "grip"
+      "grip",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "pullup_bar"
   },
@@ -355,7 +444,9 @@
     "type": "bilateral",
     "tags": [
       "quad_dominant",
-      "compound"
+      "compound",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "barbell"
   },
@@ -371,7 +462,9 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "balance"
+      "balance",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "equipment": "dumbbells"
   },
@@ -386,7 +479,10 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "hamstring"
+      "hamstring",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "barbell"
   },
@@ -401,7 +497,9 @@
     "type": "bilateral",
     "tags": [
       "quad_dominant",
-      "core"
+      "core",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "barbell"
   },
@@ -416,7 +514,13 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "power"
+      "power",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_landing_impact"
     ],
     "equipment": "trap_bar"
   },
@@ -431,7 +535,14 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "power"
+      "power",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_landing_impact"
     ],
     "equipment": "box"
   },
@@ -448,7 +559,12 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "kettlebell"
   },
@@ -463,7 +579,9 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "power"
+      "power",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "barbell"
   },
@@ -478,7 +596,10 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "conditioning"
+      "conditioning",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "sled"
   },
@@ -495,7 +616,10 @@
     "tags": [
       "posterior_chain",
       "balance",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "kettlebell"
   },
@@ -510,7 +634,9 @@
     "type": "bilateral",
     "tags": [
       "quad_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "kettlebell"
   },
@@ -525,7 +651,9 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "equipment": "box"
   },
@@ -541,7 +669,10 @@
     "type": "unilateral",
     "tags": [
       "posterior_chain",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lateral",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "bands"
   },
@@ -557,7 +688,9 @@
     "tags": [
       "quad_dominant",
       "balance",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "equipment": "trx"
   },
@@ -573,7 +706,9 @@
     "type": "bilateral",
     "tags": [
       "hamstring",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "partner"
   },
@@ -587,7 +722,9 @@
     "movement": "hinge",
     "type": "bilateral",
     "tags": [
-      "posterior_chain"
+      "posterior_chain",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "bench"
   },
@@ -602,7 +739,11 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "mobility"
+      "mobility",
+      "mech_lower_lunge",
+      "mech_lower_lateral",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "bodyweight"
   },
@@ -617,7 +758,13 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "balance"
+      "balance",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_lunge",
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -632,7 +779,9 @@
     "type": "unilateral",
     "tags": [
       "quad_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -647,7 +796,10 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "compound"
+      "compound",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
   },
@@ -663,7 +815,8 @@
     "type": "bilateral",
     "tags": [
       "upper_body",
-      "compound"
+      "compound",
+      "mech_upper_press"
     ],
     "equipment": "weight_vest"
   },
@@ -680,39 +833,64 @@
     "type": "unilateral",
     "tags": [
       "shoulders",
-      "anti_rotation"
-  ],
-  "equipment": "landmine"
+      "anti_rotation",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
+    ],
+    "equipment": "landmine"
   },
   {
     "name": "DB Alternating Incline Press (30-45°)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "horizontal_push",
     "type": "unilateral",
-    "tags": ["upper_body", "compound"],
+    "tags": [
+      "upper_body",
+      "compound",
+      "mech_upper_press"
+    ],
     "equipment": "dumbbells"
   },
   {
     "name": "DB Plyometric Push-Up (Hands on Dumbbells)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "bilateral",
-    "tags": ["upper_body", "compound"],
+    "tags": [
+      "upper_body",
+      "compound",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_landing_impact",
+      "mech_ballistic",
+      "mech_reactive"
+    ],
     "equipment": "dumbbells"
   },
   {
-  "name": "Kneeling Single-Arm Medicine Ball Slam",
-  "category": "upper_body",
-  "phases": ["GPP"],
-  "method": "power",
-  "movement": "horizontal_push",
-  "type": "unilateral",
-  "tags": ["upper_body", "compound"],
-  "equipment": "medicine_ball"
+    "name": "Kneeling Single-Arm Medicine Ball Slam",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "power",
+    "movement": "horizontal_push",
+    "type": "unilateral",
+    "tags": [
+      "upper_body",
+      "compound",
+      "mech_ballistic",
+      "mech_upper_press"
+    ],
+    "equipment": "medicine_ball"
   },
   {
     "name": "Incline DB Press",
@@ -725,7 +903,8 @@
     "type": "bilateral",
     "tags": [
       "upper_body",
-      "shoulders"
+      "shoulders",
+      "mech_upper_press"
     ],
     "equipment": "dumbbells"
   },
@@ -740,7 +919,12 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "upper_body"
+      "upper_body",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_landing_impact",
+      "mech_ballistic",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -755,7 +939,9 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "shoulders"
+      "shoulders",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
   },
@@ -770,7 +956,10 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "core"
+      "core",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
     ],
     "equipment": "barbell"
   },
@@ -785,7 +974,14 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "shoulders"
+      "shoulders",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull",
+      "mech_shoulder_overhead"
     ],
     "equipment": "dumbbells"
   },
@@ -800,7 +996,9 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "shoulders"
+      "shoulders",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
     ],
     "equipment": "bands"
   },
@@ -815,7 +1013,9 @@
     "type": "bilateral",
     "tags": [
       "pull",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "barbell"
   },
@@ -830,7 +1030,9 @@
     "type": "bilateral",
     "tags": [
       "pull",
-      "grip"
+      "grip",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "weight_belt"
   },
@@ -845,7 +1047,9 @@
     "type": "bilateral",
     "tags": [
       "pull",
-      "grip"
+      "grip",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "towel"
   },
@@ -860,7 +1064,9 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "cable"
   },
@@ -875,7 +1081,9 @@
     "type": "bilateral",
     "tags": [
       "pull",
-      "compound"
+      "compound",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "cable"
   },
@@ -890,7 +1098,9 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "barbell"
   },
@@ -906,7 +1116,9 @@
     "type": "bilateral",
     "tags": [
       "pull",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "trx"
   },
@@ -922,7 +1134,9 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "bands"
   },
@@ -937,7 +1151,9 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "pullup_bar"
   },
@@ -952,7 +1168,9 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "bands"
   },
@@ -967,7 +1185,9 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -982,7 +1202,8 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -998,7 +1219,10 @@
     "tags": [
       "core",
       "anti_rotation",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "equipment": "bodyweight"
   },
@@ -1013,7 +1237,9 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
     "equipment": "cable"
   },
@@ -1028,7 +1254,10 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "equipment": "cable"
   },
@@ -1044,7 +1273,9 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_grip_support"
     ],
     "equipment": "pullup_bar"
   },
@@ -1060,7 +1291,8 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -1075,7 +1307,9 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_lower_lateral",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -1091,7 +1325,8 @@
     "tags": [
       "core",
       "anti_rotation",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "cable"
   },
@@ -1105,7 +1340,8 @@
     "movement": "core",
     "type": "bilateral",
     "tags": [
-      "core"
+      "core",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -1120,7 +1356,8 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -1135,7 +1372,11 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "explosive"
+      "explosive",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -1150,7 +1391,9 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "cable"
   },
@@ -1164,7 +1407,8 @@
     "movement": "core",
     "type": "bilateral",
     "tags": [
-      "core"
+      "core",
+      "mech_trunk_stability"
     ],
     "equipment": "barbell"
   },
@@ -1180,7 +1424,9 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -1195,7 +1441,10 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_trunk_rotation"
     ],
     "equipment": "pullup_bar"
   },
@@ -1211,7 +1460,11 @@
     "tags": [
       "core",
       "anti_rotation",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lateral",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "bodyweight"
   },
@@ -1227,7 +1480,8 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "bands"
   },
@@ -1242,7 +1496,11 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "explosive"
+      "explosive",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "cable"
   },
@@ -1258,7 +1516,9 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "medicine_ball"
   },
@@ -1273,7 +1533,9 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
     "equipment": "swiss_ball"
   },
@@ -1288,7 +1550,11 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "conditioning"
+      "conditioning",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "equipment": "weighted_vest"
   },
@@ -1363,7 +1629,9 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_upper_press"
     ],
     "equipment": "medicine_ball"
   },
@@ -1378,7 +1646,11 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "upper_body"
+      "upper_body",
+      "mech_ballistic",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_cns_high"
     ],
     "equipment": "barbell"
   },
@@ -1394,7 +1666,11 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "sledgehammer"
   },
@@ -1425,7 +1701,12 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "conditioning"
+      "conditioning",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "equipment": "battle_ropes"
   },
@@ -1440,7 +1721,8 @@
     "type": "bilateral",
     "tags": [
       "grip",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_grip_support"
     ],
     "equipment": "towel/bar"
   },
@@ -1456,7 +1738,8 @@
     "type": "unilateral",
     "tags": [
       "neck",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "neck_harness"
   },
@@ -1470,7 +1753,11 @@
     "movement": "carry",
     "type": "bilateral",
     "tags": [
-      "grip"
+      "grip",
+      "mech_grip_crush",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "equipment": "plates"
   },
@@ -1485,7 +1772,10 @@
     "type": "bilateral",
     "tags": [
       "grip",
-      "core"
+      "core",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "equipment": "fat_grip"
   },
@@ -1515,7 +1805,10 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "grip"
+      "grip",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
     ],
     "equipment": "log"
   },
@@ -1530,7 +1823,12 @@
     "type": "bilateral",
     "tags": [
       "posterior_chain",
-      "explosive"
+      "explosive",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "equipment": "tire"
   },
@@ -1560,7 +1858,10 @@
     "type": "unilateral",
     "tags": [
       "grip",
-      "core"
+      "core",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "equipment": "water_jug"
   },
@@ -1576,7 +1877,9 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "shoulders"
+      "shoulders",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "bulgarian_bag"
   },
@@ -1591,7 +1894,16 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_squat",
+      "mech_upper_pull"
     ],
     "equipment": "barbell"
   },
@@ -1606,7 +1918,12 @@
     "type": "bilateral",
     "tags": [
       "grip",
-      "core"
+      "core",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_upper_carry"
     ],
     "equipment": "sandbag/sled"
   },
@@ -1621,7 +1938,14 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "power"
+      "power",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive",
+      "mech_upper_pull"
     ],
     "equipment": "treadmill/rower"
   },
@@ -1636,7 +1960,8 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "core"
+      "core",
+      "mech_systemic_fatigue"
     ],
     "equipment": "partner/dummy"
   },
@@ -1651,7 +1976,9 @@
     "type": "bilateral",
     "tags": [
       "power",
-      "endurance"
+      "endurance",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
     ],
     "equipment": "box/kettlebell"
   },
@@ -1697,7 +2024,10 @@
     "type": "bilateral",
     "tags": [
       "shoulders",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_pull"
     ],
     "equipment": "pullup_bar"
   },
@@ -1818,7 +2148,8 @@
     "type": "bilateral",
     "tags": [
       "neck",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_trunk_stability"
     ],
     "equipment": "weight_plate"
   },
@@ -1834,7 +2165,13 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "core"
+      "core",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_lower_squat",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -1849,7 +2186,8 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "shoulders"
+      "shoulders",
+      "mech_systemic_fatigue"
     ],
     "equipment": "heavy_bag"
   },
@@ -1879,7 +2217,13 @@
     "type": "unilateral",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_grip_support",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_upper_pull"
     ],
     "equipment": "bands"
   },
@@ -1895,7 +2239,8 @@
     "type": "unilateral",
     "tags": [
       "balance",
-      "endurance"
+      "endurance",
+      "mech_systemic_fatigue"
     ],
     "equipment": "agility_ladder"
   },
@@ -1925,7 +2270,8 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "quad_dominant"
+      "quad_dominant",
+      "mech_grip_support"
     ],
     "equipment": "weighted_vest"
   },
@@ -1940,7 +2286,11 @@
     "type": "unilateral",
     "tags": [
       "explosive",
-      "balance"
+      "balance",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -1955,7 +2305,9 @@
     "type": "unilateral",
     "tags": [
       "rotational",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -1985,7 +2337,13 @@
     "type": "unilateral",
     "tags": [
       "rotational",
-      "shoulders"
+      "shoulders",
+      "mech_grip_support",
+      "mech_trunk_rotation",
+      "mech_upper_press",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_upper_pull"
     ],
     "equipment": "medicine_ball"
   },
@@ -2000,7 +2358,12 @@
     "type": "bilateral",
     "tags": [
       "rate_of_force",
-      "upper_body"
+      "upper_body",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_landing_impact",
+      "mech_ballistic",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -2015,7 +2378,13 @@
     "type": "bilateral",
     "tags": [
       "rotational",
-      "core"
+      "core",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_trunk_flexion",
+      "mech_trunk_stability",
+      "mech_shoulder_overhead"
     ],
     "equipment": "medicine_ball"
   },
@@ -2046,7 +2415,9 @@
     "type": "unilateral",
     "tags": [
       "rotational",
-      "anti_rotation"
+      "anti_rotation",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "bands"
   },
@@ -2061,7 +2432,9 @@
     "type": "unilateral",
     "tags": [
       "rotational",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "cable"
   },
@@ -2076,7 +2449,9 @@
     "type": "bilateral",
     "tags": [
       "core",
-      "rotational"
+      "rotational",
+      "mech_trunk_stability",
+      "mech_grip_support"
     ],
     "equipment": "pullup_bar"
   },
@@ -2091,7 +2466,8 @@
     "type": "unilateral",
     "tags": [
       "anti_rotation",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_trunk_stability"
     ],
     "equipment": "bodyweight"
   },
@@ -2106,7 +2482,11 @@
     "type": "unilateral",
     "tags": [
       "rotational",
-      "grip"
+      "grip",
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
     "equipment": "sledgehammer/tire"
   },
@@ -2122,7 +2502,9 @@
     "type": "unilateral",
     "tags": [
       "neck",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lateral",
+      "mech_trunk_stability"
     ],
     "equipment": "neck_harness"
   },
@@ -2137,7 +2519,8 @@
     "type": "bilateral",
     "tags": [
       "neck",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability"
     ],
     "equipment": "bands"
   },
@@ -2152,7 +2535,11 @@
     "type": "unilateral",
     "tags": [
       "grip",
-      "rotational"
+      "rotational",
+      "mech_grip_crush",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_trunk_rotation"
     ],
     "equipment": "plates"
   },
@@ -2168,7 +2555,8 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "shoulders"
+      "shoulders",
+      "mech_systemic_fatigue"
     ],
     "equipment": "heavy_bag"
   },
@@ -2184,7 +2572,9 @@
     "type": "unilateral",
     "tags": [
       "endurance",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation"
     ],
     "equipment": "weighted_gloves"
   },
@@ -2199,7 +2589,11 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "explosive"
+      "explosive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_lower_squat"
     ],
     "equipment": "bodyweight"
   },
@@ -2215,7 +2609,8 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "balance"
+      "balance",
+      "mech_systemic_fatigue"
     ],
     "equipment": "weighted_vest/jump_rope"
   },
@@ -2230,7 +2625,14 @@
     "type": "bilateral",
     "tags": [
       "endurance",
-      "shoulders"
+      "shoulders",
+      "mech_upper_press",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
     ],
     "equipment": "battle_ropes"
   },
@@ -2245,7 +2647,12 @@
     "type": "bilateral",
     "tags": [
       "explosive",
-      "high_cns"
+      "high_cns",
+      "mech_cns_high",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
     ],
     "equipment": "open_space"
   },
@@ -2260,7 +2667,14 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "high_cns"
+      "high_cns",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_trunk_stability",
+      "mech_lower_lateral",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
     ],
     "equipment": "open_space"
   },
@@ -2275,7 +2689,11 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "explosive"
+      "explosive",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -2290,7 +2708,16 @@
     "type": "bilateral",
     "tags": [
       "high_cns",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_landing_impact"
     ],
     "equipment": "box"
   },
@@ -2305,7 +2732,11 @@
     "type": "bilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "hurdles"
   },
@@ -2320,7 +2751,12 @@
     "type": "bilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
     ],
     "equipment": "open_space"
   },
@@ -2335,7 +2771,11 @@
     "type": "unilateral",
     "tags": [
       "high_cns",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "open_space"
   },
@@ -2350,7 +2790,11 @@
     "type": "bilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -2365,7 +2809,13 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "high_cns"
+      "high_cns",
+      "mech_cns_high",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
     ],
     "equipment": "open_space"
   },
@@ -2380,7 +2830,11 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "reactive"
+      "reactive",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -2395,7 +2849,14 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "explosive"
+      "explosive",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_lower_lunge",
+      "mech_lower_lateral",
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -2411,7 +2872,12 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "mobility"
+      "mobility",
+      "mech_trunk_stability",
+      "mech_lower_lunge",
+      "mech_lower_lateral",
+      "mech_lower_squat",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -2426,7 +2892,11 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "reactive"
+      "reactive",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "line/tape"
   },
@@ -2441,7 +2911,14 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "high_cns"
+      "high_cns",
+      "mech_cns_high",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_lower_lateral",
+      "mech_reactive"
     ],
     "equipment": "medicine_ball"
   },
@@ -2456,7 +2933,9 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "conditioning"
+      "conditioning",
+      "mech_lower_lateral",
+      "mech_reactive"
     ],
     "equipment": "weighted_vest"
   },
@@ -2471,7 +2950,12 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_lower_lateral",
+      "mech_landing_impact"
     ],
     "equipment": "box"
   },
@@ -2487,7 +2971,11 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "balance"
+      "balance",
+      "mech_lower_lunge",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_trunk_rotation"
     ],
     "equipment": "bodyweight"
   },
@@ -2502,7 +2990,9 @@
     "type": "unilateral",
     "tags": [
       "agility",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_lower_lateral",
+      "mech_reactive"
     ],
     "equipment": "bands"
   },
@@ -2517,7 +3007,13 @@
     "type": "bilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_landing_impact"
     ],
     "equipment": "box"
   },
@@ -2532,7 +3028,11 @@
     "type": "unilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "hurdles"
   },
@@ -2547,7 +3047,11 @@
     "type": "bilateral",
     "tags": [
       "high_cns",
-      "explosive"
+      "explosive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "box"
   },
@@ -2562,7 +3066,11 @@
     "type": "unilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "agility_dots"
   },
@@ -2577,7 +3085,11 @@
     "type": "unilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "bands"
   },
@@ -2592,7 +3104,13 @@
     "type": "unilateral",
     "tags": [
       "high_cns",
-      "rate_of_force"
+      "rate_of_force",
+      "mech_cns_high",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_landing_impact"
     ],
     "equipment": "bodyweight"
   },
@@ -2607,7 +3125,11 @@
     "type": "unilateral",
     "tags": [
       "high_cns",
-      "reactive"
+      "reactive",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "equipment": "bodyweight"
   },
@@ -2655,7 +3177,9 @@
     "type": "bilateral",
     "tags": [
       "balance",
-      "rehab_friendly"
+      "rehab_friendly",
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "equipment": "bosu_ball",
     "notes": "Keep squats shallow (30° knee bend)"
@@ -2697,513 +3221,917 @@
   {
     "name": "Single-Leg Wall Sit (60°)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Bridge Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "mech_trunk_stability"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Spanish Squat Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "eccentric"],
+    "tags": [
+      "isometric",
+      "eccentric",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Deadlift Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "hip_dominant"],
+    "tags": [
+      "isometric",
+      "hip_dominant",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "kettlebell"
   },
   {
     "name": "Single-Leg Calf Raise Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "elastic"],
+    "tags": [
+      "isometric",
+      "elastic",
+      "mech_trunk_stability"
+    ],
     "equipment": "step_mill"
   },
   {
     "name": "Single-Leg Quadruped Hip Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "mech_trunk_stability"
+    ],
     "equipment": "swiss_ball"
   },
   {
     "name": "Single-Leg Step-Up Hold (Mid-Range)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
     "equipment": "box"
   },
   {
     "name": "Single-Leg Lateral Squat Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "adductors"],
+    "tags": [
+      "isometric",
+      "adductors",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
     "equipment": "sandbag"
   },
   {
     "name": "Single-Leg Sled Press Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "horizontal_power"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "sled"
   },
   {
     "name": "Single-Leg Kneeling Hip Flexor Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "mobility"],
+    "tags": [
+      "isometric",
+      "mobility",
+      "mech_trunk_stability"
+    ],
     "equipment": "foam_roller"
   },
   {
     "name": "Single-Leg Banded Anti-Extension Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "core"],
+    "tags": [
+      "isometric",
+      "core",
+      "mech_trunk_stability"
+    ],
     "equipment": "bands"
   },
   {
     "name": "Single-Leg Glute Medius Hold (Side-Lying)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "hip_dominant"],
+    "tags": [
+      "isometric",
+      "hip_dominant",
+      "mech_lower_lateral",
+      "mech_trunk_stability"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg TRX Suspension Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "balance"],
+    "tags": [
+      "isometric",
+      "balance",
+      "mech_trunk_stability"
+    ],
     "equipment": "trx"
   },
   {
     "name": "Single-Leg Farmer Carry Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "work_capacity"],
+    "tags": [
+      "isometric",
+      "work_capacity",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
     "equipment": "kettlebells"
   },
   {
     "name": "🔥 Single-Leg Rotational Med Ball Hold",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "rotational", "core"],
+    "tags": [
+      "isometric",
+      "rotational",
+      "core",
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
-    "tags": ["isometric", "striking", "balance"],
+    "tags": [
+      "isometric",
+      "striking",
+      "balance",
+      "mech_trunk_stability"
+    ],
     "equipment": "weight_vest"
   },
   {
     "name": "Single-Leg Forward Hops",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "sagittal",
     "type": "unilateral",
-    "tags": ["plyometric", "acceleration"],
+    "tags": [
+      "plyometric",
+      "acceleration",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Lateral Hops",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "frontal",
     "type": "unilateral",
-    "tags": ["plyometric", "lateral_power"],
+    "tags": [
+      "plyometric",
+      "lateral_power",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "agility_ladder"
   },
   {
     "name": "Single-Leg 45° Bound",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "transverse",
     "type": "unilateral",
-    "tags": ["plyometric", "rotational"],
+    "tags": [
+      "plyometric",
+      "rotational",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Box Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "vertical",
     "type": "unilateral",
-    "tags": ["plyometric", "triple_extension"],
+    "tags": [
+      "plyometric",
+      "triple_extension",
+      "mech_cns_high",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "box"
   },
   {
     "name": "Single-Leg Depth Drop (Stick Landing)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "eccentric",
     "type": "unilateral",
-    "tags": ["plyometric", "reactive"],
+    "tags": [
+      "plyometric",
+      "reactive",
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_landing_impact"
+    ],
     "equipment": "box"
   },
   {
     "name": "Single-Leg Zig-Zag Hops",
     "category": "lower_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "multiplanar",
     "type": "unilateral",
-    "tags": ["plyometric", "agility"],
+    "tags": [
+      "plyometric",
+      "agility",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "cones"
   },
   {
     "name": "Single-Leg Medicine Ball Chest Push Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "horizontal",
     "type": "unilateral",
-    "tags": ["plyometric", "upper_body"],
+    "tags": [
+      "plyometric",
+      "upper_body",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "medicine_ball"
   },
   {
     "name": "Single-Leg Reactive Shuffle",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "frontal",
     "type": "unilateral",
-    "tags": ["plyometric", "footwork"],
+    "tags": [
+      "plyometric",
+      "footwork",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "Single-Leg Rotational Hop to Balance",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "transverse",
     "type": "unilateral",
-    "tags": ["plyometric", "balance"],
+    "tags": [
+      "plyometric",
+      "balance",
+      "mech_trunk_rotation",
+      "mech_lower_jump",
+      "mech_trunk_stability",
+      "mech_reactive",
+      "mech_landing_impact"
+    ],
     "equipment": "bodyweight"
   },
   {
     "name": "🔥 Single-Leg Combat Stance Switch Jump",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "plyometric",
     "movement": "compound",
     "type": "unilateral",
-    "tags": ["plyometric", "striking", "reactive"],
+    "tags": [
+      "plyometric",
+      "striking",
+      "reactive",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive"
+    ],
     "equipment": "thai_pads"
   },
   {
     "name": "Squat Isometric (110% 1RM @ 90°)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "triphasic"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "triphasic",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Deadlift Isometric (120% 1RM @ knee height)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "triphasic"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "triphasic",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "trap_bar"
   },
   {
     "name": "Bench Isometric (130% 1RM @ mid-range)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "triphasic"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "triphasic",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Front Squat Isometric (115% 1RM @ 100°)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "core"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "core",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Rack Pull Isometric (125% 1RM @ mid-shin)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "grip"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "grip",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_pull"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Overhead Press Isometric (120% 1RM @ forehead)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "overhead", "shoulders"],
+    "tags": [
+      "isometric",
+      "overhead",
+      "shoulders",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Box Squat Isometric (110% 1RM @ parallel)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "hip_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "hip_dominant",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Deficit Deadlift Isometric (115% 1RM @ floor)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "eccentric"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "eccentric",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Incline Bench Isometric (125% 1RM @ 45°)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "shoulders"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "shoulders",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Zercher Squat Isometric (110% 1RM @ bottom)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "core"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "core",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Sumo Deadlift Isometric (120% 1RM @ mid-thigh)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "adductors"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "adductors",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Floor Press Isometric (130% 1RM @ lockout)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "triceps"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "triceps",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant", "upper_back"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "upper_back",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "trap_bar"
   },
   {
     "name": "Snatch Grip Deadlift Isometric (125% 1RM @ knee)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "upper_back"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "upper_back",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Close-Grip Bench Isometric (120% 1RM @ mid-range)",
     "category": "upper_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "triceps"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "triceps",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Atlas Stone Load Isometric (120% max stone @ lap)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain", "grip"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "grip",
+      "mech_trunk_stability"
+    ],
     "equipment": "atlas_stone"
   },
   {
     "name": "Sled Push Isometric (130% max push @ start position)",
     "category": "lower_body",
-    "phases": ["SPP"],
+    "phases": [
+      "SPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power", "work_capacity"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "work_capacity",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "sled"
   },
   {
     "name": "Squat Isometric (110% 1RM @ Parallel)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Deadlift Isometric (110% 1RM @ Mid-Shin)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
+    ],
     "equipment": "trap_bar"
   },
   {
     "name": "Bench Isometric (110% 1RM @ 90° Elbow)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "horizontal_power"],
+    "tags": [
+      "isometric",
+      "horizontal_power",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Front Squat Isometric (105% 1RM @ 100°)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "quad_dominant"],
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "mech_trunk_stability",
+      "mech_lower_squat"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Rack Pull Isometric (115% 1RM @ Knees)",
     "category": "lower_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "posterior_chain"],
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_upper_pull"
+    ],
     "equipment": "barbell"
   },
   {
     "name": "Overhead Press Isometric (105% 1RM @ Chin)",
     "category": "upper_body",
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
-    "tags": ["isometric", "overhead"],
+    "tags": [
+      "isometric",
+      "overhead",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_shoulder_overhead"
+    ],
     "equipment": "barbell"
-   },
-{
-  "name": "KB Suitcase Carry",
-  "category": "full_body",
-  "phases": ["GPP", "SPP"],
-  "method": "strength_conditioning",
-  "movement": "dynamic",
-  "type": "unilateral",
-  "tags": ["grip", "core"],
-  "equipment": "kettlebell",
-  "pro_tip": "Hold KB opposite side of working leg to maximize oblique engagement - mimics sprawl recovery mechanics",
-  "combat_carryover": "Develops clinch grip endurance and cross-body power transfer for hooks"
- },
- {
+  },
+  {
+    "name": "KB Suitcase Carry",
+    "category": "full_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "grip",
+      "core",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "equipment": "kettlebell",
+    "pro_tip": "Hold KB opposite side of working leg to maximize oblique engagement - mimics sprawl recovery mechanics",
+    "combat_carryover": "Develops clinch grip endurance and cross-body power transfer for hooks"
+  },
+  {
     "name": "Slow-Lowered Pull-Up",
     "category": "upper_body",
-    "phases": ["GPP", "SPP"],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
     "method": "strength",
     "movement": "eccentric",
     "type": "compound",
-    "tags": ["eccentric", "grip", "shoulders"],
+    "tags": [
+      "eccentric",
+      "grip",
+      "shoulders",
+      "mech_grip_support",
+      "mech_upper_pull"
+    ],
     "equipment": "bodyweight"
   }
 ]
