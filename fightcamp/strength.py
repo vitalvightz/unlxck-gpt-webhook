@@ -14,7 +14,7 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST
 from .injury_filtering import _load_style_specific_exercises, log_injury_debug
-from .injury_guard import Decision, choose_injury_replacement, injury_decision
+from .injury_guard import Decision, injury_decision, pick_safe_replacement
 
 # Load style specific exercises (JSON list)
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -687,43 +687,39 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _finalize_injury_safe_exercises(ex_list: list[dict]) -> list[dict]:
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict | None] = []
+        injuries_ctx = {"injuries": injuries, "phase": phase, "fatigue": fatigue}
         for ex in ex_list:
             decision = _guarded_injury_decision(ex)
             if decision.action != "exclude":
                 updated.append(ex)
                 continue
             replacement = None
-            safe_pool: list[dict] = []
+            replacement_decision = None
+            candidate_pool: list[dict] = []
             safe_reasons: dict[str, dict] = {}
             for cand, _, cand_reasons in guard_pairs:
                 cand_name = cand.get("name")
                 if not cand_name or cand_name in used_names:
                     continue
-                if _guarded_injury_decision(cand).action == "exclude":
-                    continue
-                safe_pool.append(cand)
+                candidate_pool.append(cand)
                 safe_reasons[cand_name] = cand_reasons
 
-            if safe_pool:
-                replacement = choose_injury_replacement(
-                    excluded_item=ex,
-                    candidates=safe_pool,
-                    injuries=injuries,
-                    phase=phase,
-                    fatigue=fatigue,
-                    score_fn=None,
+            if candidate_pool:
+                replacement, replacement_decision = pick_safe_replacement(
+                    ex,
+                    candidate_pool,
+                    injuries_ctx,
                 )
-                if replacement:
-                    rep_name = replacement.get("name")
-                    if rep_name:
-                        reason_lookup[rep_name] = safe_reasons.get(rep_name, {})
-                        used_names.add(rep_name)
-            if replacement:
+            if replacement and replacement_decision:
+                rep_name = replacement.get("name")
+                if rep_name:
+                    reason_lookup[rep_name] = safe_reasons.get(rep_name, {})
+                    used_names.add(rep_name)
                 logger.warning(
                     "[injury-guard] strength replacing '%s' -> '%s' decision=%s",
                     ex.get("name"),
                     replacement.get("name"),
-                    decision,
+                    replacement_decision,
                 )
                 updated.append(replacement)
             else:
@@ -733,7 +729,20 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     decision,
                 )
                 updated.append(None)
-        return [ex for ex in updated if ex]
+        finalized: list[dict] = []
+        for ex in updated:
+            if not ex:
+                continue
+            final_decision = _guarded_injury_decision(ex)
+            if final_decision.action == "exclude":
+                logger.warning(
+                    "[injury-guard] strength removing '%s' decision=%s",
+                    ex.get("name"),
+                    final_decision,
+                )
+                continue
+            finalized.append(ex)
+        return finalized
 
     base_exercises = _finalize_injury_safe_exercises(base_exercises)
 
