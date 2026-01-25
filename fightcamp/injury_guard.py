@@ -118,12 +118,34 @@ class Decision:
     reason: dict
 
 
-def _normalize_injury_list(injuries: Iterable[str] | str | None) -> list[str]:
+def _normalize_injury_list(injuries: Iterable[str | dict] | str | dict | None) -> list[str | dict]:
+    """
+    Normalize injuries to a list, handling both string and dictionary formats.
+    
+    Args:
+        injuries: Can be:
+            - None or empty: returns []
+            - A single string: returns [string]
+            - A single dict with 'region' and 'severity': returns [dict]
+            - An iterable of strings: returns list of strings
+            - An iterable of dicts: returns list of dicts
+            
+    Returns:
+        List of injury strings or injury dictionaries
+    """
     if not injuries:
         return []
     if isinstance(injuries, str):
         return [injuries]
-    return [str(i) for i in injuries if i]
+    if isinstance(injuries, dict):
+        # Single dictionary injury
+        return [injuries]
+    # Iterable case - preserve both strings and dicts
+    result = []
+    for i in injuries:
+        if i:  # Filter out None/empty values
+            result.append(i)
+    return result
 
 
 def _map_text_to_region(text: str) -> str | None:
@@ -133,11 +155,37 @@ def _map_text_to_region(text: str) -> str | None:
     return None
 
 
-def _injury_context(injuries: Iterable[str]) -> dict[str, str]:
+def _injury_context(injuries: Iterable[str | dict]) -> dict[str, str]:
+    """
+    Build a mapping of region -> severity from injuries.
+    
+    Args:
+        injuries: List of injury strings or dictionaries with 'region' and 'severity' keys
+        
+    Returns:
+        Dictionary mapping region names to severity levels
+    """
     region_severity: dict[str, str] = {}
+    string_injuries: list[str] = []
+    
     for injury in injuries:
         if not injury:
             continue
+            
+        # Handle dictionary format with explicit region and severity
+        if isinstance(injury, dict):
+            region = injury.get("region")
+            severity = injury.get("severity", "moderate")
+            if region:
+                # Normalize severity to valid values
+                severity = severity if severity in SEVERITY_RANK else "moderate"
+                current = region_severity.get(region)
+                if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
+                    region_severity[region] = severity
+            continue
+        
+        # Handle string format (existing logic)
+        string_injuries.append(str(injury))
         for phrase in split_injury_text(str(injury)):
             cleaned = remove_negated_phrases(phrase)
             if not cleaned:
@@ -154,8 +202,12 @@ def _injury_context(injuries: Iterable[str]) -> dict[str, str]:
                     if current is None or SEVERITY_RANK[severity] > SEVERITY_RANK[current]:
                         region_severity[region] = severity
                     break
-    for region in normalize_injury_regions(injuries):
-        region_severity.setdefault(region, "moderate")
+    
+    # For string injuries, add any regions not yet in the map
+    if string_injuries:
+        for region in normalize_injury_regions(string_injuries):
+            region_severity.setdefault(region, "moderate")
+    
     return region_severity
 
 
@@ -239,7 +291,24 @@ def _log_decision(
     )
 
 
-def injury_decision(exercise: dict, injuries: Iterable[str], phase: str, fatigue: str) -> Decision:
+def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict, phase: str, fatigue: str) -> Decision:
+    """
+    Make injury-based decision for an exercise.
+    
+    Args:
+        exercise: Exercise dictionary with 'name', 'tags', etc.
+        injuries: Can be:
+            - List of injury strings (e.g., ["shoulder pain", "knee injury"])
+            - List of injury dictionaries with 'region' and 'severity' keys
+            - Single injury string
+            - Single injury dictionary
+            - Mixed list of strings and dictionaries
+        phase: Training phase (e.g., "GPP", "SPP", "TAPER")
+        fatigue: Fatigue level (e.g., "low", "moderate", "high")
+        
+    Returns:
+        Decision object with action, risk_score, matched_tags, mods, and reason
+    """
     injuries_list = _normalize_injury_list(injuries)
     if not injuries_list:
         return Decision(
@@ -257,9 +326,21 @@ def injury_decision(exercise: dict, injuries: Iterable[str], phase: str, fatigue
     modify_band, threshold = _thresholds(phase, fatigue)
     threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
 
+    # For injury_match_details, we need to pass string representations
+    # Extract strings from both string and dict injuries
+    string_injuries_for_matching: list[str] = []
+    for injury in injuries_list:
+        if isinstance(injury, dict):
+            # For dictionary injuries, use the region as the injury string for matching
+            region = injury.get("region")
+            if region:
+                string_injuries_for_matching.append(region)
+        else:
+            string_injuries_for_matching.append(str(injury))
+    
     details = injury_match_details(
         exercise,
-        injuries_list,
+        string_injuries_for_matching,
         risk_levels=("exclude", "flag"),
     )
     if not details:
@@ -371,7 +452,7 @@ def choose_injury_replacement(
     *,
     excluded_item: dict,
     candidates: list[dict],
-    injuries: Iterable[str],
+    injuries: Iterable[str | dict],
     phase: str,
     fatigue: str,
     score_fn: Callable[[dict], float] | None = None,
