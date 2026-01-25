@@ -138,7 +138,7 @@ INJURY_TAG_ALIASES = {
         "pinch_grip_high",
     },
     "hamstring": {"posterior_chain_eccentric_high"},
-    "high_cns": {"high_cns_upper"},
+    "high_cns": set(),
     "hip_dominant": {
         "hip_impingement_risk",
         "hip_internal_rotation_stress",
@@ -170,11 +170,48 @@ INJURY_TAG_ALIASES = {
 
 logger = logging.getLogger(__name__)
 
+LOWER_BODY_CNS_TAGS = {
+    "plyometric",
+    "reactive",
+    "posterior_chain",
+    "acceleration",
+    "speed",
+    "sprint",
+    "running",
+    "jump",
+    "bounds",
+    "hops",
+    "landing",
+    "knee_dominant",
+    "hip_dominant",
+    "quad_dominant",
+}
+SHOULDER_TAG_EXCLUSIONS = {
+    "face pull",
+    "band face pull",
+    "wall slide",
+    "wall slide (shoulder mobility)",
+    "dead hang",
+    "scapular pull-up",
+}
 
-def expand_injury_tags(tags: Iterable[str]) -> set[str]:
+
+def expand_injury_tags(tags: Iterable[str], *, item: dict | None = None) -> set[str]:
+    tag_set = {t for t in normalize_tags(tags) if t}
     expanded: set[str] = set()
-    for tag in tags:
+    for tag in tag_set:
         expanded.update(INJURY_TAG_ALIASES.get(tag, ()))
+    if "high_cns" in tag_set:
+        name = str(item.get("name", "") or "") if item else ""
+        if not (tag_set & LOWER_BODY_CNS_TAGS) and not match_forbidden(
+            name, ["sprint", "sprints", "jump", "plyo", "hops", "bounds"], allowlist=INJURY_MATCH_ALLOWLIST
+        ):
+            expanded.add("high_cns_upper")
+    if "shoulders" in tag_set and item:
+        name = str(item.get("name", "") or "").lower()
+        if name in SHOULDER_TAG_EXCLUSIONS:
+            expanded.discard("dynamic_overhead")
+            expanded.discard("press_heavy")
     return expanded
 
 
@@ -184,25 +221,35 @@ def _normalize_text(text: str) -> str:
     return " ".join(cleaned.split())
 
 
-def _phrase_in_tokens(tokens: list[str], phrase_tokens: list[str]) -> bool:
-    if not phrase_tokens or len(phrase_tokens) > len(tokens):
+def _module_for_item(item: dict) -> str:
+    placement = str(item.get("placement", "") or "").lower()
+    if placement == "conditioning":
+        return "conditioning"
+    bank = str(item.get("bank") or item.get("source") or "").lower()
+    if "conditioning" in bank:
+        return "conditioning"
+    if item.get("system"):
+        return "conditioning"
+    return "strength"
+
+
+def _phrase_in_text(text: str, phrase: str) -> bool:
+    normalized_phrase = _normalize_text(phrase)
+    phrase_tokens = normalized_phrase.split()
+    if not phrase_tokens:
         return False
-    window = len(phrase_tokens)
-    for idx in range(len(tokens) - window + 1):
-        if tokens[idx : idx + window] == phrase_tokens:
-            return True
-    return False
+    escaped = r"\s+".join(re.escape(token) for token in phrase_tokens)
+    pattern = rf"\b{escaped}\b"
+    return re.search(pattern, text) is not None
 
 
 def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
     normalized_text = _normalize_text(text)
     if not normalized_text:
         return []
-    text_tokens = normalized_text.split()
     allowlist = allowlist or []
     for phrase in allowlist:
-        phrase_tokens = _normalize_text(phrase).split()
-        if phrase_tokens and _phrase_in_tokens(text_tokens, phrase_tokens):
+        if _phrase_in_text(normalized_text, phrase):
             return []
     matches: list[str] = []
     seen: set[str] = set()
@@ -213,7 +260,7 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
         phrase_tokens = normalized_pattern.split()
         if len(phrase_tokens) == 1 and phrase_tokens[0] in GENERIC_SINGLE_WORD_PATTERNS:
             continue
-        if _phrase_in_tokens(text_tokens, phrase_tokens):
+        if _phrase_in_text(normalized_text, normalized_pattern):
             if pattern not in seen:
                 matches.append(pattern)
                 seen.add(pattern)
@@ -383,10 +430,12 @@ def injury_match_details(
     name = field_values.get("name", "")
     tags = set(ensure_tags(item))
     tags |= infer_tags_from_name(name)
-    tags |= expand_injury_tags(tags)
+    tags |= expand_injury_tags(tags, item=item)
     if "low_impact" in tags:
         tags.discard("running_volume_high")
     reasons: list[dict] = []
+    module = _module_for_item(item)
+    allow_keyword_match = module == "strength"
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
         for risk_level in ("exclude", "flag"):
@@ -397,7 +446,7 @@ def injury_match_details(
             tag_hits = sorted(tags & risk_tags)
             field_hits: dict[str, list[str]] = {}
             matched_patterns: set[str] = set()
-            if not tag_hits:
+            if not tag_hits and allow_keyword_match:
                 for field_name, value in field_values.items():
                     matches = match_forbidden(value, patterns, allowlist=INJURY_MATCH_ALLOWLIST)
                     if matches:
@@ -513,7 +562,7 @@ def build_injury_exclusion_map() -> dict[str, list[str]]:
             item_id = f"{bank_name}:{name}"
             tags = set(ensure_tags(item))
             tags |= infer_tags_from_name(name)
-            tags |= expand_injury_tags(tags)
+            tags |= expand_injury_tags(tags, item=item)
             for region, rule in INJURY_RULES.items():
                 ban_keywords = rule.get("exclude_keywords", rule.get("ban_keywords", []))
                 ban_tags = {t.lower() for t in rule.get("exclude_tags", rule.get("ban_tags", []))}
