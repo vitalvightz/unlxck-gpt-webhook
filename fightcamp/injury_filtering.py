@@ -637,7 +637,7 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
     # First pass: try word-boundary matching for all patterns
     word_boundary_matches: list[str] = []
     seen: set[str] = set()
-    substring_candidates: list[tuple[str, str, str]] = []  # (pattern, normalized_pattern, pattern_for_substring)
+    substring_candidates: list[str] = []  # Patterns to check with substring matching
     
     for pattern in patterns:
         normalized_pattern = _normalize_text(pattern)
@@ -658,7 +658,7 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
         elif len(phrase_tokens) > 1:
             # This is a multi-word pattern that didn't match via word boundary
             # Save it as a candidate for substring matching
-            substring_candidates.append((pattern, normalized_pattern, ""))
+            substring_candidates.append(pattern)
     
     # If we found any word-boundary matches, return them (primary strategy succeeded)
     if word_boundary_matches:
@@ -669,7 +669,7 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
     normalized_for_substring = normalize_for_substring_match(text)
     substring_matches: list[str] = []
     
-    for pattern, normalized_pattern, _ in substring_candidates:
+    for pattern in substring_candidates:
         pattern_for_substring = normalize_for_substring_match(pattern)
         if pattern_for_substring and pattern_for_substring in normalized_for_substring:
             if pattern not in seen:
