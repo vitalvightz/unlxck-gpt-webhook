@@ -113,7 +113,7 @@ def test_injury_decision_with_explicit_tags():
 
 
 def test_severity_normalization_to_moderate():
-    """PATCH 3: Missing severity should default to 'moderate'"""
+    """PATCH 3: Missing severity should be normalized to 'moderate'"""
     # Injury dict without severity
     injury = {"region": "shoulder"}
     exercise = {"name": "Bench Press", "tags": []}
