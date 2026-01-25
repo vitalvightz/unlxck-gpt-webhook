@@ -341,6 +341,9 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
+    random_seed = flags.get("random_seed")
+    if random_seed is not None:
+        random.seed(f"{random_seed}-{phase}")
     injuries = flags.get("injuries", [])
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))

@@ -108,6 +108,36 @@ def _sanitize_phase_text(text: str, labels: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _normalize_time_labels(text: str) -> str:
+    if not text:
+        return text
+    replacements = {
+        r"(?i)\*{0,2}\s*if time short\s*:\s*\*{0,2}\s*": "**If Time Short:** ",
+        r"(?i)\*{0,2}\s*if fatigue high\s*:\s*\*{0,2}\s*": "**If Fatigue High:** ",
+        r"(?i)\*{0,2}\s*if fatigue moderate\s*:\s*\*{0,2}\s*": "**If Fatigue Moderate:** ",
+    }
+    for pattern, replacement in replacements.items():
+        text = re.sub(pattern, replacement, text)
+    text = re.sub(r"(?:\*\*If Time Short:\*\*\s*){2,}", "**If Time Short:** ", text)
+    text = re.sub(r"(?:\*\*If Fatigue High:\*\*\s*){2,}", "**If Fatigue High:** ", text)
+    text = re.sub(
+        r"(?:\*\*If Fatigue Moderate:\*\*\s*){2,}",
+        "**If Fatigue Moderate:** ",
+        text,
+    )
+    return text
+
+
+def _sanitize_stage_output(text: str, labels: list[str], apply_muay_thai: bool) -> str:
+    if not text:
+        return text
+    if apply_muay_thai:
+        text = _apply_muay_thai_filters(text, allow_grappling=False)
+    text = _normalize_time_labels(text)
+    text = _sanitize_phase_text(text, labels)
+    return text
+
+
 def _apply_muay_thai_filters(text: str, *, allow_grappling: bool) -> str:
     if not text or allow_grappling:
         return text
@@ -258,7 +288,7 @@ async def generate_plan(data: dict):
     strength_reason_log: dict[str, list] = {}
 
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
-        gpp_flags = {**training_context.to_flags(), "phase": "GPP"}
+        gpp_flags = {**training_context.to_flags(), "phase": "GPP", "random_seed": random_seed}
         gpp_block = generate_strength_block(
             flags=gpp_flags,
             weaknesses=training_context.weaknesses,
@@ -275,6 +305,7 @@ async def generate_plan(data: dict):
             "phase": "SPP",
             "prev_exercises": gpp_ex_names,
             "recent_exercises": list(gpp_movements),
+            "random_seed": random_seed,
         }
         spp_block = generate_strength_block(
             flags=spp_flags,
@@ -294,6 +325,7 @@ async def generate_plan(data: dict):
             "phase": "TAPER",
             "prev_exercises": combined_prev,
             "recent_exercises": combined_recent,
+            "random_seed": random_seed,
         }
         taper_block = generate_strength_block(
             flags=taper_flags,
@@ -405,20 +437,36 @@ async def generate_plan(data: dict):
     recovery_block = generate_recovery_block({**training_context.to_flags(), "phase": current_phase})
     nutrition_block = generate_nutrition_block(flags={**training_context.to_flags(), "phase": current_phase})
 
-    if apply_muay_thai_filters:
-        gpp_rehab_block = _apply_muay_thai_filters(gpp_rehab_block, allow_grappling=False)
-        spp_rehab_block = _apply_muay_thai_filters(spp_rehab_block, allow_grappling=False)
-        taper_rehab_block = _apply_muay_thai_filters(taper_rehab_block, allow_grappling=False)
-        gpp_guardrails = _apply_muay_thai_filters(gpp_guardrails, allow_grappling=False)
-        spp_guardrails = _apply_muay_thai_filters(spp_guardrails, allow_grappling=False)
-        taper_guardrails = _apply_muay_thai_filters(taper_guardrails, allow_grappling=False)
-
-    gpp_rehab_block = _sanitize_phase_text(gpp_rehab_block, sanitize_labels)
-    spp_rehab_block = _sanitize_phase_text(spp_rehab_block, sanitize_labels)
-    taper_rehab_block = _sanitize_phase_text(taper_rehab_block, sanitize_labels)
-    gpp_guardrails = _sanitize_phase_text(gpp_guardrails, sanitize_labels)
-    spp_guardrails = _sanitize_phase_text(spp_guardrails, sanitize_labels)
-    taper_guardrails = _sanitize_phase_text(taper_guardrails, sanitize_labels)
+    gpp_rehab_block = _sanitize_stage_output(
+        gpp_rehab_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    spp_rehab_block = _sanitize_stage_output(
+        spp_rehab_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    taper_rehab_block = _sanitize_stage_output(
+        taper_rehab_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    gpp_guardrails = _sanitize_stage_output(
+        gpp_guardrails,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    spp_guardrails = _sanitize_stage_output(
+        spp_guardrails,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    taper_guardrails = _sanitize_stage_output(
+        taper_guardrails,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
 
     phase_colors = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}
     conditioning_blocks = {}
@@ -522,6 +570,50 @@ async def generate_plan(data: dict):
     gpp_mindset = build_mindset_prompt("GPP")
     spp_mindset = build_mindset_prompt("SPP")
     taper_mindset = build_mindset_prompt("TAPER")
+    gpp_mindset = _sanitize_stage_output(gpp_mindset, sanitize_labels, apply_muay_thai_filters)
+    spp_mindset = _sanitize_stage_output(spp_mindset, sanitize_labels, apply_muay_thai_filters)
+    taper_mindset = _sanitize_stage_output(taper_mindset, sanitize_labels, apply_muay_thai_filters)
+
+    gpp_strength_block = _sanitize_stage_output(
+        gpp_block["block"] if gpp_block else "",
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    spp_strength_block = _sanitize_stage_output(
+        spp_block["block"] if spp_block else "",
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    taper_strength_block = _sanitize_stage_output(
+        taper_block["block"] if taper_block else "",
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    gpp_cond_block = _sanitize_stage_output(
+        gpp_cond_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    spp_cond_block = _sanitize_stage_output(
+        spp_cond_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    taper_cond_block = _sanitize_stage_output(
+        taper_cond_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    nutrition_block = _sanitize_stage_output(
+        nutrition_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
+    recovery_block = _sanitize_stage_output(
+        recovery_block,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
 
     rehab_sections: list[str] = []
     support_notes = ""
@@ -533,10 +625,11 @@ async def generate_plan(data: dict):
             rehab_sections += ["### SPP", spp_rehab_block.strip(), ""]
         if taper_rehab_block:
             rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
-        support_notes = generate_support_notes(injuries)
-        if apply_muay_thai_filters:
-            support_notes = _apply_muay_thai_filters(support_notes, allow_grappling=False)
-        support_notes = _sanitize_phase_text(support_notes, sanitize_labels)
+        support_notes = _sanitize_stage_output(
+            generate_support_notes(injuries),
+            sanitize_labels,
+            apply_muay_thai_filters,
+        )
         if support_notes:
             rehab_sections += ["", support_notes]
 
@@ -573,7 +666,7 @@ async def generate_plan(data: dict):
             gpp_mindset,
             "",
             "### Strength & Power",
-            gpp_block["block"] if gpp_block else "",
+            gpp_strength_block,
             "",
             "### Conditioning",
             gpp_cond_block,
@@ -590,7 +683,7 @@ async def generate_plan(data: dict):
             spp_mindset,
             "",
             "### Strength & Power",
-            spp_block["block"] if spp_block else "",
+            spp_strength_block,
             "",
             "### Conditioning",
             spp_cond_block,
@@ -607,7 +700,7 @@ async def generate_plan(data: dict):
             taper_mindset,
             "",
             "### Strength & Power",
-            taper_block["block"] if taper_block else "",
+            taper_strength_block,
             "",
             "### Conditioning",
             taper_cond_block,
@@ -670,17 +763,6 @@ async def generate_plan(data: dict):
     ]
      
     def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
-        if apply_muay_thai_filters:
-            mindset = _apply_muay_thai_filters(mindset, allow_grappling=False)
-            strength = _apply_muay_thai_filters(strength, allow_grappling=False)
-            cond = _apply_muay_thai_filters(cond, allow_grappling=False)
-            if guardrails:
-                guardrails = _apply_muay_thai_filters(guardrails, allow_grappling=False)
-        mindset = _sanitize_phase_text(mindset, sanitize_labels)
-        strength = _sanitize_phase_text(strength, sanitize_labels)
-        cond = _sanitize_phase_text(cond, sanitize_labels)
-        if guardrails:
-            guardrails = _sanitize_phase_text(guardrails, sanitize_labels)
         return PhaseBlock(
             name=name,
             weeks=weeks,
@@ -700,7 +782,7 @@ async def generate_plan(data: dict):
             phase_weeks["GPP"],
             phase_weeks["days"]["GPP"],
             gpp_mindset,
-            gpp_block["block"] if gpp_block else "",
+            gpp_strength_block,
             gpp_cond_block,
             gpp_guardrails if has_injuries else "",
         )
@@ -710,7 +792,7 @@ async def generate_plan(data: dict):
             phase_weeks["SPP"],
             phase_weeks["days"]["SPP"],
             spp_mindset,
-            spp_block["block"] if spp_block else "",
+            spp_strength_block,
             spp_cond_block,
             spp_guardrails if has_injuries else "",
         )
@@ -720,7 +802,7 @@ async def generate_plan(data: dict):
             phase_weeks["TAPER"],
             phase_weeks["days"]["TAPER"],
             taper_mindset,
-            taper_block["block"] if taper_block else "",
+            taper_strength_block,
             taper_cond_block,
             taper_guardrails if has_injuries else "",
         )
@@ -789,9 +871,11 @@ async def generate_plan(data: dict):
     )
     if coach_review_notes:
         coach_notes = f"{coach_notes}\n\n{coach_review_notes}"
-    if apply_muay_thai_filters:
-        coach_notes = _apply_muay_thai_filters(coach_notes, allow_grappling=False)
-    coach_notes = _sanitize_phase_text(coach_notes, sanitize_labels)
+    coach_notes = _sanitize_stage_output(
+        coach_notes,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
     reason_log = {
         "strength": strength_reason_log,
         "conditioning": conditioning_reason_log,
@@ -815,12 +899,11 @@ async def generate_plan(data: dict):
         "\n".join(_format_rationale_section("Conditioning Selection", conditioning_reason_log)),
     ]
     selection_rationale_md = "\n\n".join(section for section in selection_rationale_sections if section)
-    if apply_muay_thai_filters:
-        selection_rationale_md = _apply_muay_thai_filters(
-            selection_rationale_md,
-            allow_grappling=False,
-        )
-    selection_rationale_md = _sanitize_phase_text(selection_rationale_md, sanitize_labels)
+    selection_rationale_md = _sanitize_stage_output(
+        selection_rationale_md,
+        sanitize_labels,
+        apply_muay_thai_filters,
+    )
     selection_rationale_lines = [selection_rationale_md]
     fight_plan_lines += selection_rationale_lines
     fight_plan_text = "\n\n".join(fight_plan_lines)
