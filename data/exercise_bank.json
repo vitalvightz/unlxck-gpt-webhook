@@ -859,7 +859,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "shoulders",
+      "upper_back",
       "rehab_friendly"
     ],
     "equipment": "cable"
@@ -921,7 +921,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "shoulders",
+      "upper_back",
       "rehab_friendly"
     ],
     "equipment": "bands"
@@ -936,7 +936,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "shoulders",
+      "upper_back",
       "rehab_friendly"
     ],
     "equipment": "pullup_bar"
@@ -1696,7 +1696,7 @@
     "movement": "pull",
     "type": "bilateral",
     "tags": [
-      "shoulders",
+      "grip",
       "rehab_friendly"
     ],
     "equipment": "pullup_bar"
@@ -1741,7 +1741,7 @@
     "movement": "mobility",
     "type": "bilateral",
     "tags": [
-      "shoulders",
+      "mobility",
       "rehab_friendly"
     ],
     "equipment": "wall"

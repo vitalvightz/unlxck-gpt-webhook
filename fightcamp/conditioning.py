@@ -14,7 +14,7 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, log_injury_debug
-from .injury_guard import Decision, choose_injury_replacement, injury_decision
+from .injury_guard import INJURY_GUARD_TOP_K, Decision, choose_injury_replacement, injury_decision
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
@@ -115,7 +115,7 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
     return normalized
 
 
-def _sanitize_conditioning_bank(bank, *, source: str):
+def _sanitize_conditioning_bank(bank, *, source: str, bank_type: str | None = None):
     def normalize_items(items: list[dict]) -> list[dict]:
         cleaned: list[dict] = []
         for item in items:
@@ -127,6 +127,8 @@ def _sanitize_conditioning_bank(bank, *, source: str):
                 require_system=placement == "conditioning",
             )
             normalize_item_tags(item)
+            if bank_type:
+                item["bank_type"] = bank_type
             if placement != "conditioning":
                 cleaned.append(item)
                 continue
@@ -156,20 +158,30 @@ def _sanitize_conditioning_bank(bank, *, source: str):
     return cleaned_bank
 
 
-def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = False):
+def _load_bank(
+    path: Path,
+    *,
+    source: str,
+    enforce_conditioning_systems: bool = False,
+    bank_type: str | None = None,
+):
     bank = json.loads(path.read_text())
     if enforce_conditioning_systems:
-        return _sanitize_conditioning_bank(bank, source=source)
+        return _sanitize_conditioning_bank(bank, source=source, bank_type=bank_type)
     if isinstance(bank, list):
         for item in bank:
             validate_training_item(item, source=source, require_phases=True)
             normalize_item_tags(item)
+            if bank_type:
+                item["bank_type"] = bank_type
         return bank
     for items in bank.values():
         if isinstance(items, list):
             for item in items:
                 validate_training_item(item, source=source, require_phases=True)
                 normalize_item_tags(item)
+                if bank_type:
+                    item["bank_type"] = bank_type
     return bank
 
 
@@ -179,17 +191,23 @@ conditioning_bank = _load_bank(
     DATA_DIR / "conditioning_bank.json",
     source="conditioning_bank.json",
     enforce_conditioning_systems=True,
+    bank_type="conditioning",
 )
 style_conditioning_bank = _load_bank(
     DATA_DIR / "style_conditioning_bank.json",
     source="style_conditioning_bank.json",
     enforce_conditioning_systems=True,
+    bank_type="conditioning",
 )
 format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
 
 # Load coordination bank and flatten drills
 try:
-    _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")
+    _coord_data = _load_bank(
+        DATA_DIR / "coordination_bank.json",
+        source="coordination_bank.json",
+        bank_type="conditioning",
+    )
 except Exception:
     _coord_data = []
 
@@ -220,7 +238,7 @@ def get_system_or_warn(drill: dict, *, source: str) -> str | None:
 
 
 def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
-    return injury_match_details(drill, injuries, fields=("name", "notes"))
+    return injury_match_details(drill, injuries)
 
 
 def _is_drill_text_safe(
@@ -235,6 +253,22 @@ def _is_drill_text_safe(
     if decision.action != "exclude":
         return True
     return False
+
+
+def _apply_injury_guard_shortlist(
+    drills: list[tuple[dict, float, dict]],
+    *,
+    injuries: list[str],
+    phase: str,
+    fatigue: str,
+    limit: int = INJURY_GUARD_TOP_K,
+) -> list[tuple[dict, float, dict]]:
+    guarded: list[tuple[dict, float, dict]] = []
+    for drill, score, reasons in drills[:limit]:
+        if injury_decision(drill, injuries, phase, fatigue).action == "exclude":
+            continue
+        guarded.append((drill, score, reasons))
+    return guarded
 
 # Relative emphasis of each energy system by training phase
 def expand_tags(input_list, tag_map):
@@ -326,16 +360,16 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
             continue
         if drill.get("name") in existing_names:
             continue
-        decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
-        if decision.action == "exclude":
-            continue
         equipment = normalize_equipment_list(drill.get("equipment", []))
         if equipment and not set(equipment).issubset(equipment_access):
             continue
         candidates.append(drill)
 
     candidates = sorted(candidates, key=lambda d: d.get("name") or "")
-    return candidates[0] if candidates else None
+    for drill in candidates[:INJURY_GUARD_TOP_K]:
+        if injury_decision(drill, injuries, phase, flags.get("fatigue", "low")).action != "exclude":
+            return drill
+    return None
 
 
 def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
@@ -630,9 +664,6 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
-        decision = injury_decision(d, injuries, phase, fatigue)
-        if decision.action == "exclude":
-            continue
         if phase.upper() not in d.get("phases", []):
             continue
 
@@ -739,9 +770,6 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
-        decision = injury_decision(d, injuries, phase, fatigue)
-        if decision.action == "exclude":
-            continue
         tags = normalize_tags(d.get("tags", []))
         details = " ".join(
             [
@@ -835,13 +863,31 @@ def generate_conditioning_block(flags):
             if st in tags:
                 style_drills_by_style[st][system].append((d, score, reasons))
 
-    for drills in system_drills.values():
+    for system, drills in system_drills.items():
         drills.sort(key=lambda x: x[1], reverse=True)
-    for drills in style_system_drills.values():
+        system_drills[system] = _apply_injury_guard_shortlist(
+            drills,
+            injuries=injuries,
+            phase=phase,
+            fatigue=fatigue,
+        )
+    for system, drills in style_system_drills.items():
         drills.sort(key=lambda x: x[1], reverse=True)
+        style_system_drills[system] = _apply_injury_guard_shortlist(
+            drills,
+            injuries=injuries,
+            phase=phase,
+            fatigue=fatigue,
+        )
     for style_lists in style_drills_by_style.values():
-        for drills in style_lists.values():
+        for system, drills in style_lists.items():
             drills.sort(key=lambda x: x[1], reverse=True)
+            style_lists[system] = _apply_injury_guard_shortlist(
+                drills,
+                injuries=injuries,
+                phase=phase,
+                fatigue=fatigue,
+            )
 
     all_candidates_by_system = {
         system: [drill for drill, _, _ in system_drills.get(system, [])]

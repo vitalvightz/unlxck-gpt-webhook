@@ -14,7 +14,7 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST
 from .injury_filtering import _load_style_specific_exercises, log_injury_debug
-from .injury_guard import choose_injury_replacement, injury_decision
+from .injury_guard import INJURY_GUARD_TOP_K, choose_injury_replacement, injury_decision
 
 # Load style specific exercises (JSON list)
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -201,10 +201,27 @@ def _normalize_fight_format(fight_format: str) -> str:
         return "kickboxing"
     return fight_format
 
+
+def _apply_injury_guard_shortlist(
+    pairs: list[tuple[dict, float, dict]],
+    *,
+    injuries: list[str],
+    phase: str,
+    fatigue: str,
+    limit: int = INJURY_GUARD_TOP_K,
+) -> list[tuple[dict, float, dict]]:
+    guarded: list[tuple[dict, float, dict]] = []
+    for ex, score, reasons in pairs[:limit]:
+        if injury_decision(ex, injuries, phase, fatigue).action == "exclude":
+            continue
+        guarded.append((ex, score, reasons))
+    return guarded
+
 exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
 for item in exercise_bank:
     validate_training_item(item, source="exercise_bank.json", require_phases=True)
     normalize_item_tags(item)
+    item["bank_type"] = "strength"
 
 # Load universal strength list for cross-phase novelty exemptions
 try:
@@ -217,6 +234,7 @@ else:
     for item in _universal_strength:
         validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
         normalize_item_tags(item)
+        item["bank_type"] = "strength"
 UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
 logger = logging.getLogger(__name__)
@@ -404,8 +422,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("movement", ""),
             ]
         )
-        if injury_decision(ex, injuries, phase, fatigue).action == "exclude":
-            continue
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
@@ -458,15 +474,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             weighted_exercises.append((ex, score, breakdown))
 
     weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    guarded_pairs = _apply_injury_guard_shortlist(
+        weighted_exercises,
+        injuries=injuries,
+        phase=phase,
+        fatigue=fatigue,
+    )
     days_count = len(training_days) if isinstance(training_days, list) else training_days
     if not isinstance(days_count, int):
         days_count = 3
     # Target exercise count determined by phase multipliers
 
-    if len(weighted_exercises) < target_exercises:
+    if len(guarded_pairs) < target_exercises:
         fallback_exercises = []
         for ex in exercise_bank:
-            if ex in [we[0] for we in weighted_exercises]:
+            if ex in [we[0] for we in guarded_pairs]:
                 continue
             if phase not in ex.get("phases", []):
                 continue
@@ -482,8 +504,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     ex.get("movement", ""),
                 ]
             )
-            if injury_decision(ex, injuries, phase, fatigue).action == "exclude":
-                continue
             if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
             if prev_exercises and ex.get("name") in prev_exercises:
@@ -504,15 +524,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 if not any(t in taper_allowed for t in tags):
                     continue
             fallback_exercises.append(ex)
-            if len(fallback_exercises) >= target_exercises - len(weighted_exercises):
+            if len(fallback_exercises) >= target_exercises - len(guarded_pairs):
                 break
-        weighted_exercises += [(ex, 0, {}) for ex in fallback_exercises]
+        guarded_pairs += [(ex, 0, {}) for ex in fallback_exercises]
 
     # Keep score pairs for later lookups
     score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
     reason_lookup = {ex["name"]: reasons for ex, _, reasons in weighted_exercises}
 
-    top_pairs = weighted_exercises[:target_exercises]
+    top_pairs = guarded_pairs[:target_exercises]
     top_exercises = [ex for ex, _, _ in top_pairs]
     # Remove any duplicate exercise names that slipped through scoring
     seen_exercises: set[str] = set()
@@ -565,10 +585,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # --------- ISOMETRIC GUARANTEE ---------
     if phase in {"GPP", "SPP"}:
         if not any("isometric" in ex.get("tags", []) for ex in top_exercises):
-            score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
+            score_lookup = {ex["name"]: score for ex, score, _ in guarded_pairs}
             iso_candidates = [
                 (ex, score)
-                for ex, score, _ in weighted_exercises
+                for ex, score, _ in guarded_pairs
                 if "isometric" in ex.get("tags", []) and ex not in top_exercises
             ]
             if iso_candidates:
@@ -629,7 +649,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             capped.append(ex)
 
         if len(capped) < target_exercises:
-            for cand, _, cand_reasons in weighted_exercises:
+            for cand, _, cand_reasons in guarded_pairs:
                 if cand in capped:
                     continue
                 movement = normalize_exercise_movement(cand)
@@ -656,7 +676,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         for idx, ex in enumerate(ex_list):
             name_lower = ex.get("name", "").lower()
             if "heavy rdl" in name_lower or ("rdl" in name_lower and "heavy" in name_lower):
-                for cand, _, cand_reasons in weighted_exercises:
+                for cand, _, cand_reasons in guarded_pairs:
                     cand_name = cand.get("name", "").lower()
                     if cand_name == name_lower:
                         continue
@@ -683,7 +703,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             replacement = None
             safe_pool: list[dict] = []
             safe_reasons: dict[str, dict] = {}
-            for cand, _, cand_reasons in weighted_exercises:
+            for cand, _, cand_reasons in guarded_pairs:
                 cand_name = cand.get("name")
                 if not cand_name or cand_name in used_names:
                     continue

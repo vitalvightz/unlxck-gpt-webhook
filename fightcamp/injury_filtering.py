@@ -138,7 +138,7 @@ INJURY_TAG_ALIASES = {
         "pinch_grip_high",
     },
     "hamstring": {"posterior_chain_eccentric_high"},
-    "high_cns": {"high_cns_upper"},
+    "high_cns": set(),
     "hip_dominant": {
         "hip_impingement_risk",
         "hip_internal_rotation_stress",
@@ -184,25 +184,21 @@ def _normalize_text(text: str) -> str:
     return " ".join(cleaned.split())
 
 
-def _phrase_in_tokens(tokens: list[str], phrase_tokens: list[str]) -> bool:
-    if not phrase_tokens or len(phrase_tokens) > len(tokens):
+def _phrase_in_tokens(text: str, phrase_tokens: list[str]) -> bool:
+    if not phrase_tokens:
         return False
-    window = len(phrase_tokens)
-    for idx in range(len(tokens) - window + 1):
-        if tokens[idx : idx + window] == phrase_tokens:
-            return True
-    return False
+    phrase_pattern = r"\b" + r"\s+".join(re.escape(token) for token in phrase_tokens) + r"\b"
+    return re.search(phrase_pattern, text) is not None
 
 
 def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[str] | None = None) -> list[str]:
     normalized_text = _normalize_text(text)
     if not normalized_text:
         return []
-    text_tokens = normalized_text.split()
     allowlist = allowlist or []
     for phrase in allowlist:
         phrase_tokens = _normalize_text(phrase).split()
-        if phrase_tokens and _phrase_in_tokens(text_tokens, phrase_tokens):
+        if phrase_tokens and _phrase_in_tokens(normalized_text, phrase_tokens):
             return []
     matches: list[str] = []
     seen: set[str] = set()
@@ -213,11 +209,19 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
         phrase_tokens = normalized_pattern.split()
         if len(phrase_tokens) == 1 and phrase_tokens[0] in GENERIC_SINGLE_WORD_PATTERNS:
             continue
-        if _phrase_in_tokens(text_tokens, phrase_tokens):
+        if _phrase_in_tokens(normalized_text, phrase_tokens):
             if pattern not in seen:
                 matches.append(pattern)
                 seen.add(pattern)
     return matches
+
+
+def _infer_item_module(item: dict) -> str:
+    if item.get("bank_type"):
+        return str(item["bank_type"])
+    if item.get("system") or item.get("modality") or item.get("placement") == "conditioning":
+        return "conditioning"
+    return "strength"
 
 
 def infer_tags_from_name(name: str) -> set[str]:
@@ -374,13 +378,17 @@ def injury_match_details(
     *,
     fields: Iterable[str] | None = None,
     risk_levels: Iterable[str] | None = None,
+    module: str | None = None,
 ) -> list[dict]:
     if not injuries:
         return []
-    fields = fields or ("name",)
+    fields = ("name",)
     risk_levels = set(risk_levels or ("exclude",))
-    field_values = {field: str(item.get(field, "") or "") for field in fields}
-    name = field_values.get("name", "")
+    field_values = {"name": str(item.get("name", "") or "")}
+    name = field_values["name"]
+    item_module = _infer_item_module(item)
+    if module and module != item_module:
+        return []
     tags = set(ensure_tags(item))
     tags |= infer_tags_from_name(name)
     tags |= expand_injury_tags(tags)
