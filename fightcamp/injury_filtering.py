@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Iterable
@@ -622,7 +623,6 @@ def _log_exclusion(context: str, item: dict, decision) -> None:
         item: Item dictionary with 'name', 'drill', or other name fields
         decision: Decision object from injury_decision with action, reason, etc.
     """
-    import os
     if os.environ.get("INJURY_DEBUG", "0") != "1":
         return
     

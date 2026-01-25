@@ -36,7 +36,9 @@ TAPER_AVOID_TAGS = {
     "eccentric",
 }
 
-# Legacy variable for test compatibility
+# Legacy variable for backward compatibility with tests
+# This is used by test_injury_guard.py::test_injury_guard_log_deduped
+# to clear state between test runs
 _INJURY_GUARD_LOGGED: set[tuple[str, str]] = set()
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
