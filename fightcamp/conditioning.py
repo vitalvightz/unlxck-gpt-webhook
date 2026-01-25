@@ -14,7 +14,7 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, log_injury_debug
-from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory, _injury_debug_log_exclude
+from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
@@ -41,36 +41,6 @@ _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
 
 logger = logging.getLogger(__name__)
-
-def log_injury_top_excluded(label: str, excluded: list[dict]) -> None:
-    if os.getenv("INJURY_DEBUG", "0") != "1":
-        return
-    if not excluded:
-        return
-    limit = int(os.getenv("INJURY_TOP_LOG_LIMIT", "10"))
-    counts = defaultdict(int)
-    for x in excluded:
-        counts[x.get("region") or "unknown"] += 1
-
-    excluded_sorted = sorted(
-        excluded, key=lambda x: x.get("score", 0.0), reverse=True
-    )[:limit]
-    logger.warning(
-        "[injury-guard] %s excluded counts by region: %s",
-        label,
-        dict(counts),
-    )
-    for x in excluded_sorted:
-        logger.warning(
-            "[injury-guard] %s TOP_EXCLUDED name=%r score=%.3f region=%r severity=%r bucket=%r matched_tags=%s",
-            label,
-            x.get("name"),
-            float(x.get("score", 0.0)),
-            x.get("region"),
-            x.get("severity"),
-            x.get("bucket"),
-            x.get("matched_tags") or [],
-        )
 
 
 def normalize_system(raw_system: str | None, *, source: str) -> str:
@@ -1081,13 +1051,15 @@ def generate_conditioning_block(flags):
                 break
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
-                _injury_debug_log_exclude("conditioning", drill, decision)
-                if os.getenv("INJURY_DEBUG", "0") == "1":
-                    logger.warning(
-                        "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
-                        drill.get("name", "<unnamed>"),
-                        decision,
-                    )
+                # Log exclusion
+                reason = decision.reason if isinstance(decision.reason, dict) else {}
+                logger.warning(
+                    "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
+                    drill.get("name", "<unnamed>"),
+                    reason.get("region", "unknown"),
+                    reason.get("severity", "unknown"),
+                    decision.risk_score,
+                )
                 continue
             drill_tags = set(normalize_tags(drill.get("tags", [])))
             if drill.get("name") in high_priority_names or drill_tags & (goal_tags_set | weakness_tags_set):
@@ -1150,13 +1122,15 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
-                    _injury_debug_log_exclude("conditioning", drill, decision)
-                    if os.getenv("INJURY_DEBUG", "0") == "1":
-                        logger.warning(
-                            "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
-                            drill.get("name", "<unnamed>"),
-                            decision,
-                        )
+                    # Log exclusion
+                    reason = decision.reason if isinstance(decision.reason, dict) else {}
+                    logger.warning(
+                        "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
+                        drill.get("name", "<unnamed>"),
+                        reason.get("region", "unknown"),
+                        reason.get("severity", "unknown"),
+                        decision.risk_score,
+                    )
                     continue
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
@@ -1192,13 +1166,15 @@ def generate_conditioning_block(flags):
                     continue
                 decision = _guarded_injury_decision(drill)
                 if decision.action == "exclude":
-                    _injury_debug_log_exclude("conditioning", drill, decision)
-                    if os.getenv("INJURY_DEBUG", "0") == "1":
-                        logger.warning(
-                            "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
-                            drill.get("name", "<unnamed>"),
-                            decision,
-                        )
+                    # Log exclusion
+                    reason = decision.reason if isinstance(decision.reason, dict) else {}
+                    logger.warning(
+                        "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
+                        drill.get("name", "<unnamed>"),
+                        reason.get("region", "unknown"),
+                        reason.get("severity", "unknown"),
+                        decision.risk_score,
+                    )
                     continue
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
                 if system is not None:
@@ -1234,13 +1210,15 @@ def generate_conditioning_block(flags):
                 continue
             decision = _guarded_injury_decision(drill)
             if decision.action == "exclude":
-                _injury_debug_log_exclude("conditioning", drill, decision)
-                if os.getenv("INJURY_DEBUG", "0") == "1":
-                    logger.warning(
-                        "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
-                        drill.get("name", "<unnamed>"),
-                        decision,
-                    )
+                # Log exclusion
+                reason = decision.reason if isinstance(decision.reason, dict) else {}
+                logger.warning(
+                    "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
+                    drill.get("name", "<unnamed>"),
+                    reason.get("region", "unknown"),
+                    reason.get("severity", "unknown"),
+                    decision.risk_score,
+                )
                 continue
             system = get_system_or_warn(drill, source="skill_refinement")
             if system is None:
@@ -1292,13 +1270,15 @@ def generate_conditioning_block(flags):
                 )[:INJURY_GUARD_SHORTLIST]:
                     decision = _guarded_injury_decision(drill)
                     if decision.action == "exclude":
-                        _injury_debug_log_exclude("conditioning", drill, decision)
-                        if os.getenv("INJURY_DEBUG", "0") == "1":
-                            logger.warning(
-                                "[injury-guard][conditioning] EXCLUDED '%s' decision=%s",
-                                drill.get("name", "<unnamed>"),
-                                decision,
-                            )
+                        # Log exclusion
+                        reason = decision.reason if isinstance(decision.reason, dict) else {}
+                        logger.warning(
+                            "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
+                            drill.get("name", "<unnamed>"),
+                            reason.get("region", "unknown"),
+                            reason.get("severity", "unknown"),
+                            decision.risk_score,
+                        )
                         continue
                     system = get_system_or_warn(drill, source="pro_neck")
                     if system is not None:
@@ -1371,7 +1351,15 @@ def generate_conditioning_block(flags):
                     idx += 1
                     continue
                 _record_injury_exclusion(drill, decision)
-                _injury_debug_log_exclude("conditioning", drill, decision)
+                # Log exclusion
+                reason = decision.reason if isinstance(decision.reason, dict) else {}
+                logger.warning(
+                    "Excluded conditioning drill '%s': region=%s severity=%s risk_score=%.3f",
+                    drill.get("name", "<unnamed>"),
+                    reason.get("region", "unknown"),
+                    reason.get("severity", "unknown"),
+                    decision.risk_score,
+                )
 
                 safe_pool: list[dict] = []
                 for cand in candidates:
@@ -1380,7 +1368,6 @@ def generate_conditioning_block(flags):
                         continue
                     cand_decision = _decision(cand)
                     if cand_decision.action == "exclude":
-                        _injury_debug_log_exclude("conditioning", cand, cand_decision)
                         continue
                     safe_pool.append(cand)
 
@@ -1438,7 +1425,6 @@ def generate_conditioning_block(flags):
         selected_drill_names,
         reason_lookup,
     )
-    log_injury_top_excluded(label=f"conditioning:{phase}", excluded=excluded_by_injury)
 
     if os.getenv("INJURY_DEBUG") == "1":
         all_selected = [d for drills in grouped_drills.values() for d in drills]
