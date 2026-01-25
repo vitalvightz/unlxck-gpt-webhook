@@ -13,12 +13,8 @@ from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST
-from .injury_filtering import (
-    _load_style_specific_exercises,
-    injury_match_details,
-    is_injury_safe_with_fields,
-    log_injury_debug,
-)
+from .injury_filtering import _load_style_specific_exercises, log_injury_debug
+from .injury_guard import choose_injury_replacement, injury_decision
 
 # Load style specific exercises (JSON list)
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -408,7 +404,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("movement", ""),
             ]
         )
-        if not is_injury_safe_with_fields(ex, injuries, fields=("name", "notes")):
+        if injury_decision(ex, injuries, phase, fatigue).action == "exclude":
             continue
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
@@ -486,7 +482,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     ex.get("movement", ""),
                 ]
             )
-            if not is_injury_safe_with_fields(ex, injuries, fields=("name", "notes")):
+            if injury_decision(ex, injuries, phase, fatigue).action == "exclude":
                 continue
             if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
@@ -556,7 +552,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 break
             if drill.get("name") in existing_names:
                 continue
-            if not is_injury_safe_with_fields(drill, injuries, fields=("name", "notes")):
+            if injury_decision(drill, injuries, phase, fatigue).action == "exclude":
                 continue
             for group in priority_strength_tags:
                 if any(tag in drill.get("tags", []) for tag in group) and not any(
@@ -604,7 +600,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in STYLE_EXERCISES:
         if phase not in ex.get("phases", []):
             continue
-        if not is_injury_safe_with_fields(ex, injuries, fields=("name", "notes")):
+        if injury_decision(ex, injuries, phase, fatigue).action == "exclude":
             continue
         ex_tags = set(ex.get("tags", []))
         if not ex_tags & athlete_style_set:
@@ -680,44 +676,49 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict | None] = []
         for ex in ex_list:
-            reasons = injury_match_details(
-                ex,
-                injuries,
-                fields=("name", "notes"),
-                risk_levels=("exclude",),
-            )
-            if not reasons:
+            decision = injury_decision(ex, injuries, phase, fatigue)
+            if decision.action != "exclude":
                 updated.append(ex)
                 continue
             replacement = None
+            safe_pool: list[dict] = []
+            safe_reasons: dict[str, dict] = {}
             for cand, _, cand_reasons in weighted_exercises:
                 cand_name = cand.get("name")
                 if not cand_name or cand_name in used_names:
                     continue
-                if injury_match_details(
-                    cand,
-                    injuries,
-                    fields=("name", "notes"),
-                    risk_levels=("exclude",),
-                ):
+                if injury_decision(cand, injuries, phase, fatigue).action == "exclude":
                     continue
-                replacement = cand
-                reason_lookup[cand_name] = cand_reasons
-                used_names.add(cand_name)
-                break
+                safe_pool.append(cand)
+                safe_reasons[cand_name] = cand_reasons
+
+            if safe_pool:
+                replacement = choose_injury_replacement(
+                    excluded_item=ex,
+                    candidates=safe_pool,
+                    injuries=injuries,
+                    phase=phase,
+                    fatigue=fatigue,
+                    score_fn=None,
+                )
+                if replacement:
+                    rep_name = replacement.get("name")
+                    if rep_name:
+                        reason_lookup[rep_name] = safe_reasons.get(rep_name, {})
+                        used_names.add(rep_name)
             if replacement:
                 logger.warning(
-                    "[injury-guard] strength replacing '%s' -> '%s' reasons=%s",
+                    "[injury-guard] strength replacing '%s' -> '%s' decision=%s",
                     ex.get("name"),
                     replacement.get("name"),
-                    reasons,
+                    decision,
                 )
                 updated.append(replacement)
             else:
                 logger.warning(
-                    "[injury-guard] strength removing '%s' reasons=%s",
+                    "[injury-guard] strength removing '%s' decision=%s",
                     ex.get("name"),
-                    reasons,
+                    decision,
                 )
                 updated.append(None)
         return [ex for ex in updated if ex]

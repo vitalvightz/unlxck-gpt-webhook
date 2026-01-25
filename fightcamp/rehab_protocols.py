@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
+from .injury_guard import INJURY_TYPE_SEVERITY
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -77,22 +78,6 @@ INJURY_TYPES = [
     "hyperextension",
     "unspecified",
 ]
-
-INJURY_TYPE_SEVERITY = {
-    "tightness": "mild",
-    "soreness": "mild",
-    "stiffness": "mild",
-    "pain": "mild",
-    "contusion": "mild",
-    "sprain": "moderate",
-    "strain": "moderate",
-    "tendonitis": "moderate",
-    "impingement": "moderate",
-    "hyperextension": "moderate",
-    "swelling": "severe",
-    "instability": "severe",
-    "unspecified": "moderate",
-}
 
 REGION_GUARDRAILS = {
     "upper_limb": {
