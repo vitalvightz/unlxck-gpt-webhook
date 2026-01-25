@@ -9,7 +9,7 @@ from fightcamp.conditioning import (
     _is_drill_text_safe,
     select_coordination_drill,
 )
-from fightcamp.injury_guard import injury_decision
+from fightcamp.injury_guard import injury_decision, pick_safe_replacement
 from fightcamp.injury_filtering import (
     audit_missing_tags,
     build_injury_exclusion_map,
@@ -345,6 +345,22 @@ def test_injury_guard_log_deduped(caplog):
         _is_drill_text_safe(drill, injuries, label="conditioning")
     guard_lines = [rec.message for rec in caplog.records if "[injury-guard]" in rec.message]
     assert len(guard_lines) == 1
+
+
+def test_pick_safe_replacement_removes_when_all_excluded():
+    injuries_ctx = {"injuries": ["shoulder"], "phase": "GPP", "fatigue": "low"}
+    original = {"name": "Overhead Press", "tags": ["overhead", "press_heavy"]}
+    candidates = [
+        {"name": "Z Press", "tags": ["overhead"]},
+        {"name": "Push Press", "tags": ["press_heavy"]},
+    ]
+
+    replacement, decision = pick_safe_replacement(original, candidates, injuries_ctx)
+    assert replacement is None
+    assert decision is None
+
+    remaining = [replacement] if replacement else []
+    assert remaining == []
 
 
 def test_regression_shoulders_exclusion_allowlist():

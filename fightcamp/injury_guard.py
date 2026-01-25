@@ -409,3 +409,30 @@ def choose_injury_replacement(
                     return cand
 
     return safe_candidates[0]
+
+
+def pick_safe_replacement(
+    original: dict,
+    candidates: Iterable[dict],
+    injuries_ctx: dict,
+    fallback_candidates: Iterable[dict] | None = None,
+) -> tuple[dict | None, Decision | None]:
+    injuries = injuries_ctx.get("injuries", [])
+    phase = injuries_ctx.get("phase", "")
+    fatigue = injuries_ctx.get("fatigue", "")
+
+    def _first_safe(items: Iterable[dict]) -> tuple[dict | None, Decision | None]:
+        for cand in items:
+            decision = injury_decision(cand, injuries, phase, fatigue)
+            if decision.action in {"allow", "modify"}:
+                return cand, decision
+        return None, None
+
+    replacement, decision = _first_safe(candidates)
+    if replacement:
+        return replacement, decision
+
+    if fallback_candidates:
+        return _first_safe(fallback_candidates)
+
+    return None, None
