@@ -36,6 +36,8 @@ TAPER_AVOID_TAGS = {
     "eccentric",
 }
 
+# Legacy variable for test compatibility
+_INJURY_GUARD_LOGGED: set[tuple[str, str]] = set()
 _MIXED_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_LOGGED: set[tuple[str, str]] = set()
 _UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
