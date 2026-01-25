@@ -9,6 +9,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from fightcamp.injury_formatting import format_injury_summary, parse_injury_entry
 from fightcamp.injury_synonyms import split_injury_text
 from fightcamp.main import generate_plan
+from fightcamp.rehab_protocols import format_injury_guardrails
 
 
 def test_format_injury_summary_basics():
@@ -67,3 +68,8 @@ def test_injury_parsing_handles_multiple_locations_with_punctuation():
     assert "shin" in locations
     assert "shoulder" in locations
     assert "contusion" not in injury_types
+
+
+def test_torn_hamstring_severity_is_severe():
+    guardrails = format_injury_guardrails("GPP", "torn hamstring")
+    assert "Severity: Severe" in guardrails

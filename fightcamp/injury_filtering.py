@@ -862,7 +862,7 @@ def injury_match_details(
         tags_for_matching.discard("running_volume_high")
     reasons: list[dict] = []
     module = _module_for_item(item)
-    allow_keyword_match = module == "strength"
+    allow_keyword_match = module in {"strength", "conditioning"}
     for region in normalize_injury_regions(injuries):
         rules = INJURY_RULES.get(region, {})
         for risk_level in ("exclude", "flag"):
