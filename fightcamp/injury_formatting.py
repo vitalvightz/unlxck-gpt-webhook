@@ -31,13 +31,14 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
     return {
         "injury_type": injury_type,
         "canonical_location": location,
+        "side": laterality,
         "laterality": laterality,
     }
 
 
 def format_injury_summary(injury_obj: Mapping[str, str | None]) -> str:
     canonical_location = injury_obj.get("canonical_location")
-    laterality = injury_obj.get("laterality")
+    laterality = injury_obj.get("side") or injury_obj.get("laterality")
     injury_type = injury_obj.get("injury_type")
     severity = injury_obj.get("severity")
 
