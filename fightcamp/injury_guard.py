@@ -16,60 +16,6 @@ logger = logging.getLogger(__name__)
 INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
 
 
-def _injury_debug_log_exclude(kind: str, item: dict, decision) -> None:
-    """
-    Log detailed information about excluded items when INJURY_DEBUG is enabled.
-    
-    Args:
-        kind: Type of item ('strength' or 'conditioning' or 'bank')
-        item: Item dictionary with 'name', 'drill', 'title', 'tags', etc.
-        decision: Decision object from injury_decision
-    """
-    if not INJURY_DEBUG:
-        return
-    
-    # Extract item name from various possible fields
-    name = item.get("name") or item.get("drill") or item.get("title") or "Unnamed"
-    
-    # Extract decision details
-    reason = decision.reason if isinstance(decision.reason, dict) else {}
-    region = reason.get("region", "unknown")
-    severity = reason.get("severity", "unknown")
-    bucket = reason.get("bucket", "default")
-    matched_tags = decision.matched_tags or []
-    
-    # Extract triggers (tags and patterns from matches)
-    matches = reason.get("matches", [])
-    all_tags = set()
-    all_patterns = set()
-    
-    for match in matches:
-        if isinstance(match, dict):
-            all_tags.update(match.get("tags", []))
-            all_patterns.update(match.get("patterns", []))
-    
-    # Format trigger information
-    trigger_tags = sorted(all_tags) if all_tags else []
-    trigger_patterns = sorted(all_patterns) if all_patterns else []
-    
-    # Print detailed exclusion log
-    print(f"[INJURY_DEBUG] EXCLUDE {kind}")
-    print(f"  name: {name}")
-    print(f"  region: {region}")
-    print(f"  severity: {severity}")
-    print(f"  bucket: {bucket}")
-    print(f"  risk_score: {decision.risk_score:.3f}")
-    print(f"  threshold: {decision.threshold:.3f}")
-    
-    if matched_tags:
-        print(f"  matched_tags: {matched_tags}")
-    if trigger_tags:
-        print(f"  trigger_tags: {trigger_tags}")
-    if trigger_patterns:
-        print(f"  trigger_patterns: {trigger_patterns}")
-    print()
-
-
 INJURY_TYPE_SEVERITY = {
     "tightness": "mild",
     "soreness": "mild",
@@ -482,10 +428,6 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
             "matches": details,
         },
     )
-    
-    # Log exclusion details if INJURY_DEBUG is enabled
-    if action == "exclude":
-        _injury_debug_log_exclude("exercise", exercise, decision)
     
     return decision
 
