@@ -14,7 +14,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "Ropes fatigue arms before punch output - mimics late-round flurries (95% effort)",
     "equipment_note": "2\" ropes, heavy bag"
@@ -34,7 +36,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
     "notes": "Transfers to hook power and mauling stamina (Max power)",
     "equipment_note": "12lb hammer, 500lb tire"
@@ -55,7 +60,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates clinch control and defensive urgency (Violent intent)",
     "equipment_note": "70lb sandbag"
@@ -75,7 +83,10 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Snatches = uppercut transfer, bands simulate fatigue (Explosive)",
     "equipment_note": "24kg KB, monster bands"
@@ -95,7 +106,10 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Jumps = explosive entries, push-ups = clinch framing (85% effort)",
     "equipment_note": "Bodyweight jumps only if no trap bar"
@@ -114,7 +128,11 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Develops fight-ending straight right power (100% power)",
     "equipment_note": "20lb med ball, concrete wall"
@@ -134,7 +152,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "Pushes = ring-cutting, thrusters = combos under fatigue (Near-vomit)",
     "equipment_note": "Bodyweight sled load, 25lb DBs"
@@ -153,7 +173,10 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "notes": "Pure desperation conditioning for championship rounds (Survival mode)",
     "equipment_note": "Concrete floor recommended"
@@ -172,7 +195,8 @@
     "intensity": "moderate",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Because getting hit is inevitable (Steady burn)",
     "equipment_note": "25lb plate for rotations"
@@ -192,7 +216,10 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Simulates being against ropes and firing back (Fight night pace)",
     "equipment_note": "Heavy bag mandatory"
@@ -212,7 +239,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_cns_high",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains fight-starting explosiveness (Max explosion)",
     "equipment_note": "Heavy bands anchored low"
@@ -232,7 +262,11 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Rotational power meets vertical explosion (Kill switch)",
     "equipment_note": "10lb hammer, 24\" tire"
@@ -252,7 +286,10 @@
     "intensity": "moderate",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_upper_press"
     ],
     "notes": "Trains power generation while moving backward (Controlled rage)",
     "equipment_note": "32kg KB for monsters"
@@ -272,7 +309,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Pure infighting conditioning (90% effort)",
     "equipment_note": "100lb sandbag for pros"
@@ -292,7 +332,10 @@
     "intensity": "moderate",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Grip endurance for mauling (75% 1RM)",
     "equipment_note": "Straps allowed"
@@ -311,7 +354,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "When the lights are bright and tank is empty (Near death)",
     "equipment_note": "Outdoor hill sprints ideal"
@@ -331,7 +376,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_upper_press",
+      "mech_grip_intensive",
+      "mech_trunk_rotation"
     ],
     "notes": "Short-range weapon development (90% power)",
     "equipment_note": "25lb DBs minimum"
@@ -351,7 +399,10 @@
     "intensity": "moderate",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains defensive footwork under fatigue (75% effort)",
     "equipment_note": "Bodyweight sled load"
@@ -371,7 +422,11 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Develops rib-breaking power (Max torsion)",
     "equipment_note": "16lb med ball"
@@ -391,7 +446,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_acceleration",
+      "mech_cns_high"
     ],
     "notes": "Trains explosive entries and defensive reactions (90% effort)",
     "equipment_note": "Bands anchored at waist height"
@@ -411,7 +469,9 @@
     "intensity": "zone 2",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ],
     "notes": "Golden era boxing conditioning (60% 1RM)",
     "equipment_note": "95lb barbell"
@@ -431,7 +491,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_upper_press",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Trains punching from compromised positions (90% effort)",
     "equipment_note": "24kg KB"
@@ -450,7 +513,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "For when the ring feels small (100% effort)",
     "equipment_note": "Outdoor stairs ideal"
@@ -469,7 +534,8 @@
     "intensity": "moderate",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Because getting hit happens (Steady)",
     "equipment_note": "10lb plate for resistance"
@@ -489,7 +555,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_reactive"
     ],
     "notes": "No gym? No problem. (90% effort)",
     "equipment_note": "300lb+ tire"
@@ -509,7 +577,11 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Sled mimics pinning opponents, swings for hip power in dirty boxing (90% effort)",
     "equipment_note": "Bodyweight sled load, 24kg KB"
@@ -529,7 +601,11 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
     ],
     "notes": "Transfers to overhand rights and clinch breaks (Max effort)",
     "equipment_note": "12lb hammer, 400lb+ tire"
@@ -548,7 +624,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates head control in phone booth fights (Violent intent)",
     "equipment_note": "70lb sandbag, grind face into bag"
@@ -567,7 +646,11 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Deadlifts mimic double-leg drive (80% 1RM)",
     "equipment_note": "Straps allowed for grip preservation"
@@ -587,7 +670,10 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_upper_pull"
     ],
     "notes": "Cleans simulate uppercuts, wall knees for realism (85% effort)",
     "equipment_note": "24kg KB, use padded wall if available"
@@ -607,7 +693,8 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains explosive hips for suplexes/body locks (90% effort)",
     "equipment_note": "50-70lb sandbag"
@@ -626,7 +713,8 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "For when you're mounted and need to bench press opponent off (Burnout)",
     "equipment_note": "Add weight vest for pros"
@@ -646,7 +734,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Hooks transfer to elbows, snatches for scrambles (Max power)",
     "equipment_note": "25lb DBs, 20kg KB"
@@ -666,7 +757,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates framing and striking in confined spaces (90% effort)",
     "equipment_note": "20lb med ball, concrete wall"
@@ -686,7 +779,11 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Drags mimic pulling opponent into guard, slams for GNP (Near-vomit)",
     "equipment_note": "Bodyweight sled, 70lb bag"
@@ -706,7 +803,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Strikes transfer to head clubbing, jumps for guard passes (Kill switch)",
     "equipment_note": "10lb hammer, 24\" tire"
@@ -726,7 +825,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_upper_press",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains loopy strikes from broken clinch (Max chaos)",
     "equipment_note": "Heavy bands, 10lb DBs"
@@ -745,7 +846,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue",
+      "mech_reactive"
     ],
     "notes": "For defending shots against walls (90% effort)",
     "equipment_note": "Concrete floor recommended"
@@ -765,7 +868,11 @@
     "intensity": "high",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_cns_high"
     ],
     "notes": "Swings for hip pop, bag lifts for scrambling (85% effort)",
     "equipment_note": "24kg KB, 70lb sandbag"
@@ -784,7 +891,9 @@
     "intensity": "moderate",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Because sometimes rules go out the window (Steady burn)",
     "equipment_note": "25lb plate for resistance"
@@ -804,7 +913,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_upper_press",
+      "mech_trunk_stability"
     ],
     "notes": "Uppercuts transfer to short elbows, slams for dirty TD setups (90% power)",
     "equipment_note": "20lb DBs, 16lb med ball"
@@ -824,7 +936,10 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_cns_high"
     ],
     "notes": "Strikes mimic hammerfists, jumps for posture recovery (Max violence)",
     "equipment_note": "8lb hammer, 24\" tire"
@@ -844,7 +959,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "For when the fight goes longer than expected (95% effort)",
     "equipment_note": "100lb sandbag, 24kg KB"
@@ -863,7 +980,9 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
     ],
     "notes": "Simulates multiple attackers/street scenarios (Near-death)",
     "equipment_note": "Grass or uneven terrain ideal"
@@ -883,7 +1002,11 @@
     "tags": [
       "clinch_fighter",
       "muay_thai",
-      "kickboxing"
+      "kickboxing",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Simulates maintaining plumb position while striking. Alternate between single collar and double collar ties. (90% effort)",
     "equipment_note": "50-70lb sandbag"
@@ -903,7 +1026,11 @@
     "tags": [
       "clinch_fighter",
       "boxing",
-      "mma"
+      "mma",
+      "mech_upper_press",
+      "mech_grip_intensive",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Develops power for close-quarters body shots and uppercuts against the ropes/cage. (85% effort)",
     "equipment_note": "6-10kg med ball"
@@ -923,7 +1050,10 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains cutting off the octagon against resistance. Use actual cage wall if available. (90% effort)",
     "equipment_note": "Heavy bands anchored at waist height"
@@ -943,7 +1073,11 @@
     "tags": [
       "clinch_fighter",
       "muay_thai",
-      "kickboxing"
+      "kickboxing",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Swings mimic pull-down mechanics for knee strikes. Maintain upright Muay Thai posture. (85% effort)",
     "equipment_note": "16-24kg KB"
@@ -963,7 +1097,11 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "boxing"
+      "boxing",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Develops underhook/overhook endurance and explosive lifts for wrestler-based clinch. (85% effort)",
     "equipment_note": "50-70lb sandbag"
@@ -982,7 +1120,9 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "boxing"
+      "boxing",
+      "mech_grip_support",
+      "mech_trunk_stability"
     ],
     "notes": "Trains punching from Philly shell clinch position against ropes. (90% effort)",
     "equipment_note": "Use corner pads if available"
@@ -1003,7 +1143,11 @@
       "clinch_fighter",
       "muay_thai",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Simulates finishing a hurt opponent against the ropes/cage. Alternate between straight and diagonal knees. (95% effort)",
     "equipment_note": "Use Thai pads if available"
@@ -1023,7 +1167,10 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "muay_thai"
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains cutting off space and striking in confined areas. Focus on framing and head position. (90% effort)",
     "equipment_note": "Use actual wall or cage"
@@ -1042,7 +1189,11 @@
     "intensity": "high",
     "tags": [
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_trunk_stability"
     ],
     "notes": "Develops defensive reactions against judo-style clinch takedowns. (85% effort)",
     "equipment_note": "Partner recommended"
@@ -1063,7 +1214,11 @@
     "tags": [
       "clinch_fighter",
       "muay_thai",
-      "kickboxing"
+      "kickboxing",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands increase hip flexor endurance for late-round knees. Focus on full hip extension. (90% effort)",
     "equipment_note": "Bands anchored behind at ankle height"
@@ -1082,7 +1237,10 @@
     "intensity": "moderate",
     "tags": [
       "clinch_fighter",
-      "boxing"
+      "boxing",
+      "mech_grip_support",
+      "mech_upper_pull",
+      "mech_trunk_stability"
     ],
     "notes": "Builds neck strength for head control in dirty boxing exchanges. (70% effort)",
     "equipment_note": "10-15lb plate"
@@ -1101,7 +1259,10 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Snatches mimic explosive head control adjustments for cage wrestler. (90% effort)",
     "equipment_note": "16-24kg KB"
@@ -1121,7 +1282,10 @@
     "tags": [
       "clinch_fighter",
       "kickboxing",
-      "muay_thai"
+      "muay_thai",
+      "mech_grip_support",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Develops Dutch-style combination striking from the clinch. (90% effort)",
     "equipment_note": "Thai pads or heavy bag ideal"
@@ -1140,7 +1304,10 @@
     "intensity": "high",
     "tags": [
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Pushing mimics driving opponent against cage. Maintain fight posture. (85% effort)",
     "equipment_note": "Bodyweight load on sled"
@@ -1160,7 +1327,10 @@
     "tags": [
       "clinch_fighter",
       "muay_thai",
-      "kickboxing"
+      "kickboxing",
+      "mech_grip_intensive",
+      "mech_trunk_rotation",
+      "mech_upper_pull"
     ],
     "notes": "Develops explosive power for breaking posture in Thai clinch. (Max power)",
     "equipment_note": "6-10kg med ball"
@@ -1180,7 +1350,11 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "boxing"
+      "boxing",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Trains defensive reactions when clinch breaks to prevent takedowns. (90% effort)",
     "equipment_note": "Partner recommended but can shadow"
@@ -1201,7 +1375,10 @@
       "clinch_fighter",
       "boxing",
       "muay_thai",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_upper_pull",
+      "mech_trunk_stability"
     ],
     "notes": "Universal neck strengthening for all clinch styles. (70% effort)",
     "equipment_note": "10-15lb plate"
@@ -1222,7 +1399,10 @@
       "clinch_fighter",
       "muay_thai",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Bands increase hip flexor endurance for all combat sports knees. (90% effort)",
     "equipment_note": "Bands anchored behind at ankle height"
@@ -1243,7 +1423,10 @@
       "clinch_fighter",
       "mma",
       "boxing",
-      "muay_thai"
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_upper_pull"
     ],
     "notes": "Universal drill for controlling opponent while striking across all sports. (85% effort)",
     "equipment_note": "50-70lb sandbag"
@@ -1263,7 +1446,10 @@
     "tags": [
       "clinch_fighter",
       "muay_thai",
-      "mma"
+      "mma",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
     "notes": "Develops devastating elbow strikes from clinch positions. (90% effort)",
     "equipment_note": "Use elbow pads on heavy bag"
@@ -1283,7 +1469,10 @@
     "tags": [
       "clinch_fighter",
       "boxing",
-      "mma"
+      "mma",
+      "mech_grip_support",
+      "mech_reactive",
+      "mech_trunk_stability"
     ],
     "notes": "Trains punching off defensive head control. (85% effort)",
     "equipment_note": "Partner recommended"
@@ -1304,7 +1493,10 @@
       "clinch_fighter",
       "mma",
       "muay_thai",
-      "boxing"
+      "boxing",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "notes": "Championship round simulation for all clinch styles. (80% effort)",
     "equipment_note": "Partner or heavy bag"
@@ -1324,7 +1516,10 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_upper_pull",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Develops late-round takedown defense from overhook positions. (90% effort)",
     "equipment_note": "Bands anchored at shoulder height"
@@ -1344,7 +1539,11 @@
     "tags": [
       "clinch_fighter",
       "muay_thai",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_cns_high"
     ],
     "notes": "Develops fight-ending power from clinch positions. (100% effort)",
     "equipment_note": "Thai pads or heavy bag"
@@ -1363,7 +1562,10 @@
     "intensity": "max",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_upper_press"
     ],
     "notes": "Focus on pulling straight rights after slipping jabs (90% accuracy)",
     "equipment_note": "Adjust bag tension for realistic rebound"
@@ -1384,7 +1586,11 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Bands force explosive hip rotation on pivots (85% power)",
     "equipment_note": "Anchor bands at waist height"
@@ -1403,7 +1609,10 @@
     "intensity": "max",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Slip incoming ball → immediate cross counter (Max reaction speed)",
     "equipment_note": "Use head-mounted version"
@@ -1423,7 +1632,10 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_trunk_rotation",
+      "mech_upper_press"
     ],
     "notes": "Maintain defensive posture while countering (80% effort)",
     "equipment_note": "5lb DBs in lead hand"
@@ -1443,7 +1655,10 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_cns_high"
     ],
     "notes": "No initiating - only counter strikes allowed (Precision focus)",
     "equipment_note": "Coach varies attack angles"
@@ -1462,7 +1677,10 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_lower_squat",
+      "mech_trunk_rotation"
     ],
     "notes": "Simulate rolling under hooks to counter (85% power)",
     "equipment_note": "10-15lb med ball"
@@ -1483,7 +1701,10 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_cns_high"
     ],
     "notes": "Band resistance builds explosive hand speed (90% timing focus)",
     "equipment_note": "Light bands on wrists"
@@ -1503,7 +1724,10 @@
     "tags": [
       "counter_striker",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_lower_hip_hinge",
+      "mech_change_of_direction"
     ],
     "notes": "Focus on balance during check-counter transitions (Technical precision)",
     "equipment_note": "Pad holder varies kick angles"
@@ -1522,7 +1746,10 @@
     "intensity": "max",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_deceleration",
+      "mech_upper_press"
     ],
     "notes": "Mayweather-style pull counter emphasis (90% accuracy)",
     "equipment_note": "Higher bag tension"
@@ -1541,7 +1768,10 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_reactive",
+      "mech_trunk_stability"
     ],
     "notes": "Wall simulates cage/rope pressure (85% effort)",
     "equipment_note": "Focus on underhook counters"
@@ -1561,7 +1791,9 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_cns_high"
     ],
     "notes": "Partner throws from multiple angles (Max reaction speed)",
     "equipment_note": "Use 3 different sized balls"
@@ -1581,7 +1813,11 @@
     "intensity": "max",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Fatigue arms before counter training (90% effort)",
     "equipment_note": "Heavy bag + ankle bands"
@@ -1601,7 +1837,10 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Band-resisted defensive movements (85% effort)",
     "equipment_note": "Anchor bands at shoulder height"
@@ -1621,7 +1860,10 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Cutting off opponent's rhythm (Explosive entries)",
     "equipment_note": "Holder varies rhythm unpredictably"
@@ -1641,7 +1883,11 @@
     "tags": [
       "counter_striker",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Emphasize framing before counter knees (85% power)",
     "equipment_note": "Pad holder drives forward"
@@ -1660,7 +1906,10 @@
     "intensity": "max",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Simulate rolling under wide hooks (90% power)",
     "equipment_note": "10lb med ball for resistance"
@@ -1680,7 +1929,10 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Wall simulates cage pressure (85% effort)",
     "equipment_note": "Bands for additional resistance"
@@ -1700,7 +1952,9 @@
     "intensity": "moderate",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Timer beeps signal counter opportunities (Precision focus)",
     "equipment_note": "Variable delay settings"
@@ -1721,7 +1975,10 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Band resistance on non-punching hand (90% rotation)",
     "equipment_note": "Anchor at 45° angle"
@@ -1740,7 +1997,10 @@
     "intensity": "max",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Time uppercuts as bag rebounds (90% accuracy)",
     "equipment_note": "Lower bag height for body shots"
@@ -1762,7 +2022,10 @@
       "distance_striker",
       "boxing",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Sharp pivots off cones, maintain stance while circling. (80% effort)",
     "equipment_note": "Set cones in diamond pattern"
@@ -1783,7 +2046,9 @@
       "distance_striker",
       "boxing",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Ankle bands for defensive slide training. (70-80% effort)",
     "equipment_note": "Light resistance bands"
@@ -1803,7 +2068,9 @@
     "tags": [
       "distance_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Trains pull-counter mechanics under load. (Explosive)",
     "equipment_note": "5-10lb DBs for hand weight"
@@ -1824,7 +2091,9 @@
     "tags": [
       "distance_striker",
       "boxing",
-      "mma"
+      "mma",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Band-resisted shuffles to reinforce cutting angles. (85% effort)",
     "equipment_note": "Hip-height band anchor"
@@ -1844,7 +2113,9 @@
     "tags": [
       "distance_striker",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Sprint in/out of range, feinting level changes. (90% sprint effort)",
     "equipment_note": "6-10kg med ball"
@@ -1864,7 +2135,9 @@
     "intensity": "high",
     "tags": [
       "distance_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Band-resisted shoulders during bag work. (Fast twitch focus)",
     "equipment_note": "Light bands for delt fatigue"
@@ -1885,7 +2158,9 @@
     "tags": [
       "distance_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Ropes fatigue arms before footwork precision. (85% effort)",
     "equipment_note": "1.5\" ropes, 5-cone star pattern"
@@ -1904,7 +2179,9 @@
     "intensity": "zone 2",
     "tags": [
       "distance_striker",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Resisted movement to build defensive speed. (50% bodyweight load)",
     "equipment_note": "Low sled height for posture"
@@ -1924,7 +2201,9 @@
     "tags": [
       "distance_striker",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Swings mimic check hook power. (Max power)",
     "equipment_note": "16-24kg KB"
@@ -1945,7 +2224,9 @@
     "tags": [
       "distance_striker",
       "boxing",
-      "mma"
+      "mma",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Trains Philly shell/long guard stamina. (80% effort)",
     "equipment_note": "5lb DBs in non-jabbing hand"
@@ -1964,7 +2245,9 @@
     "intensity": "max",
     "tags": [
       "distance_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Emphasizes retraction and re-angle. (90% power)",
     "equipment_note": "Bag at eye level"
@@ -1984,7 +2267,9 @@
     "intensity": "moderate",
     "tags": [
       "distance_striker",
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
     ],
     "notes": "45° exits off ladder into cone pivots. (70% effort)",
     "equipment_note": "Set cones at 8 angles"
@@ -2005,7 +2290,9 @@
     "tags": [
       "distance_striker",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Bands anchored at hips for resistance. (80% effort)",
     "equipment_note": "Heavy bands only"
@@ -2024,7 +2311,10 @@
     "intensity": "high",
     "tags": [
       "distance_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
     ],
     "notes": "1-2s only, reset stance after each combo. (Fast twitch focus)",
     "equipment_note": "High bag tension"
@@ -2044,7 +2334,9 @@
     "intensity": "high",
     "tags": [
       "distance_striker",
-      "boxing"
+      "boxing",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
     ],
     "notes": "Band-resisted slips for defensive load. (85% power)",
     "equipment_note": "Anchor bands at head height"
@@ -2064,7 +2356,10 @@
     "tags": [
       "distance_striker",
       "boxing",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
     ],
     "notes": "Mimics cross/overhand torque. (60% 1RM)",
     "equipment_note": "Use bumper plates"
@@ -2084,7 +2379,9 @@
     "intensity": "high",
     "tags": [
       "distance_striker",
-      "boxing"
+      "boxing",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Bands force explosive entry/exit. (80% speed)",
     "equipment_note": "5lb DBs in rear hand"
@@ -2104,7 +2401,9 @@
     "tags": [
       "distance_striker",
       "boxing",
-      "kickboxing"
+      "kickboxing",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "No set pattern—coach calls direction. (70% effort)",
     "equipment_note": "Use 10ft ladder"
@@ -2124,7 +2423,10 @@
     "intensity": "max",
     "tags": [
       "distance_striker",
-      "boxing"
+      "boxing",
+      "mech_reactive",
+      "mech_change_of_direction",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands on ankles during bag work. (90% effort)",
     "equipment_note": "Light resistance only"
@@ -2144,7 +2446,9 @@
     "intensity": "moderate",
     "tags": [
       "distance_striker",
-      "mma"
+      "mma",
+      "mech_reactive",
+      "mech_change_of_direction"
     ],
     "notes": "Towel grips simulate clinch fights. (70% effort)",
     "equipment_note": "2 towels for MMA transfer"
@@ -2166,7 +2470,11 @@
       "kicker",
       "muay_thai",
       "kickboxing",
-      "low_kick"
+      "low_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Bands on ankles for resistance during recoil. (90% power)",
     "equipment_note": "Anchor bands to floor"
@@ -2187,7 +2495,9 @@
       "kicker",
       "mma",
       "kickboxing",
-      "head_kick"
+      "head_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Focus on retraction to avoid counters. (95% accuracy)",
     "equipment_note": "Adjust bag to head height"
@@ -2208,7 +2518,10 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "teep"
+      "teep",
+      "mech_reactive",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Bands resist retraction to build hip flexor strength. (80% speed)",
     "equipment_note": "Anchor bands at hip height"
@@ -2230,7 +2543,11 @@
       "kicker",
       "kickboxing",
       "low_kick",
-      "body_kick"
+      "body_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Partner calls random kick targets mid-combo. (85% power)",
     "equipment_note": "Thai pads preferred"
@@ -2250,7 +2567,9 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "question_mark_kick"
+      "question_mark_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Rope forces proper hip alignment. (Focus on technique)",
     "equipment_note": "Rope at waist height"
@@ -2271,7 +2590,9 @@
       "kicker",
       "muay_thai",
       "body_kick",
-      "elbow"
+      "elbow",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Focus on smooth transitions. (80% power)",
     "equipment_note": "Lean bag for elbow realism"
@@ -2292,7 +2613,11 @@
     "tags": [
       "kicker",
       "mma",
-      "low_kick"
+      "low_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Bands increase resistance on recoil. (95% power)",
     "equipment_note": "Use thin bands for speed"
@@ -2312,7 +2637,10 @@
     "tags": [
       "kicker",
       "kickboxing",
-      "spinning_kick"
+      "spinning_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_change_of_direction"
     ],
     "notes": "Box ensures proper chamber height. (Explosive reps)",
     "equipment_note": "24\" box"
@@ -2333,7 +2661,11 @@
       "kicker",
       "muay_thai",
       "switch_kick",
-      "hybrid"
+      "hybrid",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Bag movement simulates opponent retreat. (85% effort)",
     "equipment_note": "High tension on bag"
@@ -2353,7 +2685,11 @@
     "tags": [
       "kicker",
       "kickboxing",
-      "axe_kick"
+      "axe_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Noodle marks ideal chin height. (Technical focus)",
     "equipment_note": "Hang at 6’ height"
@@ -2374,7 +2710,11 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "body_kick"
+      "body_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "mech_cns_high"
     ],
     "notes": "Partner angles pads to mimic rib placement. (90% power)",
     "equipment_note": "Focus on left side"
@@ -2394,7 +2734,9 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "step_through_knee"
+      "step_through_knee",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Emphasize hip thrust into bag. (85% power)",
     "equipment_note": "Lean bag forward"
@@ -2414,7 +2756,9 @@
     "tags": [
       "kicker",
       "mma",
-      "flying_knee"
+      "flying_knee",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Box height determines trajectory. (Max height)",
     "equipment_note": "12-18\" box"
@@ -2434,7 +2778,9 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "scoop_kick"
+      "scoop_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Rope forces proper angle. (Fast retraction)",
     "equipment_note": "Rope at calf height"
@@ -2454,7 +2800,9 @@
     "tags": [
       "kicker",
       "kickboxing",
-      "cartwheel_kick"
+      "cartwheel_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Mats reduce fear of falling. (Controlled landings)",
     "equipment_note": "2\" thick mats"
@@ -2474,7 +2822,9 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "clinch_knee"
+      "clinch_knee",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Switch between collar tie and double collar. (85% power)",
     "equipment_note": "Dummy must be upright"
@@ -2495,7 +2845,8 @@
       "kicker",
       "mma",
       "switch_kick",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Cones mark pivot points. (Fast transitions)",
     "equipment_note": "5-cone star pattern"
@@ -2515,7 +2866,9 @@
     "tags": [
       "kicker",
       "kickboxing",
-      "hammer_kick"
+      "hammer_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Tire absorbs impact like a body. (Full extension)",
     "equipment_note": "Vertical tire mount"
@@ -2535,7 +2888,8 @@
     "tags": [
       "kicker",
       "muay_thai",
-      "jumping_kick"
+      "jumping_kick",
+      "mech_trunk_stability"
     ],
     "notes": "Box ensures proper takeoff. (Max height)",
     "equipment_note": "12\" box"
@@ -2555,7 +2909,9 @@
     "tags": [
       "kicker",
       "kickboxing",
-      "side_kick"
+      "side_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Wall prevents over-rotation. (90% extension)",
     "equipment_note": "Stand 12\" from wall"
@@ -2575,7 +2931,9 @@
     "tags": [
       "kicker",
       "kickboxing",
-      "crescent_kick"
+      "crescent_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Ball marks ideal temple height. (Technical focus)",
     "equipment_note": "Hang at 5’8\""
@@ -2596,7 +2954,8 @@
       "kicker",
       "muay_thai",
       "low_kick",
-      "head_kick"
+      "head_kick",
+      "mech_trunk_stability"
     ],
     "notes": "Padholder calls 'check' to defend. (85% speed)",
     "equipment_note": "Focus on hip feints"
@@ -2616,7 +2975,9 @@
     "tags": [
       "kicker",
       "mma",
-      "back_kick"
+      "back_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Bag swing simulates opponent movement. (Full rotation)",
     "equipment_note": "Loosely hung bag"
@@ -2637,7 +2998,9 @@
       "kicker",
       "muay_thai",
       "teep",
-      "clinch_knee"
+      "clinch_knee",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Partner advances after each teep. (80% speed)",
     "equipment_note": "Chest protector recommended"
@@ -2657,7 +3020,9 @@
     "tags": [
       "kicker",
       "mma",
-      "capoeira_kick"
+      "capoeira_kick",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "Mirror checks form during motion. (Technical focus)",
     "equipment_note": "Full-length mirror"
@@ -2677,7 +3042,10 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Simulates clinch work and punching under fatigue. Maintain forward pressure throughout. (85-90% effort)",
     "equipment_note": "Use 50-70lb sandbag"
@@ -2698,7 +3066,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Trains power transfer between strikes and defensive movements. (Explosive movements)",
     "equipment_note": "16-24kg KB, 6-10kg med ball"
@@ -2718,7 +3087,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Develops ring-cutting footwork and explosive entries. (90% sprint effort)",
     "equipment_note": "Use 15-25lb DBs for push presses"
@@ -2738,7 +3108,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Mimics clinch fighting and defensive recovery. (Heavy sandbag, explosive KB)",
     "equipment_note": "50-70lb sandbag, 20-28kg KB"
@@ -2758,7 +3129,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Develops body shot power and clinch knee endurance. (Max power rotations)",
     "equipment_note": "6-10kg med ball, heavy bands"
@@ -2778,7 +3150,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates late-round fatigue while maintaining punch output. (90% effort)",
     "equipment_note": "1.5-2\" ropes, 15-25lb DBs"
@@ -2798,7 +3171,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Trains punching power with fatigued legs. (Explosive movements)",
     "equipment_note": "Heavy bands, 16-24kg KB"
@@ -2818,7 +3192,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Develops arm endurance for late-round flurries. (85-90% effort)",
     "equipment_note": "50-70lb sandbag"
@@ -2838,7 +3213,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Trains fight-ending flurries when exhausted. (100% effort bursts)",
     "equipment_note": "20-28kg KB, heavy bands"
@@ -2860,7 +3236,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Ultimate pressure fighter gut check. No breaks between exercises. (90-95% effort)",
     "equipment_note": "50-70lb sandbag, 6-10kg med ball"
@@ -2880,7 +3257,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates clinch fighting and ring-cutting under fatigue. Keep chest up. (85% max load)",
     "equipment_note": "Load heavy but maintain posture"
@@ -2899,7 +3277,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Cleans mimic explosive uppercuts, sprints emulate ring-cutting. (75-80% 1RM)",
     "equipment_note": "Use bumper plates"
@@ -2919,7 +3298,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Develops full-body power for clinch breaks. (Max speed flips)",
     "equipment_note": "400-600lb tire ideal"
@@ -2939,7 +3319,8 @@
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Forward drags = cutting off ring, backward = defensive footwork. (50-70% bodyweight)",
     "equipment_note": "Use harness if available"
@@ -2959,7 +3340,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Mimics hook/body shot mechanics. Keep hips engaged. (Max power strikes)",
     "equipment_note": "8-12lb hammer recommended"
@@ -2979,7 +3361,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Ropes fatigue arms, bag work trains combos under exhaustion. (90% effort)",
     "equipment_note": "Use 1.5-2\" thick ropes"
@@ -2998,7 +3381,8 @@
     "intensity": "zone 2",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Jumps develop explosive entries, deadlifts simulate clinch posture. (60% 1RM)",
     "equipment_note": "Explode upward on jumps"
@@ -3017,7 +3401,8 @@
     "intensity": "zone 2",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Builds work capacity for late-round mauling. (50% 1RM)",
     "equipment_note": "Use fixed barbell if available"
@@ -3037,7 +3422,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Slam power transfers to hooks, burpees simulate clinch recovery. (Max effort slams)",
     "equipment_note": "Wrist wraps recommended"
@@ -3056,7 +3442,8 @@
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Pushing mimics in-fighting pressure, sprawls train defense. (Bodyweight load)",
     "equipment_note": "Use low sled height for boxing posture"
@@ -3076,7 +3463,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates clinch control under fatigue. (90% effort)",
     "equipment_note": "50-70lb sandbag"
@@ -3095,7 +3483,8 @@
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Mimics cage cutting and wrestler recovery. (Bodyweight load)",
     "equipment_note": "Low sled for MMA posture"
@@ -3116,7 +3505,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Transfers to body shots and clinch knees. (Max effort)",
     "equipment_note": "10kg med ball"
@@ -3135,7 +3525,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Trains posture for dirty boxing. (85% max load)",
     "equipment_note": "Straps allowed"
@@ -3154,7 +3545,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "kickboxing"
+      "kickboxing",
+      "mech_trunk_stability"
     ],
     "notes": "Swings simulate clinch breaks. (Violent intent)",
     "equipment_note": "24kg KB"
@@ -3174,7 +3566,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates trapping against cage/ropes. (95% effort)",
     "equipment_note": "Heavy bag required"
@@ -3194,7 +3587,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Strikes mimic hooks, flips simulate scrambles. (Max power)",
     "equipment_note": "12lb hammer, 400lb+ tire"
@@ -3214,7 +3608,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Bands anchored to hips for forward drive. (85% effort)",
     "equipment_note": "Monster bands only"
@@ -3233,7 +3628,9 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "kickboxing"
+      "kickboxing",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
     ],
     "notes": "No breaks between rounds. (90% effort)",
     "equipment_note": "Use partner or heavy bag"
@@ -3253,7 +3650,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Cleans = takedown entries, snatches = uppercuts. (Heavy)",
     "equipment_note": "50lb sandbag, 24kg KB"
@@ -3273,7 +3671,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Trains underhook/frame strength. (Explosive)",
     "equipment_note": "20-25lb DBs"
@@ -3292,7 +3691,8 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates scrambles in grappler exchanges. (No rest)",
     "equipment_note": "Concrete floor ideal"
@@ -3313,7 +3713,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Pushes = cage pressure, bands = fatigued strikes. (Near-vomit)",
     "equipment_note": "Bodyweight sled load"
@@ -3332,7 +3733,8 @@
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Jumps = shot entries, deadlifts = finishing drives. (70% 1RM)",
     "equipment_note": "Fast eccentric on deadlifts"
@@ -3351,7 +3753,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "kickboxing"
+      "kickboxing",
+      "mech_trunk_stability"
     ],
     "notes": "Swings mimic off-balancing for sweeps. (90% effort)",
     "equipment_note": "28kg KB for advanced"
@@ -3371,7 +3774,9 @@
     "intensity": "high",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Trains shot entries under fatigue. (85% effort)",
     "equipment_note": "Heavy bands, 8kg med ball"
@@ -3391,7 +3796,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Carry simulates head control in clinch. (70lb+ sandbag)",
     "equipment_note": "No rest between exercises"
@@ -3412,7 +3818,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands anchored low for upward resistance. (Explosive)",
     "equipment_note": "15-20lb DBs"
@@ -3432,7 +3839,8 @@
     "intensity": "max",
     "tags": [
       "pressure_fighter",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Strikes = ground-and-pound, burpees = standups. (100% effort)",
     "equipment_note": "10lb hammer, 24\" tire"
@@ -3454,7 +3862,8 @@
     "tags": [
       "pressure_fighter",
       "kickboxing",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Ultimate infighting gut check. (No breaks)",
     "equipment_note": "50lb sandbag, 24kg KB, heavy bands"
@@ -3476,7 +3885,8 @@
       "scrambler",
       "mma",
       "wrestler",
-      "grappler"
+      "grappler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner counters takedown – you must immediately transition to back control. (90% explosiveness)",
     "equipment_note": "Use crash pads for throws"
@@ -3497,7 +3907,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands on hips to resist sprawl recovery. (Max speed)",
     "equipment_note": "Heavy bands only"
@@ -3518,7 +3929,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "cage_work"
+      "cage_work",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner initiates cage clinch – you must reverse or escape. (Fight pace)",
     "equipment_note": "MMA gloves recommended"
@@ -3538,7 +3950,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "bjj"
+      "bjj",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner starts in top turtle – you must recover guard or stand. (Explosive hips)",
     "equipment_note": "No-gi grips only"
@@ -3558,7 +3971,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Emphasize smooth hip movement. (85% effort)",
     "equipment_note": "Use soft mats"
@@ -3579,7 +3993,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_acceleration"
     ],
     "notes": "Bands around waist for resistance. (Max explosion)",
     "equipment_note": "Partner applies light pressure"
@@ -3599,7 +4014,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "bjj"
+      "bjj",
+      "mech_systemic_fatigue"
     ],
     "notes": "If sub fails, immediately chain to sweep. (Fast transitions)",
     "equipment_note": "Dummy must be flexible"
@@ -3620,7 +4036,8 @@
       "scrambler",
       "mma",
       "muay_thai",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner resists – you must chain takedowns. (90% effort)",
     "equipment_note": "Wear rash guards"
@@ -3640,7 +4057,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_systemic_fatigue"
     ],
     "notes": "If pass is blocked, transition to back. (Technical speed)",
     "equipment_note": "No-gi only"
@@ -3662,7 +4080,8 @@
       "scrambler",
       "mma",
       "striking",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Coach signals shot after random strikes. (85% speed)",
     "equipment_note": "MMA gloves on"
@@ -3682,7 +4101,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner resists first 2 seconds. (Explosive pulls)",
     "equipment_note": "No-gi grips"
@@ -3702,7 +4122,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner starts in tight front headlock. (90% effort)",
     "equipment_note": "Sprawl shorts recommended"
@@ -3723,7 +4144,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "cage_work"
+      "cage_work",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner pins to cage – you must escape to center. (Fight pace)",
     "equipment_note": "Wear MMA gloves"
@@ -3744,7 +4166,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "bjj"
+      "bjj",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner starts in turtle. (Fast transitions)",
     "equipment_note": "No-gi only"
@@ -3764,7 +4187,8 @@
     "intensity": "high",
     "tags": [
       "scrambler",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Simulates fight-ending sequences. (85% effort)",
     "equipment_note": "Bag must be near mats"
@@ -3785,7 +4209,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner provides light resistance. (Explosive)",
     "equipment_note": "Wrestler shoes optional"
@@ -3805,7 +4230,8 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "bjj"
+      "bjj",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on landing in control. (Technical)",
     "equipment_note": "Use soft mats"
@@ -3825,7 +4251,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "muay_thai"
+      "muay_thai",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner resists initial clinch. (Fast pivots)",
     "equipment_note": "Wear elbow pads"
@@ -3845,7 +4272,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "bjj"
+      "bjj",
+      "mech_acceleration"
     ],
     "notes": "Partner starts in side control. (90% speed)",
     "equipment_note": "No-gi only"
@@ -3865,7 +4293,8 @@
     "tags": [
       "scrambler",
       "mma",
-      "wrestler"
+      "wrestler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner defends first 3 seconds. (85% control)",
     "equipment_note": "Rash guards recommended"
@@ -3887,7 +4316,8 @@
       "submission_hunter",
       "mma",
       "armbar",
-      "triangle"
+      "triangle",
+      "mech_systemic_fatigue"
     ],
     "notes": "Drill 3-step sub chains from guard. (85% effort)",
     "equipment_note": "Anchor bands to dummy for resistance"
@@ -3908,7 +4338,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "rear_naked_choke"
+      "rear_naked_choke",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner resists first 5 sec, then taps. (90% squeeze)",
     "equipment_note": "Use gi lapel for no-gi grip variations"
@@ -3929,7 +4360,8 @@
       "submission_hunter",
       "bjj",
       "armbar",
-      "kimura"
+      "kimura",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands on wrists to simulate opponent pulling back. (Explosive extensions)",
     "equipment_note": "Medium resistance"
@@ -3950,7 +4382,8 @@
       "submission_hunter",
       "mma",
       "leg_lock",
-      "heel_hook"
+      "heel_hook",
+      "mech_systemic_fatigue"
     ],
     "notes": "KB on ankle to simulate opponent weight. (Max control)",
     "equipment_note": "16-24kg KB"
@@ -3970,7 +4403,8 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "guillotine"
+      "guillotine",
+      "mech_systemic_fatigue"
     ],
     "notes": "Sandbag mimics sprawl pressure. (80% squeeze)",
     "equipment_note": "50-70lb bag"
@@ -3990,7 +4424,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "spinal_lock"
+      "spinal_lock",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on grip transitions. (Slow, technical)",
     "equipment_note": "Dummy must have flexible spine"
@@ -4010,7 +4445,12 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "d'arce"
+      "d'arce",
+      "mech_lower_jump",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_reactive_rebound",
+      "mech_cns_high"
     ],
     "notes": "Med ball simulates opponent’s head pressure. (Explosive shots)",
     "equipment_note": "8-12kg ball"
@@ -4030,7 +4470,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "leg_lock"
+      "leg_lock",
+      "mech_systemic_fatigue"
     ],
     "notes": "KB on thigh to simulate opponent’s resistance. (Slow burn)",
     "equipment_note": "20-28kg KB"
@@ -4050,7 +4491,8 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "leg_lock"
+      "leg_lock",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands on ankles to simulate opponent retracting leg. (Explosive hips)",
     "equipment_note": "Heavy resistance"
@@ -4070,7 +4512,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "north_south_choke"
+      "north_south_choke",
+      "mech_systemic_fatigue"
     ],
     "notes": "Sandbag on chest mimics opponent bridging. (85% effort)",
     "equipment_note": "70-100lb bag"
@@ -4091,7 +4534,8 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "guillotine_variation"
+      "guillotine_variation",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands on dummy’s shoulders for resistance. (Fast setups)",
     "equipment_note": "Dummy must have flexible neck"
@@ -4111,7 +4555,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "gogoplata"
+      "gogoplata",
+      "mech_systemic_fatigue"
     ],
     "notes": "Emphasize hamstring flexibility. (Slow, controlled)",
     "equipment_note": "Use mat for hip elevation"
@@ -4131,7 +4576,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "buggy_choke"
+      "buggy_choke",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner starts in side control. (85% squeeze)",
     "equipment_note": "No-gi only"
@@ -4151,7 +4597,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "electric_chair"
+      "electric_chair",
+      "mech_systemic_fatigue"
     ],
     "notes": "KB on hip to add resistance. (Explosive hips)",
     "equipment_note": "16-24kg KB"
@@ -4171,7 +4618,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "bicep_slicer"
+      "bicep_slicer",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands simulate opponent pulling arm free. (Slow burn)",
     "equipment_note": "Anchor bands to rack"
@@ -4192,7 +4640,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "loop_choke"
+      "loop_choke",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner resists initial grip. (80% speed)",
     "equipment_note": "Worn-out gi for friction"
@@ -4212,7 +4661,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "inverted_triangle"
+      "inverted_triangle",
+      "mech_systemic_fatigue"
     ],
     "notes": "Use wall to control inversion angle. (Technical)",
     "equipment_note": "Bare feet for grip"
@@ -4232,7 +4682,8 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "ezekiel"
+      "ezekiel",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on forearm pressure. (90% squeeze)",
     "equipment_note": "Dummy with stiff neck"
@@ -4252,7 +4703,8 @@
     "tags": [
       "submission_hunter",
       "mma",
-      "anaconda"
+      "anaconda",
+      "mech_systemic_fatigue"
     ],
     "notes": "Sandbag simulates sprawl weight. (Explosive entries)",
     "equipment_note": "50-70lb bag"
@@ -4272,7 +4724,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "crucifix"
+      "crucifix",
+      "mech_systemic_fatigue"
     ],
     "notes": "Partner tries to bench press escape. (85% control)",
     "equipment_note": "No-gi grips only"
@@ -4292,7 +4745,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "leg_lock"
+      "leg_lock",
+      "mech_systemic_fatigue"
     ],
     "notes": "Bands on foot for resistance. (Fast hands)",
     "equipment_note": "Anchor to heavy object"
@@ -4312,7 +4766,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "mir_lock"
+      "mir_lock",
+      "mech_systemic_fatigue"
     ],
     "notes": "KB on wrist to simulate opponent’s defense. (Slow grind)",
     "equipment_note": "12-16kg KB"
@@ -4332,7 +4787,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "japanese_necktie"
+      "japanese_necktie",
+      "mech_systemic_fatigue"
     ],
     "notes": "Focus on hip alignment. (Technical)",
     "equipment_note": "Dummy with flexible arms"
@@ -4353,7 +4809,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Non-stop knee strikes from plum position. Drive hips through dummy.",
     "equipment_note": "Anchor dummy to wall if needed."
@@ -4374,7 +4831,8 @@
       "pressure_fighter",
       "brawler",
       "mma",
-      "boxing"
+      "boxing",
+      "mech_systemic_fatigue"
     ],
     "notes": "Advance relentlessly while throwing power hooks. No backpedaling.",
     "equipment_note": "Bag should swing minimally."
@@ -4394,7 +4852,8 @@
     "intensity": "high",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_systemic_fatigue"
     ],
     "notes": "Pummel for underhooks while pressed against wall. Simulates cage work.",
     "equipment_note": "Use padded wall if available."
@@ -4416,7 +4875,8 @@
       "kicker",
       "distance_striker",
       "mma",
-      "hybrid"
+      "hybrid",
+      "mech_systemic_fatigue"
     ],
     "notes": "Alternate roundhouse kicks every 2 seconds. Focus on hip turnover.",
     "equipment_note": "Pad holder calls sides randomly."
@@ -4435,7 +4895,8 @@
     "intensity": "max",
     "tags": [
       "brawler",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Digging hooks to the body. Exhale sharply with each shot.",
     "equipment_note": "Wear bag gloves for knuckle protection."
@@ -4457,7 +4918,9 @@
       "clinch_fighter",
       "muay_thai",
       "mma",
-      "boxing"
+      "boxing",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Break clinch into 3-punch combos. Reset immediately.",
     "equipment_note": "Partner wears belly pad for body shots."
@@ -4476,7 +4939,8 @@
     "intensity": "high",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_trunk_stability"
     ],
     "notes": "Sprawl, then spring up into 2 knees + 2 elbows.",
     "equipment_note": "Use wrestler mat for knee protection."
@@ -4496,7 +4960,8 @@
     "intensity": "high",
     "tags": [
       "counter_striker",
-      "boxing"
+      "boxing",
+      "mech_trunk_stability"
     ],
     "notes": "Block/parry flurries, then counter with 3-punch combos. (mod-high)",
     "equipment_note": "Partner varies attack angles."
@@ -4515,7 +4980,8 @@
     "intensity": "high",
     "tags": [
       "submission_hunter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Cycle through 3 submission attempts without pausing.",
     "equipment_note": "Focus on grip transitions."
@@ -4536,7 +5002,9 @@
     "tags": [
       "muay_thai",
       "distance_striker",
-      "kicker"
+      "kicker",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
     "notes": "3 teeps followed by clinch knee series. Repeat.",
     "equipment_note": "Pad holder provides light resistance."
@@ -4556,7 +5024,8 @@
     "intensity": "max",
     "tags": [
       "scrambler",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Partner signals shot randomly. React with sprawl then immediate takedown.",
     "equipment_note": "Use wrestler shoes if available."
@@ -4576,7 +5045,8 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Explode off back foot to evade imaginary strike. Land in stance.",
     "equipment_note": "12-18 inch box height."
@@ -4596,7 +5066,8 @@
     "tags": [
       "submission_hunter",
       "bjj",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Sprint 10m, drop to guillotine grip, reset. Repeat.",
     "equipment_note": "Mark distance with cones."
@@ -4617,7 +5088,8 @@
       "kicker",
       "muay_thai",
       "mma",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Max-power roundhouse kicks with full hip rotation.",
     "equipment_note": "Secure bag to prevent swing."
@@ -4636,7 +5108,8 @@
     "intensity": "max",
     "tags": [
       "wrestler",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Partner points direction; shooter explodes that way.",
     "equipment_note": "Grass or mat surface only."
@@ -4656,7 +5129,8 @@
     "tags": [
       "counter_striker",
       "boxing",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Explode up from pushup to cross stance. Mimics counter weight transfer.",
     "equipment_note": "Use 12-inch box."
@@ -4675,7 +5149,8 @@
     "intensity": "max",
     "tags": [
       "clinch_fighter",
-      "muay_thai"
+      "muay_thai",
+      "mech_trunk_stability"
     ],
     "notes": "Yank partner's neck down with full power from plum position.",
     "equipment_note": "Partner wears neck protector."
@@ -4695,7 +5170,8 @@
     "tags": [
       "mma",
       "scrambler",
-      "wrestler"
+      "wrestler",
+      "mech_trunk_stability"
     ],
     "notes": "Sprawl, then explode into double-leg shot. Full recovery between reps.",
     "equipment_note": "Use wrestler mat for knee protection."
@@ -4715,7 +5191,8 @@
     "tags": [
       "boxing",
       "counter_striker",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Explode off back foot to mimic defensive pivots.",
     "equipment_note": "12-inch box height."
@@ -4735,7 +5212,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Yank partner's head down violently from clinch.",
     "equipment_note": "Partner wears neck brace."
@@ -4756,7 +5234,8 @@
       "muay_thai",
       "kicker",
       "distance_striker",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Max-power round kicks with full hip rotation.",
     "equipment_note": "Secure bag to prevent swing."
@@ -4776,7 +5255,8 @@
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Throw fight-ending power shots. Full reset between reps.",
     "equipment_note": "Pad holder braces firmly."
@@ -4796,7 +5276,8 @@
     "tags": [
       "wrestler",
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_trunk_stability"
     ],
     "notes": "Sprint into explosive takedown finish.",
     "equipment_note": "Mark distance with cones."
@@ -4816,7 +5297,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Drive knees through dummy with full hip extension.",
     "equipment_note": "Anchor dummy to wall."
@@ -4835,7 +5317,8 @@
     "intensity": "max",
     "tags": [
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_trunk_stability"
     ],
     "notes": "Partner signals shot direction; shooter reacts with guillotine grip.",
     "equipment_note": "Grass or mat surface only."
@@ -4855,7 +5338,8 @@
     "tags": [
       "muay_thai",
       "distance_striker",
-      "kicker"
+      "kicker",
+      "mech_trunk_stability"
     ],
     "notes": "Max-speed push kicks with instant retraction.",
     "equipment_note": "Pad holder provides slight resistance."
@@ -4875,7 +5359,8 @@
     "tags": [
       "mma",
       "scrambler",
-      "wrestler"
+      "wrestler",
+      "mech_trunk_stability"
     ],
     "notes": "Partner claps to signal sprawl. Max-height jump after.",
     "equipment_note": "Use crash mat for landing."
@@ -4895,7 +5380,8 @@
     "tags": [
       "boxing",
       "pressure_fighter",
-      "brawler"
+      "brawler",
+      "mech_trunk_stability"
     ],
     "notes": "Lunge forward with lead hook. Reset completely.",
     "equipment_note": "Bag should be stable."
@@ -4916,7 +5402,8 @@
       "mma",
       "wrestler",
       "grappler",
-      "muay_thai"
+      "muay_thai",
+      "mech_trunk_stability"
     ],
     "notes": "Double-leg takedown into standing knee strike. Reset.",
     "equipment_note": "Anchor dummy securely."
@@ -4938,7 +5425,8 @@
       "mma",
       "kicker",
       "distance_striker",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Simulate weight transfer for switch kicks.",
     "equipment_note": "18-inch box height."
@@ -4958,7 +5446,9 @@
     "tags": [
       "bjj",
       "submission_hunter",
-      "mma"
+      "mma",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Pull guard with immediate hip bump sweep attempt.",
     "equipment_note": "Use crash mat for falls."
@@ -4978,7 +5468,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "wrestler"
+      "wrestler",
+      "mech_trunk_stability"
     ],
     "notes": "Max-effort hip toss from clinch position.",
     "equipment_note": "Partner wears crash pad."
@@ -4998,7 +5489,8 @@
     "tags": [
       "boxing",
       "counter_striker",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Slip bag swing, then explode with 2-punch counter.",
     "equipment_note": "Shorten bungee for faster returns."
@@ -5018,7 +5510,8 @@
     "tags": [
       "mma",
       "scrambler",
-      "wrestler"
+      "wrestler",
+      "mech_trunk_stability"
     ],
     "notes": "Explosive push-off from pinned cage position.",
     "equipment_note": "Wear MMA gloves for grip."
@@ -5038,7 +5531,8 @@
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Max-power left hooks to liver region. Full reset.",
     "equipment_note": "Angle bag to mimic opponent stance."
@@ -5058,7 +5552,8 @@
     "tags": [
       "muay_thai",
       "distance_striker",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Partner attempts clinch; fighter snaps long guard push.",
     "equipment_note": "Partner wears belly pad."
@@ -5078,7 +5573,8 @@
     "tags": [
       "wrestler",
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_trunk_stability"
     ],
     "notes": "Initial shot > sprawl > immediate reshot. No pauses.",
     "equipment_note": "Partner provides light resistance."
@@ -5099,7 +5595,8 @@
       "kickboxing",
       "mma",
       "kicker",
-      "distance_striker"
+      "distance_striker",
+      "mech_trunk_stability"
     ],
     "notes": "Max-speed downward axe kicks. Full retraction.",
     "equipment_note": "Hang bag high for proper angle."
@@ -5119,7 +5616,8 @@
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Sprint into imaginary punching flurry. Reset completely.",
     "equipment_note": "Mark start/stop lines."
@@ -5139,7 +5637,9 @@
     "tags": [
       "clinch_fighter",
       "mma",
-      "muay_thai"
+      "muay_thai",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "3-punch combo > clinch entry. Explosive transitions.",
     "equipment_note": "Pad holder simulates opponent frame."
@@ -5159,7 +5659,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "wrestler"
+      "wrestler",
+      "mech_trunk_stability"
     ],
     "notes": "Max-power hip toss from double-collar tie.",
     "equipment_note": "Partner wears crash pad."
@@ -5179,7 +5680,8 @@
     "tags": [
       "boxing",
       "counter_striker",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Pull away from bag swing, explode back with cross.",
     "equipment_note": "Adjust bag weight for speed."
@@ -5199,7 +5701,8 @@
     "tags": [
       "mma",
       "brawler",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Short, violent elbow/hammerfist flurries from mount.",
     "equipment_note": "Use MMA gloves for realism."
@@ -5220,7 +5723,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Max-power knees to trapped bag. Full hip extension.",
     "equipment_note": "Angle bag to simulate opponent lean."
@@ -5240,7 +5744,8 @@
     "tags": [
       "mma",
       "scrambler",
-      "wrestler"
+      "wrestler",
+      "mech_trunk_stability"
     ],
     "notes": "From bottom position, explode to feet in one motion.",
     "equipment_note": "Partner provides 20% resistance."
@@ -5260,7 +5765,8 @@
     "tags": [
       "boxing",
       "brawler",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Max-power uppercuts from crouch position. Reset stance.",
     "equipment_note": "Bag height at chest level."
@@ -5280,7 +5786,8 @@
     "tags": [
       "kickboxing",
       "kicker",
-      "distance_striker"
+      "distance_striker",
+      "mech_trunk_stability"
     ],
     "notes": "Full rotation back kicks with instant reset.",
     "equipment_note": "Pad holder braces firmly."
@@ -5300,7 +5807,9 @@
     "tags": [
       "boxing",
       "distance_striker",
-      "counter_striker"
+      "counter_striker",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Emphasize footwork and jab-cross out-fighting. (low-moderate)",
     "equipment_note": "Film for technique analysis."
@@ -5319,7 +5828,9 @@
     "intensity": "moderate",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "Maintain plum position while circling.",
     "equipment_note": "Partner provides 30% resistance."
@@ -5339,7 +5850,9 @@
     "intensity": "low",
     "tags": [
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_grip_intensive",
+      "mech_trunk_stability"
     ],
     "notes": "No submissions - constant positional transitions.",
     "equipment_note": "Wear rash guard."
@@ -5358,7 +5871,8 @@
     "intensity": "moderate",
     "tags": [
       "muay_thai",
-      "distance_striker"
+      "distance_striker",
+      "mech_trunk_stability"
     ],
     "notes": "1 teep every 5 seconds. Focus on reset speed.",
     "equipment_note": "Pad holder steps in/out."
@@ -5377,7 +5891,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Practice cutting off octagon while shadowboxing.",
     "equipment_note": "Wear MMA gloves."
@@ -5396,7 +5911,8 @@
     "intensity": "moderate",
     "tags": [
       "wrestler",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "Hand-fighting only. No takedowns.",
     "equipment_note": "Chalk allowed for grip."
@@ -5415,7 +5931,8 @@
     "intensity": "moderate",
     "tags": [
       "kickboxing",
-      "counter_striker"
+      "counter_striker",
+      "mech_trunk_stability"
     ],
     "notes": "Continuous check/block motions while circling. (low-moderate)",
     "equipment_note": "Ankle weights optional."
@@ -5434,7 +5951,8 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Aggressive forward movement with high guard.",
     "equipment_note": "Focus on cutting angles."
@@ -5453,7 +5971,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Switch stances every 3 steps while navigating cones.",
     "equipment_note": "5-cone zigzag pattern."
@@ -5472,7 +5991,8 @@
     "intensity": "moderate",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Alternate foot every 10 jumps. Stay light. (low-moderate)",
     "equipment_note": "Use weighted rope for advanced."
@@ -5491,7 +6011,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_trunk_stability"
     ],
     "notes": "Touch all 8 cage sections in sequence.",
     "equipment_note": "Wear fight shorts."
@@ -5511,7 +6032,9 @@
     "tags": [
       "boxing",
       "counter_striker",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Backstep while maintaining defensive shell.",
     "equipment_note": "Mark distance with tape."
@@ -5531,7 +6054,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "submission_hunter"
+      "submission_hunter",
+      "mech_trunk_stability"
     ],
     "notes": "Partner attempts passes while you maintain guard. (low-moderate)",
     "equipment_note": "50% resistance."
@@ -5550,7 +6074,10 @@
     "intensity": "moderate",
     "tags": [
       "kickboxing",
-      "distance_striker"
+      "distance_striker",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Maintain kicking range with constant teep feints.",
     "equipment_note": "Check hip alignment."
@@ -5570,7 +6097,9 @@
     "intensity": "moderate",
     "tags": [
       "wrestler",
-      "mma"
+      "mma",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "notes": "From butt-scoot position, walk up wall to standing.",
     "equipment_note": "Use padded wall."
@@ -5589,7 +6118,10 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_change_of_direction",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Mirror imaginary opponent while cutting off space.",
     "equipment_note": "4-cone square setup."
@@ -5608,7 +6140,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "hybrid"
+      "hybrid",
+      "mech_trunk_stability"
     ],
     "notes": "Switch between orthodox/southpaw every 5 steps. (low-moderate)",
     "equipment_note": "Focus on balanced transitions."
@@ -5628,7 +6161,8 @@
     "tags": [
       "muay_thai",
       "clinch_fighter",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_trunk_stability"
     ],
     "notes": "Maintain plum position against light resistance.",
     "equipment_note": "Partner varies pull direction."
@@ -5647,7 +6181,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_trunk_stability"
     ],
     "notes": "From turtle, stand up and circle out repeatedly.",
     "equipment_note": "No partner needed."
@@ -5666,7 +6201,9 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "brawler"
+      "brawler",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "notes": "High guard while walking bag down with body shots.",
     "equipment_note": "16oz gloves recommended."
@@ -5685,7 +6222,9 @@
     "intensity": "moderate",
     "tags": [
       "kickboxing",
-      "distance_striker"
+      "distance_striker",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "45-degree steps off centerline between cones.",
     "equipment_note": "5-cone star pattern."
@@ -5703,7 +6242,8 @@
     "duration": "45s on / 15s off",
     "intensity": "moderate",
     "tags": [
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Stand back up from seated position using cage.",
     "equipment_note": "Wear fight shorts."
@@ -5722,7 +6262,9 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "counter_striker"
+      "counter_striker",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Parry bag strikes while maintaining distance.",
     "equipment_note": "Adjust bag height as needed."
@@ -5742,7 +6284,10 @@
     "tags": [
       "muay_thai",
       "kicker",
-      "hybrid"
+      "hybrid",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Switch stances every 10 steps with teep feints. (low-moderate)",
     "equipment_note": "Focus on balance."
@@ -5762,7 +6307,8 @@
     "intensity": "moderate",
     "tags": [
       "wrestler",
-      "mma"
+      "mma",
+      "mech_trunk_stability"
     ],
     "notes": "From bottom, stand up and immediately sprawl.",
     "equipment_note": "Partner provides 30% resistance."
@@ -5781,7 +6327,9 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "pressure_fighter"
+      "pressure_fighter",
+      "mech_change_of_direction",
+      "mech_reactive"
     ],
     "notes": "Advance while cutting off angles in mirror.",
     "equipment_note": "Focus on foot placement."
@@ -5800,7 +6348,8 @@
     "intensity": "low",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Maintain frames against partner's forward pressure.",
     "equipment_note": "Partner wears belly pad."
@@ -5818,7 +6367,8 @@
     "duration": "5min",
     "intensity": "moderate",
     "tags": [
-      "mma"
+      "mma",
+      "mech_systemic_fatigue"
     ],
     "notes": "Alternate between striking and shot feints.",
     "equipment_note": "Mark 3 engagement zones."
@@ -5837,7 +6387,8 @@
     "intensity": "moderate",
     "tags": [
       "mma",
-      "scrambler"
+      "scrambler",
+      "mech_trunk_stability"
     ],
     "notes": "Continuous hip escapes down mat length.",
     "equipment_note": "Use wrestler shoes."
@@ -5856,7 +6407,9 @@
     "intensity": "moderate",
     "tags": [
       "muay_thai",
-      "distance_striker"
+      "distance_striker",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "1 teep every 10 seconds. Reset completely.",
     "equipment_note": "Mark optimal range on floor."
@@ -5876,7 +6429,8 @@
     "tags": [
       "boxing",
       "counter_striker",
-      "kickboxing"
+      "kickboxing",
+      "mech_trunk_stability"
     ],
     "notes": "Emphasize footwork pivots and defensive slips between combos (60-70% effort)",
     "equipment_note": "Mirror for self-correction"
@@ -5895,7 +6449,8 @@
     "intensity": "low",
     "tags": [
       "boxing",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Simulates late-round clinch against ropes (RPE 5)",
     "equipment_note": "Bag must touch ropes/wall"
@@ -5914,7 +6469,8 @@
     "intensity": "zone 2",
     "tags": [
       "boxing",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Trains quick strikes after forced breaks (50% speed)",
     "equipment_note": "Headgear for partner"
@@ -5933,7 +6489,9 @@
     "intensity": "low",
     "tags": [
       "boxing",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_change_of_direction",
+      "mech_reactive"
     ],
     "notes": "Links framing to punch entries (40% power)",
     "equipment_note": "Low-hanging bag"
@@ -5953,7 +6511,8 @@
     "intensity": "low",
     "tags": [
       "boxing",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_systemic_fatigue"
     ],
     "notes": "Conditions forearm stamina for corner control (RPE 4)",
     "equipment_note": "Angled bag required"
@@ -5972,7 +6531,8 @@
     "intensity": "low",
     "tags": [
       "boxing",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Drills clinch as defensive response (30% speed)",
     "equipment_note": "Focus mitts for partner"
@@ -5993,7 +6553,8 @@
     "intensity": "moderate",
     "tags": [
       "boxing",
-      "counter_striker"
+      "counter_striker",
+      "mech_trunk_stability"
     ],
     "notes": "Partner throws ball unpredictably; react with jab or parry (70% speed)",
     "equipment_note": "Uneven bounce ball required"
@@ -6013,7 +6574,8 @@
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
-      "clinch_fighter"
+      "clinch_fighter",
+      "mech_trunk_stability"
     ],
     "notes": "Pre-recorded beeps signal underhook/overhook switches (50% effort)",
     "equipment_note": "Random interval timer (5-15s)"
@@ -6035,7 +6597,9 @@
     "tags": [
       "wrestling",
       "scrambler",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "notes": "Alternate wrestling rounds with chess moves to drain mental stamina (60% effort)",
     "equipment_note": "Portable chess set"
@@ -6056,7 +6620,10 @@
     "tags": [
       "kickboxing",
       "kicker",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Coach flashes card (e.g., '3-2-5'), fighter executes combo (40% power)",
     "equipment_note": "Pre-printed kick codes"
@@ -6076,7 +6643,9 @@
     "intensity": "zone 2",
     "tags": [
       "mma",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "notes": "Random cone colors force adaptive takedown chains (50% speed)",
     "equipment_note": "2+ cone colors"
@@ -6097,7 +6666,8 @@
     "tags": [
       "boxing",
       "brawler",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_trunk_stability"
     ],
     "notes": "Disrupts rhythm to simulate in-fight chaos (60% power)",
     "equipment_note": "4-piece jigsaw"
@@ -6118,7 +6688,9 @@
     "tags": [
       "muay_thai",
       "distance_striker",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
@@ -6139,7 +6711,8 @@
     "tags": [
       "grappling",
       "submission_hunter",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_trunk_stability"
     ],
     "notes": "Forces reliance on grip/body feel over sight (30% effort)",
     "equipment_note": "Non-slip mat"
@@ -6160,7 +6733,9 @@
     "tags": [
       "mma",
       "pressure_fighter",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_upper_press",
+      "mech_trunk_rotation"
     ],
     "notes": "Coach whispers riddles through earbuds (50% power)",
     "equipment_note": "Wireless mic for coach"
@@ -6181,7 +6756,8 @@
     "tags": [
       "mma",
       "hybrid",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_trunk_stability"
     ],
     "notes": "Forces stance switches under fatigue (60% speed)",
     "equipment_note": "Traffic light system"
