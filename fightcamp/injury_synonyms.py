@@ -257,7 +257,7 @@ INJURY_SYNONYM_MAP = {
     # Bruise - every impact description
     "contusion": [
         "bruise", "bruised", "abrase", "abrasion", "black", "blue", "black and blue", "purple",
-        "discoloration", "discolored", "kicked", "knee", "kneed", "elbow",
+        "discoloration", "discolored", "kicked", "kneed", "elbow",
         "elbowed", "dead leg", "corked", "cork", "swollen",
         "dent", "dented", "indent", "indentation", "mark", "marked",
         "hit", "struck", "banged", "banged up",
@@ -285,7 +285,9 @@ INJURY_SYNONYM_MAP = {
         "angry", "irritated", "irritation",
         "acting up", "playing up", "misbehaving", "problem area",
         "always sore", "always hurts", "never goes away", "persistent",
-        "recurring", "comes and goes", "use pain", "activity pain"
+        "recurring", "comes and goes", "use pain", "activity pain",
+        "patellar", "patellar tendon", "patellar tendinopathy",
+        "jumper's knee", "jumpers knee", "jumper knee"
     ],
 
     # Pinching - every joint catching phrase
