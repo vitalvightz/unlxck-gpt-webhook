@@ -520,11 +520,11 @@ def _log_decision(
     action: str,
 ) -> None:
     """
-    Log injury decision details at DEBUG level.
-    Only logs 'exclude' actions when INJURY_DEBUG=1 to reduce spam.
+    Log injury decision details when INJURY_DEBUG=1.
+    Only logs 'exclude' actions to reduce spam.
     'allow' and 'modify' actions are not logged.
     """
-    if not logger.isEnabledFor(logging.DEBUG):
+    if not INJURY_DEBUG:
         return
     # Only log exclude actions to avoid "allowed=True" spam
     if action != "exclude":
@@ -533,7 +533,7 @@ def _log_decision(
     if log_key in _INJURY_DECISION_LOGGED:
         return
     _INJURY_DECISION_LOGGED.add(log_key)
-    logger.debug(
+    logger.info(
         "[injury-guard] item='%s' region=%s severity=%s risk=%.2f threshold=%.2f matched_tags=%s action=%s",
         item_name,
         region,
