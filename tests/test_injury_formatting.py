@@ -77,4 +77,4 @@ def test_torn_hamstring_severity_is_severe():
 
 def test_mild_impingement_respects_phrase_severity():
     guardrails = format_injury_guardrails("GPP", "mild right shoulder impingement")
-    assert "Severity: Mild" in guardrails
+    assert "Mild impingement — avoid overhead patterns (banned list)" in guardrails
