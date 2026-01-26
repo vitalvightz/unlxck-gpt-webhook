@@ -1,86 +1,753 @@
 [
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Barbell Back Squat",
-    "tags": ["compound", "posterior_chain", "quad_dominant", "mech_lower_squat", "mech_trunk_stability"],
-    "prescription": "3x5 @ 75–85% 1RM",
+    "tags": [
+      "compound",
+      "posterior_chain",
+      "quad_dominant",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x5 @ 75\u201385% 1RM",
     "notes": "Foundational strength builder for lower body and trunk."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Trap Bar Deadlift",
-    "tags": ["compound", "hip_dominant", "posterior_chain", "deadlift", "mech_lower_hip_hinge", "mech_trunk_stability", "mech_grip_support"],
-    "prescription": "3x5 @ 75–85% 1RM",
+    "tags": [
+      "compound",
+      "hip_dominant",
+      "posterior_chain",
+      "deadlift",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_grip_support"
+    ],
+    "prescription": "3x5 @ 75\u201385% 1RM",
     "notes": "Safe hinge pattern to develop full-body strength and grip."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Push-Up or Bench Press",
-    "tags": ["push", "upper_body", "rate_of_force", "compound", "mech_upper_press", "mech_trunk_stability"],
-    "prescription": "3x8–10 controlled tempo",
+    "tags": [
+      "push",
+      "upper_body",
+      "rate_of_force",
+      "compound",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8\u201310 controlled tempo",
     "notes": "Builds pressing strength and midline control."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Barbell or DB Overhead Press",
-    "tags": ["upper_body", "shoulders", "core", "overhead", "mech_upper_press", "mech_shoulder_overhead", "mech_trunk_stability"],
-    "prescription": "3x5 @ 70–85% 1RM",
+    "tags": [
+      "upper_body",
+      "shoulders",
+      "core",
+      "overhead",
+      "mech_upper_press",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x5 @ 70\u201385% 1RM",
     "notes": "Improves posture, overhead strength, and core integration."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "DB Split Squat",
-    "tags": ["unilateral", "posterior_chain", "balance", "mech_lower_lunge", "mech_trunk_stability"],
+    "tags": [
+      "unilateral",
+      "posterior_chain",
+      "balance",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
     "prescription": "3x6/leg",
     "notes": "Builds single-leg strength and knee stability."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Pull-Up or Inverted Row",
-    "tags": ["pull", "upper_body", "grip", "mech_upper_pull", "mech_grip_support", "mech_trunk_stability"],
-    "prescription": "3x5–10 controlled reps",
+    "tags": [
+      "pull",
+      "upper_body",
+      "grip",
+      "mech_upper_pull",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x5\u201310 controlled reps",
     "notes": "Develops pulling strength, grip, and scapular control."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Sled Push or Drag",
-    "tags": ["sled", "posterior_chain", "work_capacity", "mech_lower_hip_hinge", "mech_trunk_stability", "mech_systemic_fatigue"],
+    "tags": [
+      "sled",
+      "posterior_chain",
+      "work_capacity",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
     "prescription": "4x15m heavy, rest 90s",
     "notes": "Concentric-only drill to build force output with low injury risk."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Trap Bar or DB Shrugs",
-    "tags": ["grip", "upper_body", "mech_grip_support", "mech_trunk_stability"],
-    "prescription": "3x10–12 heavy",
+    "tags": [
+      "grip",
+      "upper_body",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x10\u201312 heavy",
     "notes": "Reinforces shrug mechanics and neck support for impact sports."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Neck Harness Isometrics",
-    "tags": ["neck", "cns_freshness", "resilience", "mech_trunk_stability"],
+    "tags": [
+      "neck",
+      "cns_freshness",
+      "resilience",
+      "mech_trunk_stability"
+    ],
     "prescription": "3x30s in each direction",
     "notes": "Improves cervical strength and reduces concussion risk."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Landmine Rotations",
-    "tags": ["rotational", "core", "coordination", "mech_trunk_rotation", "mech_trunk_stability"],
+    "tags": [
+      "rotational",
+      "core",
+      "coordination",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
     "prescription": "3x8/side slow tempo",
     "notes": "Develops rotational strength and trunk transfer efficiency."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "90/90 Banded Shoulder CARs (Controlled Articular Rotations)",
-    "tags": ["mobility", "stability", "shoulders", "mech_trunk_stability"],
+    "tags": [
+      "mobility",
+      "stability",
+      "shoulders",
+      "mech_trunk_stability"
+    ],
     "prescription": "2x8/side, slow tempo",
     "notes": "Improves glenohumeral rhythm and scapulohumeral coordination without load."
   },
   {
-    "phases": ["GPP"],
+    "phases": [
+      "GPP"
+    ],
     "name": "Low Hurdle Hop (Rhythm Focus)",
-    "tags": ["reactive", "elastic", "coordination", "mech_reactive", "mech_lower_jump", "mech_landing_impact"],
+    "tags": [
+      "reactive",
+      "elastic",
+      "coordination",
+      "mech_reactive",
+      "mech_lower_jump",
+      "mech_landing_impact"
+    ],
     "prescription": "3x5 over low hurdles",
     "notes": "Rebuilds bounce, rhythm, and landing coordination."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Goblet Squat",
+    "tags": [
+      "compound",
+      "lower_body",
+      "quad_dominant",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x10-12 @ moderate load",
+    "notes": "Front-loaded squat pattern. KB/DB held at chest provides counterbalance and trunk activation."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Box Squat to Parallel",
+    "tags": [
+      "compound",
+      "lower_body",
+      "posterior_chain",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "prescription": "4x6 @ 70-80% 1RM",
+    "notes": "Box provides depth control and removes eccentric stress at bottom. Safer for knee/hip issues."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Safety Squat Bar (SSB) Squat",
+    "tags": [
+      "compound",
+      "lower_body",
+      "quad_dominant",
+      "posterior_chain",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x6-8 @ 75-85% 1RM",
+    "notes": "Cambered bar reduces shoulder mobility requirements and shifts load slightly forward."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "TRX-Assisted Squat",
+    "tags": [
+      "unilateral",
+      "lower_body",
+      "stability",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x12-15 @ bodyweight",
+    "notes": "Straps provide balance assistance. Excellent for learning squat pattern or injury recovery."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Kettlebell Swing (moderate load)",
+    "tags": [
+      "explosive",
+      "hip_dominant",
+      "posterior_chain",
+      "ballistic",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "4x12-15 @ moderate weight",
+    "notes": "Hip hinge power development. Keep load moderate to avoid excessive posterior chain stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Cable Pull-Through",
+    "tags": [
+      "hip_dominant",
+      "posterior_chain",
+      "isolation",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x12-15",
+    "notes": "Hip hinge pattern with cable provides smooth resistance curve. Very knee-friendly."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Single-Leg RDL (light)",
+    "tags": [
+      "unilateral",
+      "hip_dominant",
+      "posterior_chain",
+      "balance",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10/leg @ light load",
+    "notes": "Unilateral hinge builds balance and posterior chain. Keep load light for safety."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "45-Degree Back Extension",
+    "tags": [
+      "posterior_chain",
+      "hip_dominant",
+      "isolation",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x12-15 @ bodyweight or light load",
+    "notes": "Isolated posterior chain work. Less spinal loading than barbell variations."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "DB Bench Press (neutral grip)",
+    "tags": [
+      "push",
+      "upper_body",
+      "compound",
+      "low_impact",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10 @ 70-80% 1RM equivalent",
+    "notes": "Neutral grip reduces shoulder stress. DBs allow natural arm path."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Landmine Press",
+    "tags": [
+      "push",
+      "upper_body",
+      "compound",
+      "low_impact",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10 each arm",
+    "notes": "Angled pressing path is more shoulder-friendly than vertical press."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Floor Press",
+    "tags": [
+      "push",
+      "upper_body",
+      "compound",
+      "low_impact",
+      "mech_upper_press"
+    ],
+    "prescription": "3x6-8 @ 75-85% 1RM",
+    "notes": "Floor limits range of motion, reducing shoulder stress. Good for shoulder issues."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Incline DB Press (30-45 degrees)",
+    "tags": [
+      "push",
+      "upper_body",
+      "compound",
+      "low_impact",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10",
+    "notes": "Moderate incline reduces shoulder stress vs flat or steep angles."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "TRX Push-Up",
+    "tags": [
+      "push",
+      "upper_body",
+      "stability",
+      "low_impact",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x10-15",
+    "notes": "Instability adds core demand. Can adjust difficulty with body angle."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Cable Row (neutral grip)",
+    "tags": [
+      "pull",
+      "upper_body",
+      "compound",
+      "low_impact",
+      "mech_upper_pull",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x10-12",
+    "notes": "Neutral grip reduces shoulder/elbow stress. Cable provides constant tension."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Chest-Supported Row",
+    "tags": [
+      "pull",
+      "upper_body",
+      "isolation",
+      "low_impact",
+      "mech_upper_pull"
+    ],
+    "prescription": "3x10-12",
+    "notes": "Chest support eliminates lower back involvement. Pure upper back work."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Seal Row",
+    "tags": [
+      "pull",
+      "upper_body",
+      "isolation",
+      "low_impact",
+      "mech_upper_pull"
+    ],
+    "prescription": "3x8-10",
+    "notes": "Prone position removes all lower body and lower back stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Face Pull",
+    "tags": [
+      "pull",
+      "upper_body",
+      "isolation",
+      "low_impact",
+      "mech_upper_pull"
+    ],
+    "prescription": "3x15-20",
+    "notes": "High-rep rear delt and upper back work. Excellent for shoulder health."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Band Pull-Apart",
+    "tags": [
+      "pull",
+      "upper_body",
+      "isolation",
+      "low_impact",
+      "mech_upper_pull"
+    ],
+    "prescription": "3x20-25",
+    "notes": "Simple shoulder health drill. Can be done daily."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "TRX Row",
+    "tags": [
+      "pull",
+      "upper_body",
+      "compound",
+      "stability",
+      "low_impact",
+      "mech_upper_pull",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x12-15",
+    "notes": "Bodyweight row with adjustable difficulty. Core stability component."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Bulgarian Split Squat",
+    "tags": [
+      "unilateral",
+      "lower_body",
+      "quad_dominant",
+      "balance",
+      "low_impact",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10/leg",
+    "notes": "Rear-foot-elevated split squat. Excellent for single-leg strength and balance."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Reverse Lunge (controlled)",
+    "tags": [
+      "unilateral",
+      "lower_body",
+      "quad_dominant",
+      "balance",
+      "low_impact",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10/leg",
+    "notes": "Reverse step reduces deceleration stress vs forward lunge."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Step-Up (low box)",
+    "tags": [
+      "unilateral",
+      "lower_body",
+      "quad_dominant",
+      "low_impact",
+      "mech_lower_lunge"
+    ],
+    "prescription": "3x10-12/leg",
+    "notes": "Low box height (12-16 inches) minimizes knee stress while building strength."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Single-Leg Squat to Box",
+    "tags": [
+      "unilateral",
+      "lower_body",
+      "quad_dominant",
+      "balance",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x6-8/leg",
+    "notes": "Box provides safety net. Advanced single-leg strength."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Pallof Press",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x10-12 each side",
+    "notes": "Anti-rotation core strength. Cable or band resistance."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Dead Bug",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x10-12 each side",
+    "notes": "Anti-extension pattern. Teaches core control."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Bird Dog",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "balance",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x8-10 each side",
+    "notes": "Anti-rotation and anti-extension. Excellent for spinal stability."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Copenhagen Plank",
+    "tags": [
+      "isometric",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x15-20s each side",
+    "notes": "Adductor and lateral core strength. Important for groin health."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Hollow Body Hold",
+    "tags": [
+      "isometric",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "4x20-30s",
+    "notes": "Anti-extension isometric. Foundational core strength."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Plank Variations Circuit",
+    "tags": [
+      "isometric",
+      "core",
+      "stability",
+      "work_capacity",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3 rounds: front plank 45s, side plank 30s/side",
+    "notes": "Multi-angle core isometric work."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Farmer Carry (moderate load)",
+    "tags": [
+      "grip",
+      "core",
+      "work_capacity",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "prescription": "4x40m @ 70-80% max",
+    "notes": "Bilateral carry for grip and core endurance."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Suitcase Carry",
+    "tags": [
+      "grip",
+      "core",
+      "unilateral",
+      "anti_rotation",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x30m each side",
+    "notes": "Unilateral carry challenges anti-lateral flexion."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Double KB Front Rack Carry",
+    "tags": [
+      "core",
+      "stability",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x30m",
+    "notes": "Front rack position challenges thoracic and core stability."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Wall Sit",
+    "tags": [
+      "isometric",
+      "lower_body",
+      "quad_dominant",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "prescription": "4x30-45s",
+    "notes": "Isometric squat position. Builds leg endurance without dynamic stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Iso-Hold Split Squat",
+    "tags": [
+      "isometric",
+      "unilateral",
+      "lower_body",
+      "balance",
+      "low_impact",
+      "zero_impact",
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "prescription": "3x20-30s each leg",
+    "notes": "Static lunge position builds isometric strength and balance."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Glute Bridge Hold",
+    "tags": [
+      "isometric",
+      "posterior_chain",
+      "hip_dominant",
+      "low_impact",
+      "zero_impact"
+    ],
+    "prescription": "4x30-45s",
+    "notes": "Isometric hip extension. Glute activation without spinal loading."
   }
 ]

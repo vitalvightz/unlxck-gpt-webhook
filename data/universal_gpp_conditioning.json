@@ -5,9 +5,9 @@
     ],
     "name": "Steady-State Cardio (Run / Bike / Row)",
     "system": "aerobic",
-    "duration": "30–60 minutes",
-    "intensity": "60–70% max HR (Zone 2)",
-    "volume": "2–3x/week",
+    "duration": "30\u201360 minutes",
+    "intensity": "60\u201370% max HR (Zone 2)",
+    "volume": "2\u20133x/week",
     "equipment": [
       "road",
       "treadmill",
@@ -29,9 +29,9 @@
     ],
     "name": "Jump Rope Endurance (Footwork Conditioning)",
     "system": "aerobic",
-    "duration": "3–5 rounds × 3–5 minutes",
+    "duration": "3\u20135 rounds \u00d7 3\u20135 minutes",
     "intensity": "Moderate steady pace",
-    "volume": "2–4x/week",
+    "volume": "2\u20134x/week",
     "equipment": [
       "jump rope"
     ],
@@ -52,9 +52,9 @@
     ],
     "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
     "system": "glycolytic",
-    "duration": "6–8 × 20–30s max effort",
+    "duration": "6\u20138 \u00d7 20\u201330s max effort",
     "intensity": "Maximal sprint",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "track",
       "field",
@@ -81,9 +81,9 @@
     ],
     "name": "Battle Rope Circuits",
     "system": "glycolytic",
-    "duration": "4–6 rounds × 30s work",
+    "duration": "4\u20136 rounds \u00d7 30s work",
     "intensity": "High effort",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "battle rope"
     ],
@@ -106,9 +106,9 @@
     ],
     "name": "Bodyweight MetCon Circuit",
     "system": "glycolytic",
-    "duration": "3–4 rounds of 3–5 exercises × 30s each",
+    "duration": "3\u20134 rounds of 3\u20135 exercises \u00d7 30s each",
     "intensity": "High tempo",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "bodyweight"
     ],
@@ -129,9 +129,9 @@
     ],
     "name": "Explosive Medicine Ball Throws",
     "system": "Alactic",
-    "duration": "5–8 sets × 3–5 throws",
+    "duration": "5\u20138 sets \u00d7 3\u20135 throws",
     "intensity": "Maximal power",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "medicine ball"
     ],
@@ -147,7 +147,7 @@
       "mech_upper_press",
       "mech_cns_high"
     ],
-    "notes": "Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days."
+    "notes": "Overhead slams/chest passes with full recovery (90\u2013120s). Develops punching/takedown explosion. Pair with upper-body strength days."
   },
   {
     "phases": [
@@ -155,7 +155,7 @@
     ],
     "name": "Plyometric Depth Jumps",
     "system": "Alactic",
-    "duration": "6–10 × 3–5 jumps",
+    "duration": "6\u201310 \u00d7 3\u20135 jumps",
     "intensity": "Maximal rebound",
     "volume": "1x/week",
     "equipment": [
@@ -181,9 +181,9 @@
     ],
     "name": "Band-Resisted Takedown Explosions",
     "system": "Alactic",
-    "duration": "8–10 × 3–5s bursts",
+    "duration": "8\u201310 \u00d7 3\u20135s bursts",
     "intensity": "Max acceleration",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "resistance band",
       "partner"
@@ -208,7 +208,7 @@
     ],
     "name": "Clap Push-Up Sprints",
     "system": "Alactic",
-    "duration": "5–8 × 3–5 reps",
+    "duration": "5\u20138 \u00d7 3\u20135 reps",
     "intensity": "Max velocity",
     "volume": "1x/week",
     "equipment": [
@@ -227,5 +227,652 @@
       "mech_cns_high"
     ],
     "notes": "Explosive push-ups with flight phase. Builds punching/striking power. Rest 90s between sets."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Light Sled Push",
+    "system": "aerobic",
+    "duration": "5x20m @ 60% effort",
+    "intensity": "60-70% max HR",
+    "volume": "2-3x/week",
+    "equipment": [
+      "sled"
+    ],
+    "tags": [
+      "sled",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "work_capacity",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Concentric-only sled work builds conditioning without joint stress. Ideal for recovery days or between high-intensity sessions."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Sled Drag (Backward)",
+    "system": "aerobic",
+    "duration": "4x25m backward",
+    "intensity": "Moderate resistance",
+    "volume": "2x/week",
+    "equipment": [
+      "sled"
+    ],
+    "tags": [
+      "sled",
+      "conditioning",
+      "posterior_chain",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Backward sled drag emphasizes posterior chain with zero eccentric stress. Great for knee-friendly conditioning."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Lateral Sled Drag",
+    "system": "aerobic",
+    "duration": "4x15m each side",
+    "intensity": "Moderate",
+    "volume": "2x/week",
+    "equipment": [
+      "sled"
+    ],
+    "tags": [
+      "sled",
+      "conditioning",
+      "lateral",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Lateral movement pattern with zero impact stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Sled Row/Pull (Rope)",
+    "system": "aerobic",
+    "duration": "5x20m hand-over-hand",
+    "intensity": "Moderate",
+    "volume": "2x/week",
+    "equipment": [
+      "sled"
+    ],
+    "tags": [
+      "sled",
+      "pull",
+      "upper_body",
+      "grip",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "notes": "Upper body pulling with sled eliminates lower body impact."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Assault Bike Steady State",
+    "system": "aerobic",
+    "duration": "20-30 minutes",
+    "intensity": "65-75% max HR",
+    "volume": "2-4x/week",
+    "equipment": [
+      "assault_bike"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "recovery",
+      "work_capacity"
+    ],
+    "notes": "Full-body aerobic work with zero joint impact. Can be used as active recovery or steady conditioning."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Stationary Bike Intervals",
+    "system": "glycolytic",
+    "duration": "8-12 rounds \u00d7 (45s work / 90s easy)",
+    "intensity": "80-85% max HR on work",
+    "volume": "2-3x/week",
+    "equipment": [
+      "stationary_bike"
+    ],
+    "tags": [
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "work_capacity",
+      "glycolytic"
+    ],
+    "notes": "Interval work on bike provides high conditioning stimulus without impact stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Rowing Machine Steady State",
+    "system": "aerobic",
+    "duration": "20-30 minutes",
+    "intensity": "65-70% max HR",
+    "volume": "2-4x/week",
+    "equipment": [
+      "rower"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "pull",
+      "posterior_chain",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull",
+      "mech_trunk_stability"
+    ],
+    "notes": "Full-body cardio with emphasis on posterior chain. Zero impact makes it ideal for recovery."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Rowing Intervals (2K Pace)",
+    "system": "glycolytic",
+    "duration": "6-8 \u00d7 500m @ 2K pace (2min rest)",
+    "intensity": "85-90% max HR",
+    "volume": "2x/week",
+    "equipment": [
+      "rower"
+    ],
+    "tags": [
+      "conditioning",
+      "work_capacity",
+      "pull",
+      "low_impact",
+      "zero_impact",
+      "glycolytic",
+      "mech_upper_pull"
+    ],
+    "notes": "High-intensity rowing intervals build work capacity without joint stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Ski Erg Steady",
+    "system": "aerobic",
+    "duration": "15-20 minutes",
+    "intensity": "65-75% max HR",
+    "volume": "2-3x/week",
+    "equipment": [
+      "ski_erg"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "pull",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull"
+    ],
+    "notes": "Upper body focused cardio. Excellent for lower body injury management."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Ski Erg Intervals",
+    "system": "glycolytic",
+    "duration": "10 \u00d7 (30s work / 90s rest)",
+    "intensity": "85-90% max HR",
+    "volume": "2x/week",
+    "equipment": [
+      "ski_erg"
+    ],
+    "tags": [
+      "conditioning",
+      "work_capacity",
+      "pull",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "glycolytic",
+      "mech_upper_pull"
+    ],
+    "notes": "High-intensity upper body conditioning without lower body involvement."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Echo Bike HIIT",
+    "system": "glycolytic",
+    "duration": "8-10 \u00d7 (20s max / 100s easy)",
+    "intensity": "Max effort on work intervals",
+    "volume": "2x/week",
+    "equipment": [
+      "echo_bike"
+    ],
+    "tags": [
+      "conditioning",
+      "work_capacity",
+      "low_impact",
+      "zero_impact",
+      "glycolytic",
+      "explosive"
+    ],
+    "notes": "High-intensity bike intervals for work capacity without impact."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Elliptical Steady State",
+    "system": "aerobic",
+    "duration": "30-40 minutes",
+    "intensity": "65-75% max HR",
+    "volume": "3-4x/week",
+    "equipment": [
+      "elliptical"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Very low-impact alternative to running. Good for high-volume conditioning."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Swimming Steady State",
+    "system": "aerobic",
+    "duration": "20-30 minutes continuous",
+    "intensity": "Moderate effort",
+    "volume": "2-3x/week",
+    "equipment": [
+      "pool"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Any stroke. Zero-impact full-body conditioning ideal for injury management or recovery."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Pool Running/Aqua Jogging",
+    "system": "aerobic",
+    "duration": "20-30 minutes",
+    "intensity": "Moderate effort",
+    "volume": "2-4x/week",
+    "equipment": [
+      "pool"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Water resistance provides conditioning without any joint impact. Excellent for ankle/knee injuries."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Swimming Intervals",
+    "system": "glycolytic",
+    "duration": "8-12 \u00d7 50m @ 80% (30s rest)",
+    "intensity": "Hard effort",
+    "volume": "2x/week",
+    "equipment": [
+      "pool"
+    ],
+    "tags": [
+      "conditioning",
+      "work_capacity",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "glycolytic"
+    ],
+    "notes": "High-intensity swimming for conditioning without impact."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Farmer Carry",
+    "system": "aerobic",
+    "duration": "4-6 \u00d7 40m @ moderate load",
+    "intensity": "70-80% of max carry weight",
+    "volume": "2x/week",
+    "equipment": [
+      "kettlebell",
+      "dumbbell"
+    ],
+    "tags": [
+      "conditioning",
+      "grip",
+      "core",
+      "work_capacity",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "notes": "Loaded carries build grip, core, and conditioning with minimal joint stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Suitcase Carry",
+    "system": "aerobic",
+    "duration": "4 \u00d7 30m each side",
+    "intensity": "Moderate to heavy",
+    "volume": "2x/week",
+    "equipment": [
+      "kettlebell",
+      "dumbbell"
+    ],
+    "tags": [
+      "conditioning",
+      "grip",
+      "core",
+      "unilateral",
+      "anti_rotation",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "notes": "Single-side carry emphasizes anti-lateral flexion and core stability."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Waiter Walk",
+    "system": "aerobic",
+    "duration": "3-4 \u00d7 20m each arm",
+    "intensity": "Light to moderate",
+    "volume": "2x/week",
+    "equipment": [
+      "kettlebell"
+    ],
+    "tags": [
+      "conditioning",
+      "stability",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability"
+    ],
+    "notes": "Overhead carry challenges shoulder stability and core control."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Battle Ropes Intervals",
+    "system": "glycolytic",
+    "duration": "8-10 \u00d7 (20s work / 40s rest)",
+    "intensity": "High intensity waves",
+    "volume": "2x/week",
+    "equipment": [
+      "battle_ropes"
+    ],
+    "tags": [
+      "conditioning",
+      "work_capacity",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "glycolytic"
+    ],
+    "notes": "Upper body conditioning without lower body involvement. Can do seated for complete lower body rest."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Battle Ropes Steady",
+    "system": "aerobic",
+    "duration": "3-5 rounds \u00d7 2 minutes (1min rest)",
+    "intensity": "Moderate wave amplitude",
+    "volume": "2x/week",
+    "equipment": [
+      "battle_ropes"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "upper_body",
+      "work_capacity",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Sustained upper body work for aerobic conditioning."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Incline Walking (Treadmill)",
+    "system": "aerobic",
+    "duration": "30-45 minutes @ 8-12% incline",
+    "intensity": "Moderate pace",
+    "volume": "3-5x/week",
+    "equipment": [
+      "treadmill"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "recovery",
+      "posterior_chain"
+    ],
+    "notes": "Incline walking builds aerobic capacity and posterior chain with low impact."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Weighted Vest Walking",
+    "system": "aerobic",
+    "duration": "30-40 minutes",
+    "intensity": "Moderate pace with 10-20lb vest",
+    "volume": "2-3x/week",
+    "equipment": [
+      "weighted_vest"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "work_capacity"
+    ],
+    "notes": "Added load increases conditioning stimulus while maintaining low impact."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Upper Body Ergometer (UBE)",
+    "system": "aerobic",
+    "duration": "15-25 minutes",
+    "intensity": "65-75% max HR",
+    "volume": "2-4x/week",
+    "equipment": [
+      "ube"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Arm crank ergometer for pure upper body cardio. Zero lower body involvement."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "UBE Intervals",
+    "system": "glycolytic",
+    "duration": "10 \u00d7 (30s hard / 90s easy)",
+    "intensity": "85-90% max HR",
+    "volume": "2x/week",
+    "equipment": [
+      "ube"
+    ],
+    "tags": [
+      "conditioning",
+      "work_capacity",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "glycolytic"
+    ],
+    "notes": "High-intensity upper body intervals without lower body stress."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Core Conditioning Circuit",
+    "system": "glycolytic",
+    "duration": "4-5 rounds: plank 45s, side plank 30s/side, dead bug 30s, hollow hold 30s (1min rest)",
+    "intensity": "Bodyweight",
+    "volume": "2-3x/week",
+    "equipment": [
+      "bodyweight"
+    ],
+    "tags": [
+      "conditioning",
+      "core",
+      "stability",
+      "work_capacity",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "High-rep core circuit for conditioning and stability without spinal loading."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Recumbent Bike Steady",
+    "system": "aerobic",
+    "duration": "25-35 minutes",
+    "intensity": "65-75% max HR",
+    "volume": "3-5x/week",
+    "equipment": [
+      "recumbent_bike"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "recovery",
+      "parasympathetic"
+    ],
+    "notes": "Recumbent position provides maximal support. Excellent for injury recovery."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Assault Runner Walking",
+    "system": "aerobic",
+    "duration": "20-30 minutes",
+    "intensity": "Moderate pace",
+    "volume": "3-4x/week",
+    "equipment": [
+      "assault_runner"
+    ],
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "recovery"
+    ],
+    "notes": "Self-powered curved treadmill allows natural walking mechanics with low impact."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Mobility Flow Circuit",
+    "system": "parasympathetic",
+    "duration": "15-20 minutes continuous movement",
+    "intensity": "Light",
+    "volume": "Daily",
+    "equipment": [
+      "bodyweight"
+    ],
+    "tags": [
+      "mobility",
+      "recovery",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "parasympathetic"
+    ],
+    "notes": "Dynamic mobility work doubles as light conditioning and recovery."
+  },
+  {
+    "phases": [
+      "GPP"
+    ],
+    "name": "Prowler Push Light",
+    "system": "aerobic",
+    "duration": "6 \u00d7 30m @ 60-70% effort (90s rest)",
+    "intensity": "Moderate",
+    "volume": "2x/week",
+    "equipment": [
+      "prowler"
+    ],
+    "tags": [
+      "sled",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "work_capacity",
+      "mech_trunk_stability"
+    ],
+    "notes": "Similar to sled push but with handles for different loading pattern."
   }
 ]

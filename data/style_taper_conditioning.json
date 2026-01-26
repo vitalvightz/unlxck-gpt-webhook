@@ -1132,7 +1132,7 @@
     ],
     "system": "Cognitive",
     "modality": "visual processing",
-    "duration": "3min random ball toss → jab/parry response → x4 rounds",
+    "duration": "3min random ball toss \u2192 jab/parry response \u2192 x4 rounds",
     "intensity": "moderate",
     "tags": [
       "boxing",
@@ -1156,7 +1156,7 @@
     ],
     "system": "Cognitive",
     "modality": "auditory reaction",
-    "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
+    "duration": "5min clinch pummeling \u2192 change direction on beep \u2192 x3 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -1181,7 +1181,7 @@
     ],
     "system": "Cognitive",
     "modality": "decision fatigue",
-    "duration": "3min live wrestling → 30s chess move → x5 rounds",
+    "duration": "3min live wrestling \u2192 30s chess move \u2192 x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "wrestling",
@@ -1203,7 +1203,7 @@
     ],
     "system": "Cognitive",
     "modality": "memory challenge",
-    "duration": "3min execute kick combos from flashed cards → x4 rounds",
+    "duration": "3min execute kick combos from flashed cards \u2192 x4 rounds",
     "intensity": "low",
     "tags": [
       "kickboxing",
@@ -1227,7 +1227,7 @@
     ],
     "system": "Cognitive",
     "modality": "choice reaction",
-    "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
+    "duration": "3min shot entries \u2192 cone color dictates finish (single/double) \u2192 x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -1250,7 +1250,7 @@
     ],
     "system": "Cognitive",
     "modality": "pattern recognition",
-    "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
+    "duration": "3min mitt work \u2192 solve 3 puzzle pieces between rounds \u2192 x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -1274,7 +1274,7 @@
     ],
     "system": "Cognitive",
     "modality": "dual-task loading",
-    "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
+    "duration": "3min footwork drills \u2192 solve math problem between combos \u2192 x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -1283,7 +1283,7 @@
       "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
+    "notes": "Example: 'Teep \u2192 solve 7x8 \u2192 pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
   },
   {
@@ -1296,7 +1296,7 @@
     ],
     "system": "Cognitive",
     "modality": "tactile sensitivity",
-    "duration": "3min pummeling blindfolded → x4 rounds",
+    "duration": "3min pummeling blindfolded \u2192 x4 rounds",
     "intensity": "low",
     "tags": [
       "grappling",
@@ -1320,7 +1320,7 @@
     ],
     "system": "Cognitive",
     "modality": "audio distraction",
-    "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
+    "duration": "3min shadowboxing \u2192 answer riddle mid-round \u2192 x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -1344,7 +1344,7 @@
     ],
     "system": "Cognitive",
     "modality": "visual cueing",
-    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
+    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) \u2192 x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -1356,5 +1356,1271 @@
     ],
     "notes": "Forces stance switches under fatigue (60% speed)",
     "equipment_note": "Traffic light system"
+  },
+  {
+    "name": "Light Sled Push - Distance Striker Recovery",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "low-impact conditioning",
+    "duration": "4x20m @ 60% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "sled",
+      "conditioning",
+      "distance_striker",
+      "low_impact",
+      "zero_impact",
+      "recovery",
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Low-intensity sled work for maintaining conditioning without joint stress",
+    "equipment_note": "Light load, focus on steady pace"
+  },
+  {
+    "name": "Sled Drag - Backward for Brawler",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "low-impact conditioning",
+    "duration": "4x15m backward drag @ 50% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "sled",
+      "conditioning",
+      "brawler",
+      "low_impact",
+      "zero_impact",
+      "posterior_chain",
+      "mech_trunk_stability"
+    ],
+    "notes": "Safe posterior chain activation during taper",
+    "equipment_note": "Rope or belt attachment"
+  },
+  {
+    "name": "Lateral Sled Drag - Clinch Fighter",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "lateral conditioning",
+    "duration": "4x10m each side @ 60% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "sled",
+      "conditioning",
+      "clinch_fighter",
+      "low_impact",
+      "zero_impact",
+      "lateral",
+      "mech_trunk_stability"
+    ],
+    "notes": "Lateral movement pattern without impact stress",
+    "equipment_note": "Harness attachment recommended"
+  },
+  {
+    "name": "Sled Row Pull - Grappler",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "upper body conditioning",
+    "duration": "5x15m @ 60% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "sled",
+      "conditioning",
+      "grappler",
+      "pull",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "notes": "Pulling pattern for grapplers without heavy eccentric load",
+    "equipment_note": "Rope attachment"
+  },
+  {
+    "name": "Assault Bike Steady State - Counter Striker",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "zero-impact cardio",
+    "duration": "20min @ 65% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "counter_striker",
+      "low_impact",
+      "zero_impact",
+      "recovery",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Maintains aerobic capacity without joint loading",
+    "equipment_note": "Keep RPM moderate"
+  },
+  {
+    "name": "Stationary Bike Intervals - Kicker",
+    "equipment": [
+      "stationary_bike"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "interval work",
+    "duration": "10x(1min on / 1min easy)",
+    "intensity": "zone 2-3",
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "kicker",
+      "low_impact",
+      "zero_impact",
+      "endurance"
+    ],
+    "notes": "Light intervals to maintain conditioning without impact",
+    "equipment_note": "Moderate resistance"
+  },
+  {
+    "name": "Rower Steady Distance - Wrestler",
+    "equipment": [
+      "rower"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "full-body conditioning",
+    "duration": "2000m @ 70% pace",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "wrestler",
+      "low_impact",
+      "zero_impact",
+      "pull",
+      "posterior_chain",
+      "mech_upper_pull",
+      "mech_trunk_stability"
+    ],
+    "notes": "Full-body conditioning with zero impact stress",
+    "equipment_note": "Focus on smooth strokes"
+  },
+  {
+    "name": "Ski Erg Intervals - MMA",
+    "equipment": [
+      "ski_erg"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "upper body cardio",
+    "duration": "8x(30s work / 90s rest)",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "mma",
+      "low_impact",
+      "zero_impact",
+      "pull",
+      "upper_body",
+      "mech_upper_pull"
+    ],
+    "notes": "Upper body conditioning without lower body stress",
+    "equipment_note": "Light intensity"
+  },
+  {
+    "name": "Echo Bike Recovery - Pressure Fighter",
+    "equipment": [
+      "echo_bike"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "active recovery",
+    "duration": "15min @ 60% effort",
+    "intensity": "zone 1-2",
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "pressure_fighter",
+      "low_impact",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Light active recovery session",
+    "equipment_note": "Very light resistance"
+  },
+  {
+    "name": "TRX-Assisted Squat - Boxing",
+    "equipment": [
+      "trx"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "supported strength",
+    "duration": "3x10 @ bodyweight",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "lower_body",
+      "stability",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "notes": "Supported squat pattern reduces joint stress",
+    "equipment_note": "Hold straps for balance"
+  },
+  {
+    "name": "Goblet Squat Light - Muay Thai",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "supported movement",
+    "duration": "3x12 @ light load",
+    "intensity": "zone 2",
+    "tags": [
+      "muay_thai",
+      "lower_body",
+      "compound",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "notes": "Light goblet squats for movement quality",
+    "equipment_note": "Use 12-16kg max"
+  },
+  {
+    "name": "Box Squat Low Height - Grappler",
+    "equipment": [
+      "box"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "controlled descent",
+    "duration": "4x8 @ bodyweight",
+    "intensity": "zone 2",
+    "tags": [
+      "grappler",
+      "lower_body",
+      "stability",
+      "low_impact",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "notes": "Box provides feedback and control",
+    "equipment_note": "Use high box (above parallel)"
+  },
+  {
+    "name": "Wall Sit - Distance Fighter",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "isometric strength",
+    "duration": "4x30s holds",
+    "intensity": "zone 2",
+    "tags": [
+      "distance_fighter",
+      "isometric",
+      "lower_body",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Static hold maintains strength without dynamic stress",
+    "equipment_note": "Back against wall"
+  },
+  {
+    "name": "Plank Hold - Counter Striker",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "core isometric",
+    "duration": "4x45s holds",
+    "intensity": "zone 2",
+    "tags": [
+      "counter_striker",
+      "isometric",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Core strength maintenance without spinal loading",
+    "equipment_note": "Forearms on mat"
+  },
+  {
+    "name": "Side Plank Hold - Clinch Fighter",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "lateral core isometric",
+    "duration": "3x30s each side",
+    "intensity": "zone 2",
+    "tags": [
+      "clinch_fighter",
+      "isometric",
+      "core",
+      "stability",
+      "lateral",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Lateral core stability without rotation stress",
+    "equipment_note": "Forearm and feet"
+  },
+  {
+    "name": "Dead Bug Hold - BJJ",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "anti-extension core",
+    "duration": "3x8 controlled reps",
+    "intensity": "zone 2",
+    "tags": [
+      "bjj",
+      "isometric",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Anti-extension pattern for core control",
+    "equipment_note": "Supine on mat"
+  },
+  {
+    "name": "Pallof Press - Wrestler",
+    "equipment": [
+      "cable"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "anti-rotation",
+    "duration": "3x10 each side",
+    "intensity": "zone 2",
+    "tags": [
+      "wrestler",
+      "anti_rotation",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Anti-rotation strength without spinal load",
+    "equipment_note": "Light resistance"
+  },
+  {
+    "name": "Band Pallof Hold - Scrambler",
+    "equipment": [
+      "resistance_band"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "anti-rotation isometric",
+    "duration": "3x20s each side",
+    "intensity": "zone 2",
+    "tags": [
+      "scrambler",
+      "anti_rotation",
+      "core",
+      "isometric",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Static anti-rotation hold",
+    "equipment_note": "Medium band tension"
+  },
+  {
+    "name": "Half-Kneeling Pallof - Pressure Fighter",
+    "equipment": [
+      "cable"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "anti-rotation kneeling",
+    "duration": "3x8 each side",
+    "intensity": "zone 2",
+    "tags": [
+      "pressure_fighter",
+      "anti_rotation",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Kneeling position adds stability challenge",
+    "equipment_note": "Light weight"
+  },
+  {
+    "name": "Farmer Carry Light - MMA",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "loaded carry",
+    "duration": "4x20m @ light load",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "conditioning",
+      "grip",
+      "core",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "notes": "Light carry for grip and core without heavy load",
+    "equipment_note": "Use 12-16kg per hand max"
+  },
+  {
+    "name": "Suitcase Carry - Boxing",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "unilateral carry",
+    "duration": "3x15m each side",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "conditioning",
+      "grip",
+      "core",
+      "unilateral",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "notes": "Single-side carry for anti-lateral flexion",
+    "equipment_note": "Light load"
+  },
+  {
+    "name": "Waiter Walk - Kickboxing",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "overhead carry",
+    "duration": "3x10m each arm",
+    "intensity": "zone 2",
+    "tags": [
+      "kickboxing",
+      "conditioning",
+      "stability",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability"
+    ],
+    "notes": "Overhead stability work with light load",
+    "equipment_note": "Very light KB (8-12kg)"
+  },
+  {
+    "name": "Pool Jogging - Kicker",
+    "equipment": [
+      "pool"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "aquatic conditioning",
+    "duration": "15min @ moderate pace",
+    "intensity": "zone 2",
+    "tags": [
+      "kicker",
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Water resistance with zero joint impact",
+    "equipment_note": "Chest-deep water"
+  },
+  {
+    "name": "Swimming Steady State - Distance Striker",
+    "equipment": [
+      "pool"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "full-body aquatic",
+    "duration": "20min continuous @ easy pace",
+    "intensity": "zone 2",
+    "tags": [
+      "distance_striker",
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "recovery",
+      "upper_body"
+    ],
+    "notes": "Any stroke, focus on movement quality",
+    "equipment_note": "Pool access required"
+  },
+  {
+    "name": "Battle Ropes Light - Brawler",
+    "equipment": [
+      "battle_ropes"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "glycolytic",
+    "modality": "upper body conditioning",
+    "duration": "6x(20s work / 40s rest)",
+    "intensity": "zone 2",
+    "tags": [
+      "brawler",
+      "conditioning",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "work_capacity"
+    ],
+    "notes": "Upper body conditioning without lower body stress",
+    "equipment_note": "Light wave amplitude"
+  },
+  {
+    "name": "Seated Cable Row Steady - Grappler",
+    "equipment": [
+      "cable"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "upper body pull",
+    "duration": "3x12 @ light weight",
+    "intensity": "zone 2",
+    "tags": [
+      "grappler",
+      "pull",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull"
+    ],
+    "notes": "Seated position eliminates lower body involvement",
+    "equipment_note": "Light resistance"
+  },
+  {
+    "name": "Incline DB Press Light - Counter Striker",
+    "equipment": [
+      "dumbbell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "upper body push",
+    "duration": "3x10 @ light load",
+    "intensity": "zone 2",
+    "tags": [
+      "counter_striker",
+      "push",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_press"
+    ],
+    "notes": "Light pressing without heavy shoulder stress",
+    "equipment_note": "Light DBs"
+  },
+  {
+    "name": "Yoga Flow Light - MMA",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "parasympathetic",
+    "modality": "mobility work",
+    "duration": "15min flow",
+    "intensity": "zone 1",
+    "tags": [
+      "mma",
+      "mobility",
+      "recovery",
+      "low_impact",
+      "zero_impact",
+      "parasympathetic"
+    ],
+    "notes": "Gentle movement for recovery and mobility",
+    "equipment_note": "Yoga mat"
+  },
+  {
+    "name": "Breathwork Session - All Styles",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "parasympathetic",
+    "modality": "recovery breath",
+    "duration": "10min guided breathing",
+    "intensity": "zone 1",
+    "tags": [
+      "recovery",
+      "parasympathetic",
+      "cognitive",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Breath work for nervous system recovery",
+    "equipment_note": "Quiet space"
+  },
+  {
+    "name": "Shadow Boxing Technical - Boxing",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "skill",
+    "modality": "technical shadow",
+    "duration": "3x3min @ 50% intensity",
+    "intensity": "zone 1-2",
+    "tags": [
+      "boxing",
+      "skill",
+      "skill_refinement",
+      "footwork",
+      "low_impact",
+      "tactical"
+    ],
+    "notes": "Technical shadow work at low intensity",
+    "equipment_note": "Light movement"
+  },
+  {
+    "name": "Shadow Kickboxing Flow - Kickboxing",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "skill",
+    "modality": "flow shadow",
+    "duration": "2x4min @ 50% intensity",
+    "intensity": "zone 1-2",
+    "tags": [
+      "kickboxing",
+      "skill",
+      "skill_refinement",
+      "footwork",
+      "low_impact",
+      "tactical"
+    ],
+    "notes": "Flowing combinations without power",
+    "equipment_note": "Controlled movements"
+  },
+  {
+    "name": "Core Circuit - Wrestler",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "glycolytic",
+    "modality": "core endurance",
+    "duration": "3 rounds: 30s each (plank, side plank L/R, dead bug, bird dog)",
+    "intensity": "zone 2",
+    "tags": [
+      "wrestler",
+      "core",
+      "conditioning",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Circuit of safe core movements",
+    "equipment_note": "Mat only"
+  },
+  {
+    "name": "Anti-Rotation Circuit - Scrambler",
+    "equipment": [
+      "resistance_band"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "glycolytic",
+    "modality": "rotational stability",
+    "duration": "3 rounds: Pallof press, chops, lifts (10 reps each)",
+    "intensity": "zone 2",
+    "tags": [
+      "scrambler",
+      "anti_rotation",
+      "core",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Anti-rotation endurance circuit",
+    "equipment_note": "Light band or cable"
+  },
+  {
+    "name": "Walking Recovery - All Styles",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "active recovery",
+    "duration": "30min @ easy pace",
+    "intensity": "zone 1",
+    "tags": [
+      "recovery",
+      "aerobic",
+      "low_impact",
+      "parasympathetic"
+    ],
+    "notes": "Light walking for active recovery",
+    "equipment_note": "Flat surface preferred"
+  },
+  {
+    "name": "Elliptical Steady - Pressure Fighter",
+    "equipment": [
+      "elliptical"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "low-impact cardio",
+    "duration": "20min @ 65% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "pressure_fighter",
+      "aerobic",
+      "conditioning",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Elliptical provides low-impact alternative",
+    "equipment_note": "Moderate resistance"
+  },
+  {
+    "name": "Single-Leg Balance Holds - Kicker",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "balance work",
+    "duration": "3x30s each leg",
+    "intensity": "zone 1",
+    "tags": [
+      "kicker",
+      "balance",
+      "stability",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Static balance for ankle stability",
+    "equipment_note": "Progress to eyes closed"
+  },
+  {
+    "name": "TRX Y-T-W Series - Distance Striker",
+    "equipment": [
+      "trx"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "shoulder stability",
+    "duration": "3x8 each position",
+    "intensity": "zone 2",
+    "tags": [
+      "distance_striker",
+      "stability",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull"
+    ],
+    "notes": "Light shoulder stability work",
+    "equipment_note": "Bodyweight only"
+  },
+  {
+    "name": "Passive Hang - BJJ",
+    "equipment": [
+      "pull_up_bar"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "grip endurance",
+    "duration": "4x20s holds",
+    "intensity": "zone 2",
+    "tags": [
+      "bjj",
+      "grip",
+      "isometric",
+      "low_impact",
+      "zero_impact",
+      "mech_grip_support"
+    ],
+    "notes": "Passive hang for grip without pull stress",
+    "equipment_note": "Dead hang position"
+  },
+  {
+    "name": "Band Grip Work - Grappler",
+    "equipment": [
+      "resistance_band"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "grip strength",
+    "duration": "3x15 squeezes each hand",
+    "intensity": "zone 2",
+    "tags": [
+      "grappler",
+      "grip",
+      "isometric",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Light grip work with band",
+    "equipment_note": "Loop band"
+  },
+  {
+    "name": "Low Box Step-Up - Clinch Fighter",
+    "equipment": [
+      "box"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "controlled step pattern",
+    "duration": "3x10 each leg @ slow tempo",
+    "intensity": "zone 2",
+    "tags": [
+      "clinch_fighter",
+      "lower_body",
+      "unilateral",
+      "low_impact",
+      "mech_lower_lunge"
+    ],
+    "notes": "Very low box height for movement quality",
+    "equipment_note": "6-8 inch box max"
+  },
+  {
+    "name": "Sled Push Interval - Kickboxing",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "glycolytic",
+    "modality": "interval sled",
+    "duration": "6x15m @ 65% effort (90s rest)",
+    "intensity": "zone 2-3",
+    "tags": [
+      "kickboxing",
+      "sled",
+      "conditioning",
+      "low_impact",
+      "zero_impact",
+      "work_capacity",
+      "mech_trunk_stability"
+    ],
+    "notes": "Light sled intervals for conditioning",
+    "equipment_note": "Light load"
+  },
+  {
+    "name": "Sled Pull with Arms - Boxing",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "glycolytic",
+    "modality": "upper body sled",
+    "duration": "5x20m rope pull",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "sled",
+      "pull",
+      "upper_body",
+      "low_impact",
+      "zero_impact",
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "notes": "Hand-over-hand rope pull with sled",
+    "equipment_note": "Seated or standing"
+  },
+  {
+    "name": "Air Bike Pyramid - MMA",
+    "equipment": [
+      "air_bike"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "glycolytic",
+    "modality": "pyramid intervals",
+    "duration": "30s/45s/60s/45s/30s @ 70% (equal rest)",
+    "intensity": "zone 2-3",
+    "tags": [
+      "mma",
+      "conditioning",
+      "work_capacity",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Light pyramid for work capacity",
+    "equipment_note": "Moderate pace"
+  },
+  {
+    "name": "Recumbent Bike Recovery - Brawler",
+    "equipment": [
+      "recumbent_bike"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "recovery cardio",
+    "duration": "25min @ 60% effort",
+    "intensity": "zone 2",
+    "tags": [
+      "brawler",
+      "aerobic",
+      "recovery",
+      "low_impact",
+      "zero_impact",
+      "parasympathetic"
+    ],
+    "notes": "Recumbent position for maximal support",
+    "equipment_note": "Light resistance"
+  },
+  {
+    "name": "Hollow Body Hold - Hybrid",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "anti-extension",
+    "duration": "4x20s holds",
+    "intensity": "zone 2",
+    "tags": [
+      "hybrid",
+      "isometric",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Anti-extension core isometric",
+    "equipment_note": "Supine on mat"
+  },
+  {
+    "name": "Glute Bridge Hold - Submission Hunter",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "hip extension isometric",
+    "duration": "3x30s holds",
+    "intensity": "zone 2",
+    "tags": [
+      "submission_hunter",
+      "isometric",
+      "posterior_chain",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Static glute activation",
+    "equipment_note": "Supine position"
+  },
+  {
+    "name": "Dynamic Stretching Flow - All Styles",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "parasympathetic",
+    "modality": "dynamic mobility",
+    "duration": "12min full-body flow",
+    "intensity": "zone 1",
+    "tags": [
+      "mobility",
+      "recovery",
+      "low_impact",
+      "zero_impact",
+      "parasympathetic"
+    ],
+    "notes": "Gentle dynamic stretching routine",
+    "equipment_note": "Mat preferred"
+  },
+  {
+    "name": "Foam Rolling Session - All Styles",
+    "equipment": [
+      "foam_roller"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "parasympathetic",
+    "modality": "myofascial release",
+    "duration": "15min full-body",
+    "intensity": "zone 1",
+    "tags": [
+      "recovery",
+      "mobility",
+      "low_impact",
+      "zero_impact",
+      "parasympathetic"
+    ],
+    "notes": "Self-myofascial release for recovery",
+    "equipment_note": "Foam roller"
+  },
+  {
+    "name": "Double KB Front Rack Carry - Wrestler",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "loaded carry",
+    "duration": "3x15m @ light load",
+    "intensity": "zone 2",
+    "tags": [
+      "wrestler",
+      "conditioning",
+      "core",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_trunk_stability"
+    ],
+    "notes": "Front rack position with light bells",
+    "equipment_note": "Light KBs (12kg each)"
+  },
+  {
+    "name": "Overhead Carry March - Scrambler",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "overhead stability carry",
+    "duration": "2x10m each arm",
+    "intensity": "zone 2",
+    "tags": [
+      "scrambler",
+      "conditioning",
+      "stability",
+      "low_impact",
+      "mech_loaded_carry",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability"
+    ],
+    "notes": "Single-arm overhead carry",
+    "equipment_note": "Very light load"
+  },
+  {
+    "name": "Assault Runner Walk - Pressure Fighter",
+    "equipment": [
+      "assault_runner"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "low-intensity walking",
+    "duration": "20min @ conversational pace",
+    "intensity": "zone 2",
+    "tags": [
+      "pressure_fighter",
+      "aerobic",
+      "recovery",
+      "low_impact",
+      "parasympathetic"
+    ],
+    "notes": "Walking on curved treadmill",
+    "equipment_note": "Self-powered treadmill"
+  },
+  {
+    "name": "Upper Body Ergometer - Distance Striker",
+    "equipment": [
+      "ube"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "upper body cardio",
+    "duration": "15min @ steady pace",
+    "intensity": "zone 2",
+    "tags": [
+      "distance_striker",
+      "aerobic",
+      "upper_body",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Arm crank ergometer for upper body",
+    "equipment_note": "UBE machine"
+  },
+  {
+    "name": "Bird Dog Holds - Top Control",
+    "equipment": [
+      "bodyweight"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "anti-rotation",
+    "duration": "3x8 each side (5s hold)",
+    "intensity": "zone 2",
+    "tags": [
+      "top_control",
+      "anti_rotation",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Controlled bird dog pattern",
+    "equipment_note": "Quadruped position"
+  },
+  {
+    "name": "Copenhagen Plank Short - Grappler",
+    "equipment": [
+      "bench"
+    ],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "adductor stability",
+    "duration": "3x15s each side",
+    "intensity": "zone 2",
+    "tags": [
+      "grappler",
+      "isometric",
+      "core",
+      "stability",
+      "low_impact",
+      "zero_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Short duration Copenhagen planks",
+    "equipment_note": "Low bench"
   }
 ]
