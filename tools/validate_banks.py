@@ -44,9 +44,16 @@ Example output:
       Safe: 47 | Blocked: 0
     ...
     
-    Ban tags not found in any bank or tag vocabulary:
-      - contact (from region: head)
-      - sparring (from region: head)
+    ========================================
+    Ban tags diagnostics:
+    ========================================
+    
+    Ban tags missing from tag_vocabulary:
+      - contact (regions: head)
+      - sparring (regions: head)
+    
+    Ban tags unused in any bank:
+      - some_unused_tag (regions: knee, ankle)
     
     ========================================
     VALIDATION SUMMARY
