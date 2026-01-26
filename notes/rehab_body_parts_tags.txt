@@ -1,4 +1,5 @@
 achilles
+adductors
 ankle
 bicep
 calf
@@ -12,6 +13,7 @@ foot
 forearm
 glutes
 groin
+hamstring
 hamstrings
 hand
 heel
@@ -24,6 +26,7 @@ obliques
 quads
 shin
 shoulder
+shoulders
 toe
 triceps
 upper_back
