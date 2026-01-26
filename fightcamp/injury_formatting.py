@@ -5,7 +5,7 @@ import re
 from typing import Mapping
 
 from .injury_synonyms import parse_injury_phrase, split_injury_text
-from .restriction_parsing import ParsedRestriction, parse_restriction_entry, _contains_trigger_token
+from .restriction_parsing import ParsedRestriction, parse_restriction_entry, is_restriction_clause
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
         Dict with injury data, or None if not an injury (e.g., if it's a constraint)
     """
     # Filter out constraint phrases first
-    if _contains_trigger_token(phrase):
+    if is_restriction_clause(phrase):
         return None
     
     injury_type, location = parse_injury_phrase(phrase)

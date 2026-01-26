@@ -45,6 +45,11 @@ def test_parse_restriction_entry_canonical():
     assert result["region"] == "shoulder"
     assert result["strength"] == "avoid"
 
+    result = parse_restriction_entry("heavy overhead pressing")
+    assert result is not None
+    assert result["restriction"] == "heavy_overhead_pressing"
+    assert result["region"] == "shoulder"
+
 
 def test_parse_restriction_entry_generic():
     """Test parsing of non-canonical constraint phrases."""
@@ -119,6 +124,20 @@ def test_parse_injuries_and_restrictions_complex_case():
     assert restrictions[0]["restriction"] == "deep_knee_flexion"
     assert restrictions[0]["region"] == "knee"
     assert restrictions[0]["strength"] == "avoid"
+
+
+def test_parse_injuries_and_restrictions_clause_split():
+    """Ensure semicolon/commas split clauses before injury/restriction classification."""
+    text = "mild right shoulder impingement; avoid deep knee flexion under load, heavy overhead pressing"
+
+    injuries, restrictions = parse_injuries_and_restrictions(text)
+
+    assert len(injuries) == 1
+    assert injuries[0]["canonical_location"] == "shoulder"
+    assert len(restrictions) == 2
+    restriction_names = {r["restriction"] for r in restrictions}
+    assert "deep_knee_flexion" in restriction_names
+    assert "heavy_overhead_pressing" in restriction_names
 
 
 def test_constraint_phrases_not_parsed_as_injuries():
@@ -270,4 +289,3 @@ def test_restriction_parsing_no_logging_for_injuries(caplog):
     total_logs = [record for record in caplog.records if "total restrictions parsed:" in record.message]
     assert len(total_logs) == 1
     assert "0" in total_logs[0].message
-

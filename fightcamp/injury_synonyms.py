@@ -884,31 +884,36 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     return injury_type, location
 
 
+def _split_injury_clauses(raw_text: str) -> list[str]:
+    if not raw_text:
+        return []
+    text = raw_text.lower()
+    text = re.sub(r"[()]", " ", text)
+    text = re.sub(r"\b(and|but|also)\b,?", "; ", text)
+    for sep in [".", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
+        text = text.replace(sep, "; ")
+    if ";" in text:
+        chunks = [part for clause in text.split(";") for part in clause.split(",")]
+    else:
+        chunks = text.split(",")
+    return [
+        cleaned
+        for chunk in chunks
+        if (cleaned := _strip_surrounding_punct(chunk))
+    ]
+
+
 def split_injury_text(raw_text: str) -> list[str]:
     """Normalize free-form injury text into a list of phrases using spaCy."""
     nlp = get_nlp()
-    if not nlp:
-        if not raw_text:
-            return []
-        text = raw_text.lower()
-        text = re.sub(r"[()]", " ", text)
-        text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-        for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-            text = text.replace(sep, ". ")
-        return [
-            cleaned
-            for chunk in text.split(".")
-            if (cleaned := _strip_surrounding_punct(chunk))
-        ]
-    text = raw_text.lower()
-    text = re.sub(r"[()]", " ", text)
-    # Replace common connectors with punctuation so spaCy can split sentences
-    text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-    for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-        text = text.replace(sep, ". ")
-    doc = nlp(text)
-    return [
-        cleaned
-        for sent in doc.sents
-        if (cleaned := _strip_surrounding_punct(sent.text))
-    ]
+    clauses = _split_injury_clauses(raw_text)
+    if not nlp or not clauses:
+        return clauses
+    sentences: list[str] = []
+    for clause in clauses:
+        doc = nlp(clause)
+        for sent in doc.sents:
+            cleaned = _strip_surrounding_punct(sent.text)
+            if cleaned:
+                sentences.append(cleaned)
+    return sentences or clauses
