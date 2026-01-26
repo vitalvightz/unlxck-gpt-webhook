@@ -89,6 +89,8 @@ def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | Non
         # Otherwise, parse as injury (legacy behavior)
         injury = parse_injury_entry(phrase)
         if injury is not None:
+            # Add the original phrase to the injury entry for severity extraction
+            injury["original_phrase"] = phrase
             injuries.append(injury)
     
     # Log the complete list of restrictions after parsing finishes

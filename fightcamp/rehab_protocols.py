@@ -1,7 +1,7 @@
 from pathlib import Path
 import json
 
-from .injury_formatting import format_injury_summary, parse_injury_entry
+from .injury_formatting import format_injury_summary, parse_injury_entry, parse_injuries_and_restrictions
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 # Refactored: Import centralized DATA_DIR from config
@@ -509,13 +509,24 @@ def generate_support_notes(injury_string: str) -> str:
 
 
 def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]:
-    injury_phrases = split_injury_text(injury_string)
+    # Use parse_injuries_and_restrictions to properly separate injuries from constraints
+    injuries, restrictions = parse_injuries_and_restrictions(injury_string)
+    
     parsed_entries = []
-    for phrase in injury_phrases:
-        entry = parse_injury_entry(phrase)
-        if entry:
+    for entry in injuries:
+        # Only process actual injuries (constraints are filtered out)
+        # Extract severity only if the injury has a valid region
+        if entry.get("canonical_location"):
+            # Get the original phrase from the entry if available
+            phrase = entry.get("original_phrase", "")
             base_severity = INJURY_TYPE_SEVERITY.get(entry.get("injury_type") or "", "moderate")
-            phrase_severity, hits = normalize_severity(phrase)
+            
+            # Extract severity from the specific injury phrase only
+            if phrase:
+                phrase_severity, hits = normalize_severity(phrase)
+            else:
+                phrase_severity, hits = "moderate", []
+            
             severity_map = {"low": "mild", "moderate": "moderate", "high": "severe"}
             mapped_severity = severity_map.get(phrase_severity, "moderate")
             if hits:

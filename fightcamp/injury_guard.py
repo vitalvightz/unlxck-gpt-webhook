@@ -13,6 +13,7 @@ from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
 from .injury_formatting import parse_injury_entry
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
+from .restriction_parsing import is_restriction_clause
 from .tagging import normalize_tags
 # Import injury rules version for cache invalidation
 from .config import INJURY_RULES_VERSION
@@ -435,19 +436,26 @@ def _build_parsed_injury_dump(injuries: Iterable[str | dict]) -> list[dict]:
             continue
         raw_text = str(injury)
         for phrase in split_injury_text(raw_text):
+            # Filter out constraint phrases
+            if is_restriction_clause(phrase):
+                continue
+            
             entry = parse_injury_entry(phrase)
             if not entry:
                 continue
-            severity, _ = normalize_severity(phrase)
-            parsed.append(
-                {
-                    "region": entry.get("canonical_location"),
-                    "side": entry.get("side"),
-                    "injury_type": entry.get("injury_type"),
-                    "severity": severity,
-                    "original_phrase": phrase,
-                }
-            )
+            
+            # Only extract severity if there's a valid region
+            if entry.get("canonical_location"):
+                severity, _ = normalize_severity(phrase)
+                parsed.append(
+                    {
+                        "region": entry.get("canonical_location"),
+                        "side": entry.get("side"),
+                        "injury_type": entry.get("injury_type"),
+                        "severity": severity,
+                        "original_phrase": phrase,
+                    }
+                )
     return parsed
 
 
@@ -494,36 +502,59 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
             continue
 
         raw_text = str(injury)
-        severity, hits = normalize_severity(raw_text)
-        regions: set[str] = set()
+        # Process each phrase separately to extract severity within phrase context
         for phrase in split_injury_text(raw_text):
+            # Filter out constraint phrases first
+            if is_restriction_clause(phrase):
+                if debug_entries is not None:
+                    debug_entries.append({"raw": phrase, "region": None, "severity": None, "hits": [], "filtered": "constraint"})
+                continue
+            
             cleaned = remove_negated_phrases(phrase)
             if not cleaned:
                 continue
+            
+            # Extract injury type and location from the phrase
             itype, loc = parse_injury_phrase(phrase)
-            itype = itype or ("unspecified" if loc else None)
+            
+            # Only process if we have a valid location (region)
+            if not loc:
+                # No region means no injury to guard against
+                if debug_entries is not None:
+                    debug_entries.append({"raw": phrase, "region": None, "severity": None, "hits": [], "filtered": "no_region"})
+                continue
+            
+            # Extract severity from THIS specific phrase only (not from the entire raw_text)
+            severity, hits = normalize_severity(phrase)
+            
+            itype = itype or "unspecified"
+            regions: set[str] = set()
+            
+            # Try to map location/type/phrase to a region
             for candidate in (loc, itype, phrase):
                 if not candidate:
                     continue
                 region = _map_text_to_region(str(candidate))
                 if region:
                     regions.add(region)
+                    # Apply severity to this region
                     region_severity[region] = _strictest_severity(region_severity.get(region), severity)
                     break
 
-        fallback_regions = normalize_injury_regions([raw_text])
-        for region in fallback_regions:
-            regions.add(region)
-            region_severity[region] = _strictest_severity(region_severity.get(region), severity)
+            # Fallback region extraction
+            fallback_regions = normalize_injury_regions([phrase])
+            for region in fallback_regions:
+                regions.add(region)
+                region_severity[region] = _strictest_severity(region_severity.get(region), severity)
 
-        if debug_entries is not None:
-            if regions:
-                for region in sorted(regions):
-                    debug_entries.append(
-                        {"raw": raw_text, "region": region, "severity": severity, "hits": hits}
-                    )
-            else:
-                debug_entries.append({"raw": raw_text, "region": None, "severity": severity, "hits": hits})
+            if debug_entries is not None:
+                if regions:
+                    for region in sorted(regions):
+                        debug_entries.append(
+                            {"raw": phrase, "region": region, "severity": severity, "hits": hits}
+                        )
+                else:
+                    debug_entries.append({"raw": phrase, "region": None, "severity": severity, "hits": hits})
     return region_severity
 
 
