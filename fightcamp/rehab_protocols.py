@@ -515,15 +515,10 @@ def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]
         entry = parse_injury_entry(phrase)
         if entry:
             base_severity = INJURY_TYPE_SEVERITY.get(entry.get("injury_type") or "", "moderate")
-            phrase_severity, _ = normalize_severity(phrase)
+            phrase_severity, phrase_hits = normalize_severity(phrase)
             severity_map = {"low": "mild", "moderate": "moderate", "high": "severe"}
             mapped_severity = severity_map.get(phrase_severity, "moderate")
-            severity_rank = {"mild": 0, "moderate": 1, "severe": 2}
-            entry["severity"] = (
-                mapped_severity
-                if severity_rank.get(mapped_severity, 0) > severity_rank.get(base_severity, 0)
-                else base_severity
-            )
+            entry["severity"] = mapped_severity if phrase_hits else base_severity
             parsed_entries.append(entry)
 
     seen_pairs = set()

@@ -448,15 +448,17 @@ def _strictest_severity(current: str | None, candidate: str) -> str:
 
 
 def _normalize_dict_severity(injury: dict) -> tuple[str, list[str]]:
+    raw_text = injury.get("original_phrase") or injury.get("raw")
+    if raw_text:
+        phrase_severity, hits = _normalize_phrase_severity(str(raw_text))
+        if hits:
+            return phrase_severity, hits
     severity_raw = injury.get("severity")
     if severity_raw:
         severity_text = str(severity_raw).lower()
         if severity_text in SEVERITY_RANK:
             return severity_text, []
         return normalize_severity(severity_text)
-    raw_text = injury.get("original_phrase") or injury.get("raw")
-    if raw_text:
-        return _normalize_phrase_severity(str(raw_text))
     return "moderate", []
 
 
