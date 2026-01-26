@@ -183,8 +183,13 @@ TIGHTNESS_HINTS = {
 }
 
 TENDONITIS_REQUIRED_HINTS = {
-    "tendonitis", "tendinosis", "tendinopathy", "overuse", "repetitive",
-    "chronic", "recurring", "flare", "flare up", "activity pain", "use pain",
+    "tendonitis", "tendinosis", "tendinopathy", "tendon pain", "tendon ache",
+    "tendon sore", "tendon hurt", "overuse", "repetitive", "chronic",
+    "recurring", "flare", "flare up", "activity pain", "use pain",
+}
+
+TENDON_PAIN_HINTS = {
+    "pain", "painful", "hurt", "hurting", "ache", "aching", "sore", "soreness",
 }
 
 IMPINGEMENT_GATE_HINTS = {
@@ -257,7 +262,7 @@ INJURY_SYNONYM_MAP = {
     # Bruise - every impact description
     "contusion": [
         "bruise", "bruised", "abrase", "abrasion", "black", "blue", "black and blue", "purple",
-        "discoloration", "discolored", "kicked", "knee", "kneed", "elbow",
+        "discoloration", "discolored", "kicked", "kneed", "elbow",
         "elbowed", "dead leg", "corked", "cork", "swollen",
         "dent", "dented", "indent", "indentation", "mark", "marked",
         "hit", "struck", "banged", "banged up",
@@ -747,7 +752,12 @@ def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
             candidates.pop("impingement", None)
 
     if "tendonitis" in candidates:
-        if not any(h in text_no_neg for h in TENDONITIS_REQUIRED_HINTS):
+        tendon_pain_override = "tendon" in text_no_neg and any(
+            h in text_no_neg for h in TENDON_PAIN_HINTS
+        )
+        if not tendon_pain_override and not any(
+            h in text_no_neg for h in TENDONITIS_REQUIRED_HINTS
+        ):
             candidates.pop("tendonitis", None)
 
     # Deterministic precedence among soreness/stiffness/tightness/pain
