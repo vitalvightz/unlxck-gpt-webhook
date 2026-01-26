@@ -3,7 +3,8 @@ from __future__ import annotations
 import re
 from typing import Mapping
 
-from .injury_synonyms import parse_injury_phrase
+from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .restriction_parsing import ParsedRestriction, parse_restriction_entry
 
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
 
@@ -36,6 +37,44 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
     }
 
 
+def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
+    """Parse injury text into separate lists of injuries and restrictions.
+    
+    This is the main entry point that properly separates constraint phrases
+    from actual injury descriptions.
+    
+    Args:
+        text: Raw injury/constraint text from user input
+        
+    Returns:
+        Tuple of (injuries, restrictions) where:
+        - injuries: List of injury dicts (legacy format)
+        - restrictions: List of ParsedRestriction objects
+    """
+    injuries: list[dict[str, str | None]] = []
+    restrictions: list[ParsedRestriction] = []
+    
+    if not text:
+        return injuries, restrictions
+    
+    # Split into phrases
+    phrases = split_injury_text(text)
+    
+    for phrase in phrases:
+        # Try to parse as restriction first
+        restriction = parse_restriction_entry(phrase)
+        if restriction is not None:
+            restrictions.append(restriction)
+            continue
+        
+        # Otherwise, parse as injury (legacy behavior)
+        injury = parse_injury_entry(phrase)
+        if injury is not None:
+            injuries.append(injury)
+    
+    return injuries, restrictions
+
+
 def format_injury_summary(injury_obj: Mapping[str, str | None]) -> str:
     canonical_location = injury_obj.get("canonical_location")
     laterality = injury_obj.get("side") or injury_obj.get("laterality")
@@ -50,3 +89,34 @@ def format_injury_summary(injury_obj: Mapping[str, str | None]) -> str:
     severity_label = _title_case(severity) if severity else "Unspecified"
 
     return f"{location_label} — {injury_label} (Severity: {severity_label})"
+
+
+def format_restriction_summary(restriction: ParsedRestriction) -> str:
+    """Format a ParsedRestriction into a human-readable summary.
+    
+    Args:
+        restriction: ParsedRestriction object
+        
+    Returns:
+        Formatted string like "Knee — Deep Knee Flexion (Strength: Avoid)"
+    """
+    region = restriction.get("region")
+    side = restriction.get("side")
+    restriction_name = restriction.get("restriction", "")
+    strength = restriction.get("strength", "unspecified")
+    
+    # Format region
+    if region:
+        region_label = _title_case(region)
+        if side:
+            region_label = f"{_title_case(side)} {region_label}"
+    else:
+        region_label = "Unspecified Region"
+    
+    # Format restriction name (convert underscores to spaces)
+    restriction_label = _title_case(restriction_name.replace("_", " "))
+    
+    # Format strength
+    strength_label = _title_case(strength)
+    
+    return f"{region_label} — {restriction_label} (Strength: {strength_label})"
