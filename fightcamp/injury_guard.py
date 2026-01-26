@@ -11,6 +11,7 @@ from typing import Callable, Iterable
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
 from .injury_formatting import parse_injury_entry
+from .restriction_parsing import is_restriction_phrase
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .tagging import normalize_tags
 # Import injury rules version for cache invalidation
@@ -471,9 +472,13 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
             continue
 
         raw_text = str(injury)
-        severity, hits = normalize_severity(raw_text)
         regions: set[str] = set()
+        injury_phrases: list[str] = []
         for phrase in split_injury_text(raw_text):
+            if is_restriction_phrase(phrase):
+                continue
+            injury_phrases.append(phrase)
+            severity, hits = normalize_severity(phrase)
             cleaned = remove_negated_phrases(phrase)
             if not cleaned:
                 continue
@@ -488,19 +493,20 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
                     region_severity[region] = _strictest_severity(region_severity.get(region), severity)
                     break
 
-        fallback_regions = normalize_injury_regions([raw_text])
-        for region in fallback_regions:
-            regions.add(region)
-            region_severity[region] = _strictest_severity(region_severity.get(region), severity)
+        if injury_phrases:
+            fallback_regions = normalize_injury_regions([" ".join(injury_phrases)])
+            for region in fallback_regions:
+                regions.add(region)
+                region_severity[region] = _strictest_severity(region_severity.get(region), "moderate")
 
         if debug_entries is not None:
             if regions:
                 for region in sorted(regions):
                     debug_entries.append(
-                        {"raw": raw_text, "region": region, "severity": severity, "hits": hits}
+                        {"raw": raw_text, "region": region, "severity": region_severity[region], "hits": []}
                     )
             else:
-                debug_entries.append({"raw": raw_text, "region": None, "severity": severity, "hits": hits})
+                debug_entries.append({"raw": raw_text, "region": None, "severity": "moderate", "hits": []})
     return region_severity
 
 

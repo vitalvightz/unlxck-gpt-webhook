@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import TypedDict
 
+from .injury_synonyms import parse_injury_phrase
+
 
 # Minimum number of keyword matches required to confidently identify a canonical restriction
 # This threshold prevents false positives from single-word matches
@@ -107,6 +109,19 @@ def _contains_trigger_token(text: str) -> bool:
     return bool(tokens & CONSTRAINT_TRIGGER_TOKENS)
 
 
+def is_restriction_phrase(text: str) -> bool:
+    """Check whether a phrase should be treated as a restriction."""
+    if not text:
+        return False
+    if _contains_trigger_token(text):
+        return True
+    restriction_key, _ = _match_canonical_restriction(text)
+    if not restriction_key:
+        return False
+    injury_type, _ = parse_injury_phrase(text)
+    return injury_type is None
+
+
 def _infer_restriction_strength(text: str) -> str:
     """Infer the strength/intensity of the restriction from trigger words."""
     normalized = _normalize_text(text)
@@ -189,7 +204,7 @@ def parse_restriction_entry(phrase: str) -> ParsedRestriction | None:
         return None
     
     # Check if this looks like a constraint
-    if not _contains_trigger_token(phrase):
+    if not is_restriction_phrase(phrase):
         return None
     
     # Try to match against canonical restrictions

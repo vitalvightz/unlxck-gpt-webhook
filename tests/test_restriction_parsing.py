@@ -8,6 +8,7 @@ from fightcamp.restriction_parsing import (
     parse_restriction_entry,
     _contains_trigger_token,
     _infer_restriction_strength,
+    is_restriction_phrase,
 )
 from fightcamp.injury_formatting import (
     parse_injuries_and_restrictions,
@@ -44,6 +45,11 @@ def test_parse_restriction_entry_canonical():
     assert result["restriction"] == "heavy_overhead_pressing"
     assert result["region"] == "shoulder"
     assert result["strength"] == "avoid"
+
+    result = parse_restriction_entry("heavy overhead pressing")
+    assert result is not None
+    assert result["restriction"] == "heavy_overhead_pressing"
+    assert result["region"] == "shoulder"
 
 
 def test_parse_restriction_entry_generic():
@@ -126,6 +132,7 @@ def test_constraint_phrases_not_parsed_as_injuries():
     constraint_phrases = [
         "avoid deep knee flexion under load",
         "no heavy overhead pressing",
+        "heavy overhead pressing",
         "limit high impact activities",
         "don't do box jumps",
         "not comfortable with sprinting",
@@ -251,6 +258,12 @@ def test_restriction_parsing_logging_multiple(caplog):
     assert "3" in total_logs[0].message
 
 
+def test_is_restriction_phrase_skips_injury_context():
+    """Ensure restrictions without triggers still parse and injuries still pass."""
+    assert is_restriction_phrase("heavy overhead pressing")
+    assert not is_restriction_phrase("pain with heavy overhead pressing")
+
+
 def test_restriction_parsing_no_logging_for_injuries(caplog):
     """Test that injury parsing does not emit individual restriction logs but does log zero count."""
     caplog.set_level(logging.INFO)
@@ -270,4 +283,3 @@ def test_restriction_parsing_no_logging_for_injuries(caplog):
     total_logs = [record for record in caplog.records if "total restrictions parsed:" in record.message]
     assert len(total_logs) == 1
     assert "0" in total_logs[0].message
-
