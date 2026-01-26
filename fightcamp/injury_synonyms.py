@@ -255,6 +255,9 @@ INJURY_SYNONYM_MAP = {
     ],
 
     # Bruise - every impact description
+    # Note: "knee" was removed from this list as it caused false positives,
+    # misclassifying tendon injuries like "patellar tendon" as contusions.
+    # "kneed" (verb) and "from knee" (impact) remain as they correctly indicate impact injuries.
     "contusion": [
         "bruise", "bruised", "abrase", "abrasion", "black", "blue", "black and blue", "purple",
         "discoloration", "discolored", "kicked", "kneed", "elbow",
@@ -277,6 +280,8 @@ INJURY_SYNONYM_MAP = {
     ],
 
     # Tendon Overuse - every chronic tendon phrase
+    # Includes patellar-specific terms added to fix misclassification of jumper's knee
+    # and patellar tendinopathy as contusions instead of tendonitis.
     "tendonitis": [
         "tendon", "tendon pain", "tendon ache", "tendon sore", "tendon hurt",
         "tendonitis", "tendinosis", "tendinopathy", "grinding", "grind",
