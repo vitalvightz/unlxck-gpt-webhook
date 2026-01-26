@@ -4,6 +4,9 @@ SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
     "anaerobic_alactic": "alactic",
     "cognitive": "alactic",
+    "parasympathetic": "aerobic",
+    "recovery": "aerobic",
+    "skill": "aerobic",
 }
 
 KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}

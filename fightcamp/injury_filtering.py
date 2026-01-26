@@ -24,6 +24,45 @@ INJURY_MATCH_ALLOWLIST: list[str] = [
     "stomach ache",
 ]
 GENERIC_SINGLE_WORD_PATTERNS = {"press", "overhead", "bench"}
+CONSTRAINT_KEYWORDS = {
+    "avoid",
+    "no",
+    "not",
+    "limit",
+    "limited",
+    "restriction",
+    "restricted",
+    "contraindicated",
+    "skip",
+    "reduce",
+}
+CONSTRAINT_INTENSITY_WORDS = {
+    "heavy",
+    "light",
+    "lighter",
+    "easy",
+    "easier",
+    "moderate",
+    "low",
+    "high",
+}
+CONSTRAINT_MOVEMENT_WORDS = {
+    "press",
+    "pressing",
+    "overhead",
+    "squat",
+    "lunge",
+    "jump",
+    "run",
+    "sprint",
+    "lift",
+    "loading",
+    "load",
+    "deadlift",
+    "bench",
+    "pull",
+    "push",
+}
 MAX_VELOCITY_EXCLUDE_KEYWORDS = [
     "assault bike",
     "echo bike",
@@ -779,8 +818,22 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
                     matched = True
                     break
         if not matched and non_negated_phrases:
+            if any(_looks_like_constraint_phrase(phrase) for phrase in non_negated_phrases):
+                continue
             regions.add("unspecified")
     return regions
+
+
+def _looks_like_constraint_phrase(phrase: str) -> bool:
+    normalized = _normalize_text(phrase)
+    if not normalized:
+        return False
+    tokens = set(normalized.split())
+    if tokens & CONSTRAINT_KEYWORDS:
+        return True
+    if tokens & CONSTRAINT_INTENSITY_WORDS and tokens & CONSTRAINT_MOVEMENT_WORDS:
+        return True
+    return False
 
 
 def injury_violation_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
