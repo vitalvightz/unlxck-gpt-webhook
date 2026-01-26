@@ -15,7 +15,12 @@ from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
-from .injury_filtering import _load_style_specific_exercises, _log_exclusion, _log_replacement
+from .injury_filtering import (
+    _load_style_specific_exercises,
+    _log_exclusion,
+    _log_replacement,
+    injury_match_details,
+)
 # Refactored: Import factory function for guarded decision making
 from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
 
@@ -743,6 +748,41 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         return finalized
 
     base_exercises = _finalize_injury_safe_exercises(base_exercises)
+
+    def _final_keyword_guard(ex_list: list[dict]) -> list[dict]:
+        if not injuries:
+            return ex_list
+        used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
+        updated: list[dict] = []
+        for ex in ex_list:
+            if not injury_match_details(
+                ex, injuries, fields=("name", "movement", "method"), risk_levels=("exclude",)
+            ):
+                updated.append(ex)
+                continue
+            replacement = None
+            for cand, _, cand_reasons in weighted_exercises:
+                cand_name = cand.get("name")
+                if not cand_name or cand_name in used_names:
+                    continue
+                if injury_match_details(
+                    cand,
+                    injuries,
+                    fields=("name", "movement", "method"),
+                    risk_levels=("exclude",),
+                ):
+                    continue
+                if _guarded_injury_decision(cand).action == "exclude":
+                    continue
+                reason_lookup[cand_name] = cand_reasons
+                replacement = cand
+                used_names.add(cand_name)
+                break
+            if replacement:
+                updated.append(replacement)
+        return updated
+
+    base_exercises = _final_keyword_guard(base_exercises)
 
     for ex in base_exercises:
         normalize_exercise_movement(ex)

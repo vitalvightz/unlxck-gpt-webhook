@@ -33,7 +33,7 @@ def run_injury_self_checks() -> None:
         "status": "amateur",
     }
 
-    shoulder_flags = {**base_flags, "injuries": ["shoulder"]}
+    shoulder_flags = {**base_flags, "injuries": ["shoulder impingement"]}
     shoulder_strength = generate_strength_block(flags=shoulder_flags)
     shoulder_strength_names = [ex.get("name", "") for ex in shoulder_strength.get("exercises", [])]
     shoulder_violations = _find_keyword_violations(
@@ -41,6 +41,7 @@ def run_injury_self_checks() -> None:
         [
             "bench press",
             "overhead press",
+            "overhead slam",
             "push press",
             "strict press",
             "military press",
@@ -53,6 +54,16 @@ def run_injury_self_checks() -> None:
     if shoulder_violations:
         violations.append(
             "Shoulder injury violations in strength: " + ", ".join(shoulder_violations)
+        )
+    _, shoulder_conditioning_names, _, _, _ = generate_conditioning_block(shoulder_flags)
+    shoulder_cond_violations = _find_keyword_violations(
+        shoulder_conditioning_names,
+        ["overhead slam"],
+    )
+    if shoulder_cond_violations:
+        violations.append(
+            "Shoulder injury violations in conditioning: "
+            + ", ".join(shoulder_cond_violations)
         )
 
     achilles_flags = {**base_flags, "injuries": ["achilles"]}
