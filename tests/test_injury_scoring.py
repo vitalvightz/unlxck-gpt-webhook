@@ -33,3 +33,41 @@ def test_score_injury_phrase_records_red_flags():
     result = score_injury_phrase("Knee keeps giving way and feels numb.")
     assert "instability_event" in result["flags"]
     assert "nerve_involvement" in result["flags"]
+
+
+def test_patellar_tendon_classified_as_tendonitis():
+    """Test that patellar tendon is classified as tendonitis, not contusion."""
+    result = score_injury_phrase("left knee pain (patellar tendon)")
+    assert result["injury_type"] == "tendonitis"
+    assert result["location"] == "knee"
+    assert result["side"] == "left"
+
+
+def test_patellar_tendinopathy_classified_as_tendonitis():
+    """Test that patellar tendinopathy is classified as tendonitis, not contusion."""
+    result = score_injury_phrase("right knee patellar tendinopathy")
+    assert result["injury_type"] == "tendonitis"
+    assert result["location"] == "knee"
+    assert result["side"] == "right"
+
+
+def test_jumpers_knee_classified_as_tendonitis():
+    """Test that jumper's knee is classified as tendonitis, not contusion."""
+    result = score_injury_phrase("left jumper's knee")
+    assert result["injury_type"] == "tendonitis"
+    assert result["location"] == "knee"
+    assert result["side"] == "left"
+
+
+def test_tendon_pain_classified_as_tendonitis():
+    """Test that tendon pain is classified as tendonitis, not contusion."""
+    result = score_injury_phrase("knee tendon pain")
+    assert result["injury_type"] == "tendonitis"
+    assert result["location"] == "knee"
+
+
+def test_knee_contusion_still_works():
+    """Test that actual knee contusions are still correctly classified."""
+    result = score_injury_phrase("knee bruise from kick")
+    assert result["injury_type"] == "contusion"
+    assert result["location"] == "knee"
