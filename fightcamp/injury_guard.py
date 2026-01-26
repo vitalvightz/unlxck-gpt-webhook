@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+import hashlib
 import json
 import logging
 import os
@@ -12,6 +13,8 @@ from .injury_filtering import injury_match_details, match_forbidden, normalize_i
 from .injury_formatting import parse_injury_entry
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .tagging import normalize_tags
+# Import injury rules version for cache invalidation
+from .config import INJURY_RULES_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -308,9 +311,53 @@ FALLBACK_TAG_ORDER: dict[str, dict[str, list[list[str]]]] = {
 }
 
 _INJURY_DECISION_LOGGED: set[tuple] = set()
-_INJURY_DECISION_CACHE: dict[tuple[str, str, str, str], dict[str, object]] = {}
+
+# Enhanced cache with comprehensive key including all decision factors
+# Cache key format: (item_id, region, severity, threshold_version, rules_version, tags_hash, module, bank)
+# This ensures cache invalidation when:
+# - Injury rules change (rules_version)
+# - Exercise tags change (tags_hash)
+# - Scoring thresholds change (threshold_version)
+# - Item identity changes (item_id)
+_INJURY_DECISION_CACHE: dict[tuple[str, ...], dict[str, object]] = {}
 _INJURY_SEVERITY_DEBUGGED = False
 _INJURY_PARSED_DEBUGGED = False
+
+
+def _compute_tags_hash(tags: Iterable[str]) -> str:
+    """
+    Compute a stable hash of exercise/drill tags for cache key.
+    
+    Tags are sorted to ensure consistent hash regardless of order.
+    This allows cache invalidation when tags change.
+    
+    Args:
+        tags: List of tags to hash
+        
+    Returns:
+        Hex digest of SHA256 hash (first 16 chars for brevity)
+    """
+    normalized = sorted(str(t).lower() for t in tags if t)
+    tags_str = ",".join(normalized)
+    return hashlib.sha256(tags_str.encode()).hexdigest()[:16]
+
+
+def clear_injury_decision_cache() -> int:
+    """
+    Clear the injury decision cache.
+    
+    Call this when injury rules, exclusion maps, or tag vocabularies change
+    to ensure stale safety decisions are not reused.
+    
+    Returns:
+        Number of cache entries cleared
+    """
+    global _INJURY_DECISION_CACHE
+    count = len(_INJURY_DECISION_CACHE)
+    _INJURY_DECISION_CACHE.clear()
+    if count > 0:
+        logger.info("[injury-guard] Cache cleared: %d entries invalidated", count)
+    return count
 
 
 @dataclass(frozen=True)
@@ -641,10 +688,27 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     details_by_region: dict[str, list[dict]] = {}
     for detail in details:
         details_by_region.setdefault(detail["region"], []).append(detail)
+    
+    # Extract module/bank information for cache key
+    module = exercise.get("placement", "").lower() or "unknown"
+    bank = exercise.get("bank", "") or exercise.get("source", "") or "unknown"
+    
+    # Compute tags hash for cache invalidation when tags change
+    exercise_tags = exercise.get("tags", [])
+    tags_hash = _compute_tags_hash(exercise_tags)
 
     for region, region_details in details_by_region.items():
         severity = region_severity.get(region, "moderate")
-        cache_key = (item_id, region, severity, threshold_version)
+        # Enhanced cache key includes:
+        # - item_id: unique exercise identifier
+        # - region: injury region being evaluated
+        # - severity: injury severity level
+        # - threshold_version: scoring thresholds (changes with phase/fatigue)
+        # - rules_version: injury rules version (from config)
+        # - tags_hash: hash of exercise tags (detects tag changes)
+        # - module: strength vs conditioning
+        # - bank: which bank the exercise came from
+        cache_key = (item_id, region, severity, threshold_version, INJURY_RULES_VERSION, tags_hash, module, bank)
         cached = _INJURY_DECISION_CACHE.get(cache_key)
         if cached:
             risk = float(cached["risk"])
@@ -844,3 +908,114 @@ def pick_safe_replacement(
         return _first_safe(fallback_candidates)
 
     return None, None
+
+
+def filter_safe_candidates(
+    candidates: list[dict],
+    injuries: Iterable[str | dict],
+    phase: str,
+    fatigue: str,
+    *,
+    min_pool: int | None = None,
+    max_k: int | None = None,
+    initial_k: int | None = None,
+) -> tuple[list[dict], dict]:
+    """
+    Filter candidates through injury guard with Top-K shortlisting and starvation safeguard.
+    
+    This implements the Top-K shortlist logic with automatic K-widening when the candidate
+    pool falls below the minimum threshold (starvation safeguard).
+    
+    Algorithm:
+    1. Start with initial_k candidates (defaults to INJURY_GUARD_SHORTLIST)
+    2. Filter out excluded candidates
+    3. If pool size < min_pool, double K and retry (up to max_k)
+    4. If still starved at max_k, fall back to full candidate scan
+    
+    Args:
+        candidates: Scored/sorted list of candidate exercises or drills
+        injuries: List of injury strings or dicts
+        phase: Training phase (GPP, SPP, TAPER)
+        fatigue: Fatigue level (low, moderate, high)
+        min_pool: Minimum acceptable pool size (defaults to MIN_CANDIDATE_POOL from config)
+        max_k: Maximum K value when widening (defaults to MAX_INJURY_GUARD_SHORTLIST)
+        initial_k: Initial shortlist size (defaults to INJURY_GUARD_SHORTLIST)
+        
+    Returns:
+        Tuple of (safe_candidates, stats_dict) where stats contains:
+        - 'k_used': Final K value used
+        - 'k_iterations': Number of K-widening iterations
+        - 'total_evaluated': Total candidates evaluated
+        - 'excluded_count': Number of candidates excluded
+        - 'used_fallback': Whether full scan fallback was used
+    """
+    # Import here to avoid circular imports
+    from .config import INJURY_GUARD_SHORTLIST, MIN_CANDIDATE_POOL, MAX_INJURY_GUARD_SHORTLIST
+    
+    if min_pool is None:
+        min_pool = MIN_CANDIDATE_POOL
+    if max_k is None:
+        max_k = MAX_INJURY_GUARD_SHORTLIST
+    if initial_k is None:
+        initial_k = INJURY_GUARD_SHORTLIST
+    
+    k = initial_k
+    iterations = 0
+    total_evaluated = 0
+    excluded_count = 0
+    used_fallback = False
+    safe = []
+    
+    # Top-K shortlisting with starvation safeguard
+    while k <= max_k:
+        iterations += 1
+        shortlist = candidates[:k]
+        total_evaluated = len(shortlist)
+        
+        safe = []
+        for cand in shortlist:
+            decision = injury_decision(cand, injuries, phase, fatigue)
+            if decision.action != "exclude":
+                safe.append(cand)
+            else:
+                excluded_count += 1
+        
+        # Check if we have enough safe candidates
+        if len(safe) >= min_pool or k >= len(candidates):
+            break
+        
+        # Starvation detected: widen K and retry
+        if INJURY_DEBUG:
+            logger.info(
+                "[injury-guard-topk] Starvation safeguard: pool=%d < min_pool=%d, widening K from %d to %d",
+                len(safe), min_pool, k, min(k * 2, max_k)
+            )
+        k = min(k * 2, max_k)
+    
+    # Fallback: if still starved after reaching max_k, scan all remaining candidates
+    if len(safe) < min_pool and k < len(candidates):
+        if INJURY_DEBUG:
+            logger.info(
+                "[injury-guard-topk] Full scan fallback: pool=%d < min_pool=%d after K=%d",
+                len(safe), min_pool, k
+            )
+        used_fallback = True
+        remaining = candidates[k:]
+        for cand in remaining:
+            decision = injury_decision(cand, injuries, phase, fatigue)
+            if decision.action != "exclude":
+                safe.append(cand)
+            else:
+                excluded_count += 1
+            total_evaluated += 1
+    
+    stats = {
+        "k_used": k,
+        "k_iterations": iterations,
+        "total_evaluated": total_evaluated,
+        "excluded_count": excluded_count,
+        "used_fallback": used_fallback,
+        "final_pool_size": len(safe),
+    }
+    
+    return safe, stats
