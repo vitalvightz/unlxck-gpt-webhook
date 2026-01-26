@@ -32,9 +32,28 @@ CONDITIONING_PER_DAY = {"GPP": 4, "SPP": 3, "TAPER": 3}
 # Central data directory path - used by multiple modules to access JSON data files
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 
+# Top-K Injury Guard Configuration
+# ================================
 # Maximum number of exercises/drills to consider for injury guard evaluation
 # Used in both strength.py and conditioning.py for consistent shortlist sizing
+#
+# Top-K shortlist is built AFTER initial injury filtering to ensure we only
+# evaluate safe candidates. This prevents candidate starvation where all
+# top candidates are excluded, leaving nothing to select.
 INJURY_GUARD_SHORTLIST = 125
+
+# Minimum candidate pool size after filtering (starvation safeguard)
+# If the post-filter candidate pool falls below this threshold, we widen K
+MIN_CANDIDATE_POOL = 6
+
+# Maximum K value when widening to prevent starvation
+# We will widen K up to this value by doubling (e.g., 125 → 250 → 500)
+MAX_INJURY_GUARD_SHORTLIST = 500
+
+# Version string for injury rules (increment when rules change to invalidate cache)
+# Format: YYYYMMDD.N (date + sequence number)
+# Update this whenever INJURY_RULES, INJURY_REGION_KEYWORDS, or scoring weights change
+INJURY_RULES_VERSION = "20260126.1"
 
 
 def trim_to_injury_guard_shortlist(items: list) -> list:
