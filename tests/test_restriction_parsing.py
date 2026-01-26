@@ -252,7 +252,7 @@ def test_restriction_parsing_logging_multiple(caplog):
 
 
 def test_restriction_parsing_no_logging_for_injuries(caplog):
-    """Test that injury parsing does not emit restriction logs."""
+    """Test that injury parsing does not emit individual restriction logs but does log zero count."""
     caplog.set_level(logging.INFO)
     
     text = "left ankle sprain, right shoulder pain"
@@ -262,7 +262,12 @@ def test_restriction_parsing_no_logging_for_injuries(caplog):
     assert len(injuries) == 2
     assert len(restrictions) == 0
     
-    # Should have no restriction-parse logs
-    restriction_logs = [record for record in caplog.records if "[restriction-parse]" in record.message]
-    assert len(restriction_logs) == 0
+    # Should have no individual restriction-parse logs
+    individual_logs = [record for record in caplog.records if "[restriction-parse] parsed=" in record.message]
+    assert len(individual_logs) == 0
+    
+    # But should still have a total count log showing 0
+    total_logs = [record for record in caplog.records if "total restrictions parsed:" in record.message]
+    assert len(total_logs) == 1
+    assert "0" in total_logs[0].message
 

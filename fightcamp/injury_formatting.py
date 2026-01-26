@@ -92,8 +92,7 @@ def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | Non
             injuries.append(injury)
     
     # Log the complete list of restrictions after parsing finishes
-    if restrictions:
-        logger.info(f"[restriction-parse] total restrictions parsed: {len(restrictions)}")
+    logger.info(f"[restriction-parse] total restrictions parsed: {len(restrictions)}")
     
     return injuries, restrictions
 
