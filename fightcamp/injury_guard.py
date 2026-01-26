@@ -394,6 +394,16 @@ def normalize_severity(text: str) -> tuple[str, list[str]]:
     return severity or "moderate", hits
 
 
+def _normalize_phrase_severity(text: str) -> tuple[str, list[str]]:
+    if not text:
+        return "moderate", []
+    for phrase in split_injury_text(str(text)):
+        if is_restriction_phrase(phrase):
+            continue
+        return normalize_severity(phrase)
+    return "moderate", []
+
+
 def _build_parsed_injury_dump(injuries: Iterable[str | dict]) -> list[dict]:
     parsed: list[dict] = []
     for injury in injuries:
@@ -439,14 +449,14 @@ def _strictest_severity(current: str | None, candidate: str) -> str:
 
 def _normalize_dict_severity(injury: dict) -> tuple[str, list[str]]:
     severity_raw = injury.get("severity")
-    region = injury.get("region")
     if severity_raw:
         severity_text = str(severity_raw).lower()
         if severity_text in SEVERITY_RANK:
             return severity_text, []
         return normalize_severity(severity_text)
-    if region:
-        return normalize_severity(str(region))
+    raw_text = injury.get("original_phrase") or injury.get("raw")
+    if raw_text:
+        return _normalize_phrase_severity(str(raw_text))
     return "moderate", []
 
 
@@ -465,8 +475,11 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
         if isinstance(injury, dict):
             region = injury.get("region")
             severity_raw = injury.get("severity")
-            severity_text = str(severity_raw).lower() if severity_raw else "moderate"
-            severity = severity_text if severity_text in SEVERITY_RANK else "moderate"
+            if severity_raw:
+                severity_text = str(severity_raw).lower()
+                severity = severity_text if severity_text in SEVERITY_RANK else "moderate"
+            else:
+                severity, _ = _normalize_dict_severity(injury)
             if region:
                 region_severity[region] = _strictest_severity(region_severity.get(region), severity)
             continue
@@ -497,7 +510,8 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
             fallback_regions = normalize_injury_regions([" ".join(injury_phrases)])
             for region in fallback_regions:
                 regions.add(region)
-                region_severity[region] = _strictest_severity(region_severity.get(region), "moderate")
+                if region not in region_severity:
+                    region_severity[region] = "moderate"
 
         if debug_entries is not None:
             if regions:
