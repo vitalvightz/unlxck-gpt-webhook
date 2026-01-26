@@ -317,27 +317,56 @@ def main():
             print(f"❌ ERROR validating {bank_path.name}: {e}\n")
             all_success = False
     
-    # Check for ban_tags not present in banks or tag vocabulary
-    print("=" * 40)
-    print("Ban tags not in banks or tag vocabulary:")
-    print("=" * 40)
-    
+    # Build comprehensive data structures for diagnostics
     all_ban_tags = set()
+    all_bank_tags = all_tags_seen
+    valid_tags = tag_vocab
+    REGION_BAN_TAGS = {}
+    had_errors = not all_success
+    
     for region, rules in injury_rules.items():
-        all_ban_tags.update(rules.get("ban_tags", []))
+        ban_tags = rules.get("ban_tags", [])
+        if ban_tags:
+            REGION_BAN_TAGS[region] = ban_tags
+            all_ban_tags.update(ban_tags)
     
-    missing_ban_tags = []
+    # Build tag_to_regions map: for each tag in REGION_BAN_TAGS, show which regions reference it
+    tag_to_regions = defaultdict(list)
+    for region, ban_tags in REGION_BAN_TAGS.items():
+        for tag in ban_tags:
+            tag_to_regions[tag].append(region)
+    
+    # Enhanced diagnostics section
+    print("=" * 40)
+    print("Ban tags diagnostics:")
+    print("=" * 40)
+    
+    # A) Ban tags missing from tag_vocabulary
+    missing_from_vocab = []
     for ban_tag in sorted(all_ban_tags):
-        if ban_tag not in all_tags_seen and ban_tag not in tag_vocab:
-            # Find which region(s) use this ban_tag
-            regions = [r for r, rules in injury_rules.items() if ban_tag in rules.get("ban_tags", [])]
-            missing_ban_tags.append((ban_tag, regions))
+        if ban_tag not in valid_tags:
+            regions = tag_to_regions.get(ban_tag, [])
+            missing_from_vocab.append((ban_tag, regions))
     
-    if missing_ban_tags:
-        for ban_tag, regions in missing_ban_tags:
-            print(f"  - {ban_tag} (from regions: {', '.join(regions)})")
-    else:
-        print("  ✓ All ban_tags are present in banks or tag vocabulary")
+    if missing_from_vocab:
+        print("\nBan tags missing from tag_vocabulary:")
+        for ban_tag, regions in missing_from_vocab:
+            print(f"  - {ban_tag} (regions: {', '.join(regions)})")
+    
+    # B) Ban tags unused in any bank
+    unused_in_banks = []
+    for ban_tag in sorted(all_ban_tags):
+        if ban_tag not in all_bank_tags:
+            regions = tag_to_regions.get(ban_tag, [])
+            unused_in_banks.append((ban_tag, regions))
+    
+    if unused_in_banks:
+        print("\nBan tags unused in any bank:")
+        for ban_tag, regions in unused_in_banks:
+            print(f"  - {ban_tag} (regions: {', '.join(regions)})")
+    
+    if not missing_from_vocab and not unused_in_banks:
+        print("  ✓ All ban_tags are present in tag vocabulary and used in banks")
     
     print()
     
@@ -348,12 +377,12 @@ def main():
     print(f"Total banks validated: {len(banks)}")
     print(f"Total entries validated: {total_entries}")
     
-    if all_success:
-        print("✓ All validations passed")
-        return 0
-    else:
+    if had_errors:
         print("❌ Some validations failed")
         return 1
+    else:
+        print("✓ All validations passed")
+        return 0
 
 
 if __name__ == "__main__":
