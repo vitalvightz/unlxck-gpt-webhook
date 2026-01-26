@@ -47,7 +47,6 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
-from .injury_filtering import normalize_injury_regions
 
 GRAPPLING_STYLES = {
     "mma",
@@ -226,11 +225,9 @@ async def generate_plan(data: dict):
     )
     short_notice = days_until_fight is not None and days_until_fight <= 14
 
-    # Parse and canonicalize injuries BEFORE strength/conditioning generation
+    # Parse injuries BEFORE strength/conditioning generation
     timer_start = perf_counter()
     raw_injury_list = [w.strip().lower() for w in injuries.split(",") if w.strip()] if injuries else []
-    # Convert to list to maintain compatibility with existing code that expects a list
-    canonical_injuries = sorted(normalize_injury_regions(raw_injury_list))
     _record_timing("parse_injuries", timer_start)
 
     # Core context
@@ -239,7 +236,7 @@ async def generate_plan(data: dict):
         training_frequency=training_frequency,
         days_available=len(training_days),
         training_days=training_days,
-        injuries=canonical_injuries,
+        injuries=raw_injury_list,
         style_technical=tech_styles,
         style_tactical=tactical_styles,
         weaknesses=[
