@@ -73,3 +73,8 @@ def test_injury_parsing_handles_multiple_locations_with_punctuation():
 def test_torn_hamstring_severity_is_severe():
     guardrails = format_injury_guardrails("GPP", "torn hamstring")
     assert "Severity: Severe" in guardrails
+
+
+def test_mild_impingement_respects_phrase_severity():
+    guardrails = format_injury_guardrails("GPP", "mild right shoulder impingement")
+    assert "Severity: Mild" in guardrails

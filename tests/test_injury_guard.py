@@ -8,7 +8,13 @@ from fightcamp.conditioning import (
     _is_drill_text_safe,
     select_coordination_drill,
 )
-from fightcamp.injury_guard import _injury_context, injury_decision, normalize_severity, pick_safe_replacement
+from fightcamp.injury_guard import (
+    _injury_context,
+    _normalize_dict_severity,
+    injury_decision,
+    normalize_severity,
+    pick_safe_replacement,
+)
 from fightcamp.injury_filtering import (
     audit_missing_tags,
     build_injury_exclusion_map,
@@ -242,6 +248,17 @@ def test_dict_severity_normalization():
     injury = {"region": "hamstring", "severity": "high"}
     injury_decision({"name": "Bike Tempo Ride", "tags": []}, [injury], "GPP", "low")
     assert injury["severity"] == "high"
+
+
+def test_phrase_severity_overrides_baseline_dict_severity():
+    injury = {
+        "region": "shoulder",
+        "severity": "moderate",
+        "original_phrase": "mild right shoulder impingement",
+    }
+    severity, hits = _normalize_dict_severity(injury)
+    assert severity == "low"
+    assert "mild" in hits
 
 
 def test_duplicate_region_severity_keeps_strictest():
