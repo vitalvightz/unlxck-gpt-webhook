@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from typing import Callable, Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
@@ -384,6 +385,28 @@ def normalize_severity(text: str) -> tuple[str, list[str]]:
     lowered = text.lower()
     hits: list[str] = []
     severity = None
+    explicit_patterns = {
+        "high": [
+            r"\bseverity[:\s]*high\b",
+            r"\bhigh\s*severity\b",
+            r"\bhigh\b\s*$",
+        ],
+        "moderate": [
+            r"\bseverity[:\s]*moderate\b",
+            r"\bmoderate\s*severity\b",
+            r"\bmoderate\b\s*$",
+        ],
+        "low": [
+            r"\bseverity[:\s]*low\b",
+            r"\blow\s*severity\b",
+            r"\blow\b\s*$",
+        ],
+    }
+    for level in ("high", "moderate", "low"):
+        for pattern in explicit_patterns[level]:
+            if re.search(pattern, lowered):
+                hits.append(f"explicit:{level}")
+                return level, hits
     for level in ("high", "moderate", "low"):
         for synonym in SEVERITY_SYNONYMS[level]:
             if synonym in lowered:
