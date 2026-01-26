@@ -731,7 +731,8 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
                 continue
             matched_tags = _match_tags_from_detail(max_region_detail)
             bucket = _bucket_from_match(max_region_detail.get("tags", []), max_region_detail.get("patterns", []))
-            if max_region_risk > threshold:
+            # Conservative safety approach: exclude when risk >= threshold
+            if max_region_risk >= threshold:
                 action = "exclude"
             elif max_region_risk >= modify_band:
                 action = "modify"
@@ -772,7 +773,9 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     severity = str(max_detail_meta["severity"])
     matched_tags = list(max_detail_meta["matched_tags"])
     bucket = str(max_detail_meta["bucket"])
-    if max_risk > threshold:
+    # Conservative safety approach: exclude when risk >= threshold (not just >)
+    # This ensures borderline cases are excluded rather than modified
+    if max_risk >= threshold:
         action = "exclude"
     elif max_risk >= modify_band:
         action = "modify"
