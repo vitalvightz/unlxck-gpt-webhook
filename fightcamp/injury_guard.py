@@ -602,15 +602,17 @@ def _log_decision(
     if log_key in _INJURY_DECISION_LOGGED:
         return
     _INJURY_DECISION_LOGGED.add(log_key)
+    restriction = "banned" if action == "exclude" else "allowed"
     logger.info(
-        "[injury-guard] item='%s' region=%s severity=%s risk=%.2f threshold=%.2f matched_tags=%s action=%s",
+        "[injury-guard] item='%s' region=%s severity=%s restriction=%s action=%s risk=%.2f threshold=%.2f matched_tags=%s",
         item_name,
         region,
         severity,
+        restriction,
+        action,
         risk,
         threshold,
         matched_tags,
-        action,
     )
 
 

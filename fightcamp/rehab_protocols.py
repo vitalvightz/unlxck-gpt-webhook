@@ -659,9 +659,19 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         laterality = entry.get("laterality")
         severity = entry.get("severity") or INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
-        lines.append(
-            f"- {format_injury_summary({'canonical_location': loc, 'laterality': laterality, 'injury_type': itype, 'severity': severity})}"
-        )
+        if itype == "impingement" and loc == "shoulder":
+            severity_label = str(severity).capitalize()
+            summary = f"{severity_label} impingement — avoid overhead patterns (banned list)"
+        else:
+            summary = format_injury_summary(
+                {
+                    "canonical_location": loc,
+                    "laterality": laterality,
+                    "injury_type": itype,
+                    "severity": severity,
+                }
+            )
+        lines.append(f"- {summary}")
         ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
             severity,
             REGION_GUARDRAILS["lower_leg_foot"]["moderate"],
