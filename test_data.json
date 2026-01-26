@@ -1,52 +1,52 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Luca Mensah" },
-      { "label": "Age", "value": "22" },
-      { "label": "Weight (kg)", "value": "69" },
-      { "label": "Target Weight (kg)", "value": "67" },
-      { "label": "Height (cm)", "value": "176" },
-      { "label": "Fighting Style (Technical)", "value": ["boxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["pressure fighter", "counter striker"] },
-      { "label": "Stance", "value": "Orthodox" },
+      { "label": "Full name", "value": "Jamal Okoye" },
+      { "label": "Age", "value": "27" },
+      { "label": "Weight (kg)", "value": "78" },
+      { "label": "Target Weight (kg)", "value": "77" },
+      { "label": "Height (cm)", "value": "182" },
+      { "label": "Fighting Style (Technical)", "value": ["mma"] },
+      { "label": "Fighting Style (Tactical)", "value": ["scrambler", "pressure fighter"] },
+      { "label": "Stance", "value": "Hybrid" },
       { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "8-2-0" },
-      { "label": "When is your next fight?", "value": "2026-04-18" },
-      { "label": "Rounds x Minutes", "value": "3x3" },
-      { "label": "Weekly Training Frequency", "value": "5" },
-      { "label": "Fatigue Level", "value": "Low" },
+      { "label": "Current Record", "value": "6-1-0" },
+      { "label": "When is your next fight?", "value": "2026-05-23" },
+      { "label": "Rounds x Minutes", "value": "3x5" },
+      { "label": "Weekly Training Frequency", "value": "6" },
+      { "label": "Fatigue Level", "value": "Moderate" },
       { "label": "Training Phase", "value": "Mid-Camp" },
       {
         "label": "Equipment Access",
-        "value": ["Barbell", "Dumbbells", "Kettlebells", "Med Balls / Bands", "Sled", "Battle Ropes", "Sandbag"]
+        "value": ["Barbell", "Dumbbells", "Trap Bar", "Kettlebells", "Med Balls / Bands", "Sled", "Sandbag", "Battle Ropes"]
       },
       {
         "label": "Training Availability",
-        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
       },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "my right hamstring is torn "
+        "value": "left knee pain (patellar tendon) and mild right shoulder impingement; avoid deep knee flexion under load and heavy overhead pressing"
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Power & Explosiveness", "Conditioning / Endurance", "Speed", "Mobility", "Skill Refinement", "Mental Resilience"]
+        "value": ["Conditioning / Endurance", "Maximal Strength", "Power & Explosiveness", "Grappling", "Core Stability", "Mental Resilience"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["core stability", "conditioning", "speed / reaction", "rotation"]
+        "value": ["conditioning", "core stability", "rotation", "shoulders"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "loves short hard intervals, bag sprints, and heavy-to-explosive contrast; dislikes long steady roadwork"
+        "value": "prefers short brutal circuits (assault bike/ropes/sled), heavy-to-explosive contrast, and grappling-specific carries; dislikes long steady cardio"
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "after taking a clean shot, he rushes exchanges to 'get it back' instead of resetting; loses breath control and composure"
+        "value": "when he gets taken down early, he panics and forces a low-percentage scramble; burns arms and breath instead of building frames and resetting"
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "Loved heavy + jump/throw contrasts and sled work. Hated long runs and high-volume push-ups that flared the wrist."
+        "value": "Loved sled pushes/drags, sandbag carries, and contrast jumps/throws. Hated long runs and high-rep overhead work that irritated the shoulder."
       }
     ]
   },
