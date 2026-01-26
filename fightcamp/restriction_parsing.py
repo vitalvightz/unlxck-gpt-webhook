@@ -4,6 +4,11 @@ import re
 from typing import TypedDict
 
 
+# Minimum number of keyword matches required to confidently identify a canonical restriction
+# This threshold prevents false positives from single-word matches
+MIN_KEYWORD_MATCHES = 2
+
+
 class ParsedRestriction(TypedDict, total=False):
     """Model for parsed physical restrictions/constraints.
     
@@ -106,7 +111,13 @@ def _infer_restriction_strength(text: str) -> str:
     """Infer the strength/intensity of the restriction from trigger words."""
     normalized = _normalize_text(text)
     
-    if any(word in normalized for word in ["avoid", "no ", "do not", "don't", "dont", "not comfortable"]):
+    # Use word boundaries for "no" to avoid matching "no" in other words
+    # Check for "no" as standalone word using token set
+    tokens = set(normalized.split())
+    
+    if any(word in normalized for word in ["avoid", "do not", "don't", "dont", "not comfortable"]):
+        return "avoid"
+    elif "no" in tokens:  # Check "no" as standalone token
         return "avoid"
     elif any(word in normalized for word in ["limit", "limited", "restricted", "restriction", "reduce"]):
         return "limit"
@@ -136,8 +147,8 @@ def _match_canonical_restriction(text: str) -> tuple[str | None, str | None]:
             best_score = matches
             best_match = (restriction_data["restriction"], restriction_data["region"])
     
-    # Require at least 2 keyword matches for confidence
-    if best_score >= 2:
+    # Require at least MIN_KEYWORD_MATCHES for confidence to avoid false positives
+    if best_score >= MIN_KEYWORD_MATCHES:
         return best_match
     
     return None, None
