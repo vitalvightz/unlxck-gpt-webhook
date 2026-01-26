@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import Mapping
 
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry, _contains_trigger_token
+
+logger = logging.getLogger(__name__)
 
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
 
@@ -79,6 +82,7 @@ def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | Non
         # Try to parse as restriction first
         restriction = parse_restriction_entry(phrase)
         if restriction is not None:
+            logger.info(f"[restriction-parse] parsed={restriction!r}")
             restrictions.append(restriction)
             continue
         
@@ -86,6 +90,10 @@ def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | Non
         injury = parse_injury_entry(phrase)
         if injury is not None:
             injuries.append(injury)
+    
+    # Log the complete list of restrictions after parsing finishes
+    if restrictions:
+        logger.info(f"[restriction-parse] total restrictions parsed: {len(restrictions)}")
     
     return injuries, restrictions
 
