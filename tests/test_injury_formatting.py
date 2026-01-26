@@ -70,6 +70,13 @@ def test_injury_parsing_handles_multiple_locations_with_punctuation():
     assert "contusion" not in injury_types
 
 
+def test_tendon_pain_maps_to_tendonitis():
+    entry = parse_injury_entry("left knee pain (patellar tendon)")
+    assert entry is not None
+    assert entry.get("canonical_location") == "knee"
+    assert entry.get("injury_type") == "tendonitis"
+
+
 def test_torn_hamstring_severity_is_severe():
     guardrails = format_injury_guardrails("GPP", "torn hamstring")
     assert "Severity: Severe" in guardrails
