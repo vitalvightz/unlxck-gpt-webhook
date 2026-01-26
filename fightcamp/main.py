@@ -42,6 +42,7 @@ from .conditioning import (
 from .coach_review import run_coach_review
 from .recovery import generate_recovery_block
 from .nutrition import generate_nutrition_block
+from .injury_formatting import parse_injuries_and_restrictions, format_restriction_summary
 from .rehab_protocols import (
     format_injury_guardrails,
     generate_rehab_protocols,
@@ -257,9 +258,35 @@ async def generate_plan(data: dict):
     )
     short_notice = days_until_fight is not None and days_until_fight <= 14
 
-    # Parse injuries BEFORE strength/conditioning generation
+    # Parse injuries and constraints BEFORE strength/conditioning generation
     timer_start = perf_counter()
-    raw_injury_list = [w.strip().lower() for w in injuries.split(",") if w.strip()] if injuries else []
+    
+    # Separate injuries from constraints using the new parser
+    parsed_injuries, parsed_constraints = parse_injuries_and_restrictions(injuries)
+    
+    # Log parsed constraints for visibility
+    if parsed_constraints:
+        logger.info(f"[constraint-parse] Parsed {len(parsed_constraints)} constraints:")
+        for constraint in parsed_constraints:
+            summary = format_restriction_summary(constraint)
+            logger.info(f"[constraint-parse]   - {summary}")
+    
+    # Create raw injury list (backward compatibility - only actual injuries)
+    # This ensures constraints don't influence injury_guard scores
+    raw_injury_list = []
+    if injuries:
+        # Use the old split method as fallback for simple cases, but prioritize parsed injuries
+        if parsed_injuries:
+            # Use canonical locations from parsed injuries
+            raw_injury_list = [
+                f"{inj.get('side', '')} {inj.get('canonical_location', '')} {inj.get('injury_type', '')}".strip().lower()
+                for inj in parsed_injuries
+                if inj.get('canonical_location')  # Only include injuries with valid regions
+            ]
+        else:
+            # Fallback to simple split for backward compatibility
+            raw_injury_list = [w.strip().lower() for w in injuries.split(",") if w.strip()]
+    
     _record_timing("parse_injuries", timer_start)
 
     # Core context
