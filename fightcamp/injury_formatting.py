@@ -4,7 +4,7 @@ import re
 from typing import Mapping
 
 from .injury_synonyms import parse_injury_phrase, split_injury_text
-from .restriction_parsing import ParsedRestriction, parse_restriction_entry
+from .restriction_parsing import ParsedRestriction, parse_restriction_entry, _contains_trigger_token
 
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
 
@@ -23,6 +23,21 @@ def extract_laterality(text: str) -> str | None:
 
 
 def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
+    """Parse a single injury phrase.
+    
+    This function filters out constraint phrases and only returns injury data.
+    For full separation of injuries and constraints, use parse_injuries_and_restrictions().
+    
+    Args:
+        phrase: A single injury phrase
+        
+    Returns:
+        Dict with injury data, or None if not an injury (e.g., if it's a constraint)
+    """
+    # Filter out constraint phrases first
+    if _contains_trigger_token(phrase):
+        return None
+    
     injury_type, location = parse_injury_phrase(phrase)
     laterality = extract_laterality(phrase)
     if not injury_type and not location:
