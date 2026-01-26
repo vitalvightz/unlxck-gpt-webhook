@@ -46,6 +46,82 @@ CONSTRAINT_TRIGGER_TOKENS = {
     "reduce",
 }
 
+RESTRICTION_START_TOKENS = {
+    "avoid",
+    "no",
+    "don't",
+    "dont",
+    "do not",
+    "limit",
+}
+
+SYMPTOM_TOKENS = {
+    "ache",
+    "aching",
+    "bruise",
+    "contusion",
+    "dislocation",
+    "fracture",
+    "hurt",
+    "hurting",
+    "impingement",
+    "instability",
+    "pain",
+    "painful",
+    "sore",
+    "soreness",
+    "sprain",
+    "strain",
+    "swelling",
+    "tear",
+    "tendon",
+    "tendonitis",
+    "tendinosis",
+    "tendinopathy",
+    "tight",
+    "tightness",
+}
+
+MOVEMENT_PATTERN_TOKENS = {
+    "bend",
+    "bending",
+    "deep",
+    "extension",
+    "flex",
+    "flexion",
+    "hinge",
+    "impact",
+    "jump",
+    "jumping",
+    "lift",
+    "lifting",
+    "load",
+    "loaded",
+    "lunge",
+    "overhead",
+    "press",
+    "pressing",
+    "range",
+    "rom",
+    "rotation",
+    "rotate",
+    "rotating",
+    "run",
+    "running",
+    "squat",
+    "squatting",
+    "twist",
+    "twisting",
+}
+
+MOVEMENT_PATTERN_PHRASES = {
+    "overhead press",
+    "overhead pressing",
+    "deep knee flexion",
+    "high impact",
+    "heavy overhead",
+}
+
 # Canonical restriction mappings for common phrases
 CANONICAL_RESTRICTIONS = {
     "deep knee flexion": {
@@ -105,6 +181,41 @@ def _contains_trigger_token(text: str) -> bool:
     # Check single-word triggers
     tokens = set(normalized.split())
     return bool(tokens & CONSTRAINT_TRIGGER_TOKENS)
+
+
+def _starts_with_trigger_token(text: str) -> bool:
+    normalized = _normalize_text(text)
+    for trigger in sorted(RESTRICTION_START_TOKENS, key=len, reverse=True):
+        if normalized.startswith(trigger):
+            return True
+    return False
+
+
+def _contains_symptom_token(text: str) -> bool:
+    normalized = _normalize_text(text)
+    for token in SYMPTOM_TOKENS:
+        if re.search(rf"\\b{re.escape(token)}\\b", normalized):
+            return True
+    return False
+
+
+def _movement_pattern_score(text: str) -> int:
+    normalized = _normalize_text(text)
+    tokens = set(re.findall(r"[\\w']+", normalized))
+    token_hits = sum(1 for token in MOVEMENT_PATTERN_TOKENS if token in tokens)
+    phrase_hits = sum(1 for phrase in MOVEMENT_PATTERN_PHRASES if phrase in normalized)
+    return token_hits + phrase_hits
+
+
+def is_restriction_clause(text: str) -> bool:
+    """Classify clause as restriction if it includes constraint cues or movement-only phrasing."""
+    if not text:
+        return False
+    if _starts_with_trigger_token(text) or _contains_trigger_token(text):
+        return True
+    if _contains_symptom_token(text):
+        return False
+    return _movement_pattern_score(text) >= MIN_KEYWORD_MATCHES
 
 
 def _infer_restriction_strength(text: str) -> str:
@@ -189,7 +300,7 @@ def parse_restriction_entry(phrase: str) -> ParsedRestriction | None:
         return None
     
     # Check if this looks like a constraint
-    if not _contains_trigger_token(phrase):
+    if not is_restriction_clause(phrase):
         return None
     
     # Try to match against canonical restrictions
