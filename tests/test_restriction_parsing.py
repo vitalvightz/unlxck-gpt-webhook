@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import logging
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -202,3 +203,66 @@ def test_restriction_no_severity_field():
     assert result is not None
     assert "strength" in result
     assert "severity" not in result
+
+
+def test_restriction_parsing_logging(caplog):
+    """Test that restriction parsing emits appropriate log messages."""
+    # Set log level to capture INFO messages
+    caplog.set_level(logging.INFO)
+    
+    text = "avoid deep knee flexion under load"
+    injuries, restrictions = parse_injuries_and_restrictions(text)
+    
+    # Should have 1 restriction
+    assert len(restrictions) == 1
+    
+    # Check that logging occurred
+    assert len(caplog.records) >= 2
+    
+    # Check for individual restriction log
+    individual_logs = [record for record in caplog.records if "[restriction-parse] parsed=" in record.message]
+    assert len(individual_logs) >= 1
+    assert "restriction" in individual_logs[0].message
+    assert "deep_knee_flexion" in individual_logs[0].message
+    
+    # Check for total count log
+    total_logs = [record for record in caplog.records if "total restrictions parsed:" in record.message]
+    assert len(total_logs) == 1
+    assert "1" in total_logs[0].message
+
+
+def test_restriction_parsing_logging_multiple(caplog):
+    """Test that logging captures multiple restrictions correctly."""
+    caplog.set_level(logging.INFO)
+    
+    text = "avoid deep knee flexion. no heavy overhead pressing. limit high impact activities"
+    injuries, restrictions = parse_injuries_and_restrictions(text)
+    
+    # Should have 3 restrictions
+    assert len(restrictions) == 3
+    
+    # Check that we have at least 3 individual logs + 1 summary log
+    individual_logs = [record for record in caplog.records if "[restriction-parse] parsed=" in record.message]
+    assert len(individual_logs) == 3
+    
+    # Check for total count log
+    total_logs = [record for record in caplog.records if "total restrictions parsed:" in record.message]
+    assert len(total_logs) == 1
+    assert "3" in total_logs[0].message
+
+
+def test_restriction_parsing_no_logging_for_injuries(caplog):
+    """Test that injury parsing does not emit restriction logs."""
+    caplog.set_level(logging.INFO)
+    
+    text = "left ankle sprain, right shoulder pain"
+    injuries, restrictions = parse_injuries_and_restrictions(text)
+    
+    # Should have 2 injuries and no restrictions
+    assert len(injuries) == 2
+    assert len(restrictions) == 0
+    
+    # Should have no restriction-parse logs
+    restriction_logs = [record for record in caplog.records if "[restriction-parse]" in record.message]
+    assert len(restriction_logs) == 0
+
