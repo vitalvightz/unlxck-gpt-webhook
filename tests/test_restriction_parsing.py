@@ -294,7 +294,7 @@ def test_restriction_parsing_no_logging_for_injuries(caplog):
 def test_symptom_token_detection():
     """Test that symptom tokens are correctly detected to prevent injury misclassification.
     
-    Regression test for bug where rf"\\\\b" in raw string created literal backslashes
+    Regression test for bug where rf"\\b" in raw string created literal backslashes
     instead of regex word boundaries, causing _contains_symptom_token to never match.
     """
     from fightcamp.restriction_parsing import _contains_symptom_token, is_restriction_clause
