@@ -134,7 +134,7 @@
     "equipment": "bands"
   },
   {
-    "name": "Depth Drop → 5m Sprint",
+    "name": "Depth Drop \u2192 5m Sprint",
     "category": "locomotion",
     "phases": [
       "TAPER"
@@ -201,7 +201,7 @@
     "equipment": "trap_bar"
   },
   {
-    "name": "Back Squat → Box Jump",
+    "name": "Back Squat \u2192 Box Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -224,7 +224,7 @@
     "equipment": "barbell,box"
   },
   {
-    "name": "DB Bench Press → Plyo Push-Up",
+    "name": "DB Bench Press \u2192 Plyo Push-Up",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -245,7 +245,7 @@
     "equipment": "dumbbells"
   },
   {
-    "name": "Heavy RDL → Broad Jump",
+    "name": "Heavy RDL \u2192 Broad Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -264,7 +264,7 @@
     "equipment": "barbell"
   },
   {
-    "name": "Landmine Press → Med Ball Chest Pass",
+    "name": "Landmine Press \u2192 Med Ball Chest Pass",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -356,7 +356,7 @@
     "equipment": "landmine"
   },
   {
-    "name": "Zercher Squat → Sprawl Jump",
+    "name": "Zercher Squat \u2192 Sprawl Jump",
     "category": "wrestler",
     "phases": [
       "SPP"
@@ -840,7 +840,7 @@
     "equipment": "landmine"
   },
   {
-    "name": "DB Alternating Incline Press (30-45°)",
+    "name": "DB Alternating Incline Press (30-45\u00b0)",
     "category": "upper_body",
     "phases": [
       "GPP"
@@ -2138,7 +2138,7 @@
     "equipment": "foam_roller"
   },
   {
-    "name": "Grappler’s Bridge (Weighted)",
+    "name": "Grappler\u2019s Bridge (Weighted)",
     "category": "combat",
     "phases": [
       "SPP"
@@ -3182,7 +3182,7 @@
       "mech_lower_squat"
     ],
     "equipment": "bosu_ball",
-    "notes": "Keep squats shallow (30° knee bend)"
+    "notes": "Keep squats shallow (30\u00b0 knee bend)"
   },
   {
     "name": "Foam Pad Alphabet Tracing",
@@ -3219,7 +3219,7 @@
     "notes": "Partner gently tugs band in random directions during single-leg stance"
   },
   {
-    "name": "Single-Leg Wall Sit (60°)",
+    "name": "Single-Leg Wall Sit (60\u00b0)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -3453,7 +3453,7 @@
     "equipment": "kettlebells"
   },
   {
-    "name": "🔥 Single-Leg Rotational Med Ball Hold",
+    "name": "\ud83d\udd25 Single-Leg Rotational Med Ball Hold",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -3471,7 +3471,7 @@
     "equipment": "medicine_ball"
   },
   {
-    "name": "🔥 Single-Leg Combat Stance Hold (Weighted)",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Hold (Weighted)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -3527,7 +3527,7 @@
     "equipment": "agility_ladder"
   },
   {
-    "name": "Single-Leg 45° Bound",
+    "name": "Single-Leg 45\u00b0 Bound",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -3659,7 +3659,7 @@
     "equipment": "bodyweight"
   },
   {
-    "name": "🔥 Single-Leg Combat Stance Switch Jump",
+    "name": "\ud83d\udd25 Single-Leg Combat Stance Switch Jump",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -3678,7 +3678,7 @@
     "equipment": "thai_pads"
   },
   {
-    "name": "Squat Isometric (110% 1RM @ 90°)",
+    "name": "Squat Isometric (110% 1RM @ 90\u00b0)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -3732,7 +3732,7 @@
     "equipment": "barbell"
   },
   {
-    "name": "Front Squat Isometric (115% 1RM @ 100°)",
+    "name": "Front Squat Isometric (115% 1RM @ 100\u00b0)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -3824,7 +3824,7 @@
     "equipment": "barbell"
   },
   {
-    "name": "Incline Bench Isometric (125% 1RM @ 45°)",
+    "name": "Incline Bench Isometric (125% 1RM @ 45\u00b0)",
     "category": "upper_body",
     "phases": [
       "SPP"
@@ -3896,7 +3896,7 @@
     "equipment": "barbell"
   },
   {
-    "name": "Safety Bar Squat Isometric (115% 1RM @ 90°)",
+    "name": "Safety Bar Squat Isometric (115% 1RM @ 90\u00b0)",
     "category": "lower_body",
     "phases": [
       "SPP"
@@ -4025,7 +4025,7 @@
     "equipment": "trap_bar"
   },
   {
-    "name": "Bench Isometric (110% 1RM @ 90° Elbow)",
+    "name": "Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
     "category": "upper_body",
     "phases": [
       "GPP"
@@ -4042,7 +4042,7 @@
     "equipment": "barbell"
   },
   {
-    "name": "Front Squat Isometric (105% 1RM @ 100°)",
+    "name": "Front Squat Isometric (105% 1RM @ 100\u00b0)",
     "category": "lower_body",
     "phases": [
       "GPP"
@@ -4133,5 +4133,1027 @@
       "mech_upper_pull"
     ],
     "equipment": "bodyweight"
+  },
+  {
+    "name": "Sled Push (Heavy)",
+    "category": "lower_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "posterior_chain",
+      "glute_load_high",
+      "core",
+      "mech_trunk_stability"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Sled Push (Speed)",
+    "category": "lower_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "power",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "speed",
+      "explosive",
+      "quad_dominant",
+      "cns_freshness"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Sled Pull Backward",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "posterior_chain",
+      "hamstring",
+      "glute_load_high",
+      "work_capacity"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Sled Drag (Side)",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "sled",
+      "stability",
+      "core",
+      "work_capacity"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Weighted Sled Push (Pins)",
+    "category": "lower_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "isometric_hold",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "isometric",
+      "posterior_chain",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Sled Push (Incline)",
+    "category": "lower_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "glute_load_high",
+      "quad_dominant",
+      "posterior_chain",
+      "core"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Sled Push (Board)",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "power",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "explosive",
+      "speed",
+      "rate_of_force",
+      "zero_impact"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Sled Pull Forward (Harness)",
+    "category": "lower_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "power",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "sled",
+      "posterior_chain",
+      "hamstring",
+      "glute_load_high",
+      "acceleration"
+    ],
+    "equipment": "sled"
+  },
+  {
+    "name": "Squat Hold (Parallel)",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "mech_trunk_stability",
+      "stability",
+      "rehab_friendly"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Bottom-Out Hold (Squat)",
+    "category": "lower_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "mobility",
+      "deep_knee_flexion_loaded",
+      "stability"
+    ],
+    "equipment": "barbell"
+  },
+  {
+    "name": "Wall Sit (Knee-Friendly)",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "quad_dominant",
+      "balance",
+      "work_capacity",
+      "rehab_friendly"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Plank (Extended Hold)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "core",
+      "mech_trunk_stability",
+      "stability",
+      "endurance"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Side Plank (Long Duration)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "isometric",
+      "core",
+      "anti_rotation",
+      "stability",
+      "endurance"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Hollow Body Hold",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "core",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Farmer Walk Hold (Static)",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric_hold",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "grip",
+      "core",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Dead Bug (Isometric)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "core",
+      "mech_trunk_stability",
+      "rehab_friendly",
+      "stability"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Glute Bridge Hold (Heavy Load)",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "glute_load_high",
+      "posterior_chain",
+      "hamstring",
+      "stability"
+    ],
+    "equipment": "barbell"
+  },
+  {
+    "name": "Pallof Press Iso (Against Resistance)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "isometric",
+      "anti_rotation",
+      "core",
+      "mech_trunk_stability",
+      "rotational"
+    ],
+    "equipment": "cable_machine"
+  },
+  {
+    "name": "Pallof Press",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "rotational",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "cable_machine"
+  },
+  {
+    "name": "Half-Kneeling Anti-Rotation Hold",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "balance",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Banded Pallof (Walking)",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "coordination",
+      "mech_trunk_stability",
+      "work_capacity"
+    ],
+    "equipment": "resistance_band"
+  },
+  {
+    "name": "Landmine Anti-Rotation Press",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "mech_upper_press",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "landmine"
+  },
+  {
+    "name": "Single-Arm Chest Press (Floor)",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "mech_upper_press",
+      "stability",
+      "upper_body"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Chop Holds (Anti-Rotation)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "mech_trunk_stability",
+      "stability",
+      "rotational"
+    ],
+    "equipment": "kettlebell"
+  },
+  {
+    "name": "Single-Leg Romanian Deadlift Hold",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "balance",
+      "posterior_chain",
+      "hamstring",
+      "stability"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Staggered Stance Hold",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "balance",
+      "core",
+      "stability",
+      "coordination"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Farmer Carry (Heavy)",
+    "category": "full_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "carry_heavy",
+      "grip",
+      "core",
+      "mech_trunk_stability",
+      "work_capacity"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Waiter Walk",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "carry_heavy",
+      "shoulders",
+      "grip",
+      "mech_upper_carry",
+      "stability"
+    ],
+    "equipment": "kettlebell"
+  },
+  {
+    "name": "Overhead Carry (Single Arm)",
+    "category": "upper_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "carry_heavy",
+      "shoulders",
+      "mech_upper_carry",
+      "core",
+      "stability"
+    ],
+    "equipment": "kettlebell"
+  },
+  {
+    "name": "Rack Carry (Shoulder)",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "carry_heavy",
+      "shoulders",
+      "mech_upper_carry",
+      "front_rack",
+      "stability"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Bear Hug Carry",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength_conditioning",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "carry_heavy",
+      "core",
+      "mech_trunk_stability",
+      "grip",
+      "work_capacity"
+    ],
+    "equipment": "sandbag"
+  },
+  {
+    "name": "Cross-Body Carry",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "carry_heavy",
+      "core",
+      "anti_rotation",
+      "stability"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Yoke Walk",
+    "category": "lower_body",
+    "phases": [
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "carry_heavy",
+      "posterior_chain",
+      "core",
+      "mech_trunk_stability",
+      "work_capacity"
+    ],
+    "equipment": "yoke"
+  },
+  {
+    "name": "Bottoms-Up Carry",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "carry_heavy",
+      "shoulders",
+      "grip",
+      "stability",
+      "mech_upper_carry"
+    ],
+    "equipment": "kettlebell"
+  },
+  {
+    "name": "Band Carry (Overhead)",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "carry_heavy",
+      "shoulders",
+      "core",
+      "stability",
+      "mech_upper_carry"
+    ],
+    "equipment": "resistance_band"
+  },
+  {
+    "name": "Trap Bar Carry (Frame Neutral)",
+    "category": "full_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "carry_heavy",
+      "grip",
+      "posterior_chain",
+      "core",
+      "work_capacity"
+    ],
+    "equipment": "trap_bar"
+  },
+  {
+    "name": "Machine Chest Press",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_press",
+      "isolation",
+      "upper_body",
+      "pec_loaded"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Dumbbell Chest Fly",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_press",
+      "pec_loaded",
+      "isolation",
+      "upper_body",
+      "mech_shoulder_overhead"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Cable Fly (High to Low)",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_press",
+      "pec_loaded",
+      "isolation",
+      "upper_body",
+      "rotational"
+    ],
+    "equipment": "cable_machine"
+  },
+  {
+    "name": "Lat Pulldown Machine",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_pull",
+      "upper_back",
+      "isolation",
+      "upper_body",
+      "grip"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Machine Row",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_pull",
+      "upper_back",
+      "isolation",
+      "upper_body",
+      "row_heavy"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Arm Wrestler's Curl (Machine)",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "isolation",
+      "upper_body",
+      "bicep_slicer",
+      "grip",
+      "upper_back"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Triceps Rope Pushdown",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "triceps",
+      "isolation",
+      "upper_body",
+      "mech_upper_press"
+    ],
+    "equipment": "cable_machine"
+  },
+  {
+    "name": "Hammer Strength Chest Press",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "mech_upper_press",
+      "pec_loaded",
+      "isolation",
+      "upper_body"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Lateral Raise (Machine)",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "isolation",
+      "shoulders",
+      "upper_body",
+      "stability",
+      "mech_shoulder_overhead"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Reverse Pec Deck",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "isolation",
+      "upper_back",
+      "shoulders",
+      "upper_body",
+      "mech_upper_pull"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Machine Pullover",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "isolation",
+      "upper_back",
+      "upper_body",
+      "mech_upper_pull"
+    ],
+    "equipment": "machine"
+  },
+  {
+    "name": "Smith Machine Shoulder Press",
+    "category": "upper_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "mech_upper_press",
+      "shoulders",
+      "isolation",
+      "stability"
+    ],
+    "equipment": "smith_machine"
+  },
+  {
+    "name": "Ab Wheel Rollout (Kneeling)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "core",
+      "mech_trunk_stability",
+      "anti_rotation",
+      "stability",
+      "upper_body"
+    ],
+    "equipment": "ab_wheel"
+  },
+  {
+    "name": "Pallof Row (Half-Kneeling)",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "unilateral",
+    "tags": [
+      "anti_rotation",
+      "core",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "stability"
+    ],
+    "equipment": "cable_machine"
+  },
+  {
+    "name": "Bird Dog Hold",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "core",
+      "mech_trunk_stability",
+      "balance",
+      "stability",
+      "rehab_friendly"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Stir the Pot",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "core",
+      "mech_trunk_stability",
+      "rotational",
+      "stability",
+      "coordination"
+    ],
+    "equipment": "stability_ball"
+  },
+  {
+    "name": "Copenhagen Adduction",
+    "category": "lower_body",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "adductors",
+      "core",
+      "stability",
+      "rehab_friendly"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Quadruped Shoulder Taps",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "core",
+      "mech_trunk_stability",
+      "coordination",
+      "stability",
+      "upper_body"
+    ],
+    "equipment": "bodyweight"
+  },
+  {
+    "name": "Suitcase Carry Holds",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "core",
+      "anti_rotation",
+      "grip",
+      "stability"
+    ],
+    "equipment": "dumbbells"
+  },
+  {
+    "name": "Stability Ball Crunch",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "dynamic",
+    "type": "bilateral",
+    "tags": [
+      "core",
+      "mech_trunk_stability",
+      "stability",
+      "mech_trunk_flexion",
+      "isolation"
+    ],
+    "equipment": "stability_ball"
+  },
+  {
+    "name": "Supported Lower Back Hold",
+    "category": "core",
+    "phases": [
+      "GPP"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "core",
+      "mech_trunk_stability",
+      "spine_extension_loaded",
+      "stability",
+      "rehab_friendly"
+    ],
+    "equipment": "bench"
   }
 ]

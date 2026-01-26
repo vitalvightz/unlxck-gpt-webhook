@@ -33,7 +33,7 @@
     ],
     "system": "aerobic",
     "modality": "sled",
-    "duration": "25–30min continuous",
+    "duration": "25\u201330min continuous",
     "intensity": "low",
     "tags": [
       "aerobic",
@@ -77,7 +77,7 @@
     ],
     "system": "anaerobic_alactic",
     "modality": "reaction",
-    "duration": "5–10min",
+    "duration": "5\u201310min",
     "intensity": "low",
     "tags": [
       "coordination",
@@ -97,7 +97,7 @@
     ],
     "system": "aerobic",
     "modality": "run",
-    "duration": "30–40min",
+    "duration": "30\u201340min",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -1714,7 +1714,7 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "ORDER: Boxing → Takedown → Ground strikes. REST: 1min between. NO HEAD IMPACT"
+    "notes": "ORDER: Boxing \u2192 Takedown \u2192 Ground strikes. REST: 1min between. NO HEAD IMPACT"
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
@@ -1765,7 +1765,7 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post"
+    "notes": "TEMPERATURE: 90-95\u00b0F. HYDRATION: +20% fluid intake pre/post"
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -3199,7 +3199,7 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "BOX HEIGHT: 12–18”. Focus on snap-down and fast reset."
+    "notes": "BOX HEIGHT: 12\u201318\u201d. Focus on snap-down and fast reset."
   },
   {
     "name": "Pogo Jump Series (Mini Bounce)",
@@ -3273,7 +3273,7 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts."
+    "notes": "Fast taps over 4\u20136\u201d hurdles. Emphasize light contacts."
   },
   {
     "name": "Med Ball Drop Catch to Jump",
@@ -3294,7 +3294,7 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Partner drops ball → athlete catches + jumps. Use 2–4kg."
+    "notes": "Partner drops ball \u2192 athlete catches + jumps. Use 2\u20134kg."
   },
   {
     "name": "Mini Box Depth Drop",
@@ -3312,7 +3312,7 @@
       "mech_lower_jump",
       "mech_cns_high"
     ],
-    "notes": "Height = 6–12”. Cue soft land + quick reset. No rebound."
+    "notes": "Height = 6\u201312\u201d. Cue soft land + quick reset. No rebound."
   },
   {
     "name": "Band-Assisted Jump Reset",
@@ -3485,7 +3485,7 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "Partner gives unpredictable toss cue. Ball: 3–5kg. Emphasize snap."
+    "notes": "Partner gives unpredictable toss cue. Ball: 3\u20135kg. Emphasize snap."
   },
   {
     "name": "Plyo Push-Up on Knees",
@@ -3544,7 +3544,7 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "notes": "Use 2–4kg ball. Minimize effort, maximize intent and speed."
+    "notes": "Use 2\u20134kg ball. Minimize effort, maximize intent and speed."
   },
   {
     "name": "Seated Med Ball Chest Pop",
@@ -3606,5 +3606,1128 @@
       "mech_trunk_stability"
     ],
     "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight"
+  },
+  {
+    "name": "Assault Bike Zone 2 Steady",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "25-30min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "low_impact",
+      "recovery",
+      "posterior_chain",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Nasal breathing only; excellent recovery modality"
+  },
+  {
+    "name": "Echo Bike Tempo Intervals",
+    "equipment": [
+      "echo_bike"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bike",
+    "duration": "4x3min hard, 2min easy",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "posterior_chain",
+      "low_impact",
+      "mech_systemic_fatigue",
+      "glycolytic"
+    ],
+    "notes": "Monumental work capacity builder without impact"
+  },
+  {
+    "name": "Stationary Bike Lactate Threshold",
+    "equipment": [
+      "stationary_bike"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bike",
+    "duration": "2x8min @ threshold, 3min rest",
+    "intensity": "high",
+    "tags": [
+      "aerobic",
+      "conditioning",
+      "posterior_chain",
+      "glycolytic",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Builds aerobic power; zero joint impact"
+  },
+  {
+    "name": "Rogue Echo Bike Recovery Spin",
+    "equipment": [
+      "echo_bike"
+    ],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "20min easy spin",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "recovery",
+      "low_impact",
+      "cns_freshness",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Pure recovery; no glycogen depletion"
+  },
+  {
+    "name": "Concept2 Rower Zone 3 Block",
+    "equipment": [
+      "rowing_machine"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "row",
+    "duration": "3x4min @ zone 3, 2min easy",
+    "intensity": "moderate",
+    "tags": [
+      "aerobic",
+      "upper_body",
+      "posterior_chain",
+      "mech_upper_pull",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Full-body conditioning; safe for most injuries"
+  },
+  {
+    "name": "Rower Pyramid (1-5-1min)",
+    "equipment": [
+      "rowing_machine"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "row",
+    "duration": "1-2-3-4-5-4-3-2-1min blocks",
+    "intensity": "high",
+    "tags": [
+      "power",
+      "upper_body",
+      "posterior_chain",
+      "explosive",
+      "mech_upper_pull"
+    ],
+    "notes": "Pyramidal structure keeps intensity without true max"
+  },
+  {
+    "name": "Air Dyne Bike Aerobic Base",
+    "equipment": [
+      "air_dyne_bike"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "bike",
+    "duration": "30-40min steady",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "low_impact",
+      "work_capacity",
+      "conditioning",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Arm/leg combo; phenomenal base building"
+  },
+  {
+    "name": "SkiErg Interval Complex",
+    "equipment": [
+      "ski_erg"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "erg",
+    "duration": "6x30s hard, 30s easy",
+    "intensity": "high",
+    "tags": [
+      "upper_body",
+      "posterior_chain",
+      "conditioning",
+      "power",
+      "mech_upper_pull"
+    ],
+    "notes": "Full-body erg work; minimal impact"
+  },
+  {
+    "name": "Hydrow Steady State",
+    "equipment": [
+      "rowing_machine"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "row",
+    "duration": "25min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "upper_body",
+      "posterior_chain",
+      "recovery",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Indoor rowing variation; excellent mental focus"
+  },
+  {
+    "name": "Assault Bike Capacity Builder",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bike",
+    "duration": "20min EMOM: 12 cal",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "posterior_chain",
+      "glycolytic",
+      "work_capacity",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Clock-based; forces consistent power output"
+  },
+  {
+    "name": "Concept2 Rower Recovery Rows",
+    "equipment": [
+      "rowing_machine"
+    ],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "row",
+    "duration": "15-20min easy",
+    "intensity": "zone 1",
+    "tags": [
+      "aerobic",
+      "recovery",
+      "upper_body",
+      "posterior_chain",
+      "cns_freshness"
+    ],
+    "notes": "Parasympathetic activation; zero strain"
+  },
+  {
+    "name": "BikeErg Power Repeats",
+    "equipment": [
+      "bike_erg"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "erg",
+    "duration": "8x15s max, 45s rest",
+    "intensity": "max",
+    "tags": [
+      "power",
+      "posterior_chain",
+      "explosive",
+      "high_cns",
+      "mech_cns_high"
+    ],
+    "notes": "Brief hard efforts; excellent for power adaptation"
+  },
+  {
+    "name": "Watt Bike Tempo Climbs",
+    "equipment": [
+      "stationary_bike"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bike",
+    "duration": "5x2min climbing @ moderate resistance",
+    "intensity": "high",
+    "tags": [
+      "glycolytic",
+      "posterior_chain",
+      "conditioning",
+      "power",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Variable resistance builds force application"
+  },
+  {
+    "name": "SkiErg Recovery Flow",
+    "equipment": [
+      "ski_erg"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "erg",
+    "duration": "20min easy",
+    "intensity": "low",
+    "tags": [
+      "aerobic",
+      "upper_body",
+      "recovery",
+      "posterior_chain",
+      "cns_freshness"
+    ],
+    "notes": "Light pole work; parasympathetic dominant"
+  },
+  {
+    "name": "Sled Push Aerobic Intervals",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "5x40s push, 20s rest",
+    "intensity": "moderate",
+    "tags": [
+      "aerobic",
+      "posterior_chain",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Steady power; recovery focused"
+  },
+  {
+    "name": "Sled Drag Tempo Complex",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "sled",
+    "duration": "3x60s drag, 60s rest",
+    "intensity": "high",
+    "tags": [
+      "glycolytic",
+      "posterior_chain",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "conditioning"
+    ],
+    "notes": "Backward drags are gentle on hamstrings"
+  },
+  {
+    "name": "Sled Sprint Finisher",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "sled",
+    "duration": "6x20s sprint, 2:1 rest",
+    "intensity": "max",
+    "tags": [
+      "explosive",
+      "posterior_chain",
+      "low_impact",
+      "power",
+      "mech_lower_hip_hinge"
+    ],
+    "notes": "Short bursts; safe sprint alternative"
+  },
+  {
+    "name": "Prowler Light Push Conditioning",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "20min continuous varied pace",
+    "intensity": "moderate",
+    "tags": [
+      "aerobic",
+      "posterior_chain",
+      "work_capacity",
+      "low_impact",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Continuous low-impact work capacity"
+  },
+  {
+    "name": "Sled Push/Drag Contrast",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "sled",
+    "duration": "4 rounds: 30s push + 30s drag",
+    "intensity": "high",
+    "tags": [
+      "contrast",
+      "posterior_chain",
+      "low_impact",
+      "mech_lower_hip_hinge",
+      "glycolytic"
+    ],
+    "notes": "Push-pull contrast in low-impact setting"
+  },
+  {
+    "name": "Sled Crawl Conditioning",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "4x45s sled crawl, 15s rest",
+    "intensity": "moderate",
+    "tags": [
+      "core",
+      "upper_body",
+      "posterior_chain",
+      "low_impact",
+      "mech_trunk_stability"
+    ],
+    "notes": "Horizontal crawling; joint friendly"
+  },
+  {
+    "name": "Light Sled Steady Base",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "25-30min continuous light push",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "work_capacity",
+      "posterior_chain",
+      "low_impact",
+      "recovery"
+    ],
+    "notes": "Minimal load accumulation; pure conditioning"
+  },
+  {
+    "name": "Sled Push EMOM Capacity",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "sled",
+    "duration": "20min EMOM: 15 meters push",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "posterior_chain",
+      "low_impact",
+      "work_capacity",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Scalable; maintains push quality each minute"
+  },
+  {
+    "name": "Sled Harness Backward Drag",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "5x50m drag, walk back rest",
+    "intensity": "moderate",
+    "tags": [
+      "aerobic",
+      "posterior_chain",
+      "low_impact",
+      "core",
+      "mech_trunk_stability"
+    ],
+    "notes": "Backward movement is naturally hamstring-friendly"
+  },
+  {
+    "name": "Sled Push Recovery Flush",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "sled",
+    "duration": "15min easy push with walk-back",
+    "intensity": "low",
+    "tags": [
+      "recovery",
+      "aerobic",
+      "posterior_chain",
+      "low_impact",
+      "cns_freshness"
+    ],
+    "notes": "Active recovery with parasympathetic tone"
+  },
+  {
+    "name": "Pool Running Fartlek",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "swim",
+    "duration": "20min: 1min hard, 1min easy x10",
+    "intensity": "high",
+    "tags": [
+      "zero_impact",
+      "aerobic",
+      "conditioning",
+      "endurance",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Non-weight bearing intervals; perfect for injury rehab"
+  },
+  {
+    "name": "Easy Continuous Swimming",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "swim",
+    "duration": "20-30min steady strokes",
+    "intensity": "zone 2",
+    "tags": [
+      "zero_impact",
+      "aerobic",
+      "recovery",
+      "upper_body",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Non-impact base building; mental reset"
+  },
+  {
+    "name": "Kickboard Tempo Sets",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "swim",
+    "duration": "6x100m kick tempo, 30s rest",
+    "intensity": "high",
+    "tags": [
+      "zero_impact",
+      "posterior_chain",
+      "quad_dominant",
+      "conditioning",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Focused leg work; excellent for knee rehab"
+  },
+  {
+    "name": "Water Resistance Training",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "swim",
+    "duration": "4x3min game-pace, 1min rest",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "zero_impact",
+      "upper_body",
+      "endurance",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Non-contact directional work in pool"
+  },
+  {
+    "name": "Pull Buoy Aerobic Threshold",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "swim",
+    "duration": "3x5min pull @ threshold, 1min rest",
+    "intensity": "high",
+    "tags": [
+      "zero_impact",
+      "upper_body",
+      "aerobic",
+      "glycolytic",
+      "mech_upper_pull"
+    ],
+    "notes": "Isolated upper body work; lower body unloaded"
+  },
+  {
+    "name": "Swimming Interval Pyramid",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "swim",
+    "duration": "100-200-300-200-100m sprints",
+    "intensity": "high",
+    "tags": [
+      "zero_impact",
+      "speed",
+      "conditioning",
+      "power",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Ascending/descending structure; minimal wall impact"
+  },
+  {
+    "name": "Pool Treading Conditioning",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "swim",
+    "duration": "10min continuous treading",
+    "intensity": "moderate",
+    "tags": [
+      "zero_impact",
+      "core",
+      "stability",
+      "upper_body",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Anti-gravity core work; very joint friendly"
+  },
+  {
+    "name": "Mixed Stroke Tempo Set",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "swim",
+    "duration": "4x200m mixed strokes hard, 40s rest",
+    "intensity": "high",
+    "tags": [
+      "zero_impact",
+      "conditioning",
+      "upper_body",
+      "endurance",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Variation prevents stroke overuse"
+  },
+  {
+    "name": "Fins Sprint Repeats",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "swim",
+    "duration": "8x50m sprint, 45s rest",
+    "intensity": "max",
+    "tags": [
+      "zero_impact",
+      "explosive",
+      "posterior_chain",
+      "speed",
+      "power"
+    ],
+    "notes": "Resistance tool enhances power output safely"
+  },
+  {
+    "name": "Elliptical Lactate Threshold",
+    "equipment": [
+      "elliptical"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "elliptical",
+    "duration": "2x8min @ threshold, 3min rest",
+    "intensity": "high",
+    "tags": [
+      "low_impact",
+      "aerobic",
+      "glycolytic",
+      "posterior_chain",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "No ground contact; bilateral stability work"
+  },
+  {
+    "name": "Stair Mill Recovery Climbs",
+    "equipment": [
+      "stair_mill"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "stairs",
+    "duration": "15-20min steady pace",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "recovery",
+      "posterior_chain",
+      "quad_dominant",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Eccentric-light; excellent hamstring-safe work"
+  },
+  {
+    "name": "Incline Treadmill Walk Intervals",
+    "equipment": [
+      "treadmill"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "walk",
+    "duration": "20min: 30s high incline, 30s flat",
+    "intensity": "moderate",
+    "tags": [
+      "low_impact",
+      "aerobic",
+      "posterior_chain",
+      "endurance",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Walking variation eliminates impact"
+  },
+  {
+    "name": "Versa Climber Aerobic Base",
+    "equipment": [
+      "versa_climber"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "climb",
+    "duration": "20-25min steady",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "endurance",
+      "low_impact",
+      "posterior_chain",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "True zero-impact full-body modality"
+  },
+  {
+    "name": "StairMaster HIIT Capacity",
+    "equipment": [
+      "stair_mill"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "stairs",
+    "duration": "5x2min hard, 1min recovery",
+    "intensity": "high",
+    "tags": [
+      "glycolytic",
+      "posterior_chain",
+      "low_impact",
+      "conditioning",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Controlled impact; no ankle torque"
+  },
+  {
+    "name": "Elliptical Tempo Intervals",
+    "equipment": [
+      "elliptical"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "elliptical",
+    "duration": "4x3min tempo, 2min easy",
+    "intensity": "high",
+    "tags": [
+      "glycolytic",
+      "low_impact",
+      "conditioning",
+      "posterior_chain",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Anti-gravity; reduces Achilles/calf stress"
+  },
+  {
+    "name": "Versa Climber EMOM Capacity",
+    "equipment": [
+      "versa_climber"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "climb",
+    "duration": "15min EMOM: 12 floors",
+    "intensity": "high",
+    "tags": [
+      "conditioning",
+      "endurance",
+      "low_impact",
+      "work_capacity",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Clock-based maintains consistency"
+  },
+  {
+    "name": "Heavy Bag Aerobic Pace",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "bag_work",
+    "duration": "10min continuous steady pace",
+    "intensity": "zone 2",
+    "tags": [
+      "aerobic",
+      "upper_body",
+      "shoulders",
+      "recovery",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Low-intensity bag work; rhythm focused"
+  },
+  {
+    "name": "Battle Ropes Tempo Burner",
+    "equipment": [
+      "battle_ropes"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "rope",
+    "duration": "4x40s hard, 20s rest",
+    "intensity": "high",
+    "tags": [
+      "glycolytic",
+      "upper_body",
+      "shoulders",
+      "conditioning",
+      "explosive"
+    ],
+    "notes": "Upper body glycolytic work; lower body unloaded"
+  },
+  {
+    "name": "Double-End Bag Circuit",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bag_work",
+    "duration": "5x2min rounds with 30s transitions",
+    "intensity": "high",
+    "tags": [
+      "reactive",
+      "upper_body",
+      "shoulders",
+      "conditioning",
+      "coordination"
+    ],
+    "notes": "Reactive hand-speed work; no leg impact"
+  },
+  {
+    "name": "Speed Bag Precision Drill",
+    "equipment": [],
+    "phases": [
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "bag_work",
+    "duration": "5x3min rounds, 1min rest",
+    "intensity": "moderate",
+    "tags": [
+      "coordination",
+      "upper_body",
+      "shoulders",
+      "cns_freshness",
+      "skill_refinement"
+    ],
+    "notes": "CNS sharpening without CNS burn"
+  },
+  {
+    "name": "Sandbag Shoulder Clean Flow",
+    "equipment": [
+      "sandbag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "sandbag",
+    "duration": "5x8 reps continuous pace",
+    "intensity": "moderate",
+    "tags": [
+      "upper_body",
+      "power",
+      "explosive",
+      "posterior_chain",
+      "mech_upper_pull"
+    ],
+    "notes": "Upper-focused power work with lower body stability"
+  },
+  {
+    "name": "Medicine Ball Pass Intervals",
+    "equipment": [
+      "medicine_ball"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "explosive",
+    "duration": "6x30s hard passes, 30s rest",
+    "intensity": "high",
+    "tags": [
+      "explosive",
+      "upper_body",
+      "power",
+      "core",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Rotational upper body work without impact"
+  },
+  {
+    "name": "Turkish Get-Up Skill Flow",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "kettlebell",
+    "duration": "5x5 reps per side slow tempo",
+    "intensity": "low",
+    "tags": [
+      "stability",
+      "upper_body",
+      "core",
+      "skill",
+      "mech_trunk_stability"
+    ],
+    "notes": "Skill-based conditioning without metabolic tax"
+  },
+  {
+    "name": "Farmer Carry + Battle Rope Combo",
+    "equipment": [
+      "battle_ropes"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "rope",
+    "duration": "4 rounds: 40m carry + 30s ropes hard",
+    "intensity": "high",
+    "tags": [
+      "glycolytic",
+      "upper_body",
+      "grip",
+      "mech_upper_carry",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Integrated grip + shoulder conditioning"
+  },
+  {
+    "name": "Nasal Breathing Walk Tempo",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "walk",
+    "duration": "30-40min flat ground",
+    "intensity": "zone 1",
+    "tags": [
+      "aerobic",
+      "parasympathetic",
+      "recovery",
+      "cns_freshness",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Mental reset; parasympathetic flush"
+  },
+  {
+    "name": "Foam Rolling Mobility Circuit",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
+    "system": "recovery",
+    "modality": "mobility",
+    "duration": "15-20min full body",
+    "intensity": "low",
+    "tags": [
+      "recovery",
+      "mobility",
+      "rehab_friendly",
+      "cns_freshness",
+      "parasympathetic"
+    ],
+    "notes": "Tissue care; zero training stimulus"
+  },
+  {
+    "name": "Breathing Protocol Deep Work",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "breathing",
+    "duration": "10-15min box breathing cycles",
+    "intensity": "low",
+    "tags": [
+      "recovery",
+      "parasympathetic",
+      "mental_toughness",
+      "cns_freshness",
+      "cognitive"
+    ],
+    "notes": "Autonomic nervous system balancing"
+  },
+  {
+    "name": "Cold Plunge Recovery Routine",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "recovery",
+    "duration": "3-5min cold exposure",
+    "intensity": "low",
+    "tags": [
+      "recovery",
+      "resilience",
+      "parasympathetic",
+      "endurance",
+      "cns_freshness"
+    ],
+    "notes": "Post-session recovery flush"
+  },
+  {
+    "name": "Gentle Movement Flow",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "mobility",
+    "duration": "30min continuous flow",
+    "intensity": "low",
+    "tags": [
+      "mobility",
+      "recovery",
+      "parasympathetic",
+      "balance",
+      "coordination"
+    ],
+    "notes": "Mobility + breathing integration"
+  },
+  {
+    "name": "PVC Pipe Mobility Prep",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "mobility",
+    "duration": "10-15min shoulder/hip",
+    "intensity": "low",
+    "tags": [
+      "mobility",
+      "recovery",
+      "rehab_friendly",
+      "cns_freshness",
+      "stability"
+    ],
+    "notes": "Joint-by-joint mobility work"
+  },
+  {
+    "name": "Sauna Session Recovery",
+    "equipment": [],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "recovery",
+    "duration": "15-20min session",
+    "intensity": "low",
+    "tags": [
+      "recovery",
+      "parasympathetic",
+      "endurance",
+      "resilience",
+      "cns_freshness"
+    ],
+    "notes": "Passive heat recovery tool"
   }
 ]

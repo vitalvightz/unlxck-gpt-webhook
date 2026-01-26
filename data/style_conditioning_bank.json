@@ -10,7 +10,7 @@
     ],
     "system": "glycolytic",
     "modality": "concurrent training",
-    "duration": "30s max rope slams → 30s dirty boxing combos → x5 rounds",
+    "duration": "30s max rope slams \u2192 30s dirty boxing combos \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -32,7 +32,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "rotational annihilation",
-    "duration": "10 L/R hammer strikes → 5 tire flips → x5 rounds",
+    "duration": "10 L/R hammer strikes \u2192 5 tire flips \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -56,7 +56,7 @@
     ],
     "system": "glycolytic",
     "modality": "strongman meets fight prep",
-    "duration": "30s sandbag bear hug → 10 sprawls → x5 rounds",
+    "duration": "30s sandbag bear hug \u2192 10 sprawls \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -79,7 +79,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "power endurance",
-    "duration": "8 KB snatches → 10 band-resisted hooks → x5 rounds",
+    "duration": "8 KB snatches \u2192 10 band-resisted hooks \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -102,7 +102,7 @@
     ],
     "system": "glycolytic",
     "modality": "infighting simulator",
-    "duration": "5 trap bar jumps → 10 push-ups → x6 rounds",
+    "duration": "5 trap bar jumps \u2192 10 push-ups \u2192 x6 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -124,7 +124,7 @@
       "SPP"
     ],
     "system": "ATP-PCr",
-    "duration": "15 max-effort chest passes → 5 burpees → x6 rounds",
+    "duration": "15 max-effort chest passes \u2192 5 burpees \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -148,7 +148,7 @@
     ],
     "system": "glycolytic",
     "modality": "suffering",
-    "duration": "20m sled push → 10 DB thruster punches → x5 rounds",
+    "duration": "20m sled push \u2192 10 DB thruster punches \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -169,7 +169,7 @@
     ],
     "system": "glycolytic",
     "modality": "prison rules",
-    "duration": "10 burpees → 10 sprawls → 10 jumping knees → x5 rounds",
+    "duration": "10 burpees \u2192 10 sprawls \u2192 10 jumping knees \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -191,7 +191,7 @@
     ],
     "system": "aerobic",
     "modality": "neck torture",
-    "duration": "10min continuous: 5 neck bridges → 5 plate neck rotations",
+    "duration": "10min continuous: 5 neck bridges \u2192 5 plate neck rotations",
     "intensity": "moderate",
     "tags": [
       "brawler",
@@ -212,7 +212,7 @@
     ],
     "system": "glycolytic",
     "modality": "punishment",
-    "duration": "30s max hooks → 10 push-ups → 30s uppercuts → x5 rounds",
+    "duration": "30s max hooks \u2192 10 push-ups \u2192 30s uppercuts \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -235,7 +235,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "neurological overload",
-    "duration": "10 band-resisted sprints → 5 clap push-ups → x6 rounds",
+    "duration": "10 band-resisted sprints \u2192 5 clap push-ups \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -258,7 +258,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "destruction",
-    "duration": "20 alternating hammer strikes → 5 tire jumps → x5 rounds",
+    "duration": "20 alternating hammer strikes \u2192 5 tire jumps \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -282,7 +282,7 @@
     ],
     "system": "glycolytic",
     "modality": "retreat punishment",
-    "duration": "20 KB swings → 10 backward lunges → x6 rounds",
+    "duration": "20 KB swings \u2192 10 backward lunges \u2192 x6 rounds",
     "intensity": "moderate",
     "tags": [
       "brawler",
@@ -305,7 +305,7 @@
     ],
     "system": "glycolytic",
     "modality": "clinch hell",
-    "duration": "30s sandbag carry → 10 knees → 5 sprawls → x5 rounds",
+    "duration": "30s sandbag carry \u2192 10 knees \u2192 5 sprawls \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -328,7 +328,7 @@
     ],
     "system": "aerobic",
     "modality": "relentless pressure",
-    "duration": "10 trap bar deadlifts → 20m farmer walk → x6 rounds",
+    "duration": "10 trap bar deadlifts \u2192 20m farmer walk \u2192 x6 rounds",
     "intensity": "moderate",
     "tags": [
       "brawler",
@@ -350,7 +350,7 @@
     ],
     "system": "glycolytic",
     "modality": "pure suffering",
-    "duration": "30s sprint → 10 burpees → 30s shadowboxing → x5 rounds",
+    "duration": "30s sprint \u2192 10 burpees \u2192 30s shadowboxing \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -372,7 +372,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "dirty boxing",
-    "duration": "10 DB uppercuts → 10 clinch knees → x6 rounds",
+    "duration": "10 DB uppercuts \u2192 10 clinch knees \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -395,7 +395,7 @@
     ],
     "system": "aerobic",
     "modality": "footwork torture",
-    "duration": "20m sled drag (backward) → 10 defensive slips → x6 rounds",
+    "duration": "20m sled drag (backward) \u2192 10 defensive slips \u2192 x6 rounds",
     "intensity": "moderate",
     "tags": [
       "brawler",
@@ -418,7 +418,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "body shot specialist",
-    "duration": "15 rotational slams → 10 crunch punches → x6 rounds",
+    "duration": "15 rotational slams \u2192 10 crunch punches \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -442,7 +442,7 @@
     ],
     "system": "glycolytic",
     "modality": "surprise attack",
-    "duration": "5 band-resisted sprints → 10 sprawls → x8 rounds",
+    "duration": "5 band-resisted sprints \u2192 10 sprawls \u2192 x8 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -465,7 +465,7 @@
     ],
     "system": "aerobic",
     "modality": "old school",
-    "duration": "10min continuous: 5 power cleans → 5 push-ups",
+    "duration": "10min continuous: 5 power cleans \u2192 5 push-ups",
     "intensity": "zone 2",
     "tags": [
       "brawler",
@@ -487,7 +487,7 @@
     ],
     "system": "glycolytic",
     "modality": "doorway defense",
-    "duration": "10 KB swings → 5 wall sit punches → x6 rounds",
+    "duration": "10 KB swings \u2192 5 wall sit punches \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -509,7 +509,7 @@
     ],
     "system": "glycolytic",
     "modality": "no escape",
-    "duration": "30s sprint → 10 push presses (imaginary opponent) → x8 rounds",
+    "duration": "30s sprint \u2192 10 push presses (imaginary opponent) \u2192 x8 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -530,7 +530,7 @@
     ],
     "system": "aerobic",
     "modality": "prehab",
-    "duration": "15min continuous: 5 neck nods → 5 neck rotations",
+    "duration": "15min continuous: 5 neck nods \u2192 5 neck rotations",
     "intensity": "moderate",
     "tags": [
       "brawler",
@@ -551,7 +551,7 @@
     ],
     "system": "glycolytic",
     "modality": "asphalt conditioning",
-    "duration": "5 tire flips → 10 push-ups → 5 burpees → x6 rounds",
+    "duration": "5 tire flips \u2192 10 push-ups \u2192 5 burpees \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -573,7 +573,7 @@
     ],
     "system": "glycolytic",
     "modality": "cage wrestler",
-    "duration": "20m sled push → 10 KB swings → x5 rounds",
+    "duration": "20m sled push \u2192 10 KB swings \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -597,7 +597,7 @@
     ],
     "system": "glycolytic",
     "modality": "rotational destruction",
-    "duration": "30s alternating hammer strikes → 30s tire flips → x5 rounds",
+    "duration": "30s alternating hammer strikes \u2192 30s tire flips \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -620,7 +620,7 @@
     ],
     "system": "glycolytic",
     "modality": "dirty grappler",
-    "duration": "30s bear hug carry → 10 knees → x6 rounds",
+    "duration": "30s bear hug carry \u2192 10 knees \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -642,7 +642,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "takedown power",
-    "duration": "5 explosive deadlifts → 5 sprawls → x6 rounds",
+    "duration": "5 explosive deadlifts \u2192 5 sprawls \u2192 x6 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -666,7 +666,7 @@
     ],
     "system": "glycolytic",
     "modality": "wall fighting",
-    "duration": "20 KB cleans → 10 wall knee strikes → x5 rounds",
+    "duration": "20 KB cleans \u2192 10 wall knee strikes \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -689,7 +689,7 @@
     ],
     "system": "glycolytic",
     "modality": "throws under fatigue",
-    "duration": "5 bag tosses → 5 tire flips → x6 rounds",
+    "duration": "5 bag tosses \u2192 5 tire flips \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -709,7 +709,7 @@
     ],
     "system": "glycolytic",
     "modality": "ground survival",
-    "duration": "30s forearm plank → 5 technical stand-ups → x8 rounds",
+    "duration": "30s forearm plank \u2192 5 technical stand-ups \u2192 x8 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -730,7 +730,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "chaos conditioning",
-    "duration": "10 DB hooks → 10 KB snatches → x6 rounds",
+    "duration": "10 DB hooks \u2192 10 KB snatches \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -753,7 +753,7 @@
     ],
     "system": "glycolytic",
     "modality": "striking from clinch",
-    "duration": "15 slam ball → 10 wall push-offs → x6 rounds",
+    "duration": "15 slam ball \u2192 10 wall push-offs \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -775,7 +775,7 @@
     ],
     "system": "glycolytic",
     "modality": "last-man-standing",
-    "duration": "20m sled drag → 5 bag slams → x5 rounds",
+    "duration": "20m sled drag \u2192 5 bag slams \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -799,7 +799,7 @@
     ],
     "system": "glycolytic",
     "modality": "full-body violence",
-    "duration": "10 hammer strikes → 5 tire jumps → x8 rounds",
+    "duration": "10 hammer strikes \u2192 5 tire jumps \u2192 x8 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -821,7 +821,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "wild striking",
-    "duration": "20 band-resisted spins → 10 DB backfists → x5 rounds",
+    "duration": "20 band-resisted spins \u2192 10 DB backfists \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -842,7 +842,7 @@
     ],
     "system": "glycolytic",
     "modality": "takedown defense",
-    "duration": "10 sprawls → 10 knees → x8 rounds",
+    "duration": "10 sprawls \u2192 10 knees \u2192 x8 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -864,7 +864,7 @@
     ],
     "system": "glycolytic",
     "modality": "ground transitions",
-    "duration": "10 KB swings → 5 bag-to-shoulder → x6 rounds",
+    "duration": "10 KB swings \u2192 5 bag-to-shoulder \u2192 x6 rounds",
     "intensity": "high",
     "tags": [
       "brawler",
@@ -887,7 +887,7 @@
     ],
     "system": "aerobic",
     "modality": "forbidden weapons",
-    "duration": "15min: 5 neck bridges → 5 plate nods",
+    "duration": "15min: 5 neck bridges \u2192 5 plate nods",
     "intensity": "moderate",
     "tags": [
       "brawler",
@@ -909,7 +909,7 @@
     ],
     "system": "glycolytic",
     "modality": "clinch striking",
-    "duration": "10 DB uppercuts → 5 med ball slams → x6 rounds",
+    "duration": "10 DB uppercuts \u2192 5 med ball slams \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -932,7 +932,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "ground striking",
-    "duration": "10 hammer strikes → 5 sprawl jumps → x6 rounds",
+    "duration": "10 hammer strikes \u2192 5 sprawl jumps \u2192 x6 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -955,7 +955,7 @@
     ],
     "system": "glycolytic",
     "modality": "survival conditioning",
-    "duration": "30s bag carry → 10 KB snatches → x5 rounds",
+    "duration": "30s bag carry \u2192 10 KB snatches \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -976,7 +976,7 @@
     ],
     "system": "glycolytic",
     "modality": "no-rules endurance",
-    "duration": "30s sprint → 10 sprawls → 10 knees → x5 rounds",
+    "duration": "30s sprint \u2192 10 sprawls \u2192 10 knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "brawler",
@@ -997,7 +997,7 @@
     ],
     "system": "glycolytic",
     "modality": "isometric endurance",
-    "duration": "30s clinch hold → 10 knees → x5 rounds",
+    "duration": "30s clinch hold \u2192 10 knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1021,7 +1021,7 @@
     ],
     "system": "glycolytic",
     "modality": "rotational endurance",
-    "duration": "20 med ball slams → 10 short uppercuts → x5 rounds",
+    "duration": "20 med ball slams \u2192 10 short uppercuts \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1046,7 +1046,7 @@
     ],
     "system": "glycolytic",
     "modality": "resisted pressure",
-    "duration": "30s band-resisted forward pressure → 10 cage knees → x5 rounds",
+    "duration": "30s band-resisted forward pressure \u2192 10 cage knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1068,7 +1068,7 @@
     ],
     "system": "glycolytic",
     "modality": "dynamic endurance",
-    "duration": "20 KB swings → 10 plumb knees → x5 rounds",
+    "duration": "20 KB swings \u2192 10 plumb knees \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1092,7 +1092,7 @@
     ],
     "system": "glycolytic",
     "modality": "upper body clinch",
-    "duration": "30s pummeling drills → 10 bodylock lifts → x5 rounds",
+    "duration": "30s pummeling drills \u2192 10 bodylock lifts \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1116,7 +1116,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive endurance",
-    "duration": "30s rope clinch (simulated) → 10 short hooks → x5 rounds",
+    "duration": "30s rope clinch (simulated) \u2192 10 short hooks \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1137,7 +1137,7 @@
     ],
     "system": "glycolytic",
     "modality": "striking endurance",
-    "duration": "30s max knees → 10 sprawls → x5 rounds",
+    "duration": "30s max knees \u2192 10 sprawls \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1162,7 +1162,7 @@
     ],
     "system": "glycolytic",
     "modality": "cage simulation",
-    "duration": "30s wall pressure → 10 short elbows → x5 rounds",
+    "duration": "30s wall pressure \u2192 10 short elbows \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1185,7 +1185,7 @@
     ],
     "system": "glycolytic",
     "modality": "takedown defense",
-    "duration": "30s grip fighting → 5 hip toss counters → x5 rounds",
+    "duration": "30s grip fighting \u2192 5 hip toss counters \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1209,7 +1209,7 @@
     ],
     "system": "glycolytic",
     "modality": "resisted knees",
-    "duration": "20 band-resisted knees → 10 switch knees → x5 rounds",
+    "duration": "20 band-resisted knees \u2192 10 switch knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1233,7 +1233,7 @@
     ],
     "system": "aerobic",
     "modality": "neck endurance",
-    "duration": "15min continuous: 30s forward resistance → 30s lateral → 30s rear",
+    "duration": "15min continuous: 30s forward resistance \u2192 30s lateral \u2192 30s rear",
     "intensity": "moderate",
     "tags": [
       "clinch_fighter",
@@ -1255,7 +1255,7 @@
     ],
     "system": "glycolytic",
     "modality": "power endurance",
-    "duration": "10 KB snatches → 10 sprawls → x5 rounds",
+    "duration": "10 KB snatches \u2192 10 sprawls \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1277,7 +1277,7 @@
     ],
     "system": "glycolytic",
     "modality": "combo endurance",
-    "duration": "30s clinch knees → 30s short punches → x5 rounds",
+    "duration": "30s clinch knees \u2192 30s short punches \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1300,7 +1300,7 @@
     ],
     "system": "glycolytic",
     "modality": "forward pressure",
-    "duration": "20m sled push → 10 cage knees → x5 rounds",
+    "duration": "20m sled push \u2192 10 cage knees \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1322,7 +1322,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "rotational power",
-    "duration": "15 rotational throws → 10 knees → x5 rounds",
+    "duration": "15 rotational throws \u2192 10 knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1345,7 +1345,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive transitions",
-    "duration": "30s clinch → 5 sprawls → x8 rounds",
+    "duration": "30s clinch \u2192 5 sprawls \u2192 x8 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1369,7 +1369,7 @@
     ],
     "system": "aerobic",
     "modality": "isometric endurance",
-    "duration": "15min continuous: 30s forward resistance → 30s lateral → 30s rear",
+    "duration": "15min continuous: 30s forward resistance \u2192 30s lateral \u2192 30s rear",
     "intensity": "moderate",
     "tags": [
       "clinch_fighter",
@@ -1393,7 +1393,7 @@
     ],
     "system": "glycolytic",
     "modality": "resisted strikes",
-    "duration": "20 band-resisted knees → 10 switch knees → x5 rounds",
+    "duration": "20 band-resisted knees \u2192 10 switch knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1417,7 +1417,7 @@
     ],
     "system": "glycolytic",
     "modality": "loaded endurance",
-    "duration": "30s sandbag carry → 10 knees → x5 rounds",
+    "duration": "30s sandbag carry \u2192 10 knees \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1441,7 +1441,7 @@
     ],
     "system": "glycolytic",
     "modality": "short-range power",
-    "duration": "30s elbow combinations → 10 clinch knees → x5 rounds",
+    "duration": "30s elbow combinations \u2192 10 clinch knees \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1464,7 +1464,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive striking",
-    "duration": "30s defend collar tie → 10 counter uppercuts → x5 rounds",
+    "duration": "30s defend collar tie \u2192 10 counter uppercuts \u2192 x5 rounds",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1487,7 +1487,7 @@
     ],
     "system": "glycolytic",
     "modality": "pure endurance",
-    "duration": "5min continuous: clinch pummeling → knees → short punches",
+    "duration": "5min continuous: clinch pummeling \u2192 knees \u2192 short punches",
     "intensity": "high",
     "tags": [
       "clinch_fighter",
@@ -1511,7 +1511,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive endurance",
-    "duration": "30s band-resisted whizzers → 5 sprawls → x5 rounds",
+    "duration": "30s band-resisted whizzers \u2192 5 sprawls \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1534,7 +1534,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "max power",
-    "duration": "10 explosive knees → 5 power elbows → x5 rounds",
+    "duration": "10 explosive knees \u2192 5 power elbows \u2192 x5 rounds",
     "intensity": "max",
     "tags": [
       "clinch_fighter",
@@ -1581,7 +1581,7 @@
     ],
     "system": "glycolytic",
     "modality": "pivot counters",
-    "duration": "30s band-resisted pivots → 30s check hooks, 6 rounds",
+    "duration": "30s band-resisted pivots \u2192 30s check hooks, 6 rounds",
     "intensity": "high",
     "tags": [
       "counter_striker",
@@ -1614,7 +1614,7 @@
       "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "Slip incoming ball → immediate cross counter (Max reaction speed)",
+    "notes": "Slip incoming ball \u2192 immediate cross counter (Max reaction speed)",
     "equipment_note": "Use head-mounted version"
   },
   {
@@ -1719,7 +1719,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "leg kick counters",
-    "duration": "3min rounds: check → return kick, 1min rest x 5",
+    "duration": "3min rounds: check \u2192 return kick, 1min rest x 5",
     "intensity": "moderate",
     "tags": [
       "counter_striker",
@@ -1809,7 +1809,7 @@
     ],
     "system": "glycolytic",
     "modality": "exhausted counters",
-    "duration": "30s max punches → 30s counter-only, 6 rounds",
+    "duration": "30s max punches \u2192 30s counter-only, 6 rounds",
     "intensity": "max",
     "tags": [
       "counter_striker",
@@ -1833,7 +1833,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive angles",
-    "duration": "3min rounds: slip → pivot → counter, 1min rest x 4",
+    "duration": "3min rounds: slip \u2192 pivot \u2192 counter, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "counter_striker",
@@ -1878,7 +1878,7 @@
     ],
     "system": "glycolytic",
     "modality": "clinch counters",
-    "duration": "3min rounds: catch → knee, 1min rest x 5",
+    "duration": "3min rounds: catch \u2192 knee, 1min rest x 5",
     "intensity": "high",
     "tags": [
       "counter_striker",
@@ -1981,7 +1981,7 @@
       "mech_trunk_rotation"
     ],
     "notes": "Band resistance on non-punching hand (90% rotation)",
-    "equipment_note": "Anchor at 45° angle"
+    "equipment_note": "Anchor at 45\u00b0 angle"
   },
   {
     "name": "Counter Uppercut Drill",
@@ -2054,7 +2054,7 @@
     "equipment_note": "Light resistance bands"
   },
   {
-    "name": "Sniper’s Retreat",
+    "name": "Sniper\u2019s Retreat",
     "equipment": [
       "dumbbells"
     ],
@@ -2086,7 +2086,7 @@
     ],
     "system": "glycolytic",
     "modality": "angle striking",
-    "duration": "3min rounds: 45° cuts after combos, 1min rest x 4",
+    "duration": "3min rounds: 45\u00b0 cuts after combos, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "distance_striker",
@@ -2121,7 +2121,7 @@
     "equipment_note": "6-10kg med ball"
   },
   {
-    "name": "Flicker’s Gauntlet",
+    "name": "Flicker\u2019s Gauntlet",
     "equipment": [
       "bands",
       "double-end_bag"
@@ -2143,7 +2143,7 @@
     "equipment_note": "Light bands for delt fatigue"
   },
   {
-    "name": "Outfighter’s Crucible",
+    "name": "Outfighter\u2019s Crucible",
     "equipment": [
       "battle_ropes",
       "cones"
@@ -2232,7 +2232,7 @@
     "equipment_note": "5lb DBs in non-jabbing hand"
   },
   {
-    "name": "Sniper’s Delight",
+    "name": "Sniper\u2019s Delight",
     "equipment": [
       "punching_bag"
     ],
@@ -2271,7 +2271,7 @@
       "mech_lower_hip_hinge",
       "mech_trunk_stability"
     ],
-    "notes": "45° exits off ladder into cone pivots. (70% effort)",
+    "notes": "45\u00b0 exits off ladder into cone pivots. (70% effort)",
     "equipment_note": "Set cones at 8 angles"
   },
   {
@@ -2298,7 +2298,7 @@
     "equipment_note": "Heavy bands only"
   },
   {
-    "name": "Flicker’s Endurance",
+    "name": "Flicker\u2019s Endurance",
     "equipment": [
       "double-end_bag"
     ],
@@ -2330,7 +2330,7 @@
     ],
     "system": "glycolytic",
     "modality": "slip-counter",
-    "duration": "3min rounds: slip right → cross, 1min rest x 4",
+    "duration": "3min rounds: slip right \u2192 cross, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "distance_striker",
@@ -2342,7 +2342,7 @@
     "equipment_note": "Anchor bands at head height"
   },
   {
-    "name": "Sniper’s Load",
+    "name": "Sniper\u2019s Load",
     "equipment": [
       "barbell"
     ],
@@ -2405,11 +2405,11 @@
       "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "No set pattern—coach calls direction. (70% effort)",
+    "notes": "No set pattern\u2014coach calls direction. (70% effort)",
     "equipment_note": "Use 10ft ladder"
   },
   {
-    "name": "Flicker’s Hell",
+    "name": "Flicker\u2019s Hell",
     "equipment": [
       "bands",
       "double-end_bag"
@@ -2419,7 +2419,7 @@
     ],
     "system": "glycolytic",
     "modality": "exhausted precision",
-    "duration": "30s max-speed punches → 30s defensive slides, 6 rounds",
+    "duration": "30s max-speed punches \u2192 30s defensive slides, 6 rounds",
     "intensity": "max",
     "tags": [
       "distance_striker",
@@ -2432,7 +2432,7 @@
     "equipment_note": "Light resistance only"
   },
   {
-    "name": "Sniper’s Grip",
+    "name": "Sniper\u2019s Grip",
     "equipment": [
       "pull-up_bar",
       "towel"
@@ -2562,7 +2562,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "deception training",
-    "duration": "10 feints → 5 kicks/leg, 6 rounds",
+    "duration": "10 feints \u2192 5 kicks/leg, 6 rounds",
     "intensity": "moderate",
     "tags": [
       "kicker",
@@ -2655,7 +2655,7 @@
     ],
     "system": "glycolytic",
     "modality": "timing under fatigue",
-    "duration": "3min rounds: 5 switch kicks → 5 punches, x5",
+    "duration": "3min rounds: 5 switch kicks \u2192 5 punches, x5",
     "intensity": "high",
     "tags": [
       "kicker",
@@ -2692,7 +2692,7 @@
       "mech_cns_high"
     ],
     "notes": "Noodle marks ideal chin height. (Technical focus)",
-    "equipment_note": "Hang at 6’ height"
+    "equipment_note": "Hang at 6\u2019 height"
   },
   {
     "name": "Body Kick Barrage",
@@ -2751,7 +2751,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "explosive entry",
-    "duration": "10 jumps → knees, 5 rounds",
+    "duration": "10 jumps \u2192 knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "kicker",
@@ -2839,7 +2839,7 @@
     ],
     "system": "glycolytic",
     "modality": "stance flexibility",
-    "duration": "20 stance switches → 5 kicks, 5 rounds",
+    "duration": "20 stance switches \u2192 5 kicks, 5 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
@@ -2883,7 +2883,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "aerial power",
-    "duration": "10 jumps → kicks, 5 rounds",
+    "duration": "10 jumps \u2192 kicks, 5 rounds",
     "intensity": "max",
     "tags": [
       "kicker",
@@ -2936,7 +2936,7 @@
       "mech_trunk_rotation"
     ],
     "notes": "Ball marks ideal temple height. (Technical focus)",
-    "equipment_note": "Hang at 5’8\""
+    "equipment_note": "Hang at 5\u20198\""
   },
   {
     "name": "Low-High Deception",
@@ -2948,7 +2948,7 @@
     ],
     "system": "glycolytic",
     "modality": "feint kicking",
-    "duration": "3min rounds: fake low → high kick, x5",
+    "duration": "3min rounds: fake low \u2192 high kick, x5",
     "intensity": "high",
     "tags": [
       "kicker",
@@ -2992,7 +2992,7 @@
     ],
     "system": "glycolytic",
     "modality": "range transition",
-    "duration": "20 teeps → 10 knees, 5 rounds",
+    "duration": "20 teeps \u2192 10 knees, 5 rounds",
     "intensity": "high",
     "tags": [
       "kicker",
@@ -3458,7 +3458,7 @@
     ],
     "system": "glycolytic",
     "modality": "strongman endurance",
-    "duration": "30s bear hug carry → 10 knees, 5 rounds",
+    "duration": "30s bear hug carry \u2192 10 knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3479,7 +3479,7 @@
     ],
     "system": "glycolytic",
     "modality": "forward pressure",
-    "duration": "20m sled push → 5 sprawls, 6 rounds",
+    "duration": "20m sled push \u2192 5 sprawls, 6 rounds",
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
@@ -3490,7 +3490,7 @@
     "equipment_note": "Low sled for MMA posture"
   },
   {
-    "name": "Dirty Boxer’s Feast",
+    "name": "Dirty Boxer\u2019s Feast",
     "equipment": [
       "medicine_ball",
       "wall"
@@ -3500,7 +3500,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "rotational power",
-    "duration": "15 slam rotations → 10 clinch knees, 5 rounds",
+    "duration": "15 slam rotations \u2192 10 clinch knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3512,7 +3512,7 @@
     "equipment_note": "10kg med ball"
   },
   {
-    "name": "Mauler’s March",
+    "name": "Mauler\u2019s March",
     "equipment": [
       "trap_bar"
     ],
@@ -3521,7 +3521,7 @@
     ],
     "system": "glycolytic",
     "modality": "loaded carries",
-    "duration": "30s walk → 10 uppercuts, 5 rounds",
+    "duration": "30s walk \u2192 10 uppercuts, 5 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3541,7 +3541,7 @@
     ],
     "system": "glycolytic",
     "modality": "forward knee drive",
-    "duration": "20 KB swings → 10 marching knees, 5 rounds",
+    "duration": "20 KB swings \u2192 10 marching knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3561,7 +3561,7 @@
     ],
     "system": "glycolytic",
     "modality": "infighting",
-    "duration": "30s flurry punches → 10 collar tie knees, 5 rounds",
+    "duration": "30s flurry punches \u2192 10 collar tie knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3583,7 +3583,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "destruction",
-    "duration": "10 hammer strikes → 5 tire flips, 5 rounds",
+    "duration": "10 hammer strikes \u2192 5 tire flips, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3603,7 +3603,7 @@
     ],
     "system": "glycolytic",
     "modality": "resisted pressure",
-    "duration": "30s band-resisted forward steps → 10 sprawls, 6 rounds",
+    "duration": "30s band-resisted forward steps \u2192 10 sprawls, 6 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3624,7 +3624,7 @@
     ],
     "system": "glycolytic",
     "modality": "clinch endurance",
-    "duration": "30s double-collar tie → 20 knees, 5 rounds",
+    "duration": "30s double-collar tie \u2192 20 knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3646,7 +3646,7 @@
     ],
     "system": "glycolytic",
     "modality": "strongman MMA",
-    "duration": "10 sandbag cleans → 10 KB snatches, 5 rounds",
+    "duration": "10 sandbag cleans \u2192 10 KB snatches, 5 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3666,7 +3666,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "framing power",
-    "duration": "10 DB push presses → 10 collar tie pulls, 5 rounds",
+    "duration": "10 DB push presses \u2192 10 collar tie pulls, 5 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3687,7 +3687,7 @@
     ],
     "system": "glycolytic",
     "modality": "relentless pace",
-    "duration": "10 sprawls → 10 burpee jumps, 6 rounds",
+    "duration": "10 sprawls \u2192 10 burpee jumps, 6 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3708,7 +3708,7 @@
     ],
     "system": "glycolytic",
     "modality": "suffering",
-    "duration": "20m sled push → 10 band-resisted punches, 5 rounds",
+    "duration": "20m sled push \u2192 10 band-resisted punches, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3729,7 +3729,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "takedown power",
-    "duration": "5 explosive jumps → 5 deadlifts, 6 rounds",
+    "duration": "5 explosive jumps \u2192 5 deadlifts, 6 rounds",
     "intensity": "moderate",
     "tags": [
       "pressure_fighter",
@@ -3749,7 +3749,7 @@
     ],
     "system": "glycolytic",
     "modality": "plum control",
-    "duration": "20 KB swings → 10 clinch knees, 5 rounds",
+    "duration": "20 KB swings \u2192 10 clinch knees, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3770,7 +3770,7 @@
     ],
     "system": "glycolytic",
     "modality": "grapple-strike",
-    "duration": "10 band-resisted level changes → 10 med ball slams, 5 rounds",
+    "duration": "10 band-resisted level changes \u2192 10 med ball slams, 5 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3791,7 +3791,7 @@
     ],
     "system": "glycolytic",
     "modality": "clinch endurance",
-    "duration": "30s shoulder carry → 10 sprawls, 6 rounds",
+    "duration": "30s shoulder carry \u2192 10 sprawls, 6 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3813,7 +3813,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "resisted combos",
-    "duration": "10 band-resisted uppercuts → 10 DB thruster knees, 5 rounds",
+    "duration": "10 band-resisted uppercuts \u2192 10 DB thruster knees, 5 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3835,7 +3835,7 @@
     ],
     "system": "glycolytic",
     "modality": "killing pace",
-    "duration": "20 alternating hammer strikes → 5 burpees over tire, 5 rounds",
+    "duration": "20 alternating hammer strikes \u2192 5 burpees over tire, 5 rounds",
     "intensity": "max",
     "tags": [
       "pressure_fighter",
@@ -3857,7 +3857,7 @@
     ],
     "system": "glycolytic",
     "modality": "hell circuit",
-    "duration": "30s sandbag carry → 10 KB swings → 10 band-resisted knees, 5 rounds",
+    "duration": "30s sandbag carry \u2192 10 KB swings \u2192 10 band-resisted knees, 5 rounds",
     "intensity": "high",
     "tags": [
       "pressure_fighter",
@@ -3888,7 +3888,7 @@
       "grappler",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner counters takedown – you must immediately transition to back control. (90% explosiveness)",
+    "notes": "Partner counters takedown \u2013 you must immediately transition to back control. (90% explosiveness)",
     "equipment_note": "Use crash pads for throws"
   },
   {
@@ -3902,7 +3902,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive scrambling",
-    "duration": "10 sprawl → spin sequences, 5 rounds",
+    "duration": "10 sprawl \u2192 spin sequences, 5 rounds",
     "intensity": "max",
     "tags": [
       "scrambler",
@@ -3932,7 +3932,7 @@
       "cage_work",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner initiates cage clinch – you must reverse or escape. (Fight pace)",
+    "notes": "Partner initiates cage clinch \u2013 you must reverse or escape. (Fight pace)",
     "equipment_note": "MMA gloves recommended"
   },
   {
@@ -3945,7 +3945,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "ground transitions",
-    "duration": "20 escapes → 10 sweeps, 5 rounds",
+    "duration": "20 escapes \u2192 10 sweeps, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -3953,7 +3953,7 @@
       "bjj",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner starts in top turtle – you must recover guard or stand. (Explosive hips)",
+    "notes": "Partner starts in top turtle \u2013 you must recover guard or stand. (Explosive hips)",
     "equipment_note": "No-gi grips only"
   },
   {
@@ -3966,7 +3966,7 @@
     ],
     "system": "glycolytic",
     "modality": "failed shot recovery",
-    "duration": "15 shot → roll sequences, 5 rounds",
+    "duration": "15 shot \u2192 roll sequences, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -4009,7 +4009,7 @@
     ],
     "system": "glycolytic",
     "modality": "transitional awareness",
-    "duration": "10 sub attempts → 5 sweeps, 5 rounds",
+    "duration": "10 sub attempts \u2192 5 sweeps, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -4039,7 +4039,7 @@
       "wrestler",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner resists – you must chain takedowns. (90% effort)",
+    "notes": "Partner resists \u2013 you must chain takedowns. (90% effort)",
     "equipment_note": "Wear rash guards"
   },
   {
@@ -4052,7 +4052,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "positional advancement",
-    "duration": "10 passes → 5 backtakes, 5 rounds",
+    "duration": "10 passes \u2192 5 backtakes, 5 rounds",
     "intensity": "moderate",
     "tags": [
       "scrambler",
@@ -4074,7 +4074,7 @@
     ],
     "system": "glycolytic",
     "modality": "mixed reactions",
-    "duration": "3min rounds: 1-2 → shot, 1min rest x 4",
+    "duration": "3min rounds: 1-2 \u2192 shot, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -4117,7 +4117,7 @@
     ],
     "system": "glycolytic",
     "modality": "defensive urgency",
-    "duration": "15 escapes → 5 shots, 5 rounds",
+    "duration": "15 escapes \u2192 5 shots, 5 rounds",
     "intensity": "max",
     "tags": [
       "scrambler",
@@ -4147,7 +4147,7 @@
       "cage_work",
       "mech_systemic_fatigue"
     ],
-    "notes": "Partner pins to cage – you must escape to center. (Fight pace)",
+    "notes": "Partner pins to cage \u2013 you must escape to center. (Fight pace)",
     "equipment_note": "Wear MMA gloves"
   },
   {
@@ -4183,7 +4183,7 @@
     ],
     "system": "glycolytic",
     "modality": "hybrid transitions",
-    "duration": "3min rounds: combo → shot → sub attempt, 1min rest x 4",
+    "duration": "3min rounds: combo \u2192 shot \u2192 sub attempt, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -4204,7 +4204,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "ground to stand",
-    "duration": "10 granby rolls → 5 shots, 5 rounds",
+    "duration": "10 granby rolls \u2192 5 shots, 5 rounds",
     "intensity": "high",
     "tags": [
       "scrambler",
@@ -4376,7 +4376,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "leg entanglement drills",
-    "duration": "15 entries → 5 finishes, 5 rounds",
+    "duration": "15 entries \u2192 5 finishes, 5 rounds",
     "intensity": "max",
     "tags": [
       "submission_hunter",
@@ -4419,7 +4419,7 @@
     ],
     "system": "glycolytic",
     "modality": "back control",
-    "duration": "5 twister setups → 3 finishes, 5 rounds",
+    "duration": "5 twister setups \u2192 3 finishes, 5 rounds",
     "intensity": "moderate",
     "tags": [
       "submission_hunter",
@@ -4431,7 +4431,7 @@
     "equipment_note": "Dummy must have flexible spine"
   },
   {
-    "name": "D’Arce Depth Charge",
+    "name": "D\u2019Arce Depth Charge",
     "equipment": [
       "medicine_ball"
     ],
@@ -4440,7 +4440,7 @@
     ],
     "system": "glycolytic",
     "modality": "sinking mechanics",
-    "duration": "15 sprawl → D’Arce entries, 5 rounds",
+    "duration": "15 sprawl \u2192 D\u2019Arce entries, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4452,7 +4452,7 @@
       "mech_reactive_rebound",
       "mech_cns_high"
     ],
-    "notes": "Med ball simulates opponent’s head pressure. (Explosive shots)",
+    "notes": "Med ball simulates opponent\u2019s head pressure. (Explosive shots)",
     "equipment_note": "8-12kg ball"
   },
   {
@@ -4473,7 +4473,7 @@
       "leg_lock",
       "mech_systemic_fatigue"
     ],
-    "notes": "KB on thigh to simulate opponent’s resistance. (Slow burn)",
+    "notes": "KB on thigh to simulate opponent\u2019s resistance. (Slow burn)",
     "equipment_note": "20-28kg KB"
   },
   {
@@ -4529,7 +4529,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "entry timing",
-    "duration": "15 entries → 5 finishes, 4 rounds",
+    "duration": "15 entries \u2192 5 finishes, 4 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4537,7 +4537,7 @@
       "guillotine_variation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Bands on dummy’s shoulders for resistance. (Fast setups)",
+    "notes": "Bands on dummy\u2019s shoulders for resistance. (Fast setups)",
     "equipment_note": "Dummy must have flexible neck"
   },
   {
@@ -4571,7 +4571,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "guard recovery",
-    "duration": "5 escapes → 5 buggy attempts, 5 rounds",
+    "duration": "5 escapes \u2192 5 buggy attempts, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4592,7 +4592,7 @@
     ],
     "system": "glycolytic",
     "modality": "hip pressure",
-    "duration": "10 sweeps → 3 finishes, 5 rounds",
+    "duration": "10 sweeps \u2192 3 finishes, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4635,7 +4635,7 @@
     ],
     "system": "glycolytic",
     "modality": "grip fighting",
-    "duration": "20 collar grips → 10 finishes, 4 rounds",
+    "duration": "20 collar grips \u2192 10 finishes, 4 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4698,7 +4698,7 @@
     ],
     "system": "ATP-PCr",
     "modality": "shot to finish",
-    "duration": "10 shots → 5 rolls, 5 rounds",
+    "duration": "10 shots \u2192 5 rolls, 5 rounds",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4719,7 +4719,7 @@
     ],
     "system": "glycolytic",
     "modality": "control transitions",
-    "duration": "3min rounds: arm trap → choke, 1min rest x 4",
+    "duration": "3min rounds: arm trap \u2192 choke, 1min rest x 4",
     "intensity": "high",
     "tags": [
       "submission_hunter",
@@ -4761,7 +4761,7 @@
     ],
     "system": "glycolytic",
     "modality": "shoulder pressure",
-    "duration": "10 entries → 5 finishes, 5 rounds",
+    "duration": "10 entries \u2192 5 finishes, 5 rounds",
     "intensity": "moderate",
     "tags": [
       "submission_hunter",
@@ -4769,7 +4769,7 @@
       "mir_lock",
       "mech_systemic_fatigue"
     ],
-    "notes": "KB on wrist to simulate opponent’s defense. (Slow grind)",
+    "notes": "KB on wrist to simulate opponent\u2019s defense. (Slow grind)",
     "equipment_note": "12-16kg KB"
   },
   {
@@ -6424,7 +6424,7 @@
     ],
     "system": "aerobic",
     "modality": "technical endurance",
-    "duration": "3min shadowboxing → 1min rest → x5 rounds",
+    "duration": "3min shadowboxing \u2192 1min rest \u2192 x5 rounds",
     "intensity": "moderate",
     "tags": [
       "boxing",
@@ -6445,7 +6445,7 @@
     ],
     "system": "aerobic",
     "modality": "fatigue resistance",
-    "duration": "30s rope lean → 30s active framing → x8 rounds",
+    "duration": "30s rope lean \u2192 30s active framing \u2192 x8 rounds",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -6465,7 +6465,7 @@
     ],
     "system": "aerobic",
     "modality": "rulebook exploitation",
-    "duration": "10s clinch → 2s break → immediate jab → x20 rounds",
+    "duration": "10s clinch \u2192 2s break \u2192 immediate jab \u2192 x20 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -6485,7 +6485,7 @@
     ],
     "system": "aerobic",
     "modality": "infighting transitions",
-    "duration": "20s overhook control → 10s uppercuts → x10 rounds",
+    "duration": "20s overhook control \u2192 10s uppercuts \u2192 x10 rounds",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -6507,7 +6507,7 @@
     ],
     "system": "aerobic",
     "modality": "positional dominance",
-    "duration": "45s bag pinned to wall → 15s frame adjustments → x6 rounds",
+    "duration": "45s bag pinned to wall \u2192 15s frame adjustments \u2192 x6 rounds",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -6527,7 +6527,7 @@
     ],
     "system": "aerobic",
     "modality": "defensive clinching",
-    "duration": "Partner jabs → slip → clinch → x50 reps",
+    "duration": "Partner jabs \u2192 slip \u2192 clinch \u2192 x50 reps",
     "intensity": "low",
     "tags": [
       "boxing",
@@ -6549,7 +6549,7 @@
     ],
     "system": "Cognitive",
     "modality": "visual processing",
-    "duration": "3min random ball toss → jab/parry response → x4 rounds",
+    "duration": "3min random ball toss \u2192 jab/parry response \u2192 x4 rounds",
     "intensity": "moderate",
     "tags": [
       "boxing",
@@ -6570,7 +6570,7 @@
     ],
     "system": "Cognitive",
     "modality": "auditory reaction",
-    "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
+    "duration": "5min clinch pummeling \u2192 change direction on beep \u2192 x3 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -6592,7 +6592,7 @@
     ],
     "system": "Cognitive",
     "modality": "decision fatigue",
-    "duration": "3min live wrestling → 30s chess move → x5 rounds",
+    "duration": "3min live wrestling \u2192 30s chess move \u2192 x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "wrestling",
@@ -6615,7 +6615,7 @@
     ],
     "system": "Cognitive",
     "modality": "memory challenge",
-    "duration": "3min execute kick combos from flashed cards → x4 rounds",
+    "duration": "3min execute kick combos from flashed cards \u2192 x4 rounds",
     "intensity": "low",
     "tags": [
       "kickboxing",
@@ -6639,7 +6639,7 @@
     ],
     "system": "Cognitive",
     "modality": "choice reaction",
-    "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
+    "duration": "3min shot entries \u2192 cone color dictates finish (single/double) \u2192 x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -6661,7 +6661,7 @@
     ],
     "system": "Cognitive",
     "modality": "pattern recognition",
-    "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
+    "duration": "3min mitt work \u2192 solve 3 puzzle pieces between rounds \u2192 x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -6683,7 +6683,7 @@
     ],
     "system": "Cognitive",
     "modality": "dual-task loading",
-    "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
+    "duration": "3min footwork drills \u2192 solve math problem between combos \u2192 x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -6692,7 +6692,7 @@
       "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
+    "notes": "Example: 'Teep \u2192 solve 7x8 \u2192 pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
   },
   {
@@ -6706,7 +6706,7 @@
     ],
     "system": "Cognitive",
     "modality": "tactile sensitivity",
-    "duration": "3min pummeling blindfolded → x4 rounds",
+    "duration": "3min pummeling blindfolded \u2192 x4 rounds",
     "intensity": "low",
     "tags": [
       "grappling",
@@ -6728,7 +6728,7 @@
     ],
     "system": "Cognitive",
     "modality": "audio distraction",
-    "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
+    "duration": "3min shadowboxing \u2192 answer riddle mid-round \u2192 x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -6751,7 +6751,7 @@
     ],
     "system": "Cognitive",
     "modality": "visual cueing",
-    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
+    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) \u2192 x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -6761,5 +6761,1401 @@
     ],
     "notes": "Forces stance switches under fatigue (60% speed)",
     "equipment_note": "Traffic light system"
+  },
+  {
+    "name": "Sled Drag Low-Impact Intervals",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "low-impact conditioning",
+    "duration": "40m walk/drag, 30s rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "bjj",
+      "mech_loaded_carry",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Resisted movement without impact stress. Perfect for joint recovery while maintaining work capacity. (40-50% bodyweight)",
+    "equipment_note": "Use low sled height, light load"
+  },
+  {
+    "name": "Swimming Endurance Circuits",
+    "equipment": [
+      "pool"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "zero-impact",
+    "duration": "10-15min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "grappling",
+      "bjj",
+      "mma",
+      "zero_impact",
+      "recovery",
+      "aerobic"
+    ],
+    "notes": "Zero-impact full-body conditioning. Excellent for active recovery between hard sessions. (50-60% max effort)",
+    "equipment_note": "Any pool, any stroke"
+  },
+  {
+    "name": "Bike Sprints (Assault)",
+    "equipment": [
+      "assault_bike"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "low-impact power",
+    "duration": "20s max / 40s rest \u00d7 8",
+    "intensity": "max",
+    "tags": [
+      "mma",
+      "wrestling",
+      "low_impact",
+      "zero_impact",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Air resistance = safe for joints. Excellent leg conditioning without ground impact. (100% effort sprints)",
+    "equipment_note": "Assault bike or similar"
+  },
+  {
+    "name": "Rowing Machine Steady State",
+    "equipment": [
+      "rowing_machine"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "full-body endurance",
+    "duration": "10-15min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "grappling",
+      "mech_horizontal_pull",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Seated rowing = zero ankle/knee impact while building posterior chain endurance. (50-60% effort)",
+    "equipment_note": "Concept2 or equivalent"
+  },
+  {
+    "name": "Upper Body Sled Push",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "pushing power",
+    "duration": "30s push / 30s rest \u00d7 6",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Heavy sled pushes without lower body impact. Maintains pressing strength while managing knee/ankle stress. (75% load)",
+    "equipment_note": "Add upper handles, light load"
+  },
+  {
+    "name": "Elliptical Machine Intervals",
+    "equipment": [
+      "elliptical"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "low-impact intervals",
+    "duration": "30s high resistance / 60s easy \u00d7 8",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "mma",
+      "zero_impact",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Zero foot-strike impact with full leg range. Safe for acute recovery phases. (RPE 7-8)",
+    "equipment_note": "Adjust stride length, not just speed"
+  },
+  {
+    "name": "Parallette Push-Ups (Low-Impact)",
+    "equipment": [
+      "parallettes"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "upper body endurance",
+    "duration": "20 reps, 90s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "brawler",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Elevated handles reduce wrist flexion stress. Safe shoulder pressing with endurance focus. (No failure)",
+    "equipment_note": "Wooden parallettes, 3-4\" height"
+  },
+  {
+    "name": "Landmine Rotations (Light Load)",
+    "equipment": [
+      "landmine",
+      "light_plates"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "rotational stability",
+    "duration": "15 rotations/side, 60s rest \u00d7 6",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "muay_thai",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Loaded rotation without impact. Rebuilds rotational core stability post-injury. (40% 1RM)",
+    "equipment_note": "15-25lb total load"
+  },
+  {
+    "name": "Banded Shadowboxing",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "resisted striking",
+    "duration": "3min rounds, 1min rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "low_impact"
+    ],
+    "notes": "Light band resistance increases punching load without impact. (Light bands only, 50% power)",
+    "equipment_note": "Loop bands, anchor at shoulder height"
+  },
+  {
+    "name": "Dumbbell Turkish Get-Ups (Light)",
+    "equipment": [
+      "dumbbell"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "mobility + stability",
+    "duration": "5/side, 90s rest \u00d7 5",
+    "intensity": "low",
+    "tags": [
+      "mma",
+      "grappling",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "mobility"
+    ],
+    "notes": "Controlled movement pattern rebuilds shoulder/hip stability. No explosive phases. (8-12lb max)",
+    "equipment_note": "Very light dumbbell, focus on form"
+  },
+  {
+    "name": "Core Plank Progressions",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "isometric stability",
+    "duration": "30s hold, 30s rest \u00d7 8",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Foundational core stability without rotation or impact. Builds endurance. (Zero movement)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Assisted Chinnups (Light Load)",
+    "equipment": [
+      "pullup_bar",
+      "resistance_band"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "upper body pull",
+    "duration": "8-10 reps, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "bjj",
+      "mech_vertical_pull_heavy",
+      "mech_upper_pull",
+      "low_impact"
+    ],
+    "notes": "Band assistance maintains pulling strength without overload. (60% bodyweight)",
+    "equipment_note": "Heavy band for assistance"
+  },
+  {
+    "name": "Bike Steady-State (Easy Gear)",
+    "equipment": [
+      "stationary_bike"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "cardiac work",
+    "duration": "20-30min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "mma",
+      "zero_impact",
+      "recovery",
+      "aerobic"
+    ],
+    "notes": "Seated bike = zero ankle/knee impact. Perfect for heart health maintenance. (RPE 4-5)",
+    "equipment_note": "Easy resistance, comfortable seat"
+  },
+  {
+    "name": "Wall Sit Series (Isometric)",
+    "equipment": [
+      "wall"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "quad endurance",
+    "duration": "20s hold / 20s rest \u00d7 10",
+    "intensity": "high",
+    "tags": [
+      "wrestling",
+      "mma",
+      "mech_lower_squat",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Isometric leg work without dynamic knee stress. Builds fight stance durability. (Back on wall only)",
+    "equipment_note": "Pad for back comfort"
+  },
+  {
+    "name": "Prone Superman Holds",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "posterior chain stability",
+    "duration": "20s hold, 40s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "grappling",
+      "mech_trunk_stability",
+      "posterior_chain",
+      "low_impact"
+    ],
+    "notes": "Posterior chain isometric without dynamic stress. Zero impact. (Controlled breathing)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Sled Reverse Drag (Backward Walking)",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "quad dominant work",
+    "duration": "40m backward drag, 30s rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "mech_reactive",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Backward movement without forward impact. Challenges ankle stability safely. (50% load)",
+    "equipment_note": "Harness recommended"
+  },
+  {
+    "name": "Medicine Ball Chest Pass (Light Load)",
+    "equipment": [
+      "medicine_ball",
+      "wall"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "explosive push",
+    "duration": "10 reps, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "brawler",
+      "mech_ballistic",
+      "mech_upper_press",
+      "low_impact"
+    ],
+    "notes": "Standing med ball pass = reduced ankle impact vs. floor slams. (4-6kg ball only)",
+    "equipment_note": "Soft ball, pad wall"
+  },
+  {
+    "name": "Glute Bridge March (Isometric Base)",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "glute activation",
+    "duration": "20 marches per side, 60s rest \u00d7 6",
+    "intensity": "low",
+    "tags": [
+      "mma",
+      "wrestling",
+      "glute_load_high",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Controlled glute engagement without explosive movement. (50% effort)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Pallof Press (Anti-Rotation)",
+    "equipment": [
+      "cable_machine",
+      "light_weight"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "core stability",
+    "duration": "12 reps/side, 60s rest \u00d7 5",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_anti_rotation",
+      "mech_trunk_stability",
+      "low_impact"
+    ],
+    "notes": "Resists rotation rather than creates it. Safer core work for joint-sensitive athletes. (Light weight only)",
+    "equipment_note": "10-15lb stack"
+  },
+  {
+    "name": "Bike Sprints (Fixed Gear Recovery)",
+    "equipment": [
+      "stationary_bike"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "moderate intervals",
+    "duration": "30s hard / 90s easy \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "zero_impact",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Longer recovery intervals = safe for acute phases. (70% effort on hard intervals)",
+    "equipment_note": "Comfort seat essential"
+  },
+  {
+    "name": "Quadruped Shoulder Taps",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "stability",
+    "duration": "20 taps, 60s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "grappling",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Controlled stability without impact. Excellent for prehab. (No rushed movements)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Dead Bug Progressions",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "anti-extension core",
+    "duration": "15 reps, 60s rest \u00d7 6",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Controlled core work on back = zero impact. Rebuilds core stability safely. (Slow reps)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Banded Sled Push (Light)",
+    "equipment": [
+      "sled",
+      "bands"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "low-impact push",
+    "duration": "20m push, 45s rest \u00d7 5",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_lower_squat",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Band + sled = full-body load without impact. Great for anterior chain. (30% bodyweight load)",
+    "equipment_note": "Light bands, low sled height"
+  },
+  {
+    "name": "Rowing Machine Sprint Intervals",
+    "equipment": [
+      "rowing_machine"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "low-impact power",
+    "duration": "20s max / 40s easy \u00d7 8",
+    "intensity": "max",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "zero_impact"
+    ],
+    "notes": "Seated = zero ankle/knee impact during hard efforts. Maintains power capacity. (Full intensity sprints)",
+    "equipment_note": "Concept2 or equivalent"
+  },
+  {
+    "name": "Farmer Carry (Seated Starting Position)",
+    "equipment": [
+      "dumbbells"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "loaded carry",
+    "duration": "30m walk, 60s rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "grappling",
+      "mech_loaded_carry",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Dumbbells = loaded carry without dynamic ankle stress. (50-60% max load)",
+    "equipment_note": "Moderate dumbbells, controlled pace"
+  },
+  {
+    "name": "Pillow Punch Combinations (Air Work)",
+    "equipment": [
+      "boxing_pillow"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "soft-contact striking",
+    "duration": "3min rounds, 1min rest \u00d7 5",
+    "intensity": "high",
+    "tags": [
+      "boxing",
+      "brawler",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "low_impact"
+    ],
+    "notes": "Soft surface reduces impact stress while maintaining striking mechanics. (80% power max)",
+    "equipment_note": "Heavy bag pillow or soft target"
+  },
+  {
+    "name": "Assisted Dip Machine (Light Load)",
+    "equipment": [
+      "dip_machine"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "lower body press",
+    "duration": "10 reps, 90s rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_upper_press",
+      "low_impact"
+    ],
+    "notes": "Assisted = reduces wrist/shoulder stress. Full ROM pressing without pain. (50% bodyweight assist)",
+    "equipment_note": "Adjust assist level"
+  },
+  {
+    "name": "Pool Walking (Shallow End)",
+    "equipment": [
+      "pool"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "water resistance",
+    "duration": "10-15min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "mma",
+      "bjj",
+      "zero_impact",
+      "recovery",
+      "aerobic"
+    ],
+    "notes": "Water resistance + zero impact = perfect recovery tool. (50% land speed, RPE 5)",
+    "equipment_note": "Chest-deep water"
+  },
+  {
+    "name": "Incline Treadmill Walk",
+    "equipment": [
+      "treadmill"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "low-impact lower body",
+    "duration": "15-20min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "mma",
+      "posterior_chain_heavy",
+      "zero_impact",
+      "aerobic"
+    ],
+    "notes": "Walking \u2260 running impact. Incline = posterior chain work without joint stress. (3-5% grade, 2-3mph)",
+    "equipment_note": "Treadmill with incline"
+  },
+  {
+    "name": "Banded Pull-Aparts (Light)",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "shoulder stability",
+    "duration": "15 reps, 45s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "low_impact"
+    ],
+    "notes": "Rear delt/scap prehab without load. Improves shoulder durability. (Light band only)",
+    "equipment_note": "Light resistance loop"
+  },
+  {
+    "name": "Arch Walks (Barefoot Activation)",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "foot intrinsic activation",
+    "duration": "2min continuous, 30s rest \u00d7 6",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "mobility"
+    ],
+    "notes": "Strengthen foot arches = better base for stance work. Barefoot preferred. (Slow, controlled)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Side-Lying Leg Raise (Hip Stability)",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "hip abductor work",
+    "duration": "20 reps/side, 60s rest \u00d7 6",
+    "intensity": "low",
+    "tags": [
+      "mma",
+      "wrestling",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "mech_lower_hip_hinge"
+    ],
+    "notes": "Isolated hip abduction without dynamic stress. Stabilizes stance. (Slow, controlled reps)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Reverse Sled Drag (Quad Emphasis)",
+    "equipment": [
+      "sled"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "quad-dominant work",
+    "duration": "20m drag, 45s rest \u00d7 6",
+    "intensity": "high",
+    "tags": [
+      "wrestling",
+      "mma",
+      "mech_lower_squat",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Backward = eccentric quad work without forward impact. (75% load)",
+    "equipment_note": "Harness, low sled height"
+  },
+  {
+    "name": "Medicine Ball Rotational Slam (Light)",
+    "equipment": [
+      "medicine_ball",
+      "mat"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "rotational power",
+    "duration": "8 reps/side, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "muay_thai",
+      "mma",
+      "mech_trunk_rotation",
+      "mech_ballistic",
+      "low_impact"
+    ],
+    "notes": "Diagonal slams = rotational power without overhead stress. (4kg ball max)",
+    "equipment_note": "Soft med ball, padded floor"
+  },
+  {
+    "name": "Tall Kneeling Core Holds",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "core endurance",
+    "duration": "30s hold, 45s rest \u00d7 8",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Kneeling position = engaged core without ankle stress. (No movement, full tension)",
+    "equipment_note": "Padded mat, knee pad"
+  },
+  {
+    "name": "Incline Push-Up Progression",
+    "equipment": [
+      "bench"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "upper body press",
+    "duration": "10-15 reps, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "brawler",
+      "mech_upper_press",
+      "low_impact"
+    ],
+    "notes": "Elevated hands = reduced wrist extension stress. Full ROM pressing. (Hands on elevated surface)",
+    "equipment_note": "Bench or elevated platform"
+  },
+  {
+    "name": "Cable Woodchops (Light Load)",
+    "equipment": [
+      "cable_machine"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "rotational stability",
+    "duration": "12 reps/side, 60s rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "muay_thai",
+      "mma",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Controlled rotation against cable resistance = safe rotational loading. (10-15lb stack)",
+    "equipment_note": "Cable machine, light weight"
+  },
+  {
+    "name": "Stair Climbing (No Sprinting)",
+    "equipment": [
+      "stairs"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "glycolytic",
+    "modality": "quad dominant work",
+    "duration": "5-10min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "wrestling",
+      "mma",
+      "posterior_chain_heavy",
+      "low_impact"
+    ],
+    "notes": "Controlled stair pace = quad work without sprint impact. (RPE 5-6, no rushing)",
+    "equipment_note": "Standard stairs, slow pace"
+  },
+  {
+    "name": "Banded Face Pulls (Rear Delt)",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "shoulder prehab",
+    "duration": "15 reps, 45s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "low_impact"
+    ],
+    "notes": "Posterior shoulder strengthening without load. Prehab for striking athletes. (Light band)",
+    "equipment_note": "Anchor band at face height"
+  },
+  {
+    "name": "Half-Kneeling Hip Flexor Stretch",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "mobility",
+    "duration": "30s/side, repeat 3x",
+    "intensity": "low",
+    "tags": [
+      "mma",
+      "bjj",
+      "hip_flexion_loaded",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "mobility"
+    ],
+    "notes": "Static flexibility = zero impact. Addresses common fighter tightness. (Hold stretch, breathe)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Dumbbell Bent-Row (Light Load)",
+    "equipment": [
+      "dumbbells"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "back strength",
+    "duration": "10 reps/side, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_horizontal_pull",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Controlled rowing without impact = back strengthening safely. (5-10lb dumbbells)",
+    "equipment_note": "Light dumbbells, bench optional"
+  },
+  {
+    "name": "Bird Dog Holds (Core Stability)",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "stability",
+    "duration": "15s/side, 45s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Contralateral limb hold = core anti-rotation without movement. (Zero motion, full tension)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Elliptical Backward Movement",
+    "equipment": [
+      "elliptical"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "posterior chain",
+    "duration": "2min forward / 1min backward \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "wrestling",
+      "posterior_chain_heavy",
+      "zero_impact",
+      "mech_reactive"
+    ],
+    "notes": "Backward elliptical = posterior chain work without impact. Challenges ankle stability. (RPE 6)",
+    "equipment_note": "Smooth elliptical"
+  },
+  {
+    "name": "Push-Up Hold (Isometric Chest)",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "isometric upper body",
+    "duration": "20s hold, 45s rest \u00d7 8",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_upper_press",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Holds = maximum tension with zero movement. Builds isometric pressing strength. (No reps, just hold)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Banded Core Chop (Anti-Rotation)",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "rotational stability",
+    "duration": "12 reps/side, 60s rest \u00d7 5",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "muay_thai",
+      "mech_anti_rotation",
+      "mech_trunk_stability",
+      "low_impact"
+    ],
+    "notes": "Resists rotation = safer core work. Light band = safe loading. (Light resistance only)",
+    "equipment_note": "Light loop band"
+  },
+  {
+    "name": "Wall Plank Hold",
+    "equipment": [
+      "wall"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "core endurance",
+    "duration": "30s hold, 45s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Hands on wall = reduced stability = hard core work. Zero impact. (Back toward wall)",
+    "equipment_note": "Padded wall"
+  },
+  {
+    "name": "Single-Leg Balance Series",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "ankle proprioception",
+    "duration": "30s/leg, 30s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "mma",
+      "mech_systemic_fatigue",
+      "low_impact",
+      "balance"
+    ],
+    "notes": "Proprioceptive training = ankle stability without impact. (Close eyes for difficulty)",
+    "equipment_note": "Open space, nothing to trip on"
+  },
+  {
+    "name": "Assisted Squat (TRX)",
+    "equipment": [
+      "TRX"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "lower body work",
+    "duration": "8-10 reps, 90s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "wrestling",
+      "mma",
+      "mech_lower_squat",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Hand assistance reduces knee stress while building depth. (No impact landing)",
+    "equipment_note": "TRX straps"
+  },
+  {
+    "name": "Landmine Single-Arm Press (Light)",
+    "equipment": [
+      "landmine",
+      "light_weight"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "unilateral press",
+    "duration": "8 reps/side, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Fixed trajectory = safe pressing without shoulder impingement. (25-35lb load)",
+    "equipment_note": "Landmine device, light plates"
+  },
+  {
+    "name": "Quad Foam Rolling (Active Recovery)",
+    "equipment": [
+      "foam_roller"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "soft tissue",
+    "duration": "2min continuous",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "mma",
+      "recovery",
+      "low_impact",
+      "mobility"
+    ],
+    "notes": "Self-myofascial release = zero impact recovery. Improves tissue quality. (Light pressure only)",
+    "equipment_note": "Dense foam roller"
+  },
+  {
+    "name": "Side-Plank Hold (Core Lateral)",
+    "equipment": [
+      "mat"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "lateral stability",
+    "duration": "25s/side, 45s rest \u00d7 8",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_trunk_stability",
+      "low_impact",
+      "core"
+    ],
+    "notes": "Side plank = lateral core endurance without movement. Zero impact. (Front forearm on mat)",
+    "equipment_note": "Padded mat"
+  },
+  {
+    "name": "Hanging Leg Raise (Assisted)",
+    "equipment": [
+      "pullup_bar",
+      "AB_straps"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "hip flexor work",
+    "duration": "6-8 reps, 90s rest \u00d7 5",
+    "intensity": "moderate",
+    "tags": [
+      "grappling",
+      "mma",
+      "hip_flexion_loaded",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Leg straps = supported hip work without full bodyweight. (Bent knees, controlled rep)",
+    "equipment_note": "Ab straps or sling"
+  },
+  {
+    "name": "Chest-Supported Dumbbell Row",
+    "equipment": [
+      "incline_bench",
+      "dumbbells"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "back strength",
+    "duration": "10 reps, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_horizontal_pull",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Chest support = zero spinal stress. Pure back work without injury risk. (8-12lb dumbbells)",
+    "equipment_note": "Incline bench, light dumbbells"
+  },
+  {
+    "name": "Tall-Kneeling Pallof Press",
+    "equipment": [
+      "cable_machine"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "anti-rotation core",
+    "duration": "10 reps/side, 60s rest \u00d7 5",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "muay_thai",
+      "mech_anti_rotation",
+      "mech_trunk_stability",
+      "low_impact"
+    ],
+    "notes": "Resists rotation from tall kneeling = safe core loading. (5-10lb stack)",
+    "equipment_note": "Cable machine, light weight"
+  },
+  {
+    "name": "Swimming Technique Drills",
+    "equipment": [
+      "pool"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "full-body endurance",
+    "duration": "10-15min (varied strokes)",
+    "intensity": "zone 2",
+    "tags": [
+      "grappling",
+      "mma",
+      "mech_systemic_fatigue",
+      "zero_impact",
+      "recovery"
+    ],
+    "notes": "Vary strokes = full-body conditioning without impact. Excellent mobility work. (50-60% effort)",
+    "equipment_note": "Any pool, any stroke"
+  },
+  {
+    "name": "Kettle Bell Sumo Squat (Light Load)",
+    "equipment": [
+      "kettlebell"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "lower body",
+    "duration": "10-12 reps, 75s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "wrestling",
+      "mma",
+      "mech_lower_squat",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Sumo stance = safe knee angles. Light load = controlled tempo. (12-16kg KB)",
+    "equipment_note": "Light kettlebell"
+  },
+  {
+    "name": "Foam Roll Hamstring (Seated)",
+    "equipment": [
+      "foam_roller"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "recovery",
+    "modality": "soft tissue",
+    "duration": "2min continuous",
+    "intensity": "low",
+    "tags": [
+      "mma",
+      "boxing",
+      "recovery",
+      "low_impact",
+      "mobility"
+    ],
+    "notes": "Seated rolling = zero impact mobility work. Addresses posterior chain tightness. (Light pressure)",
+    "equipment_note": "Dense foam roller"
+  },
+  {
+    "name": "Resistance Band Chest Fly",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "chest endurance",
+    "duration": "15 reps, 45s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "brawler",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Band fly = chest work without shoulder joint stress. (Light band only)",
+    "equipment_note": "Light resistance loop"
+  },
+  {
+    "name": "Assisted Pullup (Heavy Band)",
+    "equipment": [
+      "pullup_bar",
+      "heavy_band"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "upper body pull",
+    "duration": "8-10 reps, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "mma",
+      "bjj",
+      "mech_vertical_pull_heavy",
+      "mech_upper_pull",
+      "low_impact"
+    ],
+    "notes": "Band assistance = reduced shoulder stress while building pull strength. (70% bodyweight)",
+    "equipment_note": "Heavy resistance band"
+  },
+  {
+    "name": "Banded External Rotation (Shoulder)",
+    "equipment": [
+      "bands"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "shoulder prehab",
+    "duration": "12 reps/side, 45s rest \u00d7 8",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "mech_upper_pull",
+      "mech_trunk_stability",
+      "low_impact"
+    ],
+    "notes": "Rotator cuff stability = injury prevention. Zero impact. (Light band, 90\u00b0 elbow)",
+    "equipment_note": "Light resistance band"
+  },
+  {
+    "name": "Water Jogging (Deep End)",
+    "equipment": [
+      "pool"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "running simulation",
+    "duration": "10-15min continuous",
+    "intensity": "zone 2",
+    "tags": [
+      "boxing",
+      "mma",
+      "zero_impact",
+      "recovery",
+      "aerobic"
+    ],
+    "notes": "Water = zero foot-strike impact while maintaining running mechanics. (50% land pace, RPE 5-6)",
+    "equipment_note": "Deep pool, buoyancy belt optional"
+  },
+  {
+    "name": "Half-Kneeling Landmine Press",
+    "equipment": [
+      "landmine"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "ATP-PCr",
+    "modality": "unilateral press",
+    "duration": "8 reps/side, 60s rest \u00d7 6",
+    "intensity": "moderate",
+    "tags": [
+      "boxing",
+      "mma",
+      "mech_upper_press",
+      "mech_systemic_fatigue",
+      "low_impact"
+    ],
+    "notes": "Fixed trajectory + unilateral = safe pressing without asymmetrical stress. (35-45lb load)",
+    "equipment_note": "Landmine device, moderate load"
+  },
+  {
+    "name": "Tempo Shadowboxing (Slow Reps)",
+    "equipment": [
+      "mirror"
+    ],
+    "phases": [
+      "GPP"
+    ],
+    "system": "aerobic",
+    "modality": "technical endurance",
+    "duration": "5min rounds, 1min rest \u00d7 4",
+    "intensity": "low",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "low_impact"
+    ],
+    "notes": "Slow, controlled reps = technique work without impact. (30% speed, form focus)",
+    "equipment_note": "Mirror for feedback"
   }
 ]
