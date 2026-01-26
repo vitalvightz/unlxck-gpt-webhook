@@ -23,8 +23,11 @@ def test_clinical_guidance_fallback_when_no_drills():
         seen_drills=set()
     )
     
-    # Should contain clinical guidance, not literal error
-    assert "Consult with a healthcare professional" in result or "✅ No rehab work required" in result or "Red Flag" in result
+    # Should contain clinical guidance when no drills are available
+    # (Red flag detection would produce a different message)
+    if "Red Flag" not in result:
+        assert "Consult with a healthcare professional" in result, \
+            f"Expected clinical guidance message, got: {result}"
     # Should NOT contain the old literal error
     assert "No rehab options for this phase" not in result
 

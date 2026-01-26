@@ -124,6 +124,8 @@ def _normalize_time_labels(text: str) -> str:
     if not text:
         return text
     # Match "Week N" or "Day N" patterns and make them bold if not already
+    # Uses negative lookbehind (?<!\*\*) and lookahead (?!\*\*) to prevent
+    # double-bolding text that's already formatted as **Week N**
     text = re.sub(r'(?<!\*\*)\b(Week|Day)\s+(\d+)\b(?!\*\*)', r'**\1 \2**', text)
     return text
 
