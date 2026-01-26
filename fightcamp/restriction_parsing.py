@@ -194,7 +194,7 @@ def _starts_with_trigger_token(text: str) -> bool:
 def _contains_symptom_token(text: str) -> bool:
     normalized = _normalize_text(text)
     for token in SYMPTOM_TOKENS:
-        if re.search(rf"\\b{re.escape(token)}\\b", normalized):
+        if re.search(rf"\b{re.escape(token)}\b", normalized):
             return True
     return False
 
