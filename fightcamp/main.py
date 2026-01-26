@@ -116,6 +116,36 @@ def _sanitize_phase_text(text: str, labels: list[str]) -> str:
     return "\n".join(lines)
 
 
+def _normalize_time_labels(text: str) -> str:
+    """
+    Normalize time labels in output text for consistent formatting.
+    Converts patterns like "Week 1" or "Day 1" to bold format "**Week 1**".
+    """
+    if not text:
+        return text
+    # Match "Week N" or "Day N" patterns and make them bold if not already
+    text = re.sub(r'(?<!\*\*)\b(Week|Day)\s+(\d+)\b(?!\*\*)', r'**\1 \2**', text)
+    return text
+
+
+def _sanitize_stage_output(text: str) -> str:
+    """
+    Sanitize stage/phase output text for consistent structure.
+    - Normalizes time labels
+    - Cleans up extra whitespace
+    - Ensures consistent heading formatting
+    """
+    if not text:
+        return text
+    # Normalize time labels
+    text = _normalize_time_labels(text)
+    # Remove excessive blank lines (more than 2 consecutive newlines)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    # Clean up trailing whitespace on lines
+    text = '\n'.join(line.rstrip() for line in text.split('\n'))
+    return text.strip()
+
+
 def _apply_muay_thai_filters(text: str, *, allow_grappling: bool) -> str:
     if not text or allow_grappling:
         return text
@@ -716,11 +746,18 @@ async def generate_plan(data: dict):
     ]
      
     def build_phase(name, weeks, days, mindset, strength, cond, guardrails):
+        # Apply phase-text sanitization first
         mindset = _sanitize_phase_text(mindset, sanitize_labels)
         strength = _sanitize_phase_text(strength, sanitize_labels)
         cond = _sanitize_phase_text(cond, sanitize_labels)
         if guardrails:
             guardrails = _sanitize_phase_text(guardrails, sanitize_labels)
+        # Apply stage output sanitization for consistent structure
+        mindset = _sanitize_stage_output(mindset)
+        strength = _sanitize_stage_output(strength)
+        cond = _sanitize_stage_output(cond)
+        if guardrails:
+            guardrails = _sanitize_stage_output(guardrails)
         return PhaseBlock(
             name=name,
             weeks=weeks,

@@ -438,7 +438,7 @@ def generate_rehab_protocols(
                 lines.append(f"- {loc_title} ({type_title}):")
                 lines.extend([f"  • {d}" for d in drills])
     if not lines:
-        return "\n⚠️ No rehab options for this phase.", seen_drills
+        return "\n⚠️ Consult with a healthcare professional for personalized rehab guidance.", seen_drills
 
     if any("bfr" in line.lower() for line in lines):
         lines.append(f"- {BFR_SAFETY_GATE}")
