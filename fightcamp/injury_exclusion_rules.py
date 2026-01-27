@@ -137,6 +137,7 @@ INJURY_RULES = {
             "reverse hyper",
             "reverse hyperextension",
             # squats that heavily load spine
+            "back squat",
             "back squat heavy",
             "heavy squat",
             "low bar squat",
@@ -533,6 +534,7 @@ INJURY_RULES = {
             "repeated landings",
             "rebound jumps",
             "repeated rebounds",
+            "split jump",
             # plyos
             "box jump",
             "jump squat",
