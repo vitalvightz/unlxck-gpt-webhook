@@ -1,14 +1,11 @@
 from pathlib import Path
 import json
+from typing import Iterable
 
-from .injury_formatting import (
-    format_injury_summary,
-    format_restriction_guardrail,
-    parse_injury_entry,
-    parse_injuries_and_restrictions,
-)
+from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
 # Rehab bank stores entries with fields like:
@@ -647,17 +644,32 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
     return drills[:limit]
 
 
-def format_injury_guardrails(phase: str, injuries: str) -> str:
+def _format_restrictions_block(restrictions: Iterable[ParsedRestriction]) -> list[str]:
+    if not restrictions:
+        return []
+    lines = ["**Restrictions (Stage-2 daily planner only)**"]
+    for restriction in restrictions:
+        phrase = restriction.get("original_phrase")
+        if phrase:
+            lines.append(f"- {phrase}")
+    return lines
+
+
+def format_injury_guardrails(
+    phase: str,
+    injuries: str,
+    restrictions: Iterable[ParsedRestriction] | None = None,
+) -> str:
     """Return markdown injury guardrails for the current phase."""
     if not injuries:
+        restrictions_lines = _format_restrictions_block(restrictions or [])
+        if restrictions_lines:
+            return "\n".join(restrictions_lines)
         return "✅ No injury guardrails required."
 
-    parsed_injuries, restrictions = parse_injuries_and_restrictions(injuries)
-    injury_phrases = [entry.get("original_phrase") for entry in parsed_injuries if entry.get("original_phrase")]
-    injury_text = "; ".join(injury_phrases)
-
-    entries = _normalize_injury_entries(injury_text)
-    if not entries and not restrictions:
+    entries = _normalize_injury_entries(injuries)
+    restrictions_list = list(restrictions or [])
+    if not entries and not restrictions_list:
         return "✅ No injury guardrails required."
 
     lines: list[str] = []
@@ -670,18 +682,14 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         laterality = entry.get("laterality")
         severity = entry.get("severity") or INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
         region_key = LOCATION_REGION_MAP.get(loc or "", "unspecified")
-        if itype == "impingement" and loc == "shoulder":
-            severity_label = str(severity).capitalize()
-            summary = f"{severity_label} impingement — avoid overhead patterns (banned list)"
-        else:
-            summary = format_injury_summary(
-                {
-                    "canonical_location": loc,
-                    "laterality": laterality,
-                    "injury_type": itype,
-                    "severity": severity,
-                }
-            )
+        summary = format_injury_summary(
+            {
+                "canonical_location": loc,
+                "laterality": laterality,
+                "injury_type": itype,
+                "severity": severity,
+            }
+        )
         lines.append(f"- {summary}")
         ruleset = REGION_GUARDRAILS.get(region_key, REGION_GUARDRAILS["lower_leg_foot"]).get(
             severity,
@@ -689,12 +697,11 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         )
         guardrails.append((loc, laterality, ruleset))
 
-    if restrictions:
+    restrictions_lines = _format_restrictions_block(restrictions_list)
+    if restrictions_lines:
         if lines:
             lines.append("")
-        lines.append("**Restrictions (from athlete notes)**")
-        for restriction in restrictions:
-            lines.append(f"- {format_restriction_guardrail(restriction)}")
+        lines.extend(restrictions_lines)
 
     if phase.upper() == "TAPER":
         if lines:

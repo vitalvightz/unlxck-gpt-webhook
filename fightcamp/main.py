@@ -47,7 +47,6 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
-from .injury_formatting import parse_injuries_and_restrictions
 
 GRAPPLING_STYLES = {
     "mma",
@@ -260,8 +259,11 @@ async def generate_plan(data: dict):
 
     # Parse injuries BEFORE strength/conditioning generation
     timer_start = perf_counter()
-    parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
-    injury_phrases = [entry.get("original_phrase") for entry in parsed_injuries if entry.get("original_phrase")]
+    injury_phrases = [
+        entry.get("original_phrase")
+        for entry in plan_input.parsed_injuries
+        if entry.get("original_phrase")
+    ]
     injuries_only_text = "; ".join(injury_phrases)
     raw_injury_list = [w.strip().lower() for w in injury_phrases if w.strip()] if injury_phrases else []
     _record_timing("parse_injuries", timer_start)
@@ -475,10 +477,10 @@ async def generate_plan(data: dict):
                 current_phase="TAPER",
                 seen_drills=seen_rehab_drills,
             )
-    gpp_guardrails = format_injury_guardrails("GPP", injuries)
-    spp_guardrails = format_injury_guardrails("SPP", injuries)
-    taper_guardrails = format_injury_guardrails("TAPER", injuries)
-    has_injuries = bool(injuries_only_text or parsed_restrictions)
+    gpp_guardrails = format_injury_guardrails("GPP", injuries, plan_input.restrictions)
+    spp_guardrails = format_injury_guardrails("SPP", injuries, plan_input.restrictions)
+    taper_guardrails = format_injury_guardrails("TAPER", injuries, plan_input.restrictions)
+    has_injuries = bool(injuries_only_text or plan_input.restrictions)
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
         "GPP",
