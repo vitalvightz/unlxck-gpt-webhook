@@ -20,6 +20,9 @@ PHASE_SYSTEM_RATIOS = {
     "TAPER": {"alactic": 0.7, "aerobic": 0.3, "glycolytic": 0.0},
 }
 
+STAGE_1 = "STAGE_1"
+STAGE_2 = "STAGE_2"
+
 STYLE_CONDITIONING_RATIO = {
     "GPP": 0.20,
     "SPP": 0.60,

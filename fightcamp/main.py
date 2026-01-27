@@ -321,6 +321,9 @@ async def generate_plan(data: dict):
     taper_mindset = build_mindset_prompt("TAPER")
     _record_timing("mindset", timer_start)
 
+    selection_ignore_restrictions = True
+    logger.info("[stage] selection_ignore_restrictions=%s", selection_ignore_restrictions)
+
     # === Strength blocks per phase with repeat filtering ===
     timer_start = perf_counter()
     strength_blocks = []
@@ -335,7 +338,13 @@ async def generate_plan(data: dict):
     strength_reason_log: dict[str, list] = {}
 
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
-        gpp_flags = {**training_context.to_flags(), "phase": "GPP", "random_seed": random_seed}
+        gpp_flags = {
+            **training_context.to_flags(),
+            "phase": "GPP",
+            "random_seed": random_seed,
+            "restrictions": plan_input.restrictions,
+            "ignore_restrictions": selection_ignore_restrictions,
+        }
         gpp_block = generate_strength_block(
             flags=gpp_flags,
             weaknesses=training_context.weaknesses,
@@ -353,6 +362,8 @@ async def generate_plan(data: dict):
             "prev_exercises": gpp_ex_names,
             "recent_exercises": list(gpp_movements),
             "random_seed": random_seed,
+            "restrictions": plan_input.restrictions,
+            "ignore_restrictions": selection_ignore_restrictions,
         }
         spp_block = generate_strength_block(
             flags=spp_flags,
@@ -373,6 +384,8 @@ async def generate_plan(data: dict):
             "prev_exercises": combined_prev,
             "recent_exercises": combined_recent,
             "random_seed": random_seed,
+            "restrictions": plan_input.restrictions,
+            "ignore_restrictions": selection_ignore_restrictions,
         }
         taper_block = generate_strength_block(
             flags=taper_flags,
@@ -405,7 +418,13 @@ async def generate_plan(data: dict):
             gpp_cond_grouped,
             gpp_cond_missing,
         ) = generate_conditioning_block(
-            {**training_context.to_flags(), "phase": "GPP", "random_seed": random_seed}
+            {
+                **training_context.to_flags(),
+                "phase": "GPP",
+                "random_seed": random_seed,
+                "restrictions": plan_input.restrictions,
+                "ignore_restrictions": selection_ignore_restrictions,
+            }
         )
         conditioning_reason_log["GPP"] = gpp_cond_reasons
 
@@ -417,7 +436,13 @@ async def generate_plan(data: dict):
             spp_cond_grouped,
             spp_cond_missing,
         ) = generate_conditioning_block(
-            {**training_context.to_flags(), "phase": "SPP", "random_seed": random_seed}
+            {
+                **training_context.to_flags(),
+                "phase": "SPP",
+                "random_seed": random_seed,
+                "restrictions": plan_input.restrictions,
+                "ignore_restrictions": selection_ignore_restrictions,
+            }
         )
         conditioning_reason_log["SPP"] = spp_cond_reasons
 
@@ -429,7 +454,13 @@ async def generate_plan(data: dict):
             taper_cond_grouped,
             taper_cond_missing,
         ) = generate_conditioning_block(
-            {**training_context.to_flags(), "phase": "TAPER", "random_seed": random_seed}
+            {
+                **training_context.to_flags(),
+                "phase": "TAPER",
+                "random_seed": random_seed,
+                "restrictions": plan_input.restrictions,
+                "ignore_restrictions": selection_ignore_restrictions,
+            }
         )
         conditioning_reason_log["TAPER"] = taper_cond_reasons
     _record_timing("conditioning", timer_start)
