@@ -120,6 +120,6 @@ def format_missing_system_block(
     lines = [
         f"{system_label} (Status: Not prescribed)",
         f"Reason: {reason}",
-        f"Coach adjustment option: {lever}",
+        f"Stage-2 lever: {lever}",
     ]
     return "\n".join(lines)
