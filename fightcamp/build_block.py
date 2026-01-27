@@ -66,6 +66,12 @@ _KNOWN_HEADINGS = [
     "Injury Guardrails",
 ]
 
+_DISPLAY_NAME_MAP = {
+    "battle_ropes": "Battle Ropes",
+    "medicine_ball": "Medicine Ball",
+    "trap_bar": "Trap Bar",
+}
+
 
 def _clean_text(text: str) -> str:
     """Return UTF-8 cleaned text without unwanted emoji."""
@@ -89,6 +95,16 @@ def _upgrade_symbols(text: str) -> str:
         .replace("--", "–")
         .replace("'", "’")
     )
+
+
+def _apply_display_name_map(text: str) -> str:
+    if not text:
+        return text
+    for token, label in _DISPLAY_NAME_MAP.items():
+        pattern = re.compile(rf"\b{re.escape(token)}\b", re.IGNORECASE)
+        text = pattern.sub(label, text)
+    return text
+
 
 def _sanitize_markdown(text: str) -> str:
     """Normalize markdown to avoid merged headings or duplicate labels."""
@@ -123,6 +139,7 @@ def _sanitize_markdown(text: str) -> str:
 def _md_to_html(text: str) -> str:
     """Convert Markdown text to HTML with simple bullet support."""
     text = _sanitize_markdown(text)
+    text = _apply_display_name_map(text)
     if markdown2 is None:  # fallback to stripping bold markers
         text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
     time_short_pattern = re.compile(

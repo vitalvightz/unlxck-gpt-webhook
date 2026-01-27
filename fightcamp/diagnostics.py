@@ -2,9 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from .config import STAGE_2
-
-
 SYSTEM_LABELS = {
     "aerobic": "AEROBIC",
     "glycolytic": "GLYCOLYTIC",
@@ -117,11 +114,11 @@ def format_missing_system_block(
         lever = "Use bike sprints (8–10 × 10s) or shadow/footwork bursts if tolerated."
     else:
         reason = "System deprioritized by current phase emphasis."
-        lever = "Coach may insert a minimal maintenance dose if needed."
+        lever = "Add a minimal maintenance dose if needed."
 
     lines = [
         f"{system_label} (Status: Not prescribed)",
         f"Reason: {reason}",
-        f"{STAGE_2} lever: {lever}",
+        f"Coach option: {lever}",
     ]
     return "\n".join(lines)
