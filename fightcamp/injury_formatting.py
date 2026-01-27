@@ -52,6 +52,7 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
         "canonical_location": location,
         "side": laterality,
         "laterality": laterality,
+        "original_phrase": phrase,
     }
 
 
@@ -142,3 +143,36 @@ def format_restriction_summary(restriction: ParsedRestriction) -> str:
     strength_label = _title_case(strength)
     
     return f"{region_label} — {restriction_label} (Strength: {strength_label})"
+
+
+_RESTRICTION_GUARDRAIL_DETAILS = {
+    "deep_knee_flexion": ("deep loaded knee flexion", "deep squat/lunge patterns"),
+    "heavy_overhead_pressing": ("heavy overhead pressing", "overhead press/jerk/thruster/overhead slams"),
+    "high_impact": ("high impact", "jumping/plyo/impact running"),
+    "loaded_flexion": ("loaded flexion", "weighted sit-ups/loaded crunches"),
+    "max_velocity": ("max velocity sprinting", "max sprints/overspeed work"),
+}
+
+
+def format_restriction_guardrail(restriction: ParsedRestriction) -> str:
+    """Format a ParsedRestriction into a guardrail line for plan output."""
+    region = restriction.get("region")
+    side = restriction.get("side")
+    restriction_key = restriction.get("restriction", "")
+    strength = restriction.get("strength", "avoid")
+
+    if region:
+        region_label = _title_case(region)
+        if side:
+            region_label = f"{_title_case(side)} {region_label}"
+    else:
+        region_label = "General"
+
+    strength_label = _title_case(strength)
+    detail = _RESTRICTION_GUARDRAIL_DETAILS.get(restriction_key)
+    if detail:
+        label, examples = detail
+        return f"{region_label}: {strength_label} {label} ({examples})"
+
+    restriction_label = _title_case(restriction_key.replace("_", " ")) or "Activity modifications"
+    return f"{region_label}: {strength_label} {restriction_label}"

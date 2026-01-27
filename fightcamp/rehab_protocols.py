@@ -1,7 +1,12 @@
 from pathlib import Path
 import json
 
-from .injury_formatting import format_injury_summary, parse_injury_entry
+from .injury_formatting import (
+    format_injury_summary,
+    format_restriction_guardrail,
+    parse_injury_entry,
+    parse_injuries_and_restrictions,
+)
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 # Refactored: Import centralized DATA_DIR from config
@@ -647,11 +652,17 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
     if not injuries:
         return "✅ No injury guardrails required."
 
-    entries = _normalize_injury_entries(injuries)
-    if not entries:
+    parsed_injuries, restrictions = parse_injuries_and_restrictions(injuries)
+    injury_phrases = [entry.get("original_phrase") for entry in parsed_injuries if entry.get("original_phrase")]
+    injury_text = "; ".join(injury_phrases)
+
+    entries = _normalize_injury_entries(injury_text)
+    if not entries and not restrictions:
         return "✅ No injury guardrails required."
 
-    lines = ["**Injury Summary**"]
+    lines: list[str] = []
+    if entries:
+        lines.append("**Injury Summary**")
     guardrails: list[tuple[str | None, str | None, dict]] = []
     for entry in entries:
         itype = entry.get("injury_type")
@@ -678,30 +689,39 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         )
         guardrails.append((loc, laterality, ruleset))
 
+    if restrictions:
+        if lines:
+            lines.append("")
+        lines.append("**Restrictions (from athlete notes)**")
+        for restriction in restrictions:
+            lines.append(f"- {format_restriction_guardrail(restriction)}")
+
     if phase.upper() == "TAPER":
-        lines.append("")
+        if lines:
+            lines.append("")
         lines.append("_TAPER note: Glycolytic conditioning is optional when injury risk exists._")
 
-    lines += ["", "**Rehab Priority**"]
-    for entry in entries:
-        itype = entry.get("injury_type")
-        loc = entry.get("canonical_location")
-        laterality = entry.get("laterality")
-        severity = entry.get("severity") or INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
-        drills = _rehab_drills_for_phase(itype, loc, phase, limit=4)
-        summary = format_injury_summary(
-            {
-                "canonical_location": loc,
-                "laterality": laterality,
-                "injury_type": itype,
-                "severity": severity,
-            }
-        )
-        if drills:
-            lines.append(f"- {summary}:")
-            lines.extend([f"  - {d}" for d in drills[:4]])
-        else:
-            lines.append(f"- {summary}: No rehab drills available for this phase.")
+    if entries:
+        lines += ["", "**Rehab Priority**"]
+        for entry in entries:
+            itype = entry.get("injury_type")
+            loc = entry.get("canonical_location")
+            laterality = entry.get("laterality")
+            severity = entry.get("severity") or INJURY_TYPE_SEVERITY.get(itype or "", "moderate")
+            drills = _rehab_drills_for_phase(itype, loc, phase, limit=4)
+            summary = format_injury_summary(
+                {
+                    "canonical_location": loc,
+                    "laterality": laterality,
+                    "injury_type": itype,
+                    "severity": severity,
+                }
+            )
+            if drills:
+                lines.append(f"- {summary}:")
+                lines.extend([f"  - {d}" for d in drills[:4]])
+            else:
+                lines.append(f"- {summary}: No rehab drills available for this phase.")
 
     base_red_flags = [
         "Pain that worsens and stays elevated the next morning.",
@@ -713,15 +733,16 @@ def format_injury_guardrails(phase: str, injuries: str) -> str:
         for flag in ruleset.get("red_flags", []):
             if flag not in red_flags:
                 red_flags.append(flag)
-    if not red_flags:
-        red_flags = base_red_flags
-    else:
-        for flag in base_red_flags:
-            if flag not in red_flags:
-                red_flags.append(flag)
+    if entries:
+        if not red_flags:
+            red_flags = base_red_flags
+        else:
+            for flag in base_red_flags:
+                if flag not in red_flags:
+                    red_flags.append(flag)
 
-    lines += ["", "**Red Flags**"]
-    lines.extend([f"- {flag}" for flag in red_flags])
+        lines += ["", "**Red Flags**"]
+        lines.extend([f"- {flag}" for flag in red_flags])
 
     if any("bfr" in line.lower() for line in lines):
         lines.append(f"- {BFR_SAFETY_GATE}")
