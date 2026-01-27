@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import re
 
+from .injury_formatting import parse_injuries_and_restrictions
+from .restriction_parsing import ParsedRestriction
+
 
 def _normalize_list(field: str | None) -> list[str]:
     return [w.strip().lower() for w in field.split(",") if w.strip()] if field else []
@@ -125,6 +128,8 @@ class PlanInput:
     equipment_access: str
     available_days: str
     injuries: str
+    parsed_injuries: list[dict[str, str | None]]
+    restrictions: list[ParsedRestriction]
     key_goals: str
     weak_areas: str
     training_preference: str
@@ -158,6 +163,7 @@ class PlanInput:
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
         )
+        parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
         key_goals = get_value("What are your key performance goals?", fields)
         weak_areas = get_value("Where do you feel weakest right now?", fields)
         training_preference = get_value("Do you prefer certain training styles?", fields)
@@ -202,6 +208,8 @@ class PlanInput:
             equipment_access=equipment_access,
             available_days=available_days,
             injuries=injuries,
+            parsed_injuries=parsed_injuries,
+            restrictions=parsed_restrictions,
             key_goals=key_goals,
             weak_areas=weak_areas,
             training_preference=training_preference,

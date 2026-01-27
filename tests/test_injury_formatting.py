@@ -6,7 +6,11 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from fightcamp.injury_formatting import format_injury_summary, parse_injury_entry
+from fightcamp.injury_formatting import (
+    format_injury_summary,
+    parse_injury_entry,
+    parse_injuries_and_restrictions,
+)
 from fightcamp.injury_synonyms import split_injury_text
 from fightcamp.main import generate_plan
 from fightcamp.rehab_protocols import format_injury_guardrails
@@ -71,21 +75,20 @@ def test_injury_parsing_handles_multiple_locations_with_punctuation():
 
 
 def test_torn_hamstring_severity_is_severe():
-    guardrails = format_injury_guardrails("GPP", "torn hamstring")
+    guardrails = format_injury_guardrails("GPP", "torn hamstring", [])
     assert "Severity: Severe" in guardrails
 
 
 def test_mild_impingement_respects_phrase_severity():
-    guardrails = format_injury_guardrails("GPP", "mild right shoulder impingement")
-    assert "Mild impingement — avoid overhead patterns (banned list)" in guardrails
+    guardrails = format_injury_guardrails("GPP", "mild right shoulder impingement", [])
+    assert "Right Shoulder — Impingement (Severity: Mild)" in guardrails
 
 
 def test_guardrails_render_restrictions_without_injury_summary():
-    guardrails = format_injury_guardrails(
-        "GPP",
-        "avoid deep knee flexion under load, heavy overhead pressing",
-    )
-    assert "**Restrictions (from athlete notes)**" in guardrails
+    injuries = "avoid deep knee flexion under load, heavy overhead pressing"
+    _, restrictions = parse_injuries_and_restrictions(injuries)
+    guardrails = format_injury_guardrails("GPP", injuries, restrictions)
+    assert "**Restrictions (Stage-2 daily planner only)**" in guardrails
     assert "Injury Summary" not in guardrails
-    assert "Knee: Avoid deep loaded knee flexion" in guardrails
-    assert "Shoulder: Avoid heavy overhead pressing" in guardrails
+    assert "- avoid deep knee flexion under load" in guardrails
+    assert "- heavy overhead pressing" in guardrails
