@@ -23,6 +23,7 @@ from .injury_filtering import (
 )
 # Refactored: Import factory function for guarded decision making
 from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
+from .restriction_filtering import evaluate_restriction_impact
 
 # Load style specific exercises (JSON list)
 STYLE_EXERCISES = _load_style_specific_exercises()
@@ -449,6 +450,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("movement", ""),
             ]
         )
+        restriction_text = " ".join(
+            [
+                ex.get("name", ""),
+                ex.get("movement", ""),
+                ex.get("method", ""),
+                ex.get("notes", ""),
+            ]
+        )
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
@@ -463,6 +472,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         phase_dict = PHASE_TAG_BOOST.get(phase, {})
         phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
         method = ex.get("method", "").lower()
+
+        exclude_restricted, restriction_penalty, matched_restrictions = evaluate_restriction_impact(
+            restrictions,
+            text=restriction_text,
+            tags=tags,
+            limit_penalty=-0.75,
+        )
+        if not ignore_restrictions and exclude_restricted:
+            continue
 
         score, breakdown = score_exercise(
             exercise_tags=tags,
@@ -480,6 +498,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         if score == -999:
             continue
+        if not ignore_restrictions and restriction_penalty:
+            score += restriction_penalty
+            breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
+            breakdown["restriction_hits"] = len(matched_restrictions)
 
         # Phase-based novelty enforcement with exemptions
         if prev_exercises and ex.get("name") in prev_exercises:
