@@ -1,52 +1,52 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Jamal Okoye" },
-      { "label": "Age", "value": "27" },
-      { "label": "Weight (kg)", "value": "78" },
-      { "label": "Target Weight (kg)", "value": "77" },
-      { "label": "Height (cm)", "value": "182" },
+      { "label": "Full name", "value": "Luca Mensah" },
+      { "label": "Age", "value": "24" },
+      { "label": "Weight (kg)", "value": "73" },
+      { "label": "Target Weight (kg)", "value": "70" },
+      { "label": "Height (cm)", "value": "178" },
       { "label": "Fighting Style (Technical)", "value": ["mma"] },
-      { "label": "Fighting Style (Tactical)", "value": ["scrambler", "pressure fighter"] },
-      { "label": "Stance", "value": "Hybrid" },
+      { "label": "Fighting Style (Tactical)", "value": ["counter striker", "submission hunter"] },
+      { "label": "Stance", "value": "Southpaw" },
       { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "6-1-0" },
-      { "label": "When is your next fight?", "value": "2026-05-23" },
+      { "label": "Current Record", "value": "5-2-0" },
+      { "label": "When is your next fight?", "value": "2026-04-18" },
       { "label": "Rounds x Minutes", "value": "3x5" },
-      { "label": "Weekly Training Frequency", "value": "6" },
-      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Weekly Training Frequency", "value": "5" },
+      { "label": "Fatigue Level", "value": "Low" },
       { "label": "Training Phase", "value": "Mid-Camp" },
       {
         "label": "Equipment Access",
-        "value": ["Barbell", "Dumbbells", "Trap Bar", "Kettlebells", "Medicine Ball", "Bands", "Sled", "Sandbag", "Battle Ropes"]
+        "value": ["Barbell", "Dumbbells", "Kettlebells", "Medicine Ball", "Bands", "Sled", "Battle Ropes"]
       },
       {
         "label": "Training Availability",
-        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        "value": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"]
       },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "left knee pain (patellar tendon) and mild right shoulder impingement; avoid deep knee flexion under load and heavy overhead pressing"
+        "value": "mild left ankle instability (history of sprains) and right elbow tendonitis; avoid high-impact jumping/landing and painful heavy pulling/gripping"
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Conditioning / Endurance", "Maximal Strength", "Power & Explosiveness", "Grappling", "Core Stability", "Mental Resilience"]
+        "value": ["Conditioning / Endurance", "Power & Explosiveness", "Speed", "Grappling", "Injury Prevention", "Mental Resilience"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["conditioning", "core stability", "rotation", "shoulders"]
+        "value": ["conditioning", "balance", "grip strength", "speed / reaction"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "prefers short brutal circuits (assault bike/ropes/sled), heavy-to-explosive contrast, and grappling-specific carries; dislikes long steady cardio"
+        "value": "likes EMOMs and interval circuits (sled/ropes), explosive med ball work, and short hard sprints; hates long steady runs and high-volume calf plyos"
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "when he gets taken down early, he panics and forces a low-percentage scramble; burns arms and breath instead of building frames and resetting"
+        "value": "after getting clipped, he goes into survival mode and backs straight up; stops thinking about angles and forgets his reset breathing"
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "Loved sled pushes/drags, sandbag carries, and contrast jumps/throws. Hated long runs and high-rep overhead work that irritated the shoulder."
+        "value": "Loved sled pushes, rope intervals, and med-ball throws. Hated long jogs and heavy deadlift volume that flared his elbow."
       }
     ]
   },
