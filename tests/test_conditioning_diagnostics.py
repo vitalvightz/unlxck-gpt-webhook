@@ -31,4 +31,4 @@ def test_missing_system_block_formatting():
     )
     assert "AEROBIC (Status: Not prescribed)" in output
     assert "Reason:" in output
-    assert "Stage-2 lever:" in output
+    assert "Coach adjustment option:" in output
