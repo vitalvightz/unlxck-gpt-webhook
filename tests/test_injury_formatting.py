@@ -88,7 +88,7 @@ def test_guardrails_render_restrictions_without_injury_summary():
     injuries = "avoid deep knee flexion under load, heavy overhead pressing"
     _, restrictions = parse_injuries_and_restrictions(injuries)
     guardrails = format_injury_guardrails("GPP", injuries, restrictions)
-    assert "**Restrictions (Stage-2 daily planner only)**" in guardrails
+    assert "**Restrictions (for Stage-2 daily planner)**" in guardrails
     assert "Injury Summary" not in guardrails
     assert "- avoid deep knee flexion under load" in guardrails
     assert "- heavy overhead pressing" in guardrails
