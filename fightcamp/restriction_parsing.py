@@ -36,6 +36,9 @@ CONSTRAINT_TRIGGER_TOKENS = {
     "don't",
     "dont",
     "do not",
+    "cannot",
+    "can't",
+    "cant",
     "limit",
     "limited",
     "restricted",
@@ -46,6 +49,8 @@ CONSTRAINT_TRIGGER_TOKENS = {
     "contraindicated",
     "skip",
     "reduce",
+    "irritates",
+    "aggravates",
 }
 
 # Canonical restriction mappings for common phrases
@@ -100,7 +105,7 @@ def _contains_trigger_token(text: str) -> bool:
     normalized = _normalize_text(text)
     
     # Check for multi-word triggers first
-    for trigger in ["do not", "not comfortable"]:
+    for trigger in ["do not", "not comfortable", "hurts when"]:
         if trigger in normalized:
             return True
     

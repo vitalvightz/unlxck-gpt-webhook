@@ -78,3 +78,14 @@ def test_torn_hamstring_severity_is_severe():
 def test_mild_impingement_respects_phrase_severity():
     guardrails = format_injury_guardrails("GPP", "mild right shoulder impingement")
     assert "Mild impingement — avoid overhead patterns (banned list)" in guardrails
+
+
+def test_guardrails_render_restrictions_without_injury_summary():
+    guardrails = format_injury_guardrails(
+        "GPP",
+        "avoid deep knee flexion under load, heavy overhead pressing",
+    )
+    assert "**Restrictions (from athlete notes)**" in guardrails
+    assert "Injury Summary" not in guardrails
+    assert "Knee: Avoid deep loaded knee flexion" in guardrails
+    assert "Shoulder: Avoid heavy overhead pressing" in guardrails

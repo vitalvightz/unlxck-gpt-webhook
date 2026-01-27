@@ -47,6 +47,7 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
+from .injury_formatting import parse_injuries_and_restrictions
 
 GRAPPLING_STYLES = {
     "mma",
@@ -259,7 +260,10 @@ async def generate_plan(data: dict):
 
     # Parse injuries BEFORE strength/conditioning generation
     timer_start = perf_counter()
-    raw_injury_list = [w.strip().lower() for w in injuries.split(",") if w.strip()] if injuries else []
+    parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
+    injury_phrases = [entry.get("original_phrase") for entry in parsed_injuries if entry.get("original_phrase")]
+    injuries_only_text = "; ".join(injury_phrases)
+    raw_injury_list = [w.strip().lower() for w in injury_phrases if w.strip()] if injury_phrases else []
     _record_timing("parse_injuries", timer_start)
 
     # Core context
@@ -448,7 +452,7 @@ async def generate_plan(data: dict):
     seen_rehab_drills: set = set()
     if phase_weeks["GPP"] > 0 or phase_weeks["days"]["GPP"] >= 1:
         gpp_rehab_block, seen_rehab_drills = generate_rehab_protocols(
-            injury_string=injuries,
+            injury_string=injuries_only_text,
             exercise_data=exercise_bank,
             current_phase="GPP",
             seen_drills=seen_rehab_drills,
@@ -459,14 +463,14 @@ async def generate_plan(data: dict):
     if not gpp_rehab_block.strip().startswith("**Red Flag Detected**"):
         if phase_weeks["SPP"] > 0 or phase_weeks["days"]["SPP"] >= 1:
             spp_rehab_block, seen_rehab_drills = generate_rehab_protocols(
-                injury_string=injuries,
+                injury_string=injuries_only_text,
                 exercise_data=exercise_bank,
                 current_phase="SPP",
                 seen_drills=seen_rehab_drills,
             )
         if phase_weeks["TAPER"] > 0 or phase_weeks["days"]["TAPER"] >= 1:
             taper_rehab_block, seen_rehab_drills = generate_rehab_protocols(
-                injury_string=injuries,
+                injury_string=injuries_only_text,
                 exercise_data=exercise_bank,
                 current_phase="TAPER",
                 seen_drills=seen_rehab_drills,
@@ -474,7 +478,7 @@ async def generate_plan(data: dict):
     gpp_guardrails = format_injury_guardrails("GPP", injuries)
     spp_guardrails = format_injury_guardrails("SPP", injuries)
     taper_guardrails = format_injury_guardrails("TAPER", injuries)
-    has_injuries = bool(injuries)
+    has_injuries = bool(injuries_only_text or parsed_restrictions)
     current_phase = next(
         (p for p in ["GPP", "SPP", "TAPER"] if phase_weeks[p] > 0 or phase_weeks["days"][p] >= 1),
         "GPP",
@@ -528,7 +532,7 @@ async def generate_plan(data: dict):
         }
 
     coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
-        injury_string=injuries,
+        injury_string=injuries_only_text,
         phase=current_phase,
         training_context=training_context.to_flags(),
         exercise_bank=exercise_bank,
@@ -594,7 +598,7 @@ async def generate_plan(data: dict):
             rehab_sections += ["### SPP", spp_rehab_block.strip(), ""]
         if taper_rehab_block:
             rehab_sections += ["### TAPER", taper_rehab_block.strip(), ""]
-        support_notes = generate_support_notes(injuries)
+        support_notes = generate_support_notes(injuries_only_text)
         if apply_muay_thai_filters:
             support_notes = _apply_muay_thai_filters(support_notes, allow_grappling=False)
         support_notes = _sanitize_phase_text(support_notes, sanitize_labels)
