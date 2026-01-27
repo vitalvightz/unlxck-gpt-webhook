@@ -326,8 +326,14 @@ async def generate_plan(data: dict):
     taper_mindset = build_mindset_prompt("TAPER")
     _record_timing("mindset", timer_start)
 
-    selection_ignore_restrictions = True
-    logger.info("[stage] selection_ignore_restrictions=%s", selection_ignore_restrictions)
+    selection_ignore_restrictions = not bool(plan_input.restrictions)
+    restrictions_count = len(plan_input.restrictions or [])
+    logger.info(
+        "[stage] selection_ignore_restrictions=%s restrictions_present=%s restrictions_count=%d",
+        selection_ignore_restrictions,
+        bool(plan_input.restrictions),
+        restrictions_count,
+    )
 
     # === Strength blocks per phase with repeat filtering ===
     timer_start = perf_counter()

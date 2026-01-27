@@ -15,6 +15,7 @@ from .training_context import (
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
+from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
@@ -670,6 +671,14 @@ def generate_conditioning_block(flags):
                 d.get("equipment_note", ""),
             ]
         )
+        restriction_text = " ".join(
+            [
+                d.get("name", ""),
+                d.get("modality", ""),
+                d.get("notes", ""),
+                d.get("equipment_note", ""),
+            ]
+        )
         if is_banned_drill(
             d.get("name", ""),
             tags,
@@ -713,6 +722,15 @@ def generate_conditioning_block(flags):
         ):
             continue
 
+        exclude_restricted, restriction_penalty, matched_restrictions = evaluate_restriction_impact(
+            restrictions,
+            text=restriction_text,
+            tags=tags,
+            limit_penalty=-0.75,
+        )
+        if not ignore_restrictions and exclude_restricted:
+            continue
+
         num_weak = sum(1 for t in tags if t in weak_tags)
         num_goals = sum(1 for t in tags if t in goal_tags)
         num_style = sum(1 for t in tags if t in style_tags)
@@ -734,6 +752,9 @@ def generate_conditioning_block(flags):
         elif fatigue == "moderate" and "high_cns" in tags:
             total_score -= 1.0
             penalty = -1.0
+        if not ignore_restrictions and restriction_penalty:
+            total_score += restriction_penalty
+            penalty += restriction_penalty
 
         reasons = {
             "weakness_hits": num_weak,
@@ -743,6 +764,7 @@ def generate_conditioning_block(flags):
             "load_adjustments": system_score,
             "equipment_boost": 0.0,
             "penalties": penalty,
+            "restriction_hits": len(matched_restrictions),
             "final_score": round(total_score, 4),
         }
 
@@ -766,6 +788,14 @@ def generate_conditioning_block(flags):
                 d.get("duration", ""),
                 d.get("notes", ""),
                 d.get("modality", ""),
+                d.get("equipment_note", ""),
+            ]
+        )
+        restriction_text = " ".join(
+            [
+                d.get("name", ""),
+                d.get("modality", ""),
+                d.get("notes", ""),
                 d.get("equipment_note", ""),
             ]
         )
@@ -820,6 +850,15 @@ def generate_conditioning_block(flags):
             continue
         equip_bonus = 0.5 if drill_equipment else 0.0
 
+        exclude_restricted, restriction_penalty, matched_restrictions = evaluate_restriction_impact(
+            restrictions,
+            text=restriction_text,
+            tags=tags,
+            limit_penalty=-0.75,
+        )
+        if not ignore_restrictions and exclude_restricted:
+            continue
+
         score = 0.0
         score += 1.5  # style match already guaranteed by filter
         score += 1.0  # phase match
@@ -839,6 +878,9 @@ def generate_conditioning_block(flags):
             elif fatigue == "moderate":
                 score -= 0.5
                 penalty = -0.5
+        if not ignore_restrictions and restriction_penalty:
+            score += restriction_penalty
+            penalty += restriction_penalty
         reasons = {
             "weakness_hits": weak_matches,
             "goal_hits": goal_matches,
@@ -847,6 +889,7 @@ def generate_conditioning_block(flags):
             "load_adjustments": 0.75 if system == top_system else 0.0,
             "equipment_boost": equip_bonus,
             "penalties": penalty,
+            "restriction_hits": len(matched_restrictions),
             "final_score": round(score, 4),
         }
 
