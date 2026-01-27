@@ -241,6 +241,7 @@ RISK_LEVEL_WEIGHTS = {"exclude": 1.0, "flag": 0.65}
 REGION_RISK_WEIGHTS = {
     "shoulder": 1.2,
     "knee": 1.2,
+    "achilles": 1.2,
     "ankle": 1.1,
     "shin": 1.0,
     "lower_back": 1.1,
@@ -252,7 +253,7 @@ REGION_RISK_WEIGHTS = {
 
 MATCH_RISK_MULTIPLIERS = [
     ({"high_impact_plyo", "landing_stress_high", "reactive_rebound_high", "impact_rebound_high", "foot_impact_high"}, 1.5),
-    ({"max_velocity", "running_volume_high", "shin_splints_risk"}, 1.3),
+    ({"max_velocity", "mech_max_velocity", "running_volume_high", "shin_splints_risk"}, 1.3),
     ({"overhead", "dynamic_overhead", "press_heavy"}, 1.1),
     ({"hinge_heavy", "lumbar_loaded", "axial_heavy", "posterior_chain_heavy"}, 1.2),
     ({"knee_dominant_heavy", "deep_flexion", "deep_knee_flexion_loaded"}, 1.15),

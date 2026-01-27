@@ -245,7 +245,7 @@ def get_system_or_warn(drill: dict, *, source: str) -> str | None:
 
 
 def _drill_text_injury_reasons(drill: dict, injuries: list[str]) -> list[dict]:
-    return injury_match_details(drill, injuries)
+    return injury_match_details(drill, injuries, fields=("name", "notes"))
 
 
 def _is_drill_text_safe(

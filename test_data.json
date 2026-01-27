@@ -18,7 +18,7 @@
       { "label": "Training Phase", "value": "Mid-Camp" },
       {
         "label": "Equipment Access",
-        "value": ["Barbell", "Dumbbells", "Trap Bar", "Kettlebells", "Med Balls / Bands", "Sled", "Sandbag", "Battle Ropes"]
+        "value": ["Barbell", "Dumbbells", "Trap Bar", "Kettlebells", "Medicine Ball", "Bands", "Sled", "Sandbag", "Battle Ropes"]
       },
       {
         "label": "Training Availability",
