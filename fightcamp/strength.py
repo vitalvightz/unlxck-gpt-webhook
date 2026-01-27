@@ -278,31 +278,52 @@ def normalize_exercise_movement(exercise: dict) -> str:
     return movement
 
 
+def _classify_prescription_type(exercise: dict) -> str:
+    tags = set(normalize_tags(exercise.get("tags") or []))
+    equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
+    name = (exercise.get("name") or "").lower()
+
+    if equipment.intersection({"barbell", "trap_bar"}):
+        return "barbell"
+    if "medicine_ball" in equipment or "med" in name or "medicine ball" in name:
+        return "ballistic"
+    if "isometric" in tags or "isometric" in name or "iso hold" in name:
+        return "isometric"
+    if tags.intersection({"core", "trunk", "anti_rotation", "stability"}):
+        return "core"
+    if "deadbug" in name or "dead bug" in name:
+        return "core"
+    if tags.intersection({"explosive", "rate_of_force", "reactive"}):
+        return "ballistic"
+    if equipment.intersection({"bands", "medicine_ball", "kettlebell"}) and "sprint" in name:
+        return "ballistic"
+    return "general"
+
+
+def _prescription_templates(phase: str) -> dict[str, str]:
+    phase = phase.upper()
+    barbell = {
+        "GPP": "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1.",
+        "SPP": "3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move).",
+        "TAPER": "2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load.",
+    }
+    ballistic = {
+        "GPP": "3–5x4-6 reps (or 6–10 throws) at crisp intent; rest 60–90s.",
+        "SPP": "4–6x2-5 reps at max speed; full rest 60–120s.",
+        "TAPER": "3–5x2-4 reps/throws at max speed; full rest 60–120s.",
+    }
+    return {
+        "barbell": barbell.get(phase, barbell["GPP"]),
+        "ballistic": ballistic.get(phase, ballistic["GPP"]),
+        "isometric": "3–5 holds x 10–20s @ 7–9/10 effort; full rest between holds.",
+        "core": "2–4 sets x 6–10 reps or 20–40s tempo (3-1-3), RPE 6–8.",
+        "general": "2–3x6-10 @ RPE 6–7, keep reps crisp.",
+    }
+
+
 def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> str:
     """Return the formatted strength block for the given phase."""
     phase = phase.upper()
-    phase_loads = {
-        "GPP": (
-            "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1",
-            "Build hypertrophy base, tendon durability, and general strength.",
-        ),
-        "SPP": (
-            "3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move)",
-            "Max strength + explosive power. Contrast and triphasic methods emphasized.",
-        ),
-        "TAPER": (
-            "2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load",
-            "Maintain intensity, cut volume, CNS freshness. High bar speed focus.",
-        ),
-    }
-    base_block, _focus = phase_loads.get(
-        phase, ("Default fallback block", "Ensure phase logic handled upstream.")
-    )
-    phase_titles = {
-        "GPP": "Foundation Strength – Base Build",
-        "SPP": "Fight-Specific Strength – Power Conversion",
-        "TAPER": "Neural Primer – Sharpness & Freshness",
-    }
     weekly_progression = {
         "GPP": "Add 1 set or ~5–10% load weekly; deload final week by ~20%.",
         "SPP": "Hold volume, increase intensity or bar speed weekly; deload final week by ~20%.",
@@ -330,11 +351,26 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     top_exercises = "; ".join(ex["name"] for ex in exercises)
     strength_output.append(f"**Top Exercises:** {top_exercises}")
 
-    strength_output += [
-        "",
-        "**Prescription:**",
-        base_block,
-    ]
+    prescriptions = _prescription_templates(phase)
+    ordered_types = ["barbell", "ballistic", "isometric", "core", "general"]
+    present_types = []
+    for exercise in exercises:
+        ex_type = _classify_prescription_type(exercise)
+        if ex_type not in present_types:
+            present_types.append(ex_type)
+
+    strength_output += ["", "**Prescriptions by Exercise Type:**"]
+    for ex_type in ordered_types:
+        if ex_type not in present_types:
+            continue
+        label = {
+            "barbell": "Barbell Strength",
+            "ballistic": "Ballistics (Med Ball / Speed / Power)",
+            "isometric": "Isometrics",
+            "core": "Core Control",
+            "general": "General Strength",
+        }[ex_type]
+        strength_output.append(f"- **{label}:** {prescriptions[ex_type]}")
 
     if fatigue_note:
         strength_output += [

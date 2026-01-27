@@ -4499,7 +4499,7 @@
     "phases": [
       "TAPER"
     ],
-    "system": "ATP-PCr",
+    "system": "aerobic",
     "modality": "bag_work",
     "duration": "5x3min rounds, 1min rest",
     "intensity": "moderate",
@@ -4510,7 +4510,7 @@
       "cns_freshness",
       "skill_refinement"
     ],
-    "notes": "CNS sharpening without CNS burn"
+    "notes": "Skill rhythm and timing with low impact"
   },
   {
     "name": "Sandbag Shoulder Clean Flow",

@@ -42,6 +42,61 @@ _UNKNOWN_SYSTEM_DRILL_LOGGED: set[tuple[str, str, str]] = set()
 
 logger = logging.getLogger(__name__)
 
+ALACTIC_MAX_WORK_SEC = 12
+ALACTIC_MIN_REST_SEC = 60
+_TIME_TOKEN = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(?:-|–)?\s*(\d+(?:\.\d+)?)?\s*"
+    r"(s|sec|secs|second|seconds|min|mins|minute|minutes)\b",
+    re.IGNORECASE,
+)
+
+
+def _time_token_to_seconds(value: float, unit: str) -> float:
+    if unit.lower().startswith("m"):
+        return value * 60.0
+    return value
+
+
+def _extract_time_values(text: str) -> list[float]:
+    values: list[float] = []
+    for match in _TIME_TOKEN.finditer(text or ""):
+        start_val = float(match.group(1))
+        end_val = float(match.group(2)) if match.group(2) else None
+        unit = match.group(3)
+        value = max(start_val, end_val) if end_val is not None else start_val
+        values.append(_time_token_to_seconds(value, unit))
+    return values
+
+
+def _alactic_structure_ok(drill: dict) -> bool:
+    timing = drill.get("timing") or ""
+    duration = drill.get("duration") or ""
+    rest = drill.get("rest") or ""
+    duration_text = " ".join(filter(None, [timing, duration]))
+    work_candidates: list[float] = []
+    rest_candidates: list[float] = []
+
+    for clause in re.split(r"[;,/]", duration_text):
+        clause_lower = clause.lower()
+        is_rest_clause = any(
+            key in clause_lower
+            for key in ("rest", "off", "recovery", "recover", "between")
+        )
+        targets = rest_candidates if is_rest_clause else work_candidates
+        targets.extend(_extract_time_values(clause))
+
+    if rest:
+        rest_candidates.extend(_extract_time_values(rest))
+
+    if not work_candidates:
+        return False
+    if not rest_candidates:
+        return False
+
+    work_seconds = max(work_candidates)
+    rest_seconds = max(rest_candidates)
+    return work_seconds <= ALACTIC_MAX_WORK_SEC and rest_seconds >= ALACTIC_MIN_REST_SEC
+
 
 def normalize_system(raw_system: str | None, *, source: str) -> str:
     """Return a normalized system name and log unknown values once."""
@@ -372,9 +427,9 @@ def render_conditioning_block(
         "TAPER": "Speed + alactic sharpness, neural freshness, low damage.",
     }
     dosage_template = {
-        "GPP": "3–5 rounds of 3–5 min @ RPE 6–7, work:rest 1:1–1:0.5 (cap 20–30 min).",
-        "SPP": "4–6 rounds of 2–5 min @ RPE 7–8, work:rest 1:1–1:0.5 (cap 18–25 min).",
-        "TAPER": "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min).",
+        "GPP": "3–5 rounds of 3–5 min @ RPE 6–7, work:rest 1:1–1:0.5 (cap 20–30 min). Template applies unless a drill lists its own structure.",
+        "SPP": "4–6 rounds of 2–5 min @ RPE 7–8, work:rest 1:1–1:0.5 (cap 18–25 min). Template applies unless a drill lists its own structure.",
+        "TAPER": "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min). Template applies unless a drill lists its own structure.",
     }
     weekly_progression = {
         "GPP": "Add 1 round or ~5–10% volume weekly; deload final week by ~20%.",
@@ -601,6 +656,8 @@ def generate_conditioning_block(flags):
         system = get_system_or_warn(d, source="conditioning_bank.json")
         if system is None:
             continue
+        if system == "alactic" and not _alactic_structure_ok(d):
+            continue
 
         tags = normalize_tags(d.get("tags", []))
         details = " ".join(
@@ -734,6 +791,8 @@ def generate_conditioning_block(flags):
 
         system = get_system_or_warn(d, source="style_conditioning_bank.json")
         if system is None:
+            continue
+        if system == "alactic" and not _alactic_structure_ok(d):
             continue
 
         # Apply same fatigue/CNS suppression rules
