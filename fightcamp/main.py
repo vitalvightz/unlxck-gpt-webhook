@@ -192,7 +192,12 @@ async def generate_plan(data: dict):
     training_days = plan_input.training_days
     training_frequency = plan_input.training_frequency
     injuries = plan_input.injuries
-    injuries_display = injuries or "None"
+    parsed_injury_phrases = [
+        entry.get("original_phrase")
+        for entry in plan_input.parsed_injuries
+        if entry.get("original_phrase")
+    ]
+    injuries_display = "; ".join(parsed_injury_phrases) if parsed_injury_phrases else "None"
     key_goals = plan_input.key_goals
     weak_areas = plan_input.weak_areas
     training_preference = plan_input.training_preference
