@@ -4,6 +4,7 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
+from .config import STAGE_2
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
@@ -647,7 +648,7 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
 def _format_restrictions_block(restrictions: Iterable[ParsedRestriction]) -> list[str]:
     if not restrictions:
         return []
-    lines = ["**Restrictions (Stage-2 daily planner only)**"]
+    lines = [f"**Restrictions ({STAGE_2} daily planner only)**"]
     for restriction in restrictions:
         phrase = restriction.get("original_phrase")
         if phrase:

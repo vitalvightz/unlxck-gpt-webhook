@@ -603,18 +603,41 @@ def _log_decision(
     if log_key in _INJURY_DECISION_LOGGED:
         return
     _INJURY_DECISION_LOGGED.add(log_key)
-    restriction = "banned" if action == "exclude" else "allowed"
+    injury_rule = "banned" if action == "exclude" else "allowed"
     logger.info(
-        "[injury-guard] item='%s' region=%s severity=%s restriction=%s action=%s risk=%.2f threshold=%.2f matched_tags=%s",
+        "[injury-guard] item='%s' region=%s severity=%s injury_rule=%s action=%s risk=%.2f threshold=%.2f matched_tags=%s",
         item_name,
         region,
         severity,
-        restriction,
+        injury_rule,
         action,
         risk,
         threshold,
         matched_tags,
     )
+
+
+def injury_guard(
+    item: dict,
+    injuries: Iterable[str | dict] | str | dict,
+    restrictions: Iterable[dict] | None = None,
+    *,
+    ignore_restrictions: bool = False,
+    stage: str | None = None,
+    phase: str | None = None,
+    fatigue: str | None = None,
+) -> Decision:
+    if ignore_restrictions:
+        restrictions = None
+    if INJURY_DEBUG:
+        logger.info(
+            "[injury-guard-call] ignore_restrictions=%s restrictions_in=%s",
+            ignore_restrictions,
+            bool(restrictions),
+        )
+    resolved_phase = phase or item.get("phase") or ""
+    resolved_fatigue = fatigue or item.get("fatigue") or ""
+    return injury_decision(item, injuries, resolved_phase, resolved_fatigue)
 
 
 def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict, phase: str, fatigue: str) -> Decision:
@@ -832,6 +855,10 @@ def make_guarded_decision_factory(
     fatigue: str,
     guard_pool: set[str],
     guard_list: list[dict] | None = None,
+    *,
+    restrictions: Iterable[dict] | None = None,
+    ignore_restrictions: bool = False,
+    stage: str | None = None,
 ) -> Callable[[dict], Decision]:
     """
     Refactored: Create a closure factory for guarded injury decisions.
@@ -862,7 +889,15 @@ def make_guarded_decision_factory(
             if guard_list is not None:
                 guard_list.append(item)
         # Make and return the injury decision
-        return injury_decision(item, injuries, phase, fatigue)
+        return injury_guard(
+            item,
+            injuries,
+            restrictions=restrictions,
+            ignore_restrictions=ignore_restrictions,
+            stage=stage,
+            phase=phase,
+            fatigue=fatigue,
+        )
     
     return _guarded_injury_decision
 

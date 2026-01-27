@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .config import STAGE_2
+
 
 SYSTEM_LABELS = {
     "aerobic": "AEROBIC",
@@ -120,6 +122,6 @@ def format_missing_system_block(
     lines = [
         f"{system_label} (Status: Not prescribed)",
         f"Reason: {reason}",
-        f"Stage-2 lever: {lever}",
+        f"{STAGE_2} lever: {lever}",
     ]
     return "\n".join(lines)

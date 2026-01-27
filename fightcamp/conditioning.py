@@ -555,6 +555,8 @@ def generate_conditioning_block(flags):
     goals = flags.get("key_goals", [])
     weaknesses = flags.get("weaknesses", [])
     injuries = flags.get("injuries", [])
+    restrictions = flags.get("restrictions")
+    ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
@@ -884,7 +886,12 @@ def generate_conditioning_block(flags):
 
     # Refactored: Use factory function instead of local duplicate implementation
     _guarded_injury_decision = make_guarded_decision_factory(
-        injuries, phase, fatigue, injury_guard_names
+        injuries,
+        phase,
+        fatigue,
+        injury_guard_names,
+        restrictions=restrictions,
+        ignore_restrictions=ignore_restrictions,
     )
 
     all_candidates_by_system = {

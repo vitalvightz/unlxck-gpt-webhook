@@ -385,6 +385,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     seed = flags.get("random_seed")
     rng = random.Random(seed) if seed is not None else None
     injuries = flags.get("injuries", [])
+    restrictions = flags.get("restrictions")
+    ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
@@ -558,7 +560,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     # Refactored: Use factory function instead of local duplicate implementation
     _guarded_injury_decision = make_guarded_decision_factory(
-        injuries, phase, fatigue, guard_names, guard_exercises
+        injuries,
+        phase,
+        fatigue,
+        guard_names,
+        guard_exercises,
+        restrictions=restrictions,
+        ignore_restrictions=ignore_restrictions,
     )
 
     top_pairs = weighted_exercises[:target_exercises]
