@@ -33,7 +33,7 @@
     ],
     "system": "aerobic",
     "modality": "sled",
-    "duration": "25\u201330min continuous",
+    "duration": "25–30min continuous",
     "intensity": "low",
     "tags": [
       "aerobic",
@@ -77,7 +77,7 @@
     ],
     "system": "anaerobic_alactic",
     "modality": "reaction",
-    "duration": "5\u201310min",
+    "duration": "5–10min",
     "intensity": "low",
     "tags": [
       "coordination",
@@ -97,7 +97,7 @@
     ],
     "system": "aerobic",
     "modality": "run",
-    "duration": "30\u201340min",
+    "duration": "30–40min",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -600,7 +600,8 @@
       "mech_landing_impact",
       "mech_reactive_rebound",
       "mech_acceleration",
-      "mech_cns_high"
+      "mech_cns_high",
+      "high_impact"
     ],
     "notes": "CNS LOAD: Requires 48h recovery after. BOX HEIGHT: 12-18\" based on experience"
   },
@@ -618,7 +619,8 @@
       "mech_ballistic",
       "mech_upper_press",
       "mech_acceleration",
-      "mech_cns_high"
+      "mech_cns_high",
+      "high_impact"
     ],
     "notes": "BENCH PRESS PAIRING: Ideal 48h post heavy bench. SHOULDER INJURY: Replace with med ball throws"
   },
@@ -1438,7 +1440,8 @@
       "reactive",
       "mech_reactive",
       "mech_change_of_direction",
-      "mech_cns_high"
+      "mech_cns_high",
+      "high_impact"
     ],
     "notes": "ANKLE STABILITY: Not for acute sprains. PATTERN: Change every 2 sets"
   },
@@ -1594,7 +1597,8 @@
       "mech_lower_hip_hinge",
       "mech_acceleration",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "high_impact"
     ],
     "notes": "POSTERIOR CHAIN: 48h after deadlifts. GPP: Reduce to 5 sets"
   },
@@ -1714,7 +1718,7 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "ORDER: Boxing \u2192 Takedown \u2192 Ground strikes. REST: 1min between. NO HEAD IMPACT"
+    "notes": "ORDER: Boxing → Takedown → Ground strikes. REST: 1min between. NO HEAD IMPACT"
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
@@ -1765,7 +1769,7 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "TEMPERATURE: 90-95\u00b0F. HYDRATION: +20% fluid intake pre/post"
+    "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post"
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -2323,7 +2327,8 @@
       "coordination",
       "mech_reactive",
       "mech_change_of_direction",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "high_impact"
     ],
     "notes": "Change pattern every 2 rounds (RPE 8)"
   },
@@ -3199,7 +3204,7 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "BOX HEIGHT: 12\u201318\u201d. Focus on snap-down and fast reset."
+    "notes": "BOX HEIGHT: 12–18”. Focus on snap-down and fast reset."
   },
   {
     "name": "Pogo Jump Series (Mini Bounce)",
@@ -3215,7 +3220,8 @@
       "mech_reactive_rebound",
       "mech_landing_impact",
       "mech_lower_jump",
-      "mech_cns_high"
+      "mech_cns_high",
+      "high_impact"
     ],
     "notes": "Keep ground contact <150ms. Prioritize rhythm and posture."
   },
@@ -3273,7 +3279,7 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Fast taps over 4\u20136\u201d hurdles. Emphasize light contacts."
+    "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts."
   },
   {
     "name": "Med Ball Drop Catch to Jump",
@@ -3294,7 +3300,7 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Partner drops ball \u2192 athlete catches + jumps. Use 2\u20134kg."
+    "notes": "Partner drops ball → athlete catches + jumps. Use 2–4kg."
   },
   {
     "name": "Mini Box Depth Drop",
@@ -3312,7 +3318,7 @@
       "mech_lower_jump",
       "mech_cns_high"
     ],
-    "notes": "Height = 6\u201312\u201d. Cue soft land + quick reset. No rebound."
+    "notes": "Height = 6–12”. Cue soft land + quick reset. No rebound."
   },
   {
     "name": "Band-Assisted Jump Reset",
@@ -3444,7 +3450,8 @@
       "ankle",
       "mech_reactive_rebound",
       "mech_landing_impact",
-      "mech_cns_high"
+      "mech_cns_high",
+      "high_impact"
     ],
     "notes": "Bounce on midfoot. No knee bend. High frequency bounce."
   },
@@ -3485,7 +3492,7 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "Partner gives unpredictable toss cue. Ball: 3\u20135kg. Emphasize snap."
+    "notes": "Partner gives unpredictable toss cue. Ball: 3–5kg. Emphasize snap."
   },
   {
     "name": "Plyo Push-Up on Knees",
@@ -3544,7 +3551,7 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "notes": "Use 2\u20134kg ball. Minimize effort, maximize intent and speed."
+    "notes": "Use 2–4kg ball. Minimize effort, maximize intent and speed."
   },
   {
     "name": "Seated Med Ball Chest Pop",

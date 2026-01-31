@@ -875,6 +875,19 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     cleaned = _strip_surrounding_punct(cleaned)
     if not cleaned:
         return None, None
+    tendonitis_hard_map_terms = {
+        "tendonitis",
+        "tendinitis",
+        "tennis elbow",
+        "golfer's elbow",
+        "golfers elbow",
+        "golfer’s elbow",
+    }
+    if any(term in cleaned for term in tendonitis_hard_map_terms):
+        location = canonicalize_location(cleaned)
+        if location is None and ("elbow" in cleaned):
+            location = "elbow"
+        return "tendonitis", location
     doc_text = cleaned
     injury_type = canonicalize_injury_type(doc_text)
     location = canonicalize_location(doc_text)
