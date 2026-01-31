@@ -558,6 +558,7 @@ def generate_conditioning_block(flags):
     injuries = flags.get("injuries", [])
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
+    injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
@@ -642,6 +643,9 @@ def generate_conditioning_block(flags):
     selected_drill_names = []
     reason_lookup: dict[str, dict] = {}
     excluded_by_injury: list[dict] = []
+    restriction_candidates = 0
+    restriction_blocked = 0
+    restriction_reason_counts: dict[str, int] = defaultdict(int)
 
     for drill in conditioning_bank:
         d = drill.copy()
@@ -722,14 +726,39 @@ def generate_conditioning_block(flags):
         ):
             continue
 
-        exclude_restricted, restriction_penalty, matched_restrictions = evaluate_restriction_impact(
+        restriction_candidates += 1
+        restriction_result = evaluate_restriction_impact(
             restrictions,
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
         )
-        if not ignore_restrictions and exclude_restricted:
+        restriction_penalty = restriction_result.get("penalty", 0.0)
+        matched_restrictions = restriction_result.get("matched", [])
+        if not ignore_restrictions and not restriction_result.get("allowed", True):
+            restriction_blocked += 1
+            for match in matched_restrictions:
+                restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+            if injury_trace:
+                print(
+                    "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
+                    % (
+                        phase.upper(),
+                        d.get("name", "<unnamed>"),
+                        matched_restrictions,
+                        restriction_result.get("risk", 0.0),
+                    )
+                )
             continue
+        if injury_trace and restriction_result.get("no_match_hints"):
+            print(
+                "[guard-pass-warning] conditioning:%s name=%s hints=%s"
+                % (
+                    phase.upper(),
+                    d.get("name", "<unnamed>"),
+                    restriction_result.get("no_match_hints", []),
+                )
+            )
 
         num_weak = sum(1 for t in tags if t in weak_tags)
         num_goals = sum(1 for t in tags if t in goal_tags)
@@ -850,14 +879,39 @@ def generate_conditioning_block(flags):
             continue
         equip_bonus = 0.5 if drill_equipment else 0.0
 
-        exclude_restricted, restriction_penalty, matched_restrictions = evaluate_restriction_impact(
+        restriction_candidates += 1
+        restriction_result = evaluate_restriction_impact(
             restrictions,
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
         )
-        if not ignore_restrictions and exclude_restricted:
+        restriction_penalty = restriction_result.get("penalty", 0.0)
+        matched_restrictions = restriction_result.get("matched", [])
+        if not ignore_restrictions and not restriction_result.get("allowed", True):
+            restriction_blocked += 1
+            for match in matched_restrictions:
+                restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+            if injury_trace:
+                print(
+                    "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
+                    % (
+                        phase.upper(),
+                        d.get("name", "<unnamed>"),
+                        matched_restrictions,
+                        restriction_result.get("risk", 0.0),
+                    )
+                )
             continue
+        if injury_trace and restriction_result.get("no_match_hints"):
+            print(
+                "[guard-pass-warning] conditioning:%s name=%s hints=%s"
+                % (
+                    phase.upper(),
+                    d.get("name", "<unnamed>"),
+                    restriction_result.get("no_match_hints", []),
+                )
+            )
 
         score = 0.0
         score += 1.5  # style match already guaranteed by filter
@@ -905,6 +959,15 @@ def generate_conditioning_block(flags):
     for style_lists in style_drills_by_style.values():
         for drills in style_lists.values():
             drills.sort(key=lambda x: x[1], reverse=True)
+
+    if injury_trace and restrictions:
+        logger.info(
+            "[guard-summary] conditioning:%s candidates=%d blocked=%d reasons=%s",
+            phase.upper(),
+            restriction_candidates,
+            restriction_blocked,
+            dict(restriction_reason_counts),
+        )
 
     # Refactored: Use utility function instead of local duplicate implementation
     system_drills = {system: trim_to_injury_guard_shortlist(drills) for system, drills in system_drills.items()}
