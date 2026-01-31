@@ -11,6 +11,8 @@ jobs:
       SUPABASE_URL: ${{ vars.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       INJURY_DEBUG: "1"
+      INJURY_TRACE: "1"
+      
 
     steps:
       - name: Checkout repo
