@@ -36,6 +36,22 @@ _RESTRICTION_KEYWORDS = {
 
 _LOW_CONFIDENCE_RESTRICTIONS = {"high_impact", "max_velocity"}
 
+_HIGH_IMPACT_TAGS = {"high_impact", "plyometric", "jumping", "ballistic_lower"}
+_HIGH_IMPACT_KEYWORDS = {
+    "jump",
+    "jumping",
+    "bound",
+    "bounds",
+    "pogo",
+    "pogos",
+    "bounce",
+    "bounces",
+    "plyo",
+    "plyometric",
+    "sprint burst",
+    "sprint-burst",
+}
+
 
 def _restriction_keywords(restriction: ParsedRestriction) -> list[str]:
     key = restriction.get("restriction")
@@ -58,11 +74,16 @@ def restriction_matches_item(
 ) -> bool:
     if not restriction:
         return False
+    tags_set = set(normalize_tags(tags))
+    if restriction.get("restriction") == "high_impact":
+        if tags_set & _HIGH_IMPACT_TAGS:
+            return True
     keywords = _restriction_keywords(restriction)
     if not keywords:
         return False
     normalized_text = text.lower()
-    tags_set = set(normalize_tags(tags))
+    if restriction.get("restriction") == "high_impact":
+        keywords = list(set(keywords) | _HIGH_IMPACT_KEYWORDS)
     matches = sum(1 for keyword in keywords if keyword in normalized_text or keyword in tags_set)
     min_required = 1 if restriction.get("restriction") in _LOW_CONFIDENCE_RESTRICTIONS else MIN_KEYWORD_MATCHES
     if len(keywords) < min_required:

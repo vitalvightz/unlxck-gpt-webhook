@@ -92,7 +92,8 @@
       "mech_landing_impact",
       "mech_cns_high",
       "mech_lower_hip_hinge",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "high_impact"
     ],
     "notes": "Primes teep/kick retraction speed (40% effort)",
     "equipment_note": "Flat surface only"
@@ -406,7 +407,8 @@
       "mech_landing_impact",
       "mech_cns_high",
       "mech_lower_hip_hinge",
-      "mech_lower_lunge"
+      "mech_lower_lunge",
+      "high_impact"
     ],
     "notes": "Links TDD to stand-up explosiveness (50% height)",
     "equipment_note": "Grass/turf",
@@ -508,7 +510,8 @@
       "mech_landing_impact",
       "mech_cns_high",
       "mech_lower_hip_hinge",
-      "mech_lower_lunge"
+      "mech_lower_lunge",
+      "high_impact"
     ],
     "notes": "Trains shot defense to re-engagement (50% distance)",
     "equipment_note": "Mark 3ft jump target",
@@ -1132,7 +1135,7 @@
     ],
     "system": "Cognitive",
     "modality": "visual processing",
-    "duration": "3min random ball toss \u2192 jab/parry response \u2192 x4 rounds",
+    "duration": "3min random ball toss → jab/parry response → x4 rounds",
     "intensity": "moderate",
     "tags": [
       "boxing",
@@ -1156,7 +1159,7 @@
     ],
     "system": "Cognitive",
     "modality": "auditory reaction",
-    "duration": "5min clinch pummeling \u2192 change direction on beep \u2192 x3 rounds",
+    "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -1181,7 +1184,7 @@
     ],
     "system": "Cognitive",
     "modality": "decision fatigue",
-    "duration": "3min live wrestling \u2192 30s chess move \u2192 x5 rounds",
+    "duration": "3min live wrestling → 30s chess move → x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "wrestling",
@@ -1203,7 +1206,7 @@
     ],
     "system": "Cognitive",
     "modality": "memory challenge",
-    "duration": "3min execute kick combos from flashed cards \u2192 x4 rounds",
+    "duration": "3min execute kick combos from flashed cards → x4 rounds",
     "intensity": "low",
     "tags": [
       "kickboxing",
@@ -1227,7 +1230,7 @@
     ],
     "system": "Cognitive",
     "modality": "choice reaction",
-    "duration": "3min shot entries \u2192 cone color dictates finish (single/double) \u2192 x4 rounds",
+    "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -1250,7 +1253,7 @@
     ],
     "system": "Cognitive",
     "modality": "pattern recognition",
-    "duration": "3min mitt work \u2192 solve 3 puzzle pieces between rounds \u2192 x5 rounds",
+    "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -1274,7 +1277,7 @@
     ],
     "system": "Cognitive",
     "modality": "dual-task loading",
-    "duration": "3min footwork drills \u2192 solve math problem between combos \u2192 x4 rounds",
+    "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "muay_thai",
@@ -1283,7 +1286,7 @@
       "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "Example: 'Teep \u2192 solve 7x8 \u2192 pivot' (50% effort)",
+    "notes": "Example: 'Teep → solve 7x8 → pivot' (50% effort)",
     "equipment_note": "Whiteboard markers"
   },
   {
@@ -1296,7 +1299,7 @@
     ],
     "system": "Cognitive",
     "modality": "tactile sensitivity",
-    "duration": "3min pummeling blindfolded \u2192 x4 rounds",
+    "duration": "3min pummeling blindfolded → x4 rounds",
     "intensity": "low",
     "tags": [
       "grappling",
@@ -1320,7 +1323,7 @@
     ],
     "system": "Cognitive",
     "modality": "audio distraction",
-    "duration": "3min shadowboxing \u2192 answer riddle mid-round \u2192 x4 rounds",
+    "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
@@ -1344,7 +1347,7 @@
     ],
     "system": "Cognitive",
     "modality": "visual cueing",
-    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) \u2192 x5 rounds",
+    "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
     "intensity": "zone 2",
     "tags": [
       "mma",
