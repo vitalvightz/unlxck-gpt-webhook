@@ -40,16 +40,27 @@ _HIGH_IMPACT_TAGS = {"high_impact", "plyometric", "jumping", "ballistic_lower"}
 _HIGH_IMPACT_KEYWORDS = {
     "jump",
     "jumping",
+    "box jump",
+    "broad jump",
+    "depth jump",
+    "hops",
+    "hop",
+    "lateral bound",
     "bound",
     "bounds",
+    "skater",
+    "hurdle",
+    "rebound",
     "pogo",
     "pogos",
-    "bounce",
-    "bounces",
     "plyo",
     "plyometric",
+    "sprawl jump",
     "sprint burst",
     "sprint-burst",
+}
+_RESTRICTION_SPECIFIC_STOPWORDS = {
+    "high_impact": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
 }
 
 
@@ -71,7 +82,9 @@ class RestrictionGuardResult(TypedDict, total=False):
 def _restriction_keywords(restriction: ParsedRestriction) -> list[str]:
     key = restriction.get("restriction")
     if key and key in _RESTRICTION_KEYWORDS:
-        return _RESTRICTION_KEYWORDS[key]
+        keywords = _RESTRICTION_KEYWORDS[key]
+        stopwords = _RESTRICTION_SPECIFIC_STOPWORDS.get(key, set())
+        return [kw for kw in keywords if kw not in stopwords]
 
     phrase = restriction.get("original_phrase", "")
     tokens = [w for w in _WORD_PATTERN.findall(phrase.lower()) if w not in _RESTRICTION_STOPWORDS]
@@ -94,6 +107,8 @@ def _restriction_match_detail(
     strength = (restriction.get("strength") or "avoid").lower()
     keywords = _restriction_keywords(restriction)
     if restriction_key == "high_impact":
+        stopwords = _RESTRICTION_SPECIFIC_STOPWORDS.get(restriction_key, set())
+        keywords = [kw for kw in keywords if kw not in stopwords]
         keywords = list(set(keywords) | _HIGH_IMPACT_KEYWORDS)
     normalized_text = text.lower()
     tag_matches = []
@@ -103,7 +118,7 @@ def _restriction_match_detail(
     for keyword in keywords:
         if keyword in tags_set:
             tag_matches.append(keyword)
-        if keyword in normalized_text:
+        if _keyword_in_text(keyword, normalized_text):
             text_matches.append(keyword)
     matches = set(tag_matches + text_matches)
     matches_count = len(matches)
@@ -133,6 +148,16 @@ def _restriction_match_detail(
         },
         None,
     )
+
+
+def _keyword_in_text(keyword: str, text: str) -> bool:
+    escaped = re.escape(keyword)
+    if " " in keyword:
+        parts = [re.escape(part) for part in keyword.split()]
+        pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
+    else:
+        pattern = r"\b" + escaped + r"\b"
+    return re.search(pattern, text) is not None
 
 
 def evaluate_restriction_impact(

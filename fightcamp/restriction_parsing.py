@@ -68,7 +68,7 @@ CANONICAL_RESTRICTIONS = {
     "high impact": {
         "restriction": "high_impact",
         "region": None,
-        "keywords": ["high", "impact", "jump", "jumping", "plyo"],
+        "keywords": ["high impact", "impact", "jump", "jumping", "plyo", "plyometric"],
     },
     "loaded flexion": {
         "restriction": "loaded_flexion",
