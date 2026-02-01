@@ -93,7 +93,7 @@
       "mech_cns_high",
       "mech_lower_hip_hinge",
       "mech_trunk_rotation",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "Primes teep/kick retraction speed (40% effort)",
     "equipment_note": "Flat surface only"
@@ -408,7 +408,7 @@
       "mech_cns_high",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "Links TDD to stand-up explosiveness (50% height)",
     "equipment_note": "Grass/turf",
@@ -511,7 +511,7 @@
       "mech_cns_high",
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "Trains shot defense to re-engagement (50% distance)",
     "equipment_note": "Mark 3ft jump target",

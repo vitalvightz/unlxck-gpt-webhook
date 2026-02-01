@@ -68,7 +68,29 @@ CANONICAL_RESTRICTIONS = {
     "high impact": {
         "restriction": "high_impact",
         "region": None,
-        "keywords": ["high impact", "impact", "jump", "jumping", "plyo", "plyometric"],
+        "keywords": [
+            "high impact",
+            "high-impact",
+            "jump",
+            "jumps",
+            "jumping",
+            "hop",
+            "hops",
+            "bound",
+            "bounds",
+            "plyo",
+            "plyometric",
+            "sprint",
+            "sprinting",
+            "hurdle",
+            "burpee",
+            "sprawl",
+            "landing",
+            "landings",
+            "reactive",
+            "depth drop",
+            "depth-drop",
+        ],
     },
     "loaded flexion": {
         "restriction": "loaded_flexion",
@@ -83,6 +105,7 @@ CANONICAL_RESTRICTIONS = {
 }
 
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
+_WORD_BOUNDARY_PATTERN = re.compile(r"[a-z]+")
 
 
 def _extract_laterality(text: str) -> str | None:
@@ -98,6 +121,59 @@ def _extract_laterality(text: str) -> str | None:
 def _normalize_text(text: str) -> str:
     """Normalize text for matching."""
     return text.lower().strip()
+
+
+def _keyword_in_text(keyword: str, text: str) -> bool:
+    if " " in keyword or "-" in keyword:
+        parts = [re.escape(part) for part in re.split(r"[\s-]+", keyword.strip()) if part]
+        if not parts:
+            return False
+        pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
+        return re.search(pattern, text) is not None
+    tokens = set(_WORD_BOUNDARY_PATTERN.findall(text))
+    return keyword.lower() in tokens
+
+
+def _normalize_high_impact_restriction(text: str) -> str:
+    normalized = _normalize_text(text)
+    lower_keywords = [
+        "jump",
+        "jumps",
+        "jumping",
+        "hop",
+        "hops",
+        "bound",
+        "bounds",
+        "landing",
+        "landings",
+        "depth drop",
+        "depth-drop",
+        "plyo",
+        "plyometric",
+        "sprint",
+        "sprinting",
+        "hurdle",
+        "burpee",
+        "sprawl",
+        "reactive",
+    ]
+    upper_keywords = [
+        "clap pushup",
+        "clap push-up",
+        "clapping pushup",
+        "clapping push-up",
+        "plyo pushup",
+        "plyo push-up",
+        "plyometric pushup",
+        "plyometric push-up",
+        "explosive pushup",
+        "explosive push-up",
+    ]
+    if any(_keyword_in_text(keyword, normalized) for keyword in lower_keywords):
+        return "high_impact_lower"
+    if any(_keyword_in_text(keyword, normalized) for keyword in upper_keywords):
+        return "high_impact_upper"
+    return "high_impact_global"
 
 
 def _contains_trigger_token(text: str) -> bool:
@@ -154,22 +230,32 @@ def _match_canonical_restriction(text: str) -> tuple[str | None, str | None]:
         Tuple of (restriction_key, region) or (None, None) if no match.
     """
     normalized = _normalize_text(text)
-    tokens = set(normalized.split())
+    tokens = set(_WORD_BOUNDARY_PATTERN.findall(normalized))
     
     best_match = None
     best_score = 0
     
     for restriction_name, restriction_data in CANONICAL_RESTRICTIONS.items():
         keywords = restriction_data["keywords"]
-        matches = sum(1 for keyword in keywords if keyword in normalized or keyword in tokens)
-        
-        if matches > best_score:
+        matches = sum(
+            1
+            for keyword in keywords
+            if (keyword in tokens) or _keyword_in_text(keyword, normalized)
+        )
+        min_matches = MIN_KEYWORD_MATCHES
+        if restriction_data["restriction"] == "high_impact":
+            min_matches = 1
+
+        if matches >= min_matches and matches > best_score:
             best_score = matches
             best_match = (restriction_data["restriction"], restriction_data["region"])
     
     # Require at least MIN_KEYWORD_MATCHES for confidence to avoid false positives
-    if best_score >= MIN_KEYWORD_MATCHES:
-        return best_match
+    if best_match:
+        restriction_key, region = best_match
+        if restriction_key == "high_impact":
+            restriction_key = _normalize_high_impact_restriction(normalized)
+        return restriction_key, region
     
     return None, None
 
@@ -177,6 +263,7 @@ def _match_canonical_restriction(text: str) -> tuple[str | None, str | None]:
 def _infer_region_from_text(text: str) -> str | None:
     """Infer anatomical region from text if not matched canonically."""
     normalized = _normalize_text(text)
+    tokens = set(_WORD_BOUNDARY_PATTERN.findall(normalized))
     
     # Simple keyword matching for common regions
     region_keywords = {
@@ -190,7 +277,7 @@ def _infer_region_from_text(text: str) -> str | None:
     }
     
     for region, keywords in region_keywords.items():
-        if any(keyword in normalized for keyword in keywords):
+        if any(keyword in tokens or _keyword_in_text(keyword, normalized) for keyword in keywords):
             return region
     
     return None

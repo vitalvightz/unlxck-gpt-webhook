@@ -33,34 +33,76 @@ _RESTRICTION_STOPWORDS = {
 _RESTRICTION_KEYWORDS = {
     data["restriction"]: data["keywords"] for data in CANONICAL_RESTRICTIONS.values()
 }
+if "high_impact" in _RESTRICTION_KEYWORDS:
+    _RESTRICTION_KEYWORDS.update(
+        {
+            "high_impact_lower": _RESTRICTION_KEYWORDS["high_impact"],
+            "high_impact_upper": _RESTRICTION_KEYWORDS["high_impact"],
+            "high_impact_global": _RESTRICTION_KEYWORDS["high_impact"],
+        }
+    )
 
-_LOW_CONFIDENCE_RESTRICTIONS = {"high_impact", "max_velocity"}
+_LOW_CONFIDENCE_RESTRICTIONS = {
+    "high_impact",
+    "high_impact_lower",
+    "high_impact_upper",
+    "high_impact_global",
+    "max_velocity",
+}
 
-_HIGH_IMPACT_TAGS = {"high_impact", "plyometric", "jumping", "ballistic_lower"}
-_HIGH_IMPACT_KEYWORDS = {
-    "jump",
+_HIGH_IMPACT_LOWER_TAGS = {
+    "high_impact",
+    "high_impact_plyo",
+    "plyometric",
     "jumping",
-    "box jump",
-    "broad jump",
-    "depth jump",
-    "hops",
+    "ballistic_lower",
+    "mech_lower_jump",
+    "mech_landing_impact",
+    "landing_stress_high",
+    "reactive_rebound_high",
+    "impact_rebound_high",
+    "foot_impact_high",
+    "mech_reactive",
+    "mech_ballistic",
+}
+_HIGH_IMPACT_LOWER_KEYWORDS = {
+    "jump",
+    "jumps",
+    "jumping",
     "hop",
-    "lateral bound",
+    "hops",
     "bound",
     "bounds",
-    "skater",
-    "hurdle",
-    "rebound",
-    "pogo",
-    "pogos",
     "plyo",
     "plyometric",
-    "sprawl jump",
-    "sprint burst",
-    "sprint-burst",
+    "sprint",
+    "sprinting",
+    "hurdle",
+    "depth drop",
+    "depth-drop",
+    "burpee",
+    "sprawl",
+    "landing",
+    "landings",
+    "reactive",
+}
+_HIGH_IMPACT_UPPER_KEYWORDS = {
+    "clap pushup",
+    "clap push-up",
+    "clapping pushup",
+    "clapping push-up",
+    "plyo pushup",
+    "plyo push-up",
+    "plyometric pushup",
+    "plyometric push-up",
+    "explosive pushup",
+    "explosive push-up",
 }
 _RESTRICTION_SPECIFIC_STOPWORDS = {
     "high_impact": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
+    "high_impact_lower": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
+    "high_impact_upper": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
+    "high_impact_global": {"high", "pace", "push", "pull", "row", "fly", "low", "to", "and", "with"},
 }
 
 
@@ -106,15 +148,20 @@ def _restriction_match_detail(
     restriction_key = restriction.get("restriction") or "generic_constraint"
     strength = (restriction.get("strength") or "avoid").lower()
     keywords = _restriction_keywords(restriction)
-    if restriction_key == "high_impact":
+    if restriction_key in {"high_impact", "high_impact_lower", "high_impact_upper", "high_impact_global"}:
         stopwords = _RESTRICTION_SPECIFIC_STOPWORDS.get(restriction_key, set())
         keywords = [kw for kw in keywords if kw not in stopwords]
-        keywords = list(set(keywords) | _HIGH_IMPACT_KEYWORDS)
+        if restriction_key == "high_impact_upper":
+            keywords = list(set(keywords) | _HIGH_IMPACT_UPPER_KEYWORDS)
+        elif restriction_key == "high_impact_global":
+            keywords = list(set(keywords) | _HIGH_IMPACT_LOWER_KEYWORDS | _HIGH_IMPACT_UPPER_KEYWORDS)
+        else:
+            keywords = list(set(keywords) | _HIGH_IMPACT_LOWER_KEYWORDS)
     normalized_text = text.lower()
     tag_matches = []
     text_matches = []
-    if restriction_key == "high_impact" and tags_set & _HIGH_IMPACT_TAGS:
-        tag_matches.extend(sorted(tags_set & _HIGH_IMPACT_TAGS))
+    if restriction_key in {"high_impact", "high_impact_lower", "high_impact_global"} and tags_set & _HIGH_IMPACT_LOWER_TAGS:
+        tag_matches.extend(sorted(tags_set & _HIGH_IMPACT_LOWER_TAGS))
     for keyword in keywords:
         if keyword in tags_set:
             tag_matches.append(keyword)
@@ -128,7 +175,7 @@ def _restriction_match_detail(
     matched = matches_count >= min_required
     if not matched:
         hint = None
-        if restriction_key == "high_impact" and not tag_matches:
+        if restriction_key in {"high_impact", "high_impact_lower", "high_impact_global"} and not tag_matches:
             hint = "missing high_impact tag"
         return False, None, hint
     if tag_matches and text_matches:
