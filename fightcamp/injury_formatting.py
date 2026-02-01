@@ -149,6 +149,9 @@ _RESTRICTION_GUARDRAIL_DETAILS = {
     "deep_knee_flexion": ("deep loaded knee flexion", "deep squat/lunge patterns"),
     "heavy_overhead_pressing": ("heavy overhead pressing", "overhead press/jerk/thruster/overhead slams"),
     "high_impact": ("high impact", "jumping/plyo/impact running"),
+    "high_impact_lower": ("high impact (lower)", "jumping/plyo/bounds/landing drills"),
+    "high_impact_upper": ("high impact (upper)", "clap/plyo push-ups and explosive pressing"),
+    "high_impact_global": ("high impact", "jumping/plyo/impact running"),
     "loaded_flexion": ("loaded flexion", "weighted sit-ups/loaded crunches"),
     "max_velocity": ("max velocity sprinting", "max sprints/overspeed work"),
 }

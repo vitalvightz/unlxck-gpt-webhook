@@ -601,7 +601,7 @@
       "mech_reactive_rebound",
       "mech_acceleration",
       "mech_cns_high",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "CNS LOAD: Requires 48h recovery after. BOX HEIGHT: 12-18\" based on experience"
   },
@@ -620,7 +620,7 @@
       "mech_upper_press",
       "mech_acceleration",
       "mech_cns_high",
-      "high_impact"
+      "high_impact_upper"
     ],
     "notes": "BENCH PRESS PAIRING: Ideal 48h post heavy bench. SHOULDER INJURY: Replace with med ball throws"
   },
@@ -1441,7 +1441,7 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_cns_high",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "ANKLE STABILITY: Not for acute sprains. PATTERN: Change every 2 sets"
   },
@@ -1598,7 +1598,7 @@
       "mech_acceleration",
       "mech_reactive",
       "mech_cns_high",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "POSTERIOR CHAIN: 48h after deadlifts. GPP: Reduce to 5 sets"
   },
@@ -2328,7 +2328,7 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_systemic_fatigue",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "Change pattern every 2 rounds (RPE 8)"
   },
@@ -3221,7 +3221,7 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_cns_high",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "Keep ground contact <150ms. Prioritize rhythm and posture."
   },
@@ -3451,7 +3451,7 @@
       "mech_reactive_rebound",
       "mech_landing_impact",
       "mech_cns_high",
-      "high_impact"
+      "high_impact_lower"
     ],
     "notes": "Bounce on midfoot. No knee bend. High frequency bounce."
   },
