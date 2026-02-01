@@ -443,6 +443,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     restriction_candidates = 0
     restriction_blocked = 0
     restriction_reason_counts: dict[str, int] = defaultdict(int)
+    restriction_warning_counts: dict[str, int] = defaultdict(int)
+    restriction_blocked_items: list[dict] = []
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
@@ -490,6 +492,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             restriction_blocked += 1
             for match in matched_restrictions:
                 restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+            if matched_restrictions:
+                top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
+                restriction_blocked_items.append(
+                    {
+                        "name": ex.get("name", "<unnamed>"),
+                        "match": top_match,
+                        "risk": restriction_result.get("risk", 0.0),
+                    }
+                )
             if injury_trace:
                 print(
                     "[guard-block] strength:%s name=%s matched=%s risk=%.2f"
@@ -501,15 +512,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     )
                 )
             continue
-        if injury_trace and restriction_result.get("no_match_hints"):
-            print(
-                "[guard-pass-warning] strength:%s name=%s hints=%s"
-                % (
-                    phase,
-                    ex.get("name", "<unnamed>"),
-                    restriction_result.get("no_match_hints", []),
-                )
-            )
+        if restriction_result.get("no_match_hints"):
+            for hint in restriction_result.get("no_match_hints", []):
+                restriction_warning_counts[hint] += 1
 
         score, breakdown = score_exercise(
             exercise_tags=tags,
@@ -883,12 +888,39 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         normalize_exercise_movement(ex)
 
     if injury_trace and restrictions:
+        active_restrictions = sorted({r.get("restriction", "generic_constraint") for r in restrictions})
+        top_blocks = sorted(
+            restriction_blocked_items,
+            key=lambda item: item.get("risk", 0.0),
+            reverse=True,
+        )[:5]
+        formatted_blocks = [
+            {
+                "name": item.get("name"),
+                "rule": item.get("match", {}).get("restriction"),
+                "method": item.get("match", {}).get("method"),
+                "confidence": item.get("match", {}).get("confidence"),
+                "risk": item.get("risk"),
+            }
+            for item in top_blocks
+        ]
         logger.info(
-            "[guard-summary] strength:%s candidates=%d blocked=%d reasons=%s",
+            "[guard-report] strength:%s restrictions=%s candidates=%d blocked=%d reasons=%s",
             phase,
+            active_restrictions,
             restriction_candidates,
             restriction_blocked,
             dict(restriction_reason_counts),
+        )
+        logger.info(
+            "[guard-report] strength:%s top_blocks=%s",
+            phase,
+            formatted_blocks,
+        )
+        logger.info(
+            "[guard-report] strength:%s warnings=%s",
+            phase,
+            dict(restriction_warning_counts),
         )
 
     used_days = training_days[:num_strength_sessions]

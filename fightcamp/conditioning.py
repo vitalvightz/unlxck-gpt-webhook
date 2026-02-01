@@ -646,6 +646,8 @@ def generate_conditioning_block(flags):
     restriction_candidates = 0
     restriction_blocked = 0
     restriction_reason_counts: dict[str, int] = defaultdict(int)
+    restriction_warning_counts: dict[str, int] = defaultdict(int)
+    restriction_blocked_items: list[dict] = []
 
     for drill in conditioning_bank:
         d = drill.copy()
@@ -739,6 +741,15 @@ def generate_conditioning_block(flags):
             restriction_blocked += 1
             for match in matched_restrictions:
                 restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+            if matched_restrictions:
+                top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
+                restriction_blocked_items.append(
+                    {
+                        "name": d.get("name", "<unnamed>"),
+                        "match": top_match,
+                        "risk": restriction_result.get("risk", 0.0),
+                    }
+                )
             if injury_trace:
                 print(
                     "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
@@ -750,15 +761,9 @@ def generate_conditioning_block(flags):
                     )
                 )
             continue
-        if injury_trace and restriction_result.get("no_match_hints"):
-            print(
-                "[guard-pass-warning] conditioning:%s name=%s hints=%s"
-                % (
-                    phase.upper(),
-                    d.get("name", "<unnamed>"),
-                    restriction_result.get("no_match_hints", []),
-                )
-            )
+        if restriction_result.get("no_match_hints"):
+            for hint in restriction_result.get("no_match_hints", []):
+                restriction_warning_counts[hint] += 1
 
         num_weak = sum(1 for t in tags if t in weak_tags)
         num_goals = sum(1 for t in tags if t in goal_tags)
@@ -892,6 +897,15 @@ def generate_conditioning_block(flags):
             restriction_blocked += 1
             for match in matched_restrictions:
                 restriction_reason_counts[match.get("restriction", "generic_constraint")] += 1
+            if matched_restrictions:
+                top_match = max(matched_restrictions, key=lambda m: m.get("confidence", 0))
+                restriction_blocked_items.append(
+                    {
+                        "name": d.get("name", "<unnamed>"),
+                        "match": top_match,
+                        "risk": restriction_result.get("risk", 0.0),
+                    }
+                )
             if injury_trace:
                 print(
                     "[guard-block] conditioning:%s name=%s matched=%s risk=%.2f"
@@ -903,15 +917,9 @@ def generate_conditioning_block(flags):
                     )
                 )
             continue
-        if injury_trace and restriction_result.get("no_match_hints"):
-            print(
-                "[guard-pass-warning] conditioning:%s name=%s hints=%s"
-                % (
-                    phase.upper(),
-                    d.get("name", "<unnamed>"),
-                    restriction_result.get("no_match_hints", []),
-                )
-            )
+        if restriction_result.get("no_match_hints"):
+            for hint in restriction_result.get("no_match_hints", []):
+                restriction_warning_counts[hint] += 1
 
         score = 0.0
         score += 1.5  # style match already guaranteed by filter
@@ -961,12 +969,39 @@ def generate_conditioning_block(flags):
             drills.sort(key=lambda x: x[1], reverse=True)
 
     if injury_trace and restrictions:
+        active_restrictions = sorted({r.get("restriction", "generic_constraint") for r in restrictions})
+        top_blocks = sorted(
+            restriction_blocked_items,
+            key=lambda item: item.get("risk", 0.0),
+            reverse=True,
+        )[:5]
+        formatted_blocks = [
+            {
+                "name": item.get("name"),
+                "rule": item.get("match", {}).get("restriction"),
+                "method": item.get("match", {}).get("method"),
+                "confidence": item.get("match", {}).get("confidence"),
+                "risk": item.get("risk"),
+            }
+            for item in top_blocks
+        ]
         logger.info(
-            "[guard-summary] conditioning:%s candidates=%d blocked=%d reasons=%s",
+            "[guard-report] conditioning:%s restrictions=%s candidates=%d blocked=%d reasons=%s",
             phase.upper(),
+            active_restrictions,
             restriction_candidates,
             restriction_blocked,
             dict(restriction_reason_counts),
+        )
+        logger.info(
+            "[guard-report] conditioning:%s top_blocks=%s",
+            phase.upper(),
+            formatted_blocks,
+        )
+        logger.info(
+            "[guard-report] conditioning:%s warnings=%s",
+            phase.upper(),
+            dict(restriction_warning_counts),
         )
 
     # Refactored: Use utility function instead of local duplicate implementation
