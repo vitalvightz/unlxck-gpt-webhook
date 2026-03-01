@@ -3,6 +3,7 @@ import logging
 import os
 import json
 import random
+import re
 from collections import defaultdict
 from .training_context import (
     normalize_equipment_list,
@@ -204,6 +205,25 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
     return False
 
 
+
+
+_SUPRA_MAX_ISO_PATTERN = re.compile(r"(?:11[5-9]|120)%\s*1rm|supra", re.IGNORECASE)
+
+
+def _is_supra_max_isometric(exercise: dict) -> bool:
+    name = str(exercise.get("name", ""))
+    method = str(exercise.get("method", ""))
+    tags = " ".join(normalize_tags(exercise.get("tags", [])))
+    text = f"{name} {method} {tags}"
+    if "isometric" not in text.lower() and "iso" not in text.lower():
+        return False
+    return bool(_SUPRA_MAX_ISO_PATTERN.search(text))
+
+
+def _has_isometric_setup_equipment(equipment_access: list[str]) -> bool:
+    eq = set(normalize_equipment_list(equipment_access))
+    valid = {"power_rack", "squat_rack", "rack", "safety_pins", "pins"}
+    return bool(eq & valid)
 def _normalize_fight_format(fight_format: str) -> str:
     if fight_format == "muay_thai":
         return "kickboxing"
@@ -391,6 +411,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     fatigue = flags.get("fatigue", "low")
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
+    tested_1rm_available = bool(flags.get("tested_1rm_available", False))
+    has_isometric_setup = _has_isometric_setup_equipment(equipment_access)
     fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
     style_input = flags.get("style_tactical", [])
     if isinstance(style_input, str):
@@ -473,6 +495,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if not any(t in taper_allowed for t in tags):
                 continue
         if phase not in ex.get("phases", []):
+            continue
+        if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
             continue
 
         phase_dict = PHASE_TAG_BOOST.get(phase, {})
@@ -568,6 +592,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if ex in [we[0] for we in weighted_exercises]:
                 continue
             if phase not in ex.get("phases", []):
+                continue
+            if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
                 continue
             ex_equipment = normalize_equipment_list(ex.get("equipment", []))
             if not set(ex_equipment).issubset(set(equipment_access)):
