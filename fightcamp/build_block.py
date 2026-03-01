@@ -377,10 +377,13 @@ def html_to_pdf(html: str, output_path: str) -> Optional[str]:
         return None
 
 
+DEFAULT_SUPABASE_URL = "https://leienvqynijrgghhzczt.supabase.co"
+
+
 def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
     """Upload a PDF to Supabase Storage and return the public URL."""
 
-    url = os.environ.get("SUPABASE_URL")
+    url = os.environ.get("SUPABASE_URL", DEFAULT_SUPABASE_URL)
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
         raise RuntimeError("Missing Supabase credentials")
