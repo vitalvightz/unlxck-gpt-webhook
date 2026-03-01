@@ -22,7 +22,7 @@
       },
       {
         "label": "Training Availability",
-        "value": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"]
+        "value": ["Monday", "Tuesday", "Wednseday", Thursday", "Friday", "Saturday"]
       },
       {
         "label": "Any injuries or areas you need to work around?",
@@ -42,11 +42,11 @@
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "after getting clipped, he goes into survival mode and backs straight up; stops thinking about angles and forgets his reset breathing"
+        "value": "Im too aggressive to the point i lose form and skill"
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "Loved sled pushes, rope intervals, and med-ball throws. Hated long jogs and heavy deadlift volume that flared his elbow."
+        "value": "no"
       }
     ]
   },
