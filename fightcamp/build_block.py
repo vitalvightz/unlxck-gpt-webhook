@@ -7,9 +7,11 @@ uploaded directly to Supabase Storage.
 
 Environment Variables
 ---------------------
-SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are optional. When provided, the
-``upload_to_supabase`` function will place the generated PDF into the ``fight-plans``
-bucket. No raw HTML is stored.
+SUPABASE_URL is optional and defaults to this project's URL.
+For authentication, set either SUPABASE_SERVICE_ROLE_KEY or
+SUPABASE_PUBLISHABLE_KEY. When credentials are provided, the
+``upload_to_supabase`` function will place the generated PDF into the
+``fight-plans`` bucket. No raw HTML is stored.
 """
 
 from __future__ import annotations
@@ -384,9 +386,11 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
     """Upload a PDF to Supabase Storage and return the public URL."""
 
     url = os.environ.get("SUPABASE_URL", DEFAULT_SUPABASE_URL)
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_PUBLISHABLE_KEY")
     if not url or not key:
-        raise RuntimeError("Missing Supabase credentials")
+        raise RuntimeError(
+            "Missing Supabase credentials. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY."
+        )
     url = url.strip()
     if url.upper().startswith("SUPABASE_URL="):
         url = url.split("=", 1)[1].strip()
