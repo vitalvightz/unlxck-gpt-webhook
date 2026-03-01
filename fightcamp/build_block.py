@@ -391,6 +391,7 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
         raise RuntimeError(
             "Missing Supabase credentials. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY."
         )
+
     url = url.strip()
     if url.upper().startswith("SUPABASE_URL="):
         url = url.split("=", 1)[1].strip()
@@ -407,16 +408,17 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
     with open(pdf_path, "rb") as f:
         data = f.read()
 
-    req = request.Request(storage_path, data=data, method="PUT")
+    req = request.Request(storage_path, data=data, method="POST")
     req.add_header("Authorization", f"Bearer {key}")
+    req.add_header("apikey", key)
     req.add_header("Content-Type", mimetypes.guess_type(filename)[0] or "application/pdf")
-    req.add_header("Content-Length", str(len(data)))
+    req.add_header("x-upsert", "true")
 
-    try:  # pragma: no cover - external call
+    try:
         with request.urlopen(req) as r:
-            if r.status != 200:
-                raise RuntimeError("Upload failed")
-    except HTTPError as e:  # pragma: no cover - external call
+            if r.status not in (200, 201):
+                raise RuntimeError(f"Upload failed: HTTP {r.status}")
+    except HTTPError as e:
         raise RuntimeError("Supabase upload failed") from e
 
     return f"{url}/storage/v1/object/public/{bucket}/{filename}"
