@@ -22,7 +22,7 @@
       },
       {
         "label": "Training Availability",
-        "value": ["Monday", "Tuesday", "Wednseday", Thursday", "Friday", "Saturday"]
+        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
       },
       {
         "label": "Any injuries or areas you need to work around?",
