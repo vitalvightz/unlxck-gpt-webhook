@@ -45,6 +45,26 @@ logger = logging.getLogger(__name__)
 
 ALACTIC_MAX_WORK_SEC = 12
 ALACTIC_MIN_REST_SEC = 60
+SPORT_LANGUAGE_BLACKLIST = {
+    "boxing": {
+        "dirty td",
+        "td setup",
+        "takedown",
+        "double-leg",
+        "double leg",
+        "single-leg",
+        "single leg",
+        "sprawl",
+        "thai clinch",
+        "clinch knee",
+        "cage clinch",
+        "elbow",
+        "cage",
+        "octagon",
+        "ground and pound",
+        "grappling",
+    },
+}
 _TIME_TOKEN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:-|–)?\s*(\d+(?:\.\d+)?)?\s*"
     r"(s|sec|secs|second|seconds|min|mins|minute|minutes)\b",
@@ -295,14 +315,19 @@ def is_banned_drill(
         "grapple",
         "grappler",
         "sprawl",
+        "thai clinch",
+        "clinch knee",
+        "cage clinch",
         "sprawling",
         "takedown",
         "takedowns",
     }
 
+    joined_tags = " ".join(tags)
+
     if fight_format in {"boxing", "kickboxing"}:
         for term in grappling_terms:
-            if term in name or term in tags or term in details:
+            if term in name or term in joined_tags or term in details:
                 return True
 
     if fight_format == "boxing":
@@ -310,14 +335,14 @@ def is_banned_drill(
             "grappling",
             "wrestling",
             "muay_thai",
-            "clinch",
-            "knee",
+            "thai clinch",
+            "clinch knee",
             "kick",
             "teep",
             "elbow",
         }
         for term in boxing_terms:
-            if term in name or term in tags:
+            if term in name or term in joined_tags or term in details:
                 return True
 
     kick_terms = ["kick", "knee", "clinch knee strike", "teep"]
@@ -332,6 +357,73 @@ def is_banned_drill(
                     return True
 
     return False
+
+
+def _sanitize_sport_language(text: str, *, fight_format: str) -> str:
+    """Swap blacklisted sport language with sport-safe alternatives."""
+    if not text:
+        return text
+    sanitized = text
+    if fight_format == "boxing":
+        replacements = {
+            r"\bdirty\s*td\s*setups?\b": "inside-angle entries",
+            r"\btd\s*setups?\b": "entry setups",
+            r"\btakedowns?\b": "entries",
+            r"\bdouble\s*-?\s*legs?\b": "level-change entries",
+            r"\bsingle\s*-?\s*legs?\b": "angle entries",
+            r"\bsprawls?\b": "quick exits",
+            r"\belbows?\b": "short hooks",
+            r"\bthai\s+clinch\b": "inside tie-up",
+            r"\bclinch\s+knees?\b": "inside body-shot entries",
+            r"\bcage\s+clinch\b": "rope tie-up",
+            r"\bcage\b": "ropes",
+            r"\boctagon\b": "ring",
+            r"\bground\s+and\s+pound\b": "close-range punch volume",
+            r"\bgrappling\b": "hand-fighting",
+        }
+        for pattern, replacement in replacements.items():
+            sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+    return sanitized
+
+
+def _violates_sport_language_blacklist(drill: dict, *, fight_format: str) -> bool:
+    terms = SPORT_LANGUAGE_BLACKLIST.get(fight_format, set())
+    if not terms:
+        return False
+    haystack = " ".join(
+        str(drill.get(field, ""))
+        for field in ("name", "modality", "notes", "purpose", "description", "duration", "timing")
+    ).lower()
+    return any(term in haystack for term in terms)
+
+
+def _alactic_maintenance_fallback(phase: str) -> dict:
+    phase = phase.upper()
+    rounds = "6-8" if phase == "SPP" else "4-6"
+    return {
+        "system": "ALACTIC",
+        "name": "Explosive Boxing Burst Intervals",
+        "load": "RPE 8–9, keep quality high and stop before speed drop-off",
+        "rest": "75–120 sec complete rest between reps",
+        "timing": f"{rounds} x 6–10 sec fast punch bursts",
+        "purpose": "Minimal-dose ATP-PCr maintenance for striking speed and neural sharpness.",
+        "red_flags": "Terminate set if punch speed/position quality drops.",
+    }
+
+
+def _suppress_alactic_maintenance(*, fatigue: str, injuries: list[str]) -> bool:
+    if (fatigue or "").lower() == "high":
+        return True
+    risk_terms = {
+        "concussion",
+        "dizzy",
+        "vertigo",
+        "hamstring tear",
+        "achilles",
+        "calf tear",
+    }
+    joined = " ".join(i.lower() for i in injuries)
+    return any(term in joined for term in risk_terms)
 
 
 def select_coordination_drill(flags, existing_names: set[str], injuries: list[str]):
@@ -533,6 +625,12 @@ def render_conditioning_block(
                 )
                 rest = d.get("rest", "—")
 
+                name = _sanitize_sport_language(name, fight_format=(sport or "").lower())
+                timing = _sanitize_sport_language(timing, fight_format=(sport or "").lower())
+                load = _sanitize_sport_language(load, fight_format=(sport or "").lower())
+                rest = _sanitize_sport_language(rest, fight_format=(sport or "").lower())
+                purpose = _sanitize_sport_language(purpose, fight_format=(sport or "").lower())
+
                 drill_block = {
                     "system": system.upper(),
                     "name": name,
@@ -694,6 +792,8 @@ def generate_conditioning_block(flags):
             tech_style_tags,
         ):
             continue
+        if _violates_sport_language_blacklist(d, fight_format=selection_format):
+            continue
 
         if (
             selection_format == "boxing"
@@ -841,6 +941,8 @@ def generate_conditioning_block(flags):
             style_names,
             tech_style_tags,
         ):
+            continue
+        if _violates_sport_language_blacklist(d, fight_format=selection_format):
             continue
         if not target_style_tags.intersection(tags):
             continue
@@ -1597,6 +1699,16 @@ def generate_conditioning_block(flags):
     if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic"):
         fallback = _glycolytic_fallback(phase)
         grouped_drills["glycolytic"] = [fallback]
+        selected_drill_names.append(fallback["name"])
+
+    if (
+        selection_format in {"boxing", "kickboxing"}
+        and phase.upper() in {"SPP", "TAPER"}
+        and not grouped_drills.get("alactic")
+        and not _suppress_alactic_maintenance(fatigue=fatigue, injuries=injuries)
+    ):
+        fallback = _alactic_maintenance_fallback(phase)
+        grouped_drills["alactic"] = [fallback]
         selected_drill_names.append(fallback["name"])
 
     missing_systems = [
