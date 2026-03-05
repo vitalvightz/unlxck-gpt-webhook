@@ -82,3 +82,20 @@ def test_boxing_plain_clinch_language_is_allowed():
     text = "inside clinch hand-fighting rounds"
     sanitized = _sanitize_sport_language(text, fight_format="boxing").lower()
     assert "clinch" in sanitized
+
+
+def test_over_100_percent_isometrics_are_banned_in_spp_even_with_setup():
+    flags = {
+        "phase": "SPP",
+        "fatigue": "low",
+        "fight_format": "boxing",
+        "style_tactical": ["pressure_fighter"],
+        "key_goals": ["max_strength"],
+        "training_days": ["Mon", "Tue", "Thu", "Sat"],
+        "training_frequency": 4,
+        "equipment": ["power_rack", "barbell", "plates"],
+        "tested_1rm_available": True,
+    }
+    result = generate_strength_block(flags=flags)
+    names = [ex.get("name", "") for ex in result["exercises"]]
+    assert not any("% 1RM" in name and any(p in name for p in ["105%", "110%", "115%", "120%", "125%", "130%"]) for name in names)

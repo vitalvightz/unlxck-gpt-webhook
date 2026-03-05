@@ -208,6 +208,7 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
 
 
 _SUPRA_MAX_ISO_PATTERN = re.compile(r"(?:11[5-9]|120)%\s*1rm|supra", re.IGNORECASE)
+_OVER_100_ISO_PATTERN = re.compile(r"(10[1-9]|1[1-9]\d)%\s*1rm", re.IGNORECASE)
 
 
 def _is_supra_max_isometric(exercise: dict) -> bool:
@@ -218,6 +219,16 @@ def _is_supra_max_isometric(exercise: dict) -> bool:
     if "isometric" not in text.lower() and "iso" not in text.lower():
         return False
     return bool(_SUPRA_MAX_ISO_PATTERN.search(text))
+
+
+def _is_over_100_percent_isometric(exercise: dict) -> bool:
+    name = str(exercise.get("name", ""))
+    method = str(exercise.get("method", ""))
+    tags = " ".join(normalize_tags(exercise.get("tags", [])))
+    text = f"{name} {method} {tags}"
+    if "isometric" not in text.lower() and "iso" not in text.lower():
+        return False
+    return bool(_OVER_100_ISO_PATTERN.search(text))
 
 
 def _has_isometric_setup_equipment(equipment_access: list[str]) -> bool:
@@ -496,6 +507,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
         if phase not in ex.get("phases", []):
             continue
+        if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
+            continue
         if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
             continue
 
@@ -592,6 +605,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if ex in [we[0] for we in weighted_exercises]:
                 continue
             if phase not in ex.get("phases", []):
+                continue
+            if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
                 continue
             if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
                 continue
