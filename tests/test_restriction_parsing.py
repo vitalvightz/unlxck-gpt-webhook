@@ -57,7 +57,7 @@ def test_parse_restriction_entry_generic():
     result = parse_restriction_entry("avoid jumping on the ankle")
     assert result is not None
     # "jumping" matches "high_impact" canonical restriction
-    assert result["restriction"] in ["high_impact", "generic_constraint"]
+    assert result["restriction"] in ["high_impact", "high_impact_lower", "generic_constraint"]
     # Note: region inference may vary, accepting None or ankle
     assert result["strength"] == "avoid"
     

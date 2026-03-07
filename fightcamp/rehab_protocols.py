@@ -648,7 +648,7 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
 def _format_restrictions_block(restrictions: Iterable[ParsedRestriction]) -> list[str]:
     if not restrictions:
         return []
-    lines = [f"**Restrictions ({STAGE_2} daily planner only)**"]
+    lines = ["**Restrictions (Stage-2 daily planner only)**"]
     for restriction in restrictions:
         phrase = restriction.get("original_phrase")
         if phrase:
