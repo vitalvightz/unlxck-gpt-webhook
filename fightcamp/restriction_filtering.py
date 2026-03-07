@@ -121,6 +121,24 @@ class RestrictionGuardResult(TypedDict, total=False):
     penalty: float
 
 
+class RestrictionGuardResultCompat(dict):
+    """Dict result that preserves legacy tuple-unpacking semantics.
+
+    Legacy callers used:
+      exclude, penalty, matched = evaluate_restriction_impact(...)
+    New callers use mapping keys (`allowed`, `penalty`, `matched`, `risk`).
+    """
+
+    def __iter__(self):
+        allowed = bool(self.get("allowed", True))
+        penalty = float(self.get("penalty", 0.0))
+        matched = self.get("matched", [])
+        matched_keys = [entry.get("restriction", "generic_constraint") for entry in matched]
+        yield not allowed
+        yield penalty
+        yield matched_keys
+
+
 def _restriction_keywords(restriction: ParsedRestriction) -> list[str]:
     key = restriction.get("restriction")
     if key and key in _RESTRICTION_KEYWORDS:
@@ -215,7 +233,7 @@ def evaluate_restriction_impact(
     limit_penalty: float,
 ) -> RestrictionGuardResult:
     if not restrictions:
-        return {"allowed": True, "matched": [], "risk": 0.0, "penalty": 0.0}
+        return RestrictionGuardResultCompat({"allowed": True, "matched": [], "risk": 0.0, "penalty": 0.0})
     exclude = False
     penalty = 0.0
     matched: list[RestrictionMatch] = []
@@ -235,12 +253,12 @@ def evaluate_restriction_impact(
     risk = 0.0
     if matched:
         risk = 1.0 if exclude else min(1.0, abs(penalty))
-    result: RestrictionGuardResult = {
+    result: RestrictionGuardResult = RestrictionGuardResultCompat({
         "allowed": not exclude,
         "matched": matched,
         "risk": risk,
         "penalty": penalty,
-    }
+    })
     if no_match_hints:
         result["no_match_hints"] = sorted(set(no_match_hints))
     return result
