@@ -47,6 +47,7 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
+from .stage2_payload import build_stage2_payload
 
 GRAPPLING_STYLES = {
     "mma",
@@ -987,11 +988,30 @@ async def generate_plan(data: dict):
         slowest_label = max(timings, key=timings.get)
         logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
 
+    stage2_payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format=mapped_format,
+        record=record,
+        rounds_format=rounds_format,
+        camp_len=camp_len,
+        short_notice=short_notice,
+        restrictions=plan_input.restrictions,
+        phase_weeks=phase_weeks,
+        strength_blocks={"GPP": gpp_block, "SPP": spp_block, "TAPER": taper_block},
+        conditioning_blocks=conditioning_blocks,
+        rehab_blocks={
+            "GPP": gpp_rehab_block,
+            "SPP": spp_rehab_block,
+            "TAPER": taper_rehab_block,
+        },
+    )
+
     return {
         "pdf_url": pdf_url,
         "why_log": reason_log,
         "coach_notes": coach_notes,
         "plan_text": fight_plan_text,
+        "stage2_payload": stage2_payload,
     }
 
 
@@ -1007,3 +1027,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+

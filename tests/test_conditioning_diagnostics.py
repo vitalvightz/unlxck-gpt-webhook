@@ -32,3 +32,21 @@ def test_missing_system_block_formatting():
     assert "AEROBIC (Status: Not prescribed)" in output
     assert "Reason:" in output
     assert "Coach option:" in output
+
+
+def test_generate_plan_returns_stage2_payload():
+    data_path = Path(__file__).resolve().parents[1] / "test_data.json"
+    data = json.loads(data_path.read_text())
+    result = asyncio.run(generate_plan(data))
+
+    payload = result.get("stage2_payload")
+    assert payload is not None
+    assert payload["schema_version"] == "stage2_payload.v1"
+    assert "athlete_model" in payload
+    assert "restrictions" in payload
+    assert "phase_briefs" in payload
+    assert "candidate_pools" in payload
+
+    active_phases = set(payload["phase_briefs"].keys())
+    assert active_phases
+    assert active_phases.issubset(set(payload["candidate_pools"].keys()))

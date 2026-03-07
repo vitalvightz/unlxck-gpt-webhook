@@ -208,7 +208,10 @@ def is_banned_exercise(name: str, tags: list[str], fight_format: str, details: s
 
 
 _SUPRA_MAX_ISO_PATTERN = re.compile(r"(?:11[5-9]|120)%\s*1rm|supra", re.IGNORECASE)
-_OVER_100_ISO_PATTERN = re.compile(r"(10[1-9]|1[1-9]\d)%\s*1rm", re.IGNORECASE)
+_OVER_100_ISO_PATTERN = re.compile(
+    r"(10[1-9]|1[1-9]\d)%\s*(?:1rm|max(?:\s+\w+)?)",
+    re.IGNORECASE,
+)
 
 
 def _is_supra_max_isometric(exercise: dict) -> bool:

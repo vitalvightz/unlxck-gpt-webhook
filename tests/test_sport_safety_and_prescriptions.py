@@ -5,7 +5,7 @@ from fightcamp.conditioning import (
     generate_conditioning_block,
     render_conditioning_block,
 )
-from fightcamp.strength import generate_strength_block
+from fightcamp.strength import _is_over_100_percent_isometric, generate_strength_block
 
 
 def test_boxing_sport_language_is_sanitized_in_rendered_output():
@@ -82,6 +82,11 @@ def test_boxing_plain_clinch_language_is_allowed():
     text = "inside clinch hand-fighting rounds"
     sanitized = _sanitize_sport_language(text, fight_format="boxing").lower()
     assert "clinch" in sanitized
+
+
+def test_over_100_percent_max_based_isometrics_are_detected():
+    assert _is_over_100_percent_isometric({"name": "Atlas Stone Load Isometric (120% max stone @ lap)", "movement": "isometric", "tags": ["isometric"]})
+    assert _is_over_100_percent_isometric({"name": "Sled Push Isometric (130% max push @ start position)", "movement": "isometric", "tags": ["isometric"]})
 
 
 def test_over_100_percent_isometrics_are_banned_in_spp_even_with_setup():
