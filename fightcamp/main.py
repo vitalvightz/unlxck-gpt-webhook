@@ -261,6 +261,7 @@ async def generate_plan(data: dict):
         weight_cut_pct_val,
         days_until_fight,
     )
+    camp_len = max(1, phase_weeks["GPP"] + phase_weeks["SPP"] + phase_weeks["TAPER"])
     short_notice = days_until_fight is not None and days_until_fight <= 14
 
     # Parse injuries BEFORE strength/conditioning generation

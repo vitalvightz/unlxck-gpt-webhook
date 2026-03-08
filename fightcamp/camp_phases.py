@@ -187,9 +187,10 @@ def calculate_phase_weeks(
     block state.
     """
 
-    # 1. Clamp camp_length and fetch base ratios
-    camp_length = max(1, min(16, camp_length))
-    closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs(x - camp_length))
+    # 1. Prefer exact days when available, then map back to the closest weekly template
+    total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight > 0 else camp_length * 7
+    camp_length = max(1, min(16, round(total_days / 7)))
+    closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs((x * 7) - total_days))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
     # 2. Apply style adjustments with cap when multiple styles stack
@@ -295,7 +296,6 @@ def calculate_phase_weeks(
     _rebalance(weeks)
 
     # Translate final week splits into day counts for reporting
-    total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight > 0 else camp_length * 7
     days = {
         phase: max(0, round(total_days * (weeks[phase] / camp_length)))
         for phase in ("GPP", "SPP", "TAPER")
