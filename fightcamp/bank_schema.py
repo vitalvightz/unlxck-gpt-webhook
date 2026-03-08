@@ -4,6 +4,7 @@ SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
     "anaerobic_alactic": "alactic",
     "cognitive": "alactic",
+    "hypertrophy": "glycolytic",
     "parasympathetic": "aerobic",
     "recovery": "aerobic",
     "skill": "aerobic",
