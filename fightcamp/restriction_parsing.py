@@ -106,6 +106,7 @@ CANONICAL_RESTRICTIONS = {
 
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
 _WORD_BOUNDARY_PATTERN = re.compile(r"[a-z]+")
+_APOSTROPHE_PATTERN = re.compile(r"['’]")
 
 
 def _extract_laterality(text: str) -> str | None:
@@ -121,6 +122,12 @@ def _extract_laterality(text: str) -> str | None:
 def _normalize_text(text: str) -> str:
     """Normalize text for matching."""
     return text.lower().strip()
+
+
+def _tokenize_words(text: str) -> set[str]:
+    """Tokenize words while normalizing punctuation and apostrophes."""
+    normalized = _APOSTROPHE_PATTERN.sub("", _normalize_text(text))
+    return set(_WORD_BOUNDARY_PATTERN.findall(normalized))
 
 
 def _keyword_in_text(keyword: str, text: str) -> bool:
@@ -184,9 +191,9 @@ def _contains_trigger_token(text: str) -> bool:
     for trigger in ["do not", "not comfortable", "hurts when"]:
         if trigger in normalized:
             return True
-    
+
     # Check single-word triggers
-    tokens = set(normalized.split())
+    tokens = _tokenize_words(normalized)
     return bool(tokens & CONSTRAINT_TRIGGER_TOKENS)
 
 
@@ -209,7 +216,7 @@ def _infer_restriction_strength(text: str) -> str:
     
     # Use word boundaries for "no" to avoid matching "no" in other words
     # Check for "no" as standalone word using token set
-    tokens = set(normalized.split())
+    tokens = _tokenize_words(normalized)
     
     if any(word in normalized for word in ["avoid", "do not", "don't", "dont", "not comfortable"]):
         return "avoid"

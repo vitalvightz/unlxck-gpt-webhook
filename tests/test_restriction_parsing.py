@@ -32,6 +32,19 @@ def test_contains_trigger_token():
     assert not _contains_trigger_token("torn hamstring")
 
 
+
+
+def test_restriction_triggers_with_apostrophes():
+    """Ensure apostrophes don't break trigger-token detection."""
+    assert _contains_trigger_token("can't do overhead presses")
+    assert _contains_trigger_token("don't sprint")
+    assert _contains_trigger_token("can’t do jumps")
+
+    result = parse_restriction_entry("can't do overhead presses")
+    assert result is not None
+    assert result["strength"] == "avoid"
+
+
 def test_parse_restriction_entry_canonical():
     """Test parsing of canonical restriction phrases."""
     result = parse_restriction_entry("avoid deep knee flexion under load")
