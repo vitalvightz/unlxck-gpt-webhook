@@ -64,33 +64,98 @@ def normalize_injury_text(raw: str | None) -> str:
     return ", ".join(remaining)
 
 
-def get_value(label: str, fields: list[dict]) -> str:
+def _normalize_label(label: str) -> str:
+    cleaned = re.sub(r"[^\w\s]", " ", str(label or "").lower())
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+_CRITICAL_LABEL_ALIASES = {
+    _normalize_label("When is your next fight?"): {
+        _normalize_label("Fight date"),
+        _normalize_label("Next fight date"),
+        _normalize_label("Date of next fight"),
+        _normalize_label("When is the fight?"),
+    },
+    _normalize_label("Fighting Style (Technical)"): {
+        _normalize_label("Technical style"),
+        _normalize_label("Primary fighting style"),
+        _normalize_label("Combat style (technical)"),
+    },
+    _normalize_label("Fighting Style (Tactical)"): {
+        _normalize_label("Tactical style"),
+        _normalize_label("Fight style (tactical)"),
+        _normalize_label("Combat style (tactical)"),
+    },
+    _normalize_label("Weekly Training Frequency"): {
+        _normalize_label("Training frequency"),
+        _normalize_label("Sessions per week"),
+        _normalize_label("How many times do you train per week"),
+    },
+    _normalize_label("Training Availability"): {
+        _normalize_label("Availability"),
+        _normalize_label("Available training days"),
+        _normalize_label("Days available to train"),
+    },
+    _normalize_label("Any injuries or areas you need to work around?"): {
+        _normalize_label("Injuries"),
+        _normalize_label("Current injuries"),
+        _normalize_label("Injuries or restrictions"),
+        _normalize_label("Anything to work around"),
+    },
+}
+
+
+def _field_matches_label(field_label: str, target_label: str) -> bool:
+    normalized_target = _normalize_label(target_label)
+    normalized_field = _normalize_label(field_label)
+    if not normalized_target or not normalized_field:
+        return False
+    if normalized_field == normalized_target:
+        return True
+    return normalized_field in _CRITICAL_LABEL_ALIASES.get(normalized_target, set())
+
+
+def _find_field(label: str, fields: list[dict]) -> dict | None:
+    exact_target = label.strip()
     for field in fields:
-        if field.get("label", "").strip() == label.strip():
-            value = field.get("value")
-            if isinstance(value, list):
-                if "options" in field:
-                    return ", ".join(
-                        [opt["text"] for opt in field["options"] if opt.get("id") in value]
-                    )
-                return ", ".join(str(v) for v in value)
-            return str(value).strip() if value is not None else ""
-    return ""
+        if str(field.get("label", "")).strip() == exact_target:
+            return field
+    for field in fields:
+        if _field_matches_label(field.get("label", ""), label):
+            return field
+    return None
+
+
+def _extract_value(field: dict) -> str:
+    value = field.get("value")
+    if isinstance(value, list):
+        if "options" in field:
+            return ", ".join(
+                [opt["text"] for opt in field["options"] if opt.get("id") in value]
+            )
+        return ", ".join(str(v) for v in value)
+    return str(value).strip() if value is not None else ""
+
+
+def get_value(label: str, fields: list[dict]) -> str:
+    field = _find_field(label, fields)
+    if not field:
+        return ""
+    return _extract_value(field)
 
 
 def get_date_value(label: str, fields: list[dict]) -> str:
-    for field in fields:
-        if field.get("label", "").strip() == label.strip():
-            value = field.get("value")
-            if isinstance(value, dict):
-                for key in ("date", "value", "text", "label"):
-                    if key in value and value[key] is not None:
-                        return str(value[key]).strip()
-            if isinstance(value, list):
-                return ", ".join(str(v) for v in value)
-            return str(value).strip() if value is not None else ""
-    return ""
-
+    field = _find_field(label, fields)
+    if not field:
+        return ""
+    value = field.get("value")
+    if isinstance(value, dict):
+        for key in ("date", "value", "text", "label"):
+            if key in value and value[key] is not None:
+                return str(value[key]).strip()
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
+    return str(value).strip() if value is not None else ""
 
 def parse_fight_date(value: str) -> datetime | None:
     if not value:
@@ -239,4 +304,5 @@ class PlanInput:
     @property
     def tactical_styles(self) -> list[str]:
         return _normalize_list(self.fighting_style_tactical)
+
 

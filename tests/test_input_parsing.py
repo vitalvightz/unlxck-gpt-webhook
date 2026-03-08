@@ -52,3 +52,51 @@ def test_past_fight_date_handling_is_explicit():
     assert parsed.days_until_fight is None
     assert parsed.weeks_out == "N/A"
 
+
+def test_field_alias_matching_for_key_inputs():
+    data = _payload(
+        [
+            {"label": "Fight date", "value": "2099-01-20"},
+            {"label": "Technical style", "value": "Boxing"},
+            {"label": "Tactical style", "value": "Pressure Fighter"},
+            {"label": "Training frequency", "value": "4"},
+            {"label": "Available training days", "value": "Mon, Wed, Fri"},
+            {"label": "Current injuries", "value": "wrist soreness"},
+        ]
+    )
+    parsed = PlanInput.from_payload(data)
+    assert parsed.next_fight_date == "2099-01-20"
+    assert parsed.tech_styles == ["boxing"]
+    assert parsed.tactical_styles == ["pressure fighter"]
+    assert parsed.training_frequency == 4
+    assert parsed.training_days == ["Mon", "Wed", "Fri"]
+    assert parsed.injuries == "wrist soreness"
+
+
+def test_whitespace_case_insensitive_label_matching():
+    data = _payload(
+        [
+            {"label": "  weekly training frequency  ", "value": "3"},
+            {"label": "  training availability  ", "value": "Tue, Thu"},
+            {"label": "  when IS your NEXT fight?  ", "value": "2099-02-01"},
+        ]
+    )
+    parsed = PlanInput.from_payload(data)
+    assert parsed.training_frequency == 3
+    assert parsed.training_days == ["Tue", "Thu"]
+    assert parsed.next_fight_date == "2099-02-01"
+
+
+def test_exact_match_still_preferred_over_alias():
+    data = _payload(
+        [
+            {"label": "Fight date", "value": "2099-02-01"},
+            {"label": "When is your next fight?", "value": "2099-03-01"},
+            {"label": "Training frequency", "value": "2"},
+            {"label": "Weekly Training Frequency", "value": "5"},
+        ]
+    )
+    parsed = PlanInput.from_payload(data)
+    assert parsed.next_fight_date == "2099-03-01"
+    assert parsed.training_frequency == 5
+
