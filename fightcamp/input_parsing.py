@@ -131,8 +131,13 @@ def _extract_value(field: dict) -> str:
     value = field.get("value")
     if isinstance(value, list):
         if "options" in field:
+            selected_ids = {str(item) for item in value}
             return ", ".join(
-                [opt["text"] for opt in field["options"] if opt.get("id") in value]
+                [
+                    str(opt.get("text", "")).strip()
+                    for opt in field["options"]
+                    if str(opt.get("id")) in selected_ids and str(opt.get("text", "")).strip()
+                ]
             )
         return ", ".join(str(v) for v in value)
     return str(value).strip() if value is not None else ""
