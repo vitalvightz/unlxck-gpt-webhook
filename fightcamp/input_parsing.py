@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -103,6 +103,7 @@ _CRITICAL_LABEL_ALIASES = {
         _normalize_label("Anything to work around"),
     },
 }
+_DATE_ONLY_PATTERN = re.compile(r"^(?:\d{4}[-/]\d{2}[-/]\d{2}|\d{2}/\d{2}/\d{4})$")
 
 
 def _field_matches_label(field_label: str, target_label: str) -> bool:
@@ -157,6 +158,7 @@ def get_date_value(label: str, fields: list[dict]) -> str:
         return ", ".join(str(v) for v in value)
     return str(value).strip() if value is not None else ""
 
+
 def parse_fight_date(value: str) -> datetime | None:
     if not value:
         return None
@@ -173,6 +175,7 @@ def parse_fight_date(value: str) -> datetime | None:
     except ValueError:
         return None
 
+
 def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
     if not isinstance(days_until_fight, int):
         return None
@@ -182,6 +185,21 @@ def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
 def is_short_notice_days(days_until_fight: int | None) -> bool:
     return isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14
 
+
+def _extract_fields(data: dict) -> list[dict]:
+    fields = data.get("data", {}).get("fields") if isinstance(data, dict) else None
+    if not isinstance(fields, list):
+        raise ValueError("payload missing required data.fields list")
+    return fields
+
+
+def _compute_days_until_fight(raw_value: str, fight_date: datetime) -> int | None:
+    now = datetime.now()
+    if _DATE_ONLY_PATTERN.match((raw_value or "").strip()):
+        raw_days = (fight_date.date() - now.date()).days
+    else:
+        raw_days = int((fight_date - now).total_seconds() // 86400)
+    return normalize_days_until_fight(raw_days)
 
 
 @dataclass(frozen=True)
@@ -217,7 +235,7 @@ class PlanInput:
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
-        fields = data["data"]["fields"]
+        fields = _extract_fields(data)
 
         full_name = get_value("Full name", fields)
         age = get_value("Age", fields)
@@ -258,8 +276,7 @@ class PlanInput:
         if next_fight_date:
             fight_date = parse_fight_date(next_fight_date)
             if fight_date:
-                raw_days_until_fight = (fight_date - datetime.now()).days
-                days_until_fight = normalize_days_until_fight(raw_days_until_fight)
+                days_until_fight = _compute_days_until_fight(next_fight_date, fight_date)
                 weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
             else:
                 weeks_out = "N/A"
@@ -304,5 +321,3 @@ class PlanInput:
     @property
     def tactical_styles(self) -> list[str]:
         return _normalize_list(self.fighting_style_tactical)
-
-

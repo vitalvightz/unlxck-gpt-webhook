@@ -14,11 +14,25 @@ def _planning_brief_fixture() -> dict:
             }
         ],
         "phase_strategy": {
+            "GPP": {
+                "must_keep": ["primary_strength"],
+            },
             "SPP": {
                 "must_keep": ["rehab", "alactic", "glycolytic"],
-            }
+            },
         },
         "candidate_pools": {
+            "GPP": {
+                "strength_slots": [
+                    {
+                        "role": "push",
+                        "selected": {"name": "Landmine Press"},
+                        "alternates": [{"name": "Half-Kneeling Cable Press"}],
+                    }
+                ],
+                "conditioning_slots": [],
+                "rehab_slots": [],
+            },
             "SPP": {
                 "strength_slots": [
                     {
@@ -46,7 +60,7 @@ def _planning_brief_fixture() -> dict:
                         "alternates": [{"name": "Scap Push-Up"}],
                     }
                 ],
-            }
+            },
         },
     }
 
@@ -68,10 +82,28 @@ def test_validate_stage2_output_flags_restriction_violations():
     assert any(error["code"] == "restriction_violation" for error in report["errors"])
 
 
+def test_validate_stage2_output_ignores_restriction_warning_lines():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Avoid heavy overhead pressing this week.
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    assert report["restricted_hits"] == []
+    assert report["errors"] == []
+
+
 def test_validate_stage2_output_warns_when_phase_critical_elements_go_missing():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
+        GPP
+        ### Strength & Power
+        - Goblet Squat - 4x5
         SPP
         - Landmine Press - 4x5
         - Hard Shuttle - 6x20s / 60s
@@ -79,20 +111,42 @@ def test_validate_stage2_output_warns_when_phase_critical_elements_go_missing():
     )
 
     assert report["is_valid"] is True
-    missing_requirements = {item["requirement"] for item in report["missing_required_elements"]}
-    assert "rehab" in missing_requirements
-    assert "alactic" in missing_requirements
+    missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
+    assert ("SPP", "rehab") in missing_requirements
+    assert ("SPP", "alactic") in missing_requirements
+    assert ("GPP", "primary_strength") not in missing_requirements
     assert any(warning["code"] == "missing_required_element" for warning in report["warnings"])
 
 
-def test_validate_stage2_output_passes_clean_plan():
+def test_validate_stage2_output_is_phase_aware_for_missing_elements():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
-        SPP
-        - Landmine Press - 4x5
+        GPP
         - Air Bike Sprint - 6 x 6 sec
+        SPP
         - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
+    assert ("SPP", "alactic") in missing_requirements
+
+
+def test_validate_stage2_output_passes_clean_plan_with_structural_strength_section():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        GPP
+        ### Strength & Power
+        - Goblet Squat - 4x5
+        SPP
+        ### Alactic
+        - Sprint Variation - 6 x 6 sec
+        ### Glycolytic
+        - Hard Shuttle - 6x20s / 60s
+        ### Rehab
         - Band External Rotation - 2x15
         """,
     )

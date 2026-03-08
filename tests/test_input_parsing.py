@@ -1,4 +1,9 @@
-﻿from fightcamp.input_parsing import PlanInput
+import re
+from datetime import datetime
+
+import pytest
+
+from fightcamp.input_parsing import PlanInput
 
 
 def _payload(fields: list[dict]) -> dict:
@@ -41,6 +46,7 @@ def test_style_parsing_lowercases():
     assert parsed.tech_styles == ["boxing", "mma"]
     assert parsed.tactical_styles == ["pressure fighter"]
 
+
 def test_past_fight_date_handling_is_explicit():
     data = _payload(
         [
@@ -51,6 +57,19 @@ def test_past_fight_date_handling_is_explicit():
     parsed = PlanInput.from_payload(data)
     assert parsed.days_until_fight is None
     assert parsed.weeks_out == "N/A"
+
+
+def test_same_day_fight_date_remains_fight_week_active():
+    today = datetime.now().strftime("%Y-%m-%d")
+    data = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "When is your next fight?", "value": today},
+        ]
+    )
+    parsed = PlanInput.from_payload(data)
+    assert parsed.days_until_fight == 0
+    assert parsed.weeks_out == 1
 
 
 def test_field_alias_matching_for_key_inputs():
@@ -100,3 +119,7 @@ def test_exact_match_still_preferred_over_alias():
     assert parsed.next_fight_date == "2099-03-01"
     assert parsed.training_frequency == 5
 
+
+def test_payload_requires_fields_list():
+    with pytest.raises(ValueError, match=re.escape("payload missing required data.fields list")):
+        PlanInput.from_payload({"data": {}})

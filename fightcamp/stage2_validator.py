@@ -1,11 +1,33 @@
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from typing import Any
 
 from .restriction_filtering import evaluate_restriction_impact
 
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]+|\d+[.)]|#+)\s*")
+_PHASE_HEADER = re.compile(r"\b(?:GPP|SPP|TAPER)\b", re.IGNORECASE)
+_NEGATION_MARKERS = (
+    "avoid",
+    "do not",
+    "don't",
+    "no ",
+    "not ",
+    "skip",
+    "remove",
+    "drop",
+    "without",
+    "instead of",
+)
+_SECTION_HINTS = {
+    "primary_strength": ("strength", "strength & power", "power"),
+    "extra_strength_accessory": ("strength", "strength & power", "accessory"),
+    "rehab": ("rehab", "rehabilitation", "prehab", "therapy"),
+    "aerobic": ("aerobic", "zone 2", "tempo", "roadwork"),
+    "glycolytic": ("glycolytic", "fight pace", "fight-pace", "conditioning"),
+    "alactic": ("alactic", "speed", "sharpness", "primer"),
+}
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -48,6 +70,21 @@ def _extract_plan_lines(plan_text: str) -> list[str]:
     return lines
 
 
+def _phase_sections(plan_text: str) -> dict[str, list[str]]:
+    sections: dict[str, list[str]] = defaultdict(list)
+    current_phase = ""
+    for raw_line in (plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        if not cleaned:
+            continue
+        phase_match = _PHASE_HEADER.search(cleaned)
+        if phase_match:
+            current_phase = phase_match.group(0).upper()
+        if current_phase:
+            sections[current_phase].append(cleaned)
+    return dict(sections)
+
+
 def _restriction_guard_entry(restriction: dict) -> dict:
     return {
         "restriction": restriction.get("restriction", "generic_constraint"),
@@ -70,6 +107,13 @@ def _restriction_phrases(restriction: dict) -> list[str]:
     return _dedupe_preserve_order([phrase for phrase in phrases if phrase])
 
 
+def _line_is_instruction_only(line: str, phrase: str | None) -> bool:
+    normalized = line.lower()
+    if phrase and not _phrase_in_text(normalized, phrase):
+        return False
+    return any(marker in normalized for marker in _NEGATION_MARKERS)
+
+
 def _find_restricted_hits(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
     hits: list[dict] = []
     seen: set[tuple[str, str]] = set()
@@ -79,12 +123,16 @@ def _find_restricted_hits(planning_brief: dict, plan_lines: list[str]) -> list[d
         for line in plan_lines:
             line_key = line.lower()
             phrase_match = next((phrase for phrase in phrases if _phrase_in_text(line_key, phrase)), None)
+            if _line_is_instruction_only(line, phrase_match):
+                continue
             guard_result = evaluate_restriction_impact(
                 [guard_entry],
                 text=line,
                 tags=[],
                 limit_penalty=-0.75,
             )
+            if bool(guard_result.get("matched", [])) and _line_is_instruction_only(line, None):
+                continue
             matched = bool(phrase_match) or bool(guard_result.get("matched", []))
             if not matched:
                 continue
@@ -136,14 +184,24 @@ def _slots_for_requirement(phase_pool: dict, requirement: str) -> list[dict]:
     return generic_matches
 
 
+def _line_matches_requirement(line: str, requirement: str, candidate_names: list[str]) -> bool:
+    normalized = line.lower()
+    if any(_phrase_in_text(normalized, name) for name in candidate_names):
+        return True
+    section_hints = _SECTION_HINTS.get(requirement, ())
+    return any(_phrase_in_text(normalized, hint) for hint in section_hints)
+
+
 def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> list[dict]:
     missing: list[dict] = []
-    normalized_plan = plan_text.lower()
+    phase_sections = _phase_sections(plan_text)
+    all_plan_lines = _extract_plan_lines(plan_text)
     candidate_pools = planning_brief.get("candidate_pools", {})
     phase_strategy = planning_brief.get("phase_strategy", {})
 
     for phase, strategy in phase_strategy.items():
         phase_pool = candidate_pools.get(phase, {})
+        phase_lines = phase_sections.get(phase, all_plan_lines)
         for requirement in _clean_list(strategy.get("must_keep", [])):
             slots = _slots_for_requirement(phase_pool, requirement)
             if not slots:
@@ -151,9 +209,7 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
             candidate_names = _dedupe_preserve_order(
                 [name for slot in slots for name in _slot_candidate_names(slot)]
             )
-            if not candidate_names:
-                continue
-            if any(_phrase_in_text(normalized_plan, name) for name in candidate_names):
+            if any(_line_matches_requirement(line, requirement, candidate_names) for line in phase_lines):
                 continue
             missing.append(
                 {
@@ -161,7 +217,7 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
                     "requirement": requirement,
                     "candidate_names": candidate_names,
                     "severity": "warning",
-                    "reason": f"No known {requirement.replace('_', ' ')} option from the planning brief appeared in the final plan.",
+                    "reason": f"No known {requirement.replace('_', ' ')} option from the planning brief appeared in the {phase} portion of the final plan.",
                 }
             )
     return missing
