@@ -663,6 +663,225 @@ def _derive_main_risks(athlete_model: dict, restrictions: list[dict]) -> list[st
     return risks or ["No exceptional risk flags beyond normal camp management."]
 
 
+_LIMITER_PROFILES = {
+    "coordination": {
+        "label": "coordination",
+        "organising_principle": "timing, rhythm, body control, and transfer under fatigue",
+        "drill_emphasis": [
+            "timing and rhythm before fatigue",
+            "body control and transfer quality",
+            "simple drills repeated under controlled fatigue",
+        ],
+        "protect_first": "timing quality, rhythm, and body control before extra fatigue work",
+        "cut_first": "fatigue-heavy glycolytic work and attractive explosive extras",
+        "boxing_load_rule": "If boxing timing degrades, cut conditioning density before skill-quality work.",
+        "sparring_collision_rule": "Do not pair hard sparring with hard glycolytic conditioning; if sparring is the main collision, reduce same-day or next-day S&C volume by 30% and cut accessories first.",
+        "conditioning_sequence": {
+            "GPP": ["aerobic", "alactic", "glycolytic"],
+            "SPP": ["alactic", "aerobic", "glycolytic"],
+            "TAPER": ["alactic", "aerobic", "glycolytic"],
+        },
+    },
+    "aerobic_repeatability": {
+        "label": "aerobic repeatability",
+        "organising_principle": "repeatability, density control, recovery spacing, and fatigue tolerance",
+        "drill_emphasis": [
+            "repeatability under controlled density",
+            "recovery spacing between hard exposures",
+            "low-damage conditioning progression before extra lifting",
+        ],
+        "protect_first": "repeatability work and recovery spacing before extra strength volume",
+        "cut_first": "accessory strength volume and non-essential power work",
+        "boxing_load_rule": "If there is no sparring this week, add fight-pace rounds before extra lifting.",
+        "sparring_collision_rule": "Never pair hard glycolytic conditioning with hard sparring; let sparring own the fight-pace slot when it is already hard.",
+        "conditioning_sequence": {
+            "GPP": ["aerobic", "glycolytic", "alactic"],
+            "SPP": ["aerobic", "glycolytic", "alactic"],
+            "TAPER": ["aerobic", "alactic", "glycolytic"],
+        },
+    },
+    "tissue_state": {
+        "label": "tissue state",
+        "organising_principle": "protection, conservative loading, reduced ballistic bias, and rebuild sequencing",
+        "drill_emphasis": [
+            "isometrics and carries before ballistics",
+            "controlled trunk work and tissue calm",
+            "low-impact repeatability before hard output",
+        ],
+        "protect_first": "next-day function, symptom stability, and conservative loading",
+        "cut_first": "ballistic work, reactive contacts, and cool explosive drills",
+        "boxing_load_rule": "If symptoms spike after boxing, the next day becomes recovery plus rehab only.",
+        "sparring_collision_rule": "When sparring creates a collision with tissue state, protect the athlete first and remove accessory or ballistic S&C before boxing quality work.",
+        "conditioning_sequence": {
+            "GPP": ["aerobic", "alactic", "glycolytic"],
+            "SPP": ["aerobic", "alactic", "glycolytic"],
+            "TAPER": ["aerobic", "alactic", "glycolytic"],
+        },
+    },
+    "sharpness_under_fatigue": {
+        "label": "sharpness under fatigue",
+        "organising_principle": "freshness protection, quality preservation, and clear cut-first hierarchy",
+        "drill_emphasis": [
+            "high-quality speed and sharpness work",
+            "low-soreness neural priming",
+            "fatigue work only when it does not flatten quality",
+        ],
+        "protect_first": "freshness, speed, and technical quality before extra volume",
+        "cut_first": "glycolytic density and accessory strength volume",
+        "boxing_load_rule": "If boxing quality is flat, preserve sharpness and drop fatigue work.",
+        "sparring_collision_rule": "Hard sparring or boxing flatness overrides extra fatigue work; keep sharpness and cut accessory or glycolytic work first.",
+        "conditioning_sequence": {
+            "GPP": ["alactic", "aerobic", "glycolytic"],
+            "SPP": ["alactic", "glycolytic", "aerobic"],
+            "TAPER": ["alactic", "aerobic", "glycolytic"],
+        },
+    },
+    "boxing_quality_under_load": {
+        "label": "boxing quality under load",
+        "organising_principle": "boxing quality under load with S&C staying secondary to sport output",
+        "drill_emphasis": [
+            "boxing transfer and quality under fatigue",
+            "sport-load interaction before accessory work",
+            "fight-pace support only when boxing stays crisp",
+        ],
+        "protect_first": "boxing quality and sparring freshness before extra lifting",
+        "cut_first": "accessory strength and generic conditioning before boxing-support work",
+        "boxing_load_rule": "If there is no sparring this week, add fight-pace rounds before extra lifting.",
+        "sparring_collision_rule": "Hard sparring owns the main combat stress slot; never pair it with hard glycolytic conditioning and cut S&C accessories first.",
+        "conditioning_sequence": {
+            "GPP": ["aerobic", "alactic", "glycolytic"],
+            "SPP": ["alactic", "glycolytic", "aerobic"],
+            "TAPER": ["alactic", "aerobic", "glycolytic"],
+        },
+    },
+    "general_fight_readiness": {
+        "label": "general fight readiness",
+        "organising_principle": "balanced development with clear fatigue control and phase protection",
+        "drill_emphasis": [
+            "phase-priority work first",
+            "low-damage support work before extras",
+            "preserve fight-specific quality under fatigue",
+        ],
+        "protect_first": "phase-critical work before accessories",
+        "cut_first": "non-essential accessories and redundant fatigue work",
+        "boxing_load_rule": "Let boxing quality and sparring output override extra S&C when collisions appear.",
+        "sparring_collision_rule": "If hard sparring is present, reduce same-day or next-day S&C by 30% and cut accessories first.",
+        "conditioning_sequence": {
+            "GPP": ["aerobic", "glycolytic", "alactic"],
+            "SPP": ["glycolytic", "alactic", "aerobic"],
+            "TAPER": ["alactic", "aerobic", "glycolytic"],
+        },
+    },
+}
+
+
+def _normalize_limiter_tokens(values: list[str]) -> set[str]:
+    tokens: set[str] = set()
+    for value in values:
+        token = re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+        if token:
+            tokens.add(token)
+    return tokens
+
+
+
+def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
+    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
+    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
+    style_tokens = _normalize_limiter_tokens(
+        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
+    )
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    days_until_fight = athlete_model.get("days_until_fight")
+
+    if weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm"}:
+        return "coordination"
+    if weakness_tokens & {"conditioning", "aerobic", "endurance", "gas_tank", "recovery"}:
+        return "aerobic_repeatability"
+    if weakness_tokens & {"sharpness", "speed_reaction", "cns_fatigue", "speed", "reaction"}:
+        return "sharpness_under_fatigue"
+    if weakness_tokens & {"boxing", "striking", "skill_refinement"}:
+        return "boxing_quality_under_load"
+    if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
+        return "tissue_state"
+
+    if athlete_model.get("injuries") or restrictions:
+        return "tissue_state"
+    if goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}:
+        return "aerobic_repeatability"
+    if style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"}:
+        return "boxing_quality_under_load"
+    if readiness_flags & {"moderate_fatigue", "high_fatigue", "fight_week"}:
+        return "sharpness_under_fatigue"
+    if isinstance(days_until_fight, int) and days_until_fight <= 14:
+        return "sharpness_under_fatigue"
+    return "general_fight_readiness"
+
+
+
+def _build_limiter_profile(athlete_model: dict, restrictions: list[dict]) -> dict:
+    key = _primary_limiter_key(athlete_model, restrictions)
+    template = _LIMITER_PROFILES.get(key, _LIMITER_PROFILES["general_fight_readiness"])
+    return {
+        "key": key,
+        "label": template["label"],
+        "organising_principle": template["organising_principle"],
+        "drill_emphasis": list(template["drill_emphasis"]),
+        "protect_first": template["protect_first"],
+        "cut_first": template["cut_first"],
+        "boxing_load_rule": template["boxing_load_rule"],
+        "sparring_collision_rule": template["sparring_collision_rule"],
+        "conditioning_sequence": {
+            phase: list(sequence)
+            for phase, sequence in template["conditioning_sequence"].items()
+        },
+    }
+
+
+
+def _build_weekly_stress_map(athlete_model: dict, phase_briefs: dict[str, dict], limiter_profile: dict) -> dict[str, dict]:
+    stress_map: dict[str, dict] = {}
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    short_notice = bool(athlete_model.get("short_notice"))
+    weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
+
+    for phase in phase_briefs:
+        if phase == "GPP":
+            highest_neural_day = "Place one highest neural day after the easiest day so the limiter quality stays crisp before volume accumulates."
+            highest_glycolytic_day = "Keep one density-focused day only, and never let it sit beside hard sparring."
+            lowest_load_day = "Use one lowest-load day for recovery, rehab, and easy aerobic support only."
+        elif phase == "SPP":
+            highest_neural_day = "Anchor one highest neural day around sport speed or power transfer and keep it away from hard sparring collisions."
+            highest_glycolytic_day = "Use one highest glycolytic day as the main fight-pace stressor unless hard sparring already occupies that slot."
+            lowest_load_day = "Keep one lowest-load day for recovery, tissue care, and limiter-preserving support work."
+        else:
+            highest_neural_day = "Use one highest neural day as a sharpness primer, not as a fatigue builder."
+            highest_glycolytic_day = "Only keep a light fight-pace touch; drop glycolytic density first if freshness or boxing quality falls."
+            lowest_load_day = "Make one day clearly lowest-load with recovery, rehab, and freshness protection only."
+
+        protect_first = limiter_profile["protect_first"]
+        cut_first = limiter_profile["cut_first"]
+        if fatigue in {"moderate", "high"}:
+            protect_first = f"Because fatigue is {fatigue}, protect the limiter quality and freshness before adding extra work."
+        if short_notice and phase in {"SPP", "TAPER"}:
+            cut_first = f"Because this is short notice, cut {limiter_profile['cut_first']} before touching phase-critical sharpness or boxing quality."
+        if weight_cut_risk and phase == "TAPER":
+            cut_first = f"{cut_first}; during the cut, remove glycolytic density before alactic sharpness or rehab support."
+
+        stress_map[phase] = {
+            "organising_limiter": limiter_profile["label"],
+            "highest_neural_day": highest_neural_day,
+            "highest_glycolytic_day": highest_glycolytic_day,
+            "lowest_load_day": lowest_load_day,
+            "conditioning_sequence": list(limiter_profile["conditioning_sequence"].get(phase, [])),
+            "drill_emphasis": list(limiter_profile["drill_emphasis"]),
+            "protect_first": protect_first,
+            "cut_first_when_collisions_rise": cut_first,
+            "sparring_collision_rule": limiter_profile["sparring_collision_rule"],
+            "sport_load_interaction": limiter_profile["boxing_load_rule"],
+        }
+    return stress_map
+
 def _derive_global_priorities(
     athlete_model: dict,
     phase_briefs: dict[str, dict],
@@ -741,6 +960,8 @@ def build_planning_brief(
     omission_ledger: dict[str, dict],
     rewrite_guidance: dict,
 ) -> dict:
+    limiter_profile = _build_limiter_profile(athlete_model, restrictions)
+    weekly_stress_map = _build_weekly_stress_map(athlete_model, phase_briefs, limiter_profile)
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
@@ -755,9 +976,11 @@ def build_planning_brief(
         },
         "archetype_summary": _derive_athlete_archetype(athlete_model),
         "main_limiter": _derive_main_limiter(athlete_model),
+        "limiter_profile": limiter_profile,
         "main_risks": _derive_main_risks(athlete_model, restrictions),
         "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools),
+        "weekly_stress_map": weekly_stress_map,
         "restrictions": restrictions,
         "candidate_pools": candidate_pools,
         "omission_ledger": omission_ledger,
@@ -1165,4 +1388,3 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
-
