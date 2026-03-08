@@ -18,7 +18,7 @@ from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
 from .config import DATA_DIR
 
 # Load exercise bank
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
 for item in exercise_bank:
     validate_training_item(item, source="exercise_bank.json", require_phases=True)
     normalize_item_tags(item)
@@ -1025,7 +1025,7 @@ def main():
     data_file = Path("test_data.json").resolve()
     if not data_file.exists():
         raise FileNotFoundError(f"Test data file not found: {data_file}")
-    with open(data_file, "r") as f:
+    with open(data_file, "r", encoding="utf-8") as f:
         data = json.load(f)
     result = asyncio.run(generate_plan(data))
     print(f"::notice title=Plan PDF::{result.get('pdf_url')}")

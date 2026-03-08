@@ -30,7 +30,7 @@ def test_no_legacy_token_in_data():
     for path in repo_root.rglob("*.json"):
         if "tests" in path.parts:
             continue
-        text = path.read_text().lower()
+        text = path.read_text(encoding="utf-8").lower()
         assert forbidden not in text, f"Legacy token found in {path}"
         assert forbidden_combo not in text, f"Combined equipment found in {path}"
 

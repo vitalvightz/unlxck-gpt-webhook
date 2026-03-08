@@ -206,7 +206,7 @@ def _sanitize_conditioning_bank(bank, *, source: str):
 
 
 def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = False):
-    bank = json.loads(path.read_text())
+    bank = json.loads(path.read_text(encoding="utf-8"))
     if enforce_conditioning_systems:
         return _sanitize_conditioning_bank(bank, source=source)
     if isinstance(bank, list):
@@ -232,7 +232,7 @@ style_conditioning_bank = _load_bank(
     source="style_conditioning_bank.json",
     enforce_conditioning_systems=True,
 )
-format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text())
+format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text(encoding="utf-8"))
 
 try:
     _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")

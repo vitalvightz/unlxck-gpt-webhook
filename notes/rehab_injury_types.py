@@ -16,7 +16,7 @@ OUTPUT_FILE = Path(__file__).with_name("rehab_injury_types.txt")
 
 def list_injury_types() -> list[str]:
     types = set()
-    for line in BANK_FILE.read_text().splitlines():
+    for line in BANK_FILE.read_text(encoding="utf-8").splitlines():
         match = re.search(r'"type"\s*:\s*"([^"]+)"', line)
         if match:
             types.add(match.group(1))

@@ -67,6 +67,6 @@ def load_tag_vocabulary() -> set[str]:
     if not vocab_path.exists():
         _TAG_VOCAB_CACHE = set()
         return _TAG_VOCAB_CACHE
-    vocab = normalize_tags(json.loads(vocab_path.read_text()))
+    vocab = normalize_tags(json.loads(vocab_path.read_text(encoding="utf-8")))
     _TAG_VOCAB_CACHE = set(vocab)
     return _TAG_VOCAB_CACHE

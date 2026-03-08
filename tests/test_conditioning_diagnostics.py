@@ -8,7 +8,7 @@ from fightcamp.main import generate_plan
 
 def test_plan_missing_system_messaging():
     data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text())
+    data = json.loads(data_path.read_text(encoding="utf-8"))
     result = asyncio.run(generate_plan(data))
     plan_text = result["plan_text"]
     forbidden_phrases = [
@@ -36,7 +36,7 @@ def test_missing_system_block_formatting():
 
 def test_generate_plan_returns_stage2_payload():
     data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text())
+    data = json.loads(data_path.read_text(encoding="utf-8"))
     result = asyncio.run(generate_plan(data))
 
     payload = result.get("stage2_payload")
