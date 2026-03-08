@@ -54,11 +54,17 @@ def normalize_rehab_location(location: str | None) -> list[str]:
     return filtered or candidates
 
 
+def _split_phase_progression(text: str) -> list[str]:
+    """Return normalized phase tokens from either arrow encoding."""
+    normalized = (text or "").replace("\u00e2\u2020\u2019", "\u2192")
+    return [segment.strip().upper() for segment in normalized.split("\u2192") if segment.strip()]
+
+
 def _split_notes_by_phase(notes: str) -> list[tuple[str, str]]:
-    """Return (phase, text) pairs if the notes use a → progression."""
-    if "→" not in notes:
+    """Return (phase, text) pairs if the notes use a phase progression."""
+    if "\u2192" not in notes and "\u00e2\u2020\u2019" not in notes:
         return []
-    segments = [seg.strip() for seg in notes.split("→")]
+    segments = [seg.strip() for seg in (notes or "").replace("\u00e2\u2020\u2019", "\u2192").split("\u2192")]
     results = []
     for seg in segments:
         if ":" in seg:
@@ -389,7 +395,7 @@ def generate_rehab_protocols(
     lines = []
     def _phases(entry):
         progress = entry.get("phase_progression", "")
-        return [p.strip().upper() for p in progress.split("→") if p.strip()]
+        return _split_phase_progression(progress)
 
     for itype, loc in unique_entries:
         loc_candidates = normalize_rehab_location(loc)
@@ -456,7 +462,7 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
 
     def apply_entry(entry: dict) -> None:
         progress = entry.get("phase_progression", "")
-        phase_list = [p.strip().upper() for p in progress.split("→")]
+        phase_list = _split_phase_progression(progress)
         if len(phase_list) < 2:
             return
         drills = entry.get("drills", [])
@@ -601,7 +607,7 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
 
     def _phases(entry):
         progress = entry.get("phase_progression", "")
-        return [p.strip().upper() for p in progress.split("→") if p.strip()]
+        return _split_phase_progression(progress)
 
     def _append_drills(entry):
         for drill in entry.get("drills", []):
@@ -756,3 +762,4 @@ def format_injury_guardrails(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines).strip()
+
