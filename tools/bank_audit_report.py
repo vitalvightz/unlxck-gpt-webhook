@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 import json
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES
 from fightcamp.injury_filtering import collect_banks
 from fightcamp.tagging import load_tag_vocabulary, normalize_tags
 
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+DATA_DIR = REPO_ROOT / "data"
 
 
 def normalize_system(raw: str | None) -> str:
