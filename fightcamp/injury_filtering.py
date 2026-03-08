@@ -465,6 +465,14 @@ def _tags_cache_key(tags: Iterable[str]) -> tuple[str, ...]:
     return tuple(sorted(str(tag).lower() for tag in tags if tag))
 
 
+def _injury_debug_enabled() -> bool:
+    """Return whether injury debug logging is enabled at runtime."""
+    value = os.environ.get("INJURY_DEBUG")
+    if value is None:
+        return INJURY_DEBUG
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 
 def _log_exclusion(context: str, item: dict, decision: Decision) -> None:
     """
@@ -974,15 +982,16 @@ def injury_match_details(
                     if matches:
                         field_hits[field_name] = matches
                         matched_patterns.update(matches)
-                        for matched_pattern in matches:
-                            logger.info(
-                                "[injury-exclusion] Excluding '%s' for %s injury: ban_keyword '%s' found in %s='%s'",
-                                name,
-                                region,
-                                matched_pattern,
-                                field_name,
-                                value,
-                            )
+                        if _injury_debug_enabled():
+                            for matched_pattern in matches:
+                                logger.info(
+                                    "[injury-exclusion] Excluding '%s' for %s injury: ban_keyword '%s' found in %s='%s'",
+                                    name,
+                                    region,
+                                    matched_pattern,
+                                    field_name,
+                                    value,
+                                )
             if field_hits or tag_hits:
                 reasons.append(
                     {
@@ -1138,4 +1147,3 @@ def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: s
     Use _log_exclusion() instead for logging excluded items only.
     """
     pass
-
