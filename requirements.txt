@@ -7,8 +7,8 @@ google-auth-oauthlib
 gspread
 oauth2client
 rapidfuzz
-spacy==3.6.0
-thinc==8.1.12
+spacy>=3.7,<3.8
 pdfkit
 supabase
 markdown2
+pytest
