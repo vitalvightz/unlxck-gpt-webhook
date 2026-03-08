@@ -26,8 +26,20 @@ from .injury_filtering import (
 from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
 from .restriction_filtering import evaluate_restriction_impact
 
-# Load style specific exercises (JSON list)
-STYLE_EXERCISES = _load_style_specific_exercises()
+logger = logging.getLogger(__name__)
+
+_style_exercises_cache = None
+_exercise_bank_cache = None
+_universal_strength_cache = None
+_universal_strength_names_cache = None
+
+
+def get_style_exercises() -> list[dict]:
+    global _style_exercises_cache
+    if _style_exercises_cache is None:
+        _style_exercises_cache = _load_style_specific_exercises()
+    return _style_exercises_cache
+
 
 
 CANONICAL_STYLE_TAGS = {
@@ -243,25 +255,49 @@ def _normalize_fight_format(fight_format: str) -> str:
         return "kickboxing"
     return fight_format
 
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
-for item in exercise_bank:
-    validate_training_item(item, source="exercise_bank.json", require_phases=True)
-    normalize_item_tags(item)
+def get_exercise_bank() -> list[dict]:
+    global _exercise_bank_cache
+    if _exercise_bank_cache is None:
+        _exercise_bank_cache = json.loads(
+            (DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8")
+        )
+        for item in _exercise_bank_cache:
+            validate_training_item(item, source="exercise_bank.json", require_phases=True)
+            normalize_item_tags(item)
+    return _exercise_bank_cache
 
-# Load universal strength list for cross-phase novelty exemptions
-try:
-    _universal_strength = json.loads(
-        (DATA_DIR / "universal_gpp_strength.json").read_text(encoding="utf-8")
-    )
-except Exception:
-    _universal_strength = []
-else:
-    for item in _universal_strength:
-        validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
-        normalize_item_tags(item)
-UNIVERSAL_STRENGTH_NAMES = {ex.get("name") for ex in _universal_strength if ex.get("name")}
 
-logger = logging.getLogger(__name__)
+def get_universal_strength() -> list[dict]:
+    global _universal_strength_cache
+    if _universal_strength_cache is None:
+        try:
+            _universal_strength_cache = json.loads(
+                (DATA_DIR / "universal_gpp_strength.json").read_text(encoding="utf-8")
+            )
+        except FileNotFoundError:
+            logger.warning("[bank-load] optional universal_gpp_strength bank missing")
+            _universal_strength_cache = []
+        else:
+            for item in _universal_strength_cache:
+                validate_training_item(item, source="universal_gpp_strength.json", require_phases=True)
+                normalize_item_tags(item)
+    return _universal_strength_cache
+
+
+def get_universal_strength_names() -> set[str]:
+    global _universal_strength_names_cache
+    if _universal_strength_names_cache is None:
+        _universal_strength_names_cache = {
+            ex.get("name") for ex in get_universal_strength() if ex.get("name")
+        }
+    return _universal_strength_names_cache
+
+
+def prime_strength_banks() -> None:
+    get_style_exercises()
+    get_exercise_bank()
+    get_universal_strength()
+
 
 MOVEMENT_PATTERN_TAGS = {
     "squat": {"squat", "quad_dominant"},
@@ -495,6 +531,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
+    exercise_bank = get_exercise_bank()
+    style_exercises = get_style_exercises()
+    universal_strength_names = get_universal_strength_names()
 
     style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
     goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]
@@ -629,7 +668,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         # Phase-based novelty enforcement with exemptions
         if prev_exercises and ex.get("name") in prev_exercises:
             if not (
-                ex.get("name") in UNIVERSAL_STRENGTH_NAMES
+                ex.get("name") in universal_strength_names
                 or any(
                     term in ex.get("name", "").lower() or term in tags_lower
                     for term in cornerstone_terms
@@ -678,7 +717,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
             if prev_exercises and ex.get("name") in prev_exercises:
                 if not (
-                    ex.get("name") in UNIVERSAL_STRENGTH_NAMES
+                    ex.get("name") in universal_strength_names
                     or any(
                         term in ex.get("name", "").lower() or term in tags_lower
                         for term in cornerstone_terms
@@ -803,7 +842,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     athlete_style_set = normalize_style_tags(style_list)
     available_eq = set(equipment_access)
     inserts: list[dict] = []
-    for ex in STYLE_EXERCISES:
+    for ex in style_exercises:
         if phase not in ex.get("phases", []):
             continue
         if _guarded_injury_decision(ex).action == "exclude":
@@ -1042,3 +1081,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "candidate_reservoir": candidate_reservoir,
     }
     
+

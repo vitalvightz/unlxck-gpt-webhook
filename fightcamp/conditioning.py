@@ -222,31 +222,75 @@ def _load_bank(path: Path, *, source: str, enforce_conditioning_systems: bool = 
     return bank
 
 
-conditioning_bank = _load_bank(
-    DATA_DIR / "conditioning_bank.json",
-    source="conditioning_bank.json",
-    enforce_conditioning_systems=True,
-)
-style_conditioning_bank = _load_bank(
-    DATA_DIR / "style_conditioning_bank.json",
-    source="style_conditioning_bank.json",
-    enforce_conditioning_systems=True,
-)
-format_weights = json.loads((DATA_DIR / "format_energy_weights.json").read_text(encoding="utf-8"))
+_conditioning_bank_cache = None
+_style_conditioning_bank_cache = None
+_format_weights_cache = None
+_coordination_bank_cache = None
+coordination_bank = None
 
-try:
-    _coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")
-except Exception:
-    _coord_data = []
 
-coordination_bank = []
-if isinstance(_coord_data, list):
-    coordination_bank.extend(_coord_data)
-elif isinstance(_coord_data, dict):
-    for val in _coord_data.values():
-        if isinstance(val, list):
-            coordination_bank.extend(val)
+def get_conditioning_bank():
+    global _conditioning_bank_cache
+    if _conditioning_bank_cache is None:
+        _conditioning_bank_cache = _load_bank(
+            DATA_DIR / "conditioning_bank.json",
+            source="conditioning_bank.json",
+            enforce_conditioning_systems=True,
+        )
+    return _conditioning_bank_cache
 
+
+def get_style_conditioning_bank():
+    global _style_conditioning_bank_cache
+    if _style_conditioning_bank_cache is None:
+        _style_conditioning_bank_cache = _load_bank(
+            DATA_DIR / "style_conditioning_bank.json",
+            source="style_conditioning_bank.json",
+            enforce_conditioning_systems=True,
+        )
+    return _style_conditioning_bank_cache
+
+
+def get_format_weights():
+    global _format_weights_cache
+    if _format_weights_cache is None:
+        _format_weights_cache = json.loads(
+            (DATA_DIR / "format_energy_weights.json").read_text(encoding="utf-8")
+        )
+    return _format_weights_cache
+
+
+def get_coordination_bank():
+    global _coordination_bank_cache, coordination_bank
+    if coordination_bank is not None:
+        return coordination_bank
+    if _coordination_bank_cache is not None:
+        coordination_bank = _coordination_bank_cache
+        return _coordination_bank_cache
+    try:
+        coord_data = _load_bank(DATA_DIR / "coordination_bank.json", source="coordination_bank.json")
+    except FileNotFoundError:
+        logger.warning("[bank-load] optional coordination bank missing")
+        coord_data = []
+    except (json.JSONDecodeError, ValueError):
+        logger.exception("[bank-load-failed] bank=coordination_bank.json")
+        coord_data = []
+    loaded_coordination_bank: list[dict] = []
+    if isinstance(coord_data, list):
+        loaded_coordination_bank.extend(coord_data)
+    elif isinstance(coord_data, dict):
+        for val in coord_data.values():
+            if isinstance(val, list):
+                loaded_coordination_bank.extend(val)
+    _coordination_bank_cache = loaded_coordination_bank
+    coordination_bank = loaded_coordination_bank
+    return _coordination_bank_cache
+
+def prime_conditioning_banks() -> None:
+    get_conditioning_bank()
+    get_style_conditioning_bank()
+    get_format_weights()
+    get_coordination_bank()
 
 def get_system_or_warn(drill: dict, *, source: str) -> str | None:
     system = normalize_system(drill.get("system"), source=source)
@@ -437,7 +481,7 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
     phase = flags.get("phase", "GPP").upper()
     equipment_access = set(normalize_equipment_list(flags.get("equipment", [])))
     candidates = []
-    for drill in coordination_bank:
+    for drill in get_coordination_bank():
         if phase not in [p.upper() for p in drill.get("phases", [])]:
             continue
         if drill.get("placement", "conditioning").lower() != "conditioning":
@@ -769,7 +813,7 @@ def generate_conditioning_block(flags):
     }
     fight_format = style_map.get(primary_tech, "mma")
     selection_format = _normalize_fight_format(fight_format)
-    energy_weights = format_weights.get(selection_format, {})
+    energy_weights = get_format_weights().get(selection_format, {})
 
     rename_map = {}
     if selection_format == "boxing":
@@ -807,7 +851,7 @@ def generate_conditioning_block(flags):
     restriction_warning_counts: dict[str, int] = defaultdict(int)
     restriction_blocked_items: list[dict] = []
 
-    for drill in conditioning_bank:
+    for drill in get_conditioning_bank():
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
@@ -966,7 +1010,7 @@ def generate_conditioning_block(flags):
 
     # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags)
-    for drill in style_conditioning_bank:
+    for drill in get_style_conditioning_bank():
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
             continue
@@ -1503,7 +1547,7 @@ def generate_conditioning_block(flags):
 
         # --------- TAPER PLYOMETRIC GUARANTEE ---------
         taper_plyos = [
-            d for d in conditioning_bank
+            d for d in get_conditioning_bank()
             if "TAPER" in [p.upper() for p in d.get("phases", [])]
             and d.get("placement", "conditioning").lower() == "conditioning"
             and "plyometric" in set(normalize_tags(d.get("tags", [])))
@@ -1543,7 +1587,7 @@ def generate_conditioning_block(flags):
     if "skill_refinement" in goal_set and len(selected_drill_names) < total_drills:
         existing_names = {d.get("name") for _, drills in final_drills for d in drills}
         skill_drills = [
-            d for d in style_conditioning_bank
+            d for d in get_style_conditioning_bank()
             if "skill_refinement" in set(normalize_tags(d.get("tags", [])))
             and d.get("placement", "conditioning").lower() == "conditioning"
             and phase.upper() in d.get("phases", [])
@@ -1597,7 +1641,7 @@ def generate_conditioning_block(flags):
         if not has_neck:
             neck_candidates = [
                 d
-                for d in conditioning_bank
+                for d in get_conditioning_bank()
                 if "neck" in set(normalize_tags(d.get("tags", [])))
                 and phase.upper() in d.get("phases", [])
                 and (
@@ -1814,3 +1858,5 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
+
+

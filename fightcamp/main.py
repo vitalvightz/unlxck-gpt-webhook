@@ -11,19 +11,7 @@ from .build_block import (
     upload_to_supabase,
     _md_to_html,
 )
-from .bank_schema import validate_training_item
-from .tagging import normalize_item_tags
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
-# Refactored: Import centralized DATA_DIR from config instead of redefining
-from .config import DATA_DIR
-
-# Load exercise bank
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
-for item in exercise_bank:
-    validate_training_item(item, source="exercise_bank.json", require_phases=True)
-    normalize_item_tags(item)
-
-# Modules
 from .training_context import TrainingContext, allocate_sessions, normalize_equipment_list
 from .camp_phases import calculate_phase_weeks
 from .input_parsing import PlanInput, is_short_notice_days
@@ -33,11 +21,16 @@ from .mindset_module import (
     get_phase_mindset_cues,
     get_mindset_by_phase,
 )
-from .strength import generate_strength_block
+from .strength import (
+    generate_strength_block,
+    get_exercise_bank as get_strength_exercise_bank,
+    prime_strength_banks,
+)
 from .conditioning import (
-    conditioning_bank,
     generate_conditioning_block,
-    style_conditioning_bank,
+    get_conditioning_bank,
+    get_style_conditioning_bank,
+    prime_conditioning_banks,
 )
 from .coach_review import run_coach_review
 from .recovery import generate_recovery_block
@@ -46,8 +39,38 @@ from .rehab_protocols import (
     format_injury_guardrails,
     generate_rehab_protocols,
     generate_support_notes,
+    prime_rehab_bank,
 )
 from .stage2_payload import build_planning_brief, build_stage2_handoff_text, build_stage2_payload
+
+
+def _prime_plan_banks() -> None:
+    prime_strength_banks()
+    prime_conditioning_banks()
+    prime_rehab_bank()
+
+
+class _LazyListProxy:
+    def __init__(self, loader):
+        self._loader = loader
+
+    def _resolve(self):
+        return self._loader()
+
+    def __iter__(self):
+        return iter(self._resolve())
+
+    def __len__(self):
+        return len(self._resolve())
+
+    def __getitem__(self, index):
+        return self._resolve()[index]
+
+    def __repr__(self):
+        return repr(self._resolve())
+
+
+exercise_bank = _LazyListProxy(get_strength_exercise_bank)
 
 GRAPPLING_STYLES = {
     "mma",
@@ -187,6 +210,7 @@ async def generate_plan(data: dict):
             "stage2_handoff_text": "",
         }
     _record_timing("parse_input", timer_start)
+    _prime_plan_banks()
     random_seed = data.get("random_seed")
 
     full_name = plan_input.full_name
@@ -277,6 +301,9 @@ async def generate_plan(data: dict):
     )
     camp_len = max(1, phase_weeks["GPP"] + phase_weeks["SPP"] + phase_weeks["TAPER"])
     short_notice = is_short_notice_days(days_until_fight)
+    exercise_bank = get_strength_exercise_bank()
+    conditioning_bank = get_conditioning_bank()
+    style_conditioning_bank = get_style_conditioning_bank()
 
     # Parse injuries BEFORE strength/conditioning generation
     timer_start = perf_counter()
@@ -1010,7 +1037,17 @@ async def generate_plan(data: dict):
 
     safe = full_name.replace(" ", "_") or "plan"
     pdf_path = html_to_pdf(html, f"{safe}_fight_plan.pdf")
-    pdf_url = upload_to_supabase(pdf_path) if pdf_path else "PDF generation failed"
+    if pdf_path:
+        try:
+            pdf_url = upload_to_supabase(pdf_path)
+        except Exception:
+            logger.exception(
+                "[export-error] code=pdf_upload_failed stage=upload file=%s",
+                pdf_path,
+            )
+            pdf_url = "PDF upload failed"
+    else:
+        pdf_url = "PDF generation failed"
     _record_timing("export_pdf", timer_start)
 
     if timings:
@@ -1072,6 +1109,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

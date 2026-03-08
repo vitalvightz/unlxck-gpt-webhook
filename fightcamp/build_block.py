@@ -7,7 +7,7 @@ uploaded directly to Supabase Storage.
 
 Environment Variables
 ---------------------
-SUPABASE_URL is optional and defaults to this project's URL.
+SUPABASE_URL is required unless ALLOW_DEFAULT_SUPABASE_URL=1 is explicitly set.
 For authentication, set either SUPABASE_SERVICE_ROLE_KEY or
 SUPABASE_PUBLISHABLE_KEY. When credentials are provided, the
 ``upload_to_supabase`` function will place the generated PDF into the
@@ -17,21 +17,29 @@ SUPABASE_PUBLISHABLE_KEY. When credentials are provided, the
 from __future__ import annotations
 
 from dataclasses import dataclass
+import importlib
+import logging
 from typing import Optional
 
 import os
 import re
 import unicodedata
 
-try:
-    import markdown2  # type: ignore
-except Exception:  # pragma: no cover - optional dependency
-    markdown2 = None
+logger = logging.getLogger(__name__)
 
-try:
-    import pdfkit  # type: ignore
-except Exception:  # pragma: no cover - pdfkit may be missing
-    pdfkit = None
+
+def _load_optional_module(module_name: str):
+    try:  # pragma: no cover - import path exercised indirectly
+        return importlib.import_module(module_name)
+    except ImportError:  # pragma: no cover - optional dependency absent
+        return None
+    except Exception:  # pragma: no cover - import side effects are environment dependent
+        logger.exception("[optional-import-failed] module=%s", module_name)
+        return None
+
+
+markdown2 = _load_optional_module("markdown2")
+pdfkit = _load_optional_module("pdfkit")
 
 # Map of emoji and symbols that should be stripped from output
 _CHAR_MAP = {
@@ -73,6 +81,18 @@ _DISPLAY_NAME_MAP = {
     "medicine_ball": "Medicine Ball",
     "trap_bar": "Trap Bar",
 }
+
+
+def _log_export_error(code: str, **context: object) -> None:
+    context_str = " ".join(
+        f"{key}={value}"
+        for key, value in context.items()
+        if value is not None and value != ""
+    )
+    message = f"[export-error] code={code}"
+    if context_str:
+        message = f"{message} {context_str}"
+    logger.error(message)
 
 
 def _clean_text(text: str) -> str:
@@ -369,33 +389,53 @@ def html_to_pdf(html: str, output_path: str) -> Optional[str]:
     """Convert HTML string to PDF if pdfkit is installed."""
 
     if not pdfkit:
+        _log_export_error("pdfkit_unavailable", stage="pdf_export", output_path=output_path)
         return None
     try:  # pragma: no cover - external call
         options = {"encoding": "UTF-8"}
         html_utf8 = html.encode("utf-8").decode("utf-8")
         pdfkit.from_string(html_utf8, output_path, options=options)
         return output_path
-    except Exception:
+    except Exception:  # pragma: no cover - external renderer failures are environment dependent
+        logger.exception(
+            "[export-error] code=pdf_render_failed stage=pdf_export output_path=%s",
+            output_path,
+        )
         return None
 
 
 DEFAULT_SUPABASE_URL = "https://leienvqynijrgghhzczt.supabase.co"
 
 
+def _resolve_supabase_url() -> str:
+    url = os.environ.get("SUPABASE_URL", "").strip()
+    if not url:
+        if os.environ.get("ALLOW_DEFAULT_SUPABASE_URL", "0") == "1":
+            return DEFAULT_SUPABASE_URL
+        _log_export_error("supabase_url_missing", stage="upload")
+        raise RuntimeError(
+            "Missing SUPABASE_URL. Set SUPABASE_URL or ALLOW_DEFAULT_SUPABASE_URL=1."
+        )
+    if url.upper().startswith("SUPABASE_URL="):
+        url = url.split("=", 1)[1].strip()
+    return url.rstrip("/")
+
+
 def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
     """Upload a PDF to Supabase Storage and return the public URL."""
 
-    url = os.environ.get("SUPABASE_URL", DEFAULT_SUPABASE_URL)
+    url = _resolve_supabase_url()
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_PUBLISHABLE_KEY")
-    if not url or not key:
+    if not key:
+        _log_export_error(
+            "supabase_credentials_missing",
+            stage="upload",
+            bucket=bucket,
+            pdf_path=pdf_path,
+        )
         raise RuntimeError(
             "Missing Supabase credentials. Set SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY."
         )
-
-    url = url.strip()
-    if url.upper().startswith("SUPABASE_URL="):
-        url = url.split("=", 1)[1].strip()
-    url = url.rstrip("/")
 
     import mimetypes
     from urllib import request
@@ -417,8 +457,31 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
     try:
         with request.urlopen(req) as r:
             if r.status not in (200, 201):
+                _log_export_error(
+                    "supabase_upload_unexpected_status",
+                    stage="upload",
+                    bucket=bucket,
+                    pdf_path=pdf_path,
+                    status=r.status,
+                )
                 raise RuntimeError(f"Upload failed: HTTP {r.status}")
     except HTTPError as e:
+        logger.exception(
+            "[export-error] code=supabase_upload_http_error stage=upload bucket=%s pdf_path=%s status=%s",
+            bucket,
+            pdf_path,
+            getattr(e, "code", "unknown"),
+        )
         raise RuntimeError("Supabase upload failed") from e
+    except Exception:
+        logger.exception(
+            "[export-error] code=supabase_upload_failed stage=upload bucket=%s pdf_path=%s",
+            bucket,
+            pdf_path,
+        )
+        raise
 
     return f"{url}/storage/v1/object/public/{bucket}/{filename}"
+
+
+

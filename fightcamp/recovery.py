@@ -1,4 +1,4 @@
-from .rehab_protocols import REHAB_BANK, INJURY_SUPPORT_NOTES, normalize_rehab_location
+from .rehab_protocols import get_rehab_bank, normalize_rehab_location
 from .injury_synonyms import (
     parse_injury_phrase,
 )
@@ -34,7 +34,7 @@ def _fetch_injury_drills(injuries: list, phase: str) -> list:
 
     drills = []
 
-    for entry in REHAB_BANK:
+    for entry in get_rehab_bank():
         entry_phases = [
             p.strip().upper()
             for p in entry.get("phase_progression", "").split("→")
@@ -170,3 +170,4 @@ def generate_recovery_block(training_context: dict) -> str:
             ]
 
     return "\n".join(recovery_block).strip()
+

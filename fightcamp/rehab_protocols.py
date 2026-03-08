@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import logging
 from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
@@ -9,6 +10,8 @@ from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
+logger = logging.getLogger(__name__)
+
 # Rehab bank stores entries with fields like:
 # {
 #     "location": "ankle",
@@ -19,8 +22,31 @@ from .config import DATA_DIR
 #         {"name": "...", "notes": "..."}
 #     ]
 # }
-REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
-REHAB_LOCATIONS = {entry.get("location") for entry in REHAB_BANK if entry.get("location")}
+_REHAB_BANK_CACHE = None
+_REHAB_LOCATIONS_CACHE = None
+
+
+def get_rehab_bank() -> list[dict]:
+    global _REHAB_BANK_CACHE
+    if _REHAB_BANK_CACHE is None:
+        _REHAB_BANK_CACHE = json.loads(
+            (DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8")
+        )
+    return _REHAB_BANK_CACHE
+
+
+def get_rehab_locations() -> set[str]:
+    global _REHAB_LOCATIONS_CACHE
+    if _REHAB_LOCATIONS_CACHE is None:
+        _REHAB_LOCATIONS_CACHE = {
+            entry.get("location") for entry in get_rehab_bank() if entry.get("location")
+        }
+    return _REHAB_LOCATIONS_CACHE
+
+
+def prime_rehab_bank() -> None:
+    get_rehab_bank()
+    get_rehab_locations()
 REHAB_LOCATION_ALIASES = {
     "biceps": ["bicep"],
     "bicep": ["biceps"],
@@ -50,7 +76,7 @@ def normalize_rehab_location(location: str | None) -> list[str]:
     if " " in location:
         _add(location.replace(" ", "_"))
 
-    filtered = [candidate for candidate in candidates if candidate in REHAB_LOCATIONS]
+    filtered = [candidate for candidate in candidates if candidate in get_rehab_locations()]
     return filtered or candidates
 
 
@@ -401,7 +427,7 @@ def generate_rehab_protocols(
         loc_candidates = normalize_rehab_location(loc)
         matches = [
             entry
-            for entry in REHAB_BANK
+            for entry in get_rehab_bank()
             if (
                 entry.get("type") == itype
                 or entry.get("type") == "unspecified"
@@ -473,7 +499,7 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
         if phase_list[1] in phases and phases[phase_list[1]] is None:
             phases[phase_list[1]] = drills[1]
 
-    for entry in REHAB_BANK:
+    for entry in get_rehab_bank():
         if entry.get("type") != injury_type:
             continue
         if entry.get("location") in location_candidates:
@@ -481,7 +507,7 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
             if all(phases.values()):
                 break
     if not all(phases.values()):
-        for entry in REHAB_BANK:
+        for entry in get_rehab_bank():
             if entry.get("type") != "unspecified":
                 continue
             if entry.get("location") in location_candidates:
@@ -638,7 +664,7 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
             if (c_type, c_loc) in seen_keys:
                 continue
             seen_keys.add((c_type, c_loc))
-            for entry in REHAB_BANK:
+            for entry in get_rehab_bank():
                 if entry.get("type") != c_type:
                     continue
                 if entry.get("location") != c_loc:
@@ -762,4 +788,5 @@ def format_injury_guardrails(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines).strip()
+
 

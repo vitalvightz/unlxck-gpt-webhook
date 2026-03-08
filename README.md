@@ -86,7 +86,7 @@ The `fightcamp` package contains the complete plan generation pipeline:
 
 - **`config.py`** - Centralized constants. Defines `DATA_DIR`, phase equipment boosts, phase tag boosts, energy system ratios, style conditioning ratios, exercise counts per session, and injury guard shortlist size.
 
-- **`build_block.py`** - HTML/PDF export. `build_html_document()` constructs semantic HTML from phase blocks. `html_to_pdf()` converts HTML to PDF using pdfkit. `upload_to_supabase()` uploads PDFs to Supabase storage (uses `https://leienvqynijrgghhzczt.supabase.co` by default, override with `SUPABASE_URL`; supports `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_PUBLISHABLE_KEY`).
+- **`build_block.py`** - HTML/PDF export. `build_html_document()` constructs semantic HTML from phase blocks. `html_to_pdf()` converts HTML to PDF using pdfkit. `upload_to_supabase()` uploads PDFs to Supabase storage. Set `SUPABASE_URL` explicitly for non-local use, or opt into the project default with `ALLOW_DEFAULT_SUPABASE_URL=1`; authentication still requires `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_PUBLISHABLE_KEY`.
 
 Run the application with `python -m fightcamp.main` from the project root.
 
@@ -405,4 +405,5 @@ strength or conditioning work.
 ### Performance Goals
 
 The Tally intake form includes optional key performance goals. Selecting **Skill Refinement** maps to the internal tag `skill_refinement`. The strength and conditioning modules define this goal with tags like `coordination`, `skill`, `footwork`, `cognitive`, `focus`, `reactive` and `decision_speed`. Exercises containing these tags score higher when the plan is built, so drills that refine technique are prioritized across all phases. Additionally, the conditioning module includes a safeguard that inserts at least one style-bank drill tagged with `skill_refinement` whenever this goal is selected.
+
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import re
 from collections import Counter
 from difflib import SequenceMatcher
@@ -13,12 +14,23 @@ __all__ = [
     "get_mindset_by_phase",
 ]
 
+logger = logging.getLogger(__name__)
+
 try:  # pragma: no cover - optional dependency
     if _RAPIDFUZZ_AVAILABLE:
         from rapidfuzz import fuzz
     else:
         raise ImportError
-except Exception:  # pragma: no cover - fallback when rapidfuzz missing/invalid
+except ImportError:  # pragma: no cover - fallback when rapidfuzz missing
+    class _FuzzFallback:
+        @staticmethod
+        def partial_ratio(a: str, b: str) -> int:
+            return int(SequenceMatcher(None, a, b).ratio() * 100)
+
+    fuzz = _FuzzFallback()
+except Exception:  # pragma: no cover - import side effects are environment dependent
+    logger.exception("[optional-import-failed] module=rapidfuzz")
+
     class _FuzzFallback:
         @staticmethod
         def partial_ratio(a: str, b: str) -> int:
@@ -336,3 +348,4 @@ def get_mindset_by_phase(phase: str, flags: dict) -> str:
         if cue:
             lines.append(f"- **{label}:** {cue}")
     return "\n".join(lines) if lines else f"- **Generic:** {phase_bank.get('generic', '')}"
+
