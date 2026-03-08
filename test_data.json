@@ -1,7 +1,7 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Titan Titz" },
+      { "label": "Full name", "value": "Test Athlete 01" },
       { "label": "Age", "value": "23" },
       { "label": "Weight (kg)", "value": "85" },
       { "label": "Target Weight (kg)", "value": "85" },
@@ -11,8 +11,8 @@
       { "label": "Stance", "value": "Orthodox" },
       { "label": "Professional Status", "value": "Amateur" },
       { "label": "Current Record", "value": "5-2-0" },
-      { "label": "When is your next fight?", "value": "2026-04-14" },
-      { "label": "Rounds x Minutes", "value": "3x5" },
+      { "label": "When is your next fight?", "value": "2026-04-12" },
+      { "label": "Rounds x Minutes", "value": "3x3" },
       { "label": "Weekly Training Frequency", "value": "6" },
       { "label": "Fatigue Level", "value": "Moderate" },
       { "label": "Training Phase", "value": "Mid-Camp" },
@@ -26,7 +26,7 @@
       },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": ["My right wrist is sore and makes cracking sounds alot. My knee has an ache. My neck is tight and the bones are stiff and sore."]
+        "value": "Right wrist soreness after boxing, dull knee ache, neck tightness and stiffness."
       },
       {
         "label": "What are your key performance goals?",
@@ -42,11 +42,11 @@
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "Im too aggressive to the point i lose form and skill"
+        "value": "I get too aggressive and lose form and skill."
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "no"
+        "value": "No"
       }
     ]
   },
