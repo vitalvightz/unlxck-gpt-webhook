@@ -14,16 +14,15 @@ Because of that, Stage 1 should produce a strong candidate set with clear intent
 
 ## Recommended Return Contract
 
-Current Stage 1 already returns:
+For the current backend flow, Stage 1 should return a complete Stage 2 handoff package:
 
 - `plan_text`
 - `why_log`
 - `coach_notes`
 - `pdf_url`
-
-Add:
-
 - `stage2_payload`
+- `planning_brief`
+- `stage2_handoff_text`
 
 Suggested top-level shape:
 
@@ -33,7 +32,9 @@ Suggested top-level shape:
   "why_log": {},
   "coach_notes": "string",
   "plan_text": "string",
-  "stage2_payload": {}
+  "stage2_payload": {},
+  "planning_brief": {},
+  "stage2_handoff_text": "string"
 }
 ```
 

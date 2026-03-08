@@ -1,25 +1,29 @@
 # UNLXCK Fight Camp Builder
 
-This repository generates fight camp programs by combining local training modules. The main script reads athlete data, assembles strength, conditioning, recovery and other blocks, then exports the result directly to PDF and markdown formats.
+This repository generates fight camp programs using a Stage 1 generator and a Stage 2 planning/finalization contract. Stage 2 is the production backend handoff layer: the app builds a structured package (`planning_brief`, `stage2_payload`, and `stage2_handoff_text`) that downstream services can validate, finalize, and repair when needed.
 
 ## Quick Start
 
-The application reads athlete data from a JSON file and generates a complete training plan. Example invocations:
+The application reads athlete data from a JSON file and generates a complete training plan package.
 
 ### Local Usage
 
 ```bash
-# Generate plan with default test data (outputs markdown, HTML, and PDF)
+# Generate plan with default test data (markdown + HTML/PDF + Stage 2 package)
 python -m fightcamp.main
 ```
 
-The `generate_plan()` function returns a dictionary with:
-- `plan_text` - Full training plan in markdown format
-- `pdf_url` - URL to uploaded PDF (if Supabase credentials configured) 
+### Runtime Output Contract
+
+`generate_plan()` returns:
+
+- `plan_text` - Stage 1 draft plan in markdown format
+- `pdf_url` - URL to uploaded PDF (if Supabase credentials are configured)
 - `coach_notes` - Coach review notes and selection rationale
 - `why_log` - Reason log for exercise/drill selections
-- `stage2_payload` - Structured Stage 2 handoff data for restriction-aware finalization
-- `stage2_handoff_text` - Ready-to-paste external AI handoff prompt plus Stage 1 context
+- `stage2_payload` - Structured Stage 2 payload for restriction-aware finalization
+- `planning_brief` - Concise Stage 2 planning brief used for validation and retries
+- `stage2_handoff_text` - Ready-to-paste Stage 2 handoff prompt with context
 
 Input data format (see `test_data.json`):
 ```json
@@ -324,20 +328,20 @@ The injury pipeline turns free-form injury notes into guardrails, rehab drills, 
 
 **Parsing and canonicalization** (`injury_synonyms.py`, `injury_formatting.py`)
 
-- Free-form injury notes are split into phrases with `split_injury_text()`, handling punctuation, conjunctions, and common separators before falling back to spaCy sentence segmentation when available.【F:fightcamp/injury_synonyms.py†L861-L887】
-- Each phrase is normalized into a canonical injury type and body location via `parse_injury_phrase()`, which routes through injury type and location canonicalizers after stripping negated phrases.【F:fightcamp/injury_synonyms.py†L848-L859】
-- Laterality is extracted separately (`left`/`right`) so summaries can be labeled as “Left Shoulder,” “Right Knee,” etc.【F:fightcamp/injury_formatting.py†L10-L38】
+- Free-form injury notes are split into phrases with `split_injury_text()`, handling punctuation, conjunctions, and common separators before falling back to spaCy sentence segmentation when available.
+- Each phrase is normalized into a canonical injury type and body location via `parse_injury_phrase()`, which routes through injury type and location canonicalizers after stripping negated phrases.
+- Laterality is extracted separately (`left`/`right`) so summaries can be labeled as “Left Shoulder,” “Right Knee,” etc.
 
 **Scoring and flags** (`injury_scoring.py`)
 
-- `score_injury_phrase()` applies a deterministic scan for medical terms and mechanical red flags, then scores canonical injury types against a synonym map to pick the best match.【F:fightcamp/injury_scoring.py†L11-L170】
-- Urgent medical terms (fracture, dislocation, infection, nerve) add escalation flags without blocking downstream rehab lookup.【F:fightcamp/injury_scoring.py†L11-L45】
+- `score_injury_phrase()` applies a deterministic scan for medical terms and mechanical red flags, then scores canonical injury types against a synonym map to pick the best match.
+- Urgent medical terms (fracture, dislocation, infection, nerve) add escalation flags without blocking downstream rehab lookup.
 
 **Rehab selection + guardrails** (`rehab_protocols.py`)
 
-- Parsed entries are deduplicated by location and type, then matched against the rehab bank by type, location, and phase progression to return up to two drills per injury per phase.【F:fightcamp/rehab_protocols.py†L123-L236】
-- `format_injury_guardrails()` builds the injury summary, phase rehab priorities, and red-flag list used in the plan output; taper phases add a glycolytic conditioning caution when injuries are present.【F:fightcamp/rehab_protocols.py†L365-L445】
-- Support notes aggregate type-specific recovery guidance for any injuries detected.【F:fightcamp/rehab_protocols.py†L256-L336】
+- Parsed entries are deduplicated by location and type, then matched against the rehab bank by type, location, and phase progression to return up to two drills per injury per phase.
+- `format_injury_guardrails()` builds the injury summary, phase rehab priorities, and red-flag list used in the plan output; taper phases add a glycolytic conditioning caution when injuries are present.
+- Support notes aggregate type-specific recovery guidance for any injuries detected.
 
 ### Mental Modules
 
@@ -345,12 +349,12 @@ The mental workflow focuses on classifying intake blockers, filtering them for s
 
 **Mental block intake + filtering** (`main.py`)
 
-- The intake’s mental blocker text is classified into one or more blocks, then filtered so pure strikers do not receive a “fear of takedowns” cue.【F:fightcamp/main.py†L157-L214】
-- Mental blocks are stored in the training context so they can be reused across the phase summaries, coach review notes, and plan header sections.【F:fightcamp/main.py†L240-L267】【F:fightcamp/main.py†L650-L706】
+- The intake’s mental blocker text is classified into one or more blocks, then filtered so pure strikers do not receive a “fear of takedowns” cue.
+- Mental blocks are stored in the training context so they can be reused across the phase summaries, coach review notes, and plan header sections.
 
 **Phase cues** (`main.py`, `mindset_module.py`)
 
-- Phase mindset cues are retrieved from the mindset module and injected into each phase’s strength block so the plan surfaces a targeted mental focus alongside the physical work.【F:fightcamp/main.py†L254-L312】
+- Phase mindset cues are retrieved from the mindset module and injected into each phase’s strength block so the plan surfaces a targeted mental focus alongside the physical work.
 
 **Training context** (`training_context.py`)
 

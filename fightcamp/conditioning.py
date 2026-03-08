@@ -127,10 +127,10 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
     else:
         normalized = SYSTEM_ALIASES.get(system, system)
 
-    if any(sep in system for sep in ("+", "â†’", "/", "&")) or "->" in system:
+    if any(sep in system for sep in ("+", "→", "/", "&")) or "->" in system:
         parts = [
             part.strip()
-            for part in re.split(r"\s*(?:\+|/|â†’|->|&)\s*", system)
+            for part in re.split(r"\s*(?:\+|/|→|->|&)\s*", system)
             if part.strip()
         ]
         mapped_parts = [SYSTEM_ALIASES.get(part, part) for part in parts]
@@ -506,7 +506,7 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
 
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
-    bullet = "â€¢"
+    bullet = "•"
     load_line = f"  {bullet} Load: {drill['load']}"
     if drill.get("equipment_note"):
         load_line += f" ({drill['equipment_note']})"
@@ -517,7 +517,7 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
         f"  {bullet} Rest: {drill['rest']}{br}",
         f"  {bullet} Timing: {drill['timing']}{br}",
         f"  {bullet} Purpose: {drill['purpose']}{br}",
-        f"  âš ï¸ Red Flags: {drill['red_flags']}",
+        f"  ⚠️ Red Flags: {drill['red_flags']}",
     ]
     return "".join(parts) + "\n"
 
@@ -636,7 +636,7 @@ def render_conditioning_block(
         title_bits = [system_labels[s] for s in ordered_keys if s in systems]
         title = " + ".join(title_bits) if title_bits else phase_titles.get(phase, "Conditioning")
         title += phase_suffix.get(phase, "")
-        output_lines.append(f"\n#### Conditioning Block {phase} â€” {title}")
+        output_lines.append(f"\n#### Conditioning Block {phase} — {title}")
         output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
         output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
         output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
@@ -648,7 +648,7 @@ def render_conditioning_block(
             if not drills:
                 continue
             output_lines.append(
-                f"\nðŸ“Œ **System: {system.upper()}** (scaled by format emphasis)"
+                f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
             )
             for d in drills:
                 name = d.get("name", "Unnamed Drill")
@@ -657,17 +657,17 @@ def render_conditioning_block(
                 if extra_eq:
                     name = f"{name} ({', '.join(extra_eq)})"
 
-                timing = d.get("timing") or d.get("duration") or "â€”"
-                load = d.get("load") or d.get("intensity") or "â€”"
+                timing = d.get("timing") or d.get("duration") or "—"
+                load = d.get("load") or d.get("intensity") or "—"
                 equip_note = d.get("equipment_note") or d.get("equipment_notes")
 
                 purpose = (
                     d.get("purpose")
                     or d.get("notes")
                     or d.get("description")
-                    or "â€”"
+                    or "—"
                 )
-                rest = d.get("rest", "â€”")
+                rest = d.get("rest", "—")
 
                 name = _sanitize_sport_language(name, fight_format=(sport or "").lower())
                 timing = _sanitize_sport_language(timing, fight_format=(sport or "").lower())
@@ -1858,7 +1858,6 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
-
 
 
 
