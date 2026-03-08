@@ -457,9 +457,9 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
     fatigue_note = ""
     if fatigue == "high":
-        fatigue_note = "âš ï¸ High fatigue â†’ reduce volume by 30-40%, drop last set per lift."
+        fatigue_note = "⚠️ High fatigue → reduce volume by 30-40%, drop last set per lift."
     elif fatigue == "moderate":
-        fatigue_note = "âš ï¸ Moderate fatigue â†’ reduce 1 set if performance drops."
+        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
 
     strength_output = [
         f"**Phase:** {phase}",

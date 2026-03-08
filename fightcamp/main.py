@@ -827,7 +827,7 @@ async def generate_plan(data: dict):
         "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
         "",
         "## Athlete Profile",
-        f"- **Name:** <b>{full_name}</b><br>",
+        f"- **Name:** {full_name}",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
         f"- Target Weight: {target_weight}kg",
@@ -926,7 +926,7 @@ async def generate_plan(data: dict):
         rehab_html = "\n".join(rehab_parts)
 
     profile_lines = [
-        f"- **Name:** <b>{full_name}</b><br>",
+        f"- **Name:** {full_name}",
         f"- Age: {age}",
         f"- Weight: {weight}kg",
         f"- Target Weight: {target_weight}kg",
@@ -1005,7 +1005,8 @@ async def generate_plan(data: dict):
             allow_grappling=False,
         )
     selection_rationale_md = _sanitize_phase_text(selection_rationale_md, sanitize_labels)
-    selection_rationale_lines = [selection_rationale_md]
+    selection_rationale_md = _sanitize_stage_output(selection_rationale_md)
+    selection_rationale_lines = ["## Selection Rationale", selection_rationale_md]
     fight_plan_lines += selection_rationale_lines
     fight_plan_text = "\n\n".join(fight_plan_lines)
     fight_plan_text = re.sub(r"\n{3,}", "\n\n", fight_plan_text)
@@ -1109,7 +1110,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
 
