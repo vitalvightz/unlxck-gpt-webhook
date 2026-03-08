@@ -1247,6 +1247,9 @@ def _build_week_by_week_progression(
                     "must_keep": _clean_list(guardrails.get("must_keep_if_present", [])),
                     "drop_order_if_thin": _clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
                     "conditioning_sequence": list(stress.get("conditioning_sequence", [])),
+                    "highest_neural_day": stress.get("highest_neural_day", ""),
+                    "highest_glycolytic_day": stress.get("highest_glycolytic_day", ""),
+                    "lowest_load_day": stress.get("lowest_load_day", ""),
                     "protect_first": stress.get("protect_first", ""),
                     "cut_first_when_collisions_rise": stress.get("cut_first_when_collisions_rise", ""),
                     "sport_load_interaction": stress.get("sport_load_interaction", ""),
@@ -2101,6 +2104,4 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
-
-
 
