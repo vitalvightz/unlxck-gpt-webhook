@@ -1266,6 +1266,315 @@ def _build_week_by_week_progression(
         "weeks": week_entries,
     }
 
+
+def _role_anchor(role_key: str) -> str:
+    if role_key in {
+        "primary_strength_day",
+        "structural_strength_day",
+        "neural_plus_strength_day",
+        "neural_primer_day",
+        "alactic_speed_day",
+        "alactic_sharpness_day",
+        "alactic_coordination_day",
+        "alactic_support_day",
+    }:
+        return "highest_neural_day"
+    if role_key in {"fight_pace_repeatability_day", "light_fight_pace_touch_day"}:
+        return "highest_glycolytic_day"
+    if role_key in {"recovery_reset_day", "tissue_recovery_day", "fight_week_freshness_day"}:
+        return "lowest_load_day"
+    return "support_day"
+
+
+def _placement_rule_for_anchor(anchor: str, week_entry: dict) -> str:
+    if anchor == "highest_neural_day":
+        return week_entry.get("highest_neural_day", "Use this as the week's highest neural slot.")
+    if anchor == "highest_glycolytic_day":
+        return week_entry.get("highest_glycolytic_day", "Use this as the week's main density slot.")
+    if anchor == "lowest_load_day":
+        return week_entry.get("lowest_load_day", "Keep this as the lowest-load day of the week.")
+    return "Place this away from the highest collision sport load when possible."
+
+
+def _strength_role_key(phase: str, stage_key: str, limiter_key: str, idx: int) -> str:
+    if phase == "GPP":
+        if idx == 0:
+            return "structural_strength_day" if limiter_key == "tissue_state" else "primary_strength_day"
+        return "secondary_strength_day"
+    if phase == "SPP":
+        if idx == 0:
+            return "neural_plus_strength_day"
+        if stage_key in {"peak_specificity", "specific_density_to_peak"}:
+            return "strength_touch_day"
+        return "transfer_strength_day"
+    if idx == 0:
+        return "neural_primer_day"
+    return "small_strength_touch_day"
+
+
+def _conditioning_role_key(phase: str, system: str, limiter_key: str) -> str:
+    if system == "aerobic":
+        if phase == "GPP":
+            return "aerobic_coordination_day" if limiter_key == "coordination" else "aerobic_base_day"
+        if phase == "SPP":
+            return "repeatability_support_day" if limiter_key == "aerobic_repeatability" else "aerobic_support_day"
+        return "aerobic_flush_day"
+    if system == "glycolytic":
+        if phase == "TAPER":
+            return "light_fight_pace_touch_day"
+        if phase == "SPP":
+            return "fight_pace_repeatability_day"
+        return "controlled_repeatability_day"
+    if phase == "TAPER":
+        return "alactic_sharpness_day"
+    if phase == "SPP":
+        return "alactic_speed_day"
+    return "alactic_coordination_day" if limiter_key == "coordination" else "alactic_support_day"
+
+
+def _recovery_role_key(phase: str, stage_key: str, athlete_model: dict) -> str:
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    if phase == "TAPER" or stage_key == "fight_week_survival_rhythm" or "fight_week" in readiness_flags:
+        return "fight_week_freshness_day"
+    if athlete_model.get("injuries"):
+        return "tissue_recovery_day"
+    return "recovery_reset_day"
+
+
+def _role_selection_rule(role_key: str, category: str, system: str | None = None) -> str:
+    if category == "strength":
+        if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
+            return "Use the highest-priority compliant strength slot first."
+        return "Use a remaining compliant strength slot with lower interference cost than the main strength day."
+    if category == "conditioning":
+        if system == "aerobic":
+            return "Prefer compliant aerobic or low-damage conditioning slots first."
+        if system == "glycolytic":
+            return "Prefer compliant glycolytic slots only when phase guardrails still allow density work."
+        return "Prefer compliant alactic slots that preserve speed and sharpness."
+    return "Use rehab slots first; if rehab is absent, keep this day recovery-only."
+
+
+def _role_governance(
+    week_entry: dict,
+    *,
+    category: str,
+    role_key: str,
+    athlete_model: dict,
+    system: str | None = None,
+    idx: int = 0,
+) -> dict:
+    phase = str(week_entry.get("phase", "")).upper()
+    must_keep = set(_clean_list(week_entry.get("must_keep", [])))
+    drop_order = _clean_list(week_entry.get("drop_order_if_thin", []))
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    cut_first_text = str(week_entry.get("cut_first_when_collisions_rise", "")).lower()
+    protect_first_text = str(week_entry.get("protect_first", "")).lower()
+    highest_collision_load = str(week_entry.get("highest_collision_sport_load", "")).strip()
+    tissue_protection_priority = bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags or any(
+        token in protect_first_text
+        for token in ("symptom stability", "conservative loading", "next-day function", "tissue")
+    )
+
+    hard_suppression: list[str] = []
+    suppression_rules: list[str] = []
+
+    if category == "strength" and phase == "TAPER" and idx > 0:
+        hard_suppression.append(
+            "Taper survival rules suppress extra strength touches once the primary primer already exists."
+        )
+    if category == "strength" and role_key == "neural_primer_day" and tissue_protection_priority:
+        hard_suppression.append(
+            "Safety and readiness prioritize tissue protection, so sharpness-dominant neural primer work is suppressed."
+        )
+
+    if category == "conditioning" and system:
+        if system in drop_order and system not in must_keep:
+            suppression_rules.append(
+                f"{system.replace('_', ' ')} work is optional in this week and must drop before must-keep systems if the plan gets thin."
+            )
+        if role_key == "alactic_sharpness_day" and tissue_protection_priority:
+            hard_suppression.append(
+                "Safety and readiness prioritize tissue protection, so sharpness-dominant alactic work is suppressed."
+            )
+        if system == "glycolytic" and system not in must_keep and (
+            (phase == "TAPER" and highest_collision_load) or "glycolytic density" in cut_first_text
+        ):
+            hard_suppression.append(
+                "Taper survival and sport-load rules keep glycolytic density optional once live load already owns density."
+            )
+        if system == "aerobic" and phase == "TAPER" and system not in must_keep and readiness_flags & {"fight_week", "high_fatigue"}:
+            suppression_rules.append(
+                "Optional aerobic work cannot outrank fight-week freshness protection."
+            )
+
+    if category == "recovery":
+        suppression_rules.append(
+            "Recovery roles may replace work, but cannot create extra workload or displace rehab."
+        )
+
+    return {
+        "authority": "execution_layer_only",
+        "execution_only": True,
+        "governed_by": [entry["driver"] for entry in PLANNING_DECISION_HIERARCHY],
+        "cannot_override": [
+            "phase_survival_rules",
+            "safety_and_readiness",
+            "sport_load_collision_rules",
+            "main_limiter",
+            "session_counts",
+            "must_keep",
+            "drop_order_if_thin",
+            "conditioning_sequence",
+        ],
+        "suppression_rules": suppression_rules,
+        "hard_suppression_reasons": hard_suppression,
+    }
+
+
+def _build_weekly_role_map(
+    athlete_model: dict,
+    week_by_week_progression: dict,
+    limiter_profile: dict,
+) -> dict:
+    weeks: list[dict] = []
+    limiter_key = limiter_profile.get("key", "general_fight_readiness")
+
+    for week_entry in week_by_week_progression.get("weeks", []):
+        session_counts = dict(week_entry.get("session_counts") or {})
+        conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
+        session_roles: list[dict] = []
+        suppressed_roles: list[dict] = []
+        session_index = 1
+
+        for idx in range(max(0, int(session_counts.get("strength", 0)))):
+            role_key = _strength_role_key(
+                week_entry.get("phase", ""),
+                week_entry.get("stage_key", ""),
+                limiter_key,
+                idx,
+            )
+            anchor = _role_anchor(role_key)
+            governance = _role_governance(
+                week_entry,
+                category="strength",
+                role_key=role_key,
+                athlete_model=athlete_model,
+                idx=idx,
+            )
+            if governance["hard_suppression_reasons"]:
+                suppressed_roles.append(
+                    {
+                        "category": "strength",
+                        "role_key": role_key,
+                        "reasons": governance["hard_suppression_reasons"],
+                        "governance": governance,
+                    }
+                )
+                continue
+            session_roles.append(
+                {
+                    "session_index": session_index,
+                    "category": "strength",
+                    "role_key": role_key,
+                    "preferred_pool": "strength_slots",
+                    "selection_rule": _role_selection_rule(role_key, "strength"),
+                    "anchor": anchor,
+                    "placement_rule": _placement_rule_for_anchor(anchor, week_entry),
+                    "governance": governance,
+                }
+            )
+            session_index += 1
+
+        conditioning_count = max(0, int(session_counts.get("conditioning", 0)))
+        for idx in range(conditioning_count):
+            system = conditioning_sequence[idx] if idx < len(conditioning_sequence) else conditioning_sequence[-1]
+            role_key = _conditioning_role_key(week_entry.get("phase", ""), system, limiter_key)
+            anchor = _role_anchor(role_key)
+            governance = _role_governance(
+                week_entry,
+                category="conditioning",
+                role_key=role_key,
+                athlete_model=athlete_model,
+                system=system,
+                idx=idx,
+            )
+            if governance["hard_suppression_reasons"]:
+                suppressed_roles.append(
+                    {
+                        "category": "conditioning",
+                        "role_key": role_key,
+                        "preferred_system": system,
+                        "reasons": governance["hard_suppression_reasons"],
+                        "governance": governance,
+                    }
+                )
+                continue
+            session_roles.append(
+                {
+                    "session_index": session_index,
+                    "category": "conditioning",
+                    "role_key": role_key,
+                    "preferred_pool": "conditioning_slots",
+                    "preferred_system": system,
+                    "selection_rule": _role_selection_rule(role_key, "conditioning", system),
+                    "anchor": anchor,
+                    "placement_rule": _placement_rule_for_anchor(anchor, week_entry),
+                    "governance": governance,
+                }
+            )
+            session_index += 1
+
+        for idx in range(max(0, int(session_counts.get("recovery", 0)))):
+            role_key = _recovery_role_key(
+                week_entry.get("phase", ""),
+                week_entry.get("stage_key", ""),
+                athlete_model,
+            )
+            anchor = _role_anchor(role_key)
+            governance = _role_governance(
+                week_entry,
+                category="recovery",
+                role_key=role_key,
+                athlete_model=athlete_model,
+                idx=idx,
+            )
+            session_roles.append(
+                {
+                    "session_index": session_index,
+                    "category": "recovery",
+                    "role_key": role_key,
+                    "preferred_pool": "rehab_slots_or_recovery_only",
+                    "selection_rule": _role_selection_rule(role_key, "recovery"),
+                    "anchor": anchor,
+                    "placement_rule": _placement_rule_for_anchor(anchor, week_entry),
+                    "governance": governance,
+                }
+            )
+            session_index += 1
+
+        weeks.append(
+            {
+                "week_index": week_entry.get("week_index"),
+                "phase": week_entry.get("phase"),
+                "stage_key": week_entry.get("stage_key"),
+                "phase_week_index": week_entry.get("phase_week_index"),
+                "phase_week_total": week_entry.get("phase_week_total"),
+                "session_roles": session_roles,
+                "suppressed_roles": suppressed_roles,
+            }
+        )
+
+    return {
+        "model": "session_role_overlay.v1",
+        "source_of_truth": [
+            "Session roles inherit week-by-week progression rather than replacing phase logic.",
+            "Session counts come from existing deterministic phase session allocation.",
+            "Anchors inherit the weekly stress map so phase guardrails, safety, and sport-load rules keep priority.",
+            "Weekly roles are an execution layer only and cannot overrule the planning hierarchy.",
+        ],
+        "weeks": weeks,
+    }
 def _derive_global_priorities(
     athlete_model: dict,
     phase_briefs: dict[str, dict],
@@ -1357,6 +1666,11 @@ def build_planning_brief(
         phase_briefs,
         weekly_stress_map,
     )
+    weekly_role_map = _build_weekly_role_map(
+        athlete_model,
+        week_by_week_progression,
+        limiter_profile,
+    )
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
@@ -1379,6 +1693,7 @@ def build_planning_brief(
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools),
         "weekly_stress_map": weekly_stress_map,
         "week_by_week_progression": week_by_week_progression,
+        "weekly_role_map": weekly_role_map,
         "restrictions": restrictions,
         "candidate_pools": candidate_pools,
         "omission_ledger": omission_ledger,
@@ -1751,7 +2066,7 @@ SOURCE OF TRUTH:
 
 RULE 1 (hard filter): Remove or exclude any exercise, drill, or prescription that violates ANY restriction, including synonyms and mechanically equivalent patterns. Apply this to strength, conditioning, rehab, and any new item you consider. Do not soften a violating item into compliance; replace it or drop it.
 
-RULE 2 (planning): Build the best final plan for this athlete using the planning brief. Use the week_by_week_progression map when sequencing the camp. You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing, as long as the final plan remains consistent with the phase strategy and restrictions.
+RULE 2 (planning): Build the best final plan for this athlete using the planning brief. Use the week_by_week_progression map and weekly_role_map when sequencing the camp. Treat weekly_role_map as an execution layer, not a new authority: if a role carries governance or suppression metadata, higher-order planning rules still win. Organize sessions by weekly role first, then choose compliant exercises that fit each role. You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing, as long as the final plan remains consistent with the phase strategy and restrictions.
 
 RULE 3 (selection): Prefer selected Stage 1 items first, then same-role alternates, then other compliant options from the candidate pools. Keep the highest-priority slots and preserve rehab and phase-critical systems when possible.
 
@@ -1786,5 +2101,6 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
+
 
 

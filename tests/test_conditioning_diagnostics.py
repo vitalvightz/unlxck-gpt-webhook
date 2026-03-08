@@ -58,6 +58,8 @@ def test_generate_plan_returns_stage2_payload():
     assert "phase_strategy" in planning_brief
     assert "week_by_week_progression" in planning_brief
     assert planning_brief["week_by_week_progression"]["weeks"]
+    assert "weekly_role_map" in planning_brief
+    assert planning_brief["weekly_role_map"]["weeks"]
 
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (planner/finalizer)." in handoff_text
