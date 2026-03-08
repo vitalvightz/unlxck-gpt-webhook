@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 import logging
 import os
 import json
@@ -374,21 +374,21 @@ def _classify_prescription_type(exercise: dict) -> str:
 def _prescription_templates(phase: str) -> dict[str, str]:
     phase = phase.upper()
     barbell = {
-        "GPP": "3x8-12 @ 60–75% 1RM with slow eccentrics, tempo 3-1-1.",
-        "SPP": "3–5x3-5 @ 85–90% 1RM with contrast training (pair with explosive move).",
-        "TAPER": "2–3x3-5 @ 80–85%, cluster sets, minimal eccentric load.",
+        "GPP": "3x8-12 @ 60-75% 1RM with slow eccentrics, tempo 3-1-1.",
+        "SPP": "3–5x3–5 @ 85–90% 1RM with contrast training (pair with explosive move).",
+        "TAPER": "2–3x3–5 @ 80–85%, cluster sets, minimal eccentric load.",
     }
     ballistic = {
-        "GPP": "3–5x4-6 reps (or 6–10 throws) at crisp intent; rest 60–90s.",
-        "SPP": "4–6x2-5 reps at max speed; full rest 60–120s.",
-        "TAPER": "3–5x2-4 reps/throws at max speed; full rest 60–120s.",
+        "GPP": "3–5x4–6 reps (or 6–10 throws) at crisp intent; rest 60–90s.",
+        "SPP": "4–6x2–5 reps at max speed; full rest 60–120s.",
+        "TAPER": "3–5x2–4 reps/throws at max speed; full rest 60–120s.",
     }
     return {
         "barbell": barbell.get(phase, barbell["GPP"]),
         "ballistic": ballistic.get(phase, ballistic["GPP"]),
         "isometric": "3–5 holds x 10–20s @ 7–9/10 effort; full rest between holds.",
-        "core": "2–4 sets x 6–10 reps or 20–40s tempo (3-1-3), RPE 6–8.",
-        "general": "2–3x6-10 @ RPE 6–7, keep reps crisp.",
+        "core": "2-4 sets x 6-10 reps or 20-40s tempo (3-1-3), RPE 6-8.",
+        "general": "2–3x6–10 @ RPE 6–7, keep reps crisp.",
     }
 
 
@@ -450,16 +450,16 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
         "TAPER": "Cut total volume 40–60%, keep intensity crisp; last 3–5 days very light.",
     }
     time_short_note = {
-        "GPP": "If time short: keep top 2 lifts + 1 trunk/neck drill.",
-        "SPP": "If time short: keep heavy lift + paired explosive + trunk.",
-        "TAPER": "If time short: keep 1 neural primer + 1 trunk/neck drill.",
+        "GPP": "Keep top 2 lifts + 1 trunk/neck drill.",
+        "SPP": "Keep heavy lift + paired explosive + trunk.",
+        "TAPER": "Keep 1 neural primer + 1 trunk/neck drill.",
     }
 
     fatigue_note = ""
     if fatigue == "high":
-        fatigue_note = "⚠️ High fatigue → reduce volume by 30–40%, drop last set per lift."
+        fatigue_note = "âš ï¸ High fatigue â†’ reduce volume by 30-40%, drop last set per lift."
     elif fatigue == "moderate":
-        fatigue_note = "⚠️ Moderate fatigue → reduce 1 set if performance drops."
+        fatigue_note = "âš ï¸ Moderate fatigue â†’ reduce 1 set if performance drops."
 
     strength_output = [
         f"**Phase:** {phase}",
@@ -1081,4 +1081,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "candidate_reservoir": candidate_reservoir,
     }
     
+
+
+
 

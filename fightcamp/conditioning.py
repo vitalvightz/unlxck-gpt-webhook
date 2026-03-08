@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import logging
@@ -66,7 +66,7 @@ SPORT_LANGUAGE_BLACKLIST = {
     },
 }
 _TIME_TOKEN = re.compile(
-    r"(\d+(?:\.\d+)?)\s*(?:-|–)?\s*(\d+(?:\.\d+)?)?\s*"
+    r"(\d+(?:\.\d+)?)\s*(?:-|-)?\s*(\d+(?:\.\d+)?)?\s*"
     r"(s|sec|secs|second|seconds|min|mins|minute|minutes)\b",
     re.IGNORECASE,
 )
@@ -127,10 +127,10 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
     else:
         normalized = SYSTEM_ALIASES.get(system, system)
 
-    if any(sep in system for sep in ("+", "→", "/", "&")) or "->" in system:
+    if any(sep in system for sep in ("+", "â†’", "/", "&")) or "->" in system:
         parts = [
             part.strip()
-            for part in re.split(r"\s*(?:\+|/|→|->|&)\s*", system)
+            for part in re.split(r"\s*(?:\+|/|â†’|->|&)\s*", system)
             if part.strip()
         ]
         mapped_parts = [SYSTEM_ALIASES.get(part, part) for part in parts]
@@ -443,12 +443,12 @@ def _violates_sport_language_blacklist(drill: dict, *, fight_format: str) -> boo
 
 def _alactic_maintenance_fallback(phase: str) -> dict:
     phase = phase.upper()
-    rounds = "6-8" if phase == "SPP" else "4-6"
+    rounds = "6–8" if phase == "SPP" else "4–6"
     return {
         "system": "ALACTIC",
         "name": "Explosive Boxing Burst Intervals",
         "load": "RPE 8–9, keep quality high and stop before speed drop-off",
-        "rest": "75–120 sec complete rest between reps",
+        "rest": "75-120 sec complete rest between reps",
         "timing": f"{rounds} x 6–10 sec fast punch bursts",
         "purpose": "Minimal-dose ATP-PCr maintenance for striking speed and neural sharpness.",
         "red_flags": "Terminate set if punch speed/position quality drops.",
@@ -506,7 +506,7 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
 
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
-    bullet = "•"
+    bullet = "â€¢"
     load_line = f"  {bullet} Load: {drill['load']}"
     if drill.get("equipment_note"):
         load_line += f" ({drill['equipment_note']})"
@@ -517,7 +517,7 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
         f"  {bullet} Rest: {drill['rest']}{br}",
         f"  {bullet} Timing: {drill['timing']}{br}",
         f"  {bullet} Purpose: {drill['purpose']}{br}",
-        f"  ⚠️ Red Flags: {drill['red_flags']}",
+        f"  âš ï¸ Red Flags: {drill['red_flags']}",
     ]
     return "".join(parts) + "\n"
 
@@ -533,10 +533,10 @@ def _glycolytic_fallback(phase: str) -> dict:
     intensity = "RPE 7–8" if phase == "SPP" else "RPE 6–7"
     return {
         "system": "GLYCOLYTIC",
-        "name": "Fight-Pace Rounds: 6–10 x (2–3 min on / 1 min off)",
+        "name": "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
         "load": f"{intensity} fight-pace",
         "rest": "1 min between rounds",
-        "timing": "2–3 min work / 1 min rest",
+        "timing": "2-3 min work / 1 min rest",
         "purpose": "Maintain glycolytic conditioning with clear work:rest structure.",
         "red_flags": "None",
     }
@@ -574,9 +574,9 @@ def render_conditioning_block(
         "TAPER": "Reduce volume 40–60%; keep speed sharp; last 3–5 days very light.",
     }
     time_short = {
-        "GPP": "If time short: keep 2 aerobic rounds + 1 alactic pop.",
-        "SPP": "If time short: keep 2 fight-pace rounds (system priority).",
-        "TAPER": "If time short: keep 4–6 alactic bursts + shadowboxing rhythm.",
+        "GPP": "Keep 2 aerobic rounds + 1 alactic pop.",
+        "SPP": "Keep 2 fight-pace rounds (system priority).",
+        "TAPER": "Keep 4–6 alactic bursts + shadowboxing rhythm.",
     }
     fatigue_note = {
         "GPP": "If fatigue high: drop 1–2 rounds, keep intensity easy.",
@@ -636,7 +636,7 @@ def render_conditioning_block(
         title_bits = [system_labels[s] for s in ordered_keys if s in systems]
         title = " + ".join(title_bits) if title_bits else phase_titles.get(phase, "Conditioning")
         title += phase_suffix.get(phase, "")
-        output_lines.append(f"\n#### Conditioning Block {phase} — {title}")
+        output_lines.append(f"\n#### Conditioning Block {phase} â€” {title}")
         output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
         output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
         output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
@@ -648,7 +648,7 @@ def render_conditioning_block(
             if not drills:
                 continue
             output_lines.append(
-                f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
+                f"\nðŸ“Œ **System: {system.upper()}** (scaled by format emphasis)"
             )
             for d in drills:
                 name = d.get("name", "Unnamed Drill")
@@ -657,17 +657,17 @@ def render_conditioning_block(
                 if extra_eq:
                     name = f"{name} ({', '.join(extra_eq)})"
 
-                timing = d.get("timing") or d.get("duration") or "—"
-                load = d.get("load") or d.get("intensity") or "—"
+                timing = d.get("timing") or d.get("duration") or "â€”"
+                load = d.get("load") or d.get("intensity") or "â€”"
                 equip_note = d.get("equipment_note") or d.get("equipment_notes")
 
                 purpose = (
                     d.get("purpose")
                     or d.get("notes")
                     or d.get("description")
-                    or "—"
+                    or "â€”"
                 )
-                rest = d.get("rest", "—")
+                rest = d.get("rest", "â€”")
 
                 name = _sanitize_sport_language(name, fight_format=(sport or "").lower())
                 timing = _sanitize_sport_language(timing, fight_format=(sport or "").lower())
@@ -1858,5 +1858,8 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
+
+
+
 
 

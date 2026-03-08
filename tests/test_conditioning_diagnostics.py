@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 from pathlib import Path
 
@@ -21,6 +21,16 @@ def test_plan_missing_system_messaging():
     ]
     for phrase in forbidden_phrases:
         assert phrase not in plan_text
+
+
+def test_plan_text_has_no_mojibake_or_duplicate_time_short_prefix():
+    data_path = Path(__file__).resolve().parents[1] / "test_data.json"
+    data = json.loads(data_path.read_text(encoding="utf-8"))
+    result = asyncio.run(generate_plan(data))
+    plan_text = result["plan_text"]
+
+    assert "â€“" not in plan_text
+    assert "**If Time Short:** If time short:" not in plan_text
 
 
 def test_missing_system_block_formatting():
@@ -489,3 +499,5 @@ def test_short_notice_false_for_past_date():
     assert result["planning_brief"]["fight_demands"]["days_until_fight"] is None
     assert result["planning_brief"]["fight_demands"]["short_notice"] is False
     assert result["stage2_payload"]["athlete_model"]["days_until_fight"] is None
+
+
