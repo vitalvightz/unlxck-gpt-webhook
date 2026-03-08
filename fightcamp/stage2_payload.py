@@ -1120,13 +1120,23 @@ def build_stage2_payload(
         "rewrite_guidance": rewrite_guidance,
     }
 
-STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Input = Stage 1 draft plan + athlete profile + Restrictions list.
+STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer). Input = PLANNING BRIEF + Stage 1 draft plan + athlete profile + restrictions + candidate pools.
 
-RULE 1 (hard filter): Before selecting or rewriting anything, remove/exclude any exercise, drill, or prescription that violates ANY restriction (including synonyms and mechanically equivalent patterns). Apply to strength + conditioning + rehab. Do not \"modify\" a violating item; drop it.
+SOURCE OF TRUTH:
+1. Use the PLANNING BRIEF first for athlete intent, phase strategy, priorities, and risks.
+2. Treat restrictions as hard constraints.
+3. Treat candidate pools as the preferred exercise reservoir.
+4. Treat the Stage 1 draft plan as raw material, not the final authority.
 
-RULE 2 (selection): Build the final plan ONLY from the remaining compliant items. If a section becomes too thin, choose alternative compliant items already present in Stage 1 (do not invent new exercises unless explicitly allowed).
+RULE 1 (hard filter): Remove or exclude any exercise, drill, or prescription that violates ANY restriction, including synonyms and mechanically equivalent patterns. Apply this to strength, conditioning, rehab, and any new item you consider. Do not soften a violating item into compliance; replace it or drop it.
 
-OUTPUT: Return a clean final plan (athlete-facing), keeping the best items from Stage 1, fully consistent with restrictions."""
+RULE 2 (planning): Build the best final plan for this athlete using the planning brief. You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing, as long as the final plan remains consistent with the phase strategy and restrictions.
+
+RULE 3 (selection): Prefer selected Stage 1 items first, then same-role alternates, then other compliant options from the candidate pools. Keep the highest-priority slots and preserve rehab and phase-critical systems when possible.
+
+RULE 4 (invention): Prefer not to invent new exercises. Only introduce a new item if the existing material cannot produce a coherent, restriction-compliant plan, and only if the replacement is conservative, mechanically appropriate, and clearly aligned with the planning brief.
+
+OUTPUT: Return a clean athlete-facing final plan that feels elite, personalized, and internally coherent. Preserve what is best from Stage 1, but rewrite weak structure, duplication, or sequencing when needed."""
 
 
 def _json_block(value: dict | list) -> str:
