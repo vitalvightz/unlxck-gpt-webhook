@@ -606,6 +606,164 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
     return briefs
 
 
+
+def _derive_athlete_archetype(athlete_model: dict) -> dict:
+    technical_styles = _clean_list(athlete_model.get("technical_styles", []))
+    tactical_styles = _clean_list(athlete_model.get("tactical_styles", []))
+    style_identity = _dedupe_preserve_order(technical_styles + tactical_styles) or ["generalist"]
+
+    readiness = "stable"
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    if readiness_flags & {"fight_week", "aggressive_weight_cut", "high_fatigue"}:
+        readiness = "fragile"
+    elif readiness_flags & {"moderate_fatigue", "active_weight_cut", "injury_management", "short_notice"}:
+        readiness = "managed"
+
+    return {
+        "style_identity": style_identity,
+        "training_preference": athlete_model.get("training_preference") or "balanced",
+        "experience_band": athlete_model.get("status") or "unspecified",
+        "readiness_state": readiness,
+        "equipment_profile": _clean_list(athlete_model.get("equipment", [])),
+    }
+
+
+def _derive_main_limiter(athlete_model: dict) -> str:
+    weaknesses = _clean_list(athlete_model.get("weaknesses", []))
+    goals = _clean_list(athlete_model.get("key_goals", []))
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+
+    if weaknesses:
+        return f"Primary limiter is {weaknesses[0].replace('_', ' ')}."
+    if "conditioning" in goals:
+        return "Primary limiter is fight conditioning repeatability."
+    if "power" in goals:
+        return "Primary limiter is power expression under fight fatigue."
+    if readiness_flags & {"moderate_fatigue", "high_fatigue"} or fatigue in {"moderate", "high"}:
+        return "Primary limiter is accumulated fatigue management."
+    return "Primary limiter is general fight-readiness capacity."
+
+
+def _derive_main_risks(athlete_model: dict, restrictions: list[dict]) -> list[str]:
+    risks: list[str] = []
+    injuries = _clean_list(athlete_model.get("injuries", []))
+    if injuries:
+        risks.append("Injury management must constrain exercise choice and loading.")
+    if athlete_model.get("weight_cut_risk"):
+        pct = athlete_model.get("weight_cut_pct") or 0.0
+        risks.append(f"Weight cut stress is active ({pct:.1f}% body mass target), so soreness and dehydration costs matter.")
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    if fatigue in {"moderate", "high"}:
+        risks.append(f"Current fatigue is {fatigue}, so stacking hard sessions is a risk.")
+    if athlete_model.get("short_notice"):
+        risks.append("Short-notice timeline limits how much new capacity can be built.")
+    if restrictions:
+        risks.append("Restrictions require aggressive pattern filtering, including mechanical equivalents.")
+    return risks or ["No exceptional risk flags beyond normal camp management."]
+
+
+def _derive_global_priorities(
+    athlete_model: dict,
+    phase_briefs: dict[str, dict],
+    candidate_pools: dict[str, dict],
+) -> dict[str, list[str]]:
+    preserve: list[str] = []
+    push: list[str] = []
+    avoid: list[str] = []
+
+    injuries = _clean_list(athlete_model.get("injuries", []))
+    goals = _clean_list(athlete_model.get("key_goals", []))
+
+    if injuries:
+        preserve.append("Keep rehab continuity and remove only clearly conflicting work.")
+        avoid.append("Do not keep drills that mechanically overlap the injured pattern just because they sound different.")
+    if athlete_model.get("weight_cut_risk"):
+        preserve.append("Keep low-damage conditioning options during cut stress.")
+        avoid.append("Avoid unnecessary soreness-heavy conditioning or accessory volume.")
+    if "conditioning" in goals:
+        push.append("Prioritize conditioning slots that match the phase objective before extra accessories.")
+    if "power" in goals:
+        push.append("Preserve explosive and alactic work if compliant options remain.")
+
+    for phase, brief in phase_briefs.items():
+        guardrails = brief.get("selection_guardrails", {})
+        for item in guardrails.get("must_keep_if_present", []):
+            label = str(item).replace("_", " ")
+            preserve.append(f"In {phase}, keep {label} work if a compliant version exists.")
+        for note in guardrails.get("notes", []):
+            avoid.append(str(note))
+
+    conditioning_roles = {
+        slot.get("role")
+        for pool in candidate_pools.values()
+        for slot in pool.get("conditioning_slots", [])
+        if slot.get("role")
+    }
+    if "aerobic" in conditioning_roles and "conditioning" in goals:
+        push.append("Use aerobic work to support recovery and repeatability, not just to add volume.")
+    if "alactic" in conditioning_roles:
+        push.append("Keep at least one neural-speed option when the phase or taper calls for sharpness.")
+
+    return {
+        "preserve": _dedupe_preserve_order(preserve) or ["Preserve the main phase objectives and any active rehab work."],
+        "push": _dedupe_preserve_order(push) or ["Push the highest-priority phase qualities first."],
+        "avoid": _dedupe_preserve_order(avoid) or ["Avoid changes that break the phase intent or restriction logic."],
+    }
+
+
+def _build_phase_strategy(phase_briefs: dict[str, dict], candidate_pools: dict[str, dict]) -> dict[str, dict]:
+    strategy: dict[str, dict] = {}
+    for phase, brief in phase_briefs.items():
+        pool = candidate_pools.get(phase, {})
+        strategy[phase] = {
+            "objective": brief.get("objective", ""),
+            "build": _clean_list(brief.get("emphasize", [])),
+            "protect": _clean_list(brief.get("risk_flags", [])),
+            "deprioritize": _clean_list(brief.get("deprioritize", [])),
+            "must_keep": _clean_list((brief.get("selection_guardrails") or {}).get("must_keep_if_present", [])),
+            "drop_order_if_thin": _clean_list((brief.get("selection_guardrails") or {}).get("conditioning_drop_order_if_thin", [])),
+            "slot_counts": {
+                "strength": len(pool.get("strength_slots", [])),
+                "conditioning": len(pool.get("conditioning_slots", [])),
+                "rehab": len(pool.get("rehab_slots", [])),
+            },
+        }
+    return strategy
+
+
+def build_planning_brief(
+    *,
+    athlete_model: dict,
+    restrictions: list[dict],
+    phase_briefs: dict[str, dict],
+    candidate_pools: dict[str, dict],
+    omission_ledger: dict[str, dict],
+    rewrite_guidance: dict,
+) -> dict:
+    return {
+        "schema_version": "planning_brief.v1",
+        "generator_mode": "deterministic_planner_plus_ai_finalizer",
+        "athlete_snapshot": athlete_model,
+        "fight_demands": {
+            "sport": athlete_model.get("sport"),
+            "status": athlete_model.get("status"),
+            "rounds_format": athlete_model.get("rounds_format"),
+            "camp_length_weeks": athlete_model.get("camp_length_weeks"),
+            "days_until_fight": athlete_model.get("days_until_fight"),
+            "short_notice": athlete_model.get("short_notice"),
+        },
+        "archetype_summary": _derive_athlete_archetype(athlete_model),
+        "main_limiter": _derive_main_limiter(athlete_model),
+        "main_risks": _derive_main_risks(athlete_model, restrictions),
+        "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
+        "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools),
+        "restrictions": restrictions,
+        "candidate_pools": candidate_pools,
+        "omission_ledger": omission_ledger,
+        "decision_rules": rewrite_guidance,
+    }
+
 def _serialize_strength_option(exercise: dict, why: str) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
@@ -922,40 +1080,45 @@ def build_stage2_payload(
             "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase),
         }
 
+    athlete_model = _build_athlete_model(
+        training_context=training_context,
+        sport=mapped_format,
+        record=record,
+        rounds_format=rounds_format,
+        camp_length_weeks=camp_len,
+        short_notice=short_notice,
+    )
+    serialized_restrictions = _serialize_restrictions(restrictions)
+    phase_briefs = _build_phase_briefs(training_context, phase_weeks)
+    omission_ledger = _build_omission_ledger(
+        strength_blocks=strength_blocks,
+        conditioning_blocks=conditioning_blocks,
+        phase_weeks=phase_weeks,
+    )
+    rewrite_guidance = {
+        "selection_rules": [
+            "Prefer selected items first, then alternates in listed order.",
+            "If a selected item is removed, replace only within the same slot when possible.",
+            "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
+            "Do not invent new items when a slot becomes thin after filtering.",
+        ],
+        "writing_rules": [
+            "Keep the final plan athlete-facing and clean.",
+            "Do not mention excluded items.",
+            "Preserve phase objectives when rewriting text.",
+        ],
+    }
+
     return {
         "schema_version": "stage2_payload.v1",
         "generator_mode": "restriction_aware_candidate_generator",
-        "athlete_model": _build_athlete_model(
-            training_context=training_context,
-            sport=mapped_format,
-            record=record,
-            rounds_format=rounds_format,
-            camp_length_weeks=camp_len,
-            short_notice=short_notice,
-        ),
-        "restrictions": _serialize_restrictions(restrictions),
-        "phase_briefs": _build_phase_briefs(training_context, phase_weeks),
+        "athlete_model": athlete_model,
+        "restrictions": serialized_restrictions,
+        "phase_briefs": phase_briefs,
         "candidate_pools": candidate_pools,
-        "omission_ledger": _build_omission_ledger(
-            strength_blocks=strength_blocks,
-            conditioning_blocks=conditioning_blocks,
-            phase_weeks=phase_weeks,
-        ),
-        "rewrite_guidance": {
-            "selection_rules": [
-                "Prefer selected items first, then alternates in listed order.",
-                "If a selected item is removed, replace only within the same slot when possible.",
-                "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
-                "Do not invent new items when a slot becomes thin after filtering.",
-            ],
-            "writing_rules": [
-                "Keep the final plan athlete-facing and clean.",
-                "Do not mention excluded items.",
-                "Preserve phase objectives when rewriting text.",
-            ],
-        },
+        "omission_ledger": omission_ledger,
+        "rewrite_guidance": rewrite_guidance,
     }
-
 
 STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Input = Stage 1 draft plan + athlete profile + Restrictions list.
 
@@ -970,9 +1133,16 @@ def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
 
 
-def build_stage2_handoff_text(*, stage2_payload: dict, plan_text: str, coach_notes: str = "") -> str:
+def build_stage2_handoff_text(
+    *,
+    stage2_payload: dict,
+    plan_text: str,
+    coach_notes: str = "",
+    planning_brief: dict | None = None,
+) -> str:
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
+        "PLANNING BRIEF\n" + _json_block(planning_brief or {}),
         "ATHLETE PROFILE\n" + _json_block(stage2_payload.get("athlete_model", {})),
         "RESTRICTIONS\n" + _json_block(stage2_payload.get("restrictions", [])),
         "PHASE BRIEFS\n" + _json_block(stage2_payload.get("phase_briefs", {})),

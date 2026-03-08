@@ -47,7 +47,7 @@ from .rehab_protocols import (
     generate_rehab_protocols,
     generate_support_notes,
 )
-from .stage2_payload import build_stage2_handoff_text, build_stage2_payload
+from .stage2_payload import build_planning_brief, build_stage2_handoff_text, build_stage2_payload
 
 GRAPPLING_STYLES = {
     "mma",
@@ -1019,10 +1019,19 @@ async def generate_plan(data: dict):
             "TAPER": taper_rehab_block,
         },
     )
+    planning_brief = build_planning_brief(
+        athlete_model=stage2_payload["athlete_model"],
+        restrictions=stage2_payload["restrictions"],
+        phase_briefs=stage2_payload["phase_briefs"],
+        candidate_pools=stage2_payload["candidate_pools"],
+        omission_ledger=stage2_payload["omission_ledger"],
+        rewrite_guidance=stage2_payload["rewrite_guidance"],
+    )
     stage2_handoff_text = build_stage2_handoff_text(
         stage2_payload=stage2_payload,
         plan_text=fight_plan_text,
         coach_notes=coach_notes,
+        planning_brief=planning_brief,
     )
 
     return {
@@ -1031,6 +1040,7 @@ async def generate_plan(data: dict):
         "coach_notes": coach_notes,
         "plan_text": fight_plan_text,
         "stage2_payload": stage2_payload,
+        "planning_brief": planning_brief,
         "stage2_handoff_text": stage2_handoff_text,
     }
 

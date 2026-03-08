@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fightcamp.conditioning import render_conditioning_block
 from fightcamp.main import generate_plan
-from fightcamp.stage2_payload import build_stage2_payload
+from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
 
@@ -49,14 +49,24 @@ def test_generate_plan_returns_stage2_payload():
     assert "phase_briefs" in payload
     assert "candidate_pools" in payload
 
+    planning_brief = result.get("planning_brief")
+    assert planning_brief is not None
+    assert planning_brief["schema_version"] == "planning_brief.v1"
+    assert "archetype_summary" in planning_brief
+    assert "main_limiter" in planning_brief
+    assert "global_priorities" in planning_brief
+    assert "phase_strategy" in planning_brief
+
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (finalizer)." in handoff_text
+    assert "PLANNING BRIEF" in handoff_text
     assert "ATHLETE PROFILE" in handoff_text
     assert "STAGE 1 DRAFT PLAN" in handoff_text
 
     active_phases = set(payload["phase_briefs"].keys())
     assert active_phases
     assert active_phases.issubset(set(payload["candidate_pools"].keys()))
+    assert active_phases.issubset(set(planning_brief["phase_strategy"].keys()))
 
 
 
@@ -358,3 +368,63 @@ def test_stage2_payload_phase_guardrails_prioritize_survival_structure():
     assert taper_pool["conditioning_slots"][0]["priority"] == "critical"
     assert taper_pool["conditioning_slots"][1]["priority"] == "low"
     assert taper_pool["rehab_slots"][0]["priority"] == "critical"
+
+def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": 21,
+        "short_notice": False,
+        "fatigue": "moderate",
+        "training_preference": "balanced",
+        "technical_styles": ["boxing"],
+        "tactical_styles": ["pressure_fighter"],
+        "key_goals": ["conditioning", "power"],
+        "weaknesses": ["pull"],
+        "equipment": ["air_bike", "dumbbell"],
+        "injuries": ["shoulder strain"],
+        "weight_cut_risk": True,
+        "weight_cut_pct": 5.0,
+        "readiness_flags": ["moderate_fatigue", "active_weight_cut", "injury_management"],
+    }
+    phase_briefs = {
+        "SPP": {
+            "objective": "increase fight-specific repeatability and power transfer",
+            "emphasize": ["glycolytic repeatability", "sport speed"],
+            "deprioritize": ["non-specific conditioning volume"],
+            "risk_flags": ["respect injury guardrails", "manage cut stress"],
+            "selection_guardrails": {
+                "must_keep_if_present": ["rehab", "glycolytic", "alactic"],
+                "conditioning_drop_order_if_thin": ["aerobic"],
+            },
+        }
+    }
+    candidate_pools = {
+        "SPP": {
+            "strength_slots": [{"role": "hinge"}],
+            "conditioning_slots": [{"role": "glycolytic"}, {"role": "alactic"}],
+            "rehab_slots": [{"role": "rehab_shoulder_strain"}],
+        }
+    }
+    restrictions = [{"restriction": "heavy_overhead_pressing", "blocked_patterns": ["push press"]}]
+    rewrite_guidance = {"selection_rules": ["Prefer selected items first."]}
+    omission_ledger = {"SPP": {"conditioning": [{"reason": "missing_system", "details": "aerobic"}]}}
+
+    brief = build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=restrictions,
+        phase_briefs=phase_briefs,
+        candidate_pools=candidate_pools,
+        omission_ledger=omission_ledger,
+        rewrite_guidance=rewrite_guidance,
+    )
+
+    assert brief["schema_version"] == "planning_brief.v1"
+    assert brief["archetype_summary"]["readiness_state"] == "managed"
+    assert brief["main_limiter"] == "Primary limiter is pull."
+    assert brief["main_risks"]
+    assert brief["global_priorities"]["preserve"]
+    assert brief["phase_strategy"]["SPP"]["must_keep"] == ["rehab", "glycolytic", "alactic"]
+    assert brief["phase_strategy"]["SPP"]["slot_counts"]["conditioning"] == 2
