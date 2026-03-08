@@ -221,3 +221,16 @@ if __name__ == "__main__":
     print("✓ test_regression_explicit_tags_still_exclude")
     
     print("\nAll tests passed!")
+
+
+def test_injury_match_details_cache_returns_stable_results_without_leaking_mutations():
+    item = {"name": "Overhead Press", "tags": []}
+
+    first = injury_match_details(item, ["shoulder"], risk_levels=("exclude",))
+    assert first
+
+    first[0]["patterns"].append("mutated-pattern")
+    second = injury_match_details(item, ["shoulder"], risk_levels=("exclude",))
+
+    assert "mutated-pattern" not in second[0]["patterns"]
+    assert second == injury_match_details(item, ["shoulder"], risk_levels=("exclude",))

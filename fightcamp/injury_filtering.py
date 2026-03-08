@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -447,6 +448,23 @@ logger = logging.getLogger(__name__)
 
 INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
 
+_NORMALIZED_INJURY_REGION_CACHE: dict[tuple[str, ...], frozenset[str]] = {}
+_INJURY_MATCH_DETAILS_CACHE: dict[tuple[object, ...], list[dict]] = {}
+
+
+def _injury_strings_cache_key(injuries: Iterable[str]) -> tuple[str, ...]:
+    normalized = [
+        _normalize_text(str(injury))
+        for injury in injuries
+        if str(injury or "").strip()
+    ]
+    return tuple(sorted(normalized))
+
+
+def _tags_cache_key(tags: Iterable[str]) -> tuple[str, ...]:
+    return tuple(sorted(str(tag).lower() for tag in tags if tag))
+
+
 
 def _log_exclusion(context: str, item: dict, decision: Decision) -> None:
     """
@@ -783,10 +801,14 @@ def _map_text_to_region(text: str) -> str | None:
 
 
 def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
+    injury_list = [str(injury) for injury in injuries if injury]
+    cache_key = _injury_strings_cache_key(injury_list)
+    cached = _NORMALIZED_INJURY_REGION_CACHE.get(cache_key)
+    if cached is not None:
+        return set(cached)
+
     regions: set[str] = set()
-    for injury in injuries:
-        if not injury:
-            continue
+    for injury in injury_list:
         normalized = _normalize_text(injury)
         direct_key = normalized.replace(" ", "_")
         if direct_key in INJURY_RULES:
@@ -821,8 +843,9 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
             if any(_looks_like_constraint_phrase(phrase) for phrase in non_negated_phrases):
                 continue
             regions.add("unspecified")
-    return regions
 
+    _NORMALIZED_INJURY_REGION_CACHE[cache_key] = frozenset(regions)
+    return set(regions)
 
 def _looks_like_constraint_phrase(phrase: str) -> bool:
     normalized = _normalize_text(phrase)
@@ -900,10 +923,11 @@ def injury_match_details(
     fields: Iterable[str] | None = None,
     risk_levels: Iterable[str] | None = None,
 ) -> list[dict]:
-    if not injuries:
+    injury_list = [str(injury) for injury in injuries if injury]
+    if not injury_list:
         return []
-    fields = fields or ("name",)
-    risk_levels = set(risk_levels or ("exclude",))
+    fields = tuple(fields or ("name",))
+    risk_levels = tuple(sorted(set(risk_levels or ("exclude",))))
     field_values = {field: str(item.get(field, "") or "") for field in fields}
     name = field_values.get("name", "")
     tags = set(ensure_tags(item))
@@ -913,10 +937,24 @@ def injury_match_details(
     tags_for_matching = tags | expanded
     if "low_impact" in tags_for_matching:
         tags_for_matching.discard("running_volume_high")
-    reasons: list[dict] = []
     module = _module_for_item(item)
     allow_keyword_match = module in {"strength", "conditioning"}
-    for region in normalize_injury_regions(injuries):
+    region_list = sorted(normalize_injury_regions(injury_list))
+    cache_key = (
+        module,
+        tuple(sorted(field_values.items())),
+        _injury_strings_cache_key(injury_list),
+        fields,
+        risk_levels,
+        tag_source,
+        _tags_cache_key(tags_for_matching),
+    )
+    cached = _INJURY_MATCH_DETAILS_CACHE.get(cache_key)
+    if cached is not None:
+        return copy.deepcopy(cached)
+
+    reasons: list[dict] = []
+    for region in region_list:
         rules = INJURY_RULES.get(region, {})
         for risk_level in ("exclude", "flag"):
             if risk_level not in risk_levels:
@@ -924,7 +962,6 @@ def injury_match_details(
             patterns = rules.get(f"{risk_level}_keywords", rules.get("ban_keywords", []) if risk_level == "exclude" else [])
             risk_tags = {t.lower() for t in rules.get(f"{risk_level}_tags", rules.get("ban_tags", []) if risk_level == "exclude" else [])}
             tag_hits_raw = sorted(tags_for_matching & risk_tags)
-            # Only allow explicit tags to trigger exclusion, except mech_* tags
             if tag_source == "explicit":
                 tag_hits = tag_hits_raw
             else:
@@ -937,7 +974,6 @@ def injury_match_details(
                     if matches:
                         field_hits[field_name] = matches
                         matched_patterns.update(matches)
-                        # Log exclusion for each matched ban_keyword
                         for matched_pattern in matches:
                             logger.info(
                                 "[injury-exclusion] Excluding '%s' for %s injury: ban_keyword '%s' found in %s='%s'",
@@ -957,8 +993,9 @@ def injury_match_details(
                         "risk_level": risk_level,
                     }
                 )
-    return reasons
 
+    _INJURY_MATCH_DETAILS_CACHE[cache_key] = copy.deepcopy(reasons)
+    return reasons
 
 def _load_style_specific_exercises() -> list[dict]:
     paths = [
