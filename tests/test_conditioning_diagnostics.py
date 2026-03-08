@@ -47,6 +47,12 @@ def test_generate_plan_returns_stage2_payload():
     assert "phase_briefs" in payload
     assert "candidate_pools" in payload
 
+    handoff_text = result.get("stage2_handoff_text", "")
+    assert "You are Stage 2 (finalizer)." in handoff_text
+    assert "ATHLETE PROFILE" in handoff_text
+    assert "STAGE 1 DRAFT PLAN" in handoff_text
+
     active_phases = set(payload["phase_briefs"].keys())
     assert active_phases
     assert active_phases.issubset(set(payload["candidate_pools"].keys()))
+

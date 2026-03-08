@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 
 from .training_context import TrainingContext, allocate_sessions
@@ -395,3 +396,34 @@ def build_stage2_payload(
             ],
         },
     }
+
+
+STAGE2_FINALIZER_PROMPT = """You are Stage 2 (finalizer). Input = Stage 1 draft plan + athlete profile + Restrictions list.
+
+RULE 1 (hard filter): Before selecting or rewriting anything, remove/exclude any exercise, drill, or prescription that violates ANY restriction (including synonyms and mechanically equivalent patterns). Apply to strength + conditioning + rehab. Do not \"modify\" a violating item; drop it.
+
+RULE 2 (selection): Build the final plan ONLY from the remaining compliant items. If a section becomes too thin, choose alternative compliant items already present in Stage 1 (do not invent new exercises unless explicitly allowed).
+
+OUTPUT: Return a clean final plan (athlete-facing), keeping the best items from Stage 1, fully consistent with restrictions."""
+
+
+def _json_block(value: dict | list) -> str:
+    return "```json\n" + json.dumps(value, indent=2) + "\n```"
+
+
+def build_stage2_handoff_text(*, stage2_payload: dict, plan_text: str, coach_notes: str = "") -> str:
+    sections = [
+        STAGE2_FINALIZER_PROMPT.strip(),
+        "ATHLETE PROFILE\n" + _json_block(stage2_payload.get("athlete_model", {})),
+        "RESTRICTIONS\n" + _json_block(stage2_payload.get("restrictions", [])),
+        "PHASE BRIEFS\n" + _json_block(stage2_payload.get("phase_briefs", {})),
+        "CANDIDATE POOLS\n" + _json_block(stage2_payload.get("candidate_pools", {})),
+        "OMISSION LEDGER\n" + _json_block(stage2_payload.get("omission_ledger", {})),
+        "REWRITE GUIDANCE\n" + _json_block(stage2_payload.get("rewrite_guidance", {})),
+    ]
+    cleaned_notes = (coach_notes or "").strip()
+    if cleaned_notes:
+        sections.append("COACH NOTES\n" + cleaned_notes)
+    sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
+    return "\n\n---\n\n".join(section for section in sections if section.strip())
+
