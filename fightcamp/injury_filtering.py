@@ -448,6 +448,10 @@ logger = logging.getLogger(__name__)
 
 INJURY_DEBUG = os.environ.get("INJURY_DEBUG", "0") == "1"
 
+def _injury_debug_enabled() -> bool:
+    return os.environ.get("INJURY_DEBUG", "0") == "1"
+
+
 _NORMALIZED_INJURY_REGION_CACHE: dict[tuple[str, ...], frozenset[str]] = {}
 _INJURY_MATCH_DETAILS_CACHE: dict[tuple[object, ...], list[dict]] = {}
 
@@ -974,15 +978,16 @@ def injury_match_details(
                     if matches:
                         field_hits[field_name] = matches
                         matched_patterns.update(matches)
-                        for matched_pattern in matches:
-                            logger.info(
-                                "[injury-exclusion] Excluding '%s' for %s injury: ban_keyword '%s' found in %s='%s'",
-                                name,
-                                region,
-                                matched_pattern,
-                                field_name,
-                                value,
-                            )
+                        if _injury_debug_enabled():
+                            for matched_pattern in matches:
+                                logger.info(
+                                    "[injury-exclusion] Excluding '%s' for %s injury: ban_keyword '%s' found in %s='%s'",
+                                    name,
+                                    region,
+                                    matched_pattern,
+                                    field_name,
+                                    value,
+                                )
             if field_hits or tag_hits:
                 reasons.append(
                     {
@@ -1138,4 +1143,5 @@ def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: s
     Use _log_exclusion() instead for logging excluded items only.
     """
     pass
+
 
