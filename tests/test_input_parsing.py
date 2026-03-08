@@ -123,3 +123,22 @@ def test_exact_match_still_preferred_over_alias():
 def test_payload_requires_fields_list():
     with pytest.raises(ValueError, match=re.escape("payload missing required data.fields list")):
         PlanInput.from_payload({"data": {}})
+
+
+def test_multiselect_value_maps_when_option_ids_are_strings():
+    data = _payload(
+        [
+            {
+                "label": "Training Availability",
+                "value": [1, 3],
+                "options": [
+                    {"id": "1", "text": "Mon"},
+                    {"id": "2", "text": "Tue"},
+                    {"id": "3", "text": "Fri"},
+                ],
+            }
+        ]
+    )
+    parsed = PlanInput.from_payload(data)
+    assert parsed.available_days == "Mon, Fri"
+    assert parsed.training_days == ["Mon", "Fri"]
