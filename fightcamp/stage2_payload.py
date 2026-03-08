@@ -460,6 +460,42 @@ CONDITIONING_ROLE_PURPOSES = {
     "alactic": "speed and neural sharpness",
 }
 
+PHASE_CONDITIONING_PRIORITY = {
+    "GPP": {"aerobic": "critical", "glycolytic": "medium", "alactic": "medium"},
+    "SPP": {"glycolytic": "critical", "alactic": "high", "aerobic": "medium"},
+    "TAPER": {"alactic": "critical", "aerobic": "medium", "glycolytic": "low"},
+}
+
+PHASE_SELECTION_GUARDRAILS = {
+    "GPP": {
+        "conditioning_minimums": {"aerobic": 1, "glycolytic": 0, "alactic": 0},
+        "must_keep_if_present": ["rehab", "aerobic", "primary_strength"],
+        "conditioning_drop_order_if_thin": ["alactic", "glycolytic"],
+        "notes": [
+            "Preserve at least one low-damage aerobic slot before trimming other conditioning work.",
+            "If strength must be trimmed, keep the first strength slot before accessories.",
+        ],
+    },
+    "SPP": {
+        "conditioning_minimums": {"aerobic": 0, "glycolytic": 1, "alactic": 1},
+        "must_keep_if_present": ["rehab", "glycolytic", "alactic", "primary_strength"],
+        "conditioning_drop_order_if_thin": ["aerobic", "extra_strength_accessory"],
+        "notes": [
+            "Preserve fight-pace repeatability first, then speed/sharpness support.",
+            "Do not let compliance filtering remove both glycolytic and alactic work if compliant options remain.",
+        ],
+    },
+    "TAPER": {
+        "conditioning_minimums": {"aerobic": 0, "glycolytic": 0, "alactic": 1},
+        "must_keep_if_present": ["rehab", "alactic", "primary_strength"],
+        "conditioning_drop_order_if_thin": ["glycolytic", "aerobic", "extra_strength_accessory"],
+        "notes": [
+            "Preserve neural sharpness before optional conditioning density.",
+            "If a slot becomes thin, drop soreness-heavy or lactate-heavy work before sharpness work.",
+        ],
+    },
+}
+
 
 def _build_athlete_model(
     *,
@@ -502,6 +538,48 @@ def _build_athlete_model(
     }
 
 
+def _build_phase_selection_guardrails(phase: str, training_context: TrainingContext) -> dict:
+    guardrails = dict(PHASE_SELECTION_GUARDRAILS.get(phase, {}))
+    guardrails["conditioning_minimums"] = dict(guardrails.get("conditioning_minimums", {}))
+    guardrails["must_keep_if_present"] = list(guardrails.get("must_keep_if_present", []))
+    guardrails["conditioning_drop_order_if_thin"] = list(guardrails.get("conditioning_drop_order_if_thin", []))
+    guardrails["notes"] = list(guardrails.get("notes", []))
+    guardrails["must_keep_rehab_if_present"] = bool(training_context.injuries)
+    if training_context.weight_cut_risk and phase == "TAPER":
+        guardrails["conditioning_drop_order_if_thin"] = _dedupe_preserve_order(
+            ["glycolytic"] + guardrails.get("conditioning_drop_order_if_thin", [])
+        )
+        guardrails["notes"].append("During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
+    return guardrails
+
+
+def _priority_value(priority: str) -> int:
+    return {"critical": 3, "high": 2, "medium": 1, "low": 0}.get(priority, 1)
+
+
+def _downgrade_priority(priority: str) -> str:
+    order = ["critical", "high", "medium", "low"]
+    if priority not in order:
+        return "medium"
+    idx = order.index(priority)
+    return order[min(idx + 1, len(order) - 1)]
+
+
+def _strength_slot_priority(phase: str, role: str, idx: int) -> str:
+    if idx == 1:
+        return "critical"
+    if role in {"neck", "core"}:
+        return "high"
+    if phase == "TAPER" and idx >= 3:
+        return "low"
+    return "high" if idx == 2 else "medium"
+
+
+def _conditioning_slot_priority(phase: str, system: str, idx: int) -> str:
+    base = PHASE_CONDITIONING_PRIORITY.get(phase, {}).get(system, "medium")
+    return base if idx == 1 else _downgrade_priority(base)
+
+
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
@@ -521,6 +599,7 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
             "deprioritize": PHASE_DEPRIORITIZE.get(phase, []),
             "risk_flags": _dedupe_preserve_order(risk_flags),
             "session_counts": session_counts,
+            "selection_guardrails": _build_phase_selection_guardrails(phase, training_context),
             "weeks": phase_weeks.get(phase, 0),
             "days": phase_weeks.get("days", {}).get(phase, 0),
         }
@@ -685,7 +764,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                     current_name=name,
                 ),
                 "replace_with_same_role": True,
-                "priority": "high" if idx <= 2 else "medium",
+                "priority": _strength_slot_priority(phase, role, idx),
             }
         )
     return slots
@@ -729,7 +808,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
                         current_name=name,
                     ),
                     "replace_with_same_role": True,
-                    "priority": "high" if idx == 1 else "medium",
+                    "priority": "critical" if idx == 1 else "high",
                 }
             )
     return slots
@@ -780,7 +859,7 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
                     ),
                     "alternates": alternates,
                     "replace_with_same_role": True,
-                    "priority": "high" if idx == 1 else "medium",
+                    "priority": "critical" if idx == 1 else "high",
                 }
             )
     return slots

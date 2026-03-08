@@ -279,3 +279,82 @@ def test_stage2_payload_exposes_mechanical_restriction_hints():
     assert "high_impact_lower" in conditioning_selected["mechanical_risk_tags"]
     assert "push press" in restrictions["heavy_overhead_pressing"]["blocked_patterns"]
     assert "flying sprint" in restrictions["max_velocity"]["mechanical_equivalents"]
+
+def test_stage2_payload_phase_guardrails_prioritize_survival_structure():
+    training_context = TrainingContext(
+        fatigue="moderate",
+        training_frequency=5,
+        days_available=5,
+        training_days=["Mon", "Tue", "Wed", "Fri", "Sat"],
+        injuries=["shoulder strain"],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=[],
+        equipment=["air_bike", "bodyweight"],
+        weight_cut_risk=True,
+        weight_cut_pct=5.5,
+        fight_format="boxing",
+        status="amateur",
+        training_split={},
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=27,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 0, "SPP": 0, "TAPER": 2, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=10,
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="5-1",
+        rounds_format="3x3",
+        camp_len=6,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"GPP": 0, "SPP": 0, "TAPER": 2, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={
+            "GPP": None,
+            "SPP": None,
+            "TAPER": {
+                "exercises": [
+                    {"name": "Trap Bar Jump", "movement": "hinge", "tags": ["explosive"], "method": "3x3"},
+                    {"name": "Dead Bug", "movement": "core", "tags": ["core"], "method": "2x8"},
+                ],
+                "why_log": [
+                    {"name": "Trap Bar Jump", "explanation": "balanced selection", "reasons": {}},
+                    {"name": "Dead Bug", "explanation": "balanced selection", "reasons": {}},
+                ],
+                "candidate_reservoir": {"hinge": [], "core": []},
+            },
+        },
+        conditioning_blocks={
+            "TAPER": {
+                "grouped_drills": {
+                    "alactic": [{"name": "Short Sprint", "tags": ["alactic"], "timing": "6 sec", "rest": "90 sec", "load": "fast"}],
+                    "glycolytic": [{"name": "Hard Shuttle", "tags": ["glycolytic"], "timing": "20 sec", "rest": "60 sec", "load": "hard"}],
+                },
+                "why_log": [
+                    {"name": "Short Sprint", "system": "alactic", "explanation": "balanced selection", "reasons": {}},
+                    {"name": "Hard Shuttle", "system": "glycolytic", "explanation": "balanced selection", "reasons": {}},
+                ],
+                "missing_systems": [],
+                "candidate_reservoir": {"alactic": [], "glycolytic": []},
+            }
+        },
+        rehab_blocks={"GPP": "", "SPP": "", "TAPER": "- Shoulder (Strain):\n  - Band External Rotation - 2x15"},
+    )
+
+    taper_brief = payload["phase_briefs"]["TAPER"]
+    taper_guardrails = taper_brief["selection_guardrails"]
+    taper_pool = payload["candidate_pools"]["TAPER"]
+
+    assert taper_guardrails["conditioning_minimums"]["alactic"] == 1
+    assert taper_guardrails["must_keep_rehab_if_present"] is True
+    assert taper_guardrails["conditioning_drop_order_if_thin"][0] == "glycolytic"
+    assert taper_pool["conditioning_slots"][0]["priority"] == "critical"
+    assert taper_pool["conditioning_slots"][1]["priority"] == "low"
+    assert taper_pool["rehab_slots"][0]["priority"] == "critical"
