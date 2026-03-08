@@ -1,5 +1,5 @@
-﻿BASE_PHASE_RATIOS = {
-        # Ultra-short phases (1â€“3 weeks): quick tune-up, not much base-building
+BASE_PHASE_RATIOS = {
+        # Ultra-short phases (1–3 weeks): quick tune-up, not much base-building
     1: {
         "boxing":      {"GPP": 0.00, "SPP": 0.60, "TAPER": 0.40},
         "muay_thai":   {"GPP": 0.00, "SPP": 0.55, "TAPER": 0.45},
@@ -19,7 +19,7 @@
         "kickboxing":  {"GPP": 0.15, "SPP": 0.60, "TAPER": 0.25},
     },
 
-    # Standard short camps (4â€“6 weeks)
+    # Standard short camps (4–6 weeks)
     4: {
         "boxing": {"GPP": 0.24, "SPP": 0.45, "TAPER": 0.31},
         "muay_thai": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
@@ -39,7 +39,7 @@
         "kickboxing": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
     },
 
-    # Mid-length fight camps (7â€“10 weeks)
+    # Mid-length fight camps (7–10 weeks)
     7: {
         "boxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
         "muay_thai": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
@@ -65,7 +65,7 @@
         "kickboxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
     },
 
-    # Long camps (11â€“16 weeks) â€“ longer base, full development
+    # Long camps (11–16 weeks) – longer base, full development
     11: {
         "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
         "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
@@ -179,7 +179,7 @@ def calculate_phase_weeks(
 ) -> dict:
     """Return weeks per phase for a fight camp.
 
-    The calculation prioritizes the base ratios for 1â€“16 week camps, then
+    The calculation prioritizes the base ratios for 1–16 week camps, then
     applies any style adjustments followed by min/max rules.  Output weeks
     always sum to ``camp_length`` and taper is limited to two weeks.  If the
     athlete is ``pro``/``professional`` and the camp is at least four weeks
@@ -188,7 +188,7 @@ def calculate_phase_weeks(
     """
 
     # 1. Prefer exact days when available, then map back to the closest weekly template
-    total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight > 0 else camp_length * 7
+    total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight >= 0 else camp_length * 7
     camp_length = max(1, min(16, round(total_days / 7)))
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs((x * 7) - total_days))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
@@ -321,4 +321,5 @@ def calculate_phase_weeks(
         **weeks,
         "days": days,
     }
+
 

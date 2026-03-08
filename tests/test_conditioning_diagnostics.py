@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 from pathlib import Path
 
@@ -34,6 +34,17 @@ def test_missing_system_block_formatting():
     assert "AEROBIC (Status: Not prescribed)" in output
     assert "Reason:" in output
     assert "Coach option:" in output
+
+
+def test_generate_plan_returns_controlled_error_for_invalid_payload():
+    result = asyncio.run(generate_plan({"data": {}}))
+
+    assert result["status"] == "invalid_input"
+    assert result["ok"] is False
+    assert result["error"] == "payload missing required data.fields list"
+    assert result["plan_text"] == ""
+    assert result["planning_brief"] is None
+    assert result["stage2_payload"] is None
 
 
 def test_generate_plan_returns_stage2_payload():
@@ -199,6 +210,7 @@ def test_stage2_payload_uses_slot_alternates_and_rehab_drills():
         "Scap Push-Up",
     ]
 
+
 def test_stage2_payload_exposes_mechanical_restriction_hints():
     training_context = TrainingContext(
         fatigue="low",
@@ -295,6 +307,7 @@ def test_stage2_payload_exposes_mechanical_restriction_hints():
     assert "push press" in restrictions["heavy_overhead_pressing"]["blocked_patterns"]
     assert "flying sprint" in restrictions["max_velocity"]["mechanical_equivalents"]
 
+
 def test_stage2_payload_phase_guardrails_prioritize_survival_structure():
     training_context = TrainingContext(
         fatigue="moderate",
@@ -374,6 +387,7 @@ def test_stage2_payload_phase_guardrails_prioritize_survival_structure():
     assert taper_pool["conditioning_slots"][1]["priority"] == "low"
     assert taper_pool["rehab_slots"][0]["priority"] == "critical"
 
+
 def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
     athlete_model = {
         "sport": "boxing",
@@ -439,6 +453,7 @@ def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
     assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
     assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "specific_density_to_peak"
 
+
 def test_short_notice_false_for_past_date():
     data = {
         "data": {
@@ -474,4 +489,3 @@ def test_short_notice_false_for_past_date():
     assert result["planning_brief"]["fight_demands"]["days_until_fight"] is None
     assert result["planning_brief"]["fight_demands"]["short_notice"] is False
     assert result["stage2_payload"]["athlete_model"]["days_until_fight"] is None
-

@@ -1,6 +1,7 @@
 from fightcamp.stage2_validator import validate_stage2_output
 
 
+
 def _planning_brief_fixture() -> dict:
     return {
         "restrictions": [
@@ -65,6 +66,7 @@ def _planning_brief_fixture() -> dict:
     }
 
 
+
 def test_validate_stage2_output_flags_restriction_violations():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
@@ -82,6 +84,7 @@ def test_validate_stage2_output_flags_restriction_violations():
     assert any(error["code"] == "restriction_violation" for error in report["errors"])
 
 
+
 def test_validate_stage2_output_ignores_restriction_warning_lines():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
@@ -95,6 +98,7 @@ def test_validate_stage2_output_ignores_restriction_warning_lines():
 
     assert report["restricted_hits"] == []
     assert report["errors"] == []
+
 
 
 def test_validate_stage2_output_warns_when_phase_critical_elements_go_missing():
@@ -118,6 +122,7 @@ def test_validate_stage2_output_warns_when_phase_critical_elements_go_missing():
     assert any(warning["code"] == "missing_required_element" for warning in report["warnings"])
 
 
+
 def test_validate_stage2_output_is_phase_aware_for_missing_elements():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),
@@ -132,6 +137,44 @@ def test_validate_stage2_output_is_phase_aware_for_missing_elements():
 
     missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
     assert ("SPP", "alactic") in missing_requirements
+
+
+
+def test_validate_stage2_output_does_not_count_negated_structure_as_present():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        GPP
+        ### Strength & Power
+        - Goblet Squat - 4x5
+        SPP
+        - No rehab needed this week.
+        - Do not add alactic work.
+        - Hard Shuttle - 6x20s / 60s
+        """,
+    )
+
+    missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
+    assert ("SPP", "rehab") in missing_requirements
+    assert ("SPP", "alactic") in missing_requirements
+
+
+
+def test_validate_stage2_output_warns_when_multiphase_sections_are_missing():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ### Strength & Power
+        - Goblet Squat - 4x5
+        ### Glycolytic
+        - Hard Shuttle - 6x20s / 60s
+        """,
+    )
+
+    phase_warnings = {(warning["code"], warning["phase"]) for warning in report["warnings"]}
+    assert ("phase_section_missing", "GPP") in phase_warnings
+    assert ("phase_section_missing", "SPP") in phase_warnings
+
 
 
 def test_validate_stage2_output_passes_clean_plan_with_structural_strength_section():

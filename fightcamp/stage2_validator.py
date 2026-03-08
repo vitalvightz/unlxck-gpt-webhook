@@ -107,7 +107,7 @@ def _restriction_phrases(restriction: dict) -> list[str]:
     return _dedupe_preserve_order([phrase for phrase in phrases if phrase])
 
 
-def _line_is_instruction_only(line: str, phrase: str | None) -> bool:
+def _line_is_instruction_only(line: str, phrase: str | None = None) -> bool:
     normalized = line.lower()
     if phrase and not _phrase_in_text(normalized, phrase):
         return False
@@ -131,7 +131,7 @@ def _find_restricted_hits(planning_brief: dict, plan_lines: list[str]) -> list[d
                 tags=[],
                 limit_penalty=-0.75,
             )
-            if bool(guard_result.get("matched", [])) and _line_is_instruction_only(line, None):
+            if bool(guard_result.get("matched", [])) and _line_is_instruction_only(line):
                 continue
             matched = bool(phrase_match) or bool(guard_result.get("matched", []))
             if not matched:
@@ -180,16 +180,35 @@ def _slots_for_requirement(phase_pool: dict, requirement: str) -> list[dict]:
     if requirement == "extra_strength_accessory":
         return strength_slots[1:]
 
-    generic_matches = [slot for slot in conditioning_slots + strength_slots + rehab_slots if slot.get("role") == requirement]
-    return generic_matches
+    return [slot for slot in conditioning_slots + strength_slots + rehab_slots if slot.get("role") == requirement]
 
 
 def _line_matches_requirement(line: str, requirement: str, candidate_names: list[str]) -> bool:
+    if _line_is_instruction_only(line):
+        return False
     normalized = line.lower()
     if any(_phrase_in_text(normalized, name) for name in candidate_names):
         return True
     section_hints = _SECTION_HINTS.get(requirement, ())
     return any(_phrase_in_text(normalized, hint) for hint in section_hints)
+
+
+def _find_missing_phase_sections(planning_brief: dict, phase_sections: dict[str, list[str]]) -> list[dict]:
+    expected_phases = [phase for phase, strategy in (planning_brief.get("phase_strategy") or {}).items() if _clean_list(strategy.get("must_keep", []))]
+    if len(expected_phases) <= 1:
+        return []
+
+    missing_sections: list[dict] = []
+    for phase in expected_phases:
+        if phase not in phase_sections:
+            missing_sections.append(
+                {
+                    "phase": phase,
+                    "severity": "warning",
+                    "reason": f"Final plan is missing an explicit {phase} section, so phase-specific validation is incomplete.",
+                }
+            )
+    return missing_sections
 
 
 def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> list[dict]:
@@ -198,17 +217,16 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
     all_plan_lines = _extract_plan_lines(plan_text)
     candidate_pools = planning_brief.get("candidate_pools", {})
     phase_strategy = planning_brief.get("phase_strategy", {})
+    multi_phase_expected = len(phase_strategy) > 1
 
     for phase, strategy in phase_strategy.items():
         phase_pool = candidate_pools.get(phase, {})
-        phase_lines = phase_sections.get(phase, all_plan_lines)
+        phase_lines = phase_sections.get(phase, []) if multi_phase_expected else phase_sections.get(phase, all_plan_lines)
         for requirement in _clean_list(strategy.get("must_keep", [])):
             slots = _slots_for_requirement(phase_pool, requirement)
             if not slots:
                 continue
-            candidate_names = _dedupe_preserve_order(
-                [name for slot in slots for name in _slot_candidate_names(slot)]
-            )
+            candidate_names = _dedupe_preserve_order([name for slot in slots for name in _slot_candidate_names(slot)])
             if any(_line_matches_requirement(line, requirement, candidate_names) for line in phase_lines):
                 continue
             missing.append(
@@ -225,8 +243,10 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
 
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
+    phase_sections = _phase_sections(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
+    missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
 
     errors = [
         {
@@ -248,11 +268,20 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         }
         for item in missing_required_elements
     ]
+    warnings.extend(
+        {
+            "code": "phase_section_missing",
+            "message": item["reason"],
+            "phase": item["phase"],
+        }
+        for item in missing_phase_sections
+    )
 
     return {
         "is_valid": not errors,
         "errors": errors,
         "warnings": warnings,
         "missing_required_elements": missing_required_elements,
+        "missing_phase_sections": missing_phase_sections,
         "restricted_hits": restricted_hits,
     }
