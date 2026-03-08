@@ -1,20 +1,20 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Test Athlete 01" },
-      { "label": "Age", "value": "23" },
-      { "label": "Weight (kg)", "value": "85" },
-      { "label": "Target Weight (kg)", "value": "85" },
-      { "label": "Height (cm)", "value": "183" },
-      { "label": "Fighting Style (Technical)", "value": ["boxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["brawler"] },
-      { "label": "Stance", "value": "Orthodox" },
+      { "label": "Full name", "value": "Test Athlete 02" },
+      { "label": "Age", "value": "27" },
+      { "label": "Weight (kg)", "value": "72" },
+      { "label": "Target Weight (kg)", "value": "70" },
+      { "label": "Height (cm)", "value": "178" },
+      { "label": "Fighting Style (Technical)", "value": ["kickboxer"] },
+      { "label": "Fighting Style (Tactical)", "value": ["counter striker"] },
+      { "label": "Stance", "value": "Southpaw" },
       { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "5-2-0" },
-      { "label": "When is your next fight?", "value": "2026-05-12" },
+      { "label": "Current Record", "value": "8-3-0" },
+      { "label": "When is your next fight?", "value": "2026-04-26" },
       { "label": "Rounds x Minutes", "value": "3x3" },
-      { "label": "Weekly Training Frequency", "value": "6" },
-      { "label": "Fatigue Level", "value": "Moderate" },
+      { "label": "Weekly Training Frequency", "value": "5" },
+      { "label": "Fatigue Level", "value": "High" },
       { "label": "Training Phase", "value": "Mid-Camp" },
       {
         "label": "Equipment Access",
@@ -22,31 +22,31 @@
       },
       {
         "label": "Training Availability",
-        "value": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        "value": ["Monday", "Tuesday", "Thursday", "Friday", "Saturday"]
       },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "Right wrist soreness after boxing, dull knee ache, neck tightness and stiffness."
+        "value": "Left hip tightness, recurring shin soreness after roadwork, mild shoulder irritation when punching hard."
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Skill Refinement", "Coordination"]
+        "value": ["Speed", "Conditioning / Endurance", "Skill Refinement"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["Coordination / Proprioception"]
+        "value": ["Lateral Movement", "Speed / Reaction"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "No"
+        "value": "Explosive work, reactive drills, short intense rounds, not long boring cardio."
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "I get too aggressive and lose form and skill."
+        "value": "I hesitate after getting hit clean and sometimes become too cautious."
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "No"
+        "value": "Loved med ball and reactive work. Hated long steady-state running."
       }
     ]
   },
