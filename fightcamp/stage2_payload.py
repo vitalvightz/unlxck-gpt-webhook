@@ -1055,6 +1055,217 @@ def _build_weekly_stress_map(
         }
     return stress_map
 
+_WEEKLY_STAGE_TEMPLATES = {
+    "GPP": {
+        "single": {
+            "key": "foundation_to_repeatability",
+            "label": "foundation / repeatability",
+            "objective": "Use the available base window to restore structure and rebuild repeatability before chasing extra specificity.",
+            "emphasize": ["structural restoration", "repeatability build"],
+            "protect": ["low-damage base work"],
+            "deprioritize": ["fight-pace density", "collision-heavy extras"],
+            "load_bias": "build",
+        },
+        "early": {
+            "key": "foundation_restore",
+            "label": "foundation / structural restoration",
+            "objective": "Restore structural tolerance, aerobic support, and technical rhythm before density rises.",
+            "emphasize": ["structural restoration", "aerobic support"],
+            "protect": ["tissue calm", "technical rhythm"],
+            "deprioritize": ["fight-pace density", "non-essential explosive extras"],
+            "load_bias": "build",
+        },
+        "middle": {
+            "key": "build_repeatability",
+            "label": "build / repeatability",
+            "objective": "Build repeatability and general force without breaking the base the phase is trying to create.",
+            "emphasize": ["repeatability", "general force"],
+            "protect": ["repeatable quality under manageable fatigue"],
+            "deprioritize": ["late-camp sharpness chasing", "redundant accessory fatigue"],
+            "load_bias": "build",
+        },
+        "late": {
+            "key": "general_to_specific_bridge",
+            "label": "bridge / transfer",
+            "objective": "Bridge general work toward specific transfer while keeping the base qualities alive.",
+            "emphasize": ["transfer under fatigue", "specific support"],
+            "protect": ["base qualities"],
+            "deprioritize": ["extra general volume"],
+            "load_bias": "consolidate",
+        },
+    },
+    "SPP": {
+        "single": {
+            "key": "specific_density_to_peak",
+            "label": "specific density / peak",
+            "objective": "Compress specific density build and peak transfer into one focused week because the camp does not have room for separation.",
+            "emphasize": ["fight-pace density", "sharp transfer"],
+            "protect": ["specific quality", "freshness"],
+            "deprioritize": ["non-specific volume", "extra accessory work"],
+            "load_bias": "concentrate",
+        },
+        "early": {
+            "key": "specific_entry",
+            "label": "specific entry",
+            "objective": "Shift the camp from general work into clearly fight-specific stress and sport transfer.",
+            "emphasize": ["specific transfer", "fight-pace entry"],
+            "protect": ["sport quality"],
+            "deprioritize": ["extra general volume"],
+            "load_bias": "build",
+        },
+        "middle": {
+            "key": "specific_density_build",
+            "label": "specific density build",
+            "objective": "Make fight-specific repeatability and density the main developmental job of the week.",
+            "emphasize": ["fight-pace density", "repeatability under sport load"],
+            "protect": ["quality under density"],
+            "deprioritize": ["redundant accessory work"],
+            "load_bias": "concentrate",
+        },
+        "late": {
+            "key": "peak_specificity",
+            "label": "peak specificity",
+            "objective": "Keep specificity high while reducing any work that blunts sharpness or technical quality.",
+            "emphasize": ["sharp transfer", "specific confidence"],
+            "protect": ["freshness", "sport sharpness"],
+            "deprioritize": ["excess fatigue", "generic volume"],
+            "load_bias": "peak",
+        },
+    },
+    "TAPER": {
+        "single": {
+            "key": "taper_to_fight",
+            "label": "taper / fight-readiness",
+            "objective": "Reduce noise, keep rhythm, and arrive at the fight fresh and technically ready.",
+            "emphasize": ["freshness", "rhythm", "confidence"],
+            "protect": ["sharpness", "recovery"],
+            "deprioritize": ["fatigue accumulation", "new drill exposure"],
+            "load_bias": "reduce",
+        },
+        "early": {
+            "key": "taper_freshness",
+            "label": "taper / freshness",
+            "objective": "Strip out fatigue and keep only the minimum work needed to maintain sharpness.",
+            "emphasize": ["freshness", "neural sharpness"],
+            "protect": ["recovery", "confidence"],
+            "deprioritize": ["lactate-heavy density", "soreness-heavy loading"],
+            "load_bias": "reduce",
+        },
+        "late": {
+            "key": "fight_week_survival_rhythm",
+            "label": "fight-week survival / rhythm",
+            "objective": "Protect rhythm, confidence, and freshness while removing anything that can flatten performance.",
+            "emphasize": ["rhythm", "confidence", "freshness"],
+            "protect": ["sharpness", "weight-cut survival"],
+            "deprioritize": ["all avoidable fatigue", "non-essential volume"],
+            "load_bias": "minimal_dose",
+        },
+    },
+}
+
+
+def _phase_progression_slot_count(brief: dict) -> int:
+    weeks = int(brief.get("weeks") or 0)
+    days = int(brief.get("days") or 0)
+    if weeks > 0:
+        return weeks
+    return 1 if days > 0 else 0
+
+
+def _split_phase_days(days: int, slot_count: int) -> list[int]:
+    if slot_count <= 0:
+        return []
+    if days <= 0:
+        return [0] * slot_count
+    base, remainder = divmod(days, slot_count)
+    return [base + (1 if idx < remainder else 0) for idx in range(slot_count)]
+
+
+def _progression_templates_for_phase(phase: str, slot_count: int, athlete_model: dict, phase_days: int) -> list[dict]:
+    templates = _WEEKLY_STAGE_TEMPLATES[phase]
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    short_notice = bool(athlete_model.get("short_notice"))
+    fight_week_like = short_notice or phase_days <= 7 or "fight_week" in readiness_flags
+
+    if phase == "GPP":
+        if slot_count <= 1:
+            return [templates["single"]]
+        if slot_count == 2:
+            return [templates["early"], templates["middle"]]
+        return [templates["early"]] + [templates["middle"]] * (slot_count - 2) + [templates["late"]]
+
+    if phase == "SPP":
+        if slot_count <= 1:
+            return [templates["single"]]
+        if slot_count == 2:
+            return [templates["middle"], templates["late"]]
+        return [templates["early"]] + [templates["middle"]] * (slot_count - 2) + [templates["late"]]
+
+    if slot_count <= 1:
+        return [templates["late"] if fight_week_like else templates["single"]]
+    return [templates["early"]] + [templates["late"]] * (slot_count - 1)
+
+
+def _build_week_by_week_progression(
+    athlete_model: dict,
+    phase_briefs: dict[str, dict],
+    weekly_stress_map: dict[str, dict],
+) -> dict:
+    week_entries: list[dict] = []
+    week_index = 1
+
+    for phase in ("GPP", "SPP", "TAPER"):
+        brief = phase_briefs.get(phase)
+        if not brief:
+            continue
+        slot_count = _phase_progression_slot_count(brief)
+        if slot_count <= 0:
+            continue
+
+        phase_days = int(brief.get("days") or 0)
+        stage_templates = _progression_templates_for_phase(phase, slot_count, athlete_model, phase_days)
+        day_spans = _split_phase_days(phase_days, slot_count)
+        stress = weekly_stress_map.get(phase, {})
+        guardrails = brief.get("selection_guardrails") or {}
+
+        for phase_week_index, stage in enumerate(stage_templates, start=1):
+            week_entries.append(
+                {
+                    "week_index": week_index,
+                    "phase": phase,
+                    "phase_week_index": phase_week_index,
+                    "phase_week_total": slot_count,
+                    "span_days": day_spans[phase_week_index - 1] if phase_week_index - 1 < len(day_spans) else 0,
+                    "stage_key": stage["key"],
+                    "stage_label": stage["label"],
+                    "stage_objective": stage["objective"],
+                    "load_bias": stage["load_bias"],
+                    "session_counts": dict(brief.get("session_counts") or {}),
+                    "build": _dedupe_preserve_order(_clean_list(brief.get("emphasize", [])) + list(stage.get("emphasize", []))),
+                    "protect": _dedupe_preserve_order(_clean_list(brief.get("risk_flags", [])) + list(stage.get("protect", []))),
+                    "deprioritize": _dedupe_preserve_order(_clean_list(brief.get("deprioritize", [])) + list(stage.get("deprioritize", []))),
+                    "must_keep": _clean_list(guardrails.get("must_keep_if_present", [])),
+                    "drop_order_if_thin": _clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
+                    "conditioning_sequence": list(stress.get("conditioning_sequence", [])),
+                    "protect_first": stress.get("protect_first", ""),
+                    "cut_first_when_collisions_rise": stress.get("cut_first_when_collisions_rise", ""),
+                    "sport_load_interaction": stress.get("sport_load_interaction", ""),
+                    "highest_collision_sport_load": stress.get("highest_collision_sport_load", ""),
+                }
+            )
+            week_index += 1
+
+    return {
+        "model": "adaptive_phase_overlay.v1",
+        "source_of_truth": [
+            "Phase order and duration come from the existing deterministic phase allocation.",
+            "Progression jobs compress or expand to fit the active phase duration without rewriting phase boundaries.",
+            "Days refine span reporting so short active phases still get one compressed week entry when needed.",
+        ],
+        "active_week_count": len(week_entries),
+        "weeks": week_entries,
+    }
+
 def _derive_global_priorities(
     athlete_model: dict,
     phase_briefs: dict[str, dict],
@@ -1141,6 +1352,11 @@ def build_planning_brief(
         limiter_profile,
         sport_load_profile,
     )
+    week_by_week_progression = _build_week_by_week_progression(
+        athlete_model,
+        phase_briefs,
+        weekly_stress_map,
+    )
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
@@ -1162,6 +1378,7 @@ def build_planning_brief(
         "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools),
         "weekly_stress_map": weekly_stress_map,
+        "week_by_week_progression": week_by_week_progression,
         "restrictions": restrictions,
         "candidate_pools": candidate_pools,
         "omission_ledger": omission_ledger,
@@ -1534,7 +1751,7 @@ SOURCE OF TRUTH:
 
 RULE 1 (hard filter): Remove or exclude any exercise, drill, or prescription that violates ANY restriction, including synonyms and mechanically equivalent patterns. Apply this to strength, conditioning, rehab, and any new item you consider. Do not soften a violating item into compliance; replace it or drop it.
 
-RULE 2 (planning): Build the best final plan for this athlete using the planning brief. You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing, as long as the final plan remains consistent with the phase strategy and restrictions.
+RULE 2 (planning): Build the best final plan for this athlete using the planning brief. Use the week_by_week_progression map when sequencing the camp. You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing, as long as the final plan remains consistent with the phase strategy and restrictions.
 
 RULE 3 (selection): Prefer selected Stage 1 items first, then same-role alternates, then other compliant options from the candidate pools. Keep the highest-priority slots and preserve rehab and phase-critical systems when possible.
 

@@ -454,3 +454,217 @@ def test_build_planning_brief_falls_back_to_general_fight_readiness():
     assert gpp_stress["conditioning_sequence"] == ["aerobic", "glycolytic", "alactic"]
     assert "phase-critical work before accessories" in gpp_stress["protect_first"]
     assert "live wrestling or wall-work rounds" in gpp_stress["highest_collision_sport_load"]
+
+
+def _build_progression_brief(athlete_model: dict, phase_briefs: dict[str, dict]) -> dict:
+    candidate_pools = {
+        phase: {
+            "strength_slots": [{"role": "primary_strength"}],
+            "conditioning_slots": [{"role": "aerobic"}, {"role": "glycolytic"}, {"role": "alactic"}],
+            "rehab_slots": [],
+        }
+        for phase in phase_briefs
+    }
+    return build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools=candidate_pools,
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+
+
+def test_build_planning_brief_adds_adaptive_week_by_week_progression():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 5,
+            "days_until_fight": 33,
+            "short_notice": False,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["air_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["moderate_fatigue"],
+        },
+        {
+            "GPP": {
+                "objective": "build aerobic base and general force capacity",
+                "emphasize": ["aerobic repeatability", "general force"],
+                "deprioritize": ["fight-week intensity"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["aerobic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["alactic", "glycolytic"],
+                },
+                "weeks": 2,
+                "days": 13,
+            },
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 2,
+                "days": 15,
+            },
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 2},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 1,
+                "days": 5,
+            },
+        },
+    )
+
+    progression = brief["week_by_week_progression"]
+    weeks = progression["weeks"]
+
+    assert progression["model"] == "adaptive_phase_overlay.v1"
+    assert progression["active_week_count"] == 5
+    assert [week["phase"] for week in weeks] == ["GPP", "GPP", "SPP", "SPP", "TAPER"]
+    assert [week["stage_key"] for week in weeks] == [
+        "foundation_restore",
+        "build_repeatability",
+        "specific_density_build",
+        "peak_specificity",
+        "fight_week_survival_rhythm",
+    ]
+    assert sum(week["span_days"] for week in weeks) == 33
+
+
+
+def test_build_planning_brief_compresses_progression_for_short_notice_camp():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 2,
+            "days_until_fight": 10,
+            "short_notice": True,
+            "fatigue": "high",
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power"],
+            "weaknesses": ["coordination_proprioception"],
+            "equipment": ["bodyweight"],
+            "injuries": [],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 5.0,
+            "readiness_flags": ["high_fatigue", "fight_week", "short_notice", "active_weight_cut"],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["sport speed", "fight-pace transfer"],
+                "deprioritize": ["non-specific volume"],
+                "risk_flags": ["manage accumulated fatigue", "manage cut stress"],
+                "session_counts": {"strength": 1, "conditioning": 2, "recovery": 0},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["glycolytic"],
+                },
+                "weeks": 0,
+                "days": 6,
+            },
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue", "manage cut stress"],
+                "session_counts": {"strength": 0, "conditioning": 1, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 0,
+                "days": 4,
+            },
+        },
+    )
+
+    progression = brief["week_by_week_progression"]
+    weeks = progression["weeks"]
+
+    assert progression["active_week_count"] == 2
+    assert [week["phase"] for week in weeks] == ["SPP", "TAPER"]
+    assert weeks[0]["stage_key"] == "specific_density_to_peak"
+    assert weeks[1]["stage_key"] == "fight_week_survival_rhythm"
+    assert weeks[0]["phase_week_total"] == 1
+    assert weeks[1]["phase_week_total"] == 1
+    assert sum(week["span_days"] for week in weeks) == 10
+    assert weeks[1]["protect_first"].startswith("Because fatigue is high")
+
+
+
+def test_week_by_week_progression_inherits_phase_guardrails_and_stress_rules():
+    brief = _build_progression_brief(
+        {
+            "sport": "mma",
+            "status": "amateur",
+            "rounds_format": "3x5",
+            "camp_length_weeks": 3,
+            "days_until_fight": 18,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["wrestling"],
+            "tactical_styles": ["pressure"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight"],
+            "injuries": ["shoulder strain"],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["injury_management"],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": ["respect injury guardrails"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["rehab", "glycolytic", "alactic"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 6,
+            },
+        },
+    )
+
+    week = brief["week_by_week_progression"]["weeks"][0]
+    stress = brief["weekly_stress_map"]["SPP"]
+
+    assert week["must_keep"] == ["rehab", "glycolytic", "alactic"]
+    assert week["drop_order_if_thin"] == ["aerobic"]
+    assert week["conditioning_sequence"] == stress["conditioning_sequence"]
+    assert week["cut_first_when_collisions_rise"] == stress["cut_first_when_collisions_rise"]
+    assert week["highest_collision_sport_load"] == stress["highest_collision_sport_load"]

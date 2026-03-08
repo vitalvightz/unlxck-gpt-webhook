@@ -56,6 +56,8 @@ def test_generate_plan_returns_stage2_payload():
     assert "main_limiter" in planning_brief
     assert "global_priorities" in planning_brief
     assert "phase_strategy" in planning_brief
+    assert "week_by_week_progression" in planning_brief
+    assert planning_brief["week_by_week_progression"]["weeks"]
 
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (planner/finalizer)." in handoff_text
@@ -396,10 +398,13 @@ def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
             "emphasize": ["glycolytic repeatability", "sport speed"],
             "deprioritize": ["non-specific conditioning volume"],
             "risk_flags": ["respect injury guardrails", "manage cut stress"],
+            "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
             "selection_guardrails": {
                 "must_keep_if_present": ["rehab", "glycolytic", "alactic"],
                 "conditioning_drop_order_if_thin": ["aerobic"],
             },
+            "weeks": 1,
+            "days": 7,
         }
     }
     candidate_pools = {
@@ -429,3 +434,5 @@ def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
     assert brief["global_priorities"]["preserve"]
     assert brief["phase_strategy"]["SPP"]["must_keep"] == ["rehab", "glycolytic", "alactic"]
     assert brief["phase_strategy"]["SPP"]["slot_counts"]["conditioning"] == 2
+    assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
+    assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "specific_density_to_peak"
