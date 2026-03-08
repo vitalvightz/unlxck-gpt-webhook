@@ -1,4 +1,4 @@
-from fightcamp.stage2_payload import (
+﻿from fightcamp.stage2_payload import (
     build_planning_brief,
     build_stage2_payload,
 )
@@ -244,6 +244,82 @@ def test_sport_load_collision_rules_beat_goal_push_when_collisions_rise():
     assert brief["decision_hierarchy"][2]["driver"] == "sport_load_collision_rules"
     assert "When sport load spikes, cut optional strength accessories and non-essential conditioning density first." in spp_stress["cut_first_when_collisions_rise"]
     assert "short positional goes or takedown chains before extra lifting" in spp_stress["replace_missing_live_load"]
+
+
+def test_weekly_stress_map_exposes_resolved_hierarchy_drivers():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 2,
+            "days_until_fight": 9,
+            "short_notice": True,
+            "fatigue": "high",
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power"],
+            "weaknesses": ["coordination_proprioception"],
+            "equipment": ["bodyweight", "bands"],
+            "injuries": [],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 5.0,
+            "readiness_flags": ["high_fatigue", "fight_week", "active_weight_cut"],
+        },
+        phase="TAPER",
+    )
+
+    resolved = brief["weekly_stress_map"]["TAPER"]["resolved_rule_state"]
+
+    assert resolved["protect_first_driver"] == "safety_and_readiness"
+    assert resolved["cut_first_driver"] == "sport_load_collision_rules"
+    assert resolved["conditioning_sequence_driver"] == "main_limiter"
+
+
+def test_weekly_role_governance_inherits_resolved_authority_drivers():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 2,
+            "days_until_fight": 9,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": [],
+            "equipment": ["air_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["fight_week"],
+        },
+        {
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 1, "conditioning": 3, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 1,
+                "days": 5,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    suppressed = next(item for item in week["suppressed_roles"] if item["role_key"] == "light_fight_pace_touch_day")
+
+    assert suppressed["governance"]["resolved_authority"]["cut_first_driver"] == "sport_load_collision_rules"
+    assert suppressed["governance"]["resolved_authority"]["conditioning_sequence_driver"] == "main_limiter"
 
 
 

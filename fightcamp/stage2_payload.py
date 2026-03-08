@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import re
@@ -997,6 +997,61 @@ def _build_sport_load_profile(athlete_model: dict) -> dict:
 
 
 
+def _resolve_phase_rule_state(
+    phase: str,
+    athlete_model: dict,
+    phase_brief: dict,
+    limiter_profile: dict,
+    sport_load_profile: dict,
+) -> dict:
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    short_notice = bool(athlete_model.get("short_notice"))
+    weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
+    guardrails = phase_brief.get("selection_guardrails") or {}
+
+    tissue_protection_priority = bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags or (
+        limiter_profile.get("key") == "tissue_state"
+    )
+    freshness_priority = phase == "TAPER" or bool(
+        readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"}
+    )
+    sport_load_owns_density = phase == "TAPER" and bool(sport_load_profile.get("highest_collision_load"))
+
+    protect_first = limiter_profile["protect_first"]
+    protect_first_driver = "main_limiter"
+    if fatigue in {"moderate", "high"}:
+        protect_first = f"Because fatigue is {fatigue}, protect the limiter quality and freshness before adding extra work."
+        protect_first_driver = "safety_and_readiness"
+
+    cut_first = limiter_profile["cut_first"]
+    if short_notice and phase in {"SPP", "TAPER"}:
+        cut_first = (
+            f"Because this is short notice, cut {limiter_profile['cut_first']} before touching phase-critical "
+            "sharpness or boxing quality."
+        )
+    if weight_cut_risk and phase == "TAPER":
+        cut_first = f"{cut_first}; during the cut, remove glycolytic density before alactic sharpness or rehab support."
+    cut_first = _join_rule_parts(
+        cut_first,
+        f"When sport load spikes, cut {sport_load_profile['cut_first_when_sport_load_spikes']} first.",
+    )
+
+    return {
+        "must_keep": _clean_list(guardrails.get("must_keep_if_present", [])),
+        "drop_order_if_thin": _clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
+        "conditioning_sequence": list(limiter_profile["conditioning_sequence"].get(phase, [])),
+        "conditioning_sequence_driver": "main_limiter",
+        "protect_first": protect_first,
+        "protect_first_driver": "safety_and_readiness" if fatigue in {"moderate", "high"} else "main_limiter",
+        "cut_first_when_collisions_rise": cut_first,
+        "cut_first_driver": "sport_load_collision_rules",
+        "tissue_protection_priority": tissue_protection_priority,
+        "freshness_priority": freshness_priority,
+        "sport_load_owns_density": sport_load_owns_density,
+    }
+
+
 def _build_weekly_stress_map(
     athlete_model: dict,
     phase_briefs: dict[str, dict],
@@ -1004,11 +1059,15 @@ def _build_weekly_stress_map(
     sport_load_profile: dict,
 ) -> dict[str, dict]:
     stress_map: dict[str, dict] = {}
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    short_notice = bool(athlete_model.get("short_notice"))
-    weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
 
     for phase in phase_briefs:
+        resolved = _resolve_phase_rule_state(
+            phase,
+            athlete_model,
+            phase_briefs.get(phase, {}),
+            limiter_profile,
+            sport_load_profile,
+        )
         if phase == "GPP":
             highest_neural_day = "Place one highest neural day after the easiest day so the limiter quality stays crisp before volume accumulates."
             highest_glycolytic_day = "Keep one density-focused day only, and never let it sit beside hard sparring."
@@ -1022,28 +1081,15 @@ def _build_weekly_stress_map(
             highest_glycolytic_day = "Only keep a light fight-pace touch; drop glycolytic density first if freshness or boxing quality falls."
             lowest_load_day = "Make one day clearly lowest-load with recovery, rehab, and freshness protection only."
 
-        protect_first = limiter_profile["protect_first"]
-        cut_first = limiter_profile["cut_first"]
-        if fatigue in {"moderate", "high"}:
-            protect_first = f"Because fatigue is {fatigue}, protect the limiter quality and freshness before adding extra work."
-        if short_notice and phase in {"SPP", "TAPER"}:
-            cut_first = f"Because this is short notice, cut {limiter_profile['cut_first']} before touching phase-critical sharpness or boxing quality."
-        if weight_cut_risk and phase == "TAPER":
-            cut_first = f"{cut_first}; during the cut, remove glycolytic density before alactic sharpness or rehab support."
-        cut_first = _join_rule_parts(
-            cut_first,
-            f"When sport load spikes, cut {sport_load_profile['cut_first_when_sport_load_spikes']} first.",
-        )
-
         stress_map[phase] = {
             "organising_limiter": limiter_profile["label"],
             "highest_neural_day": highest_neural_day,
             "highest_glycolytic_day": highest_glycolytic_day,
             "lowest_load_day": lowest_load_day,
-            "conditioning_sequence": list(limiter_profile["conditioning_sequence"].get(phase, [])),
+            "conditioning_sequence": list(resolved.get("conditioning_sequence", [])),
             "drill_emphasis": list(limiter_profile["drill_emphasis"]),
-            "protect_first": protect_first,
-            "cut_first_when_collisions_rise": cut_first,
+            "protect_first": resolved.get("protect_first", ""),
+            "cut_first_when_collisions_rise": resolved.get("cut_first_when_collisions_rise", ""),
             "sparring_collision_rule": limiter_profile["sparring_collision_rule"],
             "sport_load_interaction": _join_rule_parts(
                 limiter_profile["boxing_load_rule"],
@@ -1052,6 +1098,7 @@ def _build_weekly_stress_map(
             "highest_collision_sport_load": sport_load_profile["highest_collision_load"],
             "sport_load_collision_rules": list(sport_load_profile["collision_rules"]),
             "replace_missing_live_load": sport_load_profile["replace_missing_live_load"],
+            "resolved_rule_state": resolved,
         }
     return stress_map
 
@@ -1254,6 +1301,7 @@ def _build_week_by_week_progression(
                     "cut_first_when_collisions_rise": stress.get("cut_first_when_collisions_rise", ""),
                     "sport_load_interaction": stress.get("sport_load_interaction", ""),
                     "highest_collision_sport_load": stress.get("highest_collision_sport_load", ""),
+                    "resolved_rule_state": dict(stress.get("resolved_rule_state", {})),
                 }
             )
             week_index += 1
@@ -1368,16 +1416,16 @@ def _role_governance(
     idx: int = 0,
 ) -> dict:
     phase = str(week_entry.get("phase", "")).upper()
-    must_keep = set(_clean_list(week_entry.get("must_keep", [])))
-    drop_order = _clean_list(week_entry.get("drop_order_if_thin", []))
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    cut_first_text = str(week_entry.get("cut_first_when_collisions_rise", "")).lower()
-    protect_first_text = str(week_entry.get("protect_first", "")).lower()
+    resolved_rule_state = dict(week_entry.get("resolved_rule_state", {}))
+    must_keep = set(_clean_list(resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))))
+    drop_order = _clean_list(resolved_rule_state.get("drop_order_if_thin", week_entry.get("drop_order_if_thin", [])))
+    cut_first_text = str(
+        resolved_rule_state.get("cut_first_when_collisions_rise", week_entry.get("cut_first_when_collisions_rise", ""))
+    ).lower()
     highest_collision_load = str(week_entry.get("highest_collision_sport_load", "")).strip()
-    tissue_protection_priority = bool(athlete_model.get("injuries")) or "injury_management" in readiness_flags or any(
-        token in protect_first_text
-        for token in ("symptom stability", "conservative loading", "next-day function", "tissue")
-    )
+    tissue_protection_priority = bool(resolved_rule_state.get("tissue_protection_priority"))
+    freshness_priority = bool(resolved_rule_state.get("freshness_priority"))
+    sport_load_owns_density = bool(resolved_rule_state.get("sport_load_owns_density"))
 
     hard_suppression: list[str] = []
     suppression_rules: list[str] = []
@@ -1401,12 +1449,12 @@ def _role_governance(
                 "Safety and readiness prioritize tissue protection, so sharpness-dominant alactic work is suppressed."
             )
         if system == "glycolytic" and system not in must_keep and (
-            (phase == "TAPER" and highest_collision_load) or "glycolytic density" in cut_first_text
+            (phase == "TAPER" and sport_load_owns_density and highest_collision_load) or "glycolytic density" in cut_first_text
         ):
             hard_suppression.append(
                 "Taper survival and sport-load rules keep glycolytic density optional once live load already owns density."
             )
-        if system == "aerobic" and phase == "TAPER" and system not in must_keep and readiness_flags & {"fight_week", "high_fatigue"}:
+        if system == "aerobic" and phase == "TAPER" and system not in must_keep and freshness_priority:
             suppression_rules.append(
                 "Optional aerobic work cannot outrank fight-week freshness protection."
             )
@@ -1430,6 +1478,11 @@ def _role_governance(
             "drop_order_if_thin",
             "conditioning_sequence",
         ],
+        "resolved_authority": {
+            "protect_first_driver": resolved_rule_state.get("protect_first_driver"),
+            "cut_first_driver": resolved_rule_state.get("cut_first_driver"),
+            "conditioning_sequence_driver": resolved_rule_state.get("conditioning_sequence_driver"),
+        },
         "suppression_rules": suppression_rules,
         "hard_suppression_reasons": hard_suppression,
     }
@@ -2104,4 +2157,6 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
+
+
 
