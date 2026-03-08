@@ -1189,7 +1189,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
                         current_name=name,
                     ),
                     "replace_with_same_role": True,
-                    "priority": "critical" if idx == 1 else "high",
+                    "priority": _conditioning_slot_priority(phase, system, idx),
                 }
             )
     return slots
