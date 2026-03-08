@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -108,6 +108,16 @@ def parse_fight_date(value: str) -> datetime | None:
     except ValueError:
         return None
 
+def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
+    if not isinstance(days_until_fight, int):
+        return None
+    return days_until_fight if days_until_fight >= 0 else None
+
+
+def is_short_notice_days(days_until_fight: int | None) -> bool:
+    return isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14
+
+
 
 @dataclass(frozen=True)
 class PlanInput:
@@ -183,8 +193,9 @@ class PlanInput:
         if next_fight_date:
             fight_date = parse_fight_date(next_fight_date)
             if fight_date:
-                days_until_fight = (fight_date - datetime.now()).days
-                weeks_out = max(1, days_until_fight // 7)
+                raw_days_until_fight = (fight_date - datetime.now()).days
+                days_until_fight = normalize_days_until_fight(raw_days_until_fight)
+                weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
             else:
                 weeks_out = "N/A"
         else:
@@ -228,3 +239,4 @@ class PlanInput:
     @property
     def tactical_styles(self) -> list[str]:
         return _normalize_list(self.fighting_style_tactical)
+

@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 from pathlib import Path
 
@@ -438,3 +438,40 @@ def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
     assert brief["phase_strategy"]["SPP"]["slot_counts"]["conditioning"] == 2
     assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
     assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "specific_density_to_peak"
+
+def test_short_notice_false_for_past_date():
+    data = {
+        "data": {
+            "fields": [
+                {"label": "Full name", "value": "Past Date Athlete"},
+                {"label": "Age", "value": "25"},
+                {"label": "Weight (kg)", "value": "70"},
+                {"label": "Target Weight (kg)", "value": "68"},
+                {"label": "Height (cm)", "value": "175"},
+                {"label": "Fighting Style (Technical)", "value": ["boxing"]},
+                {"label": "Fighting Style (Tactical)", "value": ["pressure fighter"]},
+                {"label": "Stance", "value": "Orthodox"},
+                {"label": "Professional Status", "value": "Active"},
+                {"label": "Current Record", "value": "5-2-0"},
+                {"label": "When is your next fight?", "value": "2000-01-01"},
+                {"label": "Rounds x Minutes", "value": "3x3"},
+                {"label": "Weekly Training Frequency", "value": "3"},
+                {"label": "Fatigue Level", "value": "Low"},
+                {"label": "Equipment Access", "value": ["Dumbbells", "Bands"]},
+                {"label": "Training Availability", "value": ["Monday", "Wednesday", "Friday"]},
+                {"label": "Any injuries or areas you need to work around?", "value": ""},
+                {"label": "What are your key performance goals?", "value": "conditioning"},
+                {"label": "Where do you feel weakest right now?", "value": "pull"},
+                {"label": "Do you prefer certain training styles?", "value": "hybrid"},
+                {"label": "Do you struggle with any mental blockers or mindset challenges?", "value": ""},
+                {"label": "Notes (anything else we should know)", "value": "Past fight date test"},
+            ]
+        }
+    }
+
+    result = asyncio.run(generate_plan(data))
+
+    assert result["planning_brief"]["fight_demands"]["days_until_fight"] is None
+    assert result["planning_brief"]["fight_demands"]["short_notice"] is False
+    assert result["stage2_payload"]["athlete_model"]["days_until_fight"] is None
+

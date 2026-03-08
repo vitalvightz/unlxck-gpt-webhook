@@ -1,4 +1,4 @@
-from fightcamp.input_parsing import PlanInput
+﻿from fightcamp.input_parsing import PlanInput
 
 
 def _payload(fields: list[dict]) -> dict:
@@ -40,3 +40,15 @@ def test_style_parsing_lowercases():
     parsed = PlanInput.from_payload(data)
     assert parsed.tech_styles == ["boxing", "mma"]
     assert parsed.tactical_styles == ["pressure fighter"]
+
+def test_past_fight_date_handling_is_explicit():
+    data = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "When is your next fight?", "value": "2000-01-01"},
+        ]
+    )
+    parsed = PlanInput.from_payload(data)
+    assert parsed.days_until_fight is None
+    assert parsed.weeks_out == "N/A"
+

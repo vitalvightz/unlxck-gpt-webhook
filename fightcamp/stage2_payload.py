@@ -431,7 +431,7 @@ def _derive_readiness_flags(
         flags.append("injury_management")
     if short_notice:
         flags.append("short_notice")
-    if isinstance(days_until_fight, int) and days_until_fight <= 7:
+    if isinstance(days_until_fight, int) and 0 <= days_until_fight <= 7:
         flags.append("fight_week")
     return flags or ["baseline"]
 
@@ -852,7 +852,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "boxing_quality_under_load"
     if readiness_flags & {"moderate_fatigue", "high_fatigue", "fight_week"}:
         return "sharpness_under_fatigue"
-    if isinstance(days_until_fight, int) and days_until_fight <= 14:
+    if isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14:
         return "sharpness_under_fatigue"
     return "general_fight_readiness"
 
@@ -2157,6 +2157,7 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
+
 
 
 

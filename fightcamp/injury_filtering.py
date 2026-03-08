@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import copy
 import json
@@ -475,7 +475,7 @@ def _log_exclusion(context: str, item: dict, decision: Decision) -> None:
         item: Item being excluded
         decision: Decision object with action, reason, matched_tags, etc.
     """
-    if not INJURY_DEBUG:
+    if not _injury_debug_enabled():
         return
     
     if decision.action != "exclude":
@@ -531,7 +531,7 @@ def _log_replacement(context: str, excluded_name: str, replacement_name: str) ->
         excluded_name: Name of the excluded item
         replacement_name: Name of the replacement item
     """
-    if not INJURY_DEBUG:
+    if not _injury_debug_enabled():
         return
     
     logger.info(
@@ -1138,3 +1138,4 @@ def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: s
     Use _log_exclusion() instead for logging excluded items only.
     """
     pass
+
