@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 
+from .rehab_protocols import _rehab_drills_for_phase
 from .training_context import TrainingContext, allocate_sessions
 
 RESTRICTION_PATTERN_HINTS = {
@@ -196,6 +197,124 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
     return briefs
 
 
+def _serialize_strength_option(exercise: dict, why: str) -> dict:
+    movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
+    movement_patterns = [movement] if movement else []
+    movement_patterns.extend(_clean_list(exercise.get("tags", [])))
+    return {
+        "name": exercise.get("name", "Unnamed"),
+        "source": "exercise_bank",
+        "movement_patterns": _dedupe_preserve_order(movement_patterns),
+        "restriction_tags": _extract_restriction_tags(exercise),
+        "prescription": exercise.get("prescription") or exercise.get("method") or "",
+        "why": why or "balanced selection",
+    }
+
+
+def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
+    tags = _clean_list(drill.get("tags", []))
+    return {
+        "name": drill.get("name", "Unnamed"),
+        "source": "conditioning_bank",
+        "movement_patterns": _dedupe_preserve_order([system] + tags),
+        "restriction_tags": _extract_restriction_tags(drill),
+        "prescription": " | ".join(
+            part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
+        ),
+        "why": why or "balanced selection",
+    }
+
+
+def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: str) -> dict:
+    name = re.split(r"\s+(?:[\u2013-]|\u00e2\u20ac\u201c)\s+", prescription, maxsplit=1)[0].strip()
+    return {
+        "name": name or "Rehab Drill",
+        "source": source,
+        "movement_patterns": [role],
+        "restriction_tags": ["rehab", role],
+        "prescription": prescription,
+        "why": why,
+    }
+
+
+def _build_strength_alternates(
+    strength_block: dict,
+    *,
+    role: str,
+    selected_names: set[str],
+    current_name: str,
+) -> list[dict]:
+    alternates: list[dict] = []
+    seen: set[str] = set()
+    for candidate in (strength_block.get("candidate_reservoir") or {}).get(role, []):
+        exercise = candidate.get("exercise", {})
+        name = exercise.get("name")
+        if not name or name == current_name or name in selected_names or name in seen:
+            continue
+        alternates.append(
+            _serialize_strength_option(
+                exercise,
+                candidate.get("explanation", "balanced selection"),
+            )
+        )
+        seen.add(name)
+        if len(alternates) >= 2:
+            break
+    return alternates
+
+
+def _build_conditioning_alternates(
+    phase_block: dict,
+    *,
+    system: str,
+    selected_names: set[str],
+    current_name: str,
+) -> list[dict]:
+    alternates: list[dict] = []
+    seen: set[str] = set()
+    for candidate in (phase_block.get("candidate_reservoir") or {}).get(system, []):
+        drill = candidate.get("drill", {})
+        name = drill.get("name")
+        if not name or name == current_name or name in selected_names or name in seen:
+            continue
+        alternates.append(
+            _serialize_conditioning_option(
+                drill,
+                system,
+                candidate.get("explanation", "balanced selection"),
+            )
+        )
+        seen.add(name)
+        if len(alternates) >= 2:
+            break
+    return alternates
+
+
+def _parse_rehab_groups(rehab_block: str) -> list[dict]:
+    groups: list[dict] = []
+    current: dict | None = None
+
+    for raw_line in rehab_block.splitlines():
+        stripped = raw_line.strip()
+        if not stripped:
+            continue
+        header_match = re.match(r"^-\s+([^()]+?)\s*\(([^)]+)\):\s*$", stripped)
+        if header_match:
+            current = {
+                "location": header_match.group(1).strip(),
+                "injury_type": header_match.group(2).strip(),
+                "drills": [],
+            }
+            groups.append(current)
+            continue
+        bullet_match = re.match(r"^(?:[-*]|[\u2022]|\u00e2\u20ac\u00a2)\s+(.+)$", stripped)
+        is_indented = raw_line[:1].isspace()
+        if current is not None and bullet_match and (is_indented or stripped.startswith(("\u00e2\u20ac\u00a2", "\u2022", "*"))):
+            current["drills"].append(bullet_match.group(1).strip())
+
+    return groups
+
+
 def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]:
     if not strength_block:
         return []
@@ -203,6 +322,11 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
         entry.get("name"): entry
         for entry in strength_block.get("why_log", [])
         if entry.get("name")
+    }
+    selected_names = {
+        exercise.get("name")
+        for exercise in strength_block.get("exercises", [])
+        if exercise.get("name")
     }
     slots: list[dict] = []
     for idx, exercise in enumerate(strength_block.get("exercises", []), start=1):
@@ -217,17 +341,16 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                 "slot_id": f"{phase.lower()}_strength_{idx}_{_slugify(name)}",
                 "role": role,
                 "purpose": reasons.get("explanation", "balanced selection"),
-                "selected": {
-                    "name": name,
-                    "source": "exercise_bank",
-                    "movement_patterns": _dedupe_preserve_order(
-                        [movement] + _clean_list(exercise.get("tags", []))
-                    ),
-                    "restriction_tags": _extract_restriction_tags(exercise),
-                    "prescription": exercise.get("prescription") or exercise.get("method") or "",
-                    "why": reasons.get("explanation", "balanced selection"),
-                },
-                "alternates": [],
+                "selected": _serialize_strength_option(
+                    exercise,
+                    reasons.get("explanation", "balanced selection"),
+                ),
+                "alternates": _build_strength_alternates(
+                    strength_block,
+                    role=role,
+                    selected_names=selected_names,
+                    current_name=name,
+                ),
                 "replace_with_same_role": True,
                 "priority": "high" if idx <= 2 else "medium",
             }
@@ -243,6 +366,12 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
         for entry in phase_block.get("why_log", [])
         if entry.get("name")
     }
+    selected_names = {
+        drill.get("name")
+        for drills in (phase_block.get("grouped_drills") or {}).values()
+        for drill in drills
+        if drill.get("name")
+    }
     slots: list[dict] = []
     for system, drills in (phase_block.get("grouped_drills") or {}).items():
         for idx, drill in enumerate(drills, start=1):
@@ -250,23 +379,22 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
             if not name:
                 continue
             reasons = reason_lookup.get(name, {})
-            tags = _clean_list(drill.get("tags", []))
             slots.append(
                 {
                     "slot_id": f"{phase.lower()}_{system}_{idx}_{_slugify(name)}",
                     "role": system,
                     "purpose": CONDITIONING_ROLE_PURPOSES.get(system, reasons.get("explanation", "balanced selection")),
-                    "selected": {
-                        "name": name,
-                        "source": "conditioning_bank",
-                        "movement_patterns": _dedupe_preserve_order([system] + tags),
-                        "restriction_tags": _extract_restriction_tags(drill),
-                        "prescription": " | ".join(
-                            part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
-                        ),
-                        "why": reasons.get("explanation", "balanced selection"),
-                    },
-                    "alternates": [],
+                    "selected": _serialize_conditioning_option(
+                        drill,
+                        system,
+                        reasons.get("explanation", "balanced selection"),
+                    ),
+                    "alternates": _build_conditioning_alternates(
+                        phase_block,
+                        system=system,
+                        selected_names=selected_names,
+                        current_name=name,
+                    ),
                     "replace_with_same_role": True,
                     "priority": "high" if idx == 1 else "medium",
                 }
@@ -278,33 +406,51 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
     if not rehab_block or rehab_block.strip().startswith("**Red Flag Detected**"):
         return []
     slots: list[dict] = []
-    bullet_lines = [
-        line.strip()[2:].strip()
-        for line in rehab_block.splitlines()
-        if line.strip().startswith("- ")
-    ]
-    for idx, line in enumerate(bullet_lines, start=1):
-        name = re.split(r"\s+[\u2013-]\s+", line, maxsplit=1)[0].strip()
-        slots.append(
-            {
-                "slot_id": f"{phase.lower()}_rehab_{idx}_{_slugify(name)}",
-                "role": "rehab",
-                "purpose": "restriction-compliant support work",
-                "selected": {
-                    "name": name,
-                    "source": "rehab_block",
-                    "movement_patterns": ["rehab"],
-                    "restriction_tags": ["rehab"],
-                    "prescription": line,
-                    "why": "phase-specific rehab support",
-                },
-                "alternates": [],
-                "replace_with_same_role": True,
-                "priority": "high" if idx == 1 else "medium",
-            }
+    for group in _parse_rehab_groups(rehab_block):
+        location = group.get("location", "Unspecified")
+        injury_type = group.get("injury_type", "unspecified")
+        role = f"rehab_{_slugify(location)}_{_slugify(injury_type)}"
+        selected_lines = [line for line in group.get("drills", []) if line]
+        selected_set = set(selected_lines)
+        rehab_options = _rehab_drills_for_phase(
+            injury_type.lower(),
+            location.lower().replace(" ", "_"),
+            phase,
+            limit=6,
         )
+        why = f"phase-specific rehab support for {location.lower()} {injury_type.lower()}"
+        for idx, line in enumerate(selected_lines, start=1):
+            alternates: list[dict] = []
+            for option in rehab_options:
+                if option == line or option in selected_set:
+                    continue
+                alternates.append(
+                    _serialize_rehab_option(
+                        option,
+                        role=role,
+                        source="rehab_bank",
+                        why=why,
+                    )
+                )
+                if len(alternates) >= 2:
+                    break
+            slots.append(
+                {
+                    "slot_id": f"{phase.lower()}_{role}_{idx}_{_slugify(line)}",
+                    "role": role,
+                    "purpose": why,
+                    "selected": _serialize_rehab_option(
+                        line,
+                        role=role,
+                        source="rehab_block",
+                        why=why,
+                    ),
+                    "alternates": alternates,
+                    "replace_with_same_role": True,
+                    "priority": "high" if idx == 1 else "medium",
+                }
+            )
     return slots
-
 
 def _build_omission_ledger(
     *,

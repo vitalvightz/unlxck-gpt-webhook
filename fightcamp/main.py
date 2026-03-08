@@ -429,6 +429,7 @@ async def generate_plan(data: dict):
             gpp_cond_reasons,
             gpp_cond_grouped,
             gpp_cond_missing,
+            gpp_cond_candidates,
         ) = generate_conditioning_block(
             {
                 **training_context.to_flags(),
@@ -447,6 +448,7 @@ async def generate_plan(data: dict):
             spp_cond_reasons,
             spp_cond_grouped,
             spp_cond_missing,
+            spp_cond_candidates,
         ) = generate_conditioning_block(
             {
                 **training_context.to_flags(),
@@ -465,6 +467,7 @@ async def generate_plan(data: dict):
             taper_cond_reasons,
             taper_cond_grouped,
             taper_cond_missing,
+            taper_cond_candidates,
         ) = generate_conditioning_block(
             {
                 **training_context.to_flags(),
@@ -555,6 +558,7 @@ async def generate_plan(data: dict):
             "why_log": gpp_cond_reasons,
             "grouped_drills": gpp_cond_grouped,
             "missing_systems": gpp_cond_missing,
+            "candidate_reservoir": gpp_cond_candidates,
             "phase_color": phase_colors["GPP"],
         }
     if spp_cond_block:
@@ -564,6 +568,7 @@ async def generate_plan(data: dict):
             "why_log": spp_cond_reasons,
             "grouped_drills": spp_cond_grouped,
             "missing_systems": spp_cond_missing,
+            "candidate_reservoir": spp_cond_candidates,
             "phase_color": phase_colors["SPP"],
         }
     if taper_cond_block:
@@ -573,6 +578,7 @@ async def generate_plan(data: dict):
             "why_log": taper_cond_reasons,
             "grouped_drills": taper_cond_grouped,
             "missing_systems": taper_cond_missing,
+            "candidate_reservoir": taper_cond_candidates,
             "phase_color": phase_colors["TAPER"],
         }
 
@@ -633,6 +639,14 @@ async def generate_plan(data: dict):
 
     _apply_substitution_log(strength_reason_log, "Strength")
     _apply_substitution_log(conditioning_reason_log, "Conditioning")
+
+    for phase_key, logs in strength_reason_log.items():
+        if strength_blocks.get(phase_key):
+            strength_blocks[phase_key]["why_log"] = logs
+    for phase_key, logs in conditioning_reason_log.items():
+        if conditioning_blocks.get(phase_key):
+            conditioning_blocks[phase_key]["why_log"] = logs
+
     rehab_sections: list[str] = []
     support_notes = ""
     if has_injuries:

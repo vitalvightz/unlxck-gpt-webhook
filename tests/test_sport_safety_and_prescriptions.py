@@ -46,7 +46,7 @@ def test_boxing_spp_gets_alactic_fallback_when_not_suppressed():
         "sport": "boxing",
         "days_until_fight": 12,
     }
-    _, _, _, grouped_drills, _ = generate_conditioning_block(flags)
+    _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
     assert grouped_drills.get("alactic")
     assert "6–10 sec" in grouped_drills["alactic"][0].get("timing", "")
     assert re.search(r"75.?120", grouped_drills["alactic"][0].get("rest", ""))

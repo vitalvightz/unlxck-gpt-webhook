@@ -645,6 +645,66 @@ def render_conditioning_block(
 
     return "\n".join(output_lines)
 
+def _conditioning_explanation(reasons: dict) -> str:
+    parts = []
+    if reasons.get("goal_hits"):
+        parts.append(f"{reasons['goal_hits']} goal match")
+    if reasons.get("weakness_hits"):
+        parts.append(f"{reasons['weakness_hits']} weakness tag")
+    if reasons.get("style_hits"):
+        parts.append(f"{reasons['style_hits']} style tag")
+    if reasons.get("phase_hits"):
+        parts.append(f"{reasons['phase_hits']} phase tag")
+    if reasons.get("equipment_boost"):
+        parts.append("equipment boost")
+    if reasons.get("load_adjustments"):
+        parts.append("system emphasis")
+    return ", ".join(parts) if parts else "balanced selection"
+
+
+def _build_conditioning_candidate_reservoir(
+    system_drills: dict[str, list[tuple[dict, float, dict]]],
+    style_system_drills: dict[str, list[tuple[dict, float, dict]]],
+    grouped_drills: dict[str, list[dict]],
+    reason_lookup: dict[str, dict],
+    *,
+    limit_per_system: int = 5,
+) -> dict[str, list[dict]]:
+    reservoirs: dict[str, list[dict]] = defaultdict(list)
+    seen_by_system: dict[str, set[str]] = defaultdict(set)
+
+    def _append(system: str, drill: dict, score: float, reasons: dict) -> None:
+        name = drill.get("name")
+        if not name:
+            return
+        if name in seen_by_system[system]:
+            return
+        if len(reservoirs[system]) >= limit_per_system:
+            return
+        reservoirs[system].append(
+            {
+                "drill": drill.copy(),
+                "score": score,
+                "reasons": (reasons or {}).copy(),
+                "explanation": _conditioning_explanation(reasons or {}),
+            }
+        )
+        seen_by_system[system].add(name)
+
+    for system, drills in grouped_drills.items():
+        for drill in drills:
+            reasons = reason_lookup.get(drill.get("name"), {}).copy()
+            reasons.setdefault("final_score", 0)
+            _append(system, drill, float(reasons.get("final_score", 0) or 0), reasons)
+
+    for source in (system_drills, style_system_drills):
+        for system, candidates in source.items():
+            for drill, score, reasons in candidates:
+                _append(system, drill, score, reasons)
+
+    return dict(reservoirs)
+
+
 def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase.upper(), "#000")
@@ -1741,22 +1801,16 @@ def generate_conditioning_block(flags):
         for d in drills:
             nm = d.get("name")
             reasons = reason_lookup.get(nm, {}).copy()
-            parts = []
-            if reasons.get("goal_hits"):
-                parts.append(f"{reasons['goal_hits']} goal match")
-            if reasons.get("weakness_hits"):
-                parts.append(f"{reasons['weakness_hits']} weakness tag")
-            if reasons.get("style_hits"):
-                parts.append(f"{reasons['style_hits']} style tag")
-            if reasons.get("phase_hits"):
-                parts.append(f"{reasons['phase_hits']} phase tag")
-            if reasons.get("equipment_boost"):
-                parts.append("equipment boost")
-            if reasons.get("load_adjustments"):
-                parts.append("system emphasis")
-            explanation = ", ".join(parts) if parts else "balanced selection"
             reasons.setdefault("final_score", 0)
+            explanation = _conditioning_explanation(reasons)
             why_log.append({"name": nm, "system": system, "reasons": reasons, "explanation": explanation})
 
-    return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems
+    candidate_reservoir = _build_conditioning_candidate_reservoir(
+        system_drills,
+        style_system_drills,
+        grouped_drills,
+        reason_lookup,
+    )
+
+    return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles

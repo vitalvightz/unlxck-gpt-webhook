@@ -356,6 +356,55 @@ def _prescription_templates(phase: str) -> dict[str, str]:
     }
 
 
+def _strength_explanation(reasons: dict) -> str:
+    parts = []
+    if reasons.get("goal_hits"):
+        parts.append(f"{reasons['goal_hits']} goal match")
+    if reasons.get("weakness_hits"):
+        parts.append(f"{reasons['weakness_hits']} weakness tag")
+    if reasons.get("style_hits"):
+        parts.append(f"{reasons['style_hits']} style tag")
+    if reasons.get("phase_hits"):
+        parts.append(f"{reasons['phase_hits']} phase tag")
+    if reasons.get("equipment_boost"):
+        parts.append("equipment boost")
+    if reasons.get("load_adjustments"):
+        parts.append("fatigue adjustment")
+    return ", ".join(parts) if parts else "balanced selection"
+
+
+def _build_strength_candidate_reservoir(
+    weighted_exercises: list[tuple[dict, float, dict]],
+    *,
+    limit_per_role: int = 4,
+) -> dict[str, list[dict]]:
+    reservoirs: dict[str, list[dict]] = defaultdict(list)
+    seen_by_role: dict[str, set[str]] = defaultdict(set)
+
+    for exercise, score, reasons in weighted_exercises:
+        name = exercise.get("name")
+        if not name:
+            continue
+        exercise_copy = exercise.copy()
+        movement = normalize_exercise_movement(exercise_copy)
+        role = movement if movement != "unknown" else "strength_support"
+        if name in seen_by_role[role]:
+            continue
+        if len(reservoirs[role]) >= limit_per_role:
+            continue
+        reservoirs[role].append(
+            {
+                "exercise": exercise_copy,
+                "score": score,
+                "reasons": (reasons or {}).copy(),
+                "explanation": _strength_explanation(reasons or {}),
+            }
+        )
+        seen_by_role[role].add(name)
+
+    return dict(reservoirs)
+
+
 def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> str:
     """Return the formatted strength block for the given phase."""
     phase = phase.upper()
@@ -970,6 +1019,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     used_days = training_days[:num_strength_sessions]
 
     strength_output = format_strength_block(phase, fatigue, base_exercises)
+    candidate_reservoir = _build_strength_candidate_reservoir(weighted_exercises)
 
     all_tags = []
     for ex in base_exercises:
@@ -980,20 +1030,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         name = ex.get("name")
         reasons = reason_lookup.get(name, {}).copy()
         reasons.setdefault("final_score", score_lookup.get(name, 0))
-        parts = []
-        if reasons.get("goal_hits"):
-            parts.append(f"{reasons['goal_hits']} goal match")
-        if reasons.get("weakness_hits"):
-            parts.append(f"{reasons['weakness_hits']} weakness tag")
-        if reasons.get("style_hits"):
-            parts.append(f"{reasons['style_hits']} style tag")
-        if reasons.get("phase_hits"):
-            parts.append(f"{reasons['phase_hits']} phase tag")
-        if reasons.get("equipment_boost"):
-            parts.append("equipment boost")
-        if reasons.get("load_adjustments"):
-            parts.append("fatigue adjustment")
-        explanation = ", ".join(parts) if parts else "balanced selection"
+        explanation = _strength_explanation(reasons)
         why_log.append({"name": name, "reasons": reasons, "explanation": explanation})
 
     return {
@@ -1002,5 +1039,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "preferred_tags": list(set(all_tags)),
         "exercises": base_exercises,
         "why_log": why_log,
+        "candidate_reservoir": candidate_reservoir,
     }
     
