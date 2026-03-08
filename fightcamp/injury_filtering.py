@@ -969,7 +969,7 @@ def _load_style_specific_exercises() -> list[dict]:
         if not path.exists():
             continue
         try:
-            items = json.loads(path.read_text())
+            items = json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             raise ValueError(
                 "style_specific_exercises JSON error in "
@@ -992,7 +992,7 @@ def _load_style_specific_exercises() -> list[dict]:
 
 
 def _load_bank_items(filename: str) -> list[dict]:
-    items = json.loads((DATA_DIR / filename).read_text())
+    items = json.loads((DATA_DIR / filename).read_text(encoding="utf-8"))
     for item in items:
         validate_training_item(item, source=filename, require_phases=True)
         normalize_item_tags(item)
@@ -1009,7 +1009,7 @@ def collect_banks() -> dict[str, list[dict]]:
     banks["style_taper_conditioning"] = _load_bank_items("style_taper_conditioning.json")
     banks["style_specific_exercises"] = _load_style_specific_exercises()
 
-    coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text())
+    coord_data = json.loads((DATA_DIR / "coordination_bank.json").read_text(encoding="utf-8"))
     coordination_bank: list[dict] = []
     if isinstance(coord_data, list):
         for item in coord_data:

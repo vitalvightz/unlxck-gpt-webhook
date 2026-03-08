@@ -243,7 +243,7 @@ def _normalize_fight_format(fight_format: str) -> str:
         return "kickboxing"
     return fight_format
 
-exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text())
+exercise_bank = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
 for item in exercise_bank:
     validate_training_item(item, source="exercise_bank.json", require_phases=True)
     normalize_item_tags(item)
@@ -251,7 +251,7 @@ for item in exercise_bank:
 # Load universal strength list for cross-phase novelty exemptions
 try:
     _universal_strength = json.loads(
-        (DATA_DIR / "universal_gpp_strength.json").read_text()
+        (DATA_DIR / "universal_gpp_strength.json").read_text(encoding="utf-8")
     )
 except Exception:
     _universal_strength = []
@@ -689,7 +689,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # --------- UNIVERSAL STRENGTH INSERTION ---------
     if phase == "GPP":
         try:
-            with open(DATA_DIR / "universal_gpp_strength.json", "r") as f:
+            with open(DATA_DIR / "universal_gpp_strength.json", "r", encoding="utf-8") as f:
                 universal_strength = json.load(f)
         except Exception:
             universal_strength = []

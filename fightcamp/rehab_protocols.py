@@ -19,7 +19,7 @@ from .config import DATA_DIR
 #         {"name": "...", "notes": "..."}
 #     ]
 # }
-REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text())
+REHAB_BANK = json.loads((DATA_DIR / "rehab_bank.json").read_text(encoding="utf-8"))
 REHAB_LOCATIONS = {entry.get("location") for entry in REHAB_BANK if entry.get("location")}
 REHAB_LOCATION_ALIASES = {
     "biceps": ["bicep"],

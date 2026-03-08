@@ -8,7 +8,7 @@ phase_label = re.compile(r"\s*(GPP|SPP|TAPER|PEAK|DELOAD|BASE|UNLISTED)\s*:\s*(.
 
 in_path = Path('data/rehab_bank.json')
 
-with in_path.open() as f:
+with in_path.open(encoding="utf-8") as f:
     lines = f.readlines()
 
 # remove comment lines that start with '//'
@@ -60,7 +60,7 @@ for obj in data:
         out.append(phase_objs[ph])
 
 out_path = Path('data/rehab_bank_split.json')
-with out_path.open('w') as f:
+with out_path.open('w', encoding='utf-8') as f:
     json.dump(out, f, indent=2)
 
 print(f"Wrote {len(out)} entries to {out_path}")

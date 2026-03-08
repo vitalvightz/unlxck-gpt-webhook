@@ -43,7 +43,7 @@ def test_format_injury_summary_basics():
 
 def test_plan_output_has_no_region_wrappers():
     data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text())
+    data = json.loads(data_path.read_text(encoding="utf-8"))
     data["random_seed"] = 7
     result = asyncio.run(generate_plan(data))
     plan_text = result.get("plan_text", "")

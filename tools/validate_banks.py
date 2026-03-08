@@ -117,7 +117,7 @@ def load_tag_vocabulary() -> Set[str]:
     """
     print(f"Loading tag vocabulary from {TAG_VOCAB_FILE}...")
     
-    with open(TAG_VOCAB_FILE, 'r') as f:
+    with open(TAG_VOCAB_FILE, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     # Handle list schema
@@ -193,7 +193,7 @@ def validate_bank(bank_path: Path, tag_vocab: Set[str], injury_rules: Dict) -> T
     print("=" * 40)
     
     # Load bank data
-    with open(bank_path, 'r') as f:
+    with open(bank_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
     # Parse schema
