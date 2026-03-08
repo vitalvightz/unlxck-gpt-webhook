@@ -3,39 +3,206 @@ from __future__ import annotations
 import json
 import re
 
+from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase
 from .training_context import TrainingContext, allocate_sessions
 
 RESTRICTION_PATTERN_HINTS = {
-    "deep_knee_flexion": ["deep bilateral squat", "full ROM lunge", "high impact landing"],
+    "deep_knee_flexion": [
+        "deep bilateral squat",
+        "full ROM lunge",
+        "split squat",
+        "rear-foot-elevated split squat",
+        "deep knee-dominant step-up",
+    ],
     "high_impact": ["jump", "bound", "hop", "sprint landing", "reactive pogo"],
-    "heavy_overhead_pressing": ["overhead press", "jerk", "push press", "overhead carry"],
+    "high_impact_lower": [
+        "jump",
+        "bound",
+        "hop",
+        "landing",
+        "depth drop",
+        "reactive pogo",
+        "hard change of direction",
+    ],
+    "high_impact_upper": [
+        "clap push-up",
+        "plyo push-up",
+        "explosive push-up",
+        "ballistic upper-body catch",
+    ],
+    "high_impact_global": [
+        "jump",
+        "bound",
+        "hop",
+        "landing",
+        "reactive rebound",
+        "impact running",
+    ],
+    "heavy_overhead_pressing": [
+        "overhead press",
+        "jerk",
+        "push press",
+        "thruster",
+        "overhead carry",
+        "overhead slam",
+        "z press",
+    ],
     "spinal_flexion": ["loaded spinal flexion", "sit-up", "rounded hinge"],
+    "loaded_flexion": ["weighted sit-up", "loaded crunch", "V-up", "toe-touch"],
     "loaded_rotation": ["med-ball rotational throw", "loaded twist", "dynamic trunk rotation"],
+    "max_velocity": ["max sprint", "all-out sprint", "flying sprint", "overspeed sprint"],
 }
 
-PHASE_OBJECTIVES = {
-    "GPP": "build aerobic base and general force capacity",
-    "SPP": "increase fight-specific repeatability and power transfer",
-    "TAPER": "maintain sharpness and freshness",
+_RESTRICTION_CANONICAL_KEYS = {
+    "deep_knee_flexion": "deep knee flexion",
+    "heavy_overhead_pressing": "heavy overhead pressing",
+    "high_impact": "high impact",
+    "high_impact_lower": "high impact",
+    "high_impact_upper": "high impact",
+    "high_impact_global": "high impact",
+    "loaded_flexion": "loaded flexion",
+    "max_velocity": "max velocity",
 }
 
-PHASE_EMPHASIS = {
-    "GPP": ["aerobic repeatability", "general force", "trunk/neck robustness"],
-    "SPP": ["glycolytic repeatability", "rotational intent", "sport speed"],
-    "TAPER": ["alactic sharpness", "confidence", "low soreness"],
+_MECHANICAL_TAG_PREFIXES = ("mech_",)
+_MECHANICAL_TAGS = {
+    "overhead",
+    "press",
+    "push_press",
+    "jerk",
+    "thruster",
+    "dynamic_overhead",
+    "press_heavy",
+    "high_impact",
+    "high_impact_plyo",
+    "plyometric",
+    "jumping",
+    "landing_stress_high",
+    "reactive_rebound_high",
+    "impact_rebound_high",
+    "foot_impact_high",
+    "forefoot_load_high",
+    "sprint",
+    "max_velocity",
+    "decel_high",
+    "cod_high",
+    "rotation",
+    "rotational",
+    "anti_rotation",
+    "loaded_rotation",
+    "loaded_twist",
+    "squat",
+    "lunge",
+    "split_squat",
+    "quad_dominant",
+    "quad_dominant_heavy",
+    "deep_knee_flexion_loaded",
+    "knee_dominant_heavy",
+    "situp",
+    "crunch",
+    "flexion",
+    "spinal_flexion",
+    "hip_flexion_loaded",
+    "neck",
+    "cervical_load",
+    "cervical_extension_loaded",
+    "cervical_flexion_loaded",
+    "neck_bridge",
+    "loaded_carry",
+    "axial_loading",
+    "mech_axial_heavy",
 }
 
-PHASE_DEPRIORITIZE = {
-    "GPP": ["fight-week intensity", "excessive reactive fatigue"],
-    "SPP": ["excessive eccentric damage", "non-specific conditioning volume"],
-    "TAPER": ["new drills", "high lactate exposure", "soreness-heavy loading"],
-}
-
-CONDITIONING_ROLE_PURPOSES = {
-    "aerobic": "low-damage aerobic development",
-    "glycolytic": "fight-pace repeatability",
-    "alactic": "speed and neural sharpness",
+_TEXT_DERIVED_RESTRICTIONS = {
+    "deep_knee_flexion": [
+        "deep squat",
+        "full rom lunge",
+        "split squat",
+        "rear foot elevated split squat",
+        "bulgarian split squat",
+        "pistol squat",
+        "cyclist squat",
+        "deep knee flexion",
+        "step-up heavy",
+    ],
+    "heavy_overhead_pressing": [
+        "overhead press",
+        "push press",
+        "jerk",
+        "thruster",
+        "snatch",
+        "overhead carry",
+        "overhead hold",
+        "overhead slam",
+        "strict press",
+        "military press",
+        "z press",
+        "handstand",
+    ],
+    "loaded_flexion": [
+        "weighted sit-up",
+        "weighted sit up",
+        "loaded sit-up",
+        "loaded sit up",
+        "loaded crunch",
+        "weighted crunch",
+        "v-up",
+        "v up",
+        "toe-touch",
+        "toe touch",
+    ],
+    "loaded_rotation": [
+        "rotational throw",
+        "rotational slam",
+        "loaded twist",
+        "russian twist",
+        "med ball scoop",
+        "shotput throw",
+        "rotation throw",
+    ],
+    "max_velocity": [
+        "max sprint",
+        "maximal sprint",
+        "all-out sprint",
+        "all out sprint",
+        "full sprint",
+        "flying sprint",
+        "overspeed sprint",
+        "top-speed sprint",
+        "top speed sprint",
+    ],
+    "high_impact_upper": [
+        "clap push-up",
+        "clap pushup",
+        "plyo push-up",
+        "plyo pushup",
+        "plyometric push-up",
+        "plyometric pushup",
+        "explosive push-up",
+        "explosive pushup",
+    ],
+    "high_impact_lower": [
+        "jump",
+        "hop",
+        "bound",
+        "landing",
+        "depth jump",
+        "drop jump",
+        "depth drop",
+        "pogo",
+        "reactive hop",
+        "reactive rebound",
+        "hard decel",
+        "hard deceleration",
+        "change of direction",
+        "agility cut",
+        "sharp cut",
+        "lateral bound",
+        "jump rope",
+        "burpee",
+        "sprawl",
+    ],
 }
 
 
@@ -65,6 +232,184 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
     return result
 
 
+def _normalize_text(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip().lower())
+
+
+def _phrase_in_text(text: str, phrase: str) -> bool:
+    if not text or not phrase:
+        return False
+    parts = [re.escape(part) for part in re.split(r"[\s-]+", phrase.strip().lower()) if part]
+    if not parts:
+        return False
+    pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
+    return re.search(pattern, text) is not None
+
+
+def _restriction_item_text(item: dict) -> str:
+    fields = [
+        item.get("name", ""),
+        item.get("movement", ""),
+        item.get("method", ""),
+        item.get("prescription", ""),
+        item.get("timing", ""),
+        item.get("rest", ""),
+        item.get("load", ""),
+        item.get("notes", ""),
+        item.get("purpose", ""),
+        item.get("description", ""),
+        item.get("modality", ""),
+        item.get("equipment_note", ""),
+    ]
+    fields.extend(_clean_list(item.get("equipment", [])))
+    return _normalize_text(" ".join(str(field) for field in fields if field))
+
+
+def _derive_mechanical_risk_tags(item: dict) -> set[str]:
+    tags = {
+        str(tag).strip().lower().replace(" ", "_")
+        for tag in item.get("tags", [])
+        if str(tag).strip()
+    }
+    movement = str(item.get("movement", "")).strip().lower().replace(" ", "_")
+    if movement:
+        tags.add(movement)
+    text = _restriction_item_text(item)
+
+    risk_tags = {
+        tag
+        for tag in tags
+        if tag in _MECHANICAL_TAGS or any(tag.startswith(prefix) for prefix in _MECHANICAL_TAG_PREFIXES)
+    }
+
+    derived: set[str] = set()
+
+    if any(tag in tags for tag in {"rotation", "rotational", "anti_rotation", "loaded_rotation", "loaded_twist", "mech_rotational_power"}):
+        derived.add("loaded_rotation")
+    if any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["loaded_rotation"]):
+        derived.add("loaded_rotation")
+
+    overhead_tag_hits = {
+        "overhead",
+        "press",
+        "push_press",
+        "jerk",
+        "thruster",
+        "dynamic_overhead",
+        "press_heavy",
+        "mech_overhead_dynamic",
+        "mech_overhead_static",
+        "mech_axial_heavy",
+    }
+    if tags & overhead_tag_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["heavy_overhead_pressing"]):
+        derived.add("heavy_overhead_pressing")
+
+    deep_knee_hits = {
+        "squat",
+        "lunge",
+        "split_squat",
+        "quad_dominant",
+        "quad_dominant_heavy",
+        "deep_knee_flexion_loaded",
+        "knee_dominant_heavy",
+        "mech_knee_dominant",
+    }
+    if tags & deep_knee_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_knee_flexion"]):
+        derived.add("deep_knee_flexion")
+
+    if tags & {"situp", "crunch", "flexion", "spinal_flexion", "hip_flexion_loaded", "loaded_flexion"}:
+        derived.add("loaded_flexion")
+    if any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["loaded_flexion"]):
+        derived.add("loaded_flexion")
+    if "spinal_flexion" in derived or "loaded_flexion" in derived:
+        derived.add("spinal_flexion")
+
+    lower_impact_hits = {
+        "high_impact",
+        "high_impact_plyo",
+        "plyometric",
+        "jumping",
+        "landing_stress_high",
+        "reactive_rebound_high",
+        "impact_rebound_high",
+        "foot_impact_high",
+        "forefoot_load_high",
+        "decel_high",
+        "cod_high",
+        "mech_landing_impact",
+        "mech_reactive_rebound",
+        "mech_reactive",
+        "mech_ballistic",
+        "mech_change_of_direction",
+        "mech_deceleration",
+        "achilles_high_risk_impact",
+    }
+    if tags & lower_impact_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_lower"]):
+        derived.update({"high_impact", "high_impact_lower"})
+
+    upper_impact_hits = {"explosive_upper_push", "mech_upper_ballistic", "mech_horizontal_push"}
+    if tags & upper_impact_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_upper"]):
+        derived.update({"high_impact", "high_impact_upper"})
+
+    if "high_impact" in derived and not ({"high_impact_lower", "high_impact_upper"} & derived):
+        derived.add("high_impact_global")
+
+    if tags & {"max_velocity", "mech_max_velocity"} or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["max_velocity"]):
+        derived.add("max_velocity")
+        derived.update({"high_impact", "high_impact_lower"})
+
+    if tags & {"cervical_load", "cervical_extension_loaded", "cervical_flexion_loaded", "neck_bridge", "neck"}:
+        derived.add("cervical_loading")
+    if tags & {"loaded_carry", "axial_loading", "mech_axial_heavy"}:
+        derived.add("axial_loading")
+    if tags & {"cod_high", "mech_change_of_direction"}:
+        derived.add("change_of_direction")
+
+    return risk_tags | derived
+
+
+def _extract_restriction_tags(item: dict) -> list[str]:
+    tags = {
+        str(tag).strip().lower().replace(" ", "_")
+        for tag in item.get("tags", [])
+        if str(tag).strip()
+    }
+    movement = str(item.get("movement", "")).strip().lower().replace(" ", "_")
+    if movement:
+        tags.add(movement)
+    return sorted(tags | _derive_mechanical_risk_tags(item))
+
+
+def _extract_mechanical_risk_tags(item: dict) -> list[str]:
+    return sorted(_derive_mechanical_risk_tags(item))
+
+
+def _restriction_patterns_for_key(restriction_key: str) -> list[str]:
+    base_key = _RESTRICTION_CANONICAL_KEYS.get(restriction_key)
+    patterns = list(RESTRICTION_PATTERN_HINTS.get(restriction_key, []))
+    if base_key:
+        canonical = CANONICAL_RESTRICTIONS.get(base_key, {})
+        patterns.extend(canonical.get("keywords", []))
+    return _dedupe_preserve_order([pattern for pattern in patterns if pattern])
+
+
+def _serialize_restrictions(restrictions: list[dict]) -> list[dict]:
+    serialized: list[dict] = []
+    for entry in restrictions or []:
+        restriction_key = entry.get("restriction", "")
+        blocked_patterns = _restriction_patterns_for_key(restriction_key)
+        row = {
+            "restriction": restriction_key,
+            "region": entry.get("region"),
+            "strength": entry.get("strength"),
+            "side": entry.get("side"),
+            "source_phrase": entry.get("original_phrase"),
+            "blocked_patterns": blocked_patterns,
+            "mechanical_equivalents": blocked_patterns[:6],
+        }
+        serialized.append({key: value for key, value in row.items() if value not in (None, "", [])})
+    return serialized
+
 def _derive_readiness_flags(
     *,
     fatigue: str,
@@ -91,44 +436,29 @@ def _derive_readiness_flags(
     return flags or ["baseline"]
 
 
-def _extract_restriction_tags(item: dict) -> list[str]:
-    tags = {
-        str(tag).strip().lower().replace(" ", "_")
-        for tag in item.get("tags", [])
-        if str(tag).strip()
-    }
-    movement = str(item.get("movement", "")).strip().lower().replace(" ", "_")
-    if movement:
-        tags.add(movement)
+PHASE_OBJECTIVES = {
+    "GPP": "build aerobic base and general force capacity",
+    "SPP": "increase fight-specific repeatability and power transfer",
+    "TAPER": "maintain sharpness and freshness",
+}
 
-    derived: set[str] = set()
-    if any(token in tags for token in {"rotation", "rotational", "transverse", "twist"}):
-        derived.add("loaded_rotation")
-    if any(token in tags for token in {"overhead", "press", "push_press", "jerk"}):
-        derived.add("heavy_overhead_pressing")
-    if any(token in tags for token in {"jump", "plyometric", "bounding", "landing", "reactive"}):
-        derived.add("high_impact")
-    if any(token in tags for token in {"squat", "lunge", "split_squat"}):
-        derived.add("deep_knee_flexion")
-    if any(token in tags for token in {"situp", "spinal_flexion", "flexion"}):
-        derived.add("spinal_flexion")
-    return sorted(tags | derived)
+PHASE_EMPHASIS = {
+    "GPP": ["aerobic repeatability", "general force", "trunk/neck robustness"],
+    "SPP": ["glycolytic repeatability", "rotational intent", "sport speed"],
+    "TAPER": ["alactic sharpness", "confidence", "low soreness"],
+}
 
+PHASE_DEPRIORITIZE = {
+    "GPP": ["fight-week intensity", "excessive reactive fatigue"],
+    "SPP": ["excessive eccentric damage", "non-specific conditioning volume"],
+    "TAPER": ["new drills", "high lactate exposure", "soreness-heavy loading"],
+}
 
-def _serialize_restrictions(restrictions: list[dict]) -> list[dict]:
-    serialized: list[dict] = []
-    for entry in restrictions or []:
-        restriction_key = entry.get("restriction", "")
-        row = {
-            "restriction": restriction_key,
-            "region": entry.get("region"),
-            "strength": entry.get("strength"),
-            "side": entry.get("side"),
-            "source_phrase": entry.get("original_phrase"),
-            "blocked_patterns": RESTRICTION_PATTERN_HINTS.get(restriction_key, []),
-        }
-        serialized.append({key: value for key, value in row.items() if value not in (None, "", [])})
-    return serialized
+CONDITIONING_ROLE_PURPOSES = {
+    "aerobic": "low-damage aerobic development",
+    "glycolytic": "fight-pace repeatability",
+    "alactic": "speed and neural sharpness",
+}
 
 
 def _build_athlete_model(
@@ -206,6 +536,7 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
         "source": "exercise_bank",
         "movement_patterns": _dedupe_preserve_order(movement_patterns),
         "restriction_tags": _extract_restriction_tags(exercise),
+        "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
         "prescription": exercise.get("prescription") or exercise.get("method") or "",
         "why": why or "balanced selection",
     }
@@ -218,6 +549,7 @@ def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
         "source": "conditioning_bank",
         "movement_patterns": _dedupe_preserve_order([system] + tags),
         "restriction_tags": _extract_restriction_tags(drill),
+        "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
         "prescription": " | ".join(
             part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
         ),
@@ -232,6 +564,7 @@ def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: s
         "source": source,
         "movement_patterns": [role],
         "restriction_tags": ["rehab", role],
+        "mechanical_risk_tags": ["rehab", role],
         "prescription": prescription,
         "why": why,
     }
@@ -533,6 +866,7 @@ def build_stage2_payload(
             "selection_rules": [
                 "Prefer selected items first, then alternates in listed order.",
                 "If a selected item is removed, replace only within the same slot when possible.",
+                "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
                 "Do not invent new items when a slot becomes thin after filtering.",
             ],
             "writing_rules": [

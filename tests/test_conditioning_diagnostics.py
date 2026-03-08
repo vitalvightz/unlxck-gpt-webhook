@@ -183,3 +183,99 @@ def test_stage2_payload_uses_slot_alternates_and_rehab_drills():
         "Band External Rotation",
         "Scap Push-Up",
     ]
+
+def test_stage2_payload_exposes_mechanical_restriction_hints():
+    training_context = TrainingContext(
+        fatigue="low",
+        training_frequency=4,
+        days_available=4,
+        training_days=["Mon", "Tue", "Thu", "Sat"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=[],
+        equipment=["barbell", "track"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        training_split={},
+        key_goals=["power"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 4, "SPP": 0, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=35,
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_len=6,
+        short_notice=False,
+        restrictions=[
+            {
+                "restriction": "heavy_overhead_pressing",
+                "region": "shoulder",
+                "strength": "avoid",
+                "original_phrase": "avoid heavy overhead pressing",
+            },
+            {
+                "restriction": "max_velocity",
+                "region": None,
+                "strength": "limit",
+                "original_phrase": "limit max velocity sprinting",
+            },
+        ],
+        phase_weeks={"GPP": 4, "SPP": 0, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={
+            "GPP": {
+                "exercises": [
+                    {
+                        "name": "Push Press",
+                        "movement": "push",
+                        "tags": ["overhead", "press_heavy", "dynamic_overhead"],
+                        "method": "4x3",
+                    }
+                ],
+                "why_log": [{"name": "Push Press", "explanation": "balanced selection", "reasons": {}}],
+                "candidate_reservoir": {"push": []},
+            },
+            "SPP": None,
+            "TAPER": None,
+        },
+        conditioning_blocks={
+            "GPP": {
+                "grouped_drills": {
+                    "alactic": [
+                        {
+                            "name": "Flying Sprint",
+                            "tags": ["speed", "max_velocity", "mech_max_velocity"],
+                            "timing": "6 sec",
+                            "rest": "90 sec",
+                            "load": "all-out",
+                        }
+                    ]
+                },
+                "why_log": [{"name": "Flying Sprint", "system": "alactic", "explanation": "balanced selection", "reasons": {}}],
+                "missing_systems": [],
+                "candidate_reservoir": {"alactic": []},
+            }
+        },
+        rehab_blocks={"GPP": "", "SPP": "", "TAPER": ""},
+    )
+
+    strength_selected = payload["candidate_pools"]["GPP"]["strength_slots"][0]["selected"]
+    conditioning_selected = payload["candidate_pools"]["GPP"]["conditioning_slots"][0]["selected"]
+    restrictions = {entry["restriction"]: entry for entry in payload["restrictions"]}
+
+    assert "heavy_overhead_pressing" in strength_selected["mechanical_risk_tags"]
+    assert "max_velocity" in conditioning_selected["mechanical_risk_tags"]
+    assert "high_impact_lower" in conditioning_selected["mechanical_risk_tags"]
+    assert "push press" in restrictions["heavy_overhead_pressing"]["blocked_patterns"]
+    assert "flying sprint" in restrictions["max_velocity"]["mechanical_equivalents"]
