@@ -530,9 +530,9 @@ def render_conditioning_block(
         "TAPER": "Reduce volume 40–60%; keep speed sharp; last 3–5 days very light.",
     }
     time_short = {
-        "GPP": "If time short: keep 2 aerobic rounds + 1 alactic pop.",
-        "SPP": "If time short: keep 2 fight-pace rounds (system priority).",
-        "TAPER": "If time short: keep 4–6 alactic bursts + shadowboxing rhythm.",
+        "GPP": "Keep 2 aerobic rounds + 1 alactic pop.",
+        "SPP": "Keep 2 fight-pace rounds (system priority).",
+        "TAPER": "Keep 4–6 alactic bursts + shadowboxing rhythm.",
     }
     fatigue_note = {
         "GPP": "If fatigue high: drop 1–2 rounds, keep intensity easy.",

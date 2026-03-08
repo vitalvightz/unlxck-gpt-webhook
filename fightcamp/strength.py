@@ -414,9 +414,9 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
         "TAPER": "Cut total volume 40–60%, keep intensity crisp; last 3–5 days very light.",
     }
     time_short_note = {
-        "GPP": "If time short: keep top 2 lifts + 1 trunk/neck drill.",
-        "SPP": "If time short: keep heavy lift + paired explosive + trunk.",
-        "TAPER": "If time short: keep 1 neural primer + 1 trunk/neck drill.",
+        "GPP": "Keep top 2 lifts + 1 trunk/neck drill.",
+        "SPP": "Keep heavy lift + paired explosive + trunk.",
+        "TAPER": "Keep 1 neural primer + 1 trunk/neck drill.",
     }
 
     fatigue_note = ""
