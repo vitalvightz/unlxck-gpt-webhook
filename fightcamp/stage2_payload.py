@@ -497,6 +497,45 @@ PHASE_SELECTION_GUARDRAILS = {
 }
 
 
+PLANNING_DECISION_HIERARCHY = [
+    {
+        "rank": 1,
+        "driver": "phase_survival_rules",
+        "scope": ["phase guardrails", "must-keep slots", "conditioning minimums", "drop order if thin"],
+        "reason": "Phase survival rules decide what must stay alive when the plan gets thin.",
+    },
+    {
+        "rank": 2,
+        "driver": "safety_and_readiness",
+        "scope": ["restrictions", "injuries", "fatigue", "weight cut", "short notice"],
+        "reason": "Safety and readiness can only tighten or reduce work, never get overruled by style preference.",
+    },
+    {
+        "rank": 3,
+        "driver": "sport_load_collision_rules",
+        "scope": ["highest collision sport load", "live work substitution", "collision pairings"],
+        "reason": "Primary sport load outranks extra S&C when the two collide.",
+    },
+    {
+        "rank": 4,
+        "driver": "main_limiter",
+        "scope": ["limiter profile", "weekly stress emphasis", "protect first", "cut first"],
+        "reason": "The main limiter organizes emphasis once phase survival and safety are protected.",
+    },
+    {
+        "rank": 5,
+        "driver": "goal_emphasis",
+        "scope": ["key goals", "phase objectives", "candidate pool bias"],
+        "reason": "Goals shape what gets pushed only after survival, safety, sport load, and limiter needs are respected.",
+    },
+    {
+        "rank": 6,
+        "driver": "preferences_and_style_bias",
+        "scope": ["training preference", "equipment preference", "flavor choices"],
+        "reason": "Preferences should only break ties after higher-priority planning rules agree.",
+    },
+]
+
 def _build_athlete_model(
     *,
     training_context: TrainingContext,
@@ -839,7 +878,131 @@ def _build_limiter_profile(athlete_model: dict, restrictions: list[dict]) -> dic
 
 
 
-def _build_weekly_stress_map(athlete_model: dict, phase_briefs: dict[str, dict], limiter_profile: dict) -> dict[str, dict]:
+_SPORT_LOAD_PROFILES = {
+    "boxing": {
+        "label": "boxing",
+        "highest_collision_load": "hard sparring and high-output pad or bag rounds",
+        "primary_live_loads": ["hard sparring", "technical sparring", "pad rounds", "bag rounds"],
+        "collision_rules": [
+            "Never pair hard sparring with hard glycolytic conditioning.",
+            "If boxing quality is flat, cut accessory strength or conditioning volume before technical work.",
+        ],
+        "cut_first_when_sport_load_spikes": "accessory strength volume and optional conditioning density",
+        "replace_missing_live_load": "If no sparring is available that week, add fight-pace pad or bag rounds before extra lifting.",
+        "quality_override": "If boxing quality is flat, preserve sharpness and drop fatigue work.",
+    },
+    "kickboxing_muay_thai": {
+        "label": "kickboxing / muay thai",
+        "highest_collision_load": "hard sparring, pad rounds, and clinch volume",
+        "primary_live_loads": ["hard sparring", "pad rounds", "clinch rounds", "bag rounds"],
+        "collision_rules": [
+            "Never pair hard sparring or high-output clinch work with hard glycolytic conditioning.",
+            "If pad sharpness or clinch quality falls, cut S&C accessories before adding more fatigue.",
+        ],
+        "cut_first_when_sport_load_spikes": "optional strength accessories and non-essential conditioning density",
+        "replace_missing_live_load": "If no sparring happens that week, add fight-pace pad or clinch rounds before extra lifting.",
+        "quality_override": "If striking sharpness or clinch quality drops, keep technical quality and remove extra fatigue first.",
+    },
+    "mma": {
+        "label": "mma",
+        "highest_collision_load": "hard MMA sparring plus live wrestling or wall-work rounds",
+        "primary_live_loads": ["hard MMA sparring", "live wrestling", "wall work", "grappling rounds"],
+        "collision_rules": [
+            "Never pair hard live wrestling or hard MMA sparring with hard glycolytic conditioning.",
+            "If live MMA output is flat, cut accessory strength or optional conditioning before fight-specific work.",
+        ],
+        "cut_first_when_sport_load_spikes": "accessory strength volume and redundant conditioning density",
+        "replace_missing_live_load": "If live rounds are missing that week, add fight-pace positional or cage-wall rounds before extra lifting.",
+        "quality_override": "Let live MMA quality override extra S&C when collisions appear.",
+    },
+    "wrestling": {
+        "label": "wrestling",
+        "highest_collision_load": "live goes, takedown exchanges, and high-output mat returns",
+        "primary_live_loads": ["live goes", "takedown entries", "mat returns", "hand fighting"],
+        "collision_rules": [
+            "Do not pair hard live goes with hard glycolytic conditioning.",
+            "If hand fighting or takedown speed falls, cut accessory work before adding more fatigue.",
+        ],
+        "cut_first_when_sport_load_spikes": "optional strength accessories and non-essential conditioning density",
+        "replace_missing_live_load": "If live goes are missing that week, add short positional goes or takedown chains before extra lifting.",
+        "quality_override": "Preserve takedown speed and mat quality before extra fatigue work.",
+    },
+    "bjj": {
+        "label": "bjj",
+        "highest_collision_load": "hard rolling, positional rounds, and grip-heavy live work",
+        "primary_live_loads": ["hard rolling", "positional rounds", "grip fighting", "scramble rounds"],
+        "collision_rules": [
+            "Do not pair hard rolling with hard glycolytic conditioning.",
+            "If positional quality or decision-making drops, cut accessory S&C before adding more fatigue.",
+        ],
+        "cut_first_when_sport_load_spikes": "optional strength volume and non-essential conditioning density",
+        "replace_missing_live_load": "If hard rolling is absent that week, add positional rounds or grip-focused circuits before extra lifting.",
+        "quality_override": "Preserve rolling quality and decision-making before extra fatigue work.",
+    },
+    "general_combat": {
+        "label": "general combat sport",
+        "highest_collision_load": "hard live rounds and sparring",
+        "primary_live_loads": ["hard sparring", "live rounds", "fight-pace rounds"],
+        "collision_rules": [
+            "Do not pair the hardest live rounds with hard glycolytic conditioning.",
+            "If sport quality drops, cut accessory work before technical work.",
+        ],
+        "cut_first_when_sport_load_spikes": "optional accessories and redundant conditioning density",
+        "replace_missing_live_load": "If live rounds are absent that week, add fight-pace technical rounds before extra lifting.",
+        "quality_override": "Let sport quality override extra S&C when collisions appear.",
+    },
+}
+
+
+def _join_rule_parts(*parts: str) -> str:
+    cleaned = _dedupe_preserve_order([str(part).strip() for part in parts if str(part).strip()])
+    return " ".join(cleaned)
+
+
+
+def _primary_sport_load_key(athlete_model: dict) -> str:
+    sport_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("sport")))
+    style_tokens = _normalize_limiter_tokens(
+        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
+    )
+    combined = sport_tokens | style_tokens
+
+    if combined & {"bjj", "jiu_jitsu", "jits", "grappling"}:
+        return "bjj"
+    if combined & {"wrestler", "wrestling", "freestyle", "folkstyle", "greco"}:
+        return "wrestling"
+    if combined & {"muay_thai", "kickboxer", "kickboxing", "karate"}:
+        return "kickboxing_muay_thai"
+    if combined & {"boxing", "boxer"}:
+        return "boxing"
+    if combined & {"mma", "mixed_martial_arts", "cage_wrestling", "sambo", "judo"}:
+        return "mma"
+    return "general_combat"
+
+
+
+def _build_sport_load_profile(athlete_model: dict) -> dict:
+    key = _primary_sport_load_key(athlete_model)
+    template = _SPORT_LOAD_PROFILES.get(key, _SPORT_LOAD_PROFILES["general_combat"])
+    return {
+        "key": key,
+        "label": template["label"],
+        "highest_collision_load": template["highest_collision_load"],
+        "primary_live_loads": list(template["primary_live_loads"]),
+        "collision_rules": list(template["collision_rules"]),
+        "cut_first_when_sport_load_spikes": template["cut_first_when_sport_load_spikes"],
+        "replace_missing_live_load": template["replace_missing_live_load"],
+        "quality_override": template["quality_override"],
+    }
+
+
+
+def _build_weekly_stress_map(
+    athlete_model: dict,
+    phase_briefs: dict[str, dict],
+    limiter_profile: dict,
+    sport_load_profile: dict,
+) -> dict[str, dict]:
     stress_map: dict[str, dict] = {}
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     short_notice = bool(athlete_model.get("short_notice"))
@@ -867,6 +1030,10 @@ def _build_weekly_stress_map(athlete_model: dict, phase_briefs: dict[str, dict],
             cut_first = f"Because this is short notice, cut {limiter_profile['cut_first']} before touching phase-critical sharpness or boxing quality."
         if weight_cut_risk and phase == "TAPER":
             cut_first = f"{cut_first}; during the cut, remove glycolytic density before alactic sharpness or rehab support."
+        cut_first = _join_rule_parts(
+            cut_first,
+            f"When sport load spikes, cut {sport_load_profile['cut_first_when_sport_load_spikes']} first.",
+        )
 
         stress_map[phase] = {
             "organising_limiter": limiter_profile["label"],
@@ -878,7 +1045,13 @@ def _build_weekly_stress_map(athlete_model: dict, phase_briefs: dict[str, dict],
             "protect_first": protect_first,
             "cut_first_when_collisions_rise": cut_first,
             "sparring_collision_rule": limiter_profile["sparring_collision_rule"],
-            "sport_load_interaction": limiter_profile["boxing_load_rule"],
+            "sport_load_interaction": _join_rule_parts(
+                limiter_profile["boxing_load_rule"],
+                sport_load_profile["quality_override"],
+            ),
+            "highest_collision_sport_load": sport_load_profile["highest_collision_load"],
+            "sport_load_collision_rules": list(sport_load_profile["collision_rules"]),
+            "replace_missing_live_load": sport_load_profile["replace_missing_live_load"],
         }
     return stress_map
 
@@ -961,7 +1134,13 @@ def build_planning_brief(
     rewrite_guidance: dict,
 ) -> dict:
     limiter_profile = _build_limiter_profile(athlete_model, restrictions)
-    weekly_stress_map = _build_weekly_stress_map(athlete_model, phase_briefs, limiter_profile)
+    sport_load_profile = _build_sport_load_profile(athlete_model)
+    weekly_stress_map = _build_weekly_stress_map(
+        athlete_model,
+        phase_briefs,
+        limiter_profile,
+        sport_load_profile,
+    )
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
@@ -977,6 +1156,8 @@ def build_planning_brief(
         "archetype_summary": _derive_athlete_archetype(athlete_model),
         "main_limiter": _derive_main_limiter(athlete_model),
         "limiter_profile": limiter_profile,
+        "sport_load_profile": sport_load_profile,
+        "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
         "main_risks": _derive_main_risks(athlete_model, restrictions),
         "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools),
@@ -1388,3 +1569,5 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
+
+
