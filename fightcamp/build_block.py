@@ -17,6 +17,7 @@ SUPABASE_PUBLISHABLE_KEY. When credentials are provided, the
 from __future__ import annotations
 
 from dataclasses import dataclass
+import html
 import importlib
 import logging
 from typing import Optional
@@ -43,21 +44,21 @@ pdfkit = _load_optional_module("pdfkit")
 
 # Map of emoji and symbols that should be stripped from output
 _CHAR_MAP = {
-    ord("…"): "...",
-    ord("•"): "-",
-    ord("🧠"): "",
-    ord("📌"): "",
-    ord("🎯"): "",
-    ord("⚙"): "",
-    ord("🔥"): "",
-    ord("🧩"): "",
-    ord("🗣"): "",
-    ord("🔗"): "",
-    ord("🔖"): "",
-    ord("🔷"): "",
-    ord("⚠"): "",
-    ord("🍽"): "",
-    ord("️"): "",
+    ord("\u2026"): "...",
+    ord("\u2022"): "-",
+    ord("\U0001F9E0"): "",
+    ord("\U0001F4CC"): "",
+    ord("\U0001F3AF"): "",
+    ord("\u2699"): "",
+    ord("\U0001F525"): "",
+    ord("\U0001F9E9"): "",
+    ord("\U0001F5E3"): "",
+    ord("\U0001F517"): "",
+    ord("\U0001F516"): "",
+    ord("\U0001F537"): "",
+    ord("\u26A0"): "",
+    ord("\U0001F37D"): "",
+    ord("\uFE0F"): "",
 }
 
 _KNOWN_HEADINGS = [
@@ -110,12 +111,16 @@ def _clean_text(text: str) -> str:
     return "".join(result_chars)
 
 
+def _escape_html_text(text: str) -> str:
+    return html.escape(text, quote=False)
+
+
 def _upgrade_symbols(text: str) -> str:
     """Improve typography for arrows, dashes and apostrophes."""
     return (
-        text.replace("->", "→")
-        .replace("--", "–")
-        .replace("'", "’")
+        text.replace("->", "\u2192")
+        .replace("--", "\u2013")
+        .replace("'", "\u2019")
     )
 
 
@@ -169,10 +174,10 @@ def _md_to_html(text: str) -> str:
     )
     system_header_pattern = re.compile(r"System:\s*\w+", re.IGNORECASE)
     red_flags_none_pattern = re.compile(
-        r"^(?:⚠️\s*)?Red Flags:\s*None\s*$", re.IGNORECASE
+        r"^(?:\u26A0\uFE0F\s*)?Red Flags:\s*None\s*$", re.IGNORECASE
     )
     code_only_pattern = re.compile(
-        r"^(?:[-•]\s*)?(?:\*\*)?(tags?|equipment)(?:\*\*)?\s*:\s*"
+        r"^(?:[-\u2022]\s*)?(?:\*\*)?(tags?|equipment)(?:\*\*)?\s*:\s*"
         r"[\[\(]?[a-z0-9_ ,/+.-]+[\]\)]?\s*$",
         re.IGNORECASE,
     )
@@ -188,8 +193,8 @@ def _md_to_html(text: str) -> str:
         if system_header_pattern.search(stripped):
             in_system_section = True
             red_flags_none_written = False
-        if stripped.startswith("•"):
-            line = re.sub(r"^\s*•", "-", line)
+        if stripped.startswith("\u2022"):
+            line = re.sub(r"^\s*\u2022", "-", line)
         if red_flags_none_pattern.match(stripped):
             if in_system_section and not red_flags_none_written:
                 cleaned_lines.append(
@@ -203,10 +208,11 @@ def _md_to_html(text: str) -> str:
             cleaned_lines.append("")
         cleaned_lines.append(line)
     cleaned_text = _upgrade_symbols(_clean_text("\n".join(cleaned_lines)))
+    safe_text = _escape_html_text(cleaned_text)
     if markdown2:
-        return markdown2.markdown(cleaned_text)
+        return markdown2.markdown(safe_text)
     # simple HTML if markdown2 unavailable
-    lines = [l.rstrip() for l in cleaned_text.splitlines() if l.strip()]
+    lines = [l.rstrip() for l in safe_text.splitlines() if l.strip()]
     html_parts = []
     in_list = False
     for line in lines:
@@ -249,12 +255,16 @@ class PhaseBlock:
 
 def _section_title(text: str) -> str:
     """Return a section header."""
-    return f'<h3>{text}</h3>'
+    return f'<h3>{_escape_html_text(text)}</h3>'
 
 
 def _subheading(text: str) -> str:
     """Return a subsection header."""
-    return f'<h3>{text}</h3>'
+    return f'<h3>{_escape_html_text(text)}</h3>'
+
+
+def _render_inline_html_text(text: str) -> str:
+    return _escape_html_text(_upgrade_symbols(_clean_text(text)))
 
 
 def build_html_document(
@@ -305,14 +315,14 @@ def build_html_document(
 
     title = "FIGHT CAMP PLAN"
     if full_name:
-        title += f" – {_clean_text(full_name)}"
+        title += f" - {_render_inline_html_text(full_name)}"
     lines.append(f"<h1>{title}</h1>")
     header_line = (
-        f'<p><b>Sport:</b> {_clean_text(sport)} | <b>Phase Split:</b> {phase_split} | '
-        f'<b>Status:</b> {_clean_text(status)}'
+        f'<p><b>Sport:</b> {_render_inline_html_text(sport)} | <b>Phase Split:</b> {_render_inline_html_text(phase_split)} | '
+        f'<b>Status:</b> {_render_inline_html_text(status)}'
     )
     if record:
-        header_line += f' | <b>Record:</b> {_clean_text(record)}'
+        header_line += f' | <b>Record:</b> {_render_inline_html_text(record)}'
     if short_notice:
         header_line += " | <b>SHORT-NOTICE CAMP</b>"
     header_line += '</p><hr>'
@@ -321,7 +331,7 @@ def build_html_document(
     def phase_html(block: PhaseBlock, color: str) -> str:
         parts = [
             f'<h2 style="border-left: 4px solid {color}; padding-left: 10px;">'
-            f'{_upgrade_symbols(_clean_text(block.name))}</h2>',
+            f'{_render_inline_html_text(block.name)}</h2>',
             _subheading("Mindset Focus"),
             _md_to_html(block.mindset),
             _subheading("Strength & Power"),
@@ -482,6 +492,7 @@ def upload_to_supabase(pdf_path: str, bucket: str = "fight-plans") -> str:
         raise
 
     return f"{url}/storage/v1/object/public/{bucket}/{filename}"
+
 
 
 

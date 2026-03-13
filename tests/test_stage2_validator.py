@@ -197,3 +197,41 @@ def test_validate_stage2_output_passes_clean_plan_with_structural_strength_secti
     assert report["is_valid"] is True
     assert report["restricted_hits"] == []
     assert report["missing_required_elements"] == []
+
+
+def test_validate_stage2_output_does_not_count_post_phase_sections_for_last_phase():
+    planning_brief = {
+        "restrictions": [],
+        "phase_strategy": {
+            "TAPER": {
+                "must_keep": ["rehab"],
+            }
+        },
+        "candidate_pools": {
+            "TAPER": {
+                "strength_slots": [],
+                "conditioning_slots": [],
+                "rehab_slots": [
+                    {
+                        "role": "rehab_shoulder_strain",
+                        "selected": {"name": "Band External Rotation"},
+                        "alternates": [],
+                    }
+                ],
+            }
+        },
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 1: TAPER
+        - Shadowboxing - 3 rounds
+        ## Coach Notes
+        - Band External Rotation worked well earlier in camp.
+        """,
+    )
+
+    missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
+    assert ("TAPER", "rehab") in missing_requirements
+

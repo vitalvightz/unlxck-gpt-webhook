@@ -8,6 +8,7 @@ from .restriction_filtering import evaluate_restriction_impact
 
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]+|\d+[.)]|#+)\s*")
 _PHASE_HEADER = re.compile(r"\b(?:GPP|SPP|TAPER)\b", re.IGNORECASE)
+_MARKDOWN_HEADER = re.compile(r"^\s*(#{1,6})\s*(.+?)\s*$")
 _NEGATION_MARKERS = (
     "avoid",
     "do not",
@@ -27,6 +28,18 @@ _SECTION_HINTS = {
     "aerobic": ("aerobic", "zone 2", "tempo", "roadwork"),
     "glycolytic": ("glycolytic", "fight pace", "fight-pace", "conditioning"),
     "alactic": ("alactic", "speed", "sharpness", "primer"),
+}
+_NON_PHASE_TOP_LEVEL_SECTIONS = {
+    "coach notes",
+    "selection rationale",
+    "nutrition",
+    "recovery",
+    "rehab protocols",
+    "mindset overview",
+    "sparring & conditioning adjustments",
+    "sparring & conditioning adjustments table",
+    "nutrition adjustments for unknown sparring load",
+    "athlete profile",
 }
 
 
@@ -77,9 +90,18 @@ def _phase_sections(plan_text: str) -> dict[str, list[str]]:
         cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
         if not cleaned:
             continue
-        phase_match = _PHASE_HEADER.search(cleaned)
+        header_match = _MARKDOWN_HEADER.match(raw_line)
+        header_text = header_match.group(2).strip() if header_match else cleaned
+        phase_match = _PHASE_HEADER.search(header_text)
         if phase_match:
             current_phase = phase_match.group(0).upper()
+        elif current_phase:
+            if header_match and len(header_match.group(1)) <= 2:
+                current_phase = ""
+                continue
+            if cleaned.lower() in _NON_PHASE_TOP_LEVEL_SECTIONS:
+                current_phase = ""
+                continue
         if current_phase:
             sections[current_phase].append(cleaned)
     return dict(sections)
@@ -285,3 +307,4 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "missing_phase_sections": missing_phase_sections,
         "restricted_hits": restricted_hits,
     }
+

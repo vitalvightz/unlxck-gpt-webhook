@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import logging
 import re
@@ -48,6 +48,31 @@ def _prime_plan_banks() -> None:
     prime_strength_banks()
     prime_conditioning_banks()
     prime_rehab_bank()
+
+
+_INPUT_ERROR_LABELS = {
+    "missing_fighting_style_technical": "technical fighting style",
+    "missing_next_fight_date": "fight date",
+    "invalid_next_fight_date": "valid fight date",
+    "missing_training_availability": "training availability",
+    "invalid_training_frequency": "weekly training frequency",
+}
+
+
+def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> dict:
+    return {
+        "status": "invalid_input",
+        "ok": False,
+        "error": error,
+        "missing_fields": list(missing_fields or []),
+        "pdf_url": None,
+        "why_log": {},
+        "plan_text": "",
+        "coach_notes": "",
+        "stage2_payload": None,
+        "planning_brief": None,
+        "stage2_handoff_text": "",
+    }
 
 
 class _LazyListProxy:
@@ -199,17 +224,19 @@ async def generate_plan(data: dict):
     except ValueError as exc:
         _record_timing("parse_input", timer_start)
         logger.warning("invalid payload: %s", exc)
-        return {
-            "status": "invalid_input",
-            "ok": False,
-            "error": str(exc),
-            "plan_text": "",
-            "coach_notes": "",
-            "stage2_payload": None,
-            "planning_brief": None,
-            "stage2_handoff_text": "",
-        }
+        return _invalid_result(str(exc))
     _record_timing("parse_input", timer_start)
+    generation_issues = plan_input.generation_issues()
+    if generation_issues:
+        missing_summary = ", ".join(
+            _INPUT_ERROR_LABELS.get(issue, issue.replace("_", " "))
+            for issue in generation_issues
+        )
+        logger.warning("invalid planning input: %s", generation_issues)
+        return _invalid_result(
+            f"missing required planning inputs: {missing_summary}",
+            missing_fields=generation_issues,
+        )
     _prime_plan_banks()
     random_seed = data.get("random_seed")
 
@@ -1110,6 +1137,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 

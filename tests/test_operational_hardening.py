@@ -30,6 +30,27 @@ def test_html_to_pdf_logs_when_pdfkit_unavailable(monkeypatch, caplog):
     assert "stage=pdf_export" in caplog.text
 
 
+def test_md_to_html_escapes_raw_html():
+    rendered = build_block._md_to_html("Hello <script>alert(1)</script>")
+
+    assert "<script>" not in rendered
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in rendered
+
+
+def test_build_html_document_escapes_inline_user_fields():
+    rendered = build_block.build_html_document(
+        full_name="<img src=x onerror=alert(1)>",
+        sport="boxing<script>",
+        phase_split="2 / 2 / 1",
+        status="active",
+    )
+
+    assert "<img" not in rendered
+    assert "<script>" not in rendered
+    assert "&lt;img src=x onerror=alert(1)&gt;" in rendered
+    assert "boxing&lt;script&gt;" in rendered
+
+
 def test_resolve_supabase_url_requires_explicit_override(monkeypatch, caplog):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("ALLOW_DEFAULT_SUPABASE_URL", raising=False)
@@ -84,3 +105,4 @@ def test_plan_banks_start_lazy_and_prime_on_demand():
     assert strength_mod._exercise_bank_cache is not None
     assert strength_mod._style_exercises_cache is not None
     assert rehab_mod._REHAB_BANK_CACHE is not None
+
