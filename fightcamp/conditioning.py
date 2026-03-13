@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import logging
@@ -127,10 +127,10 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
     else:
         normalized = SYSTEM_ALIASES.get(system, system)
 
-    if any(sep in system for sep in ("+", "→", "/", "&")) or "->" in system:
+    if any(sep in system for sep in ("+", "?", "/", "&")) or "->" in system:
         parts = [
             part.strip()
-            for part in re.split(r"\s*(?:\+|/|→|->|&)\s*", system)
+            for part in re.split(r"\s*(?:\+|/|?|->|&)\s*", system)
             if part.strip()
         ]
         mapped_parts = [SYSTEM_ALIASES.get(part, part) for part in parts]
@@ -517,7 +517,7 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
         f"  {bullet} Rest: {drill['rest']}{br}",
         f"  {bullet} Timing: {drill['timing']}{br}",
         f"  {bullet} Purpose: {drill['purpose']}{br}",
-        f"  ⚠️ Red Flags: {drill['red_flags']}",
+        f"  • Red Flags: {drill['red_flags']}",
     ]
     return "".join(parts) + "\n"
 
@@ -648,7 +648,7 @@ def render_conditioning_block(
             if not drills:
                 continue
             output_lines.append(
-                f"\n📌 **System: {system.upper()}** (scaled by format emphasis)"
+                f"\n**System: {system.upper()}** (scaled by format emphasis)"
             )
             for d in drills:
                 name = d.get("name", "Unnamed Drill")
@@ -1858,6 +1858,7 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
+
 
 
 

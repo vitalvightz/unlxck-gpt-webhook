@@ -204,7 +204,7 @@ def build_coach_review_notes(entries: list[dict], substitutions: list[dict]) -> 
         for sub in substitutions:
             if sub.get("new"):
                 lines.append(
-                    f"- {sub['phase']} {sub['module']}: {sub['old']} → {sub['new']} ({sub['label']})"
+                    f"- {sub['phase']} {sub['module']}: {sub['old']} -> {sub['new']} ({sub['label']})"
                 )
             else:
                 lines.append(
@@ -407,6 +407,7 @@ def run_coach_review(
             phase=phase_key,
             phase_color=cond.get("phase_color", "#000"),
             missing_systems=cond.get("missing_systems", []),
+            num_sessions=cond.get("num_sessions", 1),
             diagnostic_context=cond.get("diagnostic_context", {}),
             sport=cond.get("sport"),
         )
@@ -414,3 +415,4 @@ def run_coach_review(
 
     coach_notes = build_coach_review_notes(entries, substitutions)
     return coach_notes, updated_strength, updated_conditioning, substitutions
+

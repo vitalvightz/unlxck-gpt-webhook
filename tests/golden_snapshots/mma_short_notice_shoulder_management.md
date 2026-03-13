@@ -36,11 +36,11 @@ Coach option: If explosiveness fades, add 6–8 × 8–10s full-rest bursts (bik
 **If Time Short:** Keep 2 fight-pace rounds (system priority).
 **If Fatigue High:** If fatigue high: drop volume, keep rest longer.
 
-📌 **System: AEROBIC** (scaled by format emphasis)
-- **Drill: Lateral Shuffle + Strike Drills**  • Load: low<br>  • Rest: —<br>  • Timing: 3 x 5min rounds<br>  • Purpose: Emphasize angles, not explosiveness (light)<br>  ⚠️ Red Flags: None
+**System: AEROBIC** (scaled by format emphasis)
+- **Drill: Lateral Shuffle + Strike Drills**  • Load: low<br>  • Rest: —<br>  • Timing: 3 x 5min rounds<br>  • Purpose: Emphasize angles, not explosiveness (light)<br>  • Red Flags: None
 
-📌 **System: GLYCOLYTIC** (scaled by format emphasis)
-- **Drill: Barbell Smash & Dash**  • Load: high (Use bumper plates)<br>  • Rest: —<br>  • Timing: 5 cleans + 20m sprint, 4 rounds<br>  • Purpose: Cleans mimic explosive uppercuts, sprints emulate ring-cutting. (75-80% 1RM)<br>  ⚠️ Red Flags: None
+**System: GLYCOLYTIC** (scaled by format emphasis)
+- **Drill: Barbell Smash & Dash**  • Load: high (Use bumper plates)<br>  • Rest: —<br>  • Timing: 5 cleans + 20m sprint, 4 rounds<br>  • Purpose: Cleans mimic explosive uppercuts, sprints emulate ring-cutting. (75-80% 1RM)<br>  • Red Flags: None
 
 #### Conditioning Block SPP — Glycolytic Power + Fight-Pace Density
 **Intent:** Match fight demands with intervals and skill-relevant density.
@@ -49,10 +49,10 @@ Coach option: If explosiveness fades, add 6–8 × 8–10s full-rest bursts (bik
 **If Time Short:** Keep 2 fight-pace rounds (system priority).
 **If Fatigue High:** If fatigue high: drop volume, keep rest longer.
 
-📌 **System: GLYCOLYTIC** (scaled by format emphasis)
-- **Drill: Ring-Cut Sprint (bands, dumbbells)**  • Load: max (Use 15-25lb DBs for push presses)<br>  • Rest: —<br>  • Timing: 3min work, 1min rest x 3 rounds<br>  • Purpose: Develops ring-cutting footwork and explosive entries. (90% sprint effort)<br>  ⚠️ Red Flags: None
+**System: GLYCOLYTIC** (scaled by format emphasis)
+- **Drill: Ring-Cut Sprint (bands, dumbbells)**  • Load: max (Use 15-25lb DBs for push presses)<br>  • Rest: —<br>  • Timing: 3min work, 1min rest x 3 rounds<br>  • Purpose: Develops ring-cutting footwork and explosive entries. (90% sprint effort)<br>  • Red Flags: None
 
-- **Drill: Chain Gang (bands)**  • Load: high (Monster bands only)<br>  • Rest: —<br>  • Timing: 30s band-resisted forward steps → 10 sprawls, 6 rounds<br>  • Purpose: Bands anchored to hips for forward drive. (85% effort)<br>  ⚠️ Red Flags: None
+- **Drill: Chain Gang (bands)**  • Load: high (Monster bands only)<br>  • Rest: —<br>  • Timing: 30s band-resisted forward steps → 10 sprawls, 6 rounds<br>  • Purpose: Bands anchored to hips for forward drive. (85% effort)<br>  • Red Flags: None
 
 ### Injury Guardrails
 
@@ -249,7 +249,7 @@ Primary Block(s): Gas Tank, Fear Of Takedowns
 - Lateral Shuffle + Strike Drills: 1 goal match, 1 phase tag, system emphasis
 
 # Coach Notes
-Novelty Summary: 12 new strength moves, 4 new conditioning drills.
+
 
 # Planning Brief Summary
 {

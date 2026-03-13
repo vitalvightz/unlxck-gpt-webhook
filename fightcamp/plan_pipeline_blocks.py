@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import logging
 from time import perf_counter
@@ -23,7 +23,7 @@ from .rehab_protocols import (
     generate_support_notes,
 )
 from .strength import generate_strength_block
-from .training_context import TrainingContext
+from .training_context import TrainingContext, allocate_sessions
 
 def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
     phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
@@ -97,11 +97,28 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             {
                 **context.training_context.to_flags(),
                 "phase": phase,
+                "sport": context.mapped_format,
                 "random_seed": context.random_seed,
+                "time_to_fight_days": context.plan_input.days_until_fight,
+                "weeks_out": context.plan_input.weeks_out,
                 "restrictions": context.plan_input.restrictions,
                 "ignore_restrictions": context.selection_ignore_restrictions,
             }
         )
+        render_metadata = {
+            "num_sessions": allocate_sessions(context.training_context.training_frequency, phase).get("conditioning", 1),
+            "diagnostic_context": {
+                "phase": phase,
+                "sport": context.mapped_format,
+                "time_to_fight_days": context.plan_input.days_until_fight,
+                "days_until_fight": context.plan_input.days_until_fight,
+                "weeks_out": context.plan_input.weeks_out,
+                "fatigue_level": context.training_context.fatigue,
+                "injuries": context.training_context.injuries,
+                "fight_format": context.training_context.fight_format,
+            },
+            "sport": context.mapped_format,
+        }
         conditioning_reason_log[phase] = reasons
         conditioning_blocks[phase] = {
             "block": block_text,
@@ -111,6 +128,9 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             "missing_systems": missing_systems,
             "candidate_reservoir": candidate_reservoir,
             "phase_color": PHASE_COLORS[phase],
+            "num_sessions": render_metadata.get("num_sessions", 1),
+            "diagnostic_context": render_metadata.get("diagnostic_context", {}),
+            "sport": render_metadata.get("sport"),
         }
 
     return conditioning_blocks, conditioning_reason_log
@@ -118,6 +138,22 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
 
 def _first_active_phase(phase_weeks: dict) -> str:
     return next((phase for phase in PHASES if phase_weeks.get(phase, 0) > 0 or phase_weeks.get("days", {}).get(phase, 0) >= 1), "GPP")
+
+
+def _build_phase_support_block(context: PlanRuntimeContext, builder) -> str:
+    active_phases = [phase for phase in PHASES if context.phase_active(phase)]
+    sections: list[str] = []
+
+    for phase in active_phases:
+        block = builder(phase).strip()
+        if not block:
+            continue
+        if len(active_phases) == 1:
+            sections.append(block)
+        else:
+            sections.extend([f"### {phase}", block])
+
+    return "\n\n".join(section for section in sections if section)
 
 
 def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
@@ -151,8 +187,14 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
     }
     has_injuries = bool(context.injuries_only_text or context.plan_input.restrictions)
     current_phase = _first_active_phase(context.phase_weeks)
-    recovery_block = generate_recovery_block({**context.training_context.to_flags(), "phase": current_phase})
-    nutrition_block = generate_nutrition_block(flags={**context.training_context.to_flags(), "phase": current_phase})
+    recovery_block = _build_phase_support_block(
+        context,
+        lambda phase: generate_recovery_block({**context.training_context.to_flags(), "phase": phase}),
+    )
+    nutrition_block = _build_phase_support_block(
+        context,
+        lambda phase: generate_nutrition_block(flags={**context.training_context.to_flags(), "phase": phase}),
+    )
     support_notes = generate_support_notes(context.injuries_only_text) if has_injuries else ""
 
     if context.apply_muay_thai_filters:
@@ -290,4 +332,5 @@ def generate_plan_blocks(
         coach_review_notes=coach_review_notes,
         current_phase=current_phase,
     )
+
 

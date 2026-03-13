@@ -30,16 +30,16 @@
 **If Time Short:** Keep 2 aerobic rounds + 1 alactic pop.
 **If Fatigue High:** If fatigue high: drop 1–2 rounds, keep intensity easy.
 
-📌 **System: AEROBIC** (scaled by format emphasis)
-- **Drill: Water Jug Carries (No Sled)**  • Load: —<br>  • Rest: —<br>  • Timing: 5x60yds<br>  • Purpose: SUBSTITUTE: 5-gallon jugs @ 25-40lbs. GRIP: Switch hands every 20yds<br>  ⚠️ Red Flags: None
+**System: AEROBIC** (scaled by format emphasis)
+- **Drill: Water Jug Carries (No Sled)**  • Load: —<br>  • Rest: —<br>  • Timing: 5x60yds<br>  • Purpose: SUBSTITUTE: 5-gallon jugs @ 25-40lbs. GRIP: Switch hands every 20yds<br>  • Red Flags: None
 
-- **Drill: Pool Treading Conditioning**  • Load: moderate<br>  • Rest: —<br>  • Timing: 10min continuous treading<br>  • Purpose: Anti-gravity core work; very joint friendly<br>  ⚠️ Red Flags: None
+- **Drill: Pool Treading Conditioning**  • Load: moderate<br>  • Rest: —<br>  • Timing: 10min continuous treading<br>  • Purpose: Anti-gravity core work; very joint friendly<br>  • Red Flags: None
 
-📌 **System: GLYCOLYTIC** (scaled by format emphasis)
-- **Drill: Med Ball Slams (Glycolytic) (medicine_ball)**  • Load: moderate<br>  • Rest: —<br>  • Timing: 5x20s on/1:40 off<br>  • Purpose: 6-10kg. Full extension on release (RPE 7-8)<br>  ⚠️ Red Flags: None
+**System: GLYCOLYTIC** (scaled by format emphasis)
+- **Drill: Med Ball Slams (Glycolytic) (medicine_ball)**  • Load: moderate<br>  • Rest: —<br>  • Timing: 5x20s on/1:40 off<br>  • Purpose: 6-10kg. Full extension on release (RPE 7-8)<br>  • Red Flags: None
 
-📌 **System: ALACTIC** (scaled by format emphasis)
-- **Drill: Explosive Medicine Ball Throws (medicine_ball)**  • Load: Maximal power<br>  • Rest: —<br>  • Timing: 5–8 sets × 3–5 throws<br>  • Purpose: Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days.<br>  ⚠️ Red Flags: None
+**System: ALACTIC** (scaled by format emphasis)
+- **Drill: Explosive Medicine Ball Throws (medicine_ball)**  • Load: Maximal power<br>  • Rest: —<br>  • Timing: 5–8 sets × 3–5 throws<br>  • Purpose: Overhead slams/chest passes with full recovery (90–120s). Develops punching/entries explosion. Pair with upper-body strength days.<br>  • Red Flags: None
 
 ## PHASE 2: SPECIFIC PREPARATION PHASE (SPP) - 2 WEEKS (14 DAYS)
 
@@ -68,14 +68,14 @@
 **If Time Short:** Keep 2 fight-pace rounds (system priority).
 **If Fatigue High:** If fatigue high: drop volume, keep rest longer.
 
-📌 **System: AEROBIC** (scaled by format emphasis)
-- **Drill: Lateral Shuffle + Strike Drills**  • Load: low<br>  • Rest: —<br>  • Timing: 3 x 5min rounds<br>  • Purpose: Emphasize angles, not explosiveness (light)<br>  ⚠️ Red Flags: None
+**System: AEROBIC** (scaled by format emphasis)
+- **Drill: Lateral Shuffle + Strike Drills**  • Load: low<br>  • Rest: —<br>  • Timing: 3 x 5min rounds<br>  • Purpose: Emphasize angles, not explosiveness (light)<br>  • Red Flags: None
 
-📌 **System: GLYCOLYTIC** (scaled by format emphasis)
-- **Drill: Roll Under Hell (medicine_ball)**  • Load: high (10-15lb med ball)<br>  • Rest: —<br>  • Timing: 20 roll-under uppercuts, 10 body shots x 5 rounds<br>  • Purpose: Simulate rolling under hooks to counter (85% power)<br>  ⚠️ Red Flags: None
+**System: GLYCOLYTIC** (scaled by format emphasis)
+- **Drill: Roll Under Hell (medicine_ball)**  • Load: high (10-15lb med ball)<br>  • Rest: —<br>  • Timing: 20 roll-under uppercuts, 10 body shots x 5 rounds<br>  • Purpose: Simulate rolling under hooks to counter (85% power)<br>  • Red Flags: None
 
-📌 **System: ALACTIC** (scaled by format emphasis)
-- **Drill: Explosive Boxing Burst Intervals**  • Load: RPE 8–9, keep quality high and stop before speed drop-off<br>  • Rest: 75-120 sec complete rest between reps<br>  • Timing: 6–8 x 6–10 sec fast punch bursts<br>  • Purpose: Minimal-dose ATP-PCr maintenance for striking speed and neural sharpness.<br>  ⚠️ Red Flags: Terminate set if punch speed/position quality drops.
+**System: ALACTIC** (scaled by format emphasis)
+- **Drill: Explosive Boxing Burst Intervals**  • Load: RPE 8–9, keep quality high and stop before speed drop-off<br>  • Rest: 75-120 sec complete rest between reps<br>  • Timing: 6–8 x 6–10 sec fast punch bursts<br>  • Purpose: Minimal-dose ATP-PCr maintenance for striking speed and neural sharpness.<br>  • Red Flags: Terminate set if punch speed/position quality drops.
 
 #### Conditioning Block SPP — Glycolytic Power + Fight-Pace Density
 **Intent:** Match fight demands with intervals and skill-relevant density.
@@ -84,10 +84,10 @@
 **If Time Short:** Keep 2 fight-pace rounds (system priority).
 **If Fatigue High:** If fatigue high: drop volume, keep rest longer.
 
-📌 **System: GLYCOLYTIC** (scaled by format emphasis)
-- **Drill: Philly Shell Torture (bands, dumbbells)**  • Load: high (5lb DBs in lead hand)<br>  • Rest: —<br>  • Timing: 1min band-resisted shoulder rolls, 30s counters x 6<br>  • Purpose: Maintain defensive posture while countering (80% effort)<br>  ⚠️ Red Flags: None
+**System: GLYCOLYTIC** (scaled by format emphasis)
+- **Drill: Philly Shell Torture (bands, dumbbells)**  • Load: high (5lb DBs in lead hand)<br>  • Rest: —<br>  • Timing: 1min band-resisted shoulder rolls, 30s counters x 6<br>  • Purpose: Maintain defensive posture while countering (80% effort)<br>  • Red Flags: None
 
-- **Drill: Medicine Ball Pass Intervals (medicine_ball)**  • Load: high<br>  • Rest: —<br>  • Timing: 6x30s hard passes, 30s rest<br>  • Purpose: Rotational upper body work without impact<br>  ⚠️ Red Flags: None
+- **Drill: Medicine Ball Pass Intervals (medicine_ball)**  • Load: high<br>  • Rest: —<br>  • Timing: 6x30s hard passes, 30s rest<br>  • Purpose: Rotational upper body work without impact<br>  • Red Flags: None
 
 ## PHASE 3: TAPER - 2 WEEKS (14 DAYS)
 
@@ -120,13 +120,15 @@ Coach option: Optional 1 early-week exposure at 60–70% volume if athlete needs
 **If Time Short:** Keep 4–6 alactic bursts + shadowboxing rhythm.
 **If Fatigue High:** If fatigue high: keep only 4–6 low-impact bursts.
 
-📌 **System: GLYCOLYTIC** (scaled by format emphasis)
-- **Drill: Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)**  • Load: RPE 6–7 fight-pace<br>  • Rest: 1 min between rounds<br>  • Timing: 2-3 min work / 1 min rest<br>  • Purpose: Maintain glycolytic conditioning with clear work:rest structure.<br>  ⚠️ Red Flags: None
+**System: GLYCOLYTIC** (scaled by format emphasis)
+- **Drill: Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)**  • Load: RPE 6–7 fight-pace<br>  • Rest: 1 min between rounds<br>  • Timing: 2-3 min work / 1 min rest<br>  • Purpose: Maintain glycolytic conditioning with clear work:rest structure.<br>  • Red Flags: None
 
-📌 **System: ALACTIC** (scaled by format emphasis)
-- **Drill: Ankle Snap Bounce**  • Load: —<br>  • Rest: —<br>  • Timing: 4x10s, 30s rest<br>  • Purpose: Bounce on midfoot. No knee bend. High frequency bounce.<br>  ⚠️ Red Flags: None
+**System: ALACTIC** (scaled by format emphasis)
+- **Drill: Ankle Snap Bounce**  • Load: —<br>  • Rest: —<br>  • Timing: 4x10s, 30s rest<br>  • Purpose: Bounce on midfoot. No knee bend. High frequency bounce.<br>  • Red Flags: None
 
 ## Nutrition
+
+### GPP
 
 🍽️ **Nutrition Module**
 - 3 core meals + 2–3 snacks daily
@@ -145,7 +147,48 @@ Coach option: Optional 1 early-week exposure at 60–70% volume if athlete needs
 - Intra-training (>60 min): 30–60 g carbs/hour (sports drinks/gels), hydration
 - Post-training (within 1h): 1–1.2 g/kg carbs + 0.3–0.4 g/kg protein
 
+### SPP
+
+🍽️ **Nutrition Module**
+- 3 core meals + 2–3 snacks daily
+- Whole foods focus: lean protein, complex carbs, healthy fats
+- Protein intake: 1.7–2.2 g/kg → 105.4–136.4 g/day
+- Hydration: 0.03–0.04 l/kg → 1860.0–2480.0 ml/day
+
+**SPP Phase Focus:**
+- Moderate calorie deficit or maintenance for lean conditioning
+- Carbohydrates: 3–6 g/kg (focus on 4–6 g/kg around sessions) → 186.0–372.0 g/day
+- Protein: 1.6–2.2 g/kg → 99.2–136.4 g/day
+- Fats: 0.7–1.0 g/kg (20–25% calories) → 43.4–62.0 g/day
+
+**Meal Timing Guidelines:**
+- Pre-training: 1.5–3h before, balanced meal with 1–2 g/kg carbs + ~0.3 g/kg protein
+- Intra-training (>60 min): 30–60 g carbs/hour (sports drinks/gels), hydration
+- Post-training (within 1h): 1–1.2 g/kg carbs + 0.3–0.4 g/kg protein
+
+### TAPER
+
+🍽️ **Nutrition Module**
+- 3 core meals + 2–3 snacks daily
+- Whole foods focus: lean protein, complex carbs, healthy fats
+- Protein intake: 1.7–2.2 g/kg → 105.4–136.4 g/day
+- Hydration: 0.03–0.04 l/kg → 1860.0–2480.0 ml/day
+
+**Taper Phase Focus:**
+- Reduced training volume, focus on freshness & weight making
+- Carbohydrates: reduce to <5 g/kg in days before weigh-in → <310.0 g/day
+- Protein: maintain high intake 1.8–2.5 g/kg → 111.6–155.0 g/day
+- Moderate fat intake (~20% calories), reduce fiber 1–2 days out
+- Emphasize gut-friendly carbs (white rice, bananas, oats)
+
+**Meal Timing Guidelines:**
+- Pre-training: light easily digestible carbs 30–60 min before
+- Intra-training: water or electrolyte drink only
+- Post-training: focus on gut-friendly carbs + protein, avoid heavy fats/fiber
+
 ## Recovery
+
+### GPP
 
 **Core Recovery Strategies:**
 - Daily breathwork (5–10 mins post-session)
@@ -157,6 +200,34 @@ Coach option: Optional 1 early-week exposure at 60–70% volume if athlete needs
 **GPP Recovery Focus:**
 - Focus on tissue prep, joint mobility
 - Reset sleep routine
+
+### SPP
+
+**Core Recovery Strategies:**
+- Daily breathwork (5–10 mins post-session)
+- Optional contrast shower: 1 min hot / 1 min cold × 5 (comfort-based; avoid if it disrupts sleep).
+- 8–9 hours of sleep/night + 90-min blue light cutoff
+- Cold exposure 2–3x/week (if needed)
+- Mobility circuits/light recovery work daily
+
+**SPP Recovery Focus:**
+- Manage CNS load and alactic fatigue
+- Introduce 1–2 full recovery days
+
+### TAPER
+
+**Core Recovery Strategies:**
+- Daily breathwork (5–10 mins post-session)
+- Optional contrast shower: 1 min hot / 1 min cold × 5 (comfort-based; avoid if it disrupts sleep).
+- 8–9 hours of sleep/night + 90-min blue light cutoff
+- Cold exposure 2–3x/week (if needed)
+- Mobility circuits/light recovery work daily
+
+**Fight Week Protocol (Taper):**
+- Reduce volume to 30–40% of taper week
+- Final hard session = Tue/Wed
+- No soreness-inducing lifts after Wed
+- Final 2 days = breathwork, float tank, shadow drills
 
 ## Mindset Overview
 
@@ -275,7 +346,7 @@ Primary Block(s): Generic
 - Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off): balanced selection
 
 # Coach Notes
-Novelty Summary: 23 new strength moves, 11 new conditioning drills.
+
 
 # Planning Brief Summary
 {

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import logging
 import re
@@ -66,6 +66,28 @@ def _format_rationale_section(title: str, phases: dict[str, list[dict]]) -> list
             else:
                 lines.append(f"- {name}")
     return lines
+
+
+def _build_coach_notes(context: PlanRuntimeContext, blocks: PlanBlocksBundle) -> str:
+    sections: list[str] = []
+    previous = set(context.training_context.prev_exercises)
+    if previous:
+        all_strength_names = [name for phase in PHASES for name in blocks.strength_names.get(phase, [])]
+        all_conditioning_names = [name for phase in PHASES for name in blocks.conditioning_names.get(phase, [])]
+        novel_strength = [name for name in all_strength_names if name not in previous]
+        novel_conditioning = [name for name in all_conditioning_names if name not in previous]
+        sections.append(
+            f"Novelty Summary: {len(novel_strength)} new strength moves, {len(novel_conditioning)} new conditioning drills."
+        )
+    if blocks.coach_review_notes:
+        sections.append(blocks.coach_review_notes)
+
+    coach_notes = "\n\n".join(section for section in sections if section).strip()
+    if not coach_notes:
+        return ""
+    if context.apply_muay_thai_filters:
+        coach_notes = _apply_muay_thai_filters(coach_notes, allow_grappling=False)
+    return sanitize_phase_text(coach_notes, context.sanitize_labels)
 
 
 def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle, logger: logging.Logger) -> RenderedPlanBundle:
@@ -249,19 +271,7 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         "  - Add 500mg sodium + 20oz electrolyte drink immediately."
     )
 
-    previous = set(context.training_context.prev_exercises)
-    all_strength_names = [name for phase in PHASES for name in blocks.strength_names.get(phase, [])]
-    all_conditioning_names = [name for phase in PHASES for name in blocks.conditioning_names.get(phase, [])]
-    novel_strength = [name for name in all_strength_names if name not in previous]
-    novel_conditioning = [name for name in all_conditioning_names if name not in previous]
-    coach_notes = (
-        f"Novelty Summary: {len(novel_strength)} new strength moves, {len(novel_conditioning)} new conditioning drills."
-    )
-    if blocks.coach_review_notes:
-        coach_notes = f"{coach_notes}\n\n{blocks.coach_review_notes}"
-    if context.apply_muay_thai_filters:
-        coach_notes = _apply_muay_thai_filters(coach_notes, allow_grappling=False)
-    coach_notes = sanitize_phase_text(coach_notes, context.sanitize_labels)
+    coach_notes = _build_coach_notes(context, blocks)
 
     selection_rationale_md = "\n\n".join(
         section
@@ -374,3 +384,4 @@ def build_stage2_outputs(
         planning_brief=planning_brief,
     )
     return stage2_payload, planning_brief, stage2_handoff_text
+
