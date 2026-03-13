@@ -193,6 +193,10 @@ pytest
 # Run specific test files
 pytest tests/test_injury_guard.py
 pytest tests/test_tag_provenance.py
+pytest tests/test_golden_end_to_end_snapshots.py -q
+
+# Regenerate approved end-to-end snapshots when output changes intentionally
+REGENERATE_GOLDENS=1 pytest tests/test_golden_end_to_end_snapshots.py -q
 
 # Run with verbose output
 pytest -v
@@ -200,6 +204,10 @@ pytest -v
 # Run tests matching a pattern
 pytest -k "injury"
 ```
+
+### Golden Snapshots
+
+The end-to-end quality gate lives in `tests/test_golden_end_to_end_snapshots.py`. It generates representative full plans and compares them against the reviewed files in `tests/golden_snapshots`. If output changes intentionally, regenerate those files locally with `REGENERATE_GOLDENS=1 pytest tests/test_golden_end_to_end_snapshots.py -q`, review the diff, and commit the updated snapshots alongside the code change.
 
 ### Core Test Coverage
 
@@ -412,6 +420,8 @@ strength or conditioning work.
 ### Performance Goals
 
 The Tally intake form includes optional key performance goals. Selecting **Skill Refinement** maps to the internal tag `skill_refinement`. The strength and conditioning modules define this goal with tags like `coordination`, `skill`, `footwork`, `cognitive`, `focus`, `reactive` and `decision_speed`. Exercises containing these tags score higher when the plan is built, so drills that refine technique are prioritized across all phases. Additionally, the conditioning module includes a safeguard that inserts at least one style-bank drill tagged with `skill_refinement` whenever this goal is selected.
+
+
 
 
 
