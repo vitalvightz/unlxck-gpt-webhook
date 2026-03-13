@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import re
 from collections import defaultdict
@@ -92,16 +92,13 @@ def _phase_sections(plan_text: str) -> dict[str, list[str]]:
             continue
         header_match = _MARKDOWN_HEADER.match(raw_line)
         header_text = header_match.group(2).strip() if header_match else cleaned
+        normalized_header = header_text.lower()
         phase_match = _PHASE_HEADER.search(header_text)
         if phase_match:
             current_phase = phase_match.group(0).upper()
-        elif current_phase:
-            if header_match and len(header_match.group(1)) <= 2:
-                current_phase = ""
-                continue
-            if cleaned.lower() in _NON_PHASE_TOP_LEVEL_SECTIONS:
-                current_phase = ""
-                continue
+        elif current_phase and normalized_header in _NON_PHASE_TOP_LEVEL_SECTIONS:
+            current_phase = ""
+            continue
         if current_phase:
             sections[current_phase].append(cleaned)
     return dict(sections)
