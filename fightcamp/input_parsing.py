@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -180,6 +180,10 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _calendar_now() -> datetime:
+    return datetime.now().astimezone().replace(tzinfo=None)
+
+
 def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
     if not isinstance(days_until_fight, int):
         return None
@@ -203,11 +207,14 @@ def _compute_days_until_fight(
     *,
     now: datetime | None = None,
 ) -> int | None:
-    now = now or _utc_now()
     if _DATE_ONLY_PATTERN.match((raw_value or "").strip()):
-        raw_days = (fight_date.date() - now.date()).days
+        reference = now or _calendar_now()
+        raw_days = (fight_date.date() - reference.date()).days
     else:
-        raw_days = int((fight_date - now).total_seconds() // 86400)
+        reference = now or _utc_now()
+        if reference.tzinfo:
+            reference = reference.astimezone(timezone.utc).replace(tzinfo=None)
+        raw_days = int((fight_date - reference).total_seconds() // 86400)
     return normalize_days_until_fight(raw_days)
 
 

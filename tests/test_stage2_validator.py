@@ -1,4 +1,4 @@
-from fightcamp.stage2_validator import validate_stage2_output
+﻿from fightcamp.stage2_validator import validate_stage2_output
 
 
 
@@ -235,3 +235,33 @@ def test_validate_stage2_output_does_not_count_post_phase_sections_for_last_phas
     missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
     assert ("TAPER", "rehab") in missing_requirements
 
+def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
+    base = _planning_brief_fixture()
+    planning_brief = {
+        "restrictions": [],
+        "phase_strategy": {
+            "SPP": {
+                "must_keep": ["rehab", "alactic", "glycolytic"],
+            }
+        },
+        "candidate_pools": {
+            "SPP": base["candidate_pools"]["SPP"],
+        },
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ## Strength & Power
+        - Landmine Press - 4x5
+        ## Conditioning
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        ## Rehab
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    assert report["is_valid"] is True
+    assert report["missing_required_elements"] == []

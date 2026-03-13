@@ -1,4 +1,4 @@
-import re
+﻿import re
 from datetime import datetime
 
 import pytest
@@ -126,11 +126,38 @@ def test_payload_requires_fields_list():
         PlanInput.from_payload({"data": {}})
 
 
-def test_compute_days_until_fight_uses_patchable_utc_reference(monkeypatch):
-    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 23, 30))
+def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_only_values(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 23, 30))
 
     fight_date = input_parsing.parse_fight_date("2026-03-14")
 
     assert fight_date is not None
     assert input_parsing._compute_days_until_fight("2026-03-14", fight_date) == 1
+
+
+def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
+
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Full name", "value": "West Coast Athlete"},
+                {"label": "When is your next fight?", "value": "2026-03-14"},
+            ]
+        )
+    )
+
+    assert parsed.days_until_fight == 1
+    assert parsed.weeks_out == 1
+
+
+def test_compute_days_until_fight_keeps_utc_reference_for_timestamped_values(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 23, 30))
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 10, 0))
+
+    fight_date = input_parsing.parse_fight_date("2026-03-15T00:00:00Z")
+
+    assert fight_date is not None
+    assert input_parsing._compute_days_until_fight("2026-03-15T00:00:00Z", fight_date) == 1
 
