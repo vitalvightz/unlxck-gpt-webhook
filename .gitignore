@@ -5,3 +5,6 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+final_plan.txt
+stage2_handoff.txt
+stage2_retry.txt

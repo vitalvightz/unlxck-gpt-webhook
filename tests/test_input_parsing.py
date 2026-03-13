@@ -1,4 +1,4 @@
-﻿import re
+import re
 from datetime import datetime
 
 import pytest
@@ -167,6 +167,46 @@ def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
         )
     )
 
+    assert parsed.days_until_fight == 1
+    assert parsed.weeks_out == 1
+
+
+def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 14, 0, 30))
+
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Full name", "value": "West Coast Athlete"},
+                {"label": "When is your next fight?", "value": "2026-03-14"},
+                {"label": "Athlete Time Zone", "value": "UTC-08:00"},
+                {"label": "Athlete Locale", "value": "en-US"},
+            ]
+        )
+    )
+
+    assert parsed.athlete_timezone == "UTC-08:00"
+    assert parsed.athlete_locale == "en-US"
+    assert parsed.days_until_fight == 1
+    assert parsed.weeks_out == 1
+
+
+def test_invalid_athlete_timezone_falls_back_to_local_calendar(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
+
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Full name", "value": "Fallback Athlete"},
+                {"label": "When is your next fight?", "value": "2026-03-14"},
+                {"label": "Timezone", "value": "Mars/Olympus"},
+            ]
+        )
+    )
+
+    assert parsed.athlete_timezone == "Mars/Olympus"
     assert parsed.days_until_fight == 1
     assert parsed.weeks_out == 1
 

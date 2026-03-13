@@ -32,12 +32,15 @@ Input data format (see `test_data.json`):
     "fields": [
       { "label": "Full name", "value": "Luca Mensah" },
       { "label": "Age", "value": "22" },
+      { "label": "Athlete Time Zone", "value": "Europe/London" },
       { "label": "Fighting Style (Technical)", "value": ["boxer"] },
       { "label": "Any injuries or areas you need to work around?", "value": "right hamstring tightness" }
     ]
   }
 }
 ```
+
+For date-only fight dates like `2026-03-14`, provide `Athlete Time Zone` when available so camp timing uses the athlete's calendar day instead of the server machine's locale. `Athlete Locale` is also accepted as metadata, but timezone is the field used for date-only fight-date math.
 
 ### Repository Structure
 
@@ -409,5 +412,8 @@ strength or conditioning work.
 ### Performance Goals
 
 The Tally intake form includes optional key performance goals. Selecting **Skill Refinement** maps to the internal tag `skill_refinement`. The strength and conditioning modules define this goal with tags like `coordination`, `skill`, `footwork`, `cognitive`, `focus`, `reactive` and `decision_speed`. Exercises containing these tags score higher when the plan is built, so drills that refine technique are prioritized across all phases. Additionally, the conditioning module includes a safeguard that inserts at least one style-bank drill tagged with `skill_refinement` whenever this goal is selected.
+
+
+
 
 

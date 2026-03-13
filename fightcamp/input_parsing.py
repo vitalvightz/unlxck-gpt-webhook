@@ -1,8 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import re
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .injury_formatting import parse_injuries_and_restrictions
 from .restriction_parsing import ParsedRestriction
@@ -102,8 +103,24 @@ _CRITICAL_LABEL_ALIASES = {
         _normalize_label("Injuries or restrictions"),
         _normalize_label("Anything to work around"),
     },
+    _normalize_label("Athlete Time Zone"): {
+        _normalize_label("Athlete Timezone"),
+        _normalize_label("Time Zone"),
+        _normalize_label("Timezone"),
+        _normalize_label("Athlete UTC Offset"),
+        _normalize_label("UTC Offset"),
+    },
+    _normalize_label("Athlete Locale"): {
+        _normalize_label("Locale"),
+        _normalize_label("Athlete Region"),
+        _normalize_label("Region"),
+    },
 }
 _DATE_ONLY_PATTERN = re.compile(r"^(?:\d{4}[-/]\d{2}[-/]\d{2}|\d{2}/\d{2}/\d{4})$")
+_UTC_OFFSET_PATTERN = re.compile(
+    r"^(?:UTC|GMT)?\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?$",
+    re.IGNORECASE,
+)
 
 
 def _field_matches_label(field_label: str, target_label: str) -> bool:
@@ -189,6 +206,41 @@ def _calendar_now() -> datetime:
     return datetime.now().astimezone().replace(tzinfo=None)
 
 
+def _resolve_timezone(value: str | None) -> timezone | ZoneInfo | None:
+    normalized = str(value or "").strip()
+    if not normalized:
+        return None
+    if normalized.upper() in {"UTC", "GMT", "Z"}:
+        return timezone.utc
+
+    try:
+        return ZoneInfo(normalized)
+    except ZoneInfoNotFoundError:
+        pass
+
+    offset_match = _UTC_OFFSET_PATTERN.match(normalized)
+    if not offset_match:
+        return None
+
+    sign, hours_text, minutes_text = offset_match.groups()
+    hours = int(hours_text)
+    minutes = int(minutes_text or "0")
+    if hours > 23 or minutes > 59:
+        return None
+
+    offset = timedelta(hours=hours, minutes=minutes)
+    if sign == "-":
+        offset = -offset
+    return timezone(offset)
+
+
+def _athlete_calendar_now(athlete_timezone: str | None = None) -> datetime:
+    tzinfo = _resolve_timezone(athlete_timezone)
+    if tzinfo is None:
+        return _calendar_now()
+    return _utc_now().replace(tzinfo=timezone.utc).astimezone(tzinfo).replace(tzinfo=None)
+
+
 def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
     if not isinstance(days_until_fight, int):
         return None
@@ -210,10 +262,11 @@ def _compute_days_until_fight(
     raw_value: str,
     fight_date: datetime,
     *,
+    athlete_timezone: str | None = None,
     now: datetime | None = None,
 ) -> int | None:
     if _DATE_ONLY_PATTERN.match((raw_value or "").strip()):
-        reference = now or _calendar_now()
+        reference = now or _athlete_calendar_now(athlete_timezone)
         raw_days = (fight_date.date() - reference.date()).days
     else:
         reference = now or _utc_now()
@@ -236,6 +289,8 @@ class PlanInput:
     status: str
     record: str
     next_fight_date: str
+    athlete_timezone: str
+    athlete_locale: str
     rounds_format: str
     frequency_raw: str
     fatigue: str
@@ -269,6 +324,8 @@ class PlanInput:
         status = get_value("Professional Status", fields)
         record = get_value("Current Record", fields)
         next_fight_date = get_date_value("When is your next fight?", fields)
+        athlete_timezone = get_value("Athlete Time Zone", fields)
+        athlete_locale = get_value("Athlete Locale", fields)
         rounds_format = get_value("Rounds x Minutes", fields)
         frequency_raw = get_value("Weekly Training Frequency", fields)
         fatigue = get_value("Fatigue Level", fields)
@@ -297,7 +354,11 @@ class PlanInput:
         if next_fight_date:
             fight_date = parse_fight_date(next_fight_date)
             if fight_date:
-                days_until_fight = _compute_days_until_fight(next_fight_date, fight_date)
+                days_until_fight = _compute_days_until_fight(
+                    next_fight_date,
+                    fight_date,
+                    athlete_timezone=athlete_timezone,
+                )
                 weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
             else:
                 weeks_out = "N/A"
@@ -316,6 +377,8 @@ class PlanInput:
             status=status,
             record=record,
             next_fight_date=next_fight_date,
+            athlete_timezone=athlete_timezone,
+            athlete_locale=athlete_locale,
             rounds_format=rounds_format,
             frequency_raw=frequency_raw,
             fatigue=fatigue,
@@ -356,4 +419,3 @@ class PlanInput:
         if self.training_frequency < 1:
             issues.append("invalid_training_frequency")
         return issues
-
