@@ -1,24 +1,24 @@
 {
   "data": {
     "fields": [
-      { "label": "Full name", "value": "Test Athlete 02" },
-      { "label": "Age", "value": "27" },
-      { "label": "Weight (kg)", "value": "72" },
-      { "label": "Target Weight (kg)", "value": "70" },
-      { "label": "Height (cm)", "value": "178" },
-      { "label": "Fighting Style (Technical)", "value": ["kickboxer"] },
-      { "label": "Fighting Style (Tactical)", "value": ["counter striker"] },
-      { "label": "Stance", "value": "Southpaw" },
+      { "label": "Full name", "value": "Test Athlete 04" },
+      { "label": "Age", "value": "24" },
+      { "label": "Weight (kg)", "value": "68" },
+      { "label": "Target Weight (kg)", "value": "67" },
+      { "label": "Height (cm)", "value": "175" },
+      { "label": "Fighting Style (Technical)", "value": ["boxer"] },
+      { "label": "Fighting Style (Tactical)", "value": ["pressure fighter"] },
+      { "label": "Stance", "value": "Orthodox" },
       { "label": "Professional Status", "value": "Amateur" },
-      { "label": "Current Record", "value": "8-3-0" },
-      { "label": "When is your next fight?", "value": "2026-04-26" },
+      { "label": "Current Record", "value": "11-2-0" },
+      { "label": "When is your next fight?", "value": "2026-05-10" },
       { "label": "Rounds x Minutes", "value": "3x3" },
       { "label": "Weekly Training Frequency", "value": "5" },
-      { "label": "Fatigue Level", "value": "High" },
+      { "label": "Fatigue Level", "value": "Moderate" },
       { "label": "Training Phase", "value": "Mid-Camp" },
       {
         "label": "Equipment Access",
-        "value": ["Barbell", "Dumbbells", "Kettlebells", "Medicine Ball", "Bands"]
+        "value": ["Barbell", "Dumbbells", "Kettlebells", "Medicine Ball", "Bands", "Battle Ropes"]
       },
       {
         "label": "Training Availability",
@@ -26,27 +26,27 @@
       },
       {
         "label": "Any injuries or areas you need to work around?",
-        "value": "Left hip tightness, recurring shin soreness after roadwork, mild shoulder irritation when punching hard."
+        "value": "Right shoulder gets irritated on high punch volume, left ankle stiffness after skipping, occasional lower back tightness after hard sparring."
       },
       {
         "label": "What are your key performance goals?",
-        "value": ["Speed", "Conditioning / Endurance", "Skill Refinement"]
+        "value": ["Speed", "Conditioning / Endurance", "Striking", "Skill Refinement"]
       },
       {
         "label": "Where do you feel weakest right now?",
-        "value": ["Lateral Movement", "Speed / Reaction"]
+        "value": ["Speed / Reaction", "Lateral Movement", "Shoulders"]
       },
       {
         "label": "Do you prefer certain training styles?",
-        "value": "Explosive work, reactive drills, short intense rounds, not long boring cardio."
+        "value": "Fast explosive rounds, reactive drills, pad work, med ball throws, and short hard intervals. I hate long slow cardio."
       },
       {
         "label": "Do you struggle with any mental blockers or mindset challenges?",
-        "value": "I hesitate after getting hit clean and sometimes become too cautious."
+        "value": "I sometimes lose sharpness after taking a clean shot and become too cautious instead of resetting quickly."
       },
       {
         "label": "Are there any parts of your previous plan you hated or loved?",
-        "value": "Loved med ball and reactive work. Hated long steady-state running."
+        "value": "Loved reactive footwork, med ball work, and short fight-pace conditioning. Hated long steady-state runs."
       }
     ]
   },

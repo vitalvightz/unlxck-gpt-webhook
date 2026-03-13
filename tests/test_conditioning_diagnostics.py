@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 from pathlib import Path
 
@@ -52,9 +52,39 @@ def test_generate_plan_returns_controlled_error_for_invalid_payload():
     assert result["status"] == "invalid_input"
     assert result["ok"] is False
     assert result["error"] == "payload missing required data.fields list"
+    assert result["missing_fields"] == []
+    assert result["pdf_url"] is None
+    assert result["why_log"] == {}
     assert result["plan_text"] == ""
     assert result["planning_brief"] is None
     assert result["stage2_payload"] is None
+
+
+def test_generate_plan_rejects_missing_generation_requirements():
+    result = asyncio.run(
+        generate_plan(
+            {
+                "data": {
+                    "fields": [
+                        {"label": "Full name", "value": "Test Athlete"},
+                    ]
+                }
+            }
+        )
+    )
+
+    assert result["status"] == "invalid_input"
+    assert result["ok"] is False
+    assert set(result["missing_fields"]) == {
+        "missing_fighting_style_technical",
+        "missing_next_fight_date",
+        "missing_training_availability",
+        "invalid_training_frequency",
+    }
+    assert result["pdf_url"] is None
+    assert result["why_log"] == {}
+    assert result["stage2_payload"] is None
+    assert result["planning_brief"] is None
 
 
 def test_generate_plan_returns_stage2_payload():
@@ -499,5 +529,6 @@ def test_short_notice_false_for_past_date():
     assert result["planning_brief"]["fight_demands"]["days_until_fight"] is None
     assert result["planning_brief"]["fight_demands"]["short_notice"] is False
     assert result["stage2_payload"]["athlete_model"]["days_until_fight"] is None
+
 
 

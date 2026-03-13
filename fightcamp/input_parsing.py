@@ -176,6 +176,10 @@ def parse_fight_date(value: str) -> datetime | None:
         return None
 
 
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
     if not isinstance(days_until_fight, int):
         return None
@@ -193,8 +197,13 @@ def _extract_fields(data: dict) -> list[dict]:
     return fields
 
 
-def _compute_days_until_fight(raw_value: str, fight_date: datetime) -> int | None:
-    now = datetime.now()
+def _compute_days_until_fight(
+    raw_value: str,
+    fight_date: datetime,
+    *,
+    now: datetime | None = None,
+) -> int | None:
+    now = now or _utc_now()
     if _DATE_ONLY_PATTERN.match((raw_value or "").strip()):
         raw_days = (fight_date.date() - now.date()).days
     else:
@@ -321,3 +330,18 @@ class PlanInput:
     @property
     def tactical_styles(self) -> list[str]:
         return _normalize_list(self.fighting_style_tactical)
+
+    def generation_issues(self) -> list[str]:
+        issues: list[str] = []
+        if not self.fighting_style_technical.strip():
+            issues.append("missing_fighting_style_technical")
+        if not self.next_fight_date.strip():
+            issues.append("missing_next_fight_date")
+        elif parse_fight_date(self.next_fight_date) is None:
+            issues.append("invalid_next_fight_date")
+        if not self.training_days:
+            issues.append("missing_training_availability")
+        if self.training_frequency < 1:
+            issues.append("invalid_training_frequency")
+        return issues
+

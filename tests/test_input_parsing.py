@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pytest
 
+from fightcamp import input_parsing
 from fightcamp.input_parsing import PlanInput
 
 
@@ -123,3 +124,13 @@ def test_exact_match_still_preferred_over_alias():
 def test_payload_requires_fields_list():
     with pytest.raises(ValueError, match=re.escape("payload missing required data.fields list")):
         PlanInput.from_payload({"data": {}})
+
+
+def test_compute_days_until_fight_uses_patchable_utc_reference(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 23, 30))
+
+    fight_date = input_parsing.parse_fight_date("2026-03-14")
+
+    assert fight_date is not None
+    assert input_parsing._compute_days_until_fight("2026-03-14", fight_date) == 1
+
