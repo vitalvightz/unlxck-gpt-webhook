@@ -265,3 +265,39 @@ def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
 
     assert report["is_valid"] is True
     assert report["missing_required_elements"] == []
+
+
+def test_validate_stage2_output_fails_on_internal_admin_sections():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 1: GPP
+        - Landmine Press - 4x5
+        ## Athlete Profile
+        - Name: Ari Mensah
+        ## Selection Rationale
+        - Landmine Press stayed in because it matched the candidate pool.
+        """,
+    )
+
+    codes = {error["code"] for error in report["errors"]}
+    assert "internal_section_leak" in codes
+    assert report["is_valid"] is False
+
+
+def test_validate_stage2_output_fails_on_stage2_only_phrase_and_html():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Conditioning
+        - Hard Shuttle<br>6x20s / 60s
+        ### Restrictions (Stage-2 daily planner only)
+        - Do not show this to the athlete.
+        """,
+    )
+
+    codes = {error["code"] for error in report["errors"]}
+    assert "html_markup_present" in codes
+    assert "internal_phrase_leak" in codes
+    assert report["is_valid"] is False

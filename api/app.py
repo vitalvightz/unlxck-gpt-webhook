@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any, Awaitable, Callable
 
@@ -34,6 +35,7 @@ from .store import AppStore, SupabaseAppStore
 
 Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 security = HTTPBearer(auto_error=False)
+logger = logging.getLogger(__name__)
 
 
 def _cors_origins() -> list[str]:
@@ -259,6 +261,12 @@ def create_app(
         planner_fn: Planner = Depends(get_planner),
         stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
+        logger.info(
+            "[plans] generate requested athlete_id=%s fight_date=%s technical_style=%s",
+            profile.athlete_id,
+            request_body.fight_date,
+            request_body.athlete.technical_style,
+        )
         store.update_profile(
             profile.athlete_id,
             ProfileUpdateRequest(
@@ -287,15 +295,25 @@ def create_app(
         try:
             finalized_result = await stage2.finalize(stage1_result=stage1_result)
         except Stage2AutomationUnavailableError as exc:
+            logger.warning("[plans] stage2 unavailable athlete_id=%s detail=%s", profile.athlete_id, exc)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=str(exc),
             ) from exc
         except Stage2AutomationError as exc:
+            logger.exception("[plans] stage2 failed athlete_id=%s", profile.athlete_id)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=str(exc),
             ) from exc
+
+        logger.info(
+            "[plans] stage2 completed athlete_id=%s app_status=%s stage2_status=%s attempts=%s",
+            profile.athlete_id,
+            finalized_result.get("status"),
+            finalized_result.get("stage2_status"),
+            finalized_result.get("stage2_attempt_count"),
+        )
 
         plan_row = store.create_plan(
             athlete_id=profile.athlete_id,

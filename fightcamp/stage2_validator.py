@@ -9,6 +9,7 @@ from .restriction_filtering import evaluate_restriction_impact
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]+|\d+[.)]|#+)\s*")
 _PHASE_HEADER = re.compile(r"\b(?:GPP|SPP|TAPER)\b", re.IGNORECASE)
 _MARKDOWN_HEADER = re.compile(r"^\s*(#{1,6})\s*(.+?)\s*$")
+_HTML_TAG = re.compile(r"<[^>]+>")
 _NEGATION_MARKERS = (
     "avoid",
     "do not",
@@ -41,6 +42,23 @@ _NON_PHASE_TOP_LEVEL_SECTIONS = {
     "nutrition adjustments for unknown sparring load",
     "athlete profile",
 }
+_FORBIDDEN_SECTION_HINTS = (
+    "selection rationale",
+    "athlete profile",
+    "coach notes",
+    "planning brief",
+    "validator report",
+    "stage 1 draft plan",
+    "stage2 payload",
+    "stage 2 payload",
+    "candidate pools",
+    "omission ledger",
+    "rewrite guidance",
+)
+_FORBIDDEN_INLINE_PHRASES = (
+    "stage-2 daily planner only",
+    "stage 2 daily planner only",
+)
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -260,12 +278,91 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
     return missing
 
 
+def _find_formatting_violations(plan_text: str) -> list[dict]:
+    violations: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_line in (plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        if not cleaned:
+            continue
+        if _HTML_TAG.search(raw_line):
+            key = ("html_markup_present", cleaned.lower())
+            if key not in seen:
+                seen.add(key)
+                violations.append(
+                    {
+                        "code": "html_markup_present",
+                        "message": f"Final plan contains raw HTML markup: {cleaned}",
+                        "line": cleaned,
+                    }
+                )
+        if "```" in raw_line:
+            key = ("code_fence_present", cleaned.lower())
+            if key not in seen:
+                seen.add(key)
+                violations.append(
+                    {
+                        "code": "code_fence_present",
+                        "message": "Final plan contains code fences instead of clean athlete-facing text.",
+                        "line": cleaned,
+                    }
+                )
+    return violations
+
+
+def _find_internal_scaffolding(plan_text: str) -> list[dict]:
+    findings: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_line in (plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        if not cleaned:
+            continue
+        lowered = cleaned.lower()
+        header_match = _MARKDOWN_HEADER.match(raw_line)
+        header_text = header_match.group(2).strip() if header_match else cleaned
+        normalized_header = re.sub(r"\s+", " ", header_text.lower())
+
+        matched_heading = next(
+            (hint for hint in _FORBIDDEN_SECTION_HINTS if hint in normalized_header),
+            None,
+        )
+        if matched_heading:
+            key = ("internal_section_leak", normalized_header)
+            if key not in seen:
+                seen.add(key)
+                findings.append(
+                    {
+                        "code": "internal_section_leak",
+                        "message": f"Final plan exposed internal section '{header_text}'.",
+                        "line": cleaned,
+                        "section": header_text,
+                    }
+                )
+
+        matched_phrase = next((phrase for phrase in _FORBIDDEN_INLINE_PHRASES if phrase in lowered), None)
+        if matched_phrase:
+            key = ("internal_phrase_leak", lowered)
+            if key not in seen:
+                seen.add(key)
+                findings.append(
+                    {
+                        "code": "internal_phrase_leak",
+                        "message": f"Final plan exposed internal planning phrase '{matched_phrase}'.",
+                        "line": cleaned,
+                        "phrase": matched_phrase,
+                    }
+                )
+    return findings
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
+    internal_scaffolding = _find_internal_scaffolding(final_plan_text)
+    formatting_violations = _find_formatting_violations(final_plan_text)
 
     errors = [
         {
@@ -277,6 +374,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         }
         for hit in restricted_hits
     ]
+    errors.extend(internal_scaffolding)
+    errors.extend(formatting_violations)
     warnings = [
         {
             "code": "missing_required_element",
@@ -303,5 +402,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "missing_required_elements": missing_required_elements,
         "missing_phase_sections": missing_phase_sections,
         "restricted_hits": restricted_hits,
+        "internal_scaffolding": internal_scaffolding,
+        "formatting_violations": formatting_violations,
     }
 

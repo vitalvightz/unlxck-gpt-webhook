@@ -15,7 +15,9 @@ REPAIR RULES:
 3. Preserve compliant parts of the previous final plan when they still fit the planning brief.
 4. Use candidate pools and same-role alternates from the planning brief before inventing anything new.
 5. If a phase-critical element is missing, reintroduce it with a conservative, compliant option that matches the phase strategy.
-6. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+6. Remove any internal/admin scaffolding such as Athlete Profile, Selection Rationale, Coach Notes, planning-brief labels, or Stage-2-only notes.
+7. Remove raw HTML, code fences, and any non-athlete formatting artifacts.
+8. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -60,8 +62,37 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
             }
         )
 
+    formatting_fixes: list[dict] = []
+    for error in validator_report.get("errors", []) or []:
+        code = str(error.get("code") or "")
+        if code == "internal_section_leak":
+            formatting_fixes.append(
+                {
+                    "action": "remove_internal_scaffolding",
+                    "section": error.get("section"),
+                    "line": error.get("line"),
+                }
+            )
+        elif code == "internal_phrase_leak":
+            formatting_fixes.append(
+                {
+                    "action": "remove_internal_phrase",
+                    "phrase": error.get("phrase"),
+                    "line": error.get("line"),
+                }
+            )
+        elif code in {"html_markup_present", "code_fence_present"}:
+            formatting_fixes.append(
+                {
+                    "action": "remove_formatting_artifact",
+                    "code": code,
+                    "line": error.get("line"),
+                }
+            )
+
     return {
         "fix_first": restriction_fixes,
+        "strip_out": formatting_fixes,
         "then_restore": missing_elements,
     }
 

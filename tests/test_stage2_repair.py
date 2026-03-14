@@ -135,3 +135,32 @@ def test_build_stage2_repair_prompt_requests_athlete_facing_output_only():
 
     assert "Return only the revised athlete-facing final plan." in prompt
     assert "Do not mention the validator" in prompt
+
+
+def test_build_stage2_repair_prompt_surfaces_internal_scaffolding_cleanup():
+    validator_report = {
+        "is_valid": False,
+        "errors": [
+            {
+                "code": "internal_section_leak",
+                "section": "Selection Rationale",
+                "line": "Selection Rationale",
+            },
+            {
+                "code": "html_markup_present",
+                "line": "Hard Shuttle<br>6x20s / 60s",
+            },
+        ],
+        "warnings": [],
+        "missing_required_elements": [],
+        "restricted_hits": [],
+    }
+    prompt = build_stage2_repair_prompt(
+        planning_brief=_planning_brief_fixture(),
+        failed_plan_text="## Selection Rationale\n- Keep Hard Shuttle<br>6x20s / 60s",
+        validator_report=validator_report,
+    )
+
+    assert "remove_internal_scaffolding" in prompt
+    assert "remove_formatting_artifact" in prompt
+    assert "Remove raw HTML" in prompt

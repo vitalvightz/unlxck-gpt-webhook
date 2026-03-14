@@ -2128,6 +2128,8 @@ RULE 3 (selection): Prefer selected Stage 1 items first, then same-role alternat
 
 RULE 4 (invention): Prefer not to invent new exercises. Only introduce a new item if the existing material cannot produce a coherent, restriction-compliant plan, and only if the replacement is conservative, mechanically appropriate, and clearly aligned with the planning brief.
 
+RULE 5 (output hygiene): The final answer must be athlete-facing only. Do not include internal/admin sections such as Athlete Profile, Selection Rationale, Coach Notes, Planning Brief, Candidate Pools, Omission Ledger, Rewrite Guidance, validator language, or Stage-2-only notes. Do not emit raw HTML tags or code fences.
+
 OUTPUT: Return a clean athlete-facing final plan that feels elite, personalized, and internally coherent. Preserve what is best from Stage 1, but rewrite weak structure, duplication, or sequencing when needed."""
 
 
