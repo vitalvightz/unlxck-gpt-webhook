@@ -26,9 +26,9 @@ export function AppNav() {
   }
 
   const signedInLinks = [
-    { href: "/", label: "Overview", meta: "Current camp status" },
-    { href: "/onboarding", label: "Onboarding", meta: "Profile and intake flow" },
-    { href: "/plans", label: "Plans", meta: "Saved camp history" },
+    { href: "/", label: "Overview", meta: "Camp status" },
+    { href: "/onboarding", label: "Onboarding", meta: "Profile and intake" },
+    { href: "/plans", label: "Plans", meta: "Saved history" },
     { href: "/settings", label: "Settings", meta: "Athlete profile" },
   ];
 
@@ -55,7 +55,7 @@ export function AppNav() {
             <Link href="/" className="brand">
               Fight Camp
             </Link>
-            <p className="sidebar-tagline">Premium athlete control room for structured fight-camp planning.</p>
+            <p className="sidebar-tagline">Athlete fight-camp workspace.</p>
             <span className="sidebar-beta">Beta</span>
           </div>
 
@@ -64,7 +64,7 @@ export function AppNav() {
               <p className="sidebar-section-label">Loading</p>
               <div className="sidebar-user-card">
                 <p className="sidebar-user-name">Checking session</p>
-                <p className="sidebar-user-email">Loading your athlete workspace.</p>
+                <p className="sidebar-user-email">Loading your workspace.</p>
               </div>
             </div>
           ) : null}
@@ -76,7 +76,7 @@ export function AppNav() {
                 <Link href="/signup" className={isActive(pathname, "/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}>
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Create account</span>
-                    <span className="sidebar-link-meta">Start your athlete setup</span>
+                    <span className="sidebar-link-meta">Start athlete setup</span>
                   </div>
                 </Link>
                 <Link href="/login" className={isActive(pathname, "/login") ? "sidebar-link sidebar-link-active" : "sidebar-link"}>
@@ -88,8 +88,8 @@ export function AppNav() {
               </div>
               <div className="sidebar-user-card">
                 <p className="sidebar-section-label">Signed out</p>
-                <p className="sidebar-user-name">Athlete-first experience</p>
-                <p className="sidebar-user-email">Enter to build, generate, and revisit your camp plans in one place.</p>
+                <p className="sidebar-user-name">Athlete-first entry</p>
+                <p className="sidebar-user-email">Build, generate, and reopen plans in one place.</p>
               </div>
             </>
           ) : null}
@@ -119,7 +119,7 @@ export function AppNav() {
                     >
                       <div className="sidebar-link-copy">
                         <span className="sidebar-link-title">Admin</span>
-                        <span className="sidebar-link-meta">Support-only view</span>
+                        <span className="sidebar-link-meta">Support view</span>
                       </div>
                     </Link>
                   </>

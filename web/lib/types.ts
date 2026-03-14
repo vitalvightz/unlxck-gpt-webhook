@@ -80,9 +80,15 @@ export type PlanOutputs = {
 export type AdminPlanOutputs = {
   coach_notes: string;
   why_log: Record<string, unknown>;
-  planning_brief?: string | null;
+  planning_brief?: Record<string, unknown> | null;
   stage2_payload?: Record<string, unknown> | null;
   stage2_handoff_text: string;
+  draft_plan_text: string;
+  final_plan_text: string;
+  stage2_retry_text: string;
+  stage2_validator_report: Record<string, unknown>;
+  stage2_status: string;
+  stage2_attempt_count: number;
 };
 
 export type PlanDetail = PlanSummary & {

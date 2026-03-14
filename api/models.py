@@ -159,9 +159,15 @@ class PlanOutputs(BaseModel):
 class AdminPlanOutputs(BaseModel):
     coach_notes: str = ""
     why_log: dict[str, Any] = Field(default_factory=dict)
-    planning_brief: str | None = None
+    planning_brief: dict[str, Any] | None = None
     stage2_payload: dict[str, Any] | None = None
     stage2_handoff_text: str = ""
+    draft_plan_text: str = ""
+    final_plan_text: str = ""
+    stage2_retry_text: str = ""
+    stage2_validator_report: dict[str, Any] = Field(default_factory=dict)
+    stage2_status: str = ""
+    stage2_attempt_count: int = 0
 
 
 class PlanDetail(PlanSummary):

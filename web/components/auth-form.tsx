@@ -94,27 +94,25 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
       <div className="auth-rail">
         <div className="hero-panel-copy">
           <p className="eyebrow">{mode === "signup" ? "Free beta" : "Athlete access"}</p>
-          <h1>{mode === "signup" ? "Build your camp profile inside UNLXCK." : "Return to your athlete workspace."}</h1>
+          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Return to your athlete workspace."}</h1>
           <p>
             {mode === "signup"
-              ? "Create your account, move through the guided intake, and generate a saved fight camp without leaving the product."
-              : "Pick up your onboarding draft, reopen saved plans, and generate the next camp from the same athlete-first workspace."}
+              ? "Create your account, complete onboarding, and generate a saved fight camp."
+              : "Resume onboarding and reopen saved plans from one athlete workspace."}
           </p>
         </div>
         <div className="support-panel">
           <p className="kicker">Flow</p>
           <ol className="auth-flow">
-            <li>Enter your athlete account and keep your intake attached to your profile.</li>
-            <li>Move through the structured onboarding with draft save and resume support.</li>
-            <li>Generate and reopen your saved plans from one dark-mode control room.</li>
+            <li>Sign in once and keep your intake on your athlete profile.</li>
+            <li>Resume the onboarding draft whenever you return.</li>
+            <li>Generate and reopen saved plans from the same workspace.</li>
           </ol>
         </div>
         {demoMode ? (
           <div className="support-panel">
             <p className="kicker">Demo mode</p>
-            <p className="muted">
-              Use any email and password to enter as an athlete, or use an <code>@unlxck.test</code> email to enter the admin view.
-            </p>
+            <p className="muted">Use any email and password for athlete access, or <code>@unlxck.test</code> for admin.</p>
           </div>
         ) : null}
       </div>

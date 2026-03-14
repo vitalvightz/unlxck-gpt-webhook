@@ -67,14 +67,27 @@ create table if not exists public.plans (
   full_name text not null default '',
   status text not null default 'generated',
   plan_text text not null default '',
+  draft_plan_text text not null default '',
+  final_plan_text text not null default '',
   coach_notes text not null default '',
   pdf_url text,
   why_log jsonb not null default '{}'::jsonb,
   planning_brief text,
   stage2_payload jsonb,
   stage2_handoff_text text not null default '',
+  stage2_retry_text text not null default '',
+  stage2_validator_report jsonb not null default '{}'::jsonb,
+  stage2_status text not null default '',
+  stage2_attempt_count integer not null default 0,
   created_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.plans add column if not exists draft_plan_text text not null default '';
+alter table public.plans add column if not exists final_plan_text text not null default '';
+alter table public.plans add column if not exists stage2_retry_text text not null default '';
+alter table public.plans add column if not exists stage2_validator_report jsonb not null default '{}'::jsonb;
+alter table public.plans add column if not exists stage2_status text not null default '';
+alter table public.plans add column if not exists stage2_attempt_count integer not null default 0;
 
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);

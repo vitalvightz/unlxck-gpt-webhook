@@ -11,4 +11,5 @@ spacy>=3.7,<3.8
 pdfkit
 supabase
 markdown2
+openai
 pytest

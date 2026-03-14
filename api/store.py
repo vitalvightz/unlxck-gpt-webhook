@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -38,6 +39,14 @@ class AppStore(Protocol):
     def list_admin_athletes(self) -> list[dict[str, Any]]: ...
 
     def clear_onboarding_draft(self, athlete_id: str) -> None: ...
+
+
+def _encode_structured_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return json.dumps(value)
 
 
 @dataclass
@@ -140,12 +149,18 @@ class SupabaseAppStore:
             "full_name": request.athlete.full_name,
             "status": result.get("status", "generated"),
             "plan_text": result.get("plan_text", ""),
+            "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
+            "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
             "coach_notes": result.get("coach_notes", ""),
             "pdf_url": result.get("pdf_url"),
             "why_log": result.get("why_log", {}),
-            "planning_brief": result.get("planning_brief"),
+            "planning_brief": _encode_structured_text(result.get("planning_brief")),
             "stage2_payload": result.get("stage2_payload"),
             "stage2_handoff_text": result.get("stage2_handoff_text", ""),
+            "stage2_retry_text": result.get("stage2_retry_text", ""),
+            "stage2_validator_report": result.get("stage2_validator_report", {}),
+            "stage2_status": result.get("stage2_status", ""),
+            "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
         response = self.client.table("plans").insert(payload).execute()
         rows = getattr(response, "data", None) or []

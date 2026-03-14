@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import PlanRequest, ProfileUpdateRequest
+from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 
 
 def _now() -> str:
@@ -95,12 +96,18 @@ class FakeStore:
             "technical_style": request.athlete.technical_style,
             "status": result.get("status", "generated"),
             "plan_text": result.get("plan_text", ""),
+            "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
+            "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
             "coach_notes": result.get("coach_notes", ""),
             "pdf_url": result.get("pdf_url"),
             "why_log": result.get("why_log", {}),
             "planning_brief": result.get("planning_brief"),
             "stage2_payload": result.get("stage2_payload"),
             "stage2_handoff_text": result.get("stage2_handoff_text", ""),
+            "stage2_retry_text": result.get("stage2_retry_text", ""),
+            "stage2_validator_report": result.get("stage2_validator_report", {}),
+            "stage2_status": result.get("stage2_status", ""),
+            "stage2_attempt_count": result.get("stage2_attempt_count", 0),
             "created_at": _now(),
             "full_name": profile["full_name"],
         }
@@ -135,6 +142,19 @@ class FakeStore:
         self.profiles[athlete_id]["onboarding_draft"] = None
 
 
+@dataclass
+class FakeStage2Automator:
+    result: dict | None = None
+    error: Exception | None = None
+    calls: list[dict] = field(default_factory=list)
+
+    async def finalize(self, *, stage1_result: dict) -> dict:
+        self.calls.append(stage1_result)
+        if self.error:
+            raise self.error
+        return {**stage1_result, **(self.result or {})}
+
+
 def _build_request() -> PlanRequest:
     return PlanRequest(
         athlete={
@@ -162,18 +182,38 @@ def _build_request() -> PlanRequest:
 
 
 async def _planner(payload: dict) -> dict:
+    return stage1_result()
+
+
+def stage1_result() -> dict:
     return {
-        "plan_text": "# Plan",
+        "plan_text": "# Stage 1 Draft",
         "coach_notes": "### Coach Review",
-        "pdf_url": None,
+        "pdf_url": "https://example.com/stage1.pdf",
         "why_log": {"strength": {}},
         "stage2_payload": {"ok": True},
-        "planning_brief": "brief",
+        "planning_brief": {"schema_version": "planning_brief.v1", "main_limiter": "conditioning"},
         "stage2_handoff_text": "handoff",
     }
 
 
-def _build_client() -> tuple[TestClient, FakeStore]:
+def finalized_result(**overrides: object) -> dict:
+    base = {
+        **stage1_result(),
+        "status": "ready",
+        "plan_text": "# Final Plan",
+        "draft_plan_text": "# Stage 1 Draft",
+        "final_plan_text": "# Final Plan",
+        "pdf_url": None,
+        "stage2_status": "stage2_pass",
+        "stage2_validator_report": {"errors": [], "warnings": []},
+        "stage2_retry_text": "",
+        "stage2_attempt_count": 1,
+    }
+    return {**base, **overrides}
+
+
+def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -187,14 +227,16 @@ def _build_client() -> tuple[TestClient, FakeStore]:
         metadata={},
     )
     store = FakeStore()
+    stage2 = automator or FakeStage2Automator(result=finalized_result())
     client = TestClient(
         create_app(
             store=store,
             auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
             planner=_planner,
+            stage2_automator=stage2,
         )
     )
-    return client, store
+    return client, store, stage2
 
 
 def test_plan_request_to_payload_uses_existing_parser_labels():
@@ -225,15 +267,15 @@ def test_record_format_validation_rejects_invalid_values():
 
 
 def test_auth_is_required_for_me_route():
-    client, _ = _build_client()
+    client, _, _ = _build_client()
 
     response = client.get("/api/me")
 
     assert response.status_code == 401
 
 
-def test_generate_plan_persists_profile_intake_and_history():
-    client, store = _build_client()
+def test_generate_plan_persists_validated_final_plan_and_history():
+    client, store, stage2 = _build_client()
     payload = _build_request().model_dump(mode="json")
 
     response = client.post(
@@ -244,14 +286,111 @@ def test_generate_plan_persists_profile_intake_and_history():
 
     assert response.status_code == 201
     body = response.json()
-    assert body["outputs"]["plan_text"] == "# Plan"
+    assert body["outputs"]["plan_text"] == "# Final Plan"
+    assert body["outputs"]["pdf_url"] is None
+    assert body["status"] == "ready"
     assert body["admin_outputs"] is None
     assert store.get_latest_intake("athlete-1")["intake"]["fight_date"] == "2026-04-18"
     assert len(store.list_user_plans("athlete-1")) == 1
+    saved = next(iter(store.plans.values()))
+    assert saved["draft_plan_text"] == "# Stage 1 Draft"
+    assert saved["final_plan_text"] == "# Final Plan"
+    assert saved["stage2_status"] == "stage2_pass"
+    assert saved["pdf_url"] is None
+    assert stage2.calls[0]["stage2_handoff_text"] == "handoff"
+
+
+def test_generate_plan_persists_retry_pass_result():
+    client, store, _ = _build_client(
+        FakeStage2Automator(
+            result=finalized_result(
+                plan_text="# Final Retry Plan",
+                final_plan_text="# Final Retry Plan",
+                stage2_status="stage2_retry_pass",
+                stage2_retry_text="repair prompt",
+                stage2_attempt_count=2,
+            )
+        )
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 201
+    saved = next(iter(store.plans.values()))
+    assert saved["plan_text"] == "# Final Retry Plan"
+    assert saved["stage2_status"] == "stage2_retry_pass"
+    assert saved["stage2_retry_text"] == "repair prompt"
+    assert saved["stage2_attempt_count"] == 2
+
+
+def test_generate_plan_returns_review_required_when_stage2_needs_manual_review():
+    client, store, _ = _build_client(
+        FakeStage2Automator(
+            result=finalized_result(
+                status="review_required",
+                plan_text="",
+                final_plan_text="# Failed Stage 2 Output",
+                stage2_status="stage2_failed",
+                stage2_retry_text="repair prompt",
+                stage2_validator_report={"errors": [{"code": "restriction_violation"}], "warnings": []},
+                stage2_attempt_count=2,
+            )
+        )
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "review_required"
+    assert body["outputs"]["plan_text"] == ""
+    saved = next(iter(store.plans.values()))
+    assert saved["final_plan_text"] == "# Failed Stage 2 Output"
+    assert saved["stage2_status"] == "stage2_failed"
+
+
+def test_stage2_unavailable_returns_503_without_persisting_plan():
+    client, store, _ = _build_client(
+        FakeStage2Automator(
+            error=Stage2AutomationUnavailableError("OPENAI_API_KEY is required for automated Stage 2 finalization.")
+        )
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 503
+    assert len(store.plans) == 0
+
+
+def test_stage2_gateway_failure_returns_502_without_persisting_plan():
+    client, store, _ = _build_client(
+        FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed"))
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 502
+    assert len(store.plans) == 0
 
 
 def test_athlete_cannot_read_another_athlete_plan():
-    client, store = _build_client()
+    client, store, _ = _build_client()
     other_user = AuthenticatedUser(
         user_id="athlete-2",
         email="other@example.com",
@@ -263,7 +402,7 @@ def test_athlete_cannot_read_another_athlete_plan():
         athlete_id="athlete-2",
         intake_id="intake_x",
         request=_build_request(),
-        result=awaitable_result(),
+        result=finalized_result(),
     )
 
     response = client.get(
@@ -275,7 +414,7 @@ def test_athlete_cannot_read_another_athlete_plan():
 
 
 def test_admin_can_view_internal_plan_outputs():
-    client, store = _build_client()
+    client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -287,7 +426,10 @@ def test_admin_can_view_internal_plan_outputs():
         athlete_id="athlete-1",
         intake_id="intake_x",
         request=_build_request(),
-        result=awaitable_result(),
+        result=finalized_result(
+            stage2_retry_text="repair prompt",
+            planning_brief={"schema_version": "planning_brief.v1"},
+        ),
     )
 
     response = client.get(
@@ -296,11 +438,15 @@ def test_admin_can_view_internal_plan_outputs():
     )
 
     assert response.status_code == 200
-    assert response.json()["admin_outputs"]["stage2_payload"] == {"ok": True}
+    admin_outputs = response.json()["admin_outputs"]
+    assert admin_outputs["stage2_payload"] == {"ok": True}
+    assert admin_outputs["draft_plan_text"] == "# Stage 1 Draft"
+    assert admin_outputs["stage2_retry_text"] == "repair prompt"
+    assert admin_outputs["stage2_status"] == "stage2_pass"
 
 
 def test_admin_endpoints_require_admin_role():
-    client, store = _build_client()
+    client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -316,13 +462,27 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
-def awaitable_result() -> dict:
-    return {
-        "plan_text": "# Plan",
-        "coach_notes": "### Coach Review",
-        "pdf_url": None,
-        "why_log": {"strength": {}},
-        "stage2_payload": {"ok": True},
-        "planning_brief": "brief",
-        "stage2_handoff_text": "handoff",
-    }
+def test_legacy_rows_with_only_plan_text_remain_readable():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    legacy = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=stage1_result(),
+    )
+
+    response = client.get(
+        f"/api/plans/{legacy['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["outputs"]["plan_text"] == "# Stage 1 Draft"
+

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from typing import Any, Awaitable, Callable
 
@@ -23,6 +24,12 @@ from .models import (
     ProfileRecord,
     ProfileUpdateRequest,
 )
+from .stage2_automation import (
+    Stage2AutomationError,
+    Stage2AutomationUnavailableError,
+    Stage2Automator,
+    build_default_stage2_automator,
+)
 from .store import AppStore, SupabaseAppStore
 
 Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
@@ -39,6 +46,23 @@ def _cors_origins() -> list[str]:
 
 async def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return await generate_plan(payload)
+
+
+def _decode_structured_text(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            decoded = json.loads(stripped)
+        except json.JSONDecodeError:
+            return {"raw": stripped}
+        return decoded if isinstance(decoded, dict) else {"raw": decoded}
+    return {"raw": value}
 
 
 def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
@@ -73,6 +97,14 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
     )
 
 
+def _admin_draft_text(row: dict[str, Any]) -> str:
+    return str(row.get("draft_plan_text") or row.get("plan_text") or "")
+
+
+def _admin_final_text(row: dict[str, Any]) -> str:
+    return str(row.get("final_plan_text") or row.get("plan_text") or "")
+
+
 def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
     summary = _map_plan_summary(row)
     return PlanDetail(
@@ -85,9 +117,15 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),
                 why_log=row.get("why_log") or {},
-                planning_brief=row.get("planning_brief"),
+                planning_brief=_decode_structured_text(row.get("planning_brief")),
                 stage2_payload=row.get("stage2_payload"),
                 stage2_handoff_text=str(row.get("stage2_handoff_text") or ""),
+                draft_plan_text=_admin_draft_text(row),
+                final_plan_text=_admin_final_text(row),
+                stage2_retry_text=str(row.get("stage2_retry_text") or ""),
+                stage2_validator_report=row.get("stage2_validator_report") or {},
+                stage2_status=str(row.get("stage2_status") or "legacy"),
+                stage2_attempt_count=int(row.get("stage2_attempt_count") or 0),
             )
             if include_admin
             else None
@@ -124,6 +162,7 @@ def create_app(
     store: AppStore,
     auth_service: AuthService,
     planner: Planner = _default_planner,
+    stage2_automator: Stage2Automator | None = None,
     mode_label: str = "supabase-authenticated",
 ) -> FastAPI:
     app = FastAPI(
@@ -134,6 +173,7 @@ def create_app(
     app.state.store = store
     app.state.auth_service = auth_service
     app.state.planner = planner
+    app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
     app.add_middleware(
         CORSMiddleware,
@@ -151,6 +191,9 @@ def create_app(
 
     def get_planner(request: Request) -> Planner:
         return request.app.state.planner
+
+    def get_stage2_automator(request: Request) -> Stage2Automator:
+        return request.app.state.stage2_automator
 
     def require_user(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -214,6 +257,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
         store.update_profile(
             profile.athlete_id,
@@ -230,21 +274,35 @@ def create_app(
             ),
         )
         intake = store.create_intake(profile.athlete_id, request_body)
-        result = await planner_fn(request_body.to_payload())
-        if result.get("status") == "invalid_input":
+        stage1_result = await planner_fn(request_body.to_payload())
+        if stage1_result.get("status") == "invalid_input":
             raise HTTPException(
                 status_code=422,
                 detail={
-                    "message": result.get("error", "invalid planning input"),
-                    "missing_fields": result.get("missing_fields", []),
+                    "message": stage1_result.get("error", "invalid planning input"),
+                    "missing_fields": stage1_result.get("missing_fields", []),
                 },
             )
+
+        try:
+            finalized_result = await stage2.finalize(stage1_result=stage1_result)
+        except Stage2AutomationUnavailableError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=str(exc),
+            ) from exc
+        except Stage2AutomationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(exc),
+            ) from exc
+
         plan_row = store.create_plan(
             athlete_id=profile.athlete_id,
             intake_id=str(intake["id"]),
             request=request_body,
             result={
-                **result,
+                **finalized_result,
                 "full_name": request_body.athlete.full_name,
             },
         )

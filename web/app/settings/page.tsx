@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { CustomSelect } from "@/components/custom-select";
 import { updateMe } from "@/lib/api";
 import {
   detectDeviceLocale,
@@ -77,12 +78,12 @@ export default function SettingsPage() {
           <div>
             <p className="kicker">Settings</p>
             <h1>Your athlete profile</h1>
-            <p className="muted">Update the profile fields that follow your account through onboarding and plan generation.</p>
+            <p className="muted">Update the profile fields reused across onboarding and plan generation.</p>
           </div>
           <div className="status-card">
             <p className="status-label">Device time</p>
             <h2 className="plan-summary-title">{detectedTimeZone}</h2>
-            <p className="muted">Time is taken from the device automatically for web intake flows.</p>
+            <p className="muted">Device time is used automatically in the web flow.</p>
           </div>
         </div>
 
@@ -100,36 +101,36 @@ export default function SettingsPage() {
                 </div>
                 <div className="field">
                   <label htmlFor="settingsTechnicalStyle">Technical Style</label>
-                  <select id="settingsTechnicalStyle" value={technicalStyle} onChange={(event) => setTechnicalStyle(event.target.value)}>
-                    <option value="">Select technical style</option>
-                    {TECHNICAL_STYLE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    id="settingsTechnicalStyle"
+                    value={technicalStyle}
+                    options={TECHNICAL_STYLE_OPTIONS}
+                    placeholder="Select technical style"
+                    includeEmptyOption
+                    onChange={(value) => setTechnicalStyle(value)}
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="settingsTacticalStyle">Tactical Style</label>
-                  <select id="settingsTacticalStyle" value={tacticalStyle} onChange={(event) => setTacticalStyle(event.target.value)}>
-                    <option value="">Select tactical style</option>
-                    {TACTICAL_STYLE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    id="settingsTacticalStyle"
+                    value={tacticalStyle}
+                    options={TACTICAL_STYLE_OPTIONS}
+                    placeholder="Select tactical style"
+                    includeEmptyOption
+                    onChange={(value) => setTacticalStyle(value)}
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="settingsProfessionalStatus">Professional Status</label>
-                  <select id="settingsProfessionalStatus" value={professionalStatus} onChange={(event) => setProfessionalStatus(event.target.value)}>
-                    <option value="">Select professional status</option>
-                    {PROFESSIONAL_STATUS_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  <CustomSelect
+                    id="settingsProfessionalStatus"
+                    value={professionalStatus}
+                    options={PROFESSIONAL_STATUS_OPTIONS}
+                    placeholder="Select professional status"
+                    includeEmptyOption
+                    onChange={(value) => setProfessionalStatus(value)}
+                  />
                 </div>
                 <div className="field">
                   <label htmlFor="settingsRecord">Record</label>
@@ -174,3 +175,5 @@ export default function SettingsPage() {
     </RequireAuth>
   );
 }
+
+

@@ -19,7 +19,7 @@ export default function HomePage() {
       <section className="panel loading-card">
         <p className="kicker">Overview</p>
         <h1>Loading your athlete workspace</h1>
-        <p className="muted">Checking your saved onboarding and plan history now.</p>
+        <p className="muted">Checking saved onboarding and plan history.</p>
       </section>
     );
   }
@@ -39,9 +39,7 @@ export default function HomePage() {
             <div className="hero-panel-copy">
               <p className="eyebrow">Overview</p>
               <h1 className="hero-title">Control the full camp from one athlete workspace.</h1>
-              <p>
-                Resume onboarding, generate your next plan, and reopen past camps without leaving the product.
-              </p>
+              <p>Resume onboarding, generate a plan, and reopen past camps in one place.</p>
             </div>
             <div className="status-card">
               <p className="status-label">Next action</p>
@@ -49,7 +47,7 @@ export default function HomePage() {
               <p className="muted">
                 {latestPlan
                   ? `Latest plan created ${new Date(latestPlan.created_at).toLocaleString()}.`
-                  : `Current draft is parked on step ${nextStepNumber} of 6.`}
+                  : `Draft is parked on step ${nextStepNumber} of 6.`}
               </p>
               <div className="plan-summary-actions">
                 <Link href={latestPlan ? `/plans/${latestPlan.plan_id}` : "/onboarding"} className="cta">
@@ -66,17 +64,17 @@ export default function HomePage() {
             <article className="metric-card">
               <p className="kicker">Saved plans</p>
               <p className="metric-value">{plans.length}</p>
-              <p className="muted">Every generation stays available in your history.</p>
+              <p className="muted">All generations stay in history.</p>
             </article>
             <article className="metric-card">
               <p className="kicker">Primary style</p>
               <p className="metric-value">{primaryStyle}</p>
-              <p className="muted">Pulled directly from your athlete profile.</p>
+              <p className="muted">Pulled from your athlete profile.</p>
             </article>
             <article className="metric-card">
               <p className="kicker">Fight date</p>
               <p className="metric-value">{latestIntake?.fight_date || latestPlan?.fight_date || "Not set"}</p>
-              <p className="muted">Your latest saved intake drives the current camp context.</p>
+              <p className="muted">Using your latest saved intake.</p>
             </article>
           </div>
         </section>
@@ -139,7 +137,7 @@ export default function HomePage() {
             ) : (
               <div className="support-panel">
                 <p className="kicker">No plans yet</p>
-                <p className="muted">Finish onboarding to generate your first saved fight camp.</p>
+                <p className="muted">Finish onboarding to create your first saved fight camp.</p>
                 <div className="plan-card-actions">
                   <Link href="/onboarding" className="cta inline-cta">
                     Start onboarding
@@ -159,10 +157,7 @@ export default function HomePage() {
         <div className="hero-panel-copy">
           <p className="eyebrow">Athlete-first beta</p>
           <h1 className="hero-title">Get your fight camp on the web.</h1>
-          <p>
-            UNLXCK now runs as a signed-in athlete product: onboarding, plan generation, plan history,
-            and exports all in one place.
-          </p>
+          <p>UNLXCK brings onboarding, generation, history, and exports into one athlete workspace.</p>
         </div>
         <div className="hero-actions">
           <Link href="/signup" className="cta">
@@ -180,20 +175,26 @@ export default function HomePage() {
       </section>
 
       <section className="metric-grid">
-        <article className="metric-card">
-          <p className="kicker">Step 1</p>
-          <h2>Sign up</h2>
-          <p className="muted">Create an athlete account and keep your plan history in one place.</p>
+        <article className="support-panel">
+          <div className="form-section-header">
+            <p className="kicker">Step 1</p>
+            <h2 className="form-section-title">Sign up</h2>
+          </div>
+          <p className="muted">Create an athlete account and keep plan history in one place.</p>
         </article>
-        <article className="metric-card">
-          <p className="kicker">Step 2</p>
-          <h2>Onboard</h2>
-          <p className="muted">Fill out a structured intake instead of leaving the product for a form.</p>
+        <article className="support-panel">
+          <div className="form-section-header">
+            <p className="kicker">Step 2</p>
+            <h2 className="form-section-title">Onboard</h2>
+          </div>
+          <p className="muted">Complete the structured intake inside the product.</p>
         </article>
-        <article className="metric-card">
-          <p className="kicker">Step 3</p>
-          <h2>Generate</h2>
-          <p className="muted">Turn that intake into a saved fight camp plan with PDF access and history.</p>
+        <article className="support-panel">
+          <div className="form-section-header">
+            <p className="kicker">Step 3</p>
+            <h2 className="form-section-title">Generate</h2>
+          </div>
+          <p className="muted">Turn that intake into a saved fight camp plan.</p>
         </article>
       </section>
     </>

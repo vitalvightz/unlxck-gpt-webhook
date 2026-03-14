@@ -6,6 +6,7 @@ import { useEffect, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { CustomSelect } from "@/components/custom-select";
 import { updateMe } from "@/lib/api";
 import {
   detectDeviceLocale,
@@ -16,7 +17,9 @@ import {
   isValidRecordFormat,
   KEY_GOAL_OPTIONS,
   PROFESSIONAL_STATUS_OPTIONS,
+  retainKnownOptionValues,
   sanitizeRecordInput,
+  STANCE_OPTIONS,
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
   toggleListValue,
@@ -149,10 +152,16 @@ export function PlanIntakeForm() {
   }
 
   function toggleFieldValue(key: "training_availability" | "equipment_access" | "key_goals" | "weak_areas", value: string) {
-    setForm((current) => ({
-      ...current,
-      [key]: toggleListValue(current[key], value),
-    }));
+    setForm((current) => {
+      const currentValues = key === "equipment_access"
+        ? retainKnownOptionValues(current[key], EQUIPMENT_ACCESS_OPTIONS)
+        : current[key];
+
+      return {
+        ...current,
+        [key]: toggleListValue(currentValues, value),
+      };
+    });
   }
 
   function validateCurrentStep(nextForm: PlanRequest): boolean {
@@ -280,12 +289,12 @@ export function PlanIntakeForm() {
           <div>
             <p className="kicker">Athlete Onboarding</p>
             <h1>Build your camp profile.</h1>
-            <p className="muted">This replaces the old external form with a saved, resumable athlete intake.</p>
+            <p className="muted">Saved, resumable athlete intake.</p>
           </div>
           <div className="status-card">
             <p className="status-label">Current step</p>
             <h2 className="plan-summary-title">{steps[currentStep]}</h2>
-            <p className="muted">Step {currentStep + 1} of {steps.length}. Draft saves preserve your selected values and current position.</p>
+            <p className="muted">Step {currentStep + 1} of {steps.length}. Draft keeps your selections and current step.</p>
           </div>
         </div>
 
@@ -322,7 +331,14 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="field">
                     <label htmlFor="stance">Stance</label>
-                    <input id="stance" value={form.athlete.stance ?? ""} onChange={(event) => updateAthlete("stance", event.target.value)} placeholder="orthodox, southpaw, switch" />
+                    <CustomSelect
+                      id="stance"
+                      value={form.athlete.stance ?? ""}
+                      options={STANCE_OPTIONS}
+                      placeholder="Select stance"
+                      includeEmptyOption
+                      onChange={(value) => updateAthlete("stance", value)}
+                    />
                   </div>
                 </div>
               </article>
@@ -335,36 +351,36 @@ export function PlanIntakeForm() {
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="technicalStyle">Technical Style</label>
-                    <select id="technicalStyle" value={form.athlete.technical_style[0] ?? ""} onChange={(event) => updateAthlete("technical_style", event.target.value ? [event.target.value] : [])}>
-                      <option value="">Select technical style</option>
-                      {TECHNICAL_STYLE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      id="technicalStyle"
+                      value={form.athlete.technical_style[0] ?? ""}
+                      options={TECHNICAL_STYLE_OPTIONS}
+                      placeholder="Select technical style"
+                      includeEmptyOption
+                      onChange={(value) => updateAthlete("technical_style", value ? [value] : [])}
+                    />
                   </div>
                   <div className="field">
                     <label htmlFor="tacticalStyle">Tactical Style</label>
-                    <select id="tacticalStyle" value={form.athlete.tactical_style[0] ?? ""} onChange={(event) => updateAthlete("tactical_style", event.target.value ? [event.target.value] : [])}>
-                      <option value="">Select tactical style</option>
-                      {TACTICAL_STYLE_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      id="tacticalStyle"
+                      value={form.athlete.tactical_style[0] ?? ""}
+                      options={TACTICAL_STYLE_OPTIONS}
+                      placeholder="Select tactical style"
+                      includeEmptyOption
+                      onChange={(value) => updateAthlete("tactical_style", value ? [value] : [])}
+                    />
                   </div>
                   <div className="field">
                     <label htmlFor="status">Professional Status</label>
-                    <select id="status" value={form.athlete.professional_status ?? ""} onChange={(event) => updateAthlete("professional_status", event.target.value)}>
-                      <option value="">Select professional status</option>
-                      {PROFESSIONAL_STATUS_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      id="status"
+                      value={form.athlete.professional_status ?? ""}
+                      options={PROFESSIONAL_STATUS_OPTIONS}
+                      placeholder="Select professional status"
+                      includeEmptyOption
+                      onChange={(value) => updateAthlete("professional_status", value)}
+                    />
                   </div>
                   <div className="field">
                     <label htmlFor="record">Record</label>
@@ -401,7 +417,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Device time</p>
                   <h2 className="form-section-title">Automatic handling</h2>
                 </div>
-                <p className="muted">We use your device time automatically. Detected time zone: <strong>{detectedTimeZone}</strong>.</p>
+                <p className="muted">Device time is used automatically: <strong>{detectedTimeZone}</strong>.</p>
               </div>
             </aside>
           </div>
@@ -430,11 +446,17 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="field">
                     <label htmlFor="fatigueLevel">Fatigue level</label>
-                    <select id="fatigueLevel" value={form.fatigue_level ?? "moderate"} onChange={(event) => updateField("fatigue_level", event.target.value)}>
-                      <option value="low">Low</option>
-                      <option value="moderate">Moderate</option>
-                      <option value="high">High</option>
-                    </select>
+                    <CustomSelect
+                      id="fatigueLevel"
+                      value={form.fatigue_level ?? "moderate"}
+                      options={[
+                        { label: "Low", value: "low" },
+                        { label: "Moderate", value: "moderate" },
+                        { label: "High", value: "high" },
+                      ]}
+                      placeholder="Select fatigue level"
+                      onChange={(value) => updateField("fatigue_level", value)}
+                    />
                   </div>
                 </div>
               </article>
@@ -455,7 +477,7 @@ export function PlanIntakeForm() {
               </div>
               <div className="support-panel">
                 <p className="kicker">Guidance</p>
-                <p className="muted">Fight date and training frequency are the main inputs used to shape the camp timeline before generation.</p>
+                <p className="muted">Fight date and training frequency shape the camp timeline.</p>
               </div>
             </aside>
           </div>
@@ -513,7 +535,7 @@ export function PlanIntakeForm() {
               </div>
               <div className="support-panel">
                 <p className="kicker">Preference</p>
-                <p className="muted">Training Preference stays as natural language so you can describe session feel, equipment constraints, or pacing without changing the payload shape.</p>
+                <p className="muted">Use natural language for session feel, equipment constraints, or pacing.</p>
               </div>
             </aside>
           </div>
@@ -537,7 +559,7 @@ export function PlanIntakeForm() {
             <aside className="step-aside">
               <div className="support-panel">
                 <p className="kicker">Safety</p>
-                <p className="muted">Keep this in your own words. Specific notes give the planner cleaner context for exercise selection and substitutions.</p>
+                <p className="muted">Specific notes help the planner adapt safely.</p>
               </div>
             </aside>
           </div>
@@ -669,7 +691,7 @@ export function PlanIntakeForm() {
               <div className="status-card">
                 <p className="status-label">Ready to generate</p>
                 <h2 className="plan-summary-title">Final pre-check</h2>
-                <p className="muted">Review the saved inputs below, then generate your plan. Raw planner behavior and payload shape stay unchanged.</p>
+                <p className="muted">Review the saved inputs, then generate.</p>
                 <ul className="summary-list">
                   <li>Technical Style must be selected.</li>
                   <li>Fight date must be set.</li>
@@ -717,3 +739,4 @@ export function PlanIntakeForm() {
     </RequireAuth>
   );
 }
+

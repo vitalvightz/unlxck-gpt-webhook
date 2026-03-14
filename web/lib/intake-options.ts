@@ -26,6 +26,13 @@ export const PROFESSIONAL_STATUS_OPTIONS: IntakeOption[] = [
   { label: "Professional", value: "professional" },
 ];
 
+export const STANCE_OPTIONS: IntakeOption[] = [
+  { label: "Orthodox", value: "Orthodox" },
+  { label: "Southpaw", value: "Southpaw" },
+  { label: "Switch", value: "Switch" },
+  { label: "Hybrid", value: "Hybrid" },
+];
+
 export const TRAINING_AVAILABILITY_OPTIONS: IntakeOption[] = [
   { label: "Monday", value: "Monday" },
   { label: "Tuesday", value: "Tuesday" },
@@ -49,7 +56,7 @@ export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
   { label: "Cable", value: "cable" },
   { label: "Landmine", value: "landmine" },
   { label: "Heavy Bag", value: "heavy_bag" },
-  { label: "Jump Rope", value: "jump_rope" },
+  { label: "Thai Pads", value: "thai_pads" },
   { label: "Assault Bike", value: "assault_bike" },
   { label: "Rower", value: "rower" },
   { label: "Partner", value: "partner" },
@@ -80,6 +87,13 @@ export const WEAK_AREA_OPTIONS: IntakeOption[] = [
 
 export const RECORD_PATTERN = /^\d+-\d+(?:-\d+)?$/;
 
+const LEGACY_OPTION_LABELS: Record<string, string> = {
+  air_bike: "Air Bike",
+  dumbbell: "Dumbbell",
+  kettlebell: "Kettlebell",
+  jump_rope: "Jump Rope",
+};
+
 export function detectDeviceTimeZone(): string {
   if (typeof window === "undefined" || typeof Intl === "undefined") {
     return "";
@@ -109,8 +123,13 @@ export function toggleListValue(values: string[], target: string): string[] {
     : [...values, target];
 }
 
+export function retainKnownOptionValues(values: string[] | undefined, options: IntakeOption[]): string[] {
+  const knownValues = new Set(options.map((option) => option.value));
+  return (values ?? []).filter((value) => knownValues.has(value));
+}
+
 export function getOptionLabel(options: IntakeOption[], value: string): string {
-  return options.find((option) => option.value === value)?.label ?? value;
+  return options.find((option) => option.value === value)?.label ?? LEGACY_OPTION_LABELS[value] ?? value;
 }
 
 export function getOptionLabels(options: IntakeOption[], values: string[] | undefined): string[] {

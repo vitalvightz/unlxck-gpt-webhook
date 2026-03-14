@@ -17,12 +17,12 @@ export default function PlansPage() {
           <div>
             <p className="kicker">Plan History</p>
             <h1>Your saved plans</h1>
-            <p className="muted">Open the current camp, revisit older outputs, or jump back into onboarding for a new generation.</p>
+            <p className="muted">Open current and older plans from one saved history.</p>
           </div>
           <div className="status-card">
             <p className="status-label">Saved</p>
             <h2 className="plan-summary-title">{plans.length}</h2>
-            <p className="muted">Every generated plan stays attached to your athlete account.</p>
+            <p className="muted">Every generated plan stays attached to your account.</p>
           </div>
         </div>
 
@@ -72,3 +72,5 @@ export default function PlansPage() {
     </RequireAuth>
   );
 }
+
+
