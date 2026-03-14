@@ -127,10 +127,10 @@ def normalize_system(raw_system: str | None, *, source: str) -> str:
     else:
         normalized = SYSTEM_ALIASES.get(system, system)
 
-    if any(sep in system for sep in ("+", "?", "/", "&")) or "->" in system:
+    if any(sep in system for sep in ("+", "\u2192", "/", "&")) or "->" in system:
         parts = [
             part.strip()
-            for part in re.split(r"\s*(?:\+|/|?|->|&)\s*", system)
+            for part in re.split(r"\s*(?:\+|/|\u2192|->|&)\s*", system)
             if part.strip()
         ]
         mapped_parts = [SYSTEM_ALIASES.get(part, part) for part in parts]
@@ -1858,6 +1858,7 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
+
 
 
 
