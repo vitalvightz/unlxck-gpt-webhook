@@ -443,7 +443,7 @@ PHASE_OBJECTIVES = {
 }
 
 PHASE_EMPHASIS = {
-    "GPP": ["aerobic repeatability", "general force", "trunk/neck robustness"],
+    "GPP": ["aerobic repeatability", "general force", "structural strength foundation"],
     "SPP": ["glycolytic repeatability", "rotational intent", "sport speed"],
     "TAPER": ["alactic sharpness", "confidence", "low soreness"],
 }
@@ -741,14 +741,14 @@ _LIMITER_PROFILES = {
     },
     "tissue_state": {
         "label": "tissue state",
-        "organising_principle": "protection, conservative loading, reduced ballistic bias, and rebuild sequencing",
+        "organising_principle": "conservative loading with meaningful force production, symptom stability, and rebuild sequencing",
         "drill_emphasis": [
-            "isometrics and carries before ballistics",
-            "controlled trunk work and tissue calm",
-            "low-impact repeatability before hard output",
+            "conservative loading with meaningful force production",
+            "symptom-stable strength before ballistic exposure",
+            "low-impact repeatability before unnecessary reactive stress",
         ],
-        "protect_first": "next-day function, symptom stability, and conservative loading",
-        "cut_first": "ballistic work, reactive contacts, and cool explosive drills",
+        "protect_first": "symptom stability and meaningful loading before ballistic progression or extra volume",
+        "cut_first": "ballistic extras, reaction-heavy accessories, and non-essential reactive contacts before primary strength loading",
         "boxing_load_rule": "If symptoms spike after boxing, the next day becomes recovery plus rehab only.",
         "sparring_collision_rule": "When sparring creates a collision with tissue state, protect the athlete first and remove accessory or ballistic S&C before boxing quality work.",
         "conditioning_sequence": {
@@ -832,6 +832,49 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     )
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
     days_until_fight = athlete_model.get("days_until_fight")
+    restriction_keys = {
+        str((restriction or {}).get("restriction", "")).strip().lower()
+        for restriction in restrictions or []
+        if str((restriction or {}).get("restriction", "")).strip()
+    }
+    restriction_regions = {
+        str((restriction or {}).get("region", "")).strip().lower()
+        for restriction in restrictions or []
+        if str((restriction or {}).get("region", "")).strip()
+    }
+    tissue_restriction_keys = {
+        "deep_knee_flexion",
+        "heavy_overhead_pressing",
+        "high_impact",
+        "high_impact_lower",
+        "high_impact_upper",
+        "high_impact_global",
+        "loaded_flexion",
+        "loaded_rotation",
+        "spinal_flexion",
+        "max_velocity",
+    }
+    tissue_region_tokens = {"shoulder", "knee", "neck", "back", "spine", "hip", "ankle", "elbow", "wrist"}
+    performance_priority_signals = bool(
+        goal_tokens & {
+            "conditioning",
+            "conditioning_endurance",
+            "endurance",
+            "power",
+            "strength",
+            "speed",
+            "skill_refinement",
+            "striking",
+        }
+        or readiness_flags & {"moderate_fatigue", "high_fatigue", "fight_week"}
+        or (style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"})
+    )
+    tissue_pressure = bool(
+        athlete_model.get("injuries")
+        or readiness_flags & {"injury_management"}
+        or restriction_keys & tissue_restriction_keys
+        or restriction_regions & tissue_region_tokens
+    )
 
     if weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm"}:
         return "coordination"
@@ -844,8 +887,6 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
         return "tissue_state"
 
-    if athlete_model.get("injuries") or restrictions:
-        return "tissue_state"
     if goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}:
         return "aerobic_repeatability"
     if style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"}:
@@ -854,6 +895,8 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "sharpness_under_fatigue"
     if isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14:
         return "sharpness_under_fatigue"
+    if tissue_pressure and not performance_priority_signals:
+        return "tissue_state"
     return "general_fight_readiness"
 
 
@@ -2089,10 +2132,12 @@ def build_stage2_payload(
     )
     rewrite_guidance = {
         "selection_rules": [
-            "Prefer selected items first, then alternates in listed order.",
-            "If a selected item is removed, replace only within the same slot when possible.",
+            "Prefer selected items first only if they remain strong and compliant.",
+            "If a selected item is removed, replace with the strongest compliant same-role option first.",
+            "Do not let support drills take over anchor slots when stronger compliant options exist.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
-            "Do not invent new items when a slot becomes thin after filtering.",
+            "Do not invent new items when a strong compliant option already exists in the pool.",
+            "When replacing vague or gimmicky items, upgrade quality instead of downgrading to filler.",
         ],
         "writing_rules": [
             "Keep the final plan athlete-facing and clean.",
@@ -2112,25 +2157,80 @@ def build_stage2_payload(
         "rewrite_guidance": rewrite_guidance,
     }
 
-STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer). Input = PLANNING BRIEF + Stage 1 draft plan + athlete profile + restrictions + candidate pools.
+STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 
-SOURCE OF TRUTH:
-1. Use the PLANNING BRIEF first for athlete intent, phase strategy, priorities, and risks.
-2. Treat restrictions as hard constraints.
-3. Treat candidate pools as the preferred exercise reservoir.
-4. Treat the Stage 1 draft plan as raw material, not the final authority.
+Input = PLANNING BRIEF + Stage 1 draft plan + athlete profile + restrictions + candidate pools.
 
-RULE 1 (hard filter): Remove or exclude any exercise, drill, or prescription that violates ANY restriction, including synonyms and mechanically equivalent patterns. Apply this to strength, conditioning, rehab, and any new item you consider. Do not soften a violating item into compliance; replace it or drop it.
+SOURCE OF TRUTH
+1. PLANNING BRIEF = primary authority for athlete intent, phase strategy, priorities, and risks.
+2. Restrictions = hard constraints.
+3. Candidate pools = preferred exercise reservoir.
+4. Stage 1 draft = raw material only, not final authority.
 
-RULE 2 (planning): Build the best final plan for this athlete using the planning brief. Use the week_by_week_progression map and weekly_role_map when sequencing the camp. Treat weekly_role_map as an execution layer, not a new authority: if a role carries governance or suppression metadata, higher-order planning rules still win. Organize sessions by weekly role first, then choose compliant exercises that fit each role. You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing, as long as the final plan remains consistent with the phase strategy and restrictions.
+RULE 1 - HARD FILTER
+Remove any exercise, drill, or prescription that violates any restriction, including synonyms and mechanically equivalent patterns.
+Apply this to strength, conditioning, rehab, warm-ups, finishers, and any new item considered.
+Do not modify a violating item into compliance. Replace it or drop it.
 
-RULE 3 (selection): Prefer selected Stage 1 items first, then same-role alternates, then other compliant options from the candidate pools. Keep the highest-priority slots and preserve rehab and phase-critical systems when possible.
+RULE 2 - PLAN THE CAMP, DON'T JUST EDIT
+Build the best final plan from the PLANNING BRIEF.
+Use week_by_week_progression and weekly_role_map to sequence the camp.
+You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing if the result is more coherent and still consistent with the planning brief and restrictions.
 
-RULE 4 (invention): Prefer not to invent new exercises. Only introduce a new item if the existing material cannot produce a coherent, restriction-compliant plan, and only if the replacement is conservative, mechanically appropriate, and clearly aligned with the planning brief.
+RULE 3 - SELECTION ORDER
+Prefer:
+1. strong compliant Stage 1 items
+2. same-role compliant alternates from candidate pools
+3. other compliant options from candidate pools
 
-RULE 5 (output hygiene): The final answer must be athlete-facing only. Do not include internal/admin sections such as Athlete Profile, Selection Rationale, Coach Notes, Planning Brief, Candidate Pools, Omission Ledger, Rewrite Guidance, validator language, or Stage-2-only notes. Do not emit raw HTML tags or code fences.
+Do not keep a weak Stage 1 choice just because it already exists.
 
-OUTPUT: Return a clean athlete-facing final plan that feels elite, personalized, and internally coherent. Preserve what is best from Stage 1, but rewrite weak structure, duplication, or sequencing when needed."""
+RULE 4 - ANCHOR SESSION STANDARD
+Each weekly anchor strength/power session must contain at least one serious high-transfer strength or power exercise if a compliant option exists for the athlete's sport, phase, equipment, and injury profile.
+Do not build anchor sessions mostly from bird dogs, dead bugs, planks, carries, bridge holds, breathing drills, mobility, or rehab-level work unless restrictions clearly force that outcome.
+Support work may assist the anchor. It cannot become the anchor.
+
+RULE 5 - SAFE STRONG, NOT SAFE SOFT
+Do not confuse tissue protection with undertraining.
+In GPP and SPP, choose the safest strong option, not the safest soft option.
+If a compliant loaded pattern exists, prefer it over low-output filler for key slots.
+
+RULE 6 - SPORT SPECIFICITY
+The final plan must look like a real combat-sport camp for this athlete, not generic athletic work.
+Conditioning, power work, weekly rhythm, and taper choices must clearly match the athlete's sport, style, fatigue state, injury context, equipment access, and phase priorities.
+
+RULE 7 - SUPPORT WORK STAYS IN SUPPORT ROLE
+Rehab, isometrics, carries, trunk stability, breathing, mobility, and tissue-protection work should support the plan, not dominate it, unless the planning brief clearly requires a protection-first camp.
+If volume must be cut, cut accessory/support work first.
+
+RULE 8 - NO GIMMICKS
+Do not use invented, dramatic, vague, or fake-smart drill names.
+Use clear, standard, coach-readable exercise names only.
+
+RULE 9 - REPLACEMENTS MUST IMPROVE QUALITY
+When removing weak, vague, gimmicky, or violating items, replace them with clearer and stronger compliant options, not weaker support work.
+
+RULE 10 - TAPER DISCIPLINE
+In taper weeks, simplify aggressively.
+Remove novelty, reduce accessory volume, avoid soreness-inducing density, and keep only the most useful sharpness, rhythm, confidence, and freshness work.
+
+RULE 11 - OUTPUT DISCIPLINE
+Keep the athlete-facing output concise, high-signal, and easy to scan.
+Minimize repetition.
+Cut filler, duplication, and generic coaching reminders.
+Keep coaching notes short and only where session-critical.
+
+OUTPUT
+Return a clean athlete-facing final plan that is:
+- concise
+- coach-readable
+- sport-specific
+- restriction-compliant
+- internally coherent
+- phase-appropriate
+
+Preserve the best of Stage 1, but remove weak exercise choices, filler, vague naming, poor sequencing, and underpowered anchor sessions.
+"""
 
 
 def _json_block(value: dict | list) -> str:
