@@ -1,4 +1,6 @@
 :root {
+  --font-display: "Space Grotesk", "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --bg-app: #0a0a0b;
   --bg-panel: #0f1012;
   --bg-surface: #111214;
