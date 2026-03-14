@@ -8,3 +8,8 @@ __pycache__/
 final_plan.txt
 stage2_handoff.txt
 stage2_retry.txt
+.app_data/
+web/.next/
+web/node_modules/
+.demo-*.log
+.demo-*.err.log

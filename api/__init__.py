@@ -1,0 +1,1 @@
+"""Application-facing API scaffold for the fight camp planner."""

@@ -177,6 +177,73 @@ The injury guard processes exercises in the same order they appear in the final 
 
 The logs reflect the exact state after injury filtering but before markdown formatting, so there is 1:1 correspondence between logged replacements and final plan contents.
 
+## App Scaffold
+
+The repo now includes a first athlete-first web application shell around the planner:
+
+- `api/app.py` - FastAPI wrapper with authenticated athlete/admin endpoints
+- `api/auth.py` - Supabase token verification and user hydration
+- `api/store.py` - Supabase-backed persistence for profiles, intakes, and plans
+- `web/` - Next.js web app with signup, login, onboarding, generation, plans, settings, and admin routes
+- `supabase/schema.sql` - relational schema and RLS policies for `profiles`, `athlete_intakes`, and `plans`
+
+### Backend Environment
+
+Create a root `.env` file or export these values before running the API:
+
+```bash
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_ANON_KEY=
+UNLXCK_ADMIN_EMAILS=ops@example.com
+APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is the preferred backend credential. `SUPABASE_ANON_KEY` is accepted as a fallback for auth token lookups, but it does not replace the service role key for production writes.
+
+### Run The API
+
+```bash
+uvicorn api.app:app --reload
+```
+
+The API expects Supabase auth tokens on every `/api/*` request and persists athlete profiles, onboarding snapshots, and generated plans into Supabase.
+
+### Run The Web App
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Copy `web/.env.local.example` to `web/.env.local` and set:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+```
+
+### Athlete-First Web Flow
+
+1. Athlete signs up or logs in.
+2. Athlete completes the structured onboarding wizard.
+3. The web app posts the saved intake to `POST /api/plans/generate`.
+4. The Python planner still runs through `fightcamp.main.generate_plan()`.
+5. Athlete lands on a saved plan detail page and can revisit plan history later.
+6. Admin users can inspect athlete records and full internal planner artifacts from `/admin`.
+
+### API Surface
+
+- `GET /health`
+- `GET /api/me`
+- `PUT /api/me`
+- `POST /api/plans/generate`
+- `GET /api/plans`
+- `GET /api/plans/{plan_id}`
+- `GET /api/admin/plans`
+- `GET /api/admin/athletes`
 ## Testing
 
 The test suite uses pytest to validate core functionality across injury guardrails, tag provenance, and plan generation.
