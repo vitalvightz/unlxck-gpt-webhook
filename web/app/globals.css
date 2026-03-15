@@ -1607,27 +1607,152 @@ select:focus-visible {
 
 
 
-/* Avatar preview — settings/profile page */
-.avatar-preview-block {
-  display: flex;
-  align-items: center;
-  gap: 14px;
+/* Avatar upload control — settings/profile page */
+
+/* Hidden file input */
+.avatar-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.avatar-preview-circle {
+/* Outer block holding the trigger + remove button */
+.avatar-upload-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+/* Clickable trigger button — resets browser button styling */
+.avatar-upload-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The avatar circle — larger for the upload UX */
+.avatar-upload-circle {
+  position: relative;
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(181, 18, 43, 0.22), rgba(181, 18, 43, 0.08));
-  border: 1px solid rgba(181, 18, 43, 0.3);
-  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.08);
+  border: 1.5px solid rgba(181, 18, 43, 0.35);
+  box-shadow:
+    0 0 0 4px rgba(181, 18, 43, 0.09),
+    0 4px 20px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
+.avatar-upload-trigger:hover .avatar-upload-circle,
+.avatar-upload-trigger:focus-visible .avatar-upload-circle {
+  border-color: var(--brand-red);
+  box-shadow:
+    0 0 0 4px rgba(181, 18, 43, 0.2),
+    0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Camera icon overlay — appears on hover/focus */
+.avatar-upload-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.54);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.avatar-upload-trigger:hover .avatar-upload-overlay,
+.avatar-upload-trigger:focus-visible .avatar-upload-overlay {
+  opacity: 1;
+}
+
+/* "UPLOAD PHOTO" / "CHANGE PHOTO" label */
+.avatar-upload-hint {
+  font-family: var(--font-display), sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  transition: color var(--transition-fast);
+}
+
+.avatar-upload-trigger:hover .avatar-upload-hint,
+.avatar-upload-trigger:focus-visible .avatar-upload-hint {
+  color: var(--brand-red);
+}
+
+/* Remove avatar button */
+.avatar-remove-btn {
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-btn);
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.avatar-remove-btn:hover {
+  border-color: var(--brand-red);
+  color: var(--danger-ink);
+}
+
+/* URL fallback section */
+.avatar-url-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* "Use URL instead" toggle link-style button */
+.avatar-url-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--transition-fast);
+}
+
+.avatar-url-toggle:hover {
+  color: var(--text-secondary);
+}
+
+/* URL input field */
+.avatar-url-field {
+  max-width: 420px;
+}
+
+/* Keep legacy preview-img and preview-initials classes — used by avatar-upload-circle */
 .avatar-preview-img {
   width: 100%;
   height: 100%;
@@ -1636,18 +1761,9 @@ select:focus-visible {
 
 .avatar-preview-initials {
   font-family: var(--font-display), sans-serif;
-  font-size: 17px;
+  font-size: 24px;
   font-weight: 700;
   color: #ffd5db;
   letter-spacing: 0.02em;
   line-height: 1;
-}
-
-.avatar-preview-meta {
-  display: grid;
-  gap: 4px;
-}
-
-.avatar-preview-meta p {
-  margin: 0;
 }
