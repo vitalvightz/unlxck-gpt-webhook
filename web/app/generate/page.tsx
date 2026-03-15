@@ -7,6 +7,7 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { generatePlan } from "@/lib/api";
 import { hydratePlanRequest } from "@/lib/onboarding";
+import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 export default function GeneratePage() {
   const router = useRouter();
@@ -37,31 +38,7 @@ export default function GeneratePage() {
 
   return (
     <RequireAuth>
-      <section className="panel">
-        <div className="split-layout">
-          <div className="step-main">
-            <article className="status-card">
-              <p className="status-label">Generating</p>
-              <h1>Building your plan</h1>
-              <p className="muted">Running Stage 1 generation, Stage 2 finalization, and validation from your saved onboarding.</p>
-              {error ? <div className="error-banner">{error}</div> : <div className="success-banner">This can take a little longer while the final validation pass runs.</div>}
-            </article>
-          </div>
-          <aside className="step-aside">
-            <div className="support-panel">
-              <div className="form-section-header">
-                <p className="kicker">Current action</p>
-                <h2 className="form-section-title">Generation flow</h2>
-              </div>
-              <ul className="summary-list">
-                <li>Load the latest saved onboarding.</li>
-                <li>Run the draft planner and Stage 2 automation.</li>
-                <li>Save the validated plan and open plan detail.</li>
-              </ul>
-            </div>
-          </aside>
-        </div>
-      </section>
+      <PremiumLoadingScreen error={error} />
     </RequireAuth>
   );
 }

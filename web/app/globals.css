@@ -1767,3 +1767,209 @@ select:focus-visible {
   letter-spacing: 0.02em;
   line-height: 1;
 }
+
+/* ============================================================
+   PREMIUM LOADING SCREEN — Editorial Ambient Motion System
+   ============================================================ */
+
+/* --- Keyframes -------------------------------------------- */
+
+@keyframes loading-panel-breathe {
+  0%, 100% {
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+  50% {
+    box-shadow: 0 24px 52px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  }
+}
+
+@keyframes loading-scan-sweep {
+  0% {
+    left: -18%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+@keyframes loading-eyebrow-pulse {
+  0%, 100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* --- Shell / panels use existing .panel and .support-panel base styles --- */
+
+/* --- Primary panel ----------------------------------------- */
+
+.loading-primary-panel {
+  animation: loading-panel-breathe 4s ease-in-out infinite;
+}
+
+/* --- Eyebrow label ----------------------------------------- */
+
+.loading-eyebrow {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--brand-red);
+  animation: loading-eyebrow-pulse 2.8s ease-in-out infinite;
+}
+
+/* --- Title -------------------------------------------------- */
+
+.loading-title {
+  margin: 0;
+  font-family: var(--font-display), sans-serif;
+  font-size: clamp(26px, 3.5vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--text-primary);
+}
+
+/* --- Supporting copy --------------------------------------- */
+
+.loading-copy {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* --- Scan rail --------------------------------------------- */
+
+.loading-scan-rail {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.loading-scan-line {
+  position: absolute;
+  top: 0;
+  left: -18%;
+  width: 18%;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(181, 18, 43, 0.55) 35%,
+    rgba(181, 18, 43, 0.85) 50%,
+    rgba(181, 18, 43, 0.55) 65%,
+    transparent 100%
+  );
+  box-shadow: 0 0 8px rgba(181, 18, 43, 0.4);
+  animation: loading-scan-sweep 3s linear infinite;
+}
+
+/* --- Status strip ------------------------------------------ */
+
+.loading-status-strip {
+  border-radius: 12px;
+  padding: 10px 13px;
+  background: rgba(181, 18, 43, 0.07);
+  border: 1px solid rgba(181, 18, 43, 0.14);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* --- Secondary panel uses existing .support-panel base styles ------------ */
+
+/* --- Steps list -------------------------------------------- */
+
+.loading-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+
+.loading-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: opacity 500ms ease;
+}
+
+.loading-step:last-child {
+  border-bottom: none;
+}
+
+/* --- Step marker (dot / accent) ---------------------------- */
+
+.loading-step-marker {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 6px;
+  background: var(--border-strong);
+  transition: background 500ms ease, box-shadow 500ms ease;
+}
+
+/* --- Step label -------------------------------------------- */
+
+.loading-step-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1.5;
+  transition: color 500ms ease, font-weight 500ms ease;
+}
+
+/* --- Active step ------------------------------------------- */
+
+.loading-step-active .loading-step-marker {
+  background: var(--brand-red);
+  box-shadow: 0 0 6px rgba(181, 18, 43, 0.5);
+}
+
+.loading-step-active .loading-step-label {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* --- Reduced-motion fallback ------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-primary-panel {
+    animation: none;
+  }
+  .loading-eyebrow {
+    animation: none;
+    opacity: 1;
+  }
+  .loading-scan-line {
+    animation: none;
+    display: none;
+  }
+  .loading-step,
+  .loading-step-marker,
+  .loading-step-label {
+    transition: none;
+  }
+}
