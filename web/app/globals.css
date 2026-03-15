@@ -1243,6 +1243,44 @@ select:focus-visible {
   gap: 14px;
 }
 
+.stage2-review-panel-stale {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.stage2-retry-banner {
+  display: grid;
+  gap: 10px;
+}
+
+.stage2-retry-in-progress {
+  border-color: rgba(181, 18, 43, 0.28);
+  background: linear-gradient(180deg, rgba(40, 10, 16, 0.94), rgba(20, 8, 12, 0.96));
+  animation: loading-panel-breathe 3s ease-in-out infinite;
+}
+
+.stage2-retry-passed {
+  border-color: rgba(125, 226, 168, 0.22);
+  background: linear-gradient(180deg, rgba(12, 36, 22, 0.94), rgba(8, 20, 14, 0.96));
+}
+
+.stage2-retry-failed {
+  border-color: rgba(181, 18, 43, 0.22);
+  background: linear-gradient(180deg, rgba(32, 12, 17, 0.94), rgba(18, 8, 12, 0.96));
+}
+
+.stage2-retry-in-progress .kicker {
+  color: var(--brand-red);
+}
+
+.stage2-retry-passed .kicker {
+  color: var(--success-ink);
+}
+
+.stage2-retry-failed .kicker {
+  color: var(--danger-ink);
+}
+
 .stage2-review-state-row {
   display: flex;
   flex-wrap: wrap;

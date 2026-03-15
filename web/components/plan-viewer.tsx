@@ -382,6 +382,8 @@ export function PlanViewer({
   const [approvePending, setApprovePending] = useState(false);
   const [approveMessage, setApproveMessage] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
+  const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(null);
   const [openAdminSection, setOpenAdminSection] = useState(() => {
     if (retryText.trim()) {
       return "retry";
@@ -422,22 +424,28 @@ export function PlanViewer({
     }
 
     setManualSubmitPending(true);
+    setStage2RetryInProgress(true);
+    setStage2RetryJustCompleted(null);
     setManualSubmitError(null);
     setManualSubmitMessage(null);
     try {
       const updatedPlan = await submitManualStage2(accessToken, plan.plan_id, {
         final_plan_text: manualPlanText,
       });
+      const retryPassed = updatedPlan.status === "ready";
+      setStage2RetryJustCompleted(retryPassed ? "passed" : "failed");
       onPlanUpdated?.(updatedPlan);
       setManualSubmitMessage(
-        updatedPlan.status === "ready"
+        retryPassed
           ? "Manual Stage 2 output passed validation and is now published in the app."
           : "Manual Stage 2 output was saved, but it still needs revision. The retry prompt below is updated.",
       );
     } catch (error) {
+      setStage2RetryJustCompleted(null);
       setManualSubmitError(error instanceof Error ? error.message : "Unable to submit manual Stage 2 output.");
     } finally {
       setManualSubmitPending(false);
+      setStage2RetryInProgress(false);
     }
   }
 
@@ -654,84 +662,114 @@ export function PlanViewer({
           ) : (
             <div className="plan-review-stack">
               {isAdmin ? (
-                <section className={reviewPanelClassName}>
-                  <div className="form-section-header">
-                    <p className="kicker">Stage 2 review</p>
-                    <h3>{stage2ReviewSummary.isPublishable ? "Release decision" : "Why this plan is being held"}</h3>
-                  </div>
-                  <div className="stage2-review-state-row">
-                    <span className={`badge ${stage2ReviewSummary.isPublishable ? "status-badge-success" : "issue-badge-error"}`}>
-                      {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
-                    </span>
-                    <span className="badge issue-badge-error">
-                      {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} blockers
-                    </span>
-                    <span className="badge issue-badge-warning">
-                      {stage2ReviewSummary.reviewFlagCount} review flags
-                    </span>
-                  </div>
-                  <p className="review-summary-text">{stage2ReviewSummary.headline}</p>
-                  <p className="muted">{stage2ReviewSummary.guidance}</p>
-                  {stage2ReviewSummary.hasIssues ? (
-                    <div className="review-issue-groups">
-                      {stage2ReviewSummary.errors.length || stage2ReviewSummary.blocking.length ? (
-                        <section className="review-issue-group">
-                          <div className="review-issue-group-header">
-                            <p className="review-issue-group-title">Blocking issues</p>
-                            <span className="badge issue-badge-error">
-                              {stage2ReviewSummary.errors.length + stage2ReviewSummary.blocking.length}
-                            </span>
-                          </div>
-                          <div className="review-issue-list">
-                            {stage2ReviewSummary.errors.map((issue, index) => (
-                              <article key={`${issue.code}-${index}`} className="review-issue-item">
-                                <div className="review-issue-title-row">
-                                  <p className="review-issue-title">{issue.title}</p>
-                                  <span className="badge issue-badge-error">Error</span>
-                                </div>
-                                <p className="review-issue-message">{issue.message}</p>
-                                {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
-                                {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
-                              </article>
-                            ))}
-                            {stage2ReviewSummary.blocking.map((issue, index) => (
-                              <article key={`${issue.code}-blocking-${index}`} className="review-issue-item">
-                                <div className="review-issue-title-row">
-                                  <p className="review-issue-title">{issue.title}</p>
-                                  <span className="badge issue-badge-error">Blocker</span>
-                                </div>
-                                <p className="review-issue-message">{issue.message}</p>
-                                {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
-                                {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
-                              </article>
-                            ))}
-                          </div>
-                        </section>
-                      ) : null}
-                      {stage2ReviewSummary.reviewFlags.length ? (
-                        <section className="review-issue-group">
-                          <div className="review-issue-group-header">
-                            <p className="review-issue-group-title">Review flags</p>
-                            <span className="badge issue-badge-warning">{stage2ReviewSummary.reviewFlags.length}</span>
-                          </div>
-                          <div className="review-issue-list">
-                            {stage2ReviewSummary.reviewFlags.map((issue, index) => (
-                              <article key={`${issue.code}-${index}`} className="review-issue-item">
-                                <div className="review-issue-title-row">
-                                  <p className="review-issue-title">{issue.title}</p>
-                                  <span className="badge issue-badge-warning">Flag</span>
-                                </div>
-                                <p className="review-issue-message">{issue.message}</p>
-                                {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
-                                {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
-                              </article>
-                            ))}
-                          </div>
-                        </section>
-                      ) : null}
-                    </div>
+                <>
+                  {stage2RetryInProgress ? (
+                    <section className="support-panel stage2-retry-banner stage2-retry-in-progress">
+                      <div className="form-section-header">
+                        <p className="kicker">Stage 2 Retry</p>
+                        <h3>Retry in progress</h3>
+                      </div>
+                      <p className="muted">
+                        Validating the submitted plan now. The validator results below are from the previous attempt and will be replaced when this retry completes.
+                      </p>
+                    </section>
                   ) : null}
-                </section>
+                  {stage2RetryJustCompleted ? (
+                    <section className={`support-panel stage2-retry-banner ${stage2RetryJustCompleted === "passed" ? "stage2-retry-passed" : "stage2-retry-failed"}`}>
+                      <div className="form-section-header">
+                        <p className="kicker">Stage 2 Retry — Attempt {plan.admin_outputs?.stage2_attempt_count || 1}</p>
+                        <h3>{stage2RetryJustCompleted === "passed" ? "Retry passed — plan published" : "Retry completed — new validation results below"}</h3>
+                      </div>
+                      <p className="muted">
+                        {stage2RetryJustCompleted === "passed"
+                          ? "The submitted plan passed validation and has been published to the athlete view."
+                          : "The submitted plan was validated. Blocking issues and review flags below reflect this latest attempt."}
+                      </p>
+                    </section>
+                  ) : null}
+                  <section className={`${reviewPanelClassName}${stage2RetryInProgress ? " stage2-review-panel-stale" : ""}`}>
+                    <div className="form-section-header">
+                      <p className="kicker">
+                        Stage 2 review
+                        {plan.admin_outputs?.stage2_attempt_count ? ` — attempt ${plan.admin_outputs.stage2_attempt_count}` : ""}
+                        {stage2RetryInProgress ? " (previous attempt)" : ""}
+                      </p>
+                      <h3>{stage2ReviewSummary.isPublishable ? "Release decision" : "Why this plan is being held"}</h3>
+                    </div>
+                    <div className="stage2-review-state-row">
+                      <span className={`badge ${stage2ReviewSummary.isPublishable ? "status-badge-success" : "issue-badge-error"}`}>
+                        {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
+                      </span>
+                      <span className="badge issue-badge-error">
+                        {stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount} blockers
+                      </span>
+                      <span className="badge issue-badge-warning">
+                        {stage2ReviewSummary.reviewFlagCount} review flags
+                      </span>
+                    </div>
+                    <p className="review-summary-text">{stage2ReviewSummary.headline}</p>
+                    <p className="muted">{stage2ReviewSummary.guidance}</p>
+                    {stage2ReviewSummary.hasIssues ? (
+                      <div className="review-issue-groups">
+                        {stage2ReviewSummary.errors.length || stage2ReviewSummary.blocking.length ? (
+                          <section className="review-issue-group">
+                            <div className="review-issue-group-header">
+                              <p className="review-issue-group-title">Blocking issues</p>
+                              <span className="badge issue-badge-error">
+                                {stage2ReviewSummary.errors.length + stage2ReviewSummary.blocking.length}
+                              </span>
+                            </div>
+                            <div className="review-issue-list">
+                              {stage2ReviewSummary.errors.map((issue, index) => (
+                                <article key={`${issue.code}-${index}`} className="review-issue-item">
+                                  <div className="review-issue-title-row">
+                                    <p className="review-issue-title">{issue.title}</p>
+                                    <span className="badge issue-badge-error">Error</span>
+                                  </div>
+                                  <p className="review-issue-message">{issue.message}</p>
+                                  {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
+                                  {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
+                                </article>
+                              ))}
+                              {stage2ReviewSummary.blocking.map((issue, index) => (
+                                <article key={`${issue.code}-blocking-${index}`} className="review-issue-item">
+                                  <div className="review-issue-title-row">
+                                    <p className="review-issue-title">{issue.title}</p>
+                                    <span className="badge issue-badge-error">Blocker</span>
+                                  </div>
+                                  <p className="review-issue-message">{issue.message}</p>
+                                  {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
+                                  {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
+                                </article>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null}
+                        {stage2ReviewSummary.reviewFlags.length ? (
+                          <section className="review-issue-group">
+                            <div className="review-issue-group-header">
+                              <p className="review-issue-group-title">Review flags</p>
+                              <span className="badge issue-badge-warning">{stage2ReviewSummary.reviewFlags.length}</span>
+                            </div>
+                            <div className="review-issue-list">
+                              {stage2ReviewSummary.reviewFlags.map((issue, index) => (
+                                <article key={`${issue.code}-${index}`} className="review-issue-item">
+                                  <div className="review-issue-title-row">
+                                    <p className="review-issue-title">{issue.title}</p>
+                                    <span className="badge issue-badge-warning">Flag</span>
+                                  </div>
+                                  <p className="review-issue-message">{issue.message}</p>
+                                  {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
+                                  {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
+                                </article>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </section>
+                </>
               ) : null}
               <div className="support-panel">
                 <div className="form-section-header">
