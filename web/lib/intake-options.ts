@@ -44,7 +44,6 @@ export const TRAINING_AVAILABILITY_OPTIONS: IntakeOption[] = [
 ];
 
 export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
-  { label: "Bodyweight", value: "bodyweight" },
   { label: "Dumbbells", value: "dumbbells" },
   { label: "Kettlebells", value: "kettlebells" },
   { label: "Barbell", value: "barbell" },
