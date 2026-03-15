@@ -24,9 +24,9 @@ STAGE_1 = "STAGE_1"
 STAGE_2 = "STAGE_2"
 
 STYLE_CONDITIONING_RATIO = {
-    "GPP": 0.20,
-    "SPP": 0.60,
-    "TAPER": 0.05,
+    "GPP": 0.10,
+    "SPP": 0.35,
+    "TAPER": 0.00,
 }
 
 STRENGTH_PER_DAY = {"GPP": 7, "SPP": 6, "TAPER": 4}

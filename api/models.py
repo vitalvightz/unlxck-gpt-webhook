@@ -123,6 +123,18 @@ class ProfileUpdateRequest(BaseModel):
         return _validate_record(value)
 
 
+class ManualStage2SubmissionRequest(BaseModel):
+    final_plan_text: str
+
+    @field_validator("final_plan_text")
+    @classmethod
+    def validate_final_plan_text(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("final_plan_text is required")
+        return normalized
+
+
 class ProfileRecord(BaseModel):
     athlete_id: str
     email: str

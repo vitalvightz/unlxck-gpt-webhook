@@ -105,4 +105,4 @@ def test_coach_review_preserves_conditioning_session_count_when_rerendering():
         conditioning_blocks=conditioning_blocks,
     )
 
-    assert updated_conditioning["SPP"]["block"].count("#### Conditioning Block SPP") == 2
+    assert updated_conditioning["SPP"]["block"].count("\n#### ") == 2

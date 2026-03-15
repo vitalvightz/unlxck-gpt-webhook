@@ -33,7 +33,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         </section>
       ) : null}
       {plan ? (
-        <PlanViewer plan={plan} />
+        <PlanViewer plan={plan} accessToken={session?.access_token ?? null} onPlanUpdated={setPlan} />
       ) : (
         <section className="panel loading-card">
           <p className="kicker">Plan Detail</p>

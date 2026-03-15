@@ -145,6 +145,26 @@ class DemoStore:
             row = self.plans.get(plan_id)
             return dict(row) if row else None
 
+    def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            row = self.plans.get(plan_id)
+            if not row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            row.update(
+                {
+                    "status": result.get("status", row.get("status", "generated")),
+                    "plan_text": result.get("plan_text", row.get("plan_text", "")),
+                    "draft_plan_text": result.get("draft_plan_text", row.get("draft_plan_text", row.get("plan_text", ""))),
+                    "final_plan_text": result.get("final_plan_text", row.get("final_plan_text", row.get("plan_text", ""))),
+                    "pdf_url": result.get("pdf_url"),
+                    "stage2_retry_text": result.get("stage2_retry_text", ""),
+                    "stage2_validator_report": result.get("stage2_validator_report", {}),
+                    "stage2_status": result.get("stage2_status", ""),
+                    "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
+                }
+            )
+            return dict(row)
+
     def list_admin_plans(self) -> list[dict[str, Any]]:
         with self._lock:
             rows: list[dict[str, Any]] = []

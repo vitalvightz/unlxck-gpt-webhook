@@ -548,6 +548,77 @@ select:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.admin-review-stack,
+.accordion-list {
+  display: grid;
+  gap: 16px;
+}
+
+.accordion-item {
+  border-radius: 18px;
+  border: 1px solid var(--border-default);
+  background: linear-gradient(180deg, rgba(17, 19, 24, 0.98), rgba(13, 15, 19, 0.98));
+  box-shadow: var(--shadow-support);
+  overflow: hidden;
+}
+
+.accordion-item-open {
+  border-color: rgba(181, 18, 43, 0.28);
+}
+
+.accordion-trigger {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.accordion-trigger:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.accordion-trigger-copy {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.accordion-summary {
+  max-width: 72ch;
+}
+
+.accordion-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.accordion-item-open .accordion-chevron {
+  border-color: rgba(181, 18, 43, 0.32);
+  background: rgba(181, 18, 43, 0.12);
+  color: #ffd7dd;
+}
+
+.accordion-panel {
+  display: grid;
+  gap: 16px;
+  padding: 0 18px 18px;
+}
+
 .metric-card,
 .plan-meta-item {
   display: grid;

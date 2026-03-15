@@ -32,6 +32,10 @@ export type PlanRequest = {
   random_seed?: number | null;
 };
 
+export type ManualStage2SubmissionRequest = {
+  final_plan_text: string;
+};
+
 export type ProfileUpdateRequest = {
   full_name?: string;
   technical_style?: string[];

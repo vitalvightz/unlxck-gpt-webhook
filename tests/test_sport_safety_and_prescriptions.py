@@ -52,6 +52,48 @@ def test_boxing_spp_gets_alactic_fallback_when_not_suppressed():
     assert re.search(r"75.?120", grouped_drills["alactic"][0].get("rest", ""))
 
 
+def test_boxing_gpp_prefers_easy_bike_over_pool_treading_when_available():
+    flags = {
+        "phase": "GPP",
+        "fatigue": "low",
+        "style_technical": ["boxing"],
+        "style_tactical": ["pressure_fighter"],
+        "key_goals": ["conditioning"],
+        "weaknesses": ["conditioning"],
+        "injuries": [],
+        "equipment": ["assault_bike"],
+        "training_frequency": 4,
+        "sport": "boxing",
+        "days_until_fight": 35,
+    }
+    _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
+
+    assert grouped_drills.get("aerobic")
+    assert grouped_drills["aerobic"][0]["name"] != "Pool Treading Conditioning"
+    assert "Bike" in grouped_drills["aerobic"][0]["name"]
+
+
+def test_boxing_gpp_uses_pool_treading_only_when_unloading_is_clearly_justified():
+    flags = {
+        "phase": "GPP",
+        "fatigue": "moderate",
+        "style_technical": ["boxing"],
+        "style_tactical": ["counter_striker"],
+        "key_goals": ["conditioning"],
+        "weaknesses": ["conditioning"],
+        "injuries": ["ankle soreness", "shoulder irritation"],
+        "restrictions": [{"restriction": "high_impact_lower", "strength": "avoid"}],
+        "equipment": [],
+        "training_frequency": 4,
+        "sport": "boxing",
+        "days_until_fight": 28,
+    }
+    _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
+
+    assert grouped_drills.get("aerobic")
+    assert grouped_drills["aerobic"][0]["name"] == "Pool Treading Conditioning"
+
+
 def test_supra_max_isometrics_are_gated_without_1rm_and_setup():
     flags = {
         "phase": "SPP",

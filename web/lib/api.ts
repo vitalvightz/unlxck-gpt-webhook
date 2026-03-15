@@ -1,6 +1,7 @@
 import type {
   AdminAthleteRecord,
   AdminPlanSummary,
+  ManualStage2SubmissionRequest,
   MeResponse,
   PlanDetail,
   PlanRequest,
@@ -69,4 +70,23 @@ export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> 
 
 export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {
   return readJson<AdminPlanSummary[]>("/api/admin/plans", { token });
+}
+
+export function submitManualStage2(
+  token: string,
+  planId: string,
+  payload: ManualStage2SubmissionRequest,
+): Promise<PlanDetail> {
+  return readJson<PlanDetail>(`/api/admin/plans/${planId}/manual-stage2`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
+export function approvePlanForRelease(token: string, planId: string): Promise<PlanDetail> {
+  return readJson<PlanDetail>(`/api/admin/plans/${planId}/approve`, {
+    method: "POST",
+    token,
+  });
 }

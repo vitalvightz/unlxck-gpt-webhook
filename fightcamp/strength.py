@@ -25,6 +25,16 @@ from .injury_filtering import (
 # Refactored: Import factory function for guarded decision making
 from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
 from .restriction_filtering import evaluate_restriction_impact
+from .strength_session_quality import (
+    classify_strength_item,
+    count_support_only,
+    infer_strength_sessions,
+    missing_base_categories,
+    score_band_margin,
+    session_starts_with_support_only,
+    session_support_count_before_anchor,
+    strength_quality_adjustment,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +76,10 @@ def normalize_style_tags(tags):
         if t in CANONICAL_STYLE_TAGS:
             normalized.add(t)
     return normalized
+
+
+STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}
+SESSION_SUPPORT_CAP_MULTIPLIER = 2
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = normalize_equipment_list(entry_equip)
@@ -140,7 +154,7 @@ def score_exercise(
     if must_have_matches:
         score += must_have_matches * 0.35
     reasons["must_have_hits"] = must_have_matches
-    must_have_bonus_tags = {"core", "posterior_chain", "neck", "stability"}
+    must_have_bonus_tags = {"compound", "posterior_chain", "unilateral", "rate_of_force", "explosive"}
     must_have_bonus = len(set(exercise_tags) & must_have_bonus_tags) * 0.15
     score += must_have_bonus
     reasons["must_have_bonus"] = round(must_have_bonus, 2)
@@ -538,11 +552,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
     goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]
     must_have_by_phase = {
-        "GPP": ["core", "posterior_chain", "neck", "stability"],
-        "SPP": ["core", "posterior_chain", "neck", "stability"],
-        "TAPER": ["core", "neck", "stability", "reactive"],
+        "GPP": ["compound", "posterior_chain", "unilateral", "push", "pull"],
+        "SPP": ["compound", "posterior_chain", "unilateral", "explosive", "rate_of_force"],
+        "TAPER": ["reactive", "neural_primer", "speed", "explosive"],
     }
     must_have_tags = must_have_by_phase.get(phase, [])
+    phase_dict = PHASE_TAG_BOOST.get(phase, {})
+    phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
 
 
     weighted_exercises = []
@@ -603,8 +619,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
             continue
 
-        phase_dict = PHASE_TAG_BOOST.get(phase, {})
-        phase_tags = list(phase_dict.keys()) if isinstance(phase_dict, dict) else []
         method = ex.get("method", "").lower()
 
         restriction_candidates += 1
@@ -660,10 +674,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         if score == -999:
             continue
+        quality_adjustment, quality_profile = strength_quality_adjustment(ex, phase=phase)
+        score += quality_adjustment
+        breakdown["quality_class"] = quality_profile["quality_class"]
+        breakdown["quality_adjustment"] = round(quality_adjustment, 2)
+        breakdown["anchor_capable"] = quality_profile["anchor_capable"]
+        breakdown["support_only"] = quality_profile["support_only"]
+        breakdown["base_categories"] = quality_profile["base_categories"]
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
+        breakdown["final_score"] = round(score, 4)
 
         # Phase-based novelty enforcement with exemptions
         if prev_exercises and ex.get("name") in prev_exercises:
@@ -757,6 +779,192 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         ignore_restrictions=ignore_restrictions,
     )
 
+    def _selected_names(exercises: list[dict]) -> set[str]:
+        return {ex.get("name") for ex in exercises if ex.get("name")}
+
+    def _best_candidate(
+        predicate,
+        *,
+        exclude_names: set[str] | None = None,
+    ) -> tuple[dict, float, dict, dict] | None:
+        blocked_names = set(exclude_names or set())
+        for cand, cand_score, cand_reasons in weighted_exercises:
+            cand_name = cand.get("name")
+            if not cand_name or cand_name in blocked_names:
+                continue
+            profile = classify_strength_item(cand)
+            if predicate(cand, cand_score, cand_reasons, profile):
+                return cand, cand_score, cand_reasons, profile
+        return None
+
+    def _replace_exercise(
+        exercises: list[dict],
+        *,
+        index: int,
+        replacement: dict,
+        replacement_score: float,
+        replacement_reasons: dict,
+    ) -> None:
+        exercises[index] = replacement
+        replacement_name = replacement.get("name")
+        if replacement_name:
+            score_lookup[replacement_name] = replacement_score
+            reason_lookup[replacement_name] = replacement_reasons
+
+    def _support_replacement_index(exercises: list[dict]) -> int | None:
+        support_positions = [
+            idx
+            for idx, exercise in enumerate(exercises)
+            if classify_strength_item(exercise)["support_only"]
+        ]
+        if support_positions:
+            return min(
+                support_positions,
+                key=lambda idx: score_lookup.get(exercises[idx].get("name"), 0.0),
+            )
+        if not exercises:
+            return None
+        return min(
+            range(len(exercises)),
+            key=lambda idx: score_lookup.get(exercises[idx].get("name"), 0.0),
+        )
+
+    def _promote_base_categories(exercises: list[dict]) -> list[dict]:
+        updated = list(exercises)
+        for category in missing_base_categories(updated):
+            selected_names = _selected_names(updated)
+            replacement_entry = _best_candidate(
+                lambda cand, _score, _reasons, profile: profile["anchor_capable"]
+                and category in profile["base_categories"],
+                exclude_names=selected_names,
+            )
+            if not replacement_entry:
+                continue
+            replace_index = _support_replacement_index(updated)
+            if replace_index is None:
+                break
+            replacement, replacement_score, replacement_reasons, _profile = replacement_entry
+            _replace_exercise(
+                updated,
+                index=replace_index,
+                replacement=replacement,
+                replacement_score=replacement_score,
+                replacement_reasons=replacement_reasons,
+            )
+        return updated
+
+    def _maybe_add_force_isometric(exercises: list[dict]) -> list[dict]:
+        if phase not in {"GPP", "SPP"}:
+            return exercises
+        selected_profiles = [classify_strength_item(ex) for ex in exercises]
+        if any(profile["force_isometric"] for profile in selected_profiles):
+            return exercises
+        protective_context = bool(injuries or restrictions or fatigue in {"moderate", "high"})
+        if not protective_context and any(profile["anchor_capable"] for profile in selected_profiles):
+            return exercises
+        selected_scores = [
+            score_lookup.get(ex.get("name"), 0.0)
+            for ex in exercises
+            if ex.get("name") is not None
+        ]
+        cutoff_score = min(selected_scores) if selected_scores else 0.0
+        margin = score_band_margin(selected_scores, phase=phase)
+        selected_names = _selected_names(exercises)
+        replacement_entry = _best_candidate(
+            lambda cand, cand_score, _reasons, profile: profile["force_isometric"]
+            and (protective_context or cand_score >= cutoff_score - margin),
+            exclude_names=selected_names,
+        )
+        if not replacement_entry:
+            return exercises
+        replace_index = _support_replacement_index(exercises)
+        if replace_index is None:
+            return exercises
+        replacement, replacement_score, replacement_reasons, _profile = replacement_entry
+        updated = list(exercises)
+        _replace_exercise(
+            updated,
+            index=replace_index,
+            replacement=replacement,
+            replacement_score=replacement_score,
+            replacement_reasons=replacement_reasons,
+        )
+        return updated
+
+    def _enforce_session_quality(exercises: list[dict]) -> list[dict]:
+        updated = list(exercises)
+        support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)
+        while count_support_only(updated) > support_cap:
+            selected_names = _selected_names(updated)
+            replacement_entry = _best_candidate(
+                lambda cand, _score, _reasons, profile: profile["anchor_capable"],
+                exclude_names=selected_names,
+            )
+            replace_index = _support_replacement_index(updated)
+            if not replacement_entry or replace_index is None:
+                break
+            replacement, replacement_score, replacement_reasons, _profile = replacement_entry
+            _replace_exercise(
+                updated,
+                index=replace_index,
+                replacement=replacement,
+                replacement_score=replacement_score,
+                replacement_reasons=replacement_reasons,
+            )
+
+        sessions = infer_strength_sessions(updated, num_strength_sessions)
+        for session in sessions:
+            items = session.get("items", [])
+            positions = session.get("positions", [])
+            if not items or not positions:
+                continue
+            has_anchor = any(classify_strength_item(ex)["anchor_capable"] for ex in items)
+            if not has_anchor:
+                selected_names = _selected_names(updated)
+                replacement_entry = _best_candidate(
+                    lambda cand, _score, _reasons, profile: profile["anchor_capable"],
+                    exclude_names=selected_names,
+                )
+                if replacement_entry:
+                    local_support = next(
+                        (
+                            idx
+                            for idx, exercise in enumerate(items)
+                            if classify_strength_item(exercise)["support_only"]
+                        ),
+                        len(items) - 1,
+                    )
+                    replacement, replacement_score, replacement_reasons, _profile = replacement_entry
+                    _replace_exercise(
+                        updated,
+                        index=positions[local_support],
+                        replacement=replacement,
+                        replacement_score=replacement_score,
+                        replacement_reasons=replacement_reasons,
+                    )
+
+        sessions = infer_strength_sessions(updated, num_strength_sessions)
+        for session in sessions:
+            items = session.get("items", [])
+            positions = session.get("positions", [])
+            if not items or not positions:
+                continue
+            anchor_local_index = next(
+                (
+                    idx
+                    for idx, exercise in enumerate(items)
+                    if classify_strength_item(exercise)["anchor_capable"]
+                ),
+                None,
+            )
+            if anchor_local_index is None:
+                continue
+            if session_support_count_before_anchor(items) > 1 or session_starts_with_support_only(items):
+                first_position = positions[0]
+                anchor_position = positions[anchor_local_index]
+                updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
+        return updated
+
     top_pairs = weighted_exercises[:target_exercises]
     top_exercises = [ex for ex, _, _ in top_pairs]
     # Remove any duplicate exercise names that slipped through scoring
@@ -776,56 +984,24 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     # --------- UNIVERSAL STRENGTH INSERTION ---------
     if phase == "GPP":
-        try:
-            with open(DATA_DIR / "universal_gpp_strength.json", "r", encoding="utf-8") as f:
-                universal_strength = json.load(f)
-        except Exception:
-            universal_strength = []
-
-        existing_names = {e["name"] for e in top_exercises}
-        existing_tags = {tag for e in top_exercises for tag in e.get("tags", [])}
-        priority_strength_tags = [
-            ("pull", "upper_body"),
-            ("anti_rotation", "core"),
-            ("unilateral",),
-            ("neck", "traps"),
-        ]
-
+        universal_strength = get_universal_strength()
+        existing_names = _selected_names(top_exercises)
         inserted = 0
-        for drill in universal_strength:
-            if inserted >= 4:
+        for category in missing_base_categories(top_exercises):
+            if inserted >= 2:
                 break
-            if drill.get("name") in existing_names:
-                continue
-            if _guarded_injury_decision(drill).action == "exclude":
-                continue
-            for group in priority_strength_tags:
-                if any(tag in drill.get("tags", []) for tag in group) and not any(
-                    tag in existing_tags for tag in group
-                ):
-                    top_exercises.append(drill)
-                    inserted += 1
-                    break
-
-    # --------- ISOMETRIC GUARANTEE ---------
-    if phase in {"GPP", "SPP"}:
-        if not any("isometric" in ex.get("tags", []) for ex in top_exercises):
-            score_lookup = {ex["name"]: score for ex, score, _ in weighted_exercises}
-            iso_candidates = [
-                (ex, score)
-                for ex, score, _ in weighted_exercises
-                if "isometric" in ex.get("tags", []) and ex not in top_exercises
-            ]
-            if iso_candidates:
-                best_iso, _ = max(iso_candidates, key=lambda x: x[1])
-                worst_index = 0
-                worst_score = float("inf")
-                for idx, ex in enumerate(top_exercises):
-                    sc = score_lookup.get(ex.get("name"), 0)
-                    if sc < worst_score:
-                        worst_score = sc
-                        worst_index = idx
-                top_exercises[worst_index] = best_iso
+            for drill in universal_strength:
+                drill_name = drill.get("name")
+                if not drill_name or drill_name in existing_names:
+                    continue
+                if _guarded_injury_decision(drill).action == "exclude":
+                    continue
+                if category not in classify_strength_item(drill)["base_categories"]:
+                    continue
+                top_exercises.append(drill)
+                existing_names.add(drill_name)
+                inserted += 1
+                break
 
     base_exercises = top_exercises
     # Final safety deduplication in case database contained repeats
@@ -841,7 +1017,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     # ------- STYLE-SPECIFIC INJECTION -------
     athlete_style_set = normalize_style_tags(style_list)
     available_eq = set(equipment_access)
-    inserts: list[dict] = []
+    style_candidates: list[tuple[dict, float, dict]] = []
+    selected_cutoff = min(
+        (score_lookup.get(ex.get("name"), 0.0) for ex in base_exercises if ex.get("name")),
+        default=0.0,
+    )
+    style_margin = STYLE_INSERT_SCORE_MARGIN.get(phase, 0.25)
     for ex in style_exercises:
         if phase not in ex.get("phases", []):
             continue
@@ -857,11 +1038,42 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             continue
         if ex.get("movement") in recent_movements and "cornerstone" not in ex_tags:
             continue
-        inserts.append(ex)
+        style_score, style_reasons = score_exercise(
+            exercise_tags=ex.get("tags", []),
+            weakness_tags=weaknesses or [],
+            goal_tags=goal_tags,
+            style_tags=style_tags,
+            must_have_tags=must_have_tags,
+            phase_tags=phase_tags,
+            current_phase=phase,
+            fatigue_level=fatigue,
+            available_equipment=equipment_access,
+            required_equipment=normalize_equipment_list(ex.get("equipment", [])),
+            is_rehab=ex.get("method", "").lower() == "rehab",
+            rng=rng,
+        )
+        if style_score == -999:
+            continue
+        quality_adjustment, quality_profile = strength_quality_adjustment(ex, phase=phase)
+        style_score += quality_adjustment
+        style_reasons["quality_class"] = quality_profile["quality_class"]
+        style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
+        style_reasons["final_score"] = round(style_score, 4)
+        if quality_profile["anchor_capable"] or style_score >= selected_cutoff - style_margin:
+            style_candidates.append((ex, style_score, style_reasons))
 
-    base_exercises = inserts + base_exercises
+    for ex, ex_score, ex_reasons in sorted(style_candidates, key=lambda entry: entry[1], reverse=True):
+        base_exercises.append(ex)
+        if ex.get("name"):
+            score_lookup[ex["name"]] = ex_score
+            reason_lookup[ex["name"]] = ex_reasons
+
     if len(base_exercises) > target_exercises:
-        base_exercises = base_exercises[:target_exercises]
+        base_exercises = sorted(
+            base_exercises,
+            key=lambda exercise: score_lookup.get(exercise.get("name"), 0.0),
+            reverse=True,
+        )[:target_exercises]
 
     def _apply_movement_caps(exercises: list[dict]) -> list[dict]:
         movement_counts: dict[str, int] = {}
@@ -887,6 +1099,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     break
         return capped
 
+    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _promote_base_categories(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _maybe_add_force_isometric(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _enforce_session_quality(base_exercises)
     base_exercises = _apply_movement_caps(base_exercises)
 
     # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------
@@ -1015,6 +1233,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         return updated
 
     base_exercises = _final_keyword_guard(base_exercises)
+    base_exercises = _enforce_session_quality(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises)
 
     for ex in base_exercises:
         normalize_exercise_movement(ex)

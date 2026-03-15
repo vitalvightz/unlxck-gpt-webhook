@@ -34,6 +34,8 @@ class AppStore(Protocol):
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None: ...
 
+    def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
+
     def list_admin_plans(self) -> list[dict[str, Any]]: ...
 
     def list_admin_athletes(self) -> list[dict[str, Any]]: ...
@@ -183,6 +185,27 @@ class SupabaseAppStore:
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
         return self._select_first(self.client.table("plans").select("*").eq("id", plan_id))
+
+    def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
+        payload = {
+            "status": result.get("status", "generated"),
+            "plan_text": result.get("plan_text", ""),
+            "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
+            "final_plan_text": result.get("final_plan_text", result.get("plan_text", "")),
+            "pdf_url": result.get("pdf_url"),
+            "stage2_retry_text": result.get("stage2_retry_text", ""),
+            "stage2_validator_report": result.get("stage2_validator_report", {}),
+            "stage2_status": result.get("stage2_status", ""),
+            "stage2_attempt_count": result.get("stage2_attempt_count", 0),
+        }
+        self.client.table("plans").update(payload).eq("id", plan_id).execute()
+        updated = self.get_plan(plan_id)
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="plan not found",
+            )
+        return updated
 
     def list_admin_plans(self) -> list[dict[str, Any]]:
         response = (

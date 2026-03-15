@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from api.auth import AuthenticatedUser
-from api.models import PlanRequest, ProfileUpdateRequest
+from api.models import ManualStage2SubmissionRequest, PlanRequest, ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 
 
@@ -119,6 +119,25 @@ class FakeStore:
 
     def get_plan(self, plan_id: str) -> dict | None:
         return self.plans.get(plan_id)
+
+    def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            return None
+        row.update(
+            {
+                "status": result.get("status", row.get("status", "generated")),
+                "plan_text": result.get("plan_text", row.get("plan_text", "")),
+                "draft_plan_text": result.get("draft_plan_text", row.get("draft_plan_text", row.get("plan_text", ""))),
+                "final_plan_text": result.get("final_plan_text", row.get("final_plan_text", row.get("plan_text", ""))),
+                "pdf_url": result.get("pdf_url"),
+                "stage2_retry_text": result.get("stage2_retry_text", ""),
+                "stage2_validator_report": result.get("stage2_validator_report", {}),
+                "stage2_status": result.get("stage2_status", ""),
+                "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
+            }
+        )
+        return row
 
     def list_admin_plans(self) -> list[dict]:
         rows = []
@@ -485,4 +504,142 @@ def test_legacy_rows_with_only_plan_text_remain_readable():
 
     assert response.status_code == 200
     assert response.json()["outputs"]["plan_text"] == "# Stage 1 Draft"
+
+
+def test_manual_stage2_submission_publishes_validated_admin_result():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="",
+            stage2_status="stage2_failed",
+            stage2_retry_text="repair prompt",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/manual-stage2",
+        headers={"Authorization": "Bearer admin-token"},
+        json=ManualStage2SubmissionRequest(final_plan_text="# Manual GPT Final").model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["outputs"]["plan_text"] == "# Manual GPT Final"
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_pass"
+    saved = store.get_plan(plan["id"])
+    assert saved["plan_text"] == "# Manual GPT Final"
+    assert saved["stage2_retry_text"] == ""
+
+
+def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revision():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="",
+            stage2_status="stage2_failed",
+            stage2_retry_text="",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/manual-stage2",
+        headers={"Authorization": "Bearer admin-token"},
+        json=ManualStage2SubmissionRequest(
+            final_plan_text="## PHASE 2: SPP\n- Bike sprint or bag sprint depending on access"
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "review_required"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
+    assert body["admin_outputs"]["stage2_retry_text"]
+
+
+def test_manual_stage2_submission_requires_admin_role():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/manual-stage2",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=ManualStage2SubmissionRequest(final_plan_text="# Manual GPT Final").model_dump(mode="json"),
+    )
+
+    assert response.status_code == 403
+
+
+def test_admin_can_approve_review_required_plan_for_release():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="# Held Stage 2 Output",
+            stage2_status="stage2_failed",
+            stage2_retry_text="repair prompt",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/approve",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["outputs"]["plan_text"] == "# Held Stage 2 Output"
+    assert body["admin_outputs"]["stage2_status"] == "admin_review_approved"
 
