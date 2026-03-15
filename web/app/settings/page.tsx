@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -29,7 +29,14 @@ function getInitials(name: string): string {
   return result || "A";
 }
 
+function isDataUrl(url: string): boolean {
+  return url.startsWith("data:image/");
+}
+
 function isSafeImageUrl(url: string): boolean {
+  if (isDataUrl(url)) {
+    return true;
+  }
   try {
     const parsed = new URL(url);
     return parsed.protocol === "https:" || parsed.protocol === "http:";
@@ -37,6 +44,8 @@ function isSafeImageUrl(url: string): boolean {
     return false;
   }
 }
+
+const MAX_AVATAR_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export default function SettingsPage() {
   const { me, refreshMe, session } = useAppSession();
@@ -47,9 +56,12 @@ export default function SettingsPage() {
   const [professionalStatus, setProfessionalStatus] = useState("");
   const [record, setRecord] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [urlInputValue, setUrlInputValue] = useState("");
+  const [showUrlInput, setShowUrlInput] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = me?.profile.role === "admin";
   const detectedTimeZone = detectDeviceTimeZone() || me?.profile.athlete_timezone || "Automatic";
   const recordHasError = !isValidRecordFormat(record);
@@ -71,7 +83,11 @@ export default function SettingsPage() {
     setStance(me.profile.stance ?? "");
     setProfessionalStatus(me.profile.professional_status);
     setRecord(me.profile.record);
-    setAvatarUrl(me.profile.avatar_url ?? "");
+    const storedAvatar = me.profile.avatar_url ?? "";
+    setAvatarUrl(storedAvatar);
+    if (!isDataUrl(storedAvatar)) {
+      setUrlInputValue(storedAvatar);
+    }
   }, [me]);
 
   function handleSave() {
@@ -106,6 +122,38 @@ export default function SettingsPage() {
     });
   }
 
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_AVATAR_FILE_BYTES) {
+      setError("Image must be smaller than 5 MB. Please choose a smaller file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result;
+      if (typeof dataUrl === "string") {
+        setAvatarUrl(dataUrl);
+        setShowUrlInput(false);
+        setError(null);
+      }
+    };
+    reader.onerror = () => {
+      setError("Failed to load image. Please try a different file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleRemoveAvatar() {
+    setAvatarUrl("");
+    setUrlInputValue("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   return (
     <RequireAuth>
       <section className="panel">
@@ -130,32 +178,76 @@ export default function SettingsPage() {
               <div className="form-section-header">
                 <p className="kicker">Identity</p>
                 <h2 className="form-section-title">Profile image</h2>
-                <p className="muted">Add a profile image URL to display your avatar in the sidebar and control room.</p>
+                <p className="muted">Choose a photo from your device or gallery. Tap the avatar to upload.</p>
               </div>
-              <div className="avatar-preview-block">
-                <div className="avatar-preview-circle">
-                  {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
-                    <img src={avatarUrl.trim()} alt="Profile" className="avatar-preview-img" />
-                  ) : (
-                    <span className="avatar-preview-initials">{initials}</span>
-                  )}
-                </div>
-                <div className="avatar-preview-meta">
-                  <p className="kicker">Avatar preview</p>
-                  <p className="muted">{avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? "Image URL set" : "Showing initials fallback"}</p>
-                </div>
+
+              <div className="avatar-upload-block">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="avatar-file-input"
+                  aria-label="Upload profile photo"
+                  onChange={handleFileChange}
+                />
+                <button
+                  type="button"
+                  className="avatar-upload-trigger"
+                  aria-label="Choose profile photo"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="avatar-upload-circle">
+                    {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+                      <img src={avatarUrl.trim()} alt="Profile" className="avatar-preview-img" />
+                    ) : (
+                      <span className="avatar-preview-initials">{initials}</span>
+                    )}
+                    <div className="avatar-upload-overlay" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  </div>
+                  <span className="avatar-upload-hint">
+                    {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? "CHANGE PHOTO" : "UPLOAD PHOTO"}
+                  </span>
+                </button>
+
+                {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+                  <button
+                    type="button"
+                    className="avatar-remove-btn"
+                    onClick={handleRemoveAvatar}
+                  >
+                    Remove
+                  </button>
+                ) : null}
               </div>
-              <div className="form-grid">
-                <div className="field">
-                  <label htmlFor="settingsAvatarUrl">Profile image URL</label>
-                  <input
-                    id="settingsAvatarUrl"
-                    type="url"
-                    value={avatarUrl}
-                    onChange={(event) => setAvatarUrl(event.target.value)}
-                    placeholder="https://example.com/your-photo.jpg"
-                  />
-                </div>
+
+              <div className="avatar-url-section">
+                <button
+                  type="button"
+                  className="avatar-url-toggle"
+                  onClick={() => setShowUrlInput((prev) => !prev)}
+                >
+                  {showUrlInput ? "Hide URL input" : "Use URL instead"}
+                </button>
+                {showUrlInput ? (
+                  <div className="field avatar-url-field">
+                    <label htmlFor="settingsAvatarUrl">Profile image URL</label>
+                    <input
+                      id="settingsAvatarUrl"
+                      type="url"
+                      value={urlInputValue}
+                      onChange={(event) => {
+                        setUrlInputValue(event.target.value);
+                        setAvatarUrl(event.target.value);
+                      }}
+                      placeholder="https://example.com/your-photo.jpg"
+                    />
+                  </div>
+                ) : null}
               </div>
             </article>
 
