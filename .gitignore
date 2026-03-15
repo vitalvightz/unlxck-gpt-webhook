@@ -5,6 +5,7 @@ __pycache__/
 .vscode/
 .idea/
 .DS_Store
+# Legacy root-level Stage 2 artifact paths (superseded by .artifacts/stage2/)
 final_plan.txt
 stage2_handoff.txt
 stage2_retry.txt
@@ -17,3 +18,13 @@ web/node_modules/
 *.log
 web/.env.local
 *.tsbuildinfo
+# Stage 2 local run artifacts
+.artifacts/
+# Python packaging/build artifacts
+*.egg-info/
+dist/
+build/
+# Test and coverage artifacts
+.coverage
+htmlcov/
+.pytest_cache/

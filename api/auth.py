@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 from fastapi import HTTPException, status
 from supabase import Client, create_client
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,12 +29,40 @@ class SupabaseAuthService:
 
     @classmethod
     def from_env(cls) -> "SupabaseAuthService":
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
-        if not url or not key:
+        """Create a SupabaseAuthService from environment variables.
+
+        Requires ``SUPABASE_URL`` and ``SUPABASE_SERVICE_ROLE_KEY``.
+        ``SUPABASE_ANON_KEY`` is accepted as a fallback for token-lookup only
+        (not for privileged writes), but a warning is logged so the operator
+        knows they are running with reduced privileges.
+        """
+        url = os.getenv("SUPABASE_URL", "").strip()
+        if not url:
             raise RuntimeError(
-                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY are required"
+                "SUPABASE_URL is required but not set. "
+                "Set it in your .env file or environment before starting the server."
             )
+
+        service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        anon_key = os.getenv("SUPABASE_ANON_KEY", "").strip()
+
+        if service_key:
+            key = service_key
+        elif anon_key:
+            logger.warning(
+                "auth: SUPABASE_SERVICE_ROLE_KEY is not set; "
+                "falling back to SUPABASE_ANON_KEY for token lookup. "
+                "This is only safe for auth token verification – "
+                "privileged store operations still require SUPABASE_SERVICE_ROLE_KEY."
+            )
+            key = anon_key
+        else:
+            raise RuntimeError(
+                "Neither SUPABASE_SERVICE_ROLE_KEY nor SUPABASE_ANON_KEY is set. "
+                "At minimum, set SUPABASE_ANON_KEY for auth token lookup; "
+                "set SUPABASE_SERVICE_ROLE_KEY for full backend operation."
+            )
+
         return cls(create_client(url, key))
 
     def get_user_from_token(self, token: str) -> AuthenticatedUser:

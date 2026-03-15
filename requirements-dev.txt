@@ -1,0 +1,5 @@
+# Development and test dependencies.
+# Install alongside runtime dependencies:
+#   pip install -r requirements-dev.txt
+-r requirements.txt
+pytest

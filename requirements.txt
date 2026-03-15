@@ -15,4 +15,3 @@ pdfkit
 supabase
 markdown2
 openai
-pytest

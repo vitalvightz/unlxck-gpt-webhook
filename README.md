@@ -189,17 +189,22 @@ The repo now includes a first athlete-first web application shell around the pla
 
 ### Backend Environment
 
-Create a root `.env` file or export these values before running the API:
+Copy `.env.example` to `.env` and fill in the values:
 
-```bash
-SUPABASE_URL=
-SUPABASE_SERVICE_ROLE_KEY=
-SUPABASE_ANON_KEY=
-UNLXCK_ADMIN_EMAILS=ops@example.com
-APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
-```
+| Variable | Required | Purpose |
+|---|---|---|
+| `SUPABASE_URL` | ✅ always | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ for store operations | Privileged backend key – required for all database writes |
+| `SUPABASE_ANON_KEY` | fallback | Used for auth token lookup only when `SUPABASE_SERVICE_ROLE_KEY` is absent; a warning is logged. Do **not** use as a substitute for the service-role key. |
+| `UNLXCK_ADMIN_EMAILS` | optional | Comma-separated admin email addresses |
+| `APP_CORS_ORIGINS` | optional | Comma-separated allowed CORS origins |
+| `UNLXCK_DEMO_MODE` | optional | Set to `1` to enable demo mode |
+| `OPENAI_API_KEY` | optional | Required only for **automated Stage 2 finalization**. Leave blank to disable automation; the API returns HTTP 503 on automated Stage 2 requests and operators use the manual review workflow instead. |
+| `UNLXCK_STAGE2_MODEL` | optional | OpenAI model for Stage 2 (default: `gpt-5-mini`) |
+| `UNLXCK_STAGE2_TIMEOUT_SECONDS` | optional | OpenAI request timeout in seconds (default: `90`) |
+| `UNLXCK_STAGE2_MAX_OUTPUT_TOKENS` | optional | Max output tokens for Stage 2 responses (default: unlimited) |
 
-`SUPABASE_SERVICE_ROLE_KEY` is the preferred backend credential. `SUPABASE_ANON_KEY` is accepted as a fallback for auth token lookups, but it does not replace the service role key for production writes.
+The server performs fail-fast validation at startup: missing required variables raise a `RuntimeError` with a clear message before any requests are served.
 
 ### Run The API
 
@@ -244,18 +249,48 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 - `GET /api/plans/{plan_id}`
 - `GET /api/admin/plans`
 - `GET /api/admin/athletes`
-## Testing
+
+## Stage 2 Local Validation Workflow
+
+`run_stage2_validation.py` is a CLI helper for testing Stage 2 outside the web app. By default it writes artifacts to `.artifacts/stage2/` (which is git-ignored) and creates the directory automatically.
+
+```bash
+# Step 1 – Generate Stage 1 output and write the Stage 2 handoff prompt
+python run_stage2_validation.py
+
+# Artifacts written to .artifacts/stage2/ by default:
+#   stage2_handoff.txt  – handoff prompt to paste into your external AI
+#   final_plan.txt      – paste the external AI's final plan here, then rerun
+#   stage2_retry.txt    – written if validation fails and a repair prompt is needed
+
+# Step 2 – Paste the handoff into your external AI, save its output, then validate:
+python run_stage2_validation.py  # final_plan.txt is read automatically
+
+# Override any path on the CLI:
+python run_stage2_validation.py --handoff /tmp/my_handoff.txt --final /tmp/my_plan.txt
+```
+
+Stage 2 automation is **optional**. When `OPENAI_API_KEY` is not set the API returns HTTP 503 on automated Stage 2 requests and the admin review workflow handles finalization manually.
+
+
 
 The test suite uses pytest to validate core functionality across injury guardrails, tag provenance, and plan generation.
+
+### Installing Dependencies
+
+Runtime dependencies are in `requirements.txt`. Development and test dependencies are in `requirements-dev.txt`.
+
+```bash
+# Install all dependencies (runtime + dev/test)
+pip install -r requirements-dev.txt
+
+# Runtime only (no pytest)
+pip install -r requirements.txt
+```
 
 ### Running Tests
 
 ```bash
-# Install pytest if not already installed
-pip install pytest
-
-# Run all tests
-pytest
 
 # Run specific test files
 pytest tests/test_injury_guard.py
@@ -314,7 +349,7 @@ The end-to-end quality gate lives in `tests/test_golden_end_to_end_snapshots.py`
 
 Tests use fixtures from `tests/conftest.py` and sample data that mirrors the structure in `test_data.json`. The test suite validates that changes to scoring logic, injury rules, and module weightings don't break existing behavior.
 
-Recent updates removed the OpenAI dependency and now build plans entirely from the module outputs. Short-camp handling and style-specific rules still adjust the phase weeks correctly via the helper `_apply_style_rules()`.
+**Stage 1** (fight-camp plan generation) runs entirely locally and deterministically — no OpenAI call is made. Short-camp handling and style-specific rules still adjust the phase weeks correctly via the helper `_apply_style_rules()`.
 
 The **Fighting Style (Technical)** field accepts a comma-separated list when an athlete has more than one technical base (e.g. `boxing, wrestling`). The style that appears first in this list sets the fight format while conditioning drills consider every style provided.
 

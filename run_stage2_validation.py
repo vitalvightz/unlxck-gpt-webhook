@@ -10,15 +10,29 @@ from fightcamp.stage2_pipeline import (
     review_stage2_output,
 )
 
+_DEFAULT_ARTIFACTS_DIR = Path(".artifacts") / "stage2"
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate Stage 1 output, write the Stage 2 handoff, and optionally validate a Stage 2 final plan.",
     )
     parser.add_argument("--input", default="test_data.json", help="Path to Stage 1 input JSON.")
-    parser.add_argument("--handoff", default="stage2_handoff.txt", help="Path to write the external AI handoff text.")
-    parser.add_argument("--final", default="final_plan.txt", help="Path to the external AI final plan text.")
-    parser.add_argument("--retry", default="stage2_retry.txt", help="Path to write the repair prompt when validation needs a retry.")
+    parser.add_argument(
+        "--handoff",
+        default=str(_DEFAULT_ARTIFACTS_DIR / "stage2_handoff.txt"),
+        help="Path to write the external AI handoff text.",
+    )
+    parser.add_argument(
+        "--final",
+        default=str(_DEFAULT_ARTIFACTS_DIR / "final_plan.txt"),
+        help="Path to the external AI final plan text.",
+    )
+    parser.add_argument(
+        "--retry",
+        default=str(_DEFAULT_ARTIFACTS_DIR / "stage2_retry.txt"),
+        help="Path to write the repair prompt when validation needs a retry.",
+    )
     return parser.parse_args()
 
 
@@ -32,6 +46,12 @@ async def main() -> int:
 
     if not input_path.exists():
         raise FileNotFoundError(f"Input JSON not found: {input_path}")
+
+    # Ensure parent directories exist so output files can be written and so
+    # the user knows where to place final_plan.txt after the external AI step.
+    handoff_path.parent.mkdir(parents=True, exist_ok=True)
+    retry_path.parent.mkdir(parents=True, exist_ok=True)
+    final_path.parent.mkdir(parents=True, exist_ok=True)
 
     data = json.loads(input_path.read_text(encoding="utf-8"))
     stage1 = await generate_plan(data)

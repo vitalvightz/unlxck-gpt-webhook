@@ -58,10 +58,19 @@ class SupabaseAppStore:
 
     @classmethod
     def from_env(cls) -> "SupabaseAppStore":
-        url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        if not url or not key:
-            raise RuntimeError("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required")
+        url = os.getenv("SUPABASE_URL", "").strip()
+        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        if not url:
+            raise RuntimeError(
+                "SUPABASE_URL is required but not set. "
+                "Set it in your .env file or environment before starting the server."
+            )
+        if not key:
+            raise RuntimeError(
+                "SUPABASE_SERVICE_ROLE_KEY is required for store operations but not set. "
+                "This key is used for privileged writes and must not be replaced by SUPABASE_ANON_KEY. "
+                "Set it in your .env file or environment before starting the server."
+            )
         admin_emails = {
             email.strip().lower()
             for email in os.getenv("UNLXCK_ADMIN_EMAILS", "").split(",")
