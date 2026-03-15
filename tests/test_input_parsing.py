@@ -145,6 +145,86 @@ def test_multiselect_value_maps_when_option_ids_are_strings():
     assert parsed.training_days == ["Mon", "Fri"]
 
 
+def test_equipment_multiselect_value_maps_from_option_ids():
+    data = _payload(
+        [
+            {
+                "label": "Equipment Access",
+                "value": [2, 3],
+                "options": [
+                    {"id": "1", "text": "Barbell"},
+                    {"id": "2", "text": "Bands"},
+                    {"id": "3", "text": "Heavy Bag"},
+                ],
+            }
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.equipment_access == "Bands, Heavy Bag"
+
+
+def test_sparring_day_fields_round_trip_from_payload():
+    data = _payload(
+        [
+            {"label": "Training Availability", "value": "Monday, Tuesday, Thursday, Saturday"},
+            {"label": "Hard Sparring Days", "value": "Tuesday, Saturday"},
+            {"label": "Technical Skill Days", "value": "Monday"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.training_days == ["Monday", "Tuesday", "Thursday", "Saturday"]
+    assert parsed.hard_sparring_days == ["Tuesday", "Saturday"]
+    assert parsed.technical_skill_days == ["Monday"]
+
+
+def test_contradictory_frequency_and_availability_stay_explicit_for_downstream_review():
+    data = _payload(
+        [
+            {"label": "Weekly Training Frequency", "value": "6"},
+            {"label": "Training Availability", "value": "Mon, Wed"},
+            {"label": "When is your next fight?", "value": "2099-03-01"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.training_frequency == 6
+    assert parsed.training_days == ["Mon", "Wed"]
+    assert parsed.frequency_raw == "6"
+
+
+def test_messy_injury_input_keeps_real_issue_and_discards_empty_markers():
+    data = _payload(
+        [
+            {"label": "Any injuries or areas you need to work around?", "value": "none / right heel soreness + toe pain"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.injuries == "right heel soreness, toe pain"
+    assert parsed.parsed_injuries
+
+
+def test_incomplete_input_can_still_be_salvaged_when_training_days_exist():
+    data = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Training Availability", "value": "Monday, Thursday, Saturday"},
+            {"label": "Any injuries or areas you need to work around?", "value": "n/a"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.training_frequency == 3
+    assert parsed.injuries == ""
+
+
 def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_only_values(monkeypatch):
     monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 23, 30))
 

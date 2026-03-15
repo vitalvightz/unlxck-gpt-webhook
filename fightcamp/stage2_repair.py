@@ -23,8 +23,11 @@ REPAIR RULES:
 11. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
 12. Keep every active week present and structurally complete, especially the late-camp weeks.
 13. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
-14. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
-15. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+14. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
+15. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
+16. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+17. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+18. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -185,12 +188,36 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
                 }
             )
+        elif code == "weekly_session_overage":
+            quality_fixes.append(
+                {
+                    "action": "trim_extra_week_sessions_to_match_profile",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                    "expected_session_count": warning.get("expected_session_count"),
+                    "actual_session_count": warning.get("actual_session_count"),
+                }
+            )
         elif code == "weekly_rhythm_broken":
             quality_fixes.append(
                 {
                     "action": "restore_default_boxer_weekly_rhythm",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
+                }
+            )
+        elif code == "missing_weight_cut_acknowledgement":
+            quality_fixes.append(
+                {
+                    "action": "add_weight_cut_acknowledgement",
+                }
+            )
+        elif code == "high_pressure_weight_cut_underaddressed":
+            quality_fixes.append(
+                {
+                    "action": "add_summary_and_support_weight_cut_notes",
+                    "summary_lines": _clean_list(warning.get("summary_lines", [])),
+                    "support_lines": _clean_list(warning.get("support_lines", [])),
                 }
             )
         elif code in {"gimmick_name", "overstyled_drill_name"}:

@@ -363,6 +363,16 @@ select:focus-visible {
   width: 100%;
 }
 
+.sidebar-user-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.sidebar-user-actions .ghost-button {
+  width: 100%;
+}
+
 .app-main {
   flex: 1;
   min-width: 0;
@@ -548,6 +558,39 @@ select:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.overview-grid {
+  align-items: start;
+}
+
+.overview-card {
+  align-content: start;
+  gap: 22px;
+}
+
+.overview-card-header {
+  display: grid;
+  gap: 8px;
+}
+
+.overview-card-body {
+  display: grid;
+  gap: 22px;
+  align-content: start;
+}
+
+.review-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.92fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.review-column {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
 .admin-review-stack,
 .accordion-list {
   display: grid;
@@ -671,6 +714,17 @@ select:focus-visible {
 .field input::placeholder,
 .field textarea::placeholder {
   color: var(--text-muted);
+}
+
+.field input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.field input[type="number"]::-webkit-outer-spin-button,
+.field input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .field .custom-select-trigger {
@@ -923,6 +977,18 @@ select:focus-visible {
   background: rgba(255, 255, 255, 0.018);
 }
 
+.step-pill-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.step-pill-button:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+}
+
 .step-pill-active {
   border-color: rgba(181, 18, 43, 0.38);
   background: linear-gradient(180deg, rgba(181, 18, 43, 0.12), rgba(181, 18, 43, 0.05));
@@ -1018,6 +1084,169 @@ select:focus-visible {
   color: var(--text-secondary);
 }
 
+.review-card {
+  align-content: start;
+}
+
+.review-detail-list {
+  display: grid;
+  gap: 0;
+}
+
+.review-detail-row {
+  display: grid;
+  gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.review-detail-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.review-detail-label,
+.review-detail-value {
+  margin: 0;
+}
+
+.review-detail-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.review-detail-value {
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.support-panel-alert {
+  border-color: rgba(255, 141, 161, 0.22);
+  background: linear-gradient(180deg, rgba(50, 20, 27, 0.92), rgba(24, 13, 17, 0.94));
+}
+
+.support-panel-preview {
+  padding: 16px 18px;
+}
+
+.plan-review-stack,
+.review-issue-groups,
+.review-issue-list {
+  display: grid;
+  gap: 16px;
+}
+
+.stage2-review-panel {
+  gap: 14px;
+}
+
+.stage2-review-state-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.review-summary-text {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.review-issue-groups {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.review-issue-group {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(22, 24, 29, 0.92), rgba(15, 17, 21, 0.96));
+}
+
+.review-issue-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.review-issue-group-title,
+.review-issue-title,
+.review-issue-message,
+.review-issue-context,
+.review-issue-snippet {
+  margin: 0;
+}
+
+.review-issue-group-title {
+  font-size: 15px;
+  line-height: 1.2;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.review-issue-item {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.review-issue-item:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.review-issue-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.review-issue-title {
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.review-issue-message {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.review-issue-context,
+.review-issue-snippet {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.issue-badge-error {
+  background: rgba(202, 24, 52, 0.18);
+  border-color: rgba(255, 141, 161, 0.18);
+  color: #ffd9df;
+}
+
+.issue-badge-warning {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
 .plan-text-panel {
   display: grid;
   gap: 16px;
@@ -1057,6 +1286,41 @@ select:focus-visible {
 .plan-card {
   display: grid;
   gap: 12px;
+}
+
+.plan-history-list {
+  display: grid;
+  gap: 14px;
+}
+
+.plan-history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.plan-history-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.plan-history-copy,
+.plan-history-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.plan-history-copy {
+  min-width: 0;
+}
+
+.plan-history-meta {
+  justify-items: end;
+  flex-shrink: 0;
+  align-self: center;
 }
 
 .plan-card-title {
@@ -1218,12 +1482,27 @@ select:focus-visible {
   .metric-grid,
   .list-grid,
   .review-grid,
+  .review-columns,
   .plans-grid,
   .plan-meta-grid,
   .admin-output-grid,
   .overview-grid,
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .review-column {
+    gap: 16px;
+  }
+
+  .plan-history-row {
+    display: grid;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .plan-history-meta {
+    justify-items: start;
   }
 }
 

@@ -265,6 +265,8 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         recent_exercises=[],
         phase_weeks=phase_weeks,
         days_until_fight=plan_input.days_until_fight,
+        hard_sparring_days=plan_input.hard_sparring_days,
+        technical_skill_days=plan_input.technical_skill_days,
     )
 
     return PlanRuntimeContext(

@@ -546,3 +546,123 @@ def test_validate_stage2_output_warns_for_missing_late_week_structure_and_broken
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "weekly_rhythm_broken" in warning_codes
     assert "late_camp_session_incomplete" in warning_codes
+
+
+def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                    {"role_key": "fight_pace_repeatability_day", "category": "conditioning"},
+                ],
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                    {"role_key": "fight_pace_repeatability_day", "category": "conditioning"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Monday - Strength
+        - Landmine Press - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        #### Friday - Fight-pace conditioning
+        - Hard Shuttle - 6x20s / 60s
+        #### Saturday - Recovery
+        - Walk + mobility
+
+        ### Week 2
+        #### Monday - Strength
+        - Landmine Press - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        #### Friday - Fight-pace conditioning
+        - Hard Shuttle - 6x20s / 60s
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_session_overage" in warning_codes
+
+
+def _weight_cut_planning_brief(high_pressure: bool = True) -> dict:
+    readiness_flags = ["active_weight_cut"]
+    if high_pressure:
+        readiness_flags.extend(["aggressive_weight_cut", "moderate_fatigue"])
+    return {
+        "athlete_model": {
+            "sport": "boxing",
+            "equipment": ["bike", "bodyweight"],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 8.6,
+            "fatigue": "moderate" if high_pressure else "low",
+            "days_until_fight": 21 if high_pressure else 42,
+            "readiness_flags": readiness_flags,
+        },
+        "phase_strategy": {},
+        "candidate_pools": {},
+    }
+
+
+def test_validate_stage2_output_weight_cut_profile_only_does_not_count_as_acknowledgement():
+    report = validate_stage2_output(
+        planning_brief=_weight_cut_planning_brief(high_pressure=True),
+        final_plan_text="""
+        ## Athlete Profile
+        - Weight: 72kg
+        - Target Weight: 66kg
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "missing_weight_cut_acknowledgement" in warning_codes
+    assert "high_pressure_weight_cut_underaddressed" in warning_codes
+
+
+def test_validate_stage2_output_accepts_summary_and_support_weight_cut_notes():
+    report = validate_stage2_output(
+        planning_brief=_weight_cut_planning_brief(high_pressure=True),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 5
+        #### Strength
+        - Active weight-cut stress is part of this week, so keep the main work sharp and avoid extra soreness.
+        - Trap Bar Deadlift - 4x3
+
+        ## Nutrition
+        - Active Weight-Cut Note:
+        - Prioritize carbs, fluids, and sodium around key sessions to preserve strength expression and conditioning tolerance.
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "missing_weight_cut_acknowledgement" not in warning_codes
+    assert "high_pressure_weight_cut_underaddressed" not in warning_codes

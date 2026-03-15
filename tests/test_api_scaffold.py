@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 
@@ -174,9 +176,9 @@ class FakeStage2Automator:
         return {**stage1_result, **(self.result or {})}
 
 
-def _build_request() -> PlanRequest:
-    return PlanRequest(
-        athlete={
+def _build_request(overrides: dict | None = None) -> PlanRequest:
+    payload = {
+        "athlete": {
             "full_name": "Ari Mensah",
             "age": 27,
             "weight_kg": 72.5,
@@ -188,16 +190,25 @@ def _build_request() -> PlanRequest:
             "record": "5-1",
             "athlete_timezone": "Europe/London",
         },
-        fight_date="2026-04-18",
-        weekly_training_frequency=4,
-        training_availability=["Monday", "Tuesday", "Thursday", "Saturday"],
-        equipment_access=["barbell", "heavy_bag"],
-        key_goals=["power", "conditioning"],
-        weak_areas=["gas_tank"],
-        injuries="mild left shoulder irritation",
-        rounds_format="3 x 3",
-        fatigue_level="moderate",
-    )
+        "fight_date": "2026-04-18",
+        "weekly_training_frequency": 4,
+        "training_availability": ["Monday", "Tuesday", "Thursday", "Saturday"],
+        "hard_sparring_days": ["Tuesday", "Saturday"],
+        "technical_skill_days": ["Monday"],
+        "equipment_access": ["barbell", "heavy_bag"],
+        "key_goals": ["power", "conditioning"],
+        "weak_areas": ["gas_tank"],
+        "injuries": "mild left shoulder irritation",
+        "rounds_format": "3 x 3",
+        "fatigue_level": "moderate",
+    }
+    if overrides:
+        merged = copy.deepcopy(overrides)
+        athlete_overrides = merged.pop("athlete", None)
+        if athlete_overrides:
+            payload["athlete"].update(athlete_overrides)
+        payload.update(merged)
+    return PlanRequest.model_validate(payload)
 
 
 async def _planner(payload: dict) -> dict:
@@ -230,6 +241,148 @@ def finalized_result(**overrides: object) -> dict:
         "stage2_attempt_count": 1,
     }
     return {**base, **overrides}
+
+
+def _presentation_ready_plan(*, heading: str, support_note: str) -> str:
+    return (
+        f"## {heading}\n"
+        "### Week 1\n"
+        "#### Strength\n"
+        "- Trap Bar Deadlift - 4x3\n"
+        "#### Recovery\n"
+        f"- {support_note}\n"
+        "#### Fight-pace conditioning\n"
+        "- Bag Rounds - 5 x 3 min\n"
+    )
+
+
+def _review_required_result(*, final_plan_text: str, warning_code: str) -> dict:
+    return finalized_result(
+        status="review_required",
+        plan_text="",
+        final_plan_text=final_plan_text,
+        stage2_status="stage2_failed",
+        stage2_retry_text="repair prompt",
+        stage2_validator_report={"errors": [], "warnings": [{"code": warning_code}]},
+        stage2_attempt_count=2,
+    )
+
+
+@dataclass(frozen=True)
+class SystemScenario:
+    key: str
+    request_overrides: dict
+    automator_result: dict
+    expected_status: str
+    expected_review_code: str | None
+    expected_resolution: str | None
+    support_marker: str
+
+
+SYSTEM_SCENARIOS = [
+    SystemScenario(
+        key="high_fatigue",
+        request_overrides={
+            "fatigue_level": "high",
+            "weekly_training_frequency": 5,
+            "training_availability": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+        },
+        automator_result=finalized_result(
+            plan_text=_presentation_ready_plan(
+                heading="PHASE 2: SPP",
+                support_note="High fatigue this week, so keep the recovery day obvious and trim optional density first.",
+            ),
+            final_plan_text=_presentation_ready_plan(
+                heading="PHASE 2: SPP",
+                support_note="High fatigue this week, so keep the recovery day obvious and trim optional density first.",
+            ),
+        ),
+        expected_status="ready",
+        expected_review_code=None,
+        expected_resolution=None,
+        support_marker="High fatigue this week",
+    ),
+    SystemScenario(
+        key="messy_injury_input",
+        request_overrides={
+            "injuries": "none / right shoulder cranky after pads + left wrist sore on hooks",
+            "equipment_access": ["bands", "heavy_bag", "bodyweight"],
+        },
+        automator_result=finalized_result(
+            plan_text=_presentation_ready_plan(
+                heading="PHASE 1: GPP",
+                support_note="Shoulder and wrist management stay in the week, but the main session remains decisive.",
+            ),
+            final_plan_text=_presentation_ready_plan(
+                heading="PHASE 1: GPP",
+                support_note="Shoulder and wrist management stay in the week, but the main session remains decisive.",
+            ),
+        ),
+        expected_status="ready",
+        expected_review_code=None,
+        expected_resolution=None,
+        support_marker="Shoulder and wrist management",
+    ),
+    SystemScenario(
+        key="severe_cut_pressure",
+        request_overrides={
+            "athlete": {"weight_kg": 72.0, "target_weight_kg": 66.0},
+            "fatigue_level": "moderate",
+            "fight_date": "2026-04-05",
+        },
+        automator_result=finalized_result(
+            plan_text=(
+                "## Camp Summary\n"
+                "- Active weight-cut stress is part of this camp, so protect freshness and avoid optional fatigue.\n"
+                "## Nutrition\n"
+                "- Prioritize carbs, fluids, and sodium around key sessions to preserve strength expression and conditioning tolerance.\n"
+            ),
+            final_plan_text=(
+                "## Camp Summary\n"
+                "- Active weight-cut stress is part of this camp, so protect freshness and avoid optional fatigue.\n"
+                "## Nutrition\n"
+                "- Prioritize carbs, fluids, and sodium around key sessions to preserve strength expression and conditioning tolerance.\n"
+            ),
+        ),
+        expected_status="ready",
+        expected_review_code=None,
+        expected_resolution=None,
+        support_marker="Active weight-cut stress",
+    ),
+    SystemScenario(
+        key="limited_equipment_hold",
+        request_overrides={
+            "equipment_access": ["bands", "bodyweight"],
+            "weekly_training_frequency": 3,
+            "training_availability": ["Tuesday", "Thursday", "Saturday"],
+        },
+        automator_result=_review_required_result(
+            final_plan_text="## PHASE 2: SPP\n- Heavy Bag Sprint Rounds - 6 x 15 sec",
+            warning_code="equipment_incongruent_selection",
+        ),
+        expected_status="review_required",
+        expected_review_code="equipment_incongruent_selection",
+        expected_resolution="approve",
+        support_marker="Heavy Bag Sprint Rounds",
+    ),
+    SystemScenario(
+        key="short_notice_contradictory",
+        request_overrides={
+            "fight_date": "2026-03-24",
+            "weekly_training_frequency": 6,
+            "training_availability": ["Monday", "Wednesday"],
+            "equipment_access": ["assault_bike", "bands", "bodyweight"],
+        },
+        automator_result=_review_required_result(
+            final_plan_text="## PHASE 3: TAPER\n### Week 5\n#### Strength\n- Dead Bug - 2x8",
+            warning_code="late_camp_session_incomplete",
+        ),
+        expected_status="review_required",
+        expected_review_code="late_camp_session_incomplete",
+        expected_resolution="manual_stage2",
+        support_marker="Dead Bug - 2x8",
+    ),
+]
 
 
 def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
@@ -291,6 +444,39 @@ def test_auth_is_required_for_me_route():
     response = client.get("/api/me")
 
     assert response.status_code == 401
+
+
+def test_saved_onboarding_draft_round_trips_through_me_and_clears_after_generation():
+    client, store, _ = _build_client()
+
+    draft_response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=ProfileUpdateRequest(
+            full_name="Ari Mensah",
+            technical_style=["boxing"],
+            onboarding_draft={"current_step": 4, "injuries": "heel soreness"},
+        ).model_dump(mode="json"),
+    )
+
+    assert draft_response.status_code == 200
+    assert draft_response.json()["profile"]["onboarding_draft"]["current_step"] == 4
+
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert me_response.status_code == 200
+    assert me_response.json()["profile"]["onboarding_draft"]["injuries"] == "heel soreness"
+
+    generate_response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert generate_response.status_code == 201
+    assert store.profiles["athlete-1"]["onboarding_draft"] is None
+    refreshed_me = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert refreshed_me.json()["profile"]["onboarding_draft"] is None
+    assert refreshed_me.json()["latest_intake"]["fight_date"] == "2026-04-18"
 
 
 def test_generate_plan_persists_validated_final_plan_and_history():
@@ -374,6 +560,46 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
+
+
+@pytest.mark.parametrize("scenario", SYSTEM_SCENARIOS, ids=lambda scenario: scenario.key)
+def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: SystemScenario):
+    client, store, _ = _build_client(
+        FakeStage2Automator(result=scenario.automator_result)
+    )
+    request = _build_request(scenario.request_overrides)
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=request.model_dump(mode="json"),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    saved = next(iter(store.plans.values()))
+    latest_intake = store.get_latest_intake("athlete-1")["intake"]
+
+    assert body["status"] == scenario.expected_status
+    assert latest_intake["fight_date"] == request.fight_date
+    assert latest_intake["injuries"] == request.injuries
+    assert latest_intake["equipment_access"] == request.equipment_access
+    assert latest_intake["training_availability"] == request.training_availability
+    assert latest_intake["hard_sparring_days"] == request.hard_sparring_days
+    assert latest_intake["technical_skill_days"] == request.technical_skill_days
+    assert store.profiles["athlete-1"]["onboarding_draft"] is None
+
+    if scenario.expected_status == "ready":
+        assert scenario.support_marker in body["outputs"]["plan_text"]
+        assert "Primary:" not in body["outputs"]["plan_text"]
+        assert "Fallback:" not in body["outputs"]["plan_text"]
+        assert saved["stage2_status"] == "stage2_pass"
+    else:
+        assert body["outputs"]["plan_text"] == ""
+        warning_codes = [warning["code"] for warning in saved["stage2_validator_report"]["warnings"]]
+        assert scenario.expected_review_code in warning_codes
+        assert saved["stage2_status"] == "stage2_failed"
+        assert saved["stage2_retry_text"] == "repair prompt"
 
 
 def test_stage2_unavailable_returns_503_without_persisting_plan():
@@ -481,6 +707,36 @@ def test_admin_endpoints_require_admin_role():
     assert allowed.status_code == 200
 
 
+def test_admin_can_list_and_open_review_required_plan_for_resolution():
+    review_result = _review_required_result(
+        final_plan_text="## PHASE 2: SPP\n- Heavy Bag Sprint Rounds - 6 x 15 sec",
+        warning_code="equipment_incongruent_selection",
+    )
+    client, store, _ = _build_client(FakeStage2Automator(result=review_result))
+
+    generate_response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request(
+            {
+                "equipment_access": ["bands", "bodyweight"],
+                "training_availability": ["Tuesday", "Thursday", "Saturday"],
+            }
+        ).model_dump(mode="json"),
+    )
+    assert generate_response.status_code == 201
+    plan_id = generate_response.json()["plan_id"]
+
+    admin_list = client.get("/api/admin/plans", headers={"Authorization": "Bearer admin-token"})
+    assert admin_list.status_code == 200
+    listed_plan = next(plan for plan in admin_list.json() if plan["plan_id"] == plan_id)
+    assert listed_plan["status"] == "review_required"
+
+    admin_detail = client.get(f"/api/plans/{plan_id}", headers={"Authorization": "Bearer admin-token"})
+    assert admin_detail.status_code == 200
+    assert admin_detail.json()["admin_outputs"]["stage2_retry_text"] == "repair prompt"
+
+
 def test_legacy_rows_with_only_plan_text_remain_readable():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
@@ -562,6 +818,22 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
             status="review_required",
             plan_text="",
             final_plan_text="",
+            planning_brief={
+                "phase_strategy": {"SPP": {"must_keep": ["rehab"]}},
+                "candidate_pools": {
+                    "SPP": {
+                        "strength_slots": [],
+                        "conditioning_slots": [],
+                        "rehab_slots": [
+                            {
+                                "role": "rehab_ankle",
+                                "selected": {"name": "Heel Raise"},
+                                "alternates": [],
+                            }
+                        ],
+                    }
+                },
+            },
             stage2_status="stage2_failed",
             stage2_retry_text="",
             stage2_attempt_count=2,
@@ -572,7 +844,7 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
         f"/api/admin/plans/{plan['id']}/manual-stage2",
         headers={"Authorization": "Bearer admin-token"},
         json=ManualStage2SubmissionRequest(
-            final_plan_text="## PHASE 2: SPP\n- Bike sprint or bag sprint depending on access"
+            final_plan_text="## PHASE 2: SPP\n- Air Bike Sprint - 6 x 6 sec"
         ).model_dump(mode="json"),
     )
 
@@ -582,6 +854,49 @@ def test_manual_stage2_submission_generates_retry_prompt_when_output_needs_revis
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["stage2_status"] == "manual_stage2_retry_required"
     assert body["admin_outputs"]["stage2_retry_text"]
+
+
+def test_manual_stage2_submission_publishes_when_only_non_blocking_review_flags_exist():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="review_required",
+            plan_text="",
+            final_plan_text="",
+            planning_brief={"athlete_model": {"sport": "boxing"}},
+            stage2_status="stage2_failed",
+            stage2_retry_text="",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/manual-stage2",
+        headers={"Authorization": "Bearer admin-token"},
+        json=ManualStage2SubmissionRequest(
+            final_plan_text=(
+                "## PHASE 2: SPP\n"
+                "- Double-leg sprint entry - 6 x 6 sec\n"
+            )
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["outputs"]["plan_text"]
+    assert body["admin_outputs"]["stage2_status"] == "manual_stage2_pass"
+    assert body["admin_outputs"]["stage2_validator_report"]["review_flag_count"] >= 1
 
 
 def test_manual_stage2_submission_requires_admin_role():
@@ -642,4 +957,49 @@ def test_admin_can_approve_review_required_plan_for_release():
     assert body["status"] == "ready"
     assert body["outputs"]["plan_text"] == "# Held Stage 2 Output"
     assert body["admin_outputs"]["stage2_status"] == "admin_review_approved"
+
+
+def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
+    for scenario in [item for item in SYSTEM_SCENARIOS if item.expected_resolution]:
+        client, store, _ = _build_client(
+            FakeStage2Automator(result=scenario.automator_result)
+        )
+        generate_response = client.post(
+            "/api/plans/generate",
+            headers={"Authorization": "Bearer athlete-token"},
+            json=_build_request(scenario.request_overrides).model_dump(mode="json"),
+        )
+        assert generate_response.status_code == 201
+        plan_id = generate_response.json()["plan_id"]
+
+        if scenario.expected_resolution == "approve":
+            resolved = client.post(
+                f"/api/admin/plans/{plan_id}/approve",
+                headers={"Authorization": "Bearer admin-token"},
+            )
+            assert resolved.status_code == 200
+            assert resolved.json()["status"] == "ready"
+            assert resolved.json()["admin_outputs"]["stage2_status"] == "admin_review_approved"
+        elif scenario.expected_resolution == "manual_stage2":
+            resolved = client.post(
+                f"/api/admin/plans/{plan_id}/manual-stage2",
+                headers={"Authorization": "Bearer admin-token"},
+                json=ManualStage2SubmissionRequest(
+                    final_plan_text=(
+                        "## PHASE 3: TAPER\n"
+                        "### Week 5\n"
+                        "#### Neural primer\n"
+                        "- Assault Bike Sprint - 4 x 6 sec\n"
+                        "#### Recovery\n"
+                        "- Walk + mobility\n"
+                    )
+                ).model_dump(mode="json"),
+            )
+            assert resolved.status_code == 200
+            assert resolved.json()["status"] == "ready"
+            assert resolved.json()["admin_outputs"]["stage2_status"] == "manual_stage2_retry_pass"
+        else:  # pragma: no cover - explicit safety branch
+            raise AssertionError(f"Unexpected resolution strategy: {scenario.expected_resolution}")
+
+        assert store.get_plan(plan_id)["status"] == "ready"
 

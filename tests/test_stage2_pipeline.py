@@ -1,10 +1,10 @@
 from fightcamp.stage2_pipeline import build_stage2_package, build_stage2_retry, review_stage2_output
 
 
-
 def _stage1_result_fixture() -> dict:
     planning_brief = {
         "schema_version": "planning_brief.v1",
+        "athlete_model": {"sport": "boxing"},
         "restrictions": [
             {
                 "restriction": "heavy_overhead_pressing",
@@ -58,7 +58,6 @@ def _stage1_result_fixture() -> dict:
     }
 
 
-
 def test_build_stage2_package_returns_ready_bundle():
     package = build_stage2_package(stage1_result=_stage1_result_fixture())
 
@@ -68,7 +67,6 @@ def test_build_stage2_package_returns_ready_bundle():
     assert package["coach_notes"] == "notes"
     assert "1 phase(s)" in package["summary"]
     assert "4 candidate slot(s)" in package["summary"]
-
 
 
 def test_review_stage2_output_returns_fail_for_restriction_violation():
@@ -88,7 +86,6 @@ def test_review_stage2_output_returns_fail_for_restriction_violation():
     assert any("Push Press" in line for line in review["summary_lines"])
 
 
-
 def test_review_stage2_output_returns_warn_for_missing_phase_critical_elements():
     review = review_stage2_output(
         planning_brief=_stage1_result_fixture()["planning_brief"],
@@ -104,6 +101,25 @@ def test_review_stage2_output_returns_warn_for_missing_phase_critical_elements()
     assert any("Restore rehab" in line for line in review["summary_lines"])
     assert any("Restore alactic" in line for line in review["summary_lines"])
 
+
+def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
+    review = review_stage2_output(
+        planning_brief=_stage1_result_fixture()["planning_brief"],
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        - Double-leg sprint entry - 6 x 6 sec
+        """,
+    )
+
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+    assert review["validator_report"]["blocking_warnings"] == []
+    review_flag_codes = [warning["code"] for warning in review["validator_report"]["review_flags"]]
+    assert "sport_language_leak" in review_flag_codes
 
 
 def test_build_stage2_retry_returns_repair_prompt_when_needed():
@@ -123,7 +139,6 @@ def test_build_stage2_retry_returns_repair_prompt_when_needed():
     assert "PLANNING BRIEF" in retry["repair_prompt"]
 
 
-
 def test_build_stage2_retry_skips_prompt_when_plan_passes():
     retry = build_stage2_retry(
         stage1_result=_stage1_result_fixture(),
@@ -133,6 +148,24 @@ def test_build_stage2_retry_skips_prompt_when_plan_passes():
         - Air Bike Sprint - 6 x 6 sec
         - Hard Shuttle - 6x20s / 60s
         - Band External Rotation - 2x15
+        """,
+    )
+
+    assert retry["status"] == "PASS"
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+
+
+def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        - Double-leg sprint entry - 6 x 6 sec
         """,
     )
 

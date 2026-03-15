@@ -23,6 +23,8 @@ export type PlanRequest = {
   fatigue_level?: string;
   equipment_access: string[];
   training_availability: string[];
+  hard_sparring_days: string[];
+  technical_skill_days: string[];
   injuries?: string;
   key_goals: string[];
   weak_areas: string[];

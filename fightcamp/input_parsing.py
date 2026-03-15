@@ -97,6 +97,17 @@ _CRITICAL_LABEL_ALIASES = {
         _normalize_label("Available training days"),
         _normalize_label("Days available to train"),
     },
+    _normalize_label("Hard Sparring Days"): {
+        _normalize_label("Hard sparring"),
+        _normalize_label("Hard sparring days"),
+        _normalize_label("Live sparring days"),
+    },
+    _normalize_label("Technical Skill Days"): {
+        _normalize_label("Technical days"),
+        _normalize_label("Technical skill days"),
+        _normalize_label("Lighter skill days"),
+        _normalize_label("Technical / lighter skill days"),
+    },
     _normalize_label("Any injuries or areas you need to work around?"): {
         _normalize_label("Injuries"),
         _normalize_label("Current injuries"),
@@ -296,6 +307,8 @@ class PlanInput:
     fatigue: str
     equipment_access: str
     available_days: str
+    hard_sparring_days_raw: str
+    technical_skill_days_raw: str
     injuries: str
     parsed_injuries: list[dict[str, str | None]]
     restrictions: list[ParsedRestriction]
@@ -305,6 +318,8 @@ class PlanInput:
     mental_block: str
     notes: str
     training_days: list[str]
+    hard_sparring_days: list[str]
+    technical_skill_days: list[str]
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
@@ -331,6 +346,8 @@ class PlanInput:
         fatigue = get_value("Fatigue Level", fields)
         equipment_access = get_value("Equipment Access", fields)
         available_days = get_value("Training Availability", fields)
+        hard_sparring_days_raw = get_value("Hard Sparring Days", fields)
+        technical_skill_days_raw = get_value("Technical Skill Days", fields)
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
         )
@@ -344,6 +361,8 @@ class PlanInput:
         notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
         training_days = [d.strip() for d in available_days.split(",") if d.strip()]
+        hard_sparring_days = [d.strip() for d in hard_sparring_days_raw.split(",") if d.strip()]
+        technical_skill_days = [d.strip() for d in technical_skill_days_raw.split(",") if d.strip()]
         try:
             training_frequency = int(frequency_raw)
         except (TypeError, ValueError):
@@ -384,6 +403,8 @@ class PlanInput:
             fatigue=fatigue,
             equipment_access=equipment_access,
             available_days=available_days,
+            hard_sparring_days_raw=hard_sparring_days_raw,
+            technical_skill_days_raw=technical_skill_days_raw,
             injuries=injuries,
             parsed_injuries=parsed_injuries,
             restrictions=parsed_restrictions,
@@ -393,6 +414,8 @@ class PlanInput:
             mental_block=mental_block,
             notes=notes,
             training_days=training_days,
+            hard_sparring_days=hard_sparring_days,
+            technical_skill_days=technical_skill_days,
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,

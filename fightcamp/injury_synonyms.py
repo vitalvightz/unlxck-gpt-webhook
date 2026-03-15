@@ -697,11 +697,11 @@ def remove_negated_phrases(text: str) -> str:
     nlp = get_nlp()
     if nlp and _NEGSPACY_AVAILABLE:
         doc = nlp(text)
-        tokens = [tok.text for tok in doc if not tok._.negex]
-        return " ".join(tokens).strip()
-    if _has_negated_injury(text):
-        return ""
-    return text.strip()
+        if any(tok._.negex for tok in doc):
+            tokens = [tok.text for tok in doc if not tok._.negex]
+            return " ".join(tokens).strip()
+        return _strip_negated_chunks_fallback(text)
+    return _strip_negated_chunks_fallback(text)
 
 def canonicalize_injury_type(text: str, threshold: int = 85) -> str | None:
     """
@@ -922,3 +922,20 @@ def split_injury_text(raw_text: str) -> list[str]:
         for sent in doc.sents
         if (cleaned := _strip_surrounding_punct(sent.text))
     ]
+
+
+def _strip_negated_chunks_fallback(text: str) -> str:
+    normalized = text.lower()
+    normalized = re.sub(r"[()]", " ", normalized)
+    normalized = re.sub(r"\b(and|but|also|however|except)\b,?", ". ", normalized)
+    for sep in [",", ";", "\n", " - ", " â€“ ", " â€” ", " then ", " + ", "+", "/", "|"]:
+        normalized = normalized.replace(sep, ". ")
+    phrases = [
+        cleaned
+        for chunk in re.split(r"\.\s*", normalized)
+        if (cleaned := _strip_surrounding_punct(chunk))
+    ]
+    if not phrases:
+        return ""
+    kept = [phrase for phrase in phrases if not _has_negated_injury(phrase)]
+    return ". ".join(kept).strip()

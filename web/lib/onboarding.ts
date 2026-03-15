@@ -24,6 +24,8 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
     fatigue_level: "moderate",
     equipment_access: [],
     training_availability: [],
+    hard_sparring_days: [],
+    technical_skill_days: [],
     injuries: "",
     key_goals: [],
     weak_areas: [],

@@ -24,6 +24,43 @@ from .plan_pipeline_runtime import (
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
 from .stage2_payload import build_planning_brief, build_stage2_handoff_text, build_stage2_payload
 
+
+def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
+    hard_days = [str(day).strip() for day in (context.plan_input.hard_sparring_days or []) if str(day).strip()]
+    technical_days = [str(day).strip() for day in (context.plan_input.technical_skill_days or []) if str(day).strip()]
+
+    lines = ["### Sparring & Conditioning Adjustments", ""]
+    if hard_days:
+        lines.append(
+            f"- **Expected hard sparring days:** {', '.join(hard_days)} -> Let these days own the main collision-heavy combat load and cut same-day or next-day S&C volume by about 30%."
+        )
+    else:
+        lines.append("- **If hard sparring lands today** -> Keep S&C but cut volume by about 30% and trim accessories first.")
+
+    if technical_days:
+        lines.append(
+            f"- **Technical / lighter skill days:** {', '.join(technical_days)} -> Use these for cleaner aerobic support, recovery, or lower-noise strength support."
+        )
+    if not hard_days:
+        lines.append("- **If no sparring is fixed this week** -> Add one clear fight-pace conditioning exposure before extra lifting.")
+    lines.append("")
+    return lines
+
+
+def _sparring_nutrition_lines(context: PlanRuntimeContext) -> list[str]:
+    hard_days = [str(day).strip() for day in (context.plan_input.hard_sparring_days or []) if str(day).strip()]
+    header = "- **On Expected Hard Sparring Days:**"
+    if hard_days:
+        header = f"- **On Expected Hard Sparring Days ({', '.join(hard_days)}):**"
+    return [
+        header,
+        "  - Increase intra-workout carbs (e.g., 30g HBCD during session).",
+        "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.",
+        "- **If Sparring Was Unexpectedly Hard:**",
+        "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
+        "",
+    ]
+
 def _week_str(weeks: int, days: int) -> str:
     return "~1" if weeks == 0 and days > 0 else str(weeks)
 
@@ -182,19 +219,10 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         "## Mindset Overview",
         f"Primary Block(s): {', '.join(context.training_context.mental_block).title()}",
         "",
-        "### Sparring & Conditioning Adjustments",
-        "",
-        "- **If technical sparring is today** -> Keep S&C but **cut volume by 30%**",
-        "- **If no sparring this week** -> Add an **extra glycolytic conditioning session** (e.g., 5x3min bag rounds)",
-        "",
+        *_sparring_adjustment_lines(context),
         "---",
         "",
-        "- **On Expected Hard Sparring Days:**",
-        "  - Increase intra-workout carbs (e.g., 30g HBCD during session).",
-        "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.",
-        "- **If Sparring Was Unexpectedly Hard:**",
-        "  - Add 500mg sodium + 20oz electrolyte drink immediately.",
-        "",
+        *_sparring_nutrition_lines(context),
         "## Athlete Profile",
         f"- **Name:** {context.plan_input.full_name}",
         f"- Age: {context.plan_input.age}",
@@ -214,6 +242,8 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Fatigue Level: {context.plan_input.fatigue}",
         f"- Injuries: {context.injuries_display}",
         f"- Training Availability: {context.plan_input.available_days}",
+        f"- Hard Sparring Days: {', '.join(context.plan_input.hard_sparring_days) if context.plan_input.hard_sparring_days else 'Not specified'}",
+        f"- Technical Skill Days: {', '.join(context.plan_input.technical_skill_days) if context.plan_input.technical_skill_days else 'Not specified'}",
         f"- Equipment Access: {context.equipment_access_display}",
         f"- Weaknesses: {context.plan_input.weak_areas}",
         f"- Key Goals: {context.plan_input.key_goals}",
@@ -252,6 +282,8 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Fatigue Level: {context.plan_input.fatigue}",
         f"- Injuries: {context.injuries_display}",
         f"- Training Availability: {context.plan_input.available_days}",
+        f"- Hard Sparring Days: {', '.join(context.plan_input.hard_sparring_days) if context.plan_input.hard_sparring_days else 'Not specified'}",
+        f"- Technical Skill Days: {', '.join(context.plan_input.technical_skill_days) if context.plan_input.technical_skill_days else 'Not specified'}",
         f"- Equipment Access: {context.equipment_access_display}",
         f"- Weaknesses: {context.plan_input.weak_areas}",
         f"- Key Goals: {context.plan_input.key_goals}",
@@ -259,17 +291,8 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Notes: {context.plan_input.notes}",
     ]
     athlete_profile_html = _md_to_html("\n".join(profile_lines))
-    adjustments_table = _md_to_html(
-        "- If sparring today: reduce S&C by 30%\n"
-        "- No sparring this week: add extra glycolytic conditioning"
-    )
-    sparring_nutrition_html = _md_to_html(
-        "- **On Expected Hard Sparring Days:**\n"
-        "  - Increase intra-workout carbs (e.g., 30g HBCD during session).\n"
-        "  - Post-session: 1.2g/kg carbs + 0.4g/kg protein within 30 mins.\n"
-        "- **If Sparring Was Unexpectedly Hard:**\n"
-        "  - Add 500mg sodium + 20oz electrolyte drink immediately."
-    )
+    adjustments_table = _md_to_html("\n".join(line for line in _sparring_adjustment_lines(context) if line))
+    sparring_nutrition_html = _md_to_html("\n".join(line for line in _sparring_nutrition_lines(context) if line))
 
     coach_notes = _build_coach_notes(context, blocks)
 

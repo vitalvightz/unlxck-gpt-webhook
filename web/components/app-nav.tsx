@@ -130,10 +130,12 @@ export function AppNav() {
                   <p className="sidebar-section-label">Signed in</p>
                   <p className="sidebar-user-name">{me?.profile.full_name || "Athlete"}</p>
                   <p className="sidebar-user-email">{me?.profile.email}</p>
+                  <div className="sidebar-user-actions">
+                    <button type="button" className="ghost-button" onClick={handleSignOut}>
+                      Log out
+                    </button>
+                  </div>
                 </div>
-                <button type="button" className="sidebar-action ghost-button" onClick={handleSignOut}>
-                  Log out
-                </button>
               </div>
             </>
           ) : null}

@@ -221,9 +221,24 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
                 "expected_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
             },
             {
+                "code": "weekly_session_overage",
+                "phase": "SPP",
+                "week_index": 5,
+                "expected_session_count": 5,
+                "actual_session_count": 6,
+            },
+            {
                 "code": "weekly_rhythm_broken",
                 "phase": "SPP",
                 "week_index": 5,
+            },
+            {
+                "code": "missing_weight_cut_acknowledgement",
+            },
+            {
+                "code": "high_pressure_weight_cut_underaddressed",
+                "summary_lines": [],
+                "support_lines": [],
             },
         ],
         "missing_required_elements": [],
@@ -245,4 +260,7 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
     assert "remove_unneeded_fallback_branch_or_make_contingency_explicit" in prompt
     assert "restore_missing_week_structure" in prompt
     assert "complete_late_camp_week" in prompt
+    assert "trim_extra_week_sessions_to_match_profile" in prompt
     assert "restore_default_boxer_weekly_rhythm" in prompt
+    assert "add_weight_cut_acknowledgement" in prompt
+    assert "add_summary_and_support_weight_cut_notes" in prompt

@@ -57,6 +57,8 @@ class PlanRequest(BaseModel):
     fatigue_level: str = ""
     equipment_access: list[str] = Field(default_factory=list)
     training_availability: list[str] = Field(default_factory=list)
+    hard_sparring_days: list[str] = Field(default_factory=list)
+    technical_skill_days: list[str] = Field(default_factory=list)
     injuries: str = ""
     key_goals: list[str] = Field(default_factory=list)
     weak_areas: list[str] = Field(default_factory=list)
@@ -85,6 +87,8 @@ class PlanRequest(BaseModel):
             _field("Fatigue Level", self.fatigue_level),
             _field("Equipment Access", self.equipment_access),
             _field("Training Availability", self.training_availability),
+            _field("Hard Sparring Days", self.hard_sparring_days),
+            _field("Technical Skill Days", self.technical_skill_days),
             _field("Any injuries or areas you need to work around?", self.injuries),
             _field("What are your key performance goals?", self.key_goals),
             _field("Where do you feel weakest right now?", self.weak_areas),

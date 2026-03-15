@@ -2,6 +2,8 @@
     build_planning_brief,
     build_stage2_payload,
 )
+from fightcamp.nutrition import generate_nutrition_block
+from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
 
 
@@ -135,6 +137,8 @@ def test_build_planning_brief_exposes_limiter_led_weekly_stress_map():
             "key_goals": ["skill_refinement"],
             "weaknesses": ["coordination_proprioception"],
             "equipment": ["bodyweight", "bands"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
             "injuries": [],
             "weight_cut_risk": False,
             "weight_cut_pct": 0.0,
@@ -161,6 +165,76 @@ def test_build_planning_brief_exposes_limiter_led_weekly_stress_map():
     assert "limiter quality" in spp_stress["protect_first"]
     assert "hard sparring" in spp_stress["sparring_collision_rule"]
     assert "pad or bag rounds" in spp_stress["replace_missing_live_load"]
+
+
+def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_priorities():
+    training_context = TrainingContext(
+        fatigue="moderate",
+        training_frequency=5,
+        days_available=5,
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=["conditioning"],
+        equipment=["bodyweight", "heavy_bag", "assault_bike"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        training_split={},
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=24,
+        weight=67.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=32,
+        hard_sparring_days=["Tuesday", "Saturday"],
+        technical_skill_days=["Monday"],
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_len=5,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={"GPP": None, "SPP": None, "TAPER": None},
+        conditioning_blocks={
+            "GPP": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}},
+            "SPP": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}},
+            "TAPER": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}},
+        },
+        rehab_blocks={"GPP": "", "SPP": "", "TAPER": ""},
+    )
+    brief = build_planning_brief(
+        athlete_model=payload["athlete_model"],
+        restrictions=payload["restrictions"],
+        phase_briefs=payload["phase_briefs"],
+        candidate_pools=payload["candidate_pools"],
+        omission_ledger=payload["omission_ledger"],
+        rewrite_guidance=payload["rewrite_guidance"],
+    )
+
+    athlete_snapshot = brief["athlete_snapshot"]
+
+    assert athlete_snapshot["hard_sparring_days"] == ["Tuesday", "Saturday"]
+    assert athlete_snapshot["technical_skill_days"] == ["Monday"]
+    assert any("hard sparring" in item.lower() for item in brief["main_risks"])
+    assert any("primary neural strength day away from declared hard sparring" in item.lower() for item in brief["global_priorities"]["push"])
+
+    spp_week = next(week for week in brief["weekly_role_map"]["weeks"] if week["phase"] == "SPP")
+    role_by_key = {role["role_key"]: role for role in spp_week["session_roles"]}
+
+    assert role_by_key["recovery_reset_day"]["scheduled_day_hint"] == "Wednesday"
+    assert role_by_key["neural_plus_strength_day"]["scheduled_day_hint"] == "Thursday"
+    assert role_by_key["fight_pace_repeatability_day"]["scheduled_day_hint"] == "Tuesday"
 
 
 
@@ -1341,3 +1415,40 @@ def test_strength_slots_share_session_metadata_and_injury_pressure_does_not_forc
     assert slots[0]["anchor_capable"] is True
     assert slots[2]["support_only"] is True
     assert brief["limiter_profile"]["key"] != "tissue_state"
+
+
+def test_weight_cut_brief_and_payload_surface_cut_stress_explicitly():
+    payload, brief = _build_taper_payload_and_brief()
+
+    assert any("strength expression" in risk for risk in brief["main_risks"])
+    assert any("conditioning tolerance" in risk for risk in brief["main_risks"])
+    assert any("recovery spacing" in line for line in brief["global_priorities"]["preserve"])
+    assert any("glycolytic density" in line for line in brief["global_priorities"]["avoid"])
+    assert any("explicitly acknowledge" in line for line in payload["rewrite_guidance"]["writing_rules"])
+
+
+def test_weight_cut_support_blocks_keep_protocol_and_plain_acknowledgement():
+    flags = {
+        "phase": "TAPER",
+        "fatigue": "moderate",
+        "weight": 70.0,
+        "weight_cut_risk": True,
+        "weight_cut_pct": 8.6,
+        "days_until_fight": 21,
+    }
+
+    nutrition = generate_nutrition_block(flags=flags)
+    recovery = generate_recovery_block(
+        {
+            **flags,
+            "age": 27,
+            "injuries": [],
+        }
+    )
+
+    assert "Active Weight-Cut Note" in nutrition
+    assert "strength expression" in nutrition
+    assert "conditioning tolerance" in nutrition
+    assert "Weight Cut Protocol Triggered" in nutrition
+    assert "Active Weight-Cut Recovery Note" in recovery
+    assert "protect freshness" in recovery.lower()

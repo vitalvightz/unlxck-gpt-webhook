@@ -13,3 +13,7 @@ web/.next/
 web/node_modules/
 .demo-*.log
 .demo-*.err.log
+.venv/
+*.log
+web/.env.local
+*.tsbuildinfo

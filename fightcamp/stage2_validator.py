@@ -51,6 +51,16 @@ _CONDITIONING_ALTERNATIVE_PATTERN = re.compile(
     r"\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b.{0,80}\bor\b.{0,80}\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b",
     re.IGNORECASE,
 )
+_WEIGHT_CUT_PATTERNS = (
+    re.compile(r"\bweight[- ]cut\b", re.IGNORECASE),
+    re.compile(r"\bweight making\b", re.IGNORECASE),
+    re.compile(r"\bweigh[- ]in\b", re.IGNORECASE),
+    re.compile(r"\bcut stress\b", re.IGNORECASE),
+    re.compile(r"\bdehydrat", re.IGNORECASE),
+    re.compile(r"\brefeed\b", re.IGNORECASE),
+    re.compile(r"\brehydrat", re.IGNORECASE),
+)
+_WEIGHT_CUT_SUPPORT_SECTION_HINTS = ("nutrition", "recovery", "taper")
 _OVERSTYLED_PATTERNS = (
     re.compile(r"\bdeath march\b", re.IGNORECASE),
     re.compile(r"\bsmash\s*&\s*dash\b", re.IGNORECASE),
@@ -92,6 +102,10 @@ _SESSION_TITLE_HINTS = {
     "technical polish",
 }
 _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
+_WEEKDAY_HEADING = re.compile(
+    r"^(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)(?:\b|[\s:\-|])",
+    re.IGNORECASE,
+)
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -165,7 +179,18 @@ def _is_session_heading(line: str) -> bool:
         return False
     if normalized in _SESSION_TITLE_HINTS:
         return True
+    if _WEEKDAY_HEADING.match(normalized):
+        return True
     return normalized.startswith(("week ", "session ", "day "))
+
+
+def _normalize_session_title(line: str) -> str:
+    normalized = _normalize_render_line(line)
+    if not normalized:
+        return normalized
+    if _WEEKDAY_HEADING.match(normalized):
+        normalized = _WEEKDAY_HEADING.sub("", normalized, count=1).strip(" :-|")
+    return normalized
 
 
 def _phase_session_blocks(phase_lines: list[str]) -> list[list[str]]:
@@ -186,6 +211,28 @@ def _phase_session_blocks(phase_lines: list[str]) -> list[list[str]]:
     if current:
         blocks.append(current)
     return blocks
+
+
+def _section_blocks(plan_text: str) -> list[dict[str, Any]]:
+    sections: list[dict[str, Any]] = []
+    current_title = ""
+    current_lines: list[str] = []
+
+    for raw_line in (plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        header_match = _MARKDOWN_HEADER.match(raw_line)
+        if header_match:
+            if current_title or current_lines:
+                sections.append({"title": current_title, "lines": current_lines})
+            current_title = _normalize_render_line(header_match.group(2))
+            current_lines = []
+            continue
+        if cleaned:
+            current_lines.append(cleaned)
+
+    if current_title or current_lines:
+        sections.append({"title": current_title, "lines": current_lines})
+    return sections
 
 
 def _restriction_guard_entry(restriction: dict) -> dict:
@@ -362,6 +409,28 @@ def _athlete_snapshot(planning_brief: dict) -> dict:
     if isinstance(athlete_snapshot, dict):
         return athlete_snapshot
     return {}
+
+
+def _weight_cut_context(planning_brief: dict) -> dict[str, bool]:
+    athlete = _athlete_snapshot(planning_brief)
+    readiness_flags = set(_clean_list(athlete.get("readiness_flags", [])))
+    active = bool(
+        athlete.get("weight_cut_risk")
+        or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}
+    )
+    fatigue = str(athlete.get("fatigue", "")).strip().lower()
+    days_until_fight = athlete.get("days_until_fight")
+    high_pressure = bool(
+        "aggressive_weight_cut" in readiness_flags
+        or (
+            active
+            and (
+                fatigue in {"moderate", "high"}
+                or (isinstance(days_until_fight, int) and days_until_fight <= 28)
+            )
+        )
+    )
+    return {"active": active, "high_pressure": high_pressure}
 
 
 def _normalize_equipment_set(values: Any) -> set[str]:
@@ -702,7 +771,7 @@ def _week_sections(plan_text: str) -> dict[int, dict[str, Any]]:
 
 def _week_session_titles(week_lines: list[str]) -> list[str]:
     return [
-        _normalize_render_line(block[0])
+        _normalize_session_title(block[0])
         for block in _phase_session_blocks(week_lines)
         if block
     ]
@@ -739,15 +808,29 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
             continue
 
         session_blocks = _phase_session_blocks(week_section.get("lines", []))
-        if len(session_blocks) < len(expected_roles):
+        actual_session_count = len(session_blocks)
+        expected_session_count = len(expected_roles)
+        if actual_session_count < expected_session_count:
             warnings.append(
                 {
                     "code": "late_camp_session_incomplete" if week_index >= late_week_start else "missing_week_session_role",
                     "message": f"Week {week_index} is structurally incomplete compared with the weekly role map.",
                     "week_index": week_index,
                     "phase": week.get("phase"),
-                    "expected_session_count": len(expected_roles),
-                    "actual_session_count": len(session_blocks),
+                    "expected_session_count": expected_session_count,
+                    "actual_session_count": actual_session_count,
+                    "expected_roles": [role.get("role_key") for role in expected_roles],
+                }
+            )
+        elif actual_session_count > expected_session_count:
+            warnings.append(
+                {
+                    "code": "weekly_session_overage",
+                    "message": f"Week {week_index} renders {actual_session_count} active sessions even though the planning brief only allows {expected_session_count}.",
+                    "week_index": week_index,
+                    "phase": week.get("phase"),
+                    "expected_session_count": expected_session_count,
+                    "actual_session_count": actual_session_count,
                     "expected_roles": [role.get("role_key") for role in expected_roles],
                 }
             )
@@ -775,6 +858,57 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
                             "titles": titles,
                         }
                     )
+    return warnings
+
+
+def _line_mentions_weight_cut(line: str) -> bool:
+    return any(pattern.search(line) for pattern in _WEIGHT_CUT_PATTERNS)
+
+
+def _weight_cut_acknowledgement_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    context = _weight_cut_context(planning_brief)
+    if not context["active"]:
+        return []
+
+    summary_lines: list[str] = []
+    support_lines: list[str] = []
+    non_profile_lines: list[str] = []
+
+    for section in _section_blocks(final_plan_text):
+        title = section.get("title", "")
+        if title == "athlete profile":
+            continue
+        matching_lines = [
+            line
+            for line in section.get("lines", [])
+            if _line_mentions_weight_cut(line)
+        ]
+        if not matching_lines:
+            continue
+        non_profile_lines.extend(matching_lines)
+        if any(hint in title for hint in _WEIGHT_CUT_SUPPORT_SECTION_HINTS):
+            support_lines.extend(matching_lines)
+        else:
+            summary_lines.extend(matching_lines)
+
+    warnings: list[dict] = []
+    if not non_profile_lines:
+        warnings.append(
+            {
+                "code": "missing_weight_cut_acknowledgement",
+                "message": "Active weight cut shaped the camp, but the final plan does not acknowledge it outside raw profile fields.",
+                "line": "",
+            }
+        )
+    if context["high_pressure"] and (not summary_lines or not support_lines):
+        warnings.append(
+            {
+                "code": "high_pressure_weight_cut_underaddressed",
+                "message": "High-pressure weight cut needs both a short summary-level acknowledgement and a support-level note.",
+                "summary_lines": summary_lines,
+                "support_lines": support_lines,
+            }
+        )
     return warnings
 
 
@@ -852,6 +986,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief,
         final_plan_text,
     )
+    weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(
+        planning_brief,
+        final_plan_text,
+    )
     overstyled_name_warnings: list[dict] = []
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
 
@@ -889,6 +1027,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(equipment_congruence_warnings)
     warnings.extend(unresolved_access_fallback_warnings)
     warnings.extend(week_completeness_warnings)
+    warnings.extend(weight_cut_acknowledgement_warnings)
     warnings.extend(sport_language_warnings)
 
     return {
@@ -904,6 +1043,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "equipment_congruence_warnings": equipment_congruence_warnings,
         "unresolved_access_fallback_warnings": unresolved_access_fallback_warnings,
         "week_completeness_warnings": week_completeness_warnings,
+        "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
         "sport_language_warnings": sport_language_warnings,

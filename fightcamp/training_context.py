@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
 
@@ -82,6 +82,8 @@ class TrainingContext:
     recent_exercises: list[str]
     phase_weeks: dict
     days_until_fight: int | None
+    hard_sparring_days: list[str] = field(default_factory=list)
+    technical_skill_days: list[str] = field(default_factory=list)
 
     def to_flags(self) -> dict:
         return asdict(self)

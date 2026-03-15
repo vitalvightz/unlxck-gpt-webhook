@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 from fightcamp.coach_review import run_coach_review
 from fightcamp.plan_pipeline_blocks import _build_phase_support_block
-from fightcamp.plan_pipeline_rendering import _build_coach_notes
+from fightcamp.plan_pipeline_rendering import _build_coach_notes, _sparring_adjustment_lines, _sparring_nutrition_lines
 
 
 class _TrainingStub:
@@ -26,6 +26,10 @@ class _ContextStub:
         self.training_context = _TrainingStub(prev_exercises=prev_exercises)
         self.apply_muay_thai_filters = False
         self.sanitize_labels = ()
+        self.plan_input = SimpleNamespace(
+            hard_sparring_days=[],
+            technical_skill_days=[],
+        )
 
     def phase_active(self, phase: str) -> bool:
         return phase in self._active_phases
@@ -106,3 +110,28 @@ def test_coach_review_preserves_conditioning_session_count_when_rerendering():
     )
 
     assert updated_conditioning["SPP"]["block"].count("\n#### ") == 2
+
+
+def test_sparring_adjustment_lines_use_declared_days_when_present():
+    context = _ContextStub()
+    context.plan_input = SimpleNamespace(
+        hard_sparring_days=["Tuesday", "Saturday"],
+        technical_skill_days=["Monday"],
+    )
+
+    lines = _sparring_adjustment_lines(context)
+    nutrition_lines = _sparring_nutrition_lines(context)
+
+    assert "Tuesday, Saturday" in "\n".join(lines)
+    assert "technical / lighter skill days" in "\n".join(lines).lower()
+    assert "Tuesday, Saturday" in "\n".join(nutrition_lines)
+
+
+def test_sparring_adjustment_lines_fall_back_to_generic_text_when_days_unknown():
+    context = _ContextStub()
+
+    lines = _sparring_adjustment_lines(context)
+
+    joined = "\n".join(lines)
+    assert "If hard sparring lands today" in joined
+    assert "If no sparring is fixed this week" in joined
