@@ -108,7 +108,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
 
   async function refreshMe() {
-    setIsReady(false);
     await loadMe(session);
   }
 
