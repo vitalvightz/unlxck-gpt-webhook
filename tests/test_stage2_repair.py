@@ -164,3 +164,85 @@ def test_build_stage2_repair_prompt_surfaces_internal_scaffolding_cleanup():
     assert "remove_internal_scaffolding" in prompt
     assert "remove_formatting_artifact" in prompt
     assert "Remove raw HTML" in prompt
+
+
+def test_build_stage2_repair_prompt_surfaces_quality_repairs():
+    validator_report = {
+        "is_valid": True,
+        "errors": [],
+        "warnings": [
+            {
+                "code": "weak_anchor_session",
+                "phase": "SPP",
+                "session_index": 1,
+                "anchor_candidates": ["Landmine Press"],
+            },
+            {
+                "code": "conditional_conditioning_choice",
+                "line": "Bike sprint or bag sprint depending on access",
+            },
+            {
+                "code": "template_like_session_render",
+                "phase": "SPP",
+                "session_index": 1,
+            },
+            {
+                "code": "too_many_fallbacks",
+                "phase": "SPP",
+                "session_index": 1,
+            },
+            {
+                "code": "taper_option_overload",
+                "phase": "TAPER",
+                "session_index": 1,
+            },
+            {
+                "code": "equipment_incongruent_selection",
+                "phase": "SPP",
+                "line": "Bag Sprint Round - 6 x 15 sec",
+                "required_equipment": ["heavy_bag"],
+            },
+            {
+                "code": "unresolved_access_fallback",
+                "phase": "SPP",
+                "session_index": 1,
+                "line": "Fallback: Short Sprint - 6 x 6 sec",
+            },
+            {
+                "code": "missing_week_session_role",
+                "phase": "SPP",
+                "week_index": 5,
+                "expected_roles": ["strength_touch_day", "recovery_reset_day", "neural_plus_strength_day"],
+            },
+            {
+                "code": "late_camp_session_incomplete",
+                "phase": "TAPER",
+                "week_index": 6,
+                "expected_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
+            },
+            {
+                "code": "weekly_rhythm_broken",
+                "phase": "SPP",
+                "week_index": 5,
+            },
+        ],
+        "missing_required_elements": [],
+        "restricted_hits": [],
+    }
+    prompt = build_stage2_repair_prompt(
+        planning_brief=_planning_brief_fixture(),
+        failed_plan_text="SPP\n- Dead Bug - 2x8\n- Bike sprint or bag sprint depending on access",
+        validator_report=validator_report,
+    )
+
+    assert "quality_repairs" in prompt
+    assert "restore_anchor_session_quality" in prompt
+    assert "resolve_conditioning_to_primary_plus_fallback" in prompt
+    assert "rewrite_session_as_final_prescription" in prompt
+    assert "collapse_extra_fallbacks_to_final_choice" in prompt
+    assert "simplify_taper_session" in prompt
+    assert "replace_with_equipment_valid_same_role_option" in prompt
+    assert "remove_unneeded_fallback_branch_or_make_contingency_explicit" in prompt
+    assert "restore_missing_week_structure" in prompt
+    assert "complete_late_camp_week" in prompt
+    assert "restore_default_boxer_weekly_rhythm" in prompt

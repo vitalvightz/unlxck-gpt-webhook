@@ -8,6 +8,7 @@ from .restriction_filtering import evaluate_restriction_impact
 
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]+|\d+[.)]|#+)\s*")
 _PHASE_HEADER = re.compile(r"\b(?:GPP|SPP|TAPER)\b", re.IGNORECASE)
+_WEEK_HEADER = re.compile(r"\bweek\s+(\d+)\b", re.IGNORECASE)
 _MARKDOWN_HEADER = re.compile(r"^\s*(#{1,6})\s*(.+?)\s*$")
 _NEGATION_MARKERS = (
     "avoid",
@@ -41,6 +42,56 @@ _NON_PHASE_TOP_LEVEL_SECTIONS = {
     "nutrition adjustments for unknown sparring load",
     "athlete profile",
 }
+_CONDITIONAL_PATTERNS = (
+    re.compile(r"\boption\s+[ab]\b", re.IGNORECASE),
+    re.compile(r"\bdepending on access\b", re.IGNORECASE),
+    re.compile(r"\bif available\b", re.IGNORECASE),
+)
+_CONDITIONING_ALTERNATIVE_PATTERN = re.compile(
+    r"\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b.{0,80}\bor\b.{0,80}\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b",
+    re.IGNORECASE,
+)
+_OVERSTYLED_PATTERNS = (
+    re.compile(r"\bdeath march\b", re.IGNORECASE),
+    re.compile(r"\bsmash\s*&\s*dash\b", re.IGNORECASE),
+    re.compile(r"\bbully\b", re.IGNORECASE),
+    re.compile(r"\bframe-and-pop\b", re.IGNORECASE),
+    re.compile(r"\bclinch-fighter\b", re.IGNORECASE),
+    re.compile(r"\brope-a-dope\b", re.IGNORECASE),
+    re.compile(r"\bdynamic plank-to-punch\b", re.IGNORECASE),
+    re.compile(r"\bankle snap bounce\b", re.IGNORECASE),
+    re.compile(r"\bhand-fight emom\b", re.IGNORECASE),
+)
+_SPORT_LANGUAGE_LEAKS = {
+    "boxing": {
+        "takedown",
+        "double-leg",
+        "double leg",
+        "single-leg",
+        "single leg",
+        "sprawl",
+        "thai clinch",
+        "clinch knee",
+        "cage",
+        "octagon",
+        "ground and pound",
+        "grappling",
+    }
+}
+_SESSION_TITLE_HINTS = {
+    "strength",
+    "recovery",
+    "aerobic support",
+    "fight-pace conditioning",
+    "alactic sharpness",
+    "neural primer",
+    "conditioning",
+    "aerobic",
+    "glycolytic",
+    "alactic",
+    "technical polish",
+}
+_TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -102,6 +153,39 @@ def _phase_sections(plan_text: str) -> dict[str, list[str]]:
         if current_phase:
             sections[current_phase].append(cleaned)
     return dict(sections)
+
+
+def _normalize_render_line(line: str) -> str:
+    return re.sub(r"[*_`]+", "", (line or "")).strip().lower()
+
+
+def _is_session_heading(line: str) -> bool:
+    normalized = _normalize_render_line(line)
+    if not normalized:
+        return False
+    if normalized in _SESSION_TITLE_HINTS:
+        return True
+    return normalized.startswith(("week ", "session ", "day "))
+
+
+def _phase_session_blocks(phase_lines: list[str]) -> list[list[str]]:
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    for line in phase_lines:
+        normalized = _normalize_render_line(line)
+        if not normalized:
+            continue
+        if _PHASE_HEADER.search(normalized.upper()):
+            continue
+        if _is_session_heading(line):
+            if current:
+                blocks.append(current)
+            current = [line]
+            continue
+        current.append(line)
+    if current:
+        blocks.append(current)
+    return blocks
 
 
 def _restriction_guard_entry(restriction: dict) -> dict:
@@ -260,12 +344,516 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
     return missing
 
 
+def _candidate_option_names(options: list[dict]) -> list[str]:
+    return _dedupe_preserve_order(
+        [
+            str(option.get("name", "")).strip()
+            for option in options
+            if str(option.get("name", "")).strip()
+        ]
+    )
+
+
+def _athlete_snapshot(planning_brief: dict) -> dict:
+    athlete_model = planning_brief.get("athlete_model")
+    if isinstance(athlete_model, dict) and athlete_model:
+        return athlete_model
+    athlete_snapshot = planning_brief.get("athlete_snapshot")
+    if isinstance(athlete_snapshot, dict):
+        return athlete_snapshot
+    return {}
+
+
+def _normalize_equipment_set(values: Any) -> set[str]:
+    equipment: set[str] = set()
+    for value in _clean_list(values):
+        normalized = str(value).strip().lower().replace(" ", "_")
+        if normalized:
+            equipment.add(normalized)
+    return equipment
+
+
+def _option_records_by_phase(planning_brief: dict) -> dict[str, list[dict]]:
+    records: dict[str, list[dict]] = defaultdict(list)
+    for phase, phase_pool in (planning_brief.get("candidate_pools") or {}).items():
+        for slot_group in ("strength_slots", "conditioning_slots", "rehab_slots"):
+            for slot in phase_pool.get(slot_group, []) or []:
+                slot_session_index = int(slot.get("session_index", 1) or 1)
+                options = [slot.get("selected") or {}] + list(slot.get("alternates") or [])
+                for option in options:
+                    name = str(option.get("name", "")).strip()
+                    if not name:
+                        continue
+                    records[phase].append(
+                        {
+                            "name": name,
+                            "phase": phase,
+                            "role": slot.get("role"),
+                            "session_index": int(option.get("session_index", slot_session_index) or slot_session_index),
+                            "required_equipment": _normalize_equipment_set(option.get("required_equipment", [])),
+                            "universally_available": bool(option.get("universally_available")),
+                            "generic_fallback": bool(option.get("generic_fallback")),
+                            "has_access_contingency": bool(
+                                str(
+                                    option.get("availability_contingency_reason")
+                                    or option.get("availability_contingency")
+                                    or slot.get("availability_contingency_reason")
+                                    or slot.get("availability_contingency")
+                                    or ""
+                                ).strip()
+                            ),
+                        }
+                    )
+    return records
+
+
+def _matching_option_records(line: str, option_records: list[dict]) -> list[dict]:
+    normalized = line.lower()
+    return [
+        record
+        for record in option_records
+        if _phrase_in_text(normalized, record.get("name", ""))
+    ]
+
+
+def _strength_session_quality_warnings(
+    planning_brief: dict,
+    phase_sections: dict[str, list[str]],
+    plan_lines: list[str],
+) -> list[dict]:
+    warnings: list[dict] = []
+    candidate_pools = planning_brief.get("candidate_pools", {}) or {}
+    phase_strategy = planning_brief.get("phase_strategy", {}) or {}
+    multi_phase_expected = len(phase_strategy) > 1
+
+    for phase, phase_pool in candidate_pools.items():
+        phase_lines = phase_sections.get(phase, []) if multi_phase_expected else plan_lines
+        if not phase_lines:
+            continue
+        session_slots: dict[int, list[dict]] = defaultdict(list)
+        for slot in phase_pool.get("strength_slots", []) or []:
+            session_slots[int(slot.get("session_index", 1) or 1)].append(slot)
+        for session_index, slots in session_slots.items():
+            anchor_names: list[str] = []
+            support_names: list[str] = []
+            session_names: list[str] = []
+            for slot in slots:
+                selected = slot.get("selected") or {}
+                alternates = list(slot.get("alternates", []) or [])
+                session_names.extend(_slot_candidate_names(slot))
+                if selected.get("anchor_capable"):
+                    anchor_names.extend(_candidate_option_names([selected]))
+                if selected.get("support_only"):
+                    support_names.extend(_candidate_option_names([selected]))
+                anchor_names.extend(
+                    _candidate_option_names([option for option in alternates if option.get("anchor_capable")])
+                )
+                support_names.extend(
+                    _candidate_option_names([option for option in alternates if option.get("support_only")])
+                )
+            anchor_names = _dedupe_preserve_order(anchor_names)
+            support_names = _dedupe_preserve_order(support_names)
+            if not anchor_names:
+                continue
+            matched_lines = [
+                line
+                for line in phase_lines
+                if any(_phrase_in_text(line, name) for name in session_names)
+            ]
+            if not matched_lines:
+                continue
+            anchor_lines = [
+                line
+                for line in matched_lines
+                if any(_phrase_in_text(line, name) for name in anchor_names)
+            ]
+            support_lines = [
+                line
+                for line in matched_lines
+                if any(_phrase_in_text(line, name) for name in support_names)
+            ]
+            if not anchor_lines and support_lines:
+                warnings.append(
+                    {
+                        "code": "weak_anchor_session",
+                        "message": f"{phase} session {session_index} is missing a serious anchor option even though the candidate pool had one.",
+                        "phase": phase,
+                        "session_index": session_index,
+                        "anchor_candidates": anchor_names,
+                        "matched_lines": matched_lines,
+                    }
+                )
+                first_two = matched_lines[:2]
+                if len(first_two) >= 1 and all(
+                    any(_phrase_in_text(line, name) for name in support_names)
+                    for line in first_two[: min(2, len(first_two))]
+                ):
+                    warnings.append(
+                        {
+                            "code": "support_takeover_before_anchor",
+                            "message": f"{phase} session {session_index} opens with support work before any available anchor exercise.",
+                            "phase": phase,
+                            "session_index": session_index,
+                            "anchor_candidates": anchor_names,
+                            "matched_lines": first_two,
+                        }
+                    )
+            elif support_lines:
+                first_two = matched_lines[:2]
+                if first_two and not any(
+                    any(_phrase_in_text(line, name) for name in anchor_names)
+                    for line in first_two
+                ) and all(
+                    any(_phrase_in_text(line, name) for name in support_names)
+                    for line in first_two
+                ):
+                    warnings.append(
+                        {
+                            "code": "support_takeover_before_anchor",
+                            "message": f"{phase} session {session_index} opens with support work before the available anchor exercise appears.",
+                            "phase": phase,
+                            "session_index": session_index,
+                            "anchor_candidates": anchor_names,
+                            "matched_lines": first_two,
+                        }
+                    )
+    return warnings
+
+
+def _conditioning_choice_warnings(plan_lines: list[str]) -> list[dict]:
+    warnings: list[dict] = []
+    seen_lines: set[str] = set()
+    for line in plan_lines:
+        normalized = _normalize_render_line(line)
+        if normalized.startswith("fallback:"):
+            continue
+        if any(pattern.search(line) for pattern in _CONDITIONAL_PATTERNS) or _CONDITIONING_ALTERNATIVE_PATTERN.search(line):
+            if normalized in seen_lines:
+                continue
+            seen_lines.add(normalized)
+            warnings.append(
+                {
+                    "code": "conditional_conditioning_choice",
+                    "message": "Conditioning prescription is still conditional instead of decisive.",
+                    "line": line,
+                }
+            )
+    return warnings
+
+
+def _rendering_discipline_warnings(phase_sections: dict[str, list[str]]) -> list[dict]:
+    warnings: list[dict] = []
+    for phase, phase_lines in phase_sections.items():
+        for session_index, session_lines in enumerate(_phase_session_blocks(phase_lines), start=1):
+            normalized_lines = [_normalize_render_line(line) for line in session_lines if _normalize_render_line(line)]
+            if not normalized_lines:
+                continue
+            template_lines = [
+                line
+                for line in normalized_lines
+                if line.startswith(_TEMPLATE_PREFIXES)
+                or line.startswith(("weekly progression:", "if time short:", "if fatigue high:", "dosage template:"))
+            ]
+            fallback_lines = [line for line in normalized_lines if line.startswith("fallback:")]
+            conditional_lines = [
+                line
+                for line in session_lines
+                if any(pattern.search(line) for pattern in _CONDITIONAL_PATTERNS) or _CONDITIONING_ALTERNATIVE_PATTERN.search(line)
+            ]
+            if len(fallback_lines) > 1:
+                warnings.append(
+                    {
+                        "code": "too_many_fallbacks",
+                        "message": f"{phase} session {session_index} still contains more than one fallback branch.",
+                        "phase": phase,
+                        "session_index": session_index,
+                        "matched_lines": session_lines,
+                    }
+                )
+            if len(template_lines) >= 3 and len(template_lines) >= max(2, len(normalized_lines) // 2):
+                warnings.append(
+                    {
+                        "code": "template_like_session_render",
+                        "message": f"{phase} session {session_index} still reads like a template or session library instead of a final prescription.",
+                        "phase": phase,
+                        "session_index": session_index,
+                        "matched_lines": session_lines,
+                    }
+                )
+            if phase == "TAPER" and (len(fallback_lines) > 1 or len(conditional_lines) > 0 or len(template_lines) > 2):
+                warnings.append(
+                    {
+                        "code": "taper_option_overload",
+                        "message": f"Taper session {session_index} still contains too much branching or template structure.",
+                        "phase": phase,
+                        "session_index": session_index,
+                        "matched_lines": session_lines,
+                    }
+                )
+    return warnings
+
+
+def _equipment_congruence_warnings(
+    planning_brief: dict,
+    phase_sections: dict[str, list[str]],
+    plan_lines: list[str],
+) -> list[dict]:
+    warnings: list[dict] = []
+    athlete_equipment = _normalize_equipment_set(_athlete_snapshot(planning_brief).get("equipment", []))
+    option_records_by_phase = _option_records_by_phase(planning_brief)
+    multi_phase_expected = len((planning_brief.get("phase_strategy") or {}).keys()) > 1
+    seen: set[tuple[str, str]] = set()
+
+    for phase, option_records in option_records_by_phase.items():
+        phase_lines = phase_sections.get(phase, []) if multi_phase_expected else plan_lines
+        for line in phase_lines:
+            for record in _matching_option_records(line, option_records):
+                if not record["required_equipment"] or record["universally_available"]:
+                    continue
+                if record["required_equipment"].issubset(athlete_equipment):
+                    continue
+                dedupe_key = (phase, line.lower())
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                warnings.append(
+                    {
+                        "code": "equipment_incongruent_selection",
+                        "message": f"{phase} includes '{record['name']}' even though it requires equipment outside the athlete profile.",
+                        "phase": phase,
+                        "line": line,
+                        "required_equipment": sorted(record["required_equipment"]),
+                    }
+                )
+    return warnings
+
+
+def _unresolved_access_fallback_warnings(
+    planning_brief: dict,
+    phase_sections: dict[str, list[str]],
+) -> list[dict]:
+    warnings: list[dict] = []
+    athlete_equipment = _normalize_equipment_set(_athlete_snapshot(planning_brief).get("equipment", []))
+    option_records_by_phase = _option_records_by_phase(planning_brief)
+
+    for phase, phase_lines in phase_sections.items():
+        phase_option_records = option_records_by_phase.get(phase, [])
+        for session_index, session_lines in enumerate(_phase_session_blocks(phase_lines), start=1):
+            for line in session_lines:
+                normalized = _normalize_render_line(line)
+                if not normalized.startswith("fallback:"):
+                    continue
+                matching_records = _matching_option_records(line, phase_option_records)
+                if not matching_records:
+                    warnings.append(
+                        {
+                            "code": "unresolved_access_fallback",
+                            "message": f"{phase} session {session_index} still renders a fallback branch without a matched contingency option.",
+                            "phase": phase,
+                            "session_index": session_index,
+                            "line": line,
+                        }
+                    )
+                    continue
+                if any(record["has_access_contingency"] for record in matching_records):
+                    continue
+                if all(
+                    not record["required_equipment"]
+                    or record["required_equipment"].issubset(athlete_equipment)
+                    for record in matching_records
+                ):
+                    warnings.append(
+                        {
+                            "code": "unresolved_access_fallback",
+                            "message": f"{phase} session {session_index} keeps a fallback branch even though the athlete profile already resolves access.",
+                            "phase": phase,
+                            "session_index": session_index,
+                            "line": line,
+                        }
+                    )
+    return warnings
+
+
+def _week_sections(plan_text: str) -> dict[int, dict[str, Any]]:
+    sections: dict[int, dict[str, Any]] = {}
+    current_phase = ""
+    current_week: int | None = None
+
+    for raw_line in (plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        if not cleaned:
+            continue
+        header_match = _MARKDOWN_HEADER.match(raw_line)
+        header_text = header_match.group(2).strip() if header_match else cleaned
+        phase_match = _PHASE_HEADER.search(header_text)
+        if phase_match:
+            current_phase = phase_match.group(0).upper()
+        week_match = _WEEK_HEADER.search(header_text)
+        if week_match:
+            current_week = int(week_match.group(1))
+            sections.setdefault(current_week, {"phase": current_phase, "lines": []})
+            sections[current_week]["phase"] = current_phase
+            continue
+        if current_week is not None:
+            sections.setdefault(current_week, {"phase": current_phase, "lines": []})
+            sections[current_week]["lines"].append(cleaned)
+    return sections
+
+
+def _week_session_titles(week_lines: list[str]) -> list[str]:
+    return [
+        _normalize_render_line(block[0])
+        for block in _phase_session_blocks(week_lines)
+        if block
+    ]
+
+
+def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[dict]:
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = list(weekly_role_map.get("weeks") or [])
+    if len(weeks) <= 1:
+        return []
+
+    warnings: list[dict] = []
+    week_sections = _week_sections(plan_text)
+    active_week_count = len(weeks)
+    late_week_start = max(1, active_week_count - 1)
+    sport_key = str(_athlete_snapshot(planning_brief).get("sport", "")).strip().lower()
+
+    for week in weeks:
+        week_index = int(week.get("week_index", 0) or 0)
+        if week_index <= 0:
+            continue
+        expected_roles = list(week.get("session_roles") or [])
+        week_section = week_sections.get(week_index)
+        if not week_section:
+            warnings.append(
+                {
+                    "code": "late_camp_session_incomplete" if week_index >= late_week_start else "missing_week_session_role",
+                    "message": f"Week {week_index} is missing from the final plan even though it is active in the planning brief.",
+                    "week_index": week_index,
+                    "phase": week.get("phase"),
+                    "expected_roles": [role.get("role_key") for role in expected_roles],
+                }
+            )
+            continue
+
+        session_blocks = _phase_session_blocks(week_section.get("lines", []))
+        if len(session_blocks) < len(expected_roles):
+            warnings.append(
+                {
+                    "code": "late_camp_session_incomplete" if week_index >= late_week_start else "missing_week_session_role",
+                    "message": f"Week {week_index} is structurally incomplete compared with the weekly role map.",
+                    "week_index": week_index,
+                    "phase": week.get("phase"),
+                    "expected_session_count": len(expected_roles),
+                    "actual_session_count": len(session_blocks),
+                    "expected_roles": [role.get("role_key") for role in expected_roles],
+                }
+            )
+
+        if sport_key == "boxing" and str(week.get("phase", "")).upper() in {"GPP", "SPP"}:
+            expected_strength_roles = sum(1 for role in expected_roles if role.get("category") == "strength")
+            has_recovery_role = any(role.get("category") == "recovery" for role in expected_roles)
+            if expected_strength_roles >= 2 and has_recovery_role:
+                titles = _week_session_titles(week_section.get("lines", []))
+                strength_positions = [
+                    idx for idx, title in enumerate(titles)
+                    if title.startswith("strength") or title.startswith("neural primer")
+                ]
+                recovery_positions = [
+                    idx for idx, title in enumerate(titles)
+                    if title.startswith("recovery")
+                ]
+                if recovery_positions and len(strength_positions) >= 2 and recovery_positions[0] + 1 != strength_positions[1]:
+                    warnings.append(
+                        {
+                            "code": "weekly_rhythm_broken",
+                            "message": f"Week {week_index} breaks the default boxer rhythm where recovery should sit immediately before the primary strength day.",
+                            "week_index": week_index,
+                            "phase": week.get("phase"),
+                            "titles": titles,
+                        }
+                    )
+    return warnings
+
+
+def _overstyled_name_warnings(plan_lines: list[str]) -> list[dict]:
+    warnings: list[dict] = []
+    seen_lines: set[str] = set()
+    for line in plan_lines:
+        normalized = line.lower()
+        if normalized in seen_lines:
+            continue
+        if any(pattern.search(line) for pattern in _OVERSTYLED_PATTERNS):
+            seen_lines.add(normalized)
+            warnings.append(
+                {
+                    "code": "overstyled_drill_name",
+                    "message": "Replace overstyled drill naming with plain coach-readable language.",
+                    "line": line,
+                }
+            )
+    return warnings
+
+
+def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
+    athlete_model = planning_brief.get("athlete_model", {}) or {}
+    sport_key = str(
+        athlete_model.get("sport")
+        or (planning_brief.get("sport_load_profile", {}) or {}).get("key")
+        or ""
+    ).strip().lower()
+    restricted_terms = _SPORT_LANGUAGE_LEAKS.get(sport_key, set())
+    if not restricted_terms:
+        return []
+    warnings: list[dict] = []
+    seen_lines: set[str] = set()
+    for line in plan_lines:
+        normalized = line.lower()
+        if normalized in seen_lines:
+            continue
+        if any(term in normalized for term in restricted_terms):
+            seen_lines.add(normalized)
+            warnings.append(
+                {
+                    "code": "sport_language_leak",
+                    "message": f"Line uses sport language that does not fit the athlete's {sport_key} context cleanly.",
+                    "line": line,
+                    "sport": sport_key,
+                }
+            )
+    return warnings
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
     restricted_hits = _find_restricted_hits(planning_brief, plan_lines)
     missing_required_elements = _find_missing_required_elements(planning_brief, final_plan_text)
     missing_phase_sections = _find_missing_phase_sections(planning_brief, phase_sections)
+    strength_session_warnings = _strength_session_quality_warnings(
+        planning_brief,
+        phase_sections,
+        plan_lines,
+    )
+    conditioning_choice_warnings = _conditioning_choice_warnings(plan_lines)
+    rendering_discipline_warnings = _rendering_discipline_warnings(phase_sections)
+    equipment_congruence_warnings = _equipment_congruence_warnings(
+        planning_brief,
+        phase_sections,
+        plan_lines,
+    )
+    unresolved_access_fallback_warnings = _unresolved_access_fallback_warnings(
+        planning_brief,
+        phase_sections,
+    )
+    week_completeness_warnings = _week_completeness_warnings(
+        planning_brief,
+        final_plan_text,
+    )
+    overstyled_name_warnings: list[dict] = []
+    sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
 
     errors = [
         {
@@ -295,6 +883,13 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         }
         for item in missing_phase_sections
     )
+    warnings.extend(strength_session_warnings)
+    warnings.extend(conditioning_choice_warnings)
+    warnings.extend(rendering_discipline_warnings)
+    warnings.extend(equipment_congruence_warnings)
+    warnings.extend(unresolved_access_fallback_warnings)
+    warnings.extend(week_completeness_warnings)
+    warnings.extend(sport_language_warnings)
 
     return {
         "is_valid": not errors,
@@ -303,5 +898,14 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "missing_required_elements": missing_required_elements,
         "missing_phase_sections": missing_phase_sections,
         "restricted_hits": restricted_hits,
+        "strength_session_warnings": strength_session_warnings,
+        "conditioning_choice_warnings": conditioning_choice_warnings,
+        "rendering_discipline_warnings": rendering_discipline_warnings,
+        "equipment_congruence_warnings": equipment_congruence_warnings,
+        "unresolved_access_fallback_warnings": unresolved_access_fallback_warnings,
+        "week_completeness_warnings": week_completeness_warnings,
+        "overstyled_name_warnings": overstyled_name_warnings,
+        "gimmick_name_warnings": overstyled_name_warnings,
+        "sport_language_warnings": sport_language_warnings,
     }
 

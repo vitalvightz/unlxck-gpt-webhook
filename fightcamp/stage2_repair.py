@@ -17,7 +17,14 @@ REPAIR RULES:
 5. If a phase-critical element is missing, reintroduce it with a conservative, compliant option that matches the phase strategy.
 6. Remove any internal/admin scaffolding such as Athlete Profile, Selection Rationale, Coach Notes, planning-brief labels, or Stage-2-only notes.
 7. Remove raw HTML, code fences, and any non-athlete formatting artifacts.
-8. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+8. If an anchor session drifted into support work, restore the strongest compliant anchor option available before accessories.
+9. Resolve conditioning choices into one primary prescription and at most one explicit fallback.
+10. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
+11. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
+12. Keep every active week present and structurally complete, especially the late-camp weeks.
+13. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
+14. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
+15. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -60,7 +67,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 "candidate_names": _clean_list(item.get("candidate_names", [])),
                 "action": "restore_phase_critical_element",
             }
-        )
+            )
 
     formatting_fixes: list[dict] = []
     for error in validator_report.get("errors", []) or []:
@@ -90,10 +97,123 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 }
             )
 
+    quality_fixes: list[dict] = []
+    for warning in validator_report.get("warnings", []) or []:
+        code = str(warning.get("code") or "")
+        if code == "weak_anchor_session":
+            quality_fixes.append(
+                {
+                    "action": "restore_anchor_session_quality",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                    "anchor_candidates": _clean_list(warning.get("anchor_candidates", [])),
+                }
+            )
+        elif code == "support_takeover_before_anchor":
+            quality_fixes.append(
+                {
+                    "action": "move_support_work_after_anchor",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                    "anchor_candidates": _clean_list(warning.get("anchor_candidates", [])),
+                }
+            )
+        elif code == "conditional_conditioning_choice":
+            quality_fixes.append(
+                {
+                    "action": "resolve_conditioning_to_primary_plus_fallback",
+                    "line": warning.get("line"),
+                }
+            )
+        elif code == "too_many_fallbacks":
+            quality_fixes.append(
+                {
+                    "action": "collapse_extra_fallbacks_to_final_choice",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                }
+            )
+        elif code == "unresolved_access_fallback":
+            quality_fixes.append(
+                {
+                    "action": "remove_unneeded_fallback_branch_or_make_contingency_explicit",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                    "line": warning.get("line"),
+                }
+            )
+        elif code == "template_like_session_render":
+            quality_fixes.append(
+                {
+                    "action": "rewrite_session_as_final_prescription",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                }
+            )
+        elif code == "taper_option_overload":
+            quality_fixes.append(
+                {
+                    "action": "simplify_taper_session",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                }
+            )
+        elif code == "equipment_incongruent_selection":
+            quality_fixes.append(
+                {
+                    "action": "replace_with_equipment_valid_same_role_option",
+                    "phase": warning.get("phase"),
+                    "line": warning.get("line"),
+                    "required_equipment": _clean_list(warning.get("required_equipment", [])),
+                }
+            )
+        elif code == "missing_week_session_role":
+            quality_fixes.append(
+                {
+                    "action": "restore_missing_week_structure",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                    "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                }
+            )
+        elif code == "late_camp_session_incomplete":
+            quality_fixes.append(
+                {
+                    "action": "complete_late_camp_week",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                    "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                }
+            )
+        elif code == "weekly_rhythm_broken":
+            quality_fixes.append(
+                {
+                    "action": "restore_default_boxer_weekly_rhythm",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                }
+            )
+        elif code in {"gimmick_name", "overstyled_drill_name"}:
+            quality_fixes.append(
+                {
+                    "action": "replace_overstyled_name_with_plain_language",
+                    "line": warning.get("line"),
+                }
+            )
+        elif code == "sport_language_leak":
+            quality_fixes.append(
+                {
+                    "action": "rewrite_sport_language_to_fit_athlete_context",
+                    "line": warning.get("line"),
+                    "sport": warning.get("sport"),
+                }
+            )
+
     return {
         "fix_first": restriction_fixes,
         "strip_out": formatting_fixes,
         "then_restore": missing_elements,
+        "quality_repairs": quality_fixes,
     }
 
 

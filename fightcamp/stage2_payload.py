@@ -5,6 +5,7 @@ import re
 
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase
+from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 
 RESTRICTION_PATTERN_HINTS = {
@@ -1112,13 +1113,13 @@ def _build_weekly_stress_map(
             sport_load_profile,
         )
         if phase == "GPP":
-            highest_neural_day = "Place one highest neural day after the easiest day so the limiter quality stays crisp before volume accumulates."
+            highest_neural_day = "Place the highest-neural primary strength day immediately after the weekly recovery / lowest-load day so force quality stays crisp before volume accumulates."
             highest_glycolytic_day = "Keep one density-focused day only, and never let it sit beside hard sparring."
-            lowest_load_day = "Use one lowest-load day for recovery, rehab, and easy aerobic support only."
+            lowest_load_day = "Use one midweek lowest-load day for recovery, rehab, and easy aerobic support only, then follow it with the primary strength anchor."
         elif phase == "SPP":
-            highest_neural_day = "Anchor one highest neural day around sport speed or power transfer and keep it away from hard sparring collisions."
+            highest_neural_day = "Anchor the highest-neural primary strength day immediately after the recovery / lowest-load day, then keep it away from hard sparring collisions."
             highest_glycolytic_day = "Use one highest glycolytic day as the main fight-pace stressor unless hard sparring already occupies that slot."
-            lowest_load_day = "Keep one lowest-load day for recovery, tissue care, and limiter-preserving support work."
+            lowest_load_day = "Keep one lowest-load day for recovery, tissue care, and limiter-preserving support work before the main neural-strength anchor."
         else:
             highest_neural_day = "Use one highest neural day as a sharpness primer, not as a fatigue builder."
             highest_glycolytic_day = "Only keep a light fight-pace touch; drop glycolytic density first if freshness or boxing quality falls."
@@ -1531,6 +1532,91 @@ def _role_governance(
     }
 
 
+_PRIMARY_STRENGTH_ROLE_KEYS = {
+    "primary_strength_day",
+    "structural_strength_day",
+    "neural_plus_strength_day",
+    "neural_primer_day",
+}
+
+
+def _athlete_sport_key(athlete_model: dict) -> str:
+    return str(athlete_model.get("sport") or "").strip().lower().replace(" ", "_")
+
+
+def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
+    phase = str(phase or "").upper()
+    if phase == "GPP":
+        preferred = ["aerobic", "alactic", "glycolytic"]
+    elif phase == "SPP":
+        preferred = ["aerobic", "glycolytic", "alactic"]
+    else:
+        preferred = ["alactic", "aerobic", "glycolytic"]
+    return _dedupe_preserve_order(preferred + list(conditioning_sequence or []))
+
+
+def _resequence_session_roles(week_entry: dict, session_roles: list[dict], athlete_model: dict) -> list[dict]:
+    if len(session_roles) <= 1:
+        return session_roles
+
+    ordered = list(session_roles)
+    sport_key = _athlete_sport_key(athlete_model)
+    phase = str(week_entry.get("phase", "")).upper()
+
+    def _is_primary_strength(role: dict) -> bool:
+        return role.get("category") == "strength" and role.get("role_key") in _PRIMARY_STRENGTH_ROLE_KEYS
+
+    def _is_support_strength(role: dict) -> bool:
+        return role.get("category") == "strength" and not _is_primary_strength(role)
+
+    def _is_low_damage_conditioning(role: dict) -> bool:
+        if role.get("category") != "conditioning":
+            return False
+        if role.get("preferred_system") == "aerobic":
+            return True
+        return role.get("role_key") in {"repeatability_support_day", "controlled_repeatability_day"}
+
+    def _take_first(predicate, used: set[int], result: list[dict]) -> None:
+        for idx, role in enumerate(ordered):
+            if idx in used:
+                continue
+            if predicate(role):
+                used.add(idx)
+                result.append(role)
+                return
+
+    if sport_key == "boxing" and phase in {"GPP", "SPP"}:
+        used: set[int] = set()
+        result: list[dict] = []
+        _take_first(_is_support_strength, used, result)
+        _take_first(_is_low_damage_conditioning, used, result)
+        _take_first(lambda role: role.get("category") == "recovery", used, result)
+        _take_first(_is_primary_strength, used, result)
+        for idx, role in enumerate(ordered):
+            if idx in used:
+                continue
+            if role.get("category") == "conditioning":
+                used.add(idx)
+                result.append(role)
+        for idx, role in enumerate(ordered):
+            if idx in used:
+                continue
+            result.append(role)
+        ordered = result
+    else:
+        recovery_idx = next((idx for idx, role in enumerate(ordered) if role.get("category") == "recovery"), None)
+        primary_idx = next((idx for idx, role in enumerate(ordered) if _is_primary_strength(role)), None)
+        if recovery_idx is not None and primary_idx is not None and primary_idx != recovery_idx + 1:
+            primary_role = ordered.pop(primary_idx)
+            if primary_idx < recovery_idx:
+                recovery_idx -= 1
+            ordered.insert(recovery_idx + 1, primary_role)
+
+    for idx, role in enumerate(ordered, start=1):
+        role["session_index"] = idx
+    return ordered
+
+
 def _build_weekly_role_map(
     athlete_model: dict,
     week_by_week_progression: dict,
@@ -1542,6 +1628,12 @@ def _build_weekly_role_map(
     for week_entry in week_by_week_progression.get("weeks", []):
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
+        sport_key = _athlete_sport_key(athlete_model)
+        if sport_key == "boxing" and week_entry.get("phase", "").upper() in {"GPP", "SPP"} and int(session_counts.get("conditioning", 0) or 0) >= 2:
+            conditioning_sequence = _preferred_boxer_conditioning_sequence(
+                week_entry.get("phase", ""),
+                conditioning_sequence,
+            )
         session_roles: list[dict] = []
         suppressed_roles: list[dict] = []
         session_index = 1
@@ -1651,6 +1743,8 @@ def _build_weekly_role_map(
                 }
             )
             session_index += 1
+
+        session_roles = _resequence_session_roles(week_entry, session_roles, athlete_model)
 
         weeks.append(
             {
@@ -1803,6 +1897,8 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
     movement_patterns.extend(_clean_list(exercise.get("tags", [])))
+    quality_profile = classify_strength_item(exercise)
+    required_equipment = _clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
     return {
         "name": exercise.get("name", "Unnamed"),
         "source": "exercise_bank",
@@ -1811,11 +1907,19 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
         "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
         "prescription": exercise.get("prescription") or exercise.get("method") or "",
         "why": why or "balanced selection",
+        "quality_class": quality_profile["quality_class"],
+        "anchor_capable": quality_profile["anchor_capable"],
+        "support_only": quality_profile["support_only"],
+        "base_categories": quality_profile["base_categories"],
+        "required_equipment": required_equipment,
+        "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
+        "generic_fallback": bool(exercise.get("generic_fallback")),
     }
 
 
 def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
     tags = _clean_list(drill.get("tags", []))
+    required_equipment = _clean_list(drill.get("required_equipment") or drill.get("equipment", []))
     return {
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
@@ -1826,6 +1930,11 @@ def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
             part for part in [drill.get("timing"), drill.get("rest"), drill.get("load")] if part
         ),
         "why": why or "balanced selection",
+        "required_equipment": required_equipment,
+        "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
+        "generic_fallback": bool(drill.get("generic_fallback")),
+        "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
+        "session_index": drill.get("session_index"),
     }
 
 
@@ -1928,19 +2037,26 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
         for entry in strength_block.get("why_log", [])
         if entry.get("name")
     }
+    exercises = list(strength_block.get("exercises", []))
     selected_names = {
         exercise.get("name")
-        for exercise in strength_block.get("exercises", [])
+        for exercise in exercises
         if exercise.get("name")
     }
+    sessions = infer_strength_sessions(exercises, strength_block.get("num_sessions", 1))
+    position_to_session: dict[int, int] = {}
+    for session in sessions:
+        for position in session.get("positions", []):
+            position_to_session[position] = session.get("session_index", 1)
     slots: list[dict] = []
-    for idx, exercise in enumerate(strength_block.get("exercises", []), start=1):
+    for idx, exercise in enumerate(exercises, start=1):
         name = exercise.get("name")
         if not name:
             continue
         reasons = reason_lookup.get(name, {})
         movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
         role = movement or "strength_support"
+        quality_profile = classify_strength_item(exercise)
         slots.append(
             {
                 "slot_id": f"{phase.lower()}_strength_{idx}_{_slugify(name)}",
@@ -1958,6 +2074,11 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                 ),
                 "replace_with_same_role": True,
                 "priority": _strength_slot_priority(phase, role, idx),
+                "session_index": position_to_session.get(idx - 1, 1),
+                "quality_class": quality_profile["quality_class"],
+                "anchor_capable": quality_profile["anchor_capable"],
+                "support_only": quality_profile["support_only"],
+                "base_categories": quality_profile["base_categories"],
             }
         )
     return slots
@@ -2002,6 +2123,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
                     ),
                     "replace_with_same_role": True,
                     "priority": _conditioning_slot_priority(phase, system, idx),
+                    "session_index": int(drill.get("session_index", idx) or idx),
                 }
             )
     return slots
@@ -2137,12 +2259,22 @@ def build_stage2_payload(
             "Do not let support drills take over anchor slots when stronger compliant options exist.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
             "Do not invent new items when a strong compliant option already exists in the pool.",
-            "When replacing vague or gimmicky items, upgrade quality instead of downgrading to filler.",
+            "Keep every final primary drill, support drill, and fallback equipment-valid for the athlete profile.",
+            "Only keep an explicit fallback when a real unresolved access or availability contingency still exists.",
         ],
         "writing_rules": [
             "Keep the final plan athlete-facing and clean.",
             "Do not mention excluded items.",
             "Preserve phase objectives when rewriting text.",
+            "Keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists.",
+            "For conditioning, give one primary prescription and at most one explicit fallback.",
+            "Collapse internal template/menu options into one final prescription whenever the athlete context already resolves the choice.",
+            "Keep every active week present and structurally complete, including late-camp weeks.",
+            "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
+            "Do not echo Primary, Fallback, Drill, or option-menu labels across most session lines.",
+            "Use simple session titles such as Strength, Recovery, Aerobic support, Fight-pace conditioning, Alactic sharpness, or Neural primer.",
+            "In taper weeks, remove optional branches aggressively and keep the work short, final, and low-noise.",
+            "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
         ],
     }
 
@@ -2203,22 +2335,31 @@ RULE 7 - SUPPORT WORK STAYS IN SUPPORT ROLE
 Rehab, isometrics, carries, trunk stability, breathing, mobility, and tissue-protection work should support the plan, not dominate it, unless the planning brief clearly requires a protection-first camp.
 If volume must be cut, cut accessory/support work first.
 
-RULE 8 - NO GIMMICKS
-Do not use invented, dramatic, vague, or fake-smart drill names.
-Use clear, standard, coach-readable exercise names only.
+RULE 8 - EQUIPMENT CONGRUENCE
+Every primary drill, support drill, and fallback must be valid for the athlete's declared equipment access unless an explicit contingency note says otherwise.
+If the athlete profile already resolves the access question, render only the resolved option.
 
 RULE 9 - REPLACEMENTS MUST IMPROVE QUALITY
-When removing weak, vague, gimmicky, or violating items, replace them with clearer and stronger compliant options, not weaker support work.
+When removing weak or violating items, replace them with stronger compliant options, not weaker support work.
+Do not leave unresolved access branches when one valid choice is already obvious from the athlete profile.
 
 RULE 10 - TAPER DISCIPLINE
 In taper weeks, simplify aggressively.
 Remove novelty, reduce accessory volume, avoid soreness-inducing density, and keep only the most useful sharpness, rhythm, confidence, and freshness work.
+Do not render taper sessions as option menus or branching templates.
+In normal taper sessions, resolve to one final prescription with no default fallback branch.
 
 RULE 11 - OUTPUT DISCIPLINE
 Keep the athlete-facing output concise, high-signal, and easy to scan.
 Minimize repetition.
 Cut filler, duplication, and generic coaching reminders.
 Keep coaching notes short and only where session-critical.
+Collapse templates into one final prescription whenever the athlete context already resolves the choice.
+Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
+Allow at most one explicit fallback in a session, and only when absolutely necessary.
+Keep every active week present and structurally complete, including late-camp weeks.
+For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
+Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 
 OUTPUT
 Return a clean athlete-facing final plan that is:
@@ -2229,7 +2370,7 @@ Return a clean athlete-facing final plan that is:
 - internally coherent
 - phase-appropriate
 
-Preserve the best of Stage 1, but remove weak exercise choices, filler, vague naming, poor sequencing, and underpowered anchor sessions.
+Preserve the best of Stage 1, but remove weak exercise choices, filler, poor sequencing, underpowered anchor sessions, unresolved access branches, and incomplete late-camp weeks.
 """
 
 

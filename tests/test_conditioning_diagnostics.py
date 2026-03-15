@@ -2,7 +2,7 @@ import asyncio
 import json
 from pathlib import Path
 
-from fightcamp.conditioning import render_conditioning_block
+from fightcamp.conditioning import _glycolytic_fallback, render_conditioning_block
 from fightcamp.main import generate_plan
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.training_context import TrainingContext
@@ -44,6 +44,189 @@ def test_missing_system_block_formatting():
     assert "AEROBIC (Status: Not prescribed)" in output
     assert "Reason:" in output
     assert "Coach option:" in output
+
+
+def test_render_conditioning_block_uses_plain_markdown_and_targeted_name_cleanup():
+    output = render_conditioning_block(
+        {
+            "glycolytic": [
+                {
+                    "name": "Trap Bar Death March",
+                    "equipment": ["trap_bar"],
+                    "timing": "30s work / 30s rest x 5",
+                    "rest": "30s",
+                    "load": "heavy",
+                    "purpose": "Build fight-specific carrying power.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Thai Clinch EMOM",
+                    "equipment": ["medicine_ball"],
+                    "timing": "8 x 20s",
+                    "rest": "40s",
+                    "load": "fast",
+                    "purpose": "Boxing hand-fight density.",
+                    "red_flags": "None",
+                    "availability_contingency_reason": "only if medicine ball access replaces the trap bar session",
+                },
+            ]
+        },
+        phase="SPP",
+        phase_color="#000",
+        sport="boxing",
+    )
+
+    assert "<br>" not in output
+    assert "Trap Bar Carry Intervals" in output
+    assert "Thai Clinch EMOM" not in output
+    assert "Hand-Fight Intervals" in output
+    assert "**Fallback:" in output
+    assert "Drill:" not in output
+    assert "Conditioning Block" not in output
+
+
+def test_render_conditioning_block_limits_fallbacks_per_session_and_simplifies_taper():
+    output = render_conditioning_block(
+        {
+            "glycolytic": [
+                {
+                    "name": "Trap Bar Death March",
+                    "timing": "30s work / 30s rest x 5",
+                    "rest": "30s",
+                    "load": "heavy",
+                    "purpose": "Build repeatability.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Barbell Smash & Dash",
+                    "timing": "4 rounds",
+                    "rest": "75s",
+                    "load": "hard",
+                    "purpose": "Fallback option.",
+                    "red_flags": "None",
+                },
+            ],
+            "alactic": [
+                {
+                    "name": "Ankle Snap Bounce",
+                    "timing": "4 x 10s",
+                    "rest": "30s",
+                    "load": "fast",
+                    "purpose": "Sharpness.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Thai Clinch EMOM",
+                    "timing": "6 x 15s",
+                    "rest": "45s",
+                    "load": "fast",
+                    "purpose": "Extra fallback that should not render in taper.",
+                    "red_flags": "None",
+                },
+            ],
+        },
+        phase="TAPER",
+        phase_color="#000",
+        sport="boxing",
+    )
+
+    assert output.count("**Fallback:") == 0
+    assert "Conditioning Block" not in output
+    assert "**System:" not in output
+    assert "Ankling" in output
+    assert "Thai Clinch EMOM" not in output
+
+
+def test_render_conditioning_block_allows_only_one_fallback_across_multi_system_session():
+    output = render_conditioning_block(
+        {
+            "glycolytic": [
+                {
+                    "name": "Trap Bar Death March",
+                    "timing": "30s work / 30s rest x 5",
+                    "rest": "30s",
+                    "load": "heavy",
+                    "purpose": "Primary glycolytic choice.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Barbell Smash & Dash",
+                    "timing": "4 rounds",
+                    "rest": "75s",
+                    "load": "hard",
+                    "purpose": "Fallback glycolytic choice.",
+                    "red_flags": "None",
+                    "availability_contingency_reason": "use only if trap bar access is unavailable that day",
+                },
+            ],
+            "alactic": [
+                {
+                    "name": "Ankle Snap Bounce",
+                    "timing": "4 x 10s",
+                    "rest": "30s",
+                    "load": "fast",
+                    "purpose": "Primary alactic choice.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Thai Clinch EMOM",
+                    "timing": "6 x 15s",
+                    "rest": "45s",
+                    "load": "fast",
+                    "purpose": "This second fallback should stay hidden.",
+                    "red_flags": "None",
+                },
+            ],
+        },
+        phase="SPP",
+        phase_color="#000",
+        sport="boxing",
+        num_sessions=1,
+    )
+
+    assert output.count("**Fallback:") == 1
+
+
+def test_render_conditioning_block_omits_fallback_when_equipment_already_resolves_choice():
+    output = render_conditioning_block(
+        {
+            "glycolytic": [
+                {
+                    "name": "Trap Bar Death March",
+                    "equipment": ["trap_bar"],
+                    "timing": "30s work / 30s rest x 5",
+                    "rest": "30s",
+                    "load": "heavy",
+                    "purpose": "Primary glycolytic choice.",
+                    "red_flags": "None",
+                },
+                {
+                    "name": "Barbell Smash & Dash",
+                    "equipment": ["barbell"],
+                    "timing": "4 rounds",
+                    "rest": "75s",
+                    "load": "hard",
+                    "purpose": "Second drill should not auto-render as fallback.",
+                    "red_flags": "None",
+                },
+            ],
+        },
+        phase="SPP",
+        phase_color="#000",
+        sport="boxing",
+        num_sessions=1,
+    )
+
+    assert "**Fallback:" not in output
+    assert "Barbell Clean Sprint Intervals" not in output
+
+
+def test_conditioning_helper_fallbacks_are_equipment_valid():
+    fallback = _glycolytic_fallback("boxing")
+
+    assert fallback["required_equipment"] == []
+    assert fallback["equipment"] == []
+    assert fallback["generic_fallback"] is True
 
 
 def test_generate_plan_returns_controlled_error_for_invalid_payload():
@@ -243,6 +426,9 @@ def test_stage2_payload_uses_slot_alternates_and_rehab_drills():
 
     assert strength_slot["alternates"]
     assert strength_slot["alternates"][0]["name"] == "Step-Up"
+    assert strength_slot["session_index"] == 1
+    assert strength_slot["quality_class"] == "anchor_loaded"
+    assert strength_slot["anchor_capable"] is True
     assert conditioning_slot["alternates"]
     assert conditioning_slot["alternates"][0]["name"] == "Air Bike Flush"
     assert [slot["selected"]["name"] for slot in rehab_slots] == [

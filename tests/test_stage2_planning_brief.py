@@ -353,7 +353,7 @@ def test_build_planning_brief_uses_tissue_state_for_stiffness_or_injury_driven_c
     assert brief_profile["key"] == "tissue_state"
     assert brief["sport_load_profile"]["key"] == "boxing"
     assert "conservative loading" in brief_profile["organising_principle"]
-    assert "ballistic work" in brief_profile["cut_first"]
+    assert "ballistic extras" in brief_profile["cut_first"]
     assert spp_stress["conditioning_sequence"] == ["aerobic", "alactic", "glycolytic"]
     assert "recovery plus rehab only" in spp_stress["sport_load_interaction"]
 
@@ -817,12 +817,14 @@ def test_build_planning_brief_adds_weekly_role_map_from_progression():
     assert len(role_map["weeks"]) == 5
     assert len(first_week_roles) == 5
     assert [role["role_key"] for role in first_week_roles] == [
-        "primary_strength_day",
         "secondary_strength_day",
         "aerobic_base_day",
-        "controlled_repeatability_day",
         "recovery_reset_day",
+        "primary_strength_day",
+        "alactic_support_day",
     ]
+    assert first_week_roles[2]["category"] == "recovery"
+    assert first_week_roles[3]["anchor"] == "highest_neural_day"
 
 
 
@@ -935,6 +937,138 @@ def test_weekly_role_map_inherits_existing_stress_anchors():
     assert fight_pace_role["placement_rule"] == stress["highest_glycolytic_day"]
     assert recovery_role["anchor"] == "lowest_load_day"
     assert recovery_role["placement_rule"] == stress["lowest_load_day"]
+
+
+def test_weekly_role_map_places_recovery_immediately_before_primary_strength_for_boxers():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["assault_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": [],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 6,
+            },
+        },
+    )
+
+    roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+    role_keys = [role["role_key"] for role in roles]
+    support_conditioning_keys = {"aerobic_support_day", "repeatability_support_day"}
+
+    assert role_keys[0] == "strength_touch_day"
+    assert role_keys[1] in support_conditioning_keys
+    assert role_keys[2] == "recovery_reset_day"
+    assert role_keys[3] == "neural_plus_strength_day"
+    assert role_keys[4] == "fight_pace_repeatability_day"
+    assert role_keys.index("recovery_reset_day") + 1 == role_keys.index("neural_plus_strength_day")
+
+
+def test_weekly_role_map_keeps_full_boxer_structure_through_weeks_five_and_six():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 6,
+            "days_until_fight": 40,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["assault_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+        },
+        {
+            "GPP": {
+                "objective": "build aerobic base and general force capacity",
+                "emphasize": ["aerobic repeatability", "general force"],
+                "deprioritize": ["fight-week intensity"],
+                "risk_flags": [],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["aerobic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["alactic", "glycolytic"],
+                },
+                "weeks": 2,
+                "days": 14,
+            },
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": [],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 3,
+                "days": 19,
+            },
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": [],
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 2},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            },
+        },
+    )
+
+    role_map = brief["weekly_role_map"]["weeks"]
+    assert [week["week_index"] for week in role_map] == [1, 2, 3, 4, 5, 6]
+
+    week_five = role_map[4]
+    week_six = role_map[5]
+
+    week_five_keys = [role["role_key"] for role in week_five["session_roles"]]
+    assert week_five["phase"] == "SPP"
+    assert len(week_five_keys) == 5
+    assert week_five_keys.index("recovery_reset_day") + 1 == week_five_keys.index("neural_plus_strength_day")
+
+    week_six_keys = [role["role_key"] for role in week_six["session_roles"]]
+    assert week_six["phase"] == "TAPER"
+    assert "fight_week_freshness_day" in week_six_keys
+    assert len(week_six_keys) == 4
+    assert any(role in week_six_keys for role in {"neural_primer_day", "alactic_sharpness_day", "aerobic_flush_day"})
 
 
 def test_weekly_role_map_marks_roles_as_execution_layer_only():
@@ -1128,3 +1262,82 @@ def test_weekly_role_map_does_not_create_strength_roles_when_strength_count_is_z
 
     assert all(role["category"] != "strength" for role in week["session_roles"])
     assert all(item["category"] != "strength" for item in week["suppressed_roles"])
+
+
+def test_strength_slots_share_session_metadata_and_injury_pressure_does_not_force_tissue_state():
+    training_context = TrainingContext(
+        fatigue="low",
+        training_frequency=4,
+        days_available=4,
+        training_days=["Mon", "Tue", "Thu", "Sat"],
+        injuries=["mild shoulder irritation"],
+        style_technical=["boxing"],
+        style_tactical=["counter_striker"],
+        weaknesses=["strength"],
+        equipment=["barbell", "dumbbells", "medicine_ball"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        training_split={},
+        key_goals=["power", "strength"],
+        training_preference="balanced",
+        mental_block=[],
+        age=26,
+        weight=69.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 3, "SPP": 0, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=35,
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="4-1",
+        rounds_format="3x3",
+        camp_len=5,
+        short_notice=False,
+        restrictions=[
+            {
+                "restriction": "heavy_overhead_pressing",
+                "region": "shoulder",
+                "source_phrase": "avoid heavy overhead pressing",
+            }
+        ],
+        phase_weeks={"GPP": 3, "SPP": 0, "TAPER": 0, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={
+            "GPP": {
+                "num_sessions": 2,
+                "exercises": [
+                    {"name": "Front Squat", "movement": "squat", "tags": ["compound", "quad_dominant"], "method": "4x5"},
+                    {"name": "Split Squat", "movement": "lunge", "tags": ["unilateral"], "method": "3x6"},
+                    {"name": "Dead Bug", "movement": "core", "tags": ["core"], "method": "2x8"},
+                ],
+                "why_log": [
+                    {"name": "Front Squat", "explanation": "balanced selection", "reasons": {}},
+                    {"name": "Split Squat", "explanation": "balanced selection", "reasons": {}},
+                    {"name": "Dead Bug", "explanation": "balanced selection", "reasons": {}},
+                ],
+                "candidate_reservoir": {"squat": [], "lunge": [], "core": []},
+            },
+            "SPP": None,
+            "TAPER": None,
+        },
+        conditioning_blocks={"GPP": {"grouped_drills": {}, "why_log": [], "missing_systems": [], "candidate_reservoir": {}}},
+        rehab_blocks={"GPP": "", "SPP": "", "TAPER": ""},
+    )
+    brief = build_planning_brief(
+        athlete_model=payload["athlete_model"],
+        restrictions=payload["restrictions"],
+        phase_briefs=payload["phase_briefs"],
+        candidate_pools=payload["candidate_pools"],
+        omission_ledger=payload["omission_ledger"],
+        rewrite_guidance=payload["rewrite_guidance"],
+    )
+
+    slots = payload["candidate_pools"]["GPP"]["strength_slots"]
+    assert [slot["session_index"] for slot in slots[:2]] == [1, 2]
+    assert slots[0]["anchor_capable"] is True
+    assert slots[2]["support_only"] is True
+    assert brief["limiter_profile"]["key"] != "tissue_state"

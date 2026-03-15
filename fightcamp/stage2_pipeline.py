@@ -69,6 +69,36 @@ def _build_review_summary(validator_report: dict, status: str) -> tuple[str, lis
                 phase = warning.get("phase", "Unknown phase")
                 requirement = str(warning.get("requirement", "required element")).replace("_", " ")
                 detail_lines.append(f"Restore {requirement} in {phase}.")
+            elif warning.get("code") == "weak_anchor_session":
+                detail_lines.append(
+                    f"Strength session quality drifted in {warning.get('phase', 'Unknown phase')} session {warning.get('session_index', '?')}; restore a real anchor."
+                )
+            elif warning.get("code") == "support_takeover_before_anchor":
+                detail_lines.append(
+                    f"Move support work behind the anchor in {warning.get('phase', 'Unknown phase')} session {warning.get('session_index', '?')}."
+                )
+            elif warning.get("code") == "conditional_conditioning_choice":
+                detail_lines.append("Resolve conditioning choices into one primary prescription and at most one fallback.")
+            elif warning.get("code") == "too_many_fallbacks":
+                detail_lines.append("Collapse extra fallback branches so the session reads like a final prescription.")
+            elif warning.get("code") == "unresolved_access_fallback":
+                detail_lines.append("Remove fallback branches unless a real unresolved access contingency remains.")
+            elif warning.get("code") == "template_like_session_render":
+                detail_lines.append("Rewrite template-like session blocks into one clean athlete-facing prescription.")
+            elif warning.get("code") == "taper_option_overload":
+                detail_lines.append("Simplify taper sessions so they stay short, decisive, and low-noise.")
+            elif warning.get("code") == "equipment_incongruent_selection":
+                detail_lines.append("Replace equipment-invalid selections with same-role options that match the athlete profile.")
+            elif warning.get("code") == "missing_week_session_role":
+                detail_lines.append("Restore the missing weekly session role so each active week stays structurally complete.")
+            elif warning.get("code") == "late_camp_session_incomplete":
+                detail_lines.append("Restore late-camp week structure so the final weeks stay complete and athlete-ready.")
+            elif warning.get("code") == "weekly_rhythm_broken":
+                detail_lines.append("Restore the default boxer weekly rhythm with recovery immediately before the primary strength day.")
+            elif warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:
+                detail_lines.append("Replace overstyled drill naming with plain coach-readable language.")
+            elif warning.get("code") == "sport_language_leak":
+                detail_lines.append("Rewrite cross-sport language so the plan reads cleanly for the athlete's sport.")
             else:
                 detail_lines.append(str(warning.get("message", "Unknown validation warning.")))
 

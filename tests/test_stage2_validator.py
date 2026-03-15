@@ -4,6 +4,7 @@
 
 def _planning_brief_fixture() -> dict:
     return {
+        "athlete_model": {"sport": "boxing", "equipment": ["landmine", "bike", "bands"]},
         "restrictions": [
             {
                 "restriction": "heavy_overhead_pressing",
@@ -27,8 +28,9 @@ def _planning_brief_fixture() -> dict:
                 "strength_slots": [
                     {
                         "role": "push",
-                        "selected": {"name": "Landmine Press"},
-                        "alternates": [{"name": "Half-Kneeling Cable Press"}],
+                        "session_index": 1,
+                        "selected": {"name": "Landmine Press", "anchor_capable": True, "support_only": False},
+                        "alternates": [{"name": "Half-Kneeling Cable Press", "anchor_capable": True, "support_only": False}],
                     }
                 ],
                 "conditioning_slots": [],
@@ -38,20 +40,44 @@ def _planning_brief_fixture() -> dict:
                 "strength_slots": [
                     {
                         "role": "push",
-                        "selected": {"name": "Landmine Press"},
-                        "alternates": [{"name": "Half-Kneeling Cable Press"}],
+                        "session_index": 1,
+                        "selected": {"name": "Landmine Press", "anchor_capable": True, "support_only": False},
+                        "alternates": [{"name": "Half-Kneeling Cable Press", "anchor_capable": True, "support_only": False}],
+                    },
+                    {
+                        "role": "core",
+                        "session_index": 1,
+                        "selected": {"name": "Dead Bug", "anchor_capable": False, "support_only": True},
+                        "alternates": [{"name": "Pallof Press", "anchor_capable": False, "support_only": True}],
                     }
                 ],
                 "conditioning_slots": [
                     {
                         "role": "alactic",
-                        "selected": {"name": "Air Bike Sprint"},
+                        "session_index": 1,
+                        "selected": {
+                            "name": "Air Bike Sprint",
+                            "required_equipment": ["bike"],
+                            "session_index": 1,
+                        },
                         "alternates": [{"name": "Short Sprint"}],
                     },
                     {
                         "role": "glycolytic",
-                        "selected": {"name": "Hard Shuttle"},
-                        "alternates": [{"name": "Bag Sprint Round"}],
+                        "session_index": 2,
+                        "selected": {
+                            "name": "Hard Shuttle",
+                            "required_equipment": [],
+                            "session_index": 2,
+                        },
+                        "alternates": [
+                            {
+                                "name": "Bag Sprint Round",
+                                "required_equipment": ["heavy_bag"],
+                                "session_index": 2,
+                                "availability_contingency_reason": "only if heavy bag is the only available glycolytic tool",
+                            }
+                        ],
                     },
                 ],
                 "rehab_slots": [
@@ -265,3 +291,258 @@ def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
 
     assert report["is_valid"] is True
     assert report["missing_required_elements"] == []
+
+
+def test_validate_stage2_output_warns_for_weak_anchor_session_only_when_anchor_exists():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Dead Bug - 2x8
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weak_anchor_session" in warning_codes
+    assert "support_takeover_before_anchor" in warning_codes
+
+
+def test_validate_stage2_output_does_not_warn_for_force_isometric_anchor_when_justified():
+    planning_brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {"GPP": {"must_keep": ["primary_strength"]}},
+        "candidate_pools": {
+            "GPP": {
+                "strength_slots": [
+                    {
+                        "role": "hinge",
+                        "session_index": 1,
+                        "selected": {"name": "Deadlift Isometric", "anchor_capable": True, "support_only": False},
+                        "alternates": [],
+                    }
+                ],
+                "conditioning_slots": [],
+                "rehab_slots": [],
+            }
+        },
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        GPP
+        - Deadlift Isometric - 4 x 10 sec
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weak_anchor_session" not in warning_codes
+    assert "support_takeover_before_anchor" not in warning_codes
+
+
+def test_validate_stage2_output_warns_for_structural_conditionals():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Bike sprint or bag sprint depending on access
+        - Trap Bar Death March - 5 x 30s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "conditional_conditioning_choice" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Double-leg sprint entry - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "sport_language_leak" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_template_like_render_and_extra_fallbacks():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Fight-pace conditioning
+        - Primary: Air Bike Sprint - 6 x 6 sec
+        - Fallback: Short Sprint - 6 x 6 sec
+        - Fallback: Bag Sprint Round - 6 x 10 sec
+        - System: Glycolytic
+        - Weekly Progression: Add 1 round
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "too_many_fallbacks" in warning_codes
+    assert "template_like_session_render" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_taper_option_overload():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 3: TAPER
+        ### Alactic sharpness
+        - Primary: Air Bike Sprint - 4 x 6 sec
+        - Fallback: Short Sprint - 4 x 6 sec
+        - Bike sprint or bag sprint depending on access
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "taper_option_overload" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_equipment_incongruent_selection():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Strength
+        - Landmine Press - 4x5
+        ### Fight-Pace Conditioning
+        - Bag Sprint Round - 6 x 15 sec
+        ### Rehab
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "equipment_incongruent_selection" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_unresolved_access_fallback_when_choice_is_already_resolved():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Fight-Pace Conditioning
+        - Primary: Air Bike Sprint - 6 x 6 sec
+        - Fallback: Short Sprint - 6 x 6 sec
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "unresolved_access_fallback" in warning_codes
+
+
+def test_validate_stage2_output_allows_fallback_when_explicit_contingency_exists():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["candidate_pools"]["SPP"]["conditioning_slots"][0]["alternates"] = [
+        {
+            "name": "Short Sprint",
+            "required_equipment": [],
+            "availability_contingency_reason": "use if bike access is unavailable that day",
+            "session_index": 1,
+        }
+    ]
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Fight-Pace Conditioning
+        - Primary: Air Bike Sprint - 6 x 6 sec
+        - Fallback: Short Sprint - 6 x 6 sec
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "unresolved_access_fallback" not in warning_codes
+
+
+def test_validate_stage2_output_warns_for_missing_late_week_structure_and_broken_boxer_rhythm():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["phase_strategy"] = {
+        "GPP": {"must_keep": ["primary_strength"]},
+        "SPP": {"must_keep": ["rehab", "alactic", "glycolytic"]},
+        "TAPER": {"must_keep": ["alactic"]},
+    }
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                    {"role_key": "fight_pace_repeatability_day", "category": "conditioning"},
+                ],
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                    {"role_key": "fight_pace_repeatability_day", "category": "conditioning"},
+                ],
+            },
+            {
+                "week_index": 3,
+                "phase": "TAPER",
+                "session_roles": [
+                    {"role_key": "alactic_sharpness_day", "category": "conditioning"},
+                    {"role_key": "fight_week_freshness_day", "category": "recovery"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Strength
+        - Landmine Press - 4x5
+        #### Fight-pace conditioning
+        - Hard Shuttle - 6x20s / 60s
+        #### Recovery
+        - Walk + mobility
+        #### Strength
+        - Landmine Press - 4x5
+        #### Fight-pace conditioning
+        - Air Bike Sprint - 6 x 6 sec
+
+        ### Week 2
+        #### Strength
+        - Landmine Press - 4x5
+        #### Recovery
+        - Walk + mobility
+        #### Fight-pace conditioning
+        - Hard Shuttle - 6x20s / 60s
+        #### Strength
+        - Landmine Press - 4x5
+
+        ## PHASE 3: TAPER
+        ### Week 3
+        #### Alactic sharpness
+        - Air Bike Sprint - 4 x 6 sec
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_rhythm_broken" in warning_codes
+    assert "late_camp_session_incomplete" in warning_codes

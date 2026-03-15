@@ -65,11 +65,80 @@ SPORT_LANGUAGE_BLACKLIST = {
         "grappling",
     },
 }
+PLAIN_CONDITIONING_NAME_MAP = {
+    "Barbell Bully": "Barbell Press-Squat Conditioning",
+    "Trap Bar Death March": "Trap Bar Carry Intervals",
+    "Barbell Smash & Dash": "Barbell Clean Sprint Intervals",
+    "Jump Rope Endurance (Footwork Conditioning)": "Jump Rope Conditioning",
+    "Assault Bike Steady State - Counter Striker": "Assault Bike Steady State",
+    "Assault Bike Zone 2 Steady": "Easy Assault Bike",
+    "Bike Zone 2 (Nasal Only)": "Easy Bike",
+    "Tempo Shadowboxing (Aerobic)": "Tempo Shadowboxing",
+    "Sled Harness Backward Drag": "Backward Sled Drag",
+    "Dynamic Plank-to-Punch": "Plank Punch Reach",
+    "Ankle Snap Bounce": "Ankling",
+    "Clinch-Fighter Neck Endurance": "Neck Endurance Circuit",
+}
+BOXING_NAME_MAP = {
+    "Clinch Frame Throws": "Medicine Ball Chest Pass",
+    "Thai Clinch EMOM": "Hand-Fight Intervals",
+    "Rope-A-Dope Clinch": "Hand-Fight Conditioning",
+}
 _TIME_TOKEN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:-|-)?\s*(\d+(?:\.\d+)?)?\s*"
     r"(s|sec|secs|second|seconds|min|mins|minute|minutes)\b",
     re.IGNORECASE,
 )
+_LOWER_LIMB_UNLOAD_HINTS = {
+    "ankle",
+    "foot",
+    "feet",
+    "shin",
+    "calf",
+    "achilles",
+    "knee",
+    "quad",
+    "hamstring",
+    "groin",
+    "hip",
+}
+_UPPER_BODY_SWIM_SENSITIVITY_HINTS = {
+    "shoulder",
+    "pec",
+    "chest",
+    "rib",
+    "elbow",
+    "wrist",
+    "hand",
+}
+_TISSUE_IRRITATION_HINTS = {
+    "sore",
+    "soreness",
+    "irritation",
+    "irritated",
+    "flare",
+    "pain",
+    "strain",
+    "sprain",
+    "tendon",
+    "tendin",
+    "swell",
+    "bruise",
+}
+_IMPACT_SENSITIVE_RESTRICTIONS = {
+    "high_impact",
+    "high_impact_lower",
+    "high_impact_global",
+    "max_velocity",
+}
+_BIKE_EQUIPMENT_KEYS = {
+    "assault_bike",
+    "stationary_bike",
+    "echo_bike",
+    "bike_erg",
+    "recumbent_bike",
+    "air_dyne_bike",
+}
 
 
 def _time_token_to_seconds(value: float, unit: str) -> float:
@@ -410,24 +479,215 @@ def _sanitize_sport_language(text: str, *, fight_format: str) -> str:
     sanitized = text
     if fight_format == "boxing":
         replacements = {
-            r"\bdirty\s*td\s*setups?\b": "inside-angle entries",
+            r"\bdirty\s*td\s*setups?\b": "entry setups",
             r"\btd\s*setups?\b": "entry setups",
             r"\btakedowns?\b": "entries",
-            r"\bdouble\s*-?\s*legs?\b": "level-change entries",
+            r"\bdouble\s*-?\s*legs?\b": "level changes",
             r"\bsingle\s*-?\s*legs?\b": "angle entries",
-            r"\bsprawls?\b": "quick exits",
+            r"\bsprawls?\b": "quick resets",
             r"\belbows?\b": "short hooks",
-            r"\bthai\s+clinch\b": "inside tie-up",
+            r"\bthai\s+clinch\b": "inside hand-fight",
             r"\bclinch\s+knees?\b": "inside body-shot entries",
-            r"\bcage\s+clinch\b": "rope tie-up",
-            r"\bcage\b": "ropes",
+            r"\bcage\s+clinch\b": "inside hand-fight",
+            r"\bcage\b": "ring edge",
             r"\boctagon\b": "ring",
-            r"\bground\s+and\s+pound\b": "close-range punch volume",
+            r"\bground\s+and\s+pound\b": "close-range punch flurries",
             r"\bgrappling\b": "hand-fighting",
         }
         for pattern, replacement in replacements.items():
             sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
     return sanitized
+
+
+def _normalize_conditioning_name(name: str, *, fight_format: str) -> str:
+    cleaned = PLAIN_CONDITIONING_NAME_MAP.get(name, name)
+    if fight_format == "boxing":
+        cleaned = BOXING_NAME_MAP.get(cleaned, cleaned)
+    return _sanitize_sport_language(cleaned, fight_format=fight_format)
+
+
+def _restriction_key_set(restrictions) -> set[str]:
+    keys: set[str] = set()
+    for restriction in restrictions or []:
+        if isinstance(restriction, dict):
+            key = str(restriction.get("restriction", "")).strip().lower()
+        else:
+            key = str(restriction).strip().lower()
+        if key:
+            keys.add(key)
+    return keys
+
+
+def _conditioning_context_text(*groups) -> str:
+    parts: list[str] = []
+    for group in groups:
+        if isinstance(group, list):
+            parts.extend(str(item).lower() for item in group if str(item).strip())
+        elif group:
+            parts.append(str(group).lower())
+    return " ".join(parts)
+
+
+def _is_pool_treading_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    return "pool treading" in name or ("treading" in name and "pool" in name)
+
+
+def _is_continuous_swim_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    modality = str(drill.get("modality", "")).lower()
+    if _is_pool_treading_drill(drill):
+        return False
+    if "pool running" in name or "pool walking" in name:
+        return False
+    return modality == "swim" and any(token in name for token in ("swim", "swimming", "freestyle"))
+
+
+def _is_shadowbox_aerobic_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    modality = str(drill.get("modality", "")).lower()
+    return modality == "shadowbox" or "shadowboxing" in name
+
+
+def _is_sled_drag_aerobic_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    modality = str(drill.get("modality", "")).lower()
+    return modality == "sled" or ("sled" in name and "drag" in name)
+
+
+def _boxing_aerobic_priority_adjustment(
+    drill: dict,
+    *,
+    injuries: list[str],
+    weaknesses: list[str],
+    goals: list[str],
+    restrictions,
+    equipment_access_set: set[str],
+) -> float:
+    modality = str(drill.get("modality", "")).lower()
+    context = _boxing_aerobic_context_flags(
+        injuries=injuries,
+        weaknesses=weaknesses,
+        goals=goals,
+        restrictions=restrictions,
+        equipment_access_set=equipment_access_set,
+    )
+
+    if _is_pool_treading_drill(drill):
+        if context["pool_treading_strong_case"]:
+            return 1.15
+        if context["pool_treading_justified"]:
+            return -0.25
+        return -2.0
+
+    if modality == "bike" or "bike" in str(drill.get("name", "")).lower():
+        return 1.5
+
+    if _is_continuous_swim_drill(drill):
+        bonus = 1.1
+        if context["upper_body_swim_sensitive"]:
+            bonus -= 0.6
+        return bonus
+
+    if _is_shadowbox_aerobic_drill(drill):
+        bonus = 0.9
+        if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"]:
+            bonus -= 0.5
+        return bonus
+
+    if _is_sled_drag_aerobic_drill(drill):
+        bonus = 0.75
+        if context["lower_limb_unload_desirable"]:
+            bonus -= 0.35
+        return bonus
+
+    if modality == "swim":
+        return 0.55 if context["pool_treading_justified"] else 0.8
+
+    return 0.0
+
+
+def _boxing_aerobic_context_flags(
+    *,
+    injuries: list[str],
+    weaknesses: list[str],
+    goals: list[str],
+    restrictions,
+    equipment_access_set: set[str],
+) -> dict[str, bool]:
+    restriction_keys = _restriction_key_set(restrictions)
+    context_text = _conditioning_context_text(injuries, weaknesses, goals)
+    lower_limb_unload_desirable = any(token in context_text for token in _LOWER_LIMB_UNLOAD_HINTS)
+    impact_tolerance_reduced = bool(restriction_keys & _IMPACT_SENSITIVE_RESTRICTIONS)
+    if not impact_tolerance_reduced:
+        impact_tolerance_reduced = any(
+            token in context_text for token in ("impact", "shin splint", "landing", "reactive", "jarring")
+        )
+    active_tissue_irritation = any(token in context_text for token in _TISSUE_IRRITATION_HINTS)
+    upper_body_swim_sensitive = any(token in context_text for token in _UPPER_BODY_SWIM_SENSITIVITY_HINTS)
+    bike_available = bool(equipment_access_set & _BIKE_EQUIPMENT_KEYS)
+    sled_available = "sled" in equipment_access_set
+
+    pool_treading_justified = (
+        lower_limb_unload_desirable
+        or impact_tolerance_reduced
+        or active_tissue_irritation
+        or (not bike_available and not sled_available)
+    )
+    pool_treading_strong_case = (
+        pool_treading_justified
+        and (lower_limb_unload_desirable or impact_tolerance_reduced)
+        and upper_body_swim_sensitive
+        and not bike_available
+    )
+
+    return {
+        "lower_limb_unload_desirable": lower_limb_unload_desirable,
+        "impact_tolerance_reduced": impact_tolerance_reduced,
+        "active_tissue_irritation": active_tissue_irritation,
+        "upper_body_swim_sensitive": upper_body_swim_sensitive,
+        "bike_available": bike_available,
+        "sled_available": sled_available,
+        "pool_treading_justified": pool_treading_justified,
+        "pool_treading_strong_case": pool_treading_strong_case,
+    }
+
+
+def _boxing_aerobic_preference_rank(
+    drill: dict,
+    *,
+    injuries: list[str],
+    weaknesses: list[str],
+    goals: list[str],
+    restrictions,
+    equipment_access_set: set[str],
+) -> int:
+    modality = str(drill.get("modality", "")).lower()
+    context = _boxing_aerobic_context_flags(
+        injuries=injuries,
+        weaknesses=weaknesses,
+        goals=goals,
+        restrictions=restrictions,
+        equipment_access_set=equipment_access_set,
+    )
+
+    if modality == "bike" or "bike" in str(drill.get("name", "")).lower():
+        return 0
+    if _is_pool_treading_drill(drill):
+        if context["pool_treading_strong_case"]:
+            return 1
+        if context["pool_treading_justified"]:
+            return 4
+        return 5
+    if _is_continuous_swim_drill(drill):
+        return 3 if context["upper_body_swim_sensitive"] else 1
+    if _is_shadowbox_aerobic_drill(drill):
+        return 4 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
+    if _is_sled_drag_aerobic_drill(drill):
+        return 4 if context["lower_limb_unload_desirable"] else 3
+    if modality == "swim":
+        return 4 if context["upper_body_swim_sensitive"] else 2
+    return 3
 
 
 def _violates_sport_language_blacklist(drill: dict, *, fight_format: str) -> bool:
@@ -452,6 +712,9 @@ def _alactic_maintenance_fallback(phase: str) -> dict:
         "timing": f"{rounds} x 6–10 sec fast punch bursts",
         "purpose": "Minimal-dose ATP-PCr maintenance for striking speed and neural sharpness.",
         "red_flags": "Terminate set if punch speed/position quality drops.",
+        "equipment": [],
+        "required_equipment": [],
+        "generic_fallback": True,
     }
 
 
@@ -468,6 +731,136 @@ def _suppress_alactic_maintenance(*, fatigue: str, injuries: list[str]) -> bool:
     }
     joined = " ".join(i.lower() for i in injuries)
     return any(term in joined for term in risk_terms)
+
+
+def _conditioning_required_equipment(drill: dict) -> list[str]:
+    return normalize_equipment_list(
+        drill.get("required_equipment")
+        or drill.get("equipment")
+        or []
+    )
+
+
+def _conditioning_is_universally_available(drill: dict) -> bool:
+    required_equipment = set(_conditioning_required_equipment(drill))
+    return not required_equipment or required_equipment.issubset({"bodyweight"})
+
+
+def _decorate_conditioning_drill(
+    drill: dict,
+    *,
+    system: str,
+    phase: str,
+    session_index: int,
+    is_fallback: bool = False,
+) -> dict:
+    decorated = dict(drill)
+    required_equipment = _conditioning_required_equipment(decorated)
+    decorated["system"] = str(decorated.get("system") or system).upper()
+    decorated["required_equipment"] = required_equipment
+    decorated["universally_available"] = _conditioning_is_universally_available(decorated)
+    decorated["generic_fallback"] = bool(decorated.get("generic_fallback"))
+    decorated["session_index"] = session_index
+    decorated["phase"] = phase.upper()
+    decorated["render_as_fallback"] = bool(is_fallback)
+    return decorated
+
+
+def _conditioning_fallback_allowed(primary: dict, fallback: dict, *, phase: str) -> bool:
+    if phase.upper() == "TAPER":
+        return False
+    contingency_reason = (
+        primary.get("availability_contingency_reason")
+        or fallback.get("availability_contingency_reason")
+        or primary.get("availability_contingency")
+        or fallback.get("availability_contingency")
+        or ""
+    )
+    return bool(str(contingency_reason).strip())
+
+
+def _resolve_conditioning_sessions(
+    grouped_drills: dict[str, list[dict]],
+    *,
+    phase: str,
+    num_sessions: int,
+) -> list[dict]:
+    ordered_keys = ["aerobic", "glycolytic", "alactic"]
+    ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
+
+    session_count = max(1, num_sessions or 1)
+    total_drills = sum(len(drills or []) for drills in grouped_drills.values())
+    if total_drills:
+        session_count = min(session_count, total_drills)
+    sessions = [{"drills": {}, "systems": set()} for _ in range(session_count)]
+    drill_index = 0
+    for system in ordered_keys:
+        drills = grouped_drills.get(system, [])
+        for drill in drills:
+            target = sessions[drill_index % session_count]
+            target["drills"].setdefault(system, []).append(drill)
+            target["systems"].add(system)
+            drill_index += 1
+
+    resolved_sessions: list[dict] = []
+    for session_index, session in enumerate(sessions, start=1):
+        fallback_used = False
+        entries: list[dict] = []
+        for system in ordered_keys:
+            drills = session["drills"].get(system, [])
+            if not drills:
+                continue
+            primary = _decorate_conditioning_drill(
+                drills[0],
+                system=system,
+                phase=phase,
+                session_index=session_index,
+            )
+            fallback = None
+            if len(drills) > 1 and not fallback_used:
+                fallback_candidate = _decorate_conditioning_drill(
+                    drills[1],
+                    system=system,
+                    phase=phase,
+                    session_index=session_index,
+                    is_fallback=True,
+                )
+                if _conditioning_fallback_allowed(primary, fallback_candidate, phase=phase):
+                    fallback = fallback_candidate
+                    fallback_used = True
+            entries.append({"system": system, "primary": primary, "fallback": fallback})
+        resolved_sessions.append(
+            {
+                "session_index": session_index,
+                "systems": set(session["systems"]),
+                "entries": entries,
+            }
+        )
+    return resolved_sessions
+
+
+def _resolved_grouped_drills(resolved_sessions: list[dict]) -> dict[str, list[dict]]:
+    grouped: dict[str, list[dict]] = {}
+    for session in resolved_sessions:
+        for entry in session.get("entries", []):
+            system = entry.get("system")
+            primary = entry.get("primary")
+            if not system or not primary:
+                continue
+            grouped.setdefault(system, []).append(primary)
+    return grouped
+
+
+def _resolved_conditioning_names(resolved_sessions: list[dict]) -> list[str]:
+    names: list[str] = []
+    for session in resolved_sessions:
+        for entry in session.get("entries", []):
+            for key in ("primary", "fallback"):
+                drill = entry.get(key) or {}
+                name = drill.get("name")
+                if isinstance(name, str) and name.strip():
+                    names.append(name.strip())
+    return names
 
 
 def select_coordination_drill(flags, existing_names: set[str], injuries: list[str]):
@@ -501,8 +894,21 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
     return None
 
 
-def format_drill_block(drill: dict, *, phase_color: str = "#000") -> str:
+def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool = False) -> str:
     """Return a formatted Markdown block for a single drill."""
+    title = f"Fallback: {drill['name']}" if fallback else drill["name"]
+    load_line = f"Load: {drill['load']}"
+    if drill.get("equipment_note"):
+        load_line += f" ({drill['equipment_note']})"
+    parts = [
+        f"- **{title}**",
+        f"  - {load_line}",
+        f"  - Rest: {drill['rest']}",
+        f"  - Timing: {drill['timing']}",
+        f"  - Purpose: {drill['purpose']}",
+        f"  - Red Flags: {drill['red_flags']}",
+    ]
+    return "\n".join(parts) + "\n"
 
     # Use HTML line breaks so bullets display vertically when converted to HTML
     br = "<br>"
@@ -528,6 +934,26 @@ def _normalize_fight_format(fight_format: str) -> str:
     return fight_format
 
 
+def _conditioning_session_title(*, phase: str, systems: set[str]) -> str:
+    phase = phase.upper()
+    systems = set(systems or set())
+    if phase == "TAPER":
+        if "alactic" in systems:
+            return "Alactic sharpness"
+        if "aerobic" in systems:
+            return "Aerobic support"
+        return "Recovery"
+    if systems == {"aerobic"}:
+        return "Aerobic support"
+    if systems == {"glycolytic"}:
+        return "Fight-pace conditioning" if phase == "SPP" else "Conditioning"
+    if systems == {"alactic"}:
+        return "Alactic sharpness"
+    if "glycolytic" in systems and phase == "SPP":
+        return "Fight-pace conditioning"
+    return "Conditioning"
+
+
 def _glycolytic_fallback(phase: str) -> dict:
     phase = phase.upper()
     intensity = "RPE 7–8" if phase == "SPP" else "RPE 6–7"
@@ -539,6 +965,9 @@ def _glycolytic_fallback(phase: str) -> dict:
         "timing": "2-3 min work / 1 min rest",
         "purpose": "Maintain glycolytic conditioning with clear work:rest structure.",
         "red_flags": "None",
+        "equipment": [],
+        "required_equipment": [],
+        "generic_fallback": True,
     }
 
 
@@ -551,6 +980,7 @@ def render_conditioning_block(
     num_sessions: int = 1,
     diagnostic_context: dict | None = None,
     sport: str | None = None,
+    resolved_sessions: list[dict] | None = None,
 ) -> str:
     phase = phase.upper()
     phase_titles = {
@@ -603,59 +1033,41 @@ def render_conditioning_block(
 
     ordered_keys = ["aerobic", "glycolytic", "alactic"]
     ordered_keys += [k for k in grouped_drills.keys() if k not in ordered_keys]
-
-    session_count = max(1, num_sessions or 1)
-    total_drills = sum(len(drills or []) for drills in grouped_drills.values())
-    if total_drills:
-        session_count = min(session_count, total_drills)
-    sessions = [{"drills": {}, "systems": set()} for _ in range(session_count)]
-    drill_index = 0
-    for system in ordered_keys:
-        drills = grouped_drills.get(system, [])
-        for d in drills:
-            target = sessions[drill_index % session_count]
-            target["drills"].setdefault(system, []).append(d)
-            target["systems"].add(system)
-            drill_index += 1
-
-    system_labels = {
-        "alactic": "Alactic Speed",
-        "glycolytic": "Glycolytic Power",
-        "aerobic": "Aerobic Base",
-    }
-    phase_suffix = {
-        "GPP": " + Repeatability",
-        "SPP": " + Fight-Pace Density",
-        "TAPER": " + Skill Rhythm",
-    }
+    sessions = resolved_sessions or _resolve_conditioning_sessions(
+        grouped_drills,
+        phase=phase,
+        num_sessions=num_sessions,
+    )
 
     for idx, session in enumerate(sessions, start=1):
-        if not session["drills"]:
+        if not session.get("entries"):
             continue
-        systems = session["systems"]
-        title_bits = [system_labels[s] for s in ordered_keys if s in systems]
-        title = " + ".join(title_bits) if title_bits else phase_titles.get(phase, "Conditioning")
-        title += phase_suffix.get(phase, "")
-        output_lines.append(f"\n#### Conditioning Block {phase} — {title}")
+        systems = session.get("systems", set())
+        title = _conditioning_session_title(phase=phase, systems=systems)
+        output_lines.append(f"\n#### {title}")
         output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
         output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
-        output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
-        output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
-        output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
+        if phase != "TAPER":
+            output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
+            output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
+            output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
+
+        show_system_labels = len(session.get("entries", [])) > 1
 
         for system in ordered_keys:
-            drills = session["drills"].get(system)
-            if not drills:
-                continue
-            output_lines.append(
-                f"\n**System: {system.upper()}** (scaled by format emphasis)"
+            entry = next(
+                (item for item in session.get("entries", []) if item.get("system") == system),
+                None,
             )
-            for d in drills:
+            if not entry:
+                continue
+            if show_system_labels:
+                output_lines.append(f"\n**{system.replace('_', ' ').title()}**")
+            session_drills = [entry.get("primary")]
+            if entry.get("fallback"):
+                session_drills.append(entry.get("fallback"))
+            for d in [drill for drill in session_drills if drill]:
                 name = d.get("name", "Unnamed Drill")
-                equipment = normalize_equipment_list(d.get("equipment", []))
-                extra_eq = [e for e in equipment if e not in name.lower()]
-                if extra_eq:
-                    name = f"{name} ({', '.join(extra_eq)})"
 
                 timing = d.get("timing") or d.get("duration") or "—"
                 load = d.get("load") or d.get("intensity") or "—"
@@ -669,7 +1081,7 @@ def render_conditioning_block(
                 )
                 rest = d.get("rest", "—")
 
-                name = _sanitize_sport_language(name, fight_format=(sport or "").lower())
+                name = _normalize_conditioning_name(name, fight_format=(sport or "").lower())
                 timing = _sanitize_sport_language(timing, fight_format=(sport or "").lower())
                 load = _sanitize_sport_language(load, fight_format=(sport or "").lower())
                 rest = _sanitize_sport_language(rest, fight_format=(sport or "").lower())
@@ -685,7 +1097,13 @@ def render_conditioning_block(
                     "purpose": purpose,
                     "red_flags": d.get("red_flags", "None"),
                 }
-                output_lines.append(format_drill_block(drill_block, phase_color=phase_color))
+                output_lines.append(
+                    format_drill_block(
+                        drill_block,
+                        phase_color=phase_color,
+                        fallback=bool(d.get("render_as_fallback")),
+                    )
+                )
 
     return "\n".join(output_lines)
 
@@ -815,12 +1233,7 @@ def generate_conditioning_block(flags):
     selection_format = _normalize_fight_format(fight_format)
     energy_weights = get_format_weights().get(selection_format, {})
 
-    rename_map = {}
-    if selection_format == "boxing":
-        rename_map = {
-            "Clinch Frame Throws": "Frame-and-Pop Chest Throw",
-            "Thai Clinch EMOM": "Inside Hand-Fight EMOM",
-        }
+    rename_map = BOXING_NAME_MAP if selection_format == "boxing" else {}
 
     format_tag_map = {
         "mma": ["mma", "bjj", "wrestler"],
@@ -861,6 +1274,7 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
+        d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
         if phase.upper() not in d.get("phases", []):
             continue
 
@@ -976,7 +1390,7 @@ def generate_conditioning_block(flags):
 
         base_score = 2.5 * min(num_weak, 2)
         base_score += 2.0 * min(num_goals, 2)
-        base_score += 1.0 * min(num_style, 2)
+        base_score += 0.75 * min(num_style, 2)
         base_score += 1.0 * min(num_format, 1)
 
         energy_multiplier = energy_weights.get(system, 1.0)
@@ -990,6 +1404,17 @@ def generate_conditioning_block(flags):
         elif fatigue == "moderate" and "high_cns" in tags:
             total_score -= 1.0
             penalty = -1.0
+        boxer_aerobic_adjustment = 0.0
+        if selection_format == "boxing" and system == "aerobic":
+            boxer_aerobic_adjustment = _boxing_aerobic_priority_adjustment(
+                d,
+                injuries=injuries,
+                weaknesses=weaknesses,
+                goals=goals,
+                restrictions=restrictions,
+                equipment_access_set=equipment_access_set,
+            )
+            total_score += boxer_aerobic_adjustment
         if not ignore_restrictions and restriction_penalty:
             total_score += restriction_penalty
             penalty += restriction_penalty
@@ -1003,6 +1428,7 @@ def generate_conditioning_block(flags):
             "equipment_boost": 0.0,
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
+            "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
             "final_score": round(total_score, 4),
         }
 
@@ -1020,6 +1446,7 @@ def generate_conditioning_block(flags):
                 "boxing" if t.lower() == "muay_thai" else t
                 for t in d.get("tags", [])
             ]
+        d["name"] = _normalize_conditioning_name(d.get("name", ""), fight_format=selection_format)
         tags = normalize_tags(d.get("tags", []))
         details = " ".join(
             [
@@ -1127,15 +1554,18 @@ def generate_conditioning_block(flags):
             for hint in restriction_result.get("no_match_hints", []):
                 restriction_warning_counts[hint] += 1
 
-        score = 0.0
-        score += 1.5  # style match already guaranteed by filter
-        score += 1.0  # phase match
+        weak_matches = sum(1 for t in tags if t in weak_tags)
+        goal_matches = sum(1 for t in tags if t in goal_tags)
         top_system = preferred_order[0]
+        if system != top_system and not weak_matches and not goal_matches:
+            continue
+
+        score = 0.0
+        score += 0.75  # style match already guaranteed by filter
+        score += 1.0  # phase match
         if system == top_system:
             score += 0.75
         score += equip_bonus
-        weak_matches = sum(1 for t in tags if t in weak_tags)
-        goal_matches = sum(1 for t in tags if t in goal_tags)
         score += 0.6 * min(weak_matches, 1)
         score += 0.5 * min(goal_matches, 1)
         penalty = 0.0
@@ -1146,6 +1576,17 @@ def generate_conditioning_block(flags):
             elif fatigue == "moderate":
                 score -= 0.5
                 penalty = -0.5
+        boxer_aerobic_adjustment = 0.0
+        if selection_format == "boxing" and system == "aerobic":
+            boxer_aerobic_adjustment = _boxing_aerobic_priority_adjustment(
+                d,
+                injuries=injuries,
+                weaknesses=weaknesses,
+                goals=goals,
+                restrictions=restrictions,
+                equipment_access_set=equipment_access_set,
+            )
+            score += boxer_aerobic_adjustment
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             penalty += restriction_penalty
@@ -1158,6 +1599,7 @@ def generate_conditioning_block(flags):
             "equipment_boost": equip_bonus,
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
+            "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
             "final_score": round(score, 4),
         }
 
@@ -1173,6 +1615,26 @@ def generate_conditioning_block(flags):
     for style_lists in style_drills_by_style.values():
         for drills in style_lists.values():
             drills.sort(key=lambda x: x[1], reverse=True)
+
+    if selection_format == "boxing":
+        def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float]:
+            drill, score, _ = item
+            return (
+                _boxing_aerobic_preference_rank(
+                    drill,
+                    injuries=injuries,
+                    weaknesses=weaknesses,
+                    goals=goals,
+                    restrictions=restrictions,
+                    equipment_access_set=equipment_access_set,
+                ),
+                -score,
+            )
+
+        system_drills["aerobic"].sort(key=_boxing_sort_key)
+        style_system_drills["aerobic"].sort(key=_boxing_sort_key)
+        for style_lists in style_drills_by_style.values():
+            style_lists["aerobic"].sort(key=_boxing_sort_key)
 
     if injury_trace and restrictions:
         active_restrictions = sorted({r.get("restriction", "generic_constraint") for r in restrictions})
@@ -1274,9 +1736,29 @@ def generate_conditioning_block(flags):
 
     style_counts = {s: 0 for s in style_names}
 
+    def _delay_pool_treading(
+        drill: dict,
+        remaining_candidates: list[tuple[dict, float, dict]],
+        system: str,
+    ) -> bool:
+        if selection_format != "boxing" or system != "aerobic" or not _is_pool_treading_drill(drill):
+            return False
+        if _boxing_aerobic_priority_adjustment(
+            drill,
+            injuries=injuries,
+            weaknesses=weaknesses,
+            goals=goals,
+            restrictions=restrictions,
+            equipment_access_set=equipment_access_set,
+        ) >= 0:
+            return False
+        return any(not _is_pool_treading_drill(candidate) for candidate, _, _ in remaining_candidates)
+
     def pop_drill(source: dict, system: str):
         drills = source.get(system, [])
         for idx, (drill, _, reasons) in enumerate(drills):
+            if _delay_pool_treading(drill, drills[idx + 1 :], system):
+                continue
             name = drill.get("name")
             tags = normalize_tags(drill.get("tags", []))
             allow_repeat = (
@@ -1296,6 +1778,8 @@ def generate_conditioning_block(flags):
         for style in sorted(style_counts, key=style_counts.get):
             drills = style_drills_by_style.get(style, {}).get(system, [])
             for idx, (drill, _, reasons) in enumerate(drills):
+                if _delay_pool_treading(drill, drills[idx + 1 :], system):
+                    continue
                 name = drill.get("name")
                 tags = normalize_tags(drill.get("tags", []))
                 allow_repeat = (
@@ -1815,6 +2299,14 @@ def generate_conditioning_block(flags):
         grouped_drills["alactic"] = [fallback]
         selected_drill_names.append(fallback["name"])
 
+    resolved_sessions = _resolve_conditioning_sessions(
+        grouped_drills,
+        phase=phase,
+        num_sessions=num_conditioning_sessions,
+    )
+    grouped_drills = _resolved_grouped_drills(resolved_sessions)
+    selected_drill_names = _resolved_conditioning_names(resolved_sessions)
+
     missing_systems = [
         system_name
         for system_name in ["aerobic", "glycolytic", "alactic"]
@@ -1838,6 +2330,7 @@ def generate_conditioning_block(flags):
         num_sessions=num_conditioning_sessions,
         diagnostic_context=diagnostic_context,
         sport=flags.get("sport"),
+        resolved_sessions=resolved_sessions,
     )
 
     why_log = []
