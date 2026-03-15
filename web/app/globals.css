@@ -363,6 +363,84 @@ select:focus-visible {
   width: 100%;
 }
 
+.sidebar-admin-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 4px 0;
+}
+
+.sidebar-user-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(181, 18, 43, 0.18), rgba(181, 18, 43, 0.08));
+  border: 1px solid rgba(181, 18, 43, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.sidebar-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-avatar-initials {
+  font-family: var(--font-display), sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffd5db;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.sidebar-user-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sidebar-user-info .sidebar-user-name,
+.sidebar-user-info .sidebar-user-email {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.sidebar-role-athlete {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+.sidebar-role-admin {
+  background: var(--brand-red-soft);
+  border: 1px solid rgba(181, 18, 43, 0.28);
+  color: #ffd5db;
+}
+
 .sidebar-user-actions {
   display: flex;
   gap: 12px;

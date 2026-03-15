@@ -10,6 +10,16 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -31,6 +41,12 @@ export function AppNav() {
     { href: "/plans", label: "Plans", meta: "Saved history" },
     { href: "/settings", label: "Settings", meta: "Athlete profile" },
   ];
+
+  const profile = me?.profile;
+  const displayName = profile?.full_name || "Athlete";
+  const initials = getInitials(displayName);
+  const avatarUrl = profile?.avatar_url || null;
+  const role = profile?.role ?? null;
 
   return (
     <>
@@ -110,26 +126,46 @@ export function AppNav() {
                     </div>
                   </Link>
                 ))}
-                {me?.profile.role === "admin" ? (
+                {profile?.role === "admin" ? (
                   <>
-                    <p className="sidebar-section-label">Support</p>
+                    <div className="sidebar-admin-divider" aria-hidden="true" />
+                    <p className="sidebar-section-label">Admin</p>
                     <Link
                       className={isActive(pathname, "/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                       href="/admin"
                     >
                       <div className="sidebar-link-copy">
-                        <span className="sidebar-link-title">Admin</span>
-                        <span className="sidebar-link-meta">Support view</span>
+                        <span className="sidebar-link-title">Admin panel</span>
+                        <span className="sidebar-link-meta">Review and support</span>
                       </div>
                     </Link>
                   </>
                 ) : null}
               </nav>
               <div className="sidebar-footer">
+                <p className="sidebar-section-label">Signed in</p>
                 <div className="sidebar-user-card">
-                  <p className="sidebar-section-label">Signed in</p>
-                  <p className="sidebar-user-name">{me?.profile.full_name || "Athlete"}</p>
-                  <p className="sidebar-user-email">{me?.profile.email}</p>
+                  <div className="sidebar-user-identity">
+                    <div className="sidebar-avatar" aria-hidden="true">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="" className="sidebar-avatar-img" />
+                      ) : (
+                        <span className="sidebar-avatar-initials">{initials}</span>
+                      )}
+                    </div>
+                    <div className="sidebar-user-info">
+                      <p className="sidebar-user-name">{displayName}</p>
+                      <p className="sidebar-user-email">{profile?.email}</p>
+                      {role ? (
+                        <span
+                          className={`sidebar-role-badge sidebar-role-${role}`}
+                          aria-label={`Role: ${role === "admin" ? "Administrator" : "Athlete"}`}
+                        >
+                          {role}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                   <div className="sidebar-user-actions">
                     <button type="button" className="ghost-button" onClick={handleSignOut}>
                       Log out
