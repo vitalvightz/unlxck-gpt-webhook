@@ -18,6 +18,26 @@ import {
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
 
+function getInitials(name: string): string {
+  const result = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
+  return result || "A";
+}
+
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export default function SettingsPage() {
   const { me, refreshMe, session } = useAppSession();
   const [fullName, setFullName] = useState("");
@@ -26,6 +46,7 @@ export default function SettingsPage() {
   const [stance, setStance] = useState("");
   const [professionalStatus, setProfessionalStatus] = useState("");
   const [record, setRecord] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -38,6 +59,8 @@ export default function SettingsPage() {
   const professionalStatusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, professionalStatus) || "Unspecified";
   const lastUpdatedLabel = me?.profile.updated_at ? new Date(me.profile.updated_at).toLocaleString() : "Not saved yet";
 
+  const initials = getInitials(fullName || "Athlete");
+
   useEffect(() => {
     if (!me) {
       return;
@@ -48,6 +71,7 @@ export default function SettingsPage() {
     setStance(me.profile.stance ?? "");
     setProfessionalStatus(me.profile.professional_status);
     setRecord(me.profile.record);
+    setAvatarUrl(me.profile.avatar_url ?? "");
   }, [me]);
 
   function handleSave() {
@@ -72,6 +96,7 @@ export default function SettingsPage() {
           stance,
           professional_status: professionalStatus,
           record,
+          avatar_url: avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? avatarUrl.trim() : null,
         });
         await refreshMe();
         setMessage("Settings updated.");
@@ -101,6 +126,39 @@ export default function SettingsPage() {
 
         <div className="split-layout">
           <div className="step-main">
+            <article className="step-card">
+              <div className="form-section-header">
+                <p className="kicker">Identity</p>
+                <h2 className="form-section-title">Profile image</h2>
+                <p className="muted">Add a profile image URL to display your avatar in the sidebar and control room.</p>
+              </div>
+              <div className="avatar-preview-block">
+                <div className="avatar-preview-circle">
+                  {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+                    <img src={avatarUrl.trim()} alt="Profile" className="avatar-preview-img" />
+                  ) : (
+                    <span className="avatar-preview-initials">{initials}</span>
+                  )}
+                </div>
+                <div className="avatar-preview-meta">
+                  <p className="kicker">Avatar preview</p>
+                  <p className="muted">{avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? "Image URL set" : "Showing initials fallback"}</p>
+                </div>
+              </div>
+              <div className="form-grid">
+                <div className="field">
+                  <label htmlFor="settingsAvatarUrl">Profile image URL</label>
+                  <input
+                    id="settingsAvatarUrl"
+                    type="url"
+                    value={avatarUrl}
+                    onChange={(event) => setAvatarUrl(event.target.value)}
+                    placeholder="https://example.com/your-photo.jpg"
+                  />
+                </div>
+              </div>
+            </article>
+
             <article className="step-card">
               <div className="form-section-header">
                 <p className="kicker">Profile</p>
@@ -251,5 +309,4 @@ export default function SettingsPage() {
     </RequireAuth>
   );
 }
-
 
