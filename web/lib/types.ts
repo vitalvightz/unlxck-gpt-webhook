@@ -48,6 +48,7 @@ export type ProfileUpdateRequest = {
   athlete_timezone?: string;
   athlete_locale?: string;
   onboarding_draft?: Record<string, unknown> | null;
+  avatar_url?: string | null;
 };
 
 export type ProfileRecord = {
@@ -63,6 +64,7 @@ export type ProfileRecord = {
   athlete_timezone: string;
   athlete_locale: string;
   onboarding_draft?: Record<string, unknown> | null;
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 };

@@ -118,6 +118,7 @@ class ProfileUpdateRequest(BaseModel):
     athlete_timezone: str | None = None
     athlete_locale: str | None = None
     onboarding_draft: dict[str, Any] | None = None
+    avatar_url: str | None = None
 
     @field_validator("record")
     @classmethod
@@ -152,6 +153,7 @@ class ProfileRecord(BaseModel):
     athlete_timezone: str = ""
     athlete_locale: str = ""
     onboarding_draft: dict[str, Any] | None = None
+    avatar_url: str | None = None
     created_at: str
     updated_at: str
 

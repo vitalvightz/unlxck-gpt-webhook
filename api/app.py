@@ -83,6 +83,7 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         athlete_timezone=str(row.get("athlete_timezone") or ""),
         athlete_locale=str(row.get("athlete_locale") or ""),
         onboarding_draft=row.get("onboarding_draft"),
+        avatar_url=row.get("avatar_url") or None,
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
     )

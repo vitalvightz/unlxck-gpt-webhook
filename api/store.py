@@ -98,6 +98,7 @@ class SupabaseAppStore:
             "athlete_timezone": (existing or {}).get("athlete_timezone") or "",
             "athlete_locale": (existing or {}).get("athlete_locale") or "",
             "onboarding_draft": (existing or {}).get("onboarding_draft"),
+            "avatar_url": (existing or {}).get("avatar_url"),
         }
         self.client.table("profiles").upsert(payload, on_conflict="id").execute()
         return self._require_profile(user.user_id)
