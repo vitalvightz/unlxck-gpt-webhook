@@ -11,13 +11,23 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 function getInitials(name: string): string {
-  return name
+  const result = name
     .trim()
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
+  return result || "A";
+}
+
+function isSafeImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
 }
 
 export function AppNav() {
@@ -45,7 +55,7 @@ export function AppNav() {
   const profile = me?.profile;
   const displayName = profile?.full_name || "Athlete";
   const initials = getInitials(displayName);
-  const avatarUrl = profile?.avatar_url || null;
+  const avatarUrl = (profile?.avatar_url && isSafeImageUrl(profile.avatar_url)) ? profile.avatar_url : null;
   const role = profile?.role ?? null;
 
   return (
@@ -71,16 +81,15 @@ export function AppNav() {
             <Link href="/" className="brand">
               Fight Camp
             </Link>
-            <p className="sidebar-tagline">Athlete fight-camp workspace.</p>
-            <span className="sidebar-beta">Beta</span>
+            <p className="sidebar-tagline">Athlete control room.</p>
           </div>
 
           {!isReady ? (
             <div className="sidebar-nav">
-              <p className="sidebar-section-label">Loading</p>
+              <p className="sidebar-section-label">Session</p>
               <div className="sidebar-user-card">
-                <p className="sidebar-user-name">Checking session</p>
-                <p className="sidebar-user-email">Loading your workspace.</p>
+                <p className="sidebar-user-name">Loading workspace</p>
+                <p className="sidebar-user-email">Checking your session.</p>
               </div>
             </div>
           ) : null}
@@ -88,7 +97,7 @@ export function AppNav() {
           {isReady && !session ? (
             <>
               <div className="sidebar-auth">
-                <p className="sidebar-section-label">Entry</p>
+                <p className="sidebar-section-label">Access</p>
                 <Link href="/signup" className={isActive(pathname, "/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}>
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Create account</span>
@@ -98,14 +107,13 @@ export function AppNav() {
                 <Link href="/login" className={isActive(pathname, "/login") ? "sidebar-link sidebar-link-active" : "sidebar-link"}>
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Log in</span>
-                    <span className="sidebar-link-meta">Resume onboarding or plans</span>
+                    <span className="sidebar-link-meta">Resume your camp</span>
                   </div>
                 </Link>
               </div>
               <div className="sidebar-user-card">
-                <p className="sidebar-section-label">Signed out</p>
-                <p className="sidebar-user-name">Athlete-first entry</p>
-                <p className="sidebar-user-email">Build, generate, and reopen plans in one place.</p>
+                <p className="sidebar-user-name">Elite athlete entry</p>
+                <p className="sidebar-user-email">Build, generate, and manage fight camps in one place.</p>
               </div>
             </>
           ) : null}
@@ -113,7 +121,7 @@ export function AppNav() {
           {isReady && session ? (
             <>
               <nav className="sidebar-nav">
-                <p className="sidebar-section-label">Athlete</p>
+                <p className="sidebar-section-label">Workspace</p>
                 {signedInLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -129,7 +137,7 @@ export function AppNav() {
                 {profile?.role === "admin" ? (
                   <>
                     <div className="sidebar-admin-divider" aria-hidden="true" />
-                    <p className="sidebar-section-label">Admin</p>
+                    <p className="sidebar-section-label">Control</p>
                     <Link
                       className={isActive(pathname, "/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                       href="/admin"
@@ -143,7 +151,6 @@ export function AppNav() {
                 ) : null}
               </nav>
               <div className="sidebar-footer">
-                <p className="sidebar-section-label">Signed in</p>
                 <div className="sidebar-user-card">
                   <div className="sidebar-user-identity">
                     <div className="sidebar-avatar" aria-hidden="true">
@@ -161,14 +168,14 @@ export function AppNav() {
                           className={`sidebar-role-badge sidebar-role-${role}`}
                           aria-label={`Role: ${role === "admin" ? "Administrator" : "Athlete"}`}
                         >
-                          {role}
+                          {role === "admin" ? "Admin" : "Athlete"}
                         </span>
                       ) : null}
                     </div>
                   </div>
                   <div className="sidebar-user-actions">
                     <button type="button" className="ghost-button" onClick={handleSignOut}>
-                      Log out
+                      Sign out
                     </button>
                   </div>
                 </div>

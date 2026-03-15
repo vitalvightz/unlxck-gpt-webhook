@@ -32,6 +32,7 @@
   --radius-stat: 16px;
   --radius-input: 16px;
   --radius-pill: 999px;
+  --radius-btn: 10px;
   --sidebar-width: 296px;
   --content-width: 1180px;
   --space-1: 8px;
@@ -141,13 +142,15 @@ select:focus-visible {
 .sidebar-shell {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   height: 100%;
 }
 
 .sidebar-brand {
   display: grid;
   gap: 8px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .eyebrow,
@@ -223,7 +226,7 @@ select:focus-visible {
 .sidebar-auth,
 .sidebar-footer {
   display: grid;
-  gap: 12px;
+  gap: 4px;
 }
 
 .sidebar-nav {
@@ -235,21 +238,21 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 14px;
+  padding: 10px 13px;
+  border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.032);
-  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.07);
 }
 
 .sidebar-link-active {
-  background: linear-gradient(180deg, rgba(181, 18, 43, 0.14), rgba(181, 18, 43, 0.06));
-  border-color: rgba(181, 18, 43, 0.34);
-  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.1);
+  background: rgba(181, 18, 43, 0.09);
+  border-color: rgba(181, 18, 43, 0.28);
+  box-shadow: inset 3px 0 0 var(--brand-red), inset 0 0 0 1px rgba(181, 18, 43, 0.06);
 }
 
 .sidebar-link-copy {
@@ -355,18 +358,29 @@ select:focus-visible {
 }
 
 .sidebar-footer {
-  gap: 16px;
+  gap: 8px;
   margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .sidebar-action {
   width: 100%;
 }
 
+.sidebar-section-label {
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+.sidebar-section-label:first-child {
+  margin-top: 0;
+}
+
 .sidebar-admin-divider {
   height: 1px;
-  background: var(--border-subtle);
-  margin: 4px 0;
+  background: linear-gradient(90deg, rgba(181, 18, 43, 0.24), rgba(255, 255, 255, 0.04), transparent);
+  margin: 8px 0 2px;
 }
 
 .sidebar-user-identity {
@@ -377,15 +391,16 @@ select:focus-visible {
 
 .sidebar-avatar {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(181, 18, 43, 0.18), rgba(181, 18, 43, 0.08));
-  border: 1px solid rgba(181, 18, 43, 0.28);
+  background: linear-gradient(135deg, rgba(181, 18, 43, 0.22), rgba(181, 18, 43, 0.1));
+  border: 1px solid rgba(181, 18, 43, 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.08);
 }
 
 .sidebar-avatar-img {
@@ -419,11 +434,11 @@ select:focus-visible {
 .sidebar-role-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 8px;
-  border-radius: var(--radius-pill);
+  padding: 2px 7px;
+  border-radius: 4px;
   font-family: var(--font-mono), monospace;
   font-size: 10px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;
   width: fit-content;
@@ -444,11 +459,14 @@ select:focus-visible {
 .sidebar-user-actions {
   display: flex;
   gap: 12px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .sidebar-user-actions .ghost-button {
   width: 100%;
+  min-height: 38px;
+  font-size: 13px;
+  border-radius: 8px;
 }
 
 .app-main {
@@ -557,27 +575,29 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: 0 16px;
-  border-radius: var(--radius-pill);
+  padding: 0 18px;
+  border-radius: var(--radius-btn);
   border: 1px solid transparent;
   cursor: pointer;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .cta {
   background: linear-gradient(180deg, var(--brand-red-hover), var(--brand-red));
   color: #fff6f7;
-  box-shadow: 0 10px 24px rgba(181, 18, 43, 0.22);
+  box-shadow: 0 8px 20px rgba(181, 18, 43, 0.26);
 }
 
 .cta:hover {
   background: linear-gradient(180deg, #d31d38, var(--brand-red-hover));
   transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(181, 18, 43, 0.32);
 }
 
 .ghost-button,
 .secondary-button {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
   border-color: var(--border-default);
   color: var(--text-primary);
 }
@@ -585,7 +605,7 @@ select:focus-visible {
 .ghost-button:hover,
 .secondary-button:hover {
   border-color: var(--border-strong);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .form-grid,
@@ -1444,9 +1464,9 @@ select:focus-visible {
     gap: 10px;
     min-height: 44px;
     padding: 0 14px;
-    border-radius: var(--radius-pill);
+    border-radius: 10px;
     border: 1px solid var(--border-default);
-    background: rgba(15, 16, 18, 0.94);
+    background: rgba(12, 13, 15, 0.96);
     backdrop-filter: blur(16px);
   }
 
@@ -1586,3 +1606,48 @@ select:focus-visible {
 
 
 
+
+/* Avatar preview — settings/profile page */
+.avatar-preview-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-preview-circle {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(181, 18, 43, 0.22), rgba(181, 18, 43, 0.08));
+  border: 1px solid rgba(181, 18, 43, 0.3);
+  box-shadow: 0 0 0 3px rgba(181, 18, 43, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-preview-initials {
+  font-family: var(--font-display), sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffd5db;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.avatar-preview-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.avatar-preview-meta p {
+  margin: 0;
+}
