@@ -488,6 +488,77 @@ def test_auth_is_required_for_me_route():
     assert response.status_code == 401
 
 
+def test_auth_is_required_for_draft_save():
+    client, _, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        json=ProfileUpdateRequest(
+            full_name="Ari Mensah",
+            onboarding_draft={"current_step": 5, "injuries": "left shoulder"},
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 401
+
+
+def test_review_stage_draft_save_persists_step_and_form():
+    """Saving a draft at step 5 (Review) must persist the full form and correct step index."""
+    client, store, _ = _build_client()
+    request = _build_request()
+    draft_payload = {
+        **request.model_dump(mode="json"),
+        "current_step": 5,
+    }
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=ProfileUpdateRequest(
+            full_name=request.athlete.full_name,
+            technical_style=request.athlete.technical_style,
+            record=request.athlete.record,
+            onboarding_draft=draft_payload,
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    profile = response.json()["profile"]
+    assert profile["onboarding_draft"]["current_step"] == 5
+    assert profile["onboarding_draft"]["fight_date"] == request.fight_date
+    assert store.profiles["athlete-1"]["onboarding_draft"]["current_step"] == 5
+
+
+def test_review_stage_invalid_record_returns_422_not_network_error():
+    """Invalid record submitted during draft save at review stage must return 422, not a network error."""
+    client, _, _ = _build_client()
+
+    for bad_record in ("5-", "-1", "5", "5-1-2-3", "abc"):
+        response = client.put(
+            "/api/me",
+            headers={"Authorization": "Bearer athlete-token"},
+            json={"record": bad_record},
+        )
+        assert response.status_code == 422, f"expected 422 for record={bad_record!r}"
+
+
+def test_review_stage_empty_record_is_accepted_during_draft_save():
+    """Empty record must be accepted when saving a draft (partial completion is allowed)."""
+    client, _, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=ProfileUpdateRequest(
+            full_name="Ari Mensah",
+            record="",
+            onboarding_draft={"current_step": 5},
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+
+
 def test_saved_onboarding_draft_round_trips_through_me_and_clears_after_generation():
     client, store, _ = _build_client()
 
