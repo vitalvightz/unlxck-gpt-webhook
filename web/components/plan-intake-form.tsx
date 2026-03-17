@@ -454,6 +454,11 @@ export function PlanIntakeForm() {
     setHydrated(true);
   }, [hydrated, me]);
 
+  useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
+  }, [currentStep]);
+
   function updateAthlete<K extends keyof PlanRequest["athlete"]>(key: K, value: PlanRequest["athlete"][K]) {
     setForm((current) => ({
       ...current,
@@ -615,6 +620,10 @@ export function PlanIntakeForm() {
     startTransition(async () => {
       const nextForm = syncDeviceFields(form);
       if (!validateCurrentStep(nextForm)) {
+        return;
+      }
+      if (!session?.access_token) {
+        setError("You must be signed in to save a draft.");
         return;
       }
       try {

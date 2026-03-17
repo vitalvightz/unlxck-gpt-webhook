@@ -17,16 +17,25 @@ type ApiRequestInit = RequestInit & {
 
 async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   const headers = new Headers(init?.headers ?? {});
-  headers.set("Content-Type", "application/json");
+  if (init?.body) {
+    headers.set("Content-Type", "application/json");
+  }
   if (init?.token) {
     headers.set("Authorization", `Bearer ${init.token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    cache: "no-store",
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      cache: "no-store",
+      headers,
+    });
+  } catch (networkError) {
+    throw new Error("Unable to reach the server. Please check your connection and try again.", {
+      cause: networkError,
+    });
+  }
 
   if (!response.ok) {
     const detail = await response.text();
