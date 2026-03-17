@@ -438,6 +438,48 @@ def test_record_format_validation_rejects_invalid_values():
         raise AssertionError("invalid record format should be rejected")
 
 
+def test_record_format_validation_accepts_valid_formats():
+    for record in ("5-1", "12-2-1", "0-0", "10-0-3"):
+        req = PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+                "record": record,
+            },
+            fight_date="2026-04-18",
+        )
+        assert req.athlete.record == record
+
+
+def test_record_format_validation_accepts_empty_record():
+    req = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "record": "",
+        },
+        fight_date="2026-04-18",
+    )
+    assert req.athlete.record == ""
+
+
+def test_record_format_validation_rejects_partial_format():
+    for bad in ("5-", "-1", "5", "5-1-2-3"):
+        try:
+            PlanRequest(
+                athlete={
+                    "full_name": "Ari Mensah",
+                    "technical_style": ["boxing"],
+                    "record": bad,
+                },
+                fight_date="2026-04-18",
+            )
+        except Exception as exc:
+            assert "x-x or x-x-x" in str(exc)
+        else:  # pragma: no cover - explicit failure path
+            raise AssertionError(f"record '{bad}' should be rejected")
+
+
 def test_auth_is_required_for_me_route():
     client, _, _ = _build_client()
 

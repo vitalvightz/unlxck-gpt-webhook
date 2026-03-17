@@ -635,11 +635,11 @@ export function PlanIntakeForm() {
       if (!validateCurrentStep(nextForm)) {
         return;
       }
+      setCurrentStep(nextStep);
       try {
         await persistDraft(nextStep);
-        setCurrentStep(nextStep);
-      } catch (draftError) {
-        setError(draftError instanceof Error ? draftError.message : "Unable to save progress.");
+      } catch {
+        // Draft persistence is best-effort; navigation has already advanced.
       }
     });
   }
@@ -891,7 +891,7 @@ export function PlanIntakeForm() {
                       value={form.athlete.record ?? ""}
                       onChange={(event) => updateAthlete("record", sanitizeRecordInput(event.target.value))}
                       placeholder="5-1 or 12-2-1"
-                      inputMode="numeric"
+                      inputMode="text"
                     />
                     <p className="muted">Use only <code>x-x</code> or <code>x-x-x</code>.</p>
                     {recordHasError ? <p className="error-text">Enter record as x-x or x-x-x.</p> : null}
