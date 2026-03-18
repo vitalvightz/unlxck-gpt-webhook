@@ -523,6 +523,13 @@ def test_cors_allows_regex_configured_preview_origin(monkeypatch: pytest.MonkeyP
     )
 
 
+def test_cors_rejects_malformed_origin_configuration(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_CORS_ORIGINS", "unlxck-gpt-webhook.vercel.app")
+
+    with pytest.raises(ValueError, match="APP_CORS_ORIGINS entries must be full origins"):
+        _build_client()
+
+
 def test_auth_is_required_for_draft_save():
     client, _, _ = _build_client()
 

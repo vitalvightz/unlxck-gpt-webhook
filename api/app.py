@@ -54,9 +54,9 @@ def _normalize_origin(origin: str) -> str:
     if not normalized:
         return ""
     parsed = urlsplit(normalized)
-    if parsed.scheme and parsed.netloc:
-        return f"{parsed.scheme}://{parsed.netloc}"
-    return normalized.rstrip("/")
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError(f"APP_CORS_ORIGINS entries must be full origins. Received: {origin!r}")
+    return f"{parsed.scheme}://{parsed.netloc}"
 
 
 def _cors_origin_regex() -> str | None:
