@@ -488,6 +488,41 @@ def test_auth_is_required_for_me_route():
     assert response.status_code == 401
 
 
+def test_cors_allows_normalized_production_origin(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://unlxck-gpt-webhook.vercel.app/onboarding/")
+    client, _, _ = _build_client()
+
+    response = client.options(
+        "/api/plans/generate",
+        headers={
+            "Origin": "https://unlxck-gpt-webhook.vercel.app",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://unlxck-gpt-webhook.vercel.app"
+
+
+def test_cors_allows_regex_configured_preview_origin(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_CORS_ORIGIN_REGEX", r"https://.*\.vercel\.app")
+    client, _, _ = _build_client()
+
+    response = client.options(
+        "/api/plans/generate",
+        headers={
+            "Origin": "https://unlxck-gpt-webhook-git-feature-branch.vercel.app",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.headers["access-control-allow-origin"]
+        == "https://unlxck-gpt-webhook-git-feature-branch.vercel.app"
+    )
+
+
 def test_auth_is_required_for_draft_save():
     client, _, _ = _build_client()
 
@@ -1115,4 +1150,3 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
             raise AssertionError(f"Unexpected resolution strategy: {scenario.expected_resolution}")
 
         assert store.get_plan(plan_id)["status"] == "ready"
-

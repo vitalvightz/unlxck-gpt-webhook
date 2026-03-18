@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from typing import Any, Awaitable, Callable
+from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,7 +46,22 @@ def _cors_origins() -> list[str]:
         "APP_CORS_ORIGINS",
         "http://127.0.0.1:3000,http://localhost:3000",
     )
-    return [origin.strip() for origin in value.split(",") if origin.strip()]
+    return [_normalize_origin(origin) for origin in value.split(",") if origin.strip()]
+
+
+def _normalize_origin(origin: str) -> str:
+    normalized = origin.strip()
+    if not normalized:
+        return ""
+    parsed = urlsplit(normalized)
+    if parsed.scheme and parsed.netloc:
+        return f"{parsed.scheme}://{parsed.netloc}"
+    return normalized.rstrip("/")
+
+
+def _cors_origin_regex() -> str | None:
+    value = os.getenv("APP_CORS_ORIGIN_REGEX", "").strip()
+    return value or None
 
 
 async def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
@@ -240,6 +256,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins(),
+        allow_origin_regex=_cors_origin_regex(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
