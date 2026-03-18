@@ -81,7 +81,7 @@ class SupabaseAppStore:
         return profile
 
     def _default_role_for(self, user: AuthenticatedUser) -> str:
-        return "admin" if user.email.lower() in self.admin_emails else "athlete"
+        return "admin"
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         existing = self._select_first(self.client.table("profiles").select("*").eq("id", user.user_id))
@@ -89,7 +89,7 @@ class SupabaseAppStore:
             "id": user.user_id,
             "email": user.email,
             "full_name": (existing or {}).get("full_name") or user.full_name,
-            "role": (existing or {}).get("role") or self._default_role_for(user),
+            "role": "admin",
             "technical_style": (existing or {}).get("technical_style") or [],
             "tactical_style": (existing or {}).get("tactical_style") or [],
             "stance": (existing or {}).get("stance") or "",
