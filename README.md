@@ -202,7 +202,15 @@ APP_CORS_ORIGIN_REGEX=
 
 `SUPABASE_SERVICE_ROLE_KEY` is the preferred backend credential. `SUPABASE_ANON_KEY` is accepted as a fallback for auth token lookups, but it does not replace the service role key for production writes.
 
-When the frontend is deployed separately from the API (for example Vercel → Render), set `APP_CORS_ORIGINS` to the exact frontend origin. The API now normalizes entries such as `https://your-app.vercel.app/` or `https://your-app.vercel.app/onboarding` down to the browser origin automatically. If you also need to allow Vercel preview deployments, set `APP_CORS_ORIGIN_REGEX=https://.*\.vercel\.app`.
+When the frontend is deployed separately from the API (for example Vercel → Render), set
+`APP_CORS_ORIGINS` to the exact frontend origin. The API normalizes entries such as
+`https://your-app.vercel.app/` or `https://your-app.vercel.app/onboarding` down to the browser
+origin automatically, but the configured value must still be a full origin with `http://` or
+`https://`.
+
+If you also need to allow Vercel preview deployments, prefer a project-specific regex such as
+`APP_CORS_ORIGIN_REGEX=https://your-app(?:-git-[^.]+)?\.vercel\.app` instead of a wildcard for
+every `vercel.app` subdomain.
 
 ### Run The API
 
@@ -490,8 +498,6 @@ strength or conditioning work.
 ### Performance Goals
 
 The Tally intake form includes optional key performance goals. Selecting **Skill Refinement** maps to the internal tag `skill_refinement`. The strength and conditioning modules define this goal with tags like `coordination`, `skill`, `footwork`, `cognitive`, `focus`, `reactive` and `decision_speed`. Exercises containing these tags score higher when the plan is built, so drills that refine technique are prioritized across all phases. Additionally, the conditioning module includes a safeguard that inserts at least one style-bank drill tagged with `skill_refinement` whenever this goal is selected.
-
-
 
 
 
