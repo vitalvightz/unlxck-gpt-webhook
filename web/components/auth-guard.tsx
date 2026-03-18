@@ -20,26 +20,30 @@ export function RequireAuth({
   adminOnly = false,
 }: Readonly<{ children: React.ReactNode; adminOnly?: boolean }>) {
   const router = useRouter();
-  const { isReady, session, me } = useAppSession();
+  const { isReady, session, me, demoMode, signInDemo } = useAppSession();
 
   useEffect(() => {
     if (!isReady) {
       return;
     }
     if (!session) {
+      if (adminOnly && demoMode) {
+        void signInDemo("admin");
+        return;
+      }
       router.replace("/login");
       return;
     }
     if (adminOnly && me?.profile.role !== "admin") {
       router.replace("/plans");
     }
-  }, [adminOnly, isReady, me?.profile.role, router, session]);
+  }, [adminOnly, demoMode, isReady, me?.profile.role, router, session, signInDemo]);
 
   if (!isReady) {
     return <LoadingCard label="Checking your access" />;
   }
   if (!session) {
-    return <LoadingCard label="Redirecting to login" />;
+    return <LoadingCard label={adminOnly && demoMode ? "Restoring demo admin access" : "Redirecting to login"} />;
   }
   if (adminOnly && me?.profile.role !== "admin") {
     return <LoadingCard label="Redirecting to your athlete view" />;
