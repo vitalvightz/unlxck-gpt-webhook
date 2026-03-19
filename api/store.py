@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -13,6 +14,10 @@ from .auth import AuthenticatedUser
 from .models import PlanRequest, ProfileUpdateRequest
 
 logger = logging.getLogger(__name__)
+_PROFILES_MISSING_COLUMN_PATTERNS = (
+    re.compile(r"Could not find the '([^']+)' column of 'profiles' in the schema cache"),
+    re.compile(r'column "([^"]+)" of relation "profiles" does not exist'),
+)
 
 
 class AppStore(Protocol):
@@ -52,6 +57,15 @@ def _encode_structured_text(value: Any) -> str | None:
     if isinstance(value, str):
         return value
     return json.dumps(value)
+
+
+def _extract_missing_profiles_column(error: Exception) -> str | None:
+    message = " ".join(str(part) for part in error.args) if getattr(error, "args", None) else str(error)
+    for pattern in _PROFILES_MISSING_COLUMN_PATTERNS:
+        match = pattern.search(message)
+        if match:
+            return match.group(1)
+    return None
 
 
 @dataclass
@@ -135,10 +149,37 @@ class SupabaseAppStore:
                 logger.info("[store] update_profile:no_fields athlete_id=%s", athlete_id)
                 return self._require_profile(athlete_id)
 
-            logger.info("[store] update_profile:start athlete_id=%s fields=%s", athlete_id, sorted(fields.keys()))
-            self.client.table("profiles").update(fields).eq("id", athlete_id).execute()
+            pending_fields = dict(fields)
+            skipped_columns: list[str] = []
+            logger.info(
+                "[store] update_profile:start athlete_id=%s fields=%s",
+                athlete_id,
+                sorted(pending_fields.keys()),
+            )
+            while True:
+                try:
+                    self.client.table("profiles").update(dict(pending_fields)).eq("id", athlete_id).execute()
+                    break
+                except Exception as exc:
+                    missing_column = _extract_missing_profiles_column(exc)
+                    if not missing_column or missing_column not in pending_fields:
+                        raise
+                    skipped_columns.append(missing_column)
+                    pending_fields.pop(missing_column, None)
+                    logger.warning(
+                        "[store] update_profile:retry_without_missing_column athlete_id=%s column=%s remaining_fields=%s",
+                        athlete_id,
+                        missing_column,
+                        sorted(pending_fields.keys()),
+                    )
+                    if not pending_fields:
+                        raise
             profile = self._require_profile(athlete_id)
-            logger.info("[store] update_profile:success athlete_id=%s", athlete_id)
+            logger.info(
+                "[store] update_profile:success athlete_id=%s skipped_columns=%s",
+                athlete_id,
+                skipped_columns,
+            )
             return profile
         except HTTPException:
             raise

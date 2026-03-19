@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from api.auth import AuthenticatedUser
+from api.models import ProfileUpdateRequest
 from api.store import SupabaseAppStore
 
 
@@ -164,3 +165,52 @@ def test_ensure_profile_preserves_existing_athlete_role():
     call_args = store.client.table.return_value.upsert.call_args
     payload = call_args[0][0]
     assert payload["role"] == "athlete"
+
+
+def test_update_profile_retries_without_missing_profile_columns():
+    store = _make_store()
+    table_mock = store.client.table.return_value
+
+    update_chain = table_mock.update.return_value.eq.return_value.execute
+    update_chain.side_effect = [
+        Exception("Could not find the 'athlete_locale' column of 'profiles' in the schema cache"),
+        MagicMock(),
+    ]
+
+    profile_after_update = {
+        "id": "uid-1",
+        "email": "athlete@example.com",
+        "role": "athlete",
+        "full_name": "Jake",
+        "technical_style": ["boxing"],
+        "tactical_style": [],
+        "stance": "",
+        "professional_status": "",
+        "record_summary": "",
+        "athlete_timezone": "Europe/London",
+        "athlete_locale": "",
+        "onboarding_draft": {"current_step": 2},
+        "created_at": "2026-03-19T00:00:00Z",
+        "updated_at": "2026-03-19T00:00:01Z",
+    }
+    select_response = MagicMock()
+    select_response.data = [profile_after_update]
+    table_mock.select.return_value.eq.return_value.limit.return_value.execute.return_value = select_response
+
+    result = store.update_profile(
+        "uid-1",
+        ProfileUpdateRequest(
+            full_name="Jake",
+            technical_style=["boxing"],
+            athlete_timezone="Europe/London",
+            athlete_locale="en-GB",
+            onboarding_draft={"current_step": 2},
+        ),
+    )
+
+    update_calls = table_mock.update.call_args_list
+    assert len(update_calls) == 2
+    assert update_calls[0].args[0]["athlete_locale"] == "en-GB"
+    assert "athlete_locale" not in update_calls[1].args[0]
+    assert update_calls[1].args[0]["onboarding_draft"] == {"current_step": 2}
+    assert result == profile_after_update
