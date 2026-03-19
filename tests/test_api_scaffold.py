@@ -15,6 +15,7 @@ from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import ManualStage2SubmissionRequest, PlanRequest, ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
+from conftest import RENDER_BACKEND_URL
 
 
 def _now() -> str:
@@ -599,7 +600,7 @@ def test_cors_does_not_allow_render_origin_when_only_vercel_origin_is_configured
     response = client.options(
         "/api/plans/generate",
         headers={
-            "Origin": "https://unlxck-gpt-webhook.onrender.com",
+            "Origin": RENDER_BACKEND_URL,
             "Access-Control-Request-Method": "POST",
         },
     )
