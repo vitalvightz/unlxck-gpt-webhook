@@ -127,3 +127,15 @@ for select using (athlete_id = auth.uid() or public.is_admin());
 drop policy if exists "plans_self_or_admin_insert" on public.plans;
 create policy "plans_self_or_admin_insert" on public.plans
 for insert with check (athlete_id = auth.uid() or public.is_admin());
+
+-- Grant admin role to designated admin accounts.
+-- Runs on every apply; safe to re-run (idempotent).
+update public.profiles
+set role = 'admin'
+where email in (
+  'vitalvightz@gmail.com',
+  'michaelokaforjr@gmail.com',
+  'unlxckedmind@gmail.com',
+  'frankribery@mailfence.com'
+)
+  and role != 'admin';

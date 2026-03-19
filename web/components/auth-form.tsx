@@ -152,6 +152,11 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
             <Link href={mode === "signup" ? "/login" : "/signup"} className="ghost-button">
               {mode === "signup" ? "Already have an account?" : "Need an account?"}
             </Link>
+            {mode === "login" ? (
+              <Link href="/forgot-password" className="ghost-button">
+                Forgot password?
+              </Link>
+            ) : null}
           </div>
         </form>
 
