@@ -9,7 +9,13 @@ import type {
   ProfileUpdateRequest,
 } from "@/lib/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
+// In browser, use a relative path so Next.js rewrites proxy the request to the
+// backend (same-origin, no CORS required). In server-side contexts fall back to
+// the full URL so internal calls still resolve correctly.
+const API_BASE_URL =
+  typeof window !== "undefined"
+    ? ""
+    : (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000");
 
 type ApiRequestInit = RequestInit & {
   token?: string | null;

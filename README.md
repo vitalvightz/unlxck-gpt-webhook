@@ -202,13 +202,24 @@ APP_CORS_ORIGIN_REGEX=
 
 `SUPABASE_SERVICE_ROLE_KEY` is the preferred backend credential. `SUPABASE_ANON_KEY` is accepted as a fallback for auth token lookups, but it does not replace the service role key for production writes.
 
-When the frontend is deployed separately from the API (for example Vercel → Render), set
-`APP_CORS_ORIGINS` to the exact frontend origin. The API normalizes entries such as
-`https://your-app.vercel.app/` or `https://your-app.vercel.app/onboarding` down to the browser
-origin automatically, but the configured value must still be a full origin with `http://` or
-`https://`.
+When the frontend is deployed separately from the API (for example Vercel → Render), all browser
+API calls are proxied through the Next.js rewrite in `web/next.config.ts`. This means the browser
+only ever talks to the Vercel origin — eliminating CORS issues and Render cold-start exposure.
+Vercel then forwards the request to the backend server-to-server.
 
-If you also need to allow Vercel preview deployments, prefer a project-specific regex such as
+Because requests from the browser are same-origin under this setup, `APP_CORS_ORIGINS` on Render
+only needs to include any origins that call the API **directly** (e.g. local development or
+external clients). For local development, the defaults (`http://127.0.0.1:3000,http://localhost:3000`)
+are sufficient. In production the backend will receive requests only from Vercel's edge, so CORS
+is less critical; setting `APP_CORS_ORIGINS=https://your-app.vercel.app` remains harmless and
+keeps the API hardened against direct browser access.
+
+The API normalizes entries such as `https://your-app.vercel.app/` or
+`https://your-app.vercel.app/onboarding` down to the browser origin automatically, but the
+configured value must still be a full origin with `http://` or `https://`.
+
+If you also need to allow Vercel preview deployments for direct API access, prefer a
+project-specific regex such as
 `APP_CORS_ORIGIN_REGEX=https://your-app(?:-git-[^.]+)?\.vercel\.app` instead of a wildcard for
 every `vercel.app` subdomain.
 
