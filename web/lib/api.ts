@@ -21,6 +21,17 @@ type ApiRequestInit = RequestInit & {
   token?: string | null;
 };
 
+/** Error thrown for non-2xx HTTP responses. Includes the HTTP `status` code. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 function truncateForLog(value: string, max = 1200): string {
   return value.length > max ? `${value.slice(0, max)}…[truncated]` : value;
 }
@@ -120,24 +131,27 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
         "request_id" in parsedBody ? (parsedBody as { request_id?: unknown }).request_id : null;
 
       if (typeof detail === "string") {
-        throw new Error(
+        throw new ApiError(
           bodyRequestId ? `${detail} (request id: ${String(bodyRequestId)})` : detail,
+          response.status,
         );
       }
 
       if (detail != null) {
-        throw new Error(
+        throw new ApiError(
           bodyRequestId
             ? `${JSON.stringify(detail)} (request id: ${String(bodyRequestId)})`
             : JSON.stringify(detail),
+          response.status,
         );
       }
     }
 
-    throw new Error(
+    throw new ApiError(
       requestId
         ? `${trimmedText || `Request failed: ${response.status}`} (request id: ${requestId})`
         : trimmedText || `Request failed: ${response.status}`,
+      response.status,
     );
   }
 
