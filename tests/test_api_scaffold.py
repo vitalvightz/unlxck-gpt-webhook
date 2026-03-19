@@ -496,6 +496,7 @@ def test_request_id_header_is_attached_to_error_responses():
     response = client.get("/api/me")
 
     assert response.status_code == 401
+    assert response.json()["request_id"] == response.headers["x-request-id"]
     assert len(response.headers["x-request-id"]) == 8
 
 

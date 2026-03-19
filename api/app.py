@@ -339,6 +339,15 @@ def create_app(
                 headers={"X-Request-ID": request_id},
             )
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", "")
+        content: dict[str, Any] = {"detail": exc.detail}
+        if request_id:
+            content["request_id"] = request_id
+        headers = {"X-Request-ID": request_id} if request_id else None
+        return JSONResponse(status_code=exc.status_code, content=content, headers=headers)
+
     def get_store(request: Request) -> AppStore:
         return request.app.state.store
 
