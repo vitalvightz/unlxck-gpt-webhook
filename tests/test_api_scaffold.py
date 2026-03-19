@@ -592,6 +592,22 @@ def test_cors_allows_host_only_origin_configuration(monkeypatch: pytest.MonkeyPa
     assert response.headers["access-control-allow-origin"] == "https://unlxck-gpt-webhook.vercel.app"
 
 
+def test_cors_does_not_allow_render_origin_when_only_vercel_origin_is_configured(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://unlxck-gpt-webhook.vercel.app")
+    client, _, _ = _build_client()
+
+    response = client.options(
+        "/api/plans/generate",
+        headers={
+            "Origin": "https://unlxck-gpt-webhook.onrender.com",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 400
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_auth_is_required_for_draft_save():
     client, _, _ = _build_client()
 
