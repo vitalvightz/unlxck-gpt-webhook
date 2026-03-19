@@ -39,6 +39,7 @@ from .store import AppStore, SupabaseAppStore
 Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
+LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
 
 
 def _cors_origins() -> list[str]:
@@ -55,7 +56,11 @@ def _normalize_origin(origin: str) -> str:
         return ""
     if "://" not in normalized:
         host = normalized.split("/", 1)[0].lower()
-        scheme = "http" if host.startswith(("localhost", "127.0.0.1", "[::1]", "::1")) else "https"
+        if host.startswith("[") and "]" in host:
+            host_name = host[1:].split("]", 1)[0]
+        else:
+            host_name = host.split(":", 1)[0]
+        scheme = "http" if host_name in LOCAL_HOST_NAMES else "https"
         normalized = f"{scheme}://{normalized}"
     parsed = urlsplit(normalized)
     if not parsed.scheme or not parsed.netloc:
