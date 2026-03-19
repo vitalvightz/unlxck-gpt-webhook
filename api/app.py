@@ -53,6 +53,10 @@ def _normalize_origin(origin: str) -> str:
     normalized = origin.strip()
     if not normalized:
         return ""
+    if "://" not in normalized:
+        host = normalized.split("/", 1)[0].lower()
+        scheme = "http" if host.startswith(("localhost", "127.0.0.1", "[::1]", "::1")) else "https"
+        normalized = f"{scheme}://{normalized}"
     parsed = urlsplit(normalized)
     if not parsed.scheme or not parsed.netloc:
         raise ValueError(f"APP_CORS_ORIGINS entries must be full origins. Received: {origin!r}")
