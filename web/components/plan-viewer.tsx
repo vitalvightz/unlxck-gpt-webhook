@@ -274,8 +274,12 @@ function ArtifactActions({
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopiedKey(artifactKey);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(artifactKey);
+    } catch {
+      // clipboard write failed; no visible feedback shown
+    }
   }
 
   return (
@@ -287,6 +291,37 @@ function ArtifactActions({
         Download .txt
       </button>
     </div>
+  );
+}
+
+function QuickCopyButton({ text, artifactKey }: { text: string; artifactKey: string }) {
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!copiedKey) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setCopiedKey(null), 1800);
+    return () => window.clearTimeout(timeout);
+  }, [copiedKey]);
+
+  if (!text.trim()) {
+    return null;
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(artifactKey);
+    } catch {
+      // clipboard write failed; no visible feedback shown
+    }
+  }
+
+  return (
+    <button type="button" className="ghost-button" onClick={handleCopy}>
+      {copiedKey === artifactKey ? "Copied" : "Copy text"}
+    </button>
   );
 }
 
@@ -362,6 +397,7 @@ export function PlanViewer({
   const stage2ReviewSummary = buildReviewSummary(validatorReport, plan.admin_outputs?.stage2_status || "");
   const planningBriefText = formatStructuredValue(plan.admin_outputs?.planning_brief, "No planning brief.");
   const payloadText = formatStructuredValue(plan.admin_outputs?.stage2_payload, "No Stage 2 payload.");
+  const reviewPlanText = (plan.admin_outputs?.final_plan_text || "").trim();
   const approvableText =
     plan.admin_outputs?.final_plan_text?.trim() ||
     plan.admin_outputs?.draft_plan_text?.trim() ||
@@ -658,7 +694,12 @@ export function PlanViewer({
             </span>
           </div>
           {hasPublishedPlan ? (
-            <pre className="plan-text-block">{athletePlanText}</pre>
+            <>
+              <div className="plan-summary-actions">
+                <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+              </div>
+              <pre className="plan-text-block">{athletePlanText}</pre>
+            </>
           ) : (
             <div className="plan-review-stack">
               {isAdmin ? (
@@ -709,6 +750,11 @@ export function PlanViewer({
                     </div>
                     <p className="review-summary-text">{stage2ReviewSummary.headline}</p>
                     <p className="muted">{stage2ReviewSummary.guidance}</p>
+                    {reviewPlanText ? (
+                      <div className="plan-summary-actions">
+                        <QuickCopyButton text={reviewPlanText} artifactKey="review-stage2" />
+                      </div>
+                    ) : null}
                     {stage2ReviewSummary.hasIssues ? (
                       <div className="review-issue-groups">
                         {stage2ReviewSummary.errors.length || stage2ReviewSummary.blocking.length ? (
