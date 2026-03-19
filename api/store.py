@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -10,6 +11,8 @@ from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
 from .models import PlanRequest, ProfileUpdateRequest
+
+logger = logging.getLogger(__name__)
 
 
 class AppStore(Protocol):
@@ -67,6 +70,12 @@ class SupabaseAppStore:
             for email in os.getenv("UNLXCK_ADMIN_EMAILS", "").split(",")
             if email.strip()
         }
+        logger.info(
+            "[store] initializing supabase store has_url=%s has_service_role_key=%s admin_emails_count=%s",
+            bool(url),
+            bool(key),
+            len(admin_emails),
+        )
         return cls(create_client(url, key), admin_emails)
 
     def _select_first(self, query) -> dict[str, Any] | None:
@@ -77,6 +86,7 @@ class SupabaseAppStore:
     def _require_profile(self, athlete_id: str) -> dict[str, Any]:
         profile = self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
         if not profile:
+            logger.warning("[store] profile not found athlete_id=%s", athlete_id)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="profile not found")
         return profile
 
@@ -84,33 +94,53 @@ class SupabaseAppStore:
         return "admin"
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
-        existing = self._select_first(self.client.table("profiles").select("*").eq("id", user.user_id))
-        payload = {
-            "id": user.user_id,
-            "email": user.email,
-            "full_name": (existing or {}).get("full_name") or user.full_name,
-            "role": "admin",
-            "technical_style": (existing or {}).get("technical_style") or [],
-            "tactical_style": (existing or {}).get("tactical_style") or [],
-            "stance": (existing or {}).get("stance") or "",
-            "professional_status": (existing or {}).get("professional_status") or "",
-            "record_summary": (existing or {}).get("record_summary") or "",
-            "athlete_timezone": (existing or {}).get("athlete_timezone") or "",
-            "athlete_locale": (existing or {}).get("athlete_locale") or "",
-            "onboarding_draft": (existing or {}).get("onboarding_draft"),
-            "avatar_url": (existing or {}).get("avatar_url"),
-        }
-        self.client.table("profiles").upsert(payload, on_conflict="id").execute()
-        return self._require_profile(user.user_id)
+        try:
+            logger.info("[store] ensure_profile:start athlete_id=%s email=%s", user.user_id, user.email)
+            existing = self._select_first(self.client.table("profiles").select("*").eq("id", user.user_id))
+            payload = {
+                "id": user.user_id,
+                "email": user.email,
+                "full_name": (existing or {}).get("full_name") or user.full_name,
+                "role": "admin",
+                "technical_style": (existing or {}).get("technical_style") or [],
+                "tactical_style": (existing or {}).get("tactical_style") or [],
+                "stance": (existing or {}).get("stance") or "",
+                "professional_status": (existing or {}).get("professional_status") or "",
+                "record_summary": (existing or {}).get("record_summary") or "",
+                "athlete_timezone": (existing or {}).get("athlete_timezone") or "",
+                "athlete_locale": (existing or {}).get("athlete_locale") or "",
+                "onboarding_draft": (existing or {}).get("onboarding_draft"),
+                "avatar_url": (existing or {}).get("avatar_url"),
+            }
+            self.client.table("profiles").upsert(payload, on_conflict="id").execute()
+            profile = self._require_profile(user.user_id)
+            logger.info("[store] ensure_profile:success athlete_id=%s role=%s", user.user_id, profile.get("role"))
+            return profile
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("[store] ensure_profile:exception athlete_id=%s email=%s", user.user_id, user.email)
+            raise
 
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]:
-        fields = update.model_dump(mode="json", exclude_none=True)
-        if "record" in fields:
-            fields["record_summary"] = fields.pop("record")
-        if not fields:
-            return self._require_profile(athlete_id)
-        self.client.table("profiles").update(fields).eq("id", athlete_id).execute()
-        return self._require_profile(athlete_id)
+        try:
+            fields = update.model_dump(mode="json", exclude_none=True)
+            if "record" in fields:
+                fields["record_summary"] = fields.pop("record")
+            if not fields:
+                logger.info("[store] update_profile:no_fields athlete_id=%s", athlete_id)
+                return self._require_profile(athlete_id)
+
+            logger.info("[store] update_profile:start athlete_id=%s fields=%s", athlete_id, sorted(fields.keys()))
+            self.client.table("profiles").update(fields).eq("id", athlete_id).execute()
+            profile = self._require_profile(athlete_id)
+            logger.info("[store] update_profile:success athlete_id=%s", athlete_id)
+            return profile
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("[store] update_profile:exception athlete_id=%s", athlete_id)
+            raise
 
     def get_latest_intake(self, athlete_id: str) -> dict[str, Any] | None:
         return self._select_first(
@@ -127,14 +157,39 @@ class SupabaseAppStore:
             "technical_style": request.athlete.technical_style,
             "intake": request.model_dump(mode="json"),
         }
-        response = self.client.table("athlete_intakes").insert(payload).execute()
-        rows = getattr(response, "data", None) or []
-        if not rows:
+        try:
+            logger.info(
+                "[store] create_intake:start athlete_id=%s fight_date=%s technical_style=%s",
+                athlete_id,
+                request.fight_date,
+                request.athlete.technical_style,
+            )
+            response = self.client.table("athlete_intakes").insert(payload).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error(
+                    "[store] create_intake:no_rows athlete_id=%s response=%r",
+                    athlete_id,
+                    response,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist intake",
+                )
+            logger.info(
+                "[store] create_intake:success athlete_id=%s intake_id=%s",
+                athlete_id,
+                rows[0].get("id"),
+            )
+            return rows[0]
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("[store] create_intake:exception athlete_id=%s", athlete_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="failed to persist intake",
-            )
-        return rows[0]
+                detail="create_intake failed",
+            ) from exc
 
     def create_plan(
         self,
@@ -165,14 +220,43 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
-        response = self.client.table("plans").insert(payload).execute()
-        rows = getattr(response, "data", None) or []
-        if not rows:
+        try:
+            logger.info(
+                "[store] create_plan:start athlete_id=%s intake_id=%s status=%s stage2_status=%s",
+                athlete_id,
+                intake_id,
+                payload["status"],
+                payload["stage2_status"],
+            )
+            response = self.client.table("plans").insert(payload).execute()
+            rows = getattr(response, "data", None) or []
+            if not rows:
+                logger.error(
+                    "[store] create_plan:no_rows athlete_id=%s intake_id=%s response_type=%s response_repr=%r",
+                    athlete_id,
+                    intake_id,
+                    type(response).__name__,
+                    response,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to persist plan",
+                )
+            logger.info(
+                "[store] create_plan:success athlete_id=%s intake_id=%s plan_id=%s",
+                athlete_id,
+                intake_id,
+                rows[0].get("id"),
+            )
+            return rows[0]
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("[store] create_plan:exception athlete_id=%s intake_id=%s", athlete_id, intake_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="failed to persist plan",
-            )
-        return rows[0]
+                detail="create_plan failed",
+            ) from exc
 
     def list_user_plans(self, athlete_id: str) -> list[dict[str, Any]]:
         response = (
@@ -199,14 +283,23 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
-        self.client.table("plans").update(payload).eq("id", plan_id).execute()
-        updated = self.get_plan(plan_id)
-        if not updated:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="plan not found",
-            )
-        return updated
+        try:
+            logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
+            self.client.table("plans").update(payload).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning("[store] update_plan_stage2:plan_missing_after_update plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] update_plan_stage2:success plan_id=%s", plan_id)
+            return updated
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("[store] update_plan_stage2:exception plan_id=%s", plan_id)
+            raise
 
     def list_admin_plans(self) -> list[dict[str, Any]]:
         response = (
@@ -232,4 +325,10 @@ class SupabaseAppStore:
         return athletes
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
-        self.client.table("profiles").update({"onboarding_draft": None}).eq("id", athlete_id).execute()
+        try:
+            logger.info("[store] clear_onboarding_draft:start athlete_id=%s", athlete_id)
+            self.client.table("profiles").update({"onboarding_draft": None}).eq("id", athlete_id).execute()
+            logger.info("[store] clear_onboarding_draft:success athlete_id=%s", athlete_id)
+        except Exception:
+            logger.exception("[store] clear_onboarding_draft:exception athlete_id=%s", athlete_id)
+            raise
