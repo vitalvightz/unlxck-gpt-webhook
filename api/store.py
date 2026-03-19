@@ -91,17 +91,21 @@ class SupabaseAppStore:
         return profile
 
     def _default_role_for(self, user: AuthenticatedUser) -> str:
-        return "admin"
+        if user.email.lower() in self.admin_emails:
+            return "admin"
+        return "athlete"
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         try:
             logger.info("[store] ensure_profile:start athlete_id=%s email=%s", user.user_id, user.email)
             existing = self._select_first(self.client.table("profiles").select("*").eq("id", user.user_id))
+            # Preserve existing role; assign default only for new profiles.
+            role = (existing or {}).get("role") or self._default_role_for(user)
             payload = {
                 "id": user.user_id,
                 "email": user.email,
                 "full_name": (existing or {}).get("full_name") or user.full_name,
-                "role": "admin",
+                "role": role,
                 "technical_style": (existing or {}).get("technical_style") or [],
                 "tactical_style": (existing or {}).get("tactical_style") or [],
                 "stance": (existing or {}).get("stance") or "",

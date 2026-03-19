@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { getMe } from "@/lib/api";
+import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import type { MeResponse } from "@/lib/types";
 
@@ -45,8 +45,20 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     try {
       const nextMe = await getMe(nextSession.access_token);
       setMe(nextMe);
-    } catch {
+    } catch (err) {
       setMe(null);
+      // If the token is rejected as unauthorized, clear the stale session so
+      // the browser stops hammering /api/me with an invalid credential.
+      if (err instanceof ApiError && err.status === 401) {
+        if (!DEMO_MODE) {
+          try {
+            await getSupabaseBrowserClient().auth.signOut();
+          } catch {
+            // Ignore errors during cleanup sign-out.
+          }
+        }
+        setSession(null);
+      }
     } finally {
       setIsReady(true);
     }
@@ -82,13 +94,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       };
     }
 
+    // Use onAuthStateChange as the single source of truth for session and /api/me
+    // loads. The INITIAL_SESSION event fires on subscription with the stored
+    // session, so a separate getSession() call is only used to set the session
+    // state for the initial render without triggering a duplicate /api/me call.
     client.auth.getSession().then(({ data }) => {
       if (!active) {
         return;
       }
       const nextSession = data.session ? { access_token: data.session.access_token } : null;
       setSession(nextSession);
-      void loadMe(nextSession);
     });
 
     const authState = client.auth.onAuthStateChange((_event, nextSession) => {

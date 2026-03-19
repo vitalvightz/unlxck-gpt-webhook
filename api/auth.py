@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 from fastapi import HTTPException, status
 from supabase import Client, create_client
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -27,10 +30,20 @@ class SupabaseAuthService:
     @classmethod
     def from_env(cls) -> "SupabaseAuthService":
         url = os.getenv("SUPABASE_URL")
-        key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+        service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        anon_key = os.getenv("SUPABASE_ANON_KEY")
+        key = service_role_key or anon_key
         if not url or not key:
             raise RuntimeError(
-                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY or SUPABASE_ANON_KEY are required"
+                "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) are required"
+            )
+        if service_role_key:
+            logger.info("[auth] initializing with SUPABASE_SERVICE_ROLE_KEY has_url=%s", bool(url))
+        else:
+            logger.warning(
+                "[auth] SUPABASE_SERVICE_ROLE_KEY not set; falling back to SUPABASE_ANON_KEY "
+                "- token verification may be restricted has_url=%s",
+                bool(url),
             )
         return cls(create_client(url, key))
 
