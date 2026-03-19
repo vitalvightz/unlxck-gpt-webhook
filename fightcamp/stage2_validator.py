@@ -106,6 +106,7 @@ _WEEKDAY_HEADING = re.compile(
     r"^(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)(?:\b|[\s:\-|])",
     re.IGNORECASE,
 )
+_NUMBERED_SESSION_HEADING = re.compile(r"^(?:session|day)\s+\d+(?:\s*[:\-|]|\s*$)", re.IGNORECASE)
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -181,7 +182,7 @@ def _is_session_heading(line: str) -> bool:
         return True
     if _WEEKDAY_HEADING.match(normalized):
         return True
-    return normalized.startswith(("week ", "session ", "day "))
+    return bool(_NUMBERED_SESSION_HEADING.match(normalized))
 
 
 def _normalize_session_title(line: str) -> str:
@@ -207,7 +208,8 @@ def _phase_session_blocks(phase_lines: list[str]) -> list[list[str]]:
                 blocks.append(current)
             current = [line]
             continue
-        current.append(line)
+        if current:
+            current.append(line)
     if current:
         blocks.append(current)
     return blocks

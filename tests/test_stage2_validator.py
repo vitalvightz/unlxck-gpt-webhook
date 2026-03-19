@@ -613,6 +613,100 @@ def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count(
     assert "weekly_session_overage" in warning_codes
 
 
+def test_validate_stage2_output_does_not_false_positive_session_overage_from_prose_lines():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 4,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                ],
+            },
+            {
+                "week_index": 5,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 4
+        Session focus: keep intensity moderate this week.
+        Day 4 note: athlete reported some fatigue, adjust load downward.
+        #### Monday - Strength
+        - Landmine Press - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+
+        ### Week 5
+        #### Monday - Strength
+        - Landmine Press - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_session_overage" not in warning_codes
+
+
+def test_validate_stage2_output_counts_explicit_numbered_session_headings():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                ],
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Session 1 - Strength
+        - Landmine Press - 4x5
+        #### Day 2: Aerobic support
+        - Easy Bike - 25 min
+        #### Day 3: extra bonus session
+        - Additional work
+
+        ### Week 2
+        #### Session 1 - Strength
+        - Landmine Press - 4x5
+        #### Day 2: Aerobic support
+        - Easy Bike - 25 min
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_session_overage" in warning_codes
+
+
 def _weight_cut_planning_brief(high_pressure: bool = True) -> dict:
     readiness_flags = ["active_weight_cut"]
     if high_pressure:
