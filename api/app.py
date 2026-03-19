@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
+import uuid
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from fightcamp.main import generate_plan
@@ -271,6 +274,71 @@ def create_app(
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def log_requests(request: Request, call_next):
+        request_id = str(uuid.uuid4())[:8]
+        request.state.request_id = request_id
+        started = time.perf_counter()
+
+        logger.info(
+            "[http] request:start request_id=%s method=%s path=%s query=%s client=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            str(request.url.query),
+            request.client.host if request.client else "unknown",
+        )
+
+        try:
+            response = await call_next(request)
+            duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            response.headers["X-Request-ID"] = request_id
+            logger.info(
+                "[http] request:complete request_id=%s method=%s path=%s status=%s duration_ms=%s",
+                request_id,
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
+            return response
+        except HTTPException as exc:
+            duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            logger.warning(
+                "[http] request:http_exception request_id=%s method=%s path=%s status=%s duration_ms=%s detail=%r",
+                request_id,
+                request.method,
+                request.url.path,
+                exc.status_code,
+                duration_ms,
+                exc.detail,
+            )
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "detail": exc.detail,
+                    "request_id": request_id,
+                },
+                headers={"X-Request-ID": request_id},
+            )
+        except Exception:
+            duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            logger.exception(
+                "[http] request:exception request_id=%s method=%s path=%s duration_ms=%s",
+                request_id,
+                request.method,
+                request.url.path,
+                duration_ms,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "detail": "Internal server error",
+                    "request_id": request_id,
+                },
+                headers={"X-Request-ID": request_id},
+            )
+
     def get_store(request: Request) -> AppStore:
         return request.app.state.store
 
@@ -288,20 +356,34 @@ def create_app(
         auth: AuthService = Depends(get_auth_service),
     ) -> AuthenticatedUser:
         if credentials is None or credentials.scheme.lower() != "bearer":
+            logger.warning("[auth] missing_or_invalid_bearer_token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="authentication required",
             )
-        return auth.get_user_from_token(credentials.credentials)
+        try:
+            user = auth.get_user_from_token(credentials.credentials)
+            logger.info("[auth] token_resolved user_id=%s email=%s", user.user_id, user.email)
+            return user
+        except Exception:
+            logger.exception("[auth] token_resolution_failed")
+            raise
 
     def require_profile(
         user: AuthenticatedUser = Depends(require_user),
         store: AppStore = Depends(get_store),
     ) -> ProfileRecord:
-        return _map_profile_row(store.ensure_profile(user))
+        try:
+            profile = _map_profile_row(store.ensure_profile(user))
+            logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
+            return profile
+        except Exception:
+            logger.exception("[auth] profile_resolution_failed user_id=%s email=%s", user.user_id, user.email)
+            raise
 
     def require_admin(profile: ProfileRecord = Depends(require_profile)) -> ProfileRecord:
         if profile.role != "admin":
+            logger.warning("[auth] admin_access_denied athlete_id=%s role=%s", profile.athlete_id, profile.role)
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
         return profile
 
@@ -348,70 +430,117 @@ def create_app(
         stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
         logger.info(
-            "[plans] generate requested athlete_id=%s fight_date=%s technical_style=%s",
+            "[plans] generate:start athlete_id=%s fight_date=%s technical_style=%s",
             profile.athlete_id,
             request_body.fight_date,
             request_body.athlete.technical_style,
         )
-        store.update_profile(
-            profile.athlete_id,
-            ProfileUpdateRequest(
-                full_name=request_body.athlete.full_name,
-                technical_style=request_body.athlete.technical_style,
-                tactical_style=request_body.athlete.tactical_style,
-                stance=request_body.athlete.stance,
-                professional_status=request_body.athlete.professional_status,
-                record=request_body.athlete.record,
-                athlete_timezone=request_body.athlete.athlete_timezone,
-                athlete_locale=request_body.athlete.athlete_locale,
-                onboarding_draft=request_body.model_dump(mode="json"),
-            ),
-        )
-        intake = store.create_intake(profile.athlete_id, request_body)
-        stage1_result = await planner_fn(request_body.to_payload())
-        if stage1_result.get("status") == "invalid_input":
-            raise HTTPException(
-                status_code=422,
-                detail={
-                    "message": stage1_result.get("error", "invalid planning input"),
-                    "missing_fields": stage1_result.get("missing_fields", []),
-                },
+        try:
+            logger.info("[plans] update_profile:start athlete_id=%s", profile.athlete_id)
+            store.update_profile(
+                profile.athlete_id,
+                ProfileUpdateRequest(
+                    full_name=request_body.athlete.full_name,
+                    technical_style=request_body.athlete.technical_style,
+                    tactical_style=request_body.athlete.tactical_style,
+                    stance=request_body.athlete.stance,
+                    professional_status=request_body.athlete.professional_status,
+                    record=request_body.athlete.record,
+                    athlete_timezone=request_body.athlete.athlete_timezone,
+                    athlete_locale=request_body.athlete.athlete_locale,
+                    onboarding_draft=request_body.model_dump(mode="json"),
+                ),
+            )
+            logger.info("[plans] update_profile:success athlete_id=%s", profile.athlete_id)
+
+            logger.info("[plans] create_intake:start athlete_id=%s", profile.athlete_id)
+            intake = store.create_intake(profile.athlete_id, request_body)
+            logger.info("[plans] create_intake:success athlete_id=%s intake_id=%s", profile.athlete_id, intake.get("id"))
+
+            logger.info(
+                "[plans] stage1:payload_summary athlete_id=%s fight_date=%s weekly_training_frequency=%s availability_count=%s hard_sparring_count=%s injuries_present=%s",
+                profile.athlete_id,
+                request_body.fight_date,
+                request_body.weekly_training_frequency,
+                len(request_body.training_availability or []),
+                len(request_body.hard_sparring_days or []),
+                bool(request_body.injuries),
+            )
+            logger.info("[plans] stage1:start athlete_id=%s", profile.athlete_id)
+            stage1_result = await planner_fn(request_body.to_payload())
+            logger.info(
+                "[plans] stage1:success athlete_id=%s stage1_status=%s has_plan_text=%s has_stage2_payload=%s has_planning_brief=%s keys=%s",
+                profile.athlete_id,
+                stage1_result.get("status"),
+                bool(stage1_result.get("plan_text")),
+                bool(stage1_result.get("stage2_payload")),
+                bool(stage1_result.get("planning_brief")),
+                sorted(stage1_result.keys()),
             )
 
-        try:
-            finalized_result = await stage2.finalize(stage1_result=stage1_result)
-        except Stage2AutomationUnavailableError as exc:
-            logger.warning("[plans] stage2 unavailable athlete_id=%s detail=%s", profile.athlete_id, exc)
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=str(exc),
-            ) from exc
-        except Stage2AutomationError as exc:
-            logger.exception("[plans] stage2 failed athlete_id=%s", profile.athlete_id)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=str(exc),
-            ) from exc
+            if stage1_result.get("status") == "invalid_input":
+                logger.warning(
+                    "[plans] stage1:invalid_input athlete_id=%s missing_fields=%s",
+                    profile.athlete_id,
+                    stage1_result.get("missing_fields", []),
+                )
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "message": stage1_result.get("error", "invalid planning input"),
+                        "missing_fields": stage1_result.get("missing_fields", []),
+                    },
+                )
 
-        logger.info(
-            "[plans] stage2 completed athlete_id=%s app_status=%s stage2_status=%s attempts=%s",
-            profile.athlete_id,
-            finalized_result.get("status"),
-            finalized_result.get("stage2_status"),
-            finalized_result.get("stage2_attempt_count"),
-        )
+            try:
+                logger.info("[plans] stage2:start athlete_id=%s", profile.athlete_id)
+                finalized_result = await stage2.finalize(stage1_result=stage1_result)
+                logger.info(
+                    "[plans] stage2:success athlete_id=%s app_status=%s stage2_status=%s attempts=%s",
+                    profile.athlete_id,
+                    finalized_result.get("status"),
+                    finalized_result.get("stage2_status"),
+                    finalized_result.get("stage2_attempt_count"),
+                )
+            except Stage2AutomationUnavailableError as exc:
+                logger.warning("[plans] stage2:unavailable athlete_id=%s detail=%s", profile.athlete_id, exc)
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=str(exc),
+                ) from exc
+            except Stage2AutomationError as exc:
+                logger.exception("[plans] stage2:failed athlete_id=%s", profile.athlete_id)
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=str(exc),
+                ) from exc
 
-        plan_row = store.create_plan(
-            athlete_id=profile.athlete_id,
-            intake_id=str(intake["id"]),
-            request=request_body,
-            result={
-                **finalized_result,
-                "full_name": request_body.athlete.full_name,
-            },
-        )
-        store.clear_onboarding_draft(profile.athlete_id)
-        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+            logger.info("[plans] create_plan:start athlete_id=%s", profile.athlete_id)
+            plan_row = store.create_plan(
+                athlete_id=profile.athlete_id,
+                intake_id=str(intake["id"]),
+                request=request_body,
+                result={
+                    **finalized_result,
+                    "full_name": request_body.athlete.full_name,
+                },
+            )
+            logger.info("[plans] create_plan:success athlete_id=%s plan_id=%s", profile.athlete_id, plan_row.get("id"))
+
+            logger.info("[plans] clear_onboarding_draft:start athlete_id=%s", profile.athlete_id)
+            store.clear_onboarding_draft(profile.athlete_id)
+            logger.info("[plans] clear_onboarding_draft:success athlete_id=%s", profile.athlete_id)
+
+            logger.info("[plans] generate:complete athlete_id=%s plan_id=%s", profile.athlete_id, plan_row.get("id"))
+            return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("[plans] generate:unhandled_exception athlete_id=%s", profile.athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Plan generation failed unexpectedly. Check server logs with the request ID.",
+            )
 
     @app.get("/api/plans", response_model=list[PlanSummary])
     def list_plans(
@@ -484,12 +613,20 @@ def create_app(
 
 
 def _build_runtime_app() -> FastAPI:
+    logger.info(
+        "[app] build_runtime_app:start demo_mode=%s has_supabase_url=%s has_service_role_key=%s",
+        os.getenv("UNLXCK_DEMO_MODE"),
+        bool(os.getenv("SUPABASE_URL")),
+        bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
+    )
     if os.getenv("UNLXCK_DEMO_MODE") == "1":
+        logger.info("[app] build_runtime_app:using_demo_mode")
         return create_app(
             store=get_demo_store(),
             auth_service=DemoAuthService(),
             mode_label="demo",
         )
+    logger.info("[app] build_runtime_app:using_supabase_mode")
     return create_app(
         store=SupabaseAppStore.from_env(),
         auth_service=SupabaseAuthService.from_env(),
@@ -500,6 +637,7 @@ def _build_runtime_app() -> FastAPI:
 try:
     app = _build_runtime_app()
 except RuntimeError:
+    logger.exception("[app] runtime_app_build_failed")
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
     @app.get("/health")

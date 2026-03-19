@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import importlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -9,6 +10,7 @@ import pytest
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 
+import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import ManualStage2SubmissionRequest, PlanRequest, ProfileUpdateRequest
@@ -486,6 +488,56 @@ def test_auth_is_required_for_me_route():
     response = client.get("/api/me")
 
     assert response.status_code == 401
+
+
+def test_request_id_header_is_attached_to_error_responses():
+    client, _, _ = _build_client()
+
+    response = client.get("/api/me")
+
+    assert response.status_code == 401
+    assert len(response.headers["x-request-id"]) == 8
+
+
+def test_request_middleware_returns_json_request_id_for_unhandled_exceptions():
+    app = create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        planner=_planner,
+        stage2_automator=FakeStage2Automator(result=finalized_result()),
+    )
+
+    @app.get("/boom")
+    def boom():
+        raise RuntimeError("boom")
+
+    client = TestClient(app, raise_server_exceptions=False)
+
+    response = client.get("/boom")
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Internal server error"
+    assert response.json()["request_id"] == response.headers["x-request-id"]
+    assert len(response.json()["request_id"]) == 8
+
+
+def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_ANON_KEY", raising=False)
+
+    reloaded = importlib.reload(app_module)
+
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": False,
+        "app": "unlxck-fight-camp-api",
+        "detail": "missing supabase configuration",
+    }
 
 
 def test_cors_allows_normalized_production_origin(monkeypatch: pytest.MonkeyPatch):
