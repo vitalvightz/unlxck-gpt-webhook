@@ -260,6 +260,7 @@ function ArtifactActions({
   filename: string;
 }) {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   useEffect(() => {
     if (!copiedKey) {
@@ -269,19 +270,38 @@ function ArtifactActions({
     return () => window.clearTimeout(timeout);
   }, [copiedKey]);
 
+  useEffect(() => {
+    if (!copyFailed) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setCopyFailed(false), 2500);
+    return () => window.clearTimeout(timeout);
+  }, [copyFailed]);
+
   if (!text.trim()) {
     return null;
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(text);
-    setCopiedKey(artifactKey);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(artifactKey);
+    } catch {
+      setCopyFailed(true);
+    }
+  }
+
+  let copyLabel = "Copy text";
+  if (copiedKey === artifactKey) {
+    copyLabel = "Copied";
+  } else if (copyFailed) {
+    copyLabel = "Copy failed";
   }
 
   return (
     <div className="plan-summary-actions">
       <button type="button" className="ghost-button" onClick={handleCopy}>
-        {copiedKey === artifactKey ? "Copied" : "Copy text"}
+        {copyLabel}
       </button>
       <button type="button" className="ghost-button" onClick={() => downloadArtifact(text, filename)}>
         Download .txt
@@ -658,7 +678,14 @@ export function PlanViewer({
             </span>
           </div>
           {hasPublishedPlan ? (
-            <pre className="plan-text-block">{athletePlanText}</pre>
+            <>
+              <ArtifactActions
+                artifactKey="athlete_plan_text"
+                text={athletePlanText}
+                filename={buildArtifactFilename(plan, "athlete-plan")}
+              />
+              <pre className="plan-text-block">{athletePlanText}</pre>
+            </>
           ) : (
             <div className="plan-review-stack">
               {isAdmin ? (
