@@ -199,6 +199,22 @@ class DemoStore:
                 )
         return sorted(rows, key=lambda row: row["updated_at"], reverse=True)
 
+    def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            profile = self.profiles.get(athlete_id)
+            if not profile:
+                return None
+            plans = sorted(
+                [plan for plan in self.plans.values() if plan["athlete_id"] == athlete_id],
+                key=lambda row: row["created_at"],
+                reverse=True,
+            )
+            return {
+                **profile,
+                "plan_count": len(plans),
+                "latest_plan_created_at": plans[0]["created_at"] if plans else None,
+            }
+
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         with self._lock:
             self.profiles[athlete_id]["onboarding_draft"] = None

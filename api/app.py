@@ -618,6 +618,17 @@ def create_app(
     ) -> list[AdminAthleteRecord]:
         return [_map_admin_athlete(row) for row in store.list_admin_athletes()]
 
+    @app.get("/api/admin/athletes/{athlete_id}", response_model=AdminAthleteRecord)
+    def get_admin_athlete(
+        athlete_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> AdminAthleteRecord:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        return _map_admin_athlete(row)
+
     return app
 
 
