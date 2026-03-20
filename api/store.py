@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+import httpx
 from fastapi import HTTPException, status
 from supabase import Client, create_client
 
@@ -13,6 +15,12 @@ from .auth import AuthenticatedUser
 from .models import PlanRequest, ProfileUpdateRequest
 
 logger = logging.getLogger(__name__)
+
+_TRANSIENT_SUPABASE_ERRORS = (
+    httpx.RemoteProtocolError,
+    httpx.ConnectError,
+    httpx.ReadTimeout,
+)
 
 
 class AppStore(Protocol):
@@ -85,8 +93,77 @@ class SupabaseAppStore:
         rows = getattr(response, "data", None) or []
         return rows[0] if rows else None
 
+    def _log_profile_event(self, *, operation: str, user: AuthenticatedUser, **fields: Any) -> None:
+        details = " ".join(f"{key}=%r" % value for key, value in sorted(fields.items()))
+        suffix = f" {details}" if details else ""
+        logger.info(
+            "[store] profile:%s user_id=%s email=%s%s",
+            operation,
+            user.user_id,
+            user.email,
+            suffix,
+        )
+
+    def _is_transient_profile_error(self, exc: Exception) -> bool:
+        return isinstance(exc, _TRANSIENT_SUPABASE_ERRORS)
+
+    def _get_profile_by_id(self, athlete_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
+
+    def _build_profile_payload(
+        self,
+        *,
+        user: AuthenticatedUser,
+        existing: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        existing = existing or {}
+        return {
+            "id": user.user_id,
+            "email": user.email,
+            "full_name": existing.get("full_name") or user.full_name,
+            "role": existing.get("role") or self._default_role_for(user),
+            "technical_style": existing.get("technical_style") or [],
+            "tactical_style": existing.get("tactical_style") or [],
+            "stance": existing.get("stance") or "",
+            "professional_status": existing.get("professional_status") or "",
+            "record_summary": existing.get("record_summary") or "",
+            "athlete_timezone": existing.get("athlete_timezone") or "",
+            "athlete_locale": existing.get("athlete_locale") or "",
+            "onboarding_draft": existing.get("onboarding_draft"),
+            "avatar_url": existing.get("avatar_url"),
+        }
+
+    def _upsert_profile_with_retry(
+        self,
+        *,
+        user: AuthenticatedUser,
+        payload: dict[str, Any],
+        attempts: int = 3,
+        backoff_seconds: float = 0.25,
+    ) -> None:
+        for attempt in range(1, attempts + 1):
+            try:
+                self._log_profile_event(operation="upsert_attempt", user=user, attempt=attempt)
+                self.client.table("profiles").upsert(payload, on_conflict="id").execute()
+                self._log_profile_event(operation="upsert_success", user=user, attempt=attempt)
+                return
+            except Exception as exc:
+                transient = self._is_transient_profile_error(exc)
+                logger.warning(
+                    "[store] profile:upsert_failure user_id=%s email=%s attempt=%s transient=%s error_type=%s error=%s",
+                    user.user_id,
+                    user.email,
+                    attempt,
+                    transient,
+                    type(exc).__name__,
+                    exc,
+                )
+                if not transient or attempt >= attempts:
+                    raise
+                time.sleep(backoff_seconds * attempt)
+
     def _require_profile(self, athlete_id: str) -> dict[str, Any]:
-        profile = self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
+        profile = self._get_profile_by_id(athlete_id)
         if not profile:
             logger.warning("[store] profile not found athlete_id=%s", athlete_id)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="profile not found")
@@ -99,34 +176,53 @@ class SupabaseAppStore:
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         try:
-            logger.info("[store] ensure_profile:start athlete_id=%s email=%s", user.user_id, user.email)
-            existing = self._select_first(self.client.table("profiles").select("*").eq("id", user.user_id))
-            # Preserve existing role; assign default only for new profiles.
-            role = (existing or {}).get("role") or self._default_role_for(user)
-            payload = {
-                "id": user.user_id,
-                "email": user.email,
-                "full_name": (existing or {}).get("full_name") or user.full_name,
-                "role": role,
-                "technical_style": (existing or {}).get("technical_style") or [],
-                "tactical_style": (existing or {}).get("tactical_style") or [],
-                "stance": (existing or {}).get("stance") or "",
-                "professional_status": (existing or {}).get("professional_status") or "",
-                "record_summary": (existing or {}).get("record_summary") or "",
-                "athlete_timezone": (existing or {}).get("athlete_timezone") or "",
-                "athlete_locale": (existing or {}).get("athlete_locale") or "",
-                "onboarding_draft": (existing or {}).get("onboarding_draft"),
-                "avatar_url": (existing or {}).get("avatar_url"),
-            }
-            self.client.table("profiles").upsert(payload, on_conflict="id").execute()
+            self._log_profile_event(operation="ensure_start", user=user)
+            existing = self._get_profile_by_id(user.user_id)
+            if existing:
+                self._log_profile_event(
+                    operation="ensure_existing",
+                    user=user,
+                    role=existing.get("role") or self._default_role_for(user),
+                )
+                return existing
+
+            payload = self._build_profile_payload(user=user, existing=None)
+            try:
+                self._upsert_profile_with_retry(user=user, payload=payload)
+            except Exception as exc:
+                logger.exception(
+                    "[store] profile:ensure_upsert_exception user_id=%s email=%s error_type=%s",
+                    user.user_id,
+                    user.email,
+                    type(exc).__name__,
+                )
+                fallback = self._get_profile_by_id(user.user_id)
+                if fallback:
+                    self._log_profile_event(operation="ensure_fallback_read_success", user=user)
+                    return fallback
+                if self._is_transient_profile_error(exc):
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="profile service temporarily unavailable",
+                    ) from exc
+                raise
+
             profile = self._require_profile(user.user_id)
-            logger.info("[store] ensure_profile:success athlete_id=%s role=%s", user.user_id, profile.get("role"))
+            self._log_profile_event(operation="ensure_created", user=user, role=profile.get("role"))
             return profile
         except HTTPException:
             raise
-        except Exception:
-            logger.exception("[store] ensure_profile:exception athlete_id=%s email=%s", user.user_id, user.email)
-            raise
+        except Exception as exc:
+            logger.exception(
+                "[store] ensure_profile:exception athlete_id=%s email=%s error_type=%s",
+                user.user_id,
+                user.email,
+                type(exc).__name__,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to ensure profile",
+            ) from exc
 
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]:
         try:

@@ -386,6 +386,15 @@ def create_app(
             profile = _map_profile_row(store.ensure_profile(user))
             logger.info("[auth] profile_resolved athlete_id=%s role=%s", profile.athlete_id, profile.role)
             return profile
+        except HTTPException as exc:
+            logger.warning(
+                "[auth] profile_resolution_http_error user_id=%s email=%s status_code=%s detail=%s",
+                user.user_id,
+                user.email,
+                exc.status_code,
+                exc.detail,
+            )
+            raise
         except Exception:
             logger.exception("[auth] profile_resolution_failed user_id=%s email=%s", user.user_id, user.email)
             raise
