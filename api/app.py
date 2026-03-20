@@ -8,7 +8,7 @@ import uuid
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -433,11 +433,13 @@ def create_app(
     @app.post("/api/plans/generate", response_model=PlanDetail, status_code=201)
     async def generate_current_user_plan(
         request_body: PlanRequest,
+        background_tasks: BackgroundTasks,
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
         planner_fn: Planner = Depends(get_planner),
         stage2: Stage2Automator = Depends(get_stage2_automator),
     ) -> PlanDetail:
+        t_start = time.perf_counter()
         logger.info(
             "[plans] generate:start athlete_id=%s fight_date=%s technical_style=%s",
             profile.athlete_id,
@@ -445,26 +447,47 @@ def create_app(
             request_body.athlete.technical_style,
         )
         try:
-            logger.info("[plans] update_profile:start athlete_id=%s", profile.athlete_id)
-            store.update_profile(
-                profile.athlete_id,
-                ProfileUpdateRequest(
-                    full_name=request_body.athlete.full_name,
-                    technical_style=request_body.athlete.technical_style,
-                    tactical_style=request_body.athlete.tactical_style,
-                    stance=request_body.athlete.stance,
-                    professional_status=request_body.athlete.professional_status,
-                    record=request_body.athlete.record,
-                    athlete_timezone=request_body.athlete.athlete_timezone,
-                    athlete_locale=request_body.athlete.athlete_locale,
-                    onboarding_draft=request_body.model_dump(mode="json"),
-                ),
+            # Non-essential: profile refresh from request data does not affect plan generation
+            # or the response payload; deferred off the critical path.
+            _athlete_id = profile.athlete_id
+            _profile_update = ProfileUpdateRequest(
+                full_name=request_body.athlete.full_name,
+                technical_style=request_body.athlete.technical_style,
+                tactical_style=request_body.athlete.tactical_style,
+                stance=request_body.athlete.stance,
+                professional_status=request_body.athlete.professional_status,
+                record=request_body.athlete.record,
+                athlete_timezone=request_body.athlete.athlete_timezone,
+                athlete_locale=request_body.athlete.athlete_locale,
+                onboarding_draft=request_body.model_dump(mode="json"),
             )
-            logger.info("[plans] update_profile:success athlete_id=%s", profile.athlete_id)
 
+            def _deferred_update_profile() -> None:
+                try:
+                    t0 = time.perf_counter()
+                    logger.info("[plans] deferred:update_profile:start athlete_id=%s", _athlete_id)
+                    store.update_profile(_athlete_id, _profile_update)
+                    logger.info(
+                        "[plans] deferred:update_profile:success athlete_id=%s duration_ms=%s",
+                        _athlete_id,
+                        round((time.perf_counter() - t0) * 1000, 2),
+                    )
+                except Exception:
+                    logger.exception("[plans] deferred:update_profile:failed athlete_id=%s", _athlete_id)
+
+            background_tasks.add_task(_deferred_update_profile)
+            logger.info("[plans] deferred:update_profile:enqueued athlete_id=%s", profile.athlete_id)
+
+            # Essential: intake_id is required by create_plan; must happen on the critical path.
             logger.info("[plans] create_intake:start athlete_id=%s", profile.athlete_id)
+            t_intake = time.perf_counter()
             intake = store.create_intake(profile.athlete_id, request_body)
-            logger.info("[plans] create_intake:success athlete_id=%s intake_id=%s", profile.athlete_id, intake.get("id"))
+            logger.info(
+                "[plans] create_intake:success athlete_id=%s intake_id=%s duration_ms=%s",
+                profile.athlete_id,
+                intake.get("id"),
+                round((time.perf_counter() - t_intake) * 1000, 2),
+            )
 
             logger.info(
                 "[plans] stage1:payload_summary athlete_id=%s fight_date=%s weekly_training_frequency=%s availability_count=%s hard_sparring_count=%s injuries_present=%s",
@@ -476,15 +499,17 @@ def create_app(
                 bool(request_body.injuries),
             )
             logger.info("[plans] stage1:start athlete_id=%s", profile.athlete_id)
+            t_stage1 = time.perf_counter()
             stage1_result = await planner_fn(request_body.to_payload())
             logger.info(
-                "[plans] stage1:success athlete_id=%s stage1_status=%s has_plan_text=%s has_stage2_payload=%s has_planning_brief=%s keys=%s",
+                "[plans] stage1:success athlete_id=%s stage1_status=%s has_plan_text=%s has_stage2_payload=%s has_planning_brief=%s keys=%s duration_ms=%s",
                 profile.athlete_id,
                 stage1_result.get("status"),
                 bool(stage1_result.get("plan_text")),
                 bool(stage1_result.get("stage2_payload")),
                 bool(stage1_result.get("planning_brief")),
                 sorted(stage1_result.keys()),
+                round((time.perf_counter() - t_stage1) * 1000, 2),
             )
 
             if stage1_result.get("status") == "invalid_input":
@@ -503,13 +528,15 @@ def create_app(
 
             try:
                 logger.info("[plans] stage2:start athlete_id=%s", profile.athlete_id)
+                t_stage2 = time.perf_counter()
                 finalized_result = await stage2.finalize(stage1_result=stage1_result)
                 logger.info(
-                    "[plans] stage2:success athlete_id=%s app_status=%s stage2_status=%s attempts=%s",
+                    "[plans] stage2:success athlete_id=%s app_status=%s stage2_status=%s attempts=%s duration_ms=%s",
                     profile.athlete_id,
                     finalized_result.get("status"),
                     finalized_result.get("stage2_status"),
                     finalized_result.get("stage2_attempt_count"),
+                    round((time.perf_counter() - t_stage2) * 1000, 2),
                 )
             except Stage2AutomationUnavailableError as exc:
                 logger.warning("[plans] stage2:unavailable athlete_id=%s detail=%s", profile.athlete_id, exc)
@@ -524,7 +551,9 @@ def create_app(
                     detail=str(exc),
                 ) from exc
 
+            # Essential: plan record must exist before the response is returned.
             logger.info("[plans] create_plan:start athlete_id=%s", profile.athlete_id)
+            t_plan = time.perf_counter()
             plan_row = store.create_plan(
                 athlete_id=profile.athlete_id,
                 intake_id=str(intake["id"]),
@@ -534,13 +563,41 @@ def create_app(
                     "full_name": request_body.athlete.full_name,
                 },
             )
-            logger.info("[plans] create_plan:success athlete_id=%s plan_id=%s", profile.athlete_id, plan_row.get("id"))
+            logger.info(
+                "[plans] create_plan:success athlete_id=%s plan_id=%s duration_ms=%s",
+                profile.athlete_id,
+                plan_row.get("id"),
+                round((time.perf_counter() - t_plan) * 1000, 2),
+            )
 
-            logger.info("[plans] clear_onboarding_draft:start athlete_id=%s", profile.athlete_id)
-            store.clear_onboarding_draft(profile.athlete_id)
-            logger.info("[plans] clear_onboarding_draft:success athlete_id=%s", profile.athlete_id)
+            # Non-essential: draft cleanup does not affect the returned plan; deferred.
+            _plan_id = plan_row.get("id")
 
-            logger.info("[plans] generate:complete athlete_id=%s plan_id=%s", profile.athlete_id, plan_row.get("id"))
+            def _deferred_clear_onboarding_draft() -> None:
+                try:
+                    t0 = time.perf_counter()
+                    logger.info("[plans] deferred:clear_onboarding_draft:start athlete_id=%s", _athlete_id)
+                    store.clear_onboarding_draft(_athlete_id)
+                    logger.info(
+                        "[plans] deferred:clear_onboarding_draft:success athlete_id=%s duration_ms=%s",
+                        _athlete_id,
+                        round((time.perf_counter() - t0) * 1000, 2),
+                    )
+                except Exception:
+                    logger.exception(
+                        "[plans] deferred:clear_onboarding_draft:failed athlete_id=%s", _athlete_id
+                    )
+
+            background_tasks.add_task(_deferred_clear_onboarding_draft)
+            logger.info("[plans] deferred:clear_onboarding_draft:enqueued athlete_id=%s", profile.athlete_id)
+
+            critical_path_ms = round((time.perf_counter() - t_start) * 1000, 2)
+            logger.info(
+                "[plans] generate:complete athlete_id=%s plan_id=%s critical_path_ms=%s",
+                profile.athlete_id,
+                _plan_id,
+                critical_path_ms,
+            )
             return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
         except HTTPException:
             raise

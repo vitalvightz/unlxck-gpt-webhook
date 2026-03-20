@@ -1281,3 +1281,135 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
             raise AssertionError(f"Unexpected resolution strategy: {scenario.expected_resolution}")
 
         assert store.get_plan(plan_id)["status"] == "ready"
+
+
+# ---------------------------------------------------------------------------
+# Deferred non-essential write tests
+# ---------------------------------------------------------------------------
+
+def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
+    """Response schema must be unchanged after moving non-essential writes to background tasks."""
+    client, store, _ = _build_client()
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert "plan_id" in body
+    assert "outputs" in body
+    assert "plan_text" in body["outputs"]
+    assert "pdf_url" in body["outputs"]
+    assert "status" in body
+    assert "fight_date" in body
+    assert "athlete_id" in body
+
+
+def test_generate_plan_essential_writes_happen_synchronously():
+    """create_intake and create_plan must be persisted before the response is returned."""
+    client, store, _ = _build_client()
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 201
+    # Intake must exist.
+    assert store.get_latest_intake("athlete-1") is not None
+    # Plan must exist and match the returned plan_id.
+    plan_id = response.json()["plan_id"]
+    assert store.get_plan(plan_id) is not None
+
+
+def test_generate_plan_deferred_writes_run_but_do_not_block_response():
+    """update_profile and clear_onboarding_draft are run as background tasks.
+
+    With FastAPI's TestClient, background tasks execute synchronously before
+    the call returns, so we can assert their side-effects are visible here.
+    The structural assertion is that a failure in either task does NOT
+    prevent the 201 response from being delivered.
+    """
+    client, store, _ = _build_client()
+
+    # Pre-set an onboarding draft so we can verify it gets cleared by the
+    # deferred background task.
+    store.profiles.setdefault("athlete-1", {})
+    store.ensure_profile(AuthenticatedUser(
+        user_id="athlete-1", email="ari@example.com", full_name="Ari Mensah", metadata={}
+    ))
+    store.profiles["athlete-1"]["onboarding_draft"] = {"current_step": 3}
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 201
+    # Deferred update_profile side-effect: profile full_name refreshed.
+    assert store.profiles["athlete-1"]["full_name"] == "Ari Mensah"
+    # Deferred clear_onboarding_draft side-effect: draft cleared.
+    assert store.profiles["athlete-1"]["onboarding_draft"] is None
+
+
+def test_generate_plan_deferred_write_failure_does_not_fail_main_response():
+    """A failure in a deferred (background) write must not retroactively fail the plan generation.
+
+    We subclass FakeStore so that update_profile and clear_onboarding_draft raise,
+    simulating a transient backend failure in those non-essential writes.
+    The essential writes (create_intake, create_plan) succeed, and the caller
+    must still receive a 201 with the generated plan.
+    """
+
+    class FailingNonEssentialStore(FakeStore):
+        def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict:
+            raise RuntimeError("simulated update_profile failure")
+
+        def clear_onboarding_draft(self, athlete_id: str) -> None:
+            raise RuntimeError("simulated clear_onboarding_draft failure")
+
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FailingNonEssentialStore()
+    stage2 = FakeStage2Automator(result=finalized_result())
+    # raise_server_exceptions=False so background-task exceptions do not
+    # propagate into the test; the response is still the one already sent.
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=_planner,
+            stage2_automator=stage2,
+        ),
+        raise_server_exceptions=False,
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    # Main response must succeed despite deferred-write failures.
+    assert response.status_code == 201
+    body = response.json()
+    assert "plan_id" in body
+    assert body["outputs"]["plan_text"] == "# Final Plan"
+    # Essential writes must still have persisted.
+    assert store.get_latest_intake("athlete-1") is not None
+    assert store.get_plan(body["plan_id"]) is not None
