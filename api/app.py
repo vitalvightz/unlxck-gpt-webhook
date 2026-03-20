@@ -5,6 +5,8 @@ import logging
 import os
 import time
 import uuid
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
@@ -18,6 +20,7 @@ from fightcamp.main import generate_plan
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
 from .models import (
+    GenerationJobResponse,
     AdminAthleteRecord,
     AdminPlanOutputs,
     AdminPlanSummary,
@@ -43,6 +46,42 @@ Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
+
+
+@dataclass
+class GenerationJobState:
+    job_id: str
+    athlete_id: str
+    status: str
+    created_at: str
+    updated_at: str
+    error: str | None = None
+    plan_id: str | None = None
+    latest_plan_id: str | None = None
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _job_response(job: GenerationJobState) -> GenerationJobResponse:
+    return GenerationJobResponse(
+        job_id=job.job_id,
+        athlete_id=job.athlete_id,
+        status=job.status,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+        error=job.error,
+        plan_id=job.plan_id,
+        latest_plan_id=job.latest_plan_id,
+    )
+
+
+def _update_job(job: GenerationJobState, **changes: Any) -> GenerationJobState:
+    for key, value in changes.items():
+        setattr(job, key, value)
+    job.updated_at = _utc_now_iso()
+    return job
 
 
 def _cors_origins() -> list[str]:
@@ -265,6 +304,7 @@ def create_app(
     app.state.planner = planner
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
+    app.state.generation_jobs: dict[str, GenerationJobState] = {}
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins(),
@@ -360,6 +400,9 @@ def create_app(
     def get_stage2_automator(request: Request) -> Stage2Automator:
         return request.app.state.stage2_automator
 
+    def get_generation_jobs(request: Request) -> dict[str, GenerationJobState]:
+        return request.app.state.generation_jobs
+
     def require_user(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
         auth: AuthService = Depends(get_auth_service),
@@ -439,94 +482,40 @@ def create_app(
             plans=[_map_plan_summary(row) for row in store.list_user_plans(profile.athlete_id)],
         )
 
-    @app.post("/api/plans/generate", response_model=PlanDetail, status_code=201)
-    async def generate_current_user_plan(
+    async def _run_generation_job(
+        *,
+        job: GenerationJobState,
         request_body: PlanRequest,
-        background_tasks: BackgroundTasks,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-        planner_fn: Planner = Depends(get_planner),
-        stage2: Stage2Automator = Depends(get_stage2_automator),
-    ) -> PlanDetail:
+        profile: ProfileRecord,
+        store: AppStore,
+        planner_fn: Planner,
+        stage2: Stage2Automator,
+    ) -> None:
         t_start = time.perf_counter()
-        logger.info(
-            "[plans] generate:start athlete_id=%s fight_date=%s technical_style=%s",
-            profile.athlete_id,
-            request_body.fight_date,
-            request_body.athlete.technical_style,
-        )
+        _update_job(job, status="running", error=None)
+        logger.info("[jobs] generation:start athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
         try:
-            # Non-essential: profile refresh from request data does not affect plan generation
-            # or the response payload; deferred off the critical path.
-            _athlete_id = profile.athlete_id
-            _profile_update = ProfileUpdateRequest(
-                full_name=request_body.athlete.full_name,
-                technical_style=request_body.athlete.technical_style,
-                tactical_style=request_body.athlete.tactical_style,
-                stance=request_body.athlete.stance,
-                professional_status=request_body.athlete.professional_status,
-                record=request_body.athlete.record,
-                athlete_timezone=request_body.athlete.athlete_timezone,
-                athlete_locale=request_body.athlete.athlete_locale,
-                onboarding_draft=request_body.model_dump(mode="json"),
-            )
-
-            def _deferred_update_profile() -> None:
-                try:
-                    t0 = time.perf_counter()
-                    logger.info("[plans] deferred:update_profile:start athlete_id=%s", _athlete_id)
-                    store.update_profile(_athlete_id, _profile_update)
-                    logger.info(
-                        "[plans] deferred:update_profile:success athlete_id=%s duration_ms=%s",
-                        _athlete_id,
-                        round((time.perf_counter() - t0) * 1000, 2),
-                    )
-                except Exception:
-                    logger.exception("[plans] deferred:update_profile:failed athlete_id=%s", _athlete_id)
-
-            background_tasks.add_task(_deferred_update_profile)
-            logger.info("[plans] deferred:update_profile:enqueued athlete_id=%s", profile.athlete_id)
-
-            # Essential: intake_id is required by create_plan; must happen on the critical path.
-            logger.info("[plans] create_intake:start athlete_id=%s", profile.athlete_id)
-            t_intake = time.perf_counter()
-            intake = store.create_intake(profile.athlete_id, request_body)
-            logger.info(
-                "[plans] create_intake:success athlete_id=%s intake_id=%s duration_ms=%s",
-                profile.athlete_id,
-                intake.get("id"),
-                round((time.perf_counter() - t_intake) * 1000, 2),
-            )
-
-            logger.info(
-                "[plans] stage1:payload_summary athlete_id=%s fight_date=%s weekly_training_frequency=%s availability_count=%s hard_sparring_count=%s injuries_present=%s",
-                profile.athlete_id,
-                request_body.fight_date,
-                request_body.weekly_training_frequency,
-                len(request_body.training_availability or []),
-                len(request_body.hard_sparring_days or []),
-                bool(request_body.injuries),
-            )
-            logger.info("[plans] stage1:start athlete_id=%s", profile.athlete_id)
-            t_stage1 = time.perf_counter()
-            stage1_result = await planner_fn(request_body.to_payload())
-            logger.info(
-                "[plans] stage1:success athlete_id=%s stage1_status=%s has_plan_text=%s has_stage2_payload=%s has_planning_brief=%s keys=%s duration_ms=%s",
-                profile.athlete_id,
-                stage1_result.get("status"),
-                bool(stage1_result.get("plan_text")),
-                bool(stage1_result.get("stage2_payload")),
-                bool(stage1_result.get("planning_brief")),
-                sorted(stage1_result.keys()),
-                round((time.perf_counter() - t_stage1) * 1000, 2),
-            )
-
-            if stage1_result.get("status") == "invalid_input":
-                logger.warning(
-                    "[plans] stage1:invalid_input athlete_id=%s missing_fields=%s",
+            try:
+                store.update_profile(
                     profile.athlete_id,
-                    stage1_result.get("missing_fields", []),
+                    ProfileUpdateRequest(
+                        full_name=request_body.athlete.full_name,
+                        technical_style=request_body.athlete.technical_style,
+                        tactical_style=request_body.athlete.tactical_style,
+                        stance=request_body.athlete.stance,
+                        professional_status=request_body.athlete.professional_status,
+                        record=request_body.athlete.record,
+                        athlete_timezone=request_body.athlete.athlete_timezone,
+                        athlete_locale=request_body.athlete.athlete_locale,
+                        onboarding_draft=request_body.model_dump(mode="json"),
+                    ),
                 )
+            except Exception:
+                logger.exception("[jobs] generation:update_profile_failed athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
+
+            intake = store.create_intake(profile.athlete_id, request_body)
+            stage1_result = await planner_fn(request_body.to_payload())
+            if stage1_result.get("status") == "invalid_input":
                 raise HTTPException(
                     status_code=422,
                     detail={
@@ -535,87 +524,101 @@ def create_app(
                     },
                 )
 
-            try:
-                logger.info("[plans] stage2:start athlete_id=%s", profile.athlete_id)
-                t_stage2 = time.perf_counter()
-                finalized_result = await stage2.finalize(stage1_result=stage1_result)
-                logger.info(
-                    "[plans] stage2:success athlete_id=%s app_status=%s stage2_status=%s attempts=%s duration_ms=%s",
-                    profile.athlete_id,
-                    finalized_result.get("status"),
-                    finalized_result.get("stage2_status"),
-                    finalized_result.get("stage2_attempt_count"),
-                    round((time.perf_counter() - t_stage2) * 1000, 2),
-                )
-            except Stage2AutomationUnavailableError as exc:
-                logger.warning("[plans] stage2:unavailable athlete_id=%s detail=%s", profile.athlete_id, exc)
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail=str(exc),
-                ) from exc
-            except Stage2AutomationError as exc:
-                logger.exception("[plans] stage2:failed athlete_id=%s", profile.athlete_id)
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail=str(exc),
-                ) from exc
-
-            # Essential: plan record must exist before the response is returned.
-            logger.info("[plans] create_plan:start athlete_id=%s", profile.athlete_id)
-            t_plan = time.perf_counter()
+            finalized_result = await stage2.finalize(stage1_result=stage1_result)
             plan_row = store.create_plan(
                 athlete_id=profile.athlete_id,
                 intake_id=str(intake["id"]),
                 request=request_body,
-                result={
-                    **finalized_result,
-                    "full_name": request_body.athlete.full_name,
-                },
+                result={**finalized_result, "full_name": request_body.athlete.full_name},
+            )
+            try:
+                store.clear_onboarding_draft(profile.athlete_id)
+            except Exception:
+                logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
+
+            final_status = str(plan_row.get("status") or "completed")
+            _update_job(
+                job,
+                status="completed" if final_status == "ready" else final_status,
+                plan_id=str(plan_row.get("id") or ""),
+                latest_plan_id=str(plan_row.get("id") or ""),
+                error=None,
             )
             logger.info(
-                "[plans] create_plan:success athlete_id=%s plan_id=%s duration_ms=%s",
+                "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s duration_ms=%s",
                 profile.athlete_id,
+                job.job_id,
                 plan_row.get("id"),
-                round((time.perf_counter() - t_plan) * 1000, 2),
+                job.status,
+                round((time.perf_counter() - t_start) * 1000, 2),
             )
-
-            # Non-essential: draft cleanup does not affect the returned plan; deferred.
-            _plan_id = plan_row.get("id")
-
-            def _deferred_clear_onboarding_draft() -> None:
-                try:
-                    t0 = time.perf_counter()
-                    logger.info("[plans] deferred:clear_onboarding_draft:start athlete_id=%s", _athlete_id)
-                    store.clear_onboarding_draft(_athlete_id)
-                    logger.info(
-                        "[plans] deferred:clear_onboarding_draft:success athlete_id=%s duration_ms=%s",
-                        _athlete_id,
-                        round((time.perf_counter() - t0) * 1000, 2),
-                    )
-                except Exception:
-                    logger.exception(
-                        "[plans] deferred:clear_onboarding_draft:failed athlete_id=%s", _athlete_id
-                    )
-
-            background_tasks.add_task(_deferred_clear_onboarding_draft)
-            logger.info("[plans] deferred:clear_onboarding_draft:enqueued athlete_id=%s", profile.athlete_id)
-
-            critical_path_ms = round((time.perf_counter() - t_start) * 1000, 2)
-            logger.info(
-                "[plans] generate:complete athlete_id=%s plan_id=%s critical_path_ms=%s",
-                profile.athlete_id,
-                _plan_id,
-                critical_path_ms,
-            )
-            return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
-        except HTTPException:
-            raise
+        except Stage2AutomationUnavailableError as exc:
+            logger.warning("[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s detail=%s", profile.athlete_id, job.job_id, exc)
+            _update_job(job, status="failed", error=str(exc))
+        except Stage2AutomationError as exc:
+            logger.exception("[jobs] generation:stage2_failed athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
+            _update_job(job, status="failed", error=str(exc))
+        except HTTPException as exc:
+            detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
+            logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", profile.athlete_id, job.job_id, detail)
+            _update_job(job, status="failed", error=detail)
         except Exception:
-            logger.exception("[plans] generate:unhandled_exception athlete_id=%s", profile.athlete_id)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Plan generation failed unexpectedly. Check server logs with the request ID.",
-            )
+            logger.exception("[jobs] generation:unhandled_exception athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
+            _update_job(job, status="failed", error="Plan generation failed unexpectedly. Check server logs with the request ID.")
+
+    @app.post("/api/plans/generate", response_model=GenerationJobResponse, status_code=202)
+    async def generate_current_user_plan(
+        request_body: PlanRequest,
+        background_tasks: BackgroundTasks,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        jobs: dict[str, GenerationJobState] = Depends(get_generation_jobs),
+    ) -> GenerationJobResponse:
+        job = GenerationJobState(
+            job_id=f"job_{uuid.uuid4().hex[:12]}",
+            athlete_id=profile.athlete_id,
+            status="queued",
+            created_at=_utc_now_iso(),
+            updated_at=_utc_now_iso(),
+            latest_plan_id=(store.get_latest_plan(profile.athlete_id) or {}).get("id"),
+        )
+        jobs[job.job_id] = job
+        logger.info("[jobs] generation:queued athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
+        background_tasks.add_task(
+            _run_generation_job,
+            job=job,
+            request_body=request_body,
+            profile=profile,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+        )
+        return _job_response(job)
+
+    @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
+    def get_generation_job(
+        job_id: str,
+        profile: ProfileRecord = Depends(require_profile),
+        jobs: dict[str, GenerationJobState] = Depends(get_generation_jobs),
+    ) -> GenerationJobResponse:
+        job = jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        if profile.role != "admin" and job.athlete_id != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        return _job_response(job)
+
+    @app.get("/api/plans/latest", response_model=PlanDetail)
+    def get_latest_plan(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> PlanDetail:
+        plan_row = store.get_latest_plan(profile.athlete_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
 
     @app.get("/api/plans", response_model=list[PlanSummary])
     def list_plans(

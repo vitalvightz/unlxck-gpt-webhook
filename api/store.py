@@ -45,6 +45,8 @@ class AppStore(Protocol):
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None: ...
 
+    def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
+
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_admin_plans(self) -> list[dict[str, Any]]: ...
@@ -372,6 +374,14 @@ class SupabaseAppStore:
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
         return self._select_first(self.client.table("plans").select("*").eq("id", plan_id))
+
+    def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("plans")
+            .select("*")
+            .eq("athlete_id", athlete_id)
+            .order("created_at", desc=True)
+        )
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         payload = {

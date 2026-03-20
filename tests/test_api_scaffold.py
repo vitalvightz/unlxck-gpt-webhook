@@ -125,6 +125,10 @@ class FakeStore:
     def get_plan(self, plan_id: str) -> dict | None:
         return self.plans.get(plan_id)
 
+    def get_latest_plan(self, athlete_id: str) -> dict | None:
+        plans = self.list_user_plans(athlete_id)
+        return plans[0] if plans else None
+
     def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
         row = self.plans.get(plan_id)
         if not row:
@@ -397,6 +401,22 @@ SYSTEM_SCENARIOS = [
         support_marker="Dead Bug - 2x8",
     ),
 ]
+
+
+def _start_generation(client: TestClient, request: PlanRequest | None = None) -> tuple[dict, dict]:
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=(request or _build_request()).model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+    job_body = response.json()
+    job_response = client.get(
+        f"/api/generation-jobs/{job_body['job_id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert job_response.status_code == 200
+    return job_body, job_response.json()
 
 
 def _build_client(automator: FakeStage2Automator | None = None) -> tuple[TestClient, FakeStore, FakeStage2Automator]:
@@ -717,7 +737,7 @@ def test_saved_onboarding_draft_round_trips_through_me_and_clears_after_generati
         json=_build_request().model_dump(mode="json"),
     )
 
-    assert generate_response.status_code == 201
+    assert generate_response.status_code == 202
     assert store.profiles["athlete-1"]["onboarding_draft"] is None
     refreshed_me = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
     assert refreshed_me.json()["profile"]["onboarding_draft"] is None
@@ -728,17 +748,19 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     client, store, stage2 = _build_client()
     payload = _build_request().model_dump(mode="json")
 
-    response = client.post(
-        "/api/plans/generate",
+    _, job = _start_generation(client, PlanRequest.model_validate(payload))
+    detail = client.get(
+        f"/api/plans/{job['plan_id']}",
         headers={"Authorization": "Bearer athlete-token"},
-        json=payload,
     )
 
-    assert response.status_code == 201
-    body = response.json()
-    assert body["outputs"]["plan_text"] == "# Final Plan"
-    assert body["outputs"]["pdf_url"] is None
-    assert body["status"] == "ready"
+    assert detail.status_code == 200
+    body = detail.json()
+    assert job["status"] == "completed"
+    saved = store.get_plan(job["plan_id"])
+    assert saved["plan_text"] == "# Final Plan"
+    assert saved["pdf_url"] is None
+    assert saved["status"] == "ready"
     assert body["admin_outputs"] is None
     assert store.get_latest_intake("athlete-1")["intake"]["fight_date"] == "2026-04-18"
     assert len(store.list_user_plans("athlete-1")) == 1
@@ -769,7 +791,7 @@ def test_generate_plan_persists_retry_pass_result():
         json=_build_request().model_dump(mode="json"),
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     saved = next(iter(store.plans.values()))
     assert saved["plan_text"] == "# Final Retry Plan"
     assert saved["stage2_status"] == "stage2_retry_pass"
@@ -792,16 +814,9 @@ def test_generate_plan_returns_review_required_when_stage2_needs_manual_review()
         )
     )
 
-    response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request().model_dump(mode="json"),
-    )
+    _, job = _start_generation(client)
 
-    assert response.status_code == 201
-    body = response.json()
-    assert body["status"] == "review_required"
-    assert body["outputs"]["plan_text"] == ""
+    assert job["status"] == "review_required"
     saved = next(iter(store.plans.values()))
     assert saved["final_plan_text"] == "# Failed Stage 2 Output"
     assert saved["stage2_status"] == "stage2_failed"
@@ -814,18 +829,12 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
     )
     request = _build_request(scenario.request_overrides)
 
-    response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=request.model_dump(mode="json"),
-    )
+    _, job = _start_generation(client, request)
 
-    assert response.status_code == 201
-    body = response.json()
     saved = next(iter(store.plans.values()))
     latest_intake = store.get_latest_intake("athlete-1")["intake"]
 
-    assert body["status"] == scenario.expected_status
+    assert job["status"] == ("completed" if scenario.expected_status == "ready" else scenario.expected_status)
     assert latest_intake["fight_date"] == request.fight_date
     assert latest_intake["injuries"] == request.injuries
     assert latest_intake["equipment_access"] == request.equipment_access
@@ -835,47 +844,41 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
     assert store.profiles["athlete-1"]["onboarding_draft"] is None
 
     if scenario.expected_status == "ready":
-        assert scenario.support_marker in body["outputs"]["plan_text"]
-        assert "Primary:" not in body["outputs"]["plan_text"]
-        assert "Fallback:" not in body["outputs"]["plan_text"]
+        assert scenario.support_marker in saved["plan_text"]
+        assert "Primary:" not in saved["plan_text"]
+        assert "Fallback:" not in saved["plan_text"]
         assert saved["stage2_status"] == "stage2_pass"
     else:
-        assert body["outputs"]["plan_text"] == ""
+        assert saved["plan_text"] == ""
         warning_codes = [warning["code"] for warning in saved["stage2_validator_report"]["warnings"]]
         assert scenario.expected_review_code in warning_codes
         assert saved["stage2_status"] == "stage2_failed"
         assert saved["stage2_retry_text"] == "repair prompt"
 
 
-def test_stage2_unavailable_returns_503_without_persisting_plan():
+def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
     client, store, _ = _build_client(
         FakeStage2Automator(
             error=Stage2AutomationUnavailableError("OPENAI_API_KEY is required for automated Stage 2 finalization.")
         )
     )
 
-    response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request().model_dump(mode="json"),
-    )
+    _, job = _start_generation(client)
 
-    assert response.status_code == 503
+    assert job["status"] == "failed"
+    assert "OPENAI_API_KEY" in job["error"]
     assert len(store.plans) == 0
 
 
-def test_stage2_gateway_failure_returns_502_without_persisting_plan():
+def test_stage2_gateway_failure_returns_failed_job_without_persisting_plan():
     client, store, _ = _build_client(
         FakeStage2Automator(error=Stage2AutomationError("Stage 2 model request failed"))
     )
 
-    response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request().model_dump(mode="json"),
-    )
+    _, job = _start_generation(client)
 
-    assert response.status_code == 502
+    assert job["status"] == "failed"
+    assert "Stage 2 model request failed" in job["error"]
     assert len(store.plans) == 0
 
 
@@ -993,18 +996,13 @@ def test_admin_can_list_and_open_review_required_plan_for_resolution():
     )
     client, store, _ = _build_client(FakeStage2Automator(result=review_result))
 
-    generate_response = client.post(
-        "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
-        json=_build_request(
+    _, job = _start_generation(client, _build_request(
             {
                 "equipment_access": ["bands", "bodyweight"],
                 "training_availability": ["Tuesday", "Thursday", "Saturday"],
             }
-        ).model_dump(mode="json"),
-    )
-    assert generate_response.status_code == 201
-    plan_id = generate_response.json()["plan_id"]
+        ))
+    plan_id = job["plan_id"]
 
     admin_list = client.get("/api/admin/plans", headers={"Authorization": "Bearer admin-token"})
     assert admin_list.status_code == 200
@@ -1243,13 +1241,8 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
         client, store, _ = _build_client(
             FakeStage2Automator(result=scenario.automator_result)
         )
-        generate_response = client.post(
-            "/api/plans/generate",
-            headers={"Authorization": "Bearer athlete-token"},
-            json=_build_request(scenario.request_overrides).model_dump(mode="json"),
-        )
-        assert generate_response.status_code == 201
-        plan_id = generate_response.json()["plan_id"]
+        _, job = _start_generation(client, _build_request(scenario.request_overrides))
+        plan_id = job["plan_id"]
 
         if scenario.expected_resolution == "approve":
             resolved = client.post(
@@ -1297,15 +1290,11 @@ def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
         json=_build_request().model_dump(mode="json"),
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     body = response.json()
-    assert "plan_id" in body
-    assert "outputs" in body
-    assert "plan_text" in body["outputs"]
-    assert "pdf_url" in body["outputs"]
-    assert "status" in body
-    assert "fight_date" in body
-    assert "athlete_id" in body
+    assert body["job_id"].startswith("job_")
+    assert body["status"] in {"queued", "running", "completed"}
+    assert body["athlete_id"] == "athlete-1"
 
 
 def test_generate_plan_essential_writes_happen_synchronously():
@@ -1318,11 +1307,14 @@ def test_generate_plan_essential_writes_happen_synchronously():
         json=_build_request().model_dump(mode="json"),
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     # Intake must exist.
     assert store.get_latest_intake("athlete-1") is not None
     # Plan must exist and match the returned plan_id.
-    plan_id = response.json()["plan_id"]
+    job_body = response.json()
+    assert job_body["job_id"].startswith("job_")
+    assert len(store.plans) == 1
+    plan_id = next(iter(store.plans.values()))["id"]
     assert store.get_plan(plan_id) is not None
 
 
@@ -1350,7 +1342,7 @@ def test_generate_plan_deferred_writes_run_but_do_not_block_response():
         json=_build_request().model_dump(mode="json"),
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 202
     # Deferred update_profile side-effect: profile full_name refreshed.
     assert store.profiles["athlete-1"]["full_name"] == "Ari Mensah"
     # Deferred clear_onboarding_draft side-effect: draft cleared.
@@ -1406,10 +1398,123 @@ def test_generate_plan_deferred_write_failure_does_not_fail_main_response():
     )
 
     # Main response must succeed despite deferred-write failures.
-    assert response.status_code == 201
+    assert response.status_code == 202
     body = response.json()
-    assert "plan_id" in body
-    assert body["outputs"]["plan_text"] == "# Final Plan"
+    assert body["job_id"].startswith("job_")
+    job_response = client.get(
+        f"/api/generation-jobs/{body['job_id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert job_response.status_code == 200
+    assert job_response.json()["status"] == "completed"
     # Essential writes must still have persisted.
     assert store.get_latest_intake("athlete-1") is not None
-    assert store.get_plan(body["plan_id"]) is not None
+    assert len(store.plans) == 1
+
+
+def test_generate_plan_returns_job_payload_and_status_endpoint_resolves_completed_plan():
+    client, store, _ = _build_client()
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["job_id"].startswith("job_")
+
+    job_response = client.get(
+        f"/api/generation-jobs/{body['job_id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert job_response.status_code == 200
+    job_body = job_response.json()
+    assert job_body["status"] == "completed"
+    assert job_body["plan_id"]
+    assert job_body["latest_plan_id"] == job_body["plan_id"]
+    assert store.get_plan(job_body["plan_id"]) is not None
+
+
+def test_generation_job_status_reports_review_required_result():
+    client, _, _ = _build_client(
+        FakeStage2Automator(
+            result=finalized_result(
+                status="review_required",
+                plan_text="",
+                final_plan_text="# Failed Stage 2 Output",
+                stage2_status="stage2_failed",
+                stage2_retry_text="repair prompt",
+                stage2_validator_report={"errors": [{"code": "restriction_violation"}], "warnings": []},
+                stage2_attempt_count=2,
+            )
+        )
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    job_response = client.get(
+        f"/api/generation-jobs/{job_id}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert job_response.status_code == 200
+    assert job_response.json()["status"] == "review_required"
+
+
+def test_latest_plan_endpoint_returns_latest_saved_plan():
+    client, store, _ = _build_client()
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    latest = client.get("/api/plans/latest", headers={"Authorization": "Bearer athlete-token"})
+
+    assert latest.status_code == 200
+    assert latest.json()["plan_id"] == next(iter(store.plans.values()))["id"]
+
+
+def test_generation_job_endpoint_requires_same_athlete_or_admin():
+    client, _, _ = _build_client()
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert response.status_code == 202
+    job_id = response.json()["job_id"]
+
+    other_user = AuthenticatedUser(
+        user_id="athlete-2",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    app_store = client.app.state.store
+    client.app.state.auth_service.users_by_token["other-token"] = other_user
+    app_store.ensure_profile(other_user)
+
+    forbidden = client.get(
+        f"/api/generation-jobs/{job_id}",
+        headers={"Authorization": "Bearer other-token"},
+    )
+    allowed = client.get(
+        f"/api/generation-jobs/{job_id}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert forbidden.status_code == 403
+    assert allowed.status_code == 200
