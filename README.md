@@ -248,6 +248,8 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
+In production, `NEXT_PUBLIC_API_BASE_URL` must point at your deployed backend (for example your Render URL). The frontend rewrite now fails fast in production if this value is missing, instead of silently proxying `/api/*` to `127.0.0.1`.
+
 ### Athlete-First Web Flow
 
 1. Athlete signs up or logs in.

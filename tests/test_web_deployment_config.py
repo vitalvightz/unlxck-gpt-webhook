@@ -10,16 +10,16 @@ WEB_ROOT = REPO_ROOT / "web"
 NEXT_CONFIG_SOURCE = (WEB_ROOT / "next.config.ts").read_text()
 
 
-def _expected_destination(api_base_url: str | None = None) -> str:
-    backend_url = api_base_url or "http://127.0.0.1:8000"
-    return f"{backend_url}/api/:path*"
+def _expected_destination(api_base_url: str) -> str:
+    return f"{api_base_url}/api/:path*"
 
 
-def test_vercel_frontend_rewrite_defaults_to_local_backend():
+def test_vercel_frontend_rewrite_requires_backend_url_in_production():
     assert 'source: "/api/:path*"' in NEXT_CONFIG_SOURCE
-    assert 'process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"' in NEXT_CONFIG_SOURCE
+    assert 'NEXT_PUBLIC_API_BASE_URL must be set in production for /api rewrites.' in NEXT_CONFIG_SOURCE
+    assert 'process.env.NODE_ENV !== "production"' in NEXT_CONFIG_SOURCE
+    assert 'http://127.0.0.1:8000' in NEXT_CONFIG_SOURCE
     assert '`/api/:path*`' not in NEXT_CONFIG_SOURCE
-    assert _expected_destination() == "http://127.0.0.1:8000/api/:path*"
 
 
 def test_vercel_frontend_rewrite_uses_configured_backend_destination():
@@ -31,3 +31,11 @@ def test_browser_fetches_use_same_origin_api_paths():
 
     assert 'if (typeof window !== "undefined") {' in api_client_source
     assert 'return "";' in api_client_source
+
+
+def test_server_side_api_client_requires_backend_url_in_production():
+    api_client_source = (WEB_ROOT / "lib" / "api.ts").read_text()
+
+    assert "NEXT_PUBLIC_API_BASE_URL must be set for server-side API calls in production." in api_client_source
+    assert 'process.env.NODE_ENV !== "production"' in api_client_source
+    assert 'http://127.0.0.1:8000' in api_client_source
