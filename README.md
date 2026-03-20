@@ -203,9 +203,10 @@ APP_CORS_ORIGIN_REGEX=
 `SUPABASE_SERVICE_ROLE_KEY` is the preferred backend credential. `SUPABASE_ANON_KEY` is accepted as a fallback for auth token lookups, but it does not replace the service role key for production writes.
 
 When the frontend is deployed separately from the API (for example Vercel → Render), all browser
-API calls are proxied through the Next.js rewrite in `web/next.config.ts`. This means the browser
-only ever talks to the Vercel origin — eliminating CORS issues and Render cold-start exposure.
-Vercel then forwards the request to the backend server-to-server.
+API calls are proxied through the Next.js rewrite in `web/next.config.ts`. The client fetch layer
+intentionally uses same-origin `/api/...` URLs in the browser, so the browser only ever talks to
+the Vercel origin — eliminating CORS issues and avoiding accidental `127.0.0.1` calls in
+production. Vercel then forwards the request to the backend server-to-server.
 
 Because requests from the browser are same-origin under this setup, `APP_CORS_ORIGINS` on Render
 only needs to include any origins that call the API **directly** (e.g. local development or

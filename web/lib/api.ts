@@ -9,9 +9,16 @@ import type {
   ProfileUpdateRequest,
 } from "@/lib/types";
 
-const API_BASE_URL = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000"
-).replace(/\/$/, "");
+const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
+const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
+
+function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
+  return EXPLICIT_API_BASE_URL ?? LOCAL_API_BASE_URL;
+}
 
 type ApiRequestInit = RequestInit & {
   token?: string | null;
@@ -42,7 +49,7 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
 
   const method = init?.method ?? "GET";
-  const url = `${API_BASE_URL}${path}`;
+  const url = `${getApiBaseUrl()}${path}`;
   const startedAt = Date.now();
 
   console.info("[api] request:start", {
