@@ -349,10 +349,148 @@ BFR_SAFETY_GATE = (
     "stop if numbness/tingling occurs."
 )
 
+# ---------------------------------------------------------------------------
+# Surgical Rehab Integration – function classification and formatting
+# ---------------------------------------------------------------------------
+
+# Six function buckets. Keyword order within each list is checked sequentially;
+# first match wins. More specific terms come before generic ones.
+REHAB_FUNCTION_BUCKETS: dict[str, list[str]] = {
+    "isometric_analgesia": [
+        "isometric", "wall sit", "static hold", "sustained contraction",
+        "tendon isometric", "iso ", "iso-",
+    ],
+    "tendon_loading": [
+        "eccentric", "nordic", "calf raise", "heel raise", "pogo",
+        "drop landing", "progressive load", "bfr", "blood flow",
+    ],
+    "activation": [
+        "activation", "activate", "prime ", "firing", "clamshell",
+        "monster walk", "hip thrust", "lateral band walk", "banded",
+        "glute bridge", "side-lying", "hip hinge warm",
+    ],
+    "control": [
+        "balance", "proprioception", "single-leg", "coordination",
+        "wobble", "pistol", "step-up", "postural", "trunk control",
+        "stability", "controlled",
+    ],
+    "mobility": [
+        "mobility", "stretch", "range of motion", "distraction",
+        "rom ", "band floss", "ankle mob", "joint mob", "hip flexor stretch",
+    ],
+    "recovery_downregulation": [
+        "recovery", "downregulation", "breathing", "parasympathetic",
+        "gentle", "cool down", "diaphragmatic", "foam roll", "low-load",
+    ],
+}
+
+# Human-readable labels for each bucket (used in output formatting)
+_FUNCTION_LABELS: dict[str, str] = {
+    "activation": "Activation",
+    "control": "Control",
+    "isometric_analgesia": "Isometric analgesia",
+    "mobility": "Mobility",
+    "tendon_loading": "Tendon/tissue loading",
+    "recovery_downregulation": "Recovery/downregulation",
+}
+
+# Per-bucket, short purpose descriptions used to explain each drill's role
+_FUNCTION_PURPOSES: dict[str, str] = {
+    "activation": "wake up underactive tissue before main work",
+    "control": "improve joint position and movement quality",
+    "isometric_analgesia": "reduce irritation and improve load tolerance",
+    "mobility": "improve usable range for today's session demands",
+    "tendon_loading": "build tissue tolerance progressively",
+    "recovery_downregulation": "reduce stiffness and restore baseline after training stress",
+}
+
+# Phase-level rationale for rehab ("why this phase")
+_PHASE_REHAB_WHY: dict[str, str] = {
+    "GPP": "establishes baseline control and tissue tolerance before training load ramps up",
+    "SPP": "maintains movement quality and symptom control as training intensity increases",
+    "TAPER": "low-noise maintenance to protect freshness and symptom stability before competition",
+}
+
+# The five rehab quality evaluator checks (used internally and in tests)
+REHAB_QUALITY_CHECKS: list[str] = [
+    "What exact issue is this solving?",
+    "Why is it on this day/phase specifically?",
+    "Does it duplicate another rehab item already used this week?",
+    "Is this the lowest effective dose?",
+    "Would this still look intentional if the athlete read it line by line?",
+]
+
+# Volume ceiling per session context. 'sparring' is most restricted.
+_DAY_TYPE_DRILL_LIMIT: dict[str, int] = {
+    "sparring": 1,
+    "strength": 2,
+    "aerobic": 2,
+    "recovery": 2,
+}
+_DEFAULT_DRILL_LIMIT = 2
+
+
+def classify_drill_function(name: str, notes: str = "") -> str:
+    """Return the rehab function bucket for a drill.
+
+    Checks ``name`` and ``notes`` against keyword lists for each bucket.
+    Falls back to ``'control'`` when no keywords match.
+    """
+    text = f"{name} {notes}".lower()
+    for bucket, keywords in REHAB_FUNCTION_BUCKETS.items():
+        if any(kw in text for kw in keywords):
+            return bucket
+    return "control"
+
+
+def _format_rehab_drill(
+    name: str,
+    notes: str,
+    phase: str,
+    function_tag: str,
+) -> tuple[str, list[str]]:
+    """Return the drill headline and its annotation lines separately.
+
+    Returns a tuple of:
+    - ``headline``: the drill name (and notes) as a single string, suitable
+      for use as a bullet point.
+    - ``annotations``: additional lines that provide function, purpose, and
+      phase rationale.  These should be rendered as indented continuations
+      rather than new bullet points.
+
+    Example output::
+
+        headline  → "Banded External Rotation – Restore rotator cuff control"
+        annotations → [
+            "[Function: Activation] Purpose: wake up underactive tissue before main work.",
+            "Why this phase: maintains movement quality as training intensity increases.",
+        ]
+    """
+    phase_key = phase.upper()
+    headline = f"{name} – {notes}" if notes else name
+    label = _FUNCTION_LABELS.get(function_tag, function_tag.replace("_", " ").title())
+    purpose = _FUNCTION_PURPOSES.get(function_tag, "targeted rehab support")
+    why = _PHASE_REHAB_WHY.get(phase_key, "phase-appropriate rehab support")
+    annotations = [
+        f"[Function: {label}] Purpose: {purpose}.",
+        f"Why this phase: {why}.",
+    ]
+    return headline, annotations
+
 def generate_rehab_protocols(
-    *, injury_string: str, exercise_data: list, current_phase: str, seen_drills: set | None = None
+    *,
+    injury_string: str,
+    exercise_data: list,
+    current_phase: str,
+    seen_drills: set | None = None,
+    day_type: str | None = None,
 ) -> tuple[str, set]:
     """Return rehab exercise suggestions for the given injuries and phase.
+
+    Drills are classified by function bucket (activation, control, isometric
+    analgesia, mobility, tendon loading, recovery/downregulation).  Each drill
+    is formatted with a purpose line and a phase rationale so the output reads
+    as a deliberate risk-management decision rather than a template copy-paste.
 
     Parameters
     ----------
@@ -363,7 +501,12 @@ def generate_rehab_protocols(
     current_phase:
         Phase name (``GPP``/``SPP``/``TAPER``).
     seen_drills:
-        Set used to track drills already listed in earlier phases.
+        Set used to track drills already listed in earlier phases.  Prevents
+        the same drill from appearing verbatim across phases.
+    day_type:
+        Optional session type context (``'sparring'``, ``'strength'``,
+        ``'aerobic'``, ``'recovery'``).  Controls the volume ceiling:
+        sparring days receive at most 1 drill; all others at most 2.
     """
     if seen_drills is None:
         seen_drills = set()
@@ -418,7 +561,16 @@ def generate_rehab_protocols(
             "• All strength/conditioning recommendations must be manually adjusted.",
             seen_drills,
         )
+
+    # Per-session volume ceiling (surgical patch: keep rehab minimal)
+    drill_limit = _DAY_TYPE_DRILL_LIMIT.get(day_type or "", _DEFAULT_DRILL_LIMIT)
+
     lines = []
+
+    # Track seen function buckets globally across this call so we don't stack
+    # multiple drills that serve the same rehab purpose in one session.
+    seen_functions: set[str] = set()
+
     def _phases(entry):
         progress = entry.get("phase_progression", "")
         return _split_phase_progression(progress)
@@ -440,7 +592,7 @@ def generate_rehab_protocols(
             and current_phase.upper() in _phases(entry)
         ]
         if matches:
-            drills = []
+            drills: list[tuple[str, str]] = []  # (name, notes_for_phase)
             for m in matches:
                 for d in m.get("drills", []):
                     name = d.get("name")
@@ -452,26 +604,41 @@ def generate_rehab_protocols(
                     if parsed:
                         for phase_label, text in parsed:
                             if phase_label == current_phase.upper():
-                                entry = name
-                                if text:
-                                    entry = f"{name} – {text}"
-                                if entry not in seen_drills:
-                                    drills.append(entry)
-                                    seen_drills.add(entry)
+                                key = name if not text else f"{name} – {text}"
+                                if key not in seen_drills:
+                                    drills.append((name, text))
+                                    seen_drills.add(key)
                                 break
                     else:
-                        entry = name
-                        if notes:
-                            entry = f"{name} – {notes}"
-                        if entry not in seen_drills:
-                            drills.append(entry)
-                            seen_drills.add(entry)
-            drills = drills[:2]
-            if drills:
+                        key = name if not notes else f"{name} – {notes}"
+                        if key not in seen_drills:
+                            drills.append((name, notes))
+                            seen_drills.add(key)
+
+            # Apply volume ceiling and function-deduplication:
+            # - No more than drill_limit drills per session
+            # - Skip drills with a function bucket already represented this call
+            #   (prevents stacking two activation drills, two control drills, etc.)
+            selected: list[tuple[str, str]] = []
+            for name, notes in drills:
+                if len(selected) >= drill_limit:
+                    break
+                fn = classify_drill_function(name, notes)
+                if fn in seen_functions:
+                    continue
+                seen_functions.add(fn)
+                selected.append((name, notes))
+
+            if selected:
                 loc_title = loc.title() if loc else "Unspecified"
                 type_title = itype.title() if itype else "Unspecified"
                 lines.append(f"- {loc_title} ({type_title}):")
-                lines.extend([f"  • {d}" for d in drills])
+                for name, notes in selected:
+                    fn = classify_drill_function(name, notes)
+                    headline, annotations = _format_rehab_drill(name, notes, current_phase, fn)
+                    lines.append(f"  • {headline}")
+                    lines.extend([f"    {ann}" for ann in annotations])
+
     if not lines:
         return "\n⚠️ Consult with a healthcare professional for personalized rehab guidance.", seen_drills
 

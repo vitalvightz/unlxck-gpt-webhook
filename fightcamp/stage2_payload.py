@@ -4,7 +4,7 @@ import json
 import re
 
 from .restriction_parsing import CANONICAL_RESTRICTIONS
-from .rehab_protocols import _rehab_drills_for_phase
+from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 
@@ -2117,6 +2117,8 @@ def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
 
 def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: str) -> dict:
     name = re.split(r"\s+(?:[\u2013-]|\u00e2\u20ac\u201c)\s+", prescription, maxsplit=1)[0].strip()
+    function_tag = classify_drill_function(name, prescription)
+    function_label = _FUNCTION_LABELS.get(function_tag, function_tag.replace("_", " ").title())
     return {
         "name": name or "Rehab Drill",
         "source": source,
@@ -2125,6 +2127,8 @@ def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: s
         "mechanical_risk_tags": ["rehab", role],
         "prescription": prescription,
         "why": why,
+        "rehab_function": function_tag,
+        "rehab_function_label": function_label,
     }
 
 
@@ -2310,6 +2314,9 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
     if not rehab_block or rehab_block.strip().startswith("**Red Flag Detected**"):
         return []
     slots: list[dict] = []
+    # Track function buckets already represented in this phase so alternates can
+    # be filtered to prefer a different function (avoid stacking same-function drills).
+    used_functions: set[str] = set()
     for group in _parse_rehab_groups(rehab_block):
         location = group.get("location", "Unspecified")
         injury_type = group.get("injury_type", "unspecified")
@@ -2324,10 +2331,20 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
         )
         why = f"phase-specific rehab support for {location.lower()} {injury_type.lower()}"
         for idx, line in enumerate(selected_lines, start=1):
+            slot_function = classify_drill_function(line)
+            used_functions.add(slot_function)
+            # Prefer alternates with a different function bucket to avoid stacking same-function
+            # drills. Skip any alternate whose function is already in use (either from this
+            # slot's injury group or from a previous injury group in this phase).
             alternates: list[dict] = []
+            seen_alt_functions: set[str] = set()
             for option in rehab_options:
                 if option == line or option in selected_set:
                     continue
+                alt_fn = classify_drill_function(option)
+                if alt_fn in seen_alt_functions or alt_fn in used_functions:
+                    continue
+                seen_alt_functions.add(alt_fn)
                 alternates.append(
                     _serialize_rehab_option(
                         option,
@@ -2343,6 +2360,10 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
                     "slot_id": f"{phase.lower()}_{role}_{idx}_{_slugify(line)}",
                     "role": role,
                     "purpose": why,
+                    "rehab_function": slot_function,
+                    "rehab_function_label": _FUNCTION_LABELS.get(
+                        slot_function, slot_function.replace("_", " ").title()
+                    ),
                     "selected": _serialize_rehab_option(
                         line,
                         role=role,
@@ -2546,6 +2567,20 @@ For boxer weeks, keep the default rhythm of support strength, low-damage conditi
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
+
+RULE 12 - REHAB INTEGRATION PATCH
+Rehab must never feel copy-pasted, generic, or repeated by default.
+Do not add rehab as filler. Every rehab item must solve a specific issue tied to the athlete's actual limitation, the session goal, the day type, and the current phase.
+Avoid repeating the same rehab drills across the week unless the role meaningfully changes (e.g. activation on a strength day vs. recovery/downregulation after sparring).
+Classify each rehab item by function: activation, control, isometric analgesia, mobility, tissue loading, or recovery/downregulation.
+Most sessions should contain only 1–2 rehab functions and 5–10 minutes total rehab time.
+Hard sparring days: use minimal rehab only — at most 1 drill. Do not add anything that competes with sparring freshness.
+Strength/power days: prep the key movement pattern — glute activation before lower-body power, trunk control before unilateral loading, scap prep before pressing or punching.
+Aerobic/recovery days: slightly more developmental — tissue tolerance, control work, mobility, low-load patterning.
+For each rehab item, clearly state: Drill, Dose, Purpose (what mechanism it targets), and Why today (what session risk it manages).
+Use precise wording that reflects the actual problem, not just the body part. Write "hip flexor irritation under loaded unilateral patterns", not "hip rehab".
+If a main exercise risks aggravating symptoms, state an explicit substitution trigger: "Use Bulgarians only if irritation ≤2/10 during warm-up; otherwise switch to isometric bridge or split-stance hold."
+Before finalizing, remove any rehab item that looks repetitive, detached from the session goal, or unable to answer: what exact issue does this solve, and why today?
 
 OUTPUT
 Return a clean athlete-facing final plan that is:
