@@ -4,7 +4,7 @@ import json
 import re
 
 from .restriction_parsing import CANONICAL_RESTRICTIONS
-from .rehab_protocols import _rehab_drills_for_phase
+from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 
@@ -2115,8 +2115,10 @@ def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
     }
 
 
-def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: str) -> dict:
+def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: str, function_class: str = "") -> dict:
     name = re.split(r"\s+(?:[\u2013-]|\u00e2\u20ac\u201c)\s+", prescription, maxsplit=1)[0].strip()
+    # Strip any inline [Function: X] tag from the display name
+    name = re.sub(r"\s*\[Function:[^\]]*\]", "", name).strip()
     return {
         "name": name or "Rehab Drill",
         "source": source,
@@ -2125,6 +2127,7 @@ def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: s
         "mechanical_risk_tags": ["rehab", role],
         "prescription": prescription,
         "why": why,
+        "function_class": function_class or classify_drill_function(name),
     }
 
 
@@ -2322,34 +2325,61 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             phase,
             limit=6,
         )
-        why = f"phase-specific rehab support for {location.lower()} {injury_type.lower()}"
+        # "Why today" framing: the selected drill carries phase + issue context.
+        # The Stage 2 model is expected to enrich this with day-type reasoning.
+        phase_context = f"{phase} phase" if phase else "current phase"
+        why_today_template = (
+            f"Targets {location.lower()} {injury_type.lower()} during {phase_context}. "
+            "When scheduling, state why this drill appears on this specific day type "
+            "(e.g. pre-sparring activation, post-strength reset, aerobic-day tolerance work)."
+        )
+        # Track function classes already represented in selected drills so
+        # alternates are scored toward function diversity — not hard-blocked.
+        selected_functions = {
+            classify_drill_function(line) for line in selected_lines
+        }
         for idx, line in enumerate(selected_lines, start=1):
-            alternates: list[dict] = []
+            drill_func = classify_drill_function(line)
+            # Collect candidate alternates, preferring drills from different function buckets.
+            # We gather up to 4 candidates so diversity sorting has enough to work with.
+            scored_alternates: list[tuple[int, dict]] = []
             for option in rehab_options:
                 if option == line or option in selected_set:
                     continue
-                alternates.append(
-                    _serialize_rehab_option(
-                        option,
-                        role=role,
-                        source="rehab_bank",
-                        why=why,
+                opt_func = classify_drill_function(option)
+                # Prefer function diversity, but do not hard-block same-function
+                # alternates — the model may choose any of them with good reason.
+                priority_score = 0 if opt_func not in selected_functions else 1
+                scored_alternates.append(
+                    (
+                        priority_score,
+                        _serialize_rehab_option(
+                            option,
+                            role=role,
+                            source="rehab_bank",
+                            why=why_today_template,
+                            function_class=opt_func,
+                        ),
                     )
                 )
-                if len(alternates) >= 2:
+                if len(scored_alternates) >= 4:
                     break
+            # Sort by priority score (diverse-function first) then take top 2.
+            top_alternates = [opt for _, opt in sorted(scored_alternates, key=lambda x: x[0])][:2]
             slots.append(
                 {
                     "slot_id": f"{phase.lower()}_{role}_{idx}_{_slugify(line)}",
                     "role": role,
-                    "purpose": why,
+                    "purpose": why_today_template,
+                    "function_class": drill_func,
                     "selected": _serialize_rehab_option(
                         line,
                         role=role,
                         source="rehab_block",
-                        why=why,
+                        why=why_today_template,
+                        function_class=drill_func,
                     ),
-                    "alternates": alternates,
+                    "alternates": top_alternates,
                     "replace_with_same_role": True,
                     "priority": "critical" if idx == 1 else "high",
                 }
@@ -2546,6 +2576,33 @@ For boxer weeks, keep the default rhythm of support strength, low-damage conditi
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
+
+RULE 12 - SURGICAL REHAB INTEGRATION
+Rehab must never feel copy-pasted, generic, or repeated by default.
+You have full authority to choose, adjust, or remove any rehab item from the candidate pools based on athlete context.
+Use the function_class tags (activation / control / isometric_analgesia / mobility / tissue_loading / recovery) as scoring guidance — not hard constraints.
+A session should usually contain only 1–2 rehab functions and 5–10 minutes of total rehab work.
+Hard sparring days: minimal rehab only (low-volume activation + brief post-session reset if needed).
+Strength/power days: choose rehab that prepares the specific risk point for the main lift.
+Aerobic/recovery days: rehab may be slightly more developmental (tissue tolerance, control, mobility).
+
+For every rehab item you keep or add, render it in this format:
+  • [Drill name] — [Dose]
+    Purpose: [what exact problem this solves — reference the mechanism, not just the body part]
+    Why today: [why this drill appears on this specific day type — pre-sparring activation / post-strength reset / aerobic-day tolerance / etc.]
+
+If a drill repeats across sessions, the Why today line must make the changed role explicit (e.g. "activation before unilateral lower-body work" vs "downregulation after high-volume sparring"). Identical role + identical drill on multiple days requires explicit justification.
+
+Before finalizing any rehab item, ask:
+1. What exact issue is this solving?
+2. Why is it on this day specifically?
+3. Does it duplicate a rehab item already used this week?
+4. Is this the lowest effective dose?
+5. Would this still look intentional if the athlete read it line by line?
+If any rehab item fails three or more of these checks, remove or replace it.
+
+Do not add rehab as filler. Do not use generic body-part labels like "hip rehab" or "shoulder activation".
+Prefer precise mechanism wording: "hip flexor irritation under loaded unilateral patterns", "ankle instability during stance changes", etc.
 
 OUTPUT
 Return a clean athlete-facing final plan that is:

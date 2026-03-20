@@ -349,6 +349,58 @@ BFR_SAFETY_GATE = (
     "stop if numbness/tingling occurs."
 )
 
+# Rehab function taxonomy — used as guidance/scoring for GPT, not hard constraints.
+# Each drill is classified into one of these buckets based on keywords in its name/notes.
+REHAB_FUNCTION_BUCKETS: dict[str, list[str]] = {
+    "activation": [
+        "activation", "activate", "wake", "prime", "fire",
+        "banded", "monster walk", "clamshell", "glute bridge",
+    ],
+    "control": [
+        "control", "stability", "stabilization", "balance", "proprioception",
+        "position", "wall slide", "single-leg", "single leg", "deadbug", "dead bug",
+        "bird dog", "pallof",
+    ],
+    "isometric_analgesia": [
+        "isometric", "iso hold", "hold", "analgesia", "tendon pain",
+        "wall sit", "split-stance hold", "spanish squat",
+    ],
+    "mobility": [
+        "mobility", "stretch", "range of motion", "rom", "flexibility",
+        "hip flexor", "ankle circle", "calf stretch", "thoracic",
+        "pigeon", "90/90", "couch stretch",
+    ],
+    "tissue_loading": [
+        "loading", "tendon", "eccentric", "slow eccentric", "calf raise",
+        "nordic", "tissue tolerance", "progressive", "heavy slow resistance",
+    ],
+    "recovery": [
+        "recovery", "downregulation", "reset", "restore", "soft tissue",
+        "foam roll", "rolling", "compress", "elevation", "breath",
+    ],
+}
+
+
+def classify_drill_function(name: str, notes: str = "") -> str:
+    """Classify a rehab drill into one of the REHAB_FUNCTION_BUCKETS.
+
+    Classification is keyword-based and is intended as guidance for the
+    GPT/OpenAI planner — not a hard constraint.  When ambiguous, returns
+    ``"control"`` as a safe default.
+
+    Returns
+    -------
+    str
+        One of the keys in ``REHAB_FUNCTION_BUCKETS``:
+        ``"activation"``, ``"control"``, ``"isometric_analgesia"``,
+        ``"mobility"``, ``"tissue_loading"``, or ``"recovery"``.
+    """
+    text = f"{name} {notes}".lower()
+    for bucket, keywords in REHAB_FUNCTION_BUCKETS.items():
+        if any(kw in text for kw in keywords):
+            return bucket
+    return "control"
+
 def generate_rehab_protocols(
     *, injury_string: str, exercise_data: list, current_phase: str, seen_drills: set | None = None
 ) -> tuple[str, set]:
@@ -440,7 +492,7 @@ def generate_rehab_protocols(
             and current_phase.upper() in _phases(entry)
         ]
         if matches:
-            drills = []
+            drills: list[tuple[str, str]] = []  # (formatted_entry, function_class)
             for m in matches:
                 for d in m.get("drills", []):
                     name = d.get("name")
@@ -448,6 +500,7 @@ def generate_rehab_protocols(
                     if not name:
                         continue
 
+                    func = classify_drill_function(name, notes)
                     parsed = _split_notes_by_phase(notes)
                     if parsed:
                         for phase_label, text in parsed:
@@ -456,7 +509,7 @@ def generate_rehab_protocols(
                                 if text:
                                     entry = f"{name} – {text}"
                                 if entry not in seen_drills:
-                                    drills.append(entry)
+                                    drills.append((entry, func))
                                     seen_drills.add(entry)
                                 break
                     else:
@@ -464,14 +517,15 @@ def generate_rehab_protocols(
                         if notes:
                             entry = f"{name} – {notes}"
                         if entry not in seen_drills:
-                            drills.append(entry)
+                            drills.append((entry, func))
                             seen_drills.add(entry)
             drills = drills[:2]
             if drills:
                 loc_title = loc.title() if loc else "Unspecified"
                 type_title = itype.title() if itype else "Unspecified"
                 lines.append(f"- {loc_title} ({type_title}):")
-                lines.extend([f"  • {d}" for d in drills])
+                for entry_text, func in drills:
+                    lines.append(f"  • {entry_text} [Function: {func}]")
     if not lines:
         return "\n⚠️ Consult with a healthcare professional for personalized rehab guidance.", seen_drills
 
