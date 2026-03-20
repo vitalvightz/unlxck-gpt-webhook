@@ -273,6 +273,7 @@ def generate_plan_blocks(
     conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(context)
     record_timing("conditioning", timer_start)
 
+    timer_start = perf_counter()
     (
         rehab_blocks,
         guardrails,
@@ -282,7 +283,9 @@ def generate_plan_blocks(
         recovery_block,
         nutrition_block,
     ) = _generate_rehab_support_bundle(context)
+    record_timing("rehab_support_bundle", timer_start)
 
+    timer_start = perf_counter()
     coach_review_notes, strength_blocks, conditioning_blocks, substitutions = run_coach_review(
         injury_string=context.injuries_only_text,
         phase=current_phase,
@@ -292,6 +295,7 @@ def generate_plan_blocks(
         strength_blocks=strength_blocks,
         conditioning_blocks=conditioning_blocks,
     )
+    record_timing("coach_review", timer_start)
 
     _apply_substitution_log(strength_reason_log, substitutions, "Strength")
     _apply_substitution_log(conditioning_reason_log, substitutions, "Conditioning")

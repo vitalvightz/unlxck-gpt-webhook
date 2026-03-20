@@ -1,6 +1,7 @@
 ﻿import asyncio
 import json
 import logging
+import os
 from pathlib import Path
 from time import perf_counter
 
@@ -21,6 +22,9 @@ from .plan_rendering_utils import (
     _sanitize_stage_output,
 )
 from .strength import get_exercise_bank as get_strength_exercise_bank
+
+# PDF export is off by default; set UNLXCK_ENABLE_PLAN_PDF=1 to enable.
+_PDF_ENABLED_BY_DEFAULT: bool = os.environ.get("UNLXCK_ENABLE_PLAN_PDF", "0") == "1"
 
 _INPUT_ERROR_LABELS = {
     "missing_fighting_style_technical": "technical fighting style",
@@ -70,10 +74,25 @@ class _LazyListProxy:
 exercise_bank = _LazyListProxy(get_strength_exercise_bank)
 
 
-async def generate_plan(data: dict):
+async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
+    """Generate a fight-camp plan.
+
+    Parameters
+    ----------
+    data:
+        Raw webhook / form payload.
+    generate_pdf:
+        Whether to render and upload a PDF.  When *None* (the default) the
+        value of the ``UNLXCK_ENABLE_PLAN_PDF`` environment variable is used
+        (defaults to ``False``).  Pass ``True`` explicitly to force PDF
+        generation regardless of the environment flag.
+    """
     configure_logging()
     logger = logging.getLogger(__name__)
     timings: dict[str, float] = {}
+
+    if generate_pdf is None:
+        generate_pdf = _PDF_ENABLED_BY_DEFAULT
 
     def _record_timing(label: str, start: float) -> None:
         elapsed = perf_counter() - start
@@ -101,30 +120,49 @@ async def generate_plan(data: dict):
             missing_fields=generation_issues,
         )
 
+    timer_start = perf_counter()
     prime_plan_banks()
+    _record_timing("prime_banks", timer_start)
+
+    timer_start = perf_counter()
     context = build_runtime_context(
         plan_input=plan_input,
         random_seed=data.get("random_seed"),
         logger=logger,
     )
+    _record_timing("runtime_context", timer_start)
+
     blocks = generate_plan_blocks(context=context, record_timing=_record_timing, logger=logger)
+
+    timer_start = perf_counter()
     rendered = render_plan_bundle(context=context, blocks=blocks, logger=logger)
-    pdf_url = export_plan_pdf(
-        full_name=plan_input.full_name,
-        html=rendered.html,
-        record_timing=_record_timing,
-        logger=logger,
-    )
+    _record_timing("render_bundle", timer_start)
 
-    if timings:
-        slowest_label = max(timings, key=timings.get)
-        logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
-
+    # Build Stage 2 outputs before any optional PDF work so they are never
+    # gated behind the (potentially slow) export step.
+    timer_start = perf_counter()
     stage2_payload, planning_brief, stage2_handoff_text = build_stage2_outputs(
         context=context,
         blocks=blocks,
         rendered=rendered,
     )
+    _record_timing("stage2_outputs", timer_start)
+
+    # PDF generation is optional and off by default.
+    if generate_pdf:
+        pdf_url: str | None = export_plan_pdf(
+            full_name=plan_input.full_name,
+            html=rendered.html,
+            record_timing=_record_timing,
+            logger=logger,
+        )
+    else:
+        logger.info("[timing] pdf_export=skipped (generate_pdf=False)")
+        pdf_url = None
+
+    if timings:
+        slowest_label = max(timings, key=timings.get)
+        logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
 
     return {
         "pdf_url": pdf_url,
