@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -10,6 +11,7 @@ import type { PlanDetail } from "@/lib/types";
 
 export function PlanDetailScreen({ planId }: { planId: string }) {
   const { session } = useAppSession();
+  const searchParams = useSearchParams();
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,6 +19,9 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
     if (!session?.access_token) {
       return;
     }
+
+    setError(null);
+
     getPlan(session.access_token, planId)
       .then(setPlan)
       .catch((planError) => {
@@ -24,8 +29,16 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       });
   }, [planId, session?.access_token]);
 
+  const recovered = searchParams.get("recovered") === "1";
+
   return (
     <RequireAuth>
+      {recovered ? (
+        <section className="panel loading-card">
+          <p className="kicker">Plan synced</p>
+          <div className="loading-status-strip">Plan was created and restored after a timeout during generation.</div>
+        </section>
+      ) : null}
       {error ? (
         <section className="panel loading-card">
           <p className="kicker">Plan Detail</p>

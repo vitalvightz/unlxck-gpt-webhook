@@ -13,9 +13,10 @@ const STEP_INTERVAL_MS = 2200;
 
 interface PremiumLoadingScreenProps {
   error?: string | null;
+  statusMessage?: string | null;
 }
 
-export function PremiumLoadingScreen({ error = null }: PremiumLoadingScreenProps) {
+export function PremiumLoadingScreen({ error = null, statusMessage = null }: PremiumLoadingScreenProps) {
   const [activeStep, setActiveStep] = useState(0);
 
   useEffect(() => {
@@ -43,7 +44,7 @@ export function PremiumLoadingScreen({ error = null }: PremiumLoadingScreenProps
               <div className="error-banner">{error}</div>
             ) : (
               <div className="loading-status-strip">
-                Precision checks are running before your final plan opens.
+                {statusMessage ?? "Precision checks are running before your final plan opens."}
               </div>
             )}
           </article>
