@@ -596,6 +596,11 @@ export function PlanViewer({
           <Link href="/plans" className="ghost-button">
             Back to plans
           </Link>
+          {isAdmin && plan.athlete_id ? (
+            <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
+              View athlete profile
+            </Link>
+          ) : null}
           {plan.outputs.pdf_url ? (
             <Link href={plan.outputs.pdf_url} target="_blank" rel="noreferrer" className="cta">
               Open PDF

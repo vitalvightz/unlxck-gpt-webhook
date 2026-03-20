@@ -212,6 +212,10 @@ export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> 
   return readJson<AdminAthleteRecord[]>("/api/admin/athletes", { token });
 }
 
+export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
+  return readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token });
+}
+
 export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {
   return readJson<AdminPlanSummary[]>("/api/admin/plans", { token });
 }

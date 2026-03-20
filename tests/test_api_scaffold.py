@@ -162,6 +162,17 @@ class FakeStore:
             })
         return rows
 
+    def get_admin_athlete(self, athlete_id: str) -> dict | None:
+        profile = self.profiles.get(athlete_id)
+        if not profile:
+            return None
+        plans = self.list_user_plans(athlete_id)
+        return {
+            **profile,
+            "plan_count": len(plans),
+            "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
+        }
+
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         self.profiles[athlete_id]["onboarding_draft"] = None
 
@@ -939,6 +950,40 @@ def test_admin_endpoints_require_admin_role():
 
     assert forbidden.status_code == 403
     assert allowed.status_code == 200
+
+
+def test_admin_get_athlete_by_id_returns_profile():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-profile-1",
+        email="solo@example.com",
+        full_name="Solo Fighter",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+
+    forbidden = client.get(
+        "/api/admin/athletes/athlete-profile-1",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert forbidden.status_code == 403
+
+    not_found = client.get(
+        "/api/admin/athletes/nonexistent-id",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert not_found.status_code == 404
+
+    response = client.get(
+        "/api/admin/athletes/athlete-profile-1",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["athlete_id"] == "athlete-profile-1"
+    assert data["email"] == "solo@example.com"
+    assert data["full_name"] == "Solo Fighter"
+    assert data["plan_count"] == 0
 
 
 def test_admin_can_list_and_open_review_required_plan_for_resolution():

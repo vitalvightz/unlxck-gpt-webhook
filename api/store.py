@@ -43,6 +43,8 @@ class AppStore(Protocol):
 
     def list_admin_athletes(self) -> list[dict[str, Any]]: ...
 
+    def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
+
     def clear_onboarding_draft(self, athlete_id: str) -> None: ...
 
 
@@ -327,6 +329,15 @@ class SupabaseAppStore:
             athlete["plan_count"] = len(plans)
             athlete["latest_plan_created_at"] = plans[0]["created_at"] if plans else None
         return athletes
+
+    def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
+        profile = self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
+        if not profile:
+            return None
+        plans = self.list_user_plans(athlete_id)
+        profile["plan_count"] = len(plans)
+        profile["latest_plan_created_at"] = plans[0]["created_at"] if plans else None
+        return profile
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:
