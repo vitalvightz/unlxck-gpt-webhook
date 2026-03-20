@@ -1,5 +1,7 @@
 export type UserRole = "athlete" | "admin";
 
+export type GenerationJobStatus = "queued" | "running" | "completed" | "review_required" | "failed";
+
 export type AthleteProfileInput = {
   full_name: string;
   age?: number | null;
@@ -102,6 +104,17 @@ export type AdminPlanOutputs = {
 export type PlanDetail = PlanSummary & {
   outputs: PlanOutputs;
   admin_outputs?: AdminPlanOutputs | null;
+};
+
+export type GenerationJobResponse = {
+  job_id: string;
+  athlete_id: string;
+  status: GenerationJobStatus;
+  created_at: string;
+  updated_at: string;
+  error?: string | null;
+  plan_id?: string | null;
+  latest_plan_id?: string | null;
 };
 
 export type MeResponse = {

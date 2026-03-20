@@ -6,6 +6,9 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 UserRole = Literal["athlete", "admin"]
+
+
+GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
 _RECORD_PATTERN = re.compile(r"^\d+-\d+(?:-\d+)?$")
 
 
@@ -191,6 +194,17 @@ class AdminPlanOutputs(BaseModel):
 class PlanDetail(PlanSummary):
     outputs: PlanOutputs
     admin_outputs: AdminPlanOutputs | None = None
+
+
+class GenerationJobResponse(BaseModel):
+    job_id: str
+    athlete_id: str
+    status: GenerationJobStatus
+    created_at: str
+    updated_at: str
+    error: str | None = None
+    plan_id: str | None = None
+    latest_plan_id: str | None = None
 
 
 class MeResponse(BaseModel):

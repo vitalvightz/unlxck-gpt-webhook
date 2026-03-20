@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 
 const STEPS = [
   "Load the latest saved onboarding",
-  "Run the draft planner and Stage 2 automation",
-  "Validate the final structure and readiness",
-  "Save the final plan and open control room detail",
+  "Create a background generation job",
+  "Run Stage 1 and Stage 2 in the background",
+  "Poll the saved job until the final plan is ready",
 ];
 
 const STEP_INTERVAL_MS = 2200;
@@ -35,7 +35,7 @@ export function PremiumLoadingScreen({ error = null, statusMessage = null }: Pre
             <p className="loading-eyebrow">GENERATING</p>
             <h1 className="loading-title">BUILDING YOUR PLAN</h1>
             <p className="muted loading-copy">
-              Running Stage 1 generation, Stage 2 finalization, and validation from your saved onboarding.
+              Your request is saved immediately, then Stage 1 and Stage 2 run in the background while this page polls for completion.
             </p>
             <div className="loading-scan-rail" aria-hidden="true">
               <span className="loading-scan-line" />

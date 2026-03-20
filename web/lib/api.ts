@@ -2,6 +2,7 @@ import type {
   AdminAthleteRecord,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
+  GenerationJobResponse,
   MeResponse,
   PlanDetail,
   PlanRequest,
@@ -207,12 +208,17 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
   });
 }
 
-export function generatePlan(token: string, payload: PlanRequest): Promise<PlanDetail> {
-  return readJson<PlanDetail>("/api/plans/generate", {
+export function createGenerationJob(token: string, payload: PlanRequest): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>("/api/plans/generate", {
     method: "POST",
     token,
     body: JSON.stringify(payload),
   });
+}
+
+
+export function getGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}`, { token });
 }
 
 export function listPlans(token: string): Promise<PlanSummary[]> {
