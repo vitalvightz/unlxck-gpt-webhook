@@ -24,7 +24,6 @@ const BLOCKING_WARNING_CODES = new Set([
   "unresolved_access_fallback",
   "missing_week_session_role",
   "late_camp_session_incomplete",
-  "weekly_session_overage",
   "high_pressure_weight_cut_underaddressed",
 ]);
 
