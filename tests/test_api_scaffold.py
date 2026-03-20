@@ -1280,6 +1280,33 @@ def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
 # Deferred non-essential write tests
 # ---------------------------------------------------------------------------
 
+def test_generate_plan_returns_existing_active_job_for_same_athlete():
+    client, store, _ = _build_client()
+
+    existing_job = {
+        "job_id": "job_existing123",
+        "athlete_id": "athlete-1",
+        "status": "running",
+        "created_at": _now(),
+        "updated_at": _now(),
+        "error": None,
+        "plan_id": None,
+        "latest_plan_id": None,
+    }
+    client.app.state.generation_jobs[existing_job["job_id"]] = app_module.GenerationJobState(**existing_job)
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    assert response.json() == existing_job
+    assert store.get_latest_intake("athlete-1") is None
+    assert len(store.plans) == 0
+
+
 def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
     """Response schema must be unchanged after moving non-essential writes to background tasks."""
     client, store, _ = _build_client()

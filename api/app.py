@@ -84,6 +84,17 @@ def _update_job(job: GenerationJobState, **changes: Any) -> GenerationJobState:
     return job
 
 
+def _is_active_job(job: GenerationJobState) -> bool:
+    return job.status in {"queued", "running"}
+
+
+def _find_active_job_for_athlete(jobs: dict[str, GenerationJobState], athlete_id: str) -> GenerationJobState | None:
+    candidates = [job for job in jobs.values() if job.athlete_id == athlete_id and _is_active_job(job)]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda job: job.created_at)
+
+
 def _cors_origins() -> list[str]:
     value = os.getenv(
         "APP_CORS_ORIGINS",
@@ -576,12 +587,23 @@ def create_app(
         stage2: Stage2Automator = Depends(get_stage2_automator),
         jobs: dict[str, GenerationJobState] = Depends(get_generation_jobs),
     ) -> GenerationJobResponse:
+        existing_job = _find_active_job_for_athlete(jobs, profile.athlete_id)
+        if existing_job:
+            logger.info(
+                "[jobs] generation:deduplicated athlete_id=%s job_id=%s status=%s",
+                profile.athlete_id,
+                existing_job.job_id,
+                existing_job.status,
+            )
+            return _job_response(existing_job)
+
+        now = _utc_now_iso()
         job = GenerationJobState(
             job_id=f"job_{uuid.uuid4().hex[:12]}",
             athlete_id=profile.athlete_id,
             status="queued",
-            created_at=_utc_now_iso(),
-            updated_at=_utc_now_iso(),
+            created_at=now,
+            updated_at=now,
             latest_plan_id=(store.get_latest_plan(profile.athlete_id) or {}).get("id"),
         )
         jobs[job.job_id] = job
