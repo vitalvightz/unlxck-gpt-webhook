@@ -17,7 +17,15 @@ function getApiBaseUrl(): string {
     return "";
   }
 
-  return EXPLICIT_API_BASE_URL ?? LOCAL_API_BASE_URL;
+  if (EXPLICIT_API_BASE_URL) {
+    return EXPLICIT_API_BASE_URL;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return LOCAL_API_BASE_URL;
+  }
+
+  throw new Error("NEXT_PUBLIC_API_BASE_URL must be set for server-side API calls in production.");
 }
 
 type ApiRequestInit = RequestInit & {
