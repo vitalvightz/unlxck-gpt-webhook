@@ -35,6 +35,11 @@ from .strength_session_quality import (
     session_support_count_before_anchor,
     strength_quality_adjustment,
 )
+from .session_restraint import (
+    context_density_cap as _context_density_cap,
+    pruning_pass as _pruning_pass,
+    tie_break_sort as _tie_break_sort,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -542,6 +547,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     num_strength_sessions = allocate_sessions(training_frequency, phase).get("strength", 2)
     exercise_counts = calculate_exercise_numbers(training_frequency, phase)
     target_exercises = exercise_counts.get("strength", 0)
+    # Rule 1: apply context-sensitive density cap before the candidate pool is
+    # sliced so the selection itself is already bounded.
+    target_exercises = min(
+        target_exercises,
+        _context_density_cap(
+            phase=phase,
+            fatigue=fatigue,
+            days_until_fight=flags.get("days_until_fight"),
+            num_sessions=num_strength_sessions,
+        ),
+    )
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
@@ -706,7 +722,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if score >= 0:
             weighted_exercises.append((ex, score, breakdown))
 
-    weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    # Rule 2: resolve near-equal scores deterministically in favour of lower
+    # recovery cost (soreness, neural complexity, aggravation risk).  Uses an
+    # explicit near-equal band so borderline score differences are also affected
+    # by fatigue cost, not just exact ties.
+    weighted_exercises = _tie_break_sort(weighted_exercises)
     days_count = len(training_days) if isinstance(training_days, list) else training_days
     if not isinstance(days_count, int):
         days_count = 3
@@ -1236,6 +1256,27 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _enforce_session_quality(base_exercises)
     base_exercises = _apply_movement_caps(base_exercises)
 
+    # Rule 3: in taper / short-notice / high-fatigue contexts, remove the
+    # lowest-necessity non-anchor item if the session still clearly preserves
+    # its purpose without it.  Safety checks ensure anchor, base-category
+    # coverage, and quality/support-function coverage are all retained.
+    base_exercises, _pruned, _prune_note = _pruning_pass(
+        base_exercises,
+        phase=phase,
+        fatigue=fatigue,
+        days_until_fight=flags.get("days_until_fight"),
+        score_lookup=score_lookup,
+    )
+    if _pruned:
+        logger.info(
+            "[restraint] pruned phase=%s fatigue=%s name=%s score=%.4f — %s",
+            phase,
+            fatigue,
+            _pruned.get("name", "<unnamed>"),
+            score_lookup.get(_pruned.get("name", ""), 0.0),
+            _prune_note,
+        )
+
     for ex in base_exercises:
         normalize_exercise_movement(ex)
 
@@ -1291,6 +1332,15 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         reasons.setdefault("final_score", score_lookup.get(name, 0))
         explanation = _strength_explanation(reasons)
         why_log.append({"name": name, "reasons": reasons, "explanation": explanation})
+    if _pruned:
+        pruned_name = _pruned.get("name")
+        why_log.append(
+            {
+                "name": pruned_name,
+                "reasons": {"final_score": score_lookup.get(pruned_name or "", 0.0)},
+                "explanation": f"removed by final pruning pass — {_prune_note}",
+            }
+        )
 
     return {
         "block": strength_output,
