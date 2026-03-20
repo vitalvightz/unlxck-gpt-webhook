@@ -121,7 +121,7 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         )
 
     timer_start = perf_counter()
-    prime_plan_banks()
+    prime_plan_banks(logger=logger)
     _record_timing("prime_banks", timer_start)
 
     timer_start = perf_counter()

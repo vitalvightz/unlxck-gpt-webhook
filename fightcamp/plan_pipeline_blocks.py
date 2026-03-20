@@ -28,13 +28,15 @@ from .training_context import TrainingContext, allocate_sessions
 def _build_phase_mindsets(training_context: TrainingContext) -> tuple[dict[str, str], dict[str, str]]:
     phase_mindset_cues = get_phase_mindset_cues(training_context.mental_block)
     phase_mindsets: dict[str, str] = {}
+    # Compute once; reused for every non-generic phase below.
+    base_flags = training_context.to_flags()
 
     for phase in PHASES:
         blocks = training_context.mental_block
         if isinstance(blocks, str):
             blocks = [blocks]
         if blocks and blocks[0].lower() != "generic":
-            phase_mindsets[phase] = get_mindset_by_phase(phase, training_context.to_flags())
+            phase_mindsets[phase] = get_mindset_by_phase(phase, base_flags)
         else:
             phase_mindsets[phase] = get_mindset_by_phase(phase, {"mental_block": ["generic"]})
 
@@ -46,12 +48,14 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
     strength_reason_log: dict[str, list[dict]] = {}
     previous_names: list[str] = []
     previous_movements: set[str] = set()
+    # Compute once per request; spread into per-phase flags dict below.
+    base_flags = context.training_context.to_flags()
 
     for phase in PHASES:
         if not context.phase_active(phase):
             continue
         flags = {
-            **context.training_context.to_flags(),
+            **base_flags,
             "phase": phase,
             "random_seed": context.random_seed,
             "restrictions": context.plan_input.restrictions,
@@ -82,6 +86,8 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
 def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str, dict], dict[str, list[dict]]]:
     conditioning_blocks: dict[str, dict] = {}
     conditioning_reason_log: dict[str, list[dict]] = {}
+    # Compute once per request; spread into per-phase flags dict below.
+    base_flags = context.training_context.to_flags()
 
     for phase in PHASES:
         if not context.phase_active(phase):
@@ -95,7 +101,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             candidate_reservoir,
         ) = generate_conditioning_block(
             {
-                **context.training_context.to_flags(),
+                **base_flags,
                 "phase": phase,
                 "sport": context.mapped_format,
                 "random_seed": context.random_seed,
@@ -187,13 +193,16 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
     }
     has_injuries = bool(context.injuries_only_text or context.plan_input.restrictions)
     current_phase = _first_active_phase(context.phase_weeks)
+    # Compute once; captured as a default argument by each builder lambda so
+    # the dict is not re-created for every active phase.
+    base_flags = context.training_context.to_flags()
     recovery_block = _build_phase_support_block(
         context,
-        lambda phase: generate_recovery_block({**context.training_context.to_flags(), "phase": phase}),
+        lambda phase, bf=base_flags: generate_recovery_block({**bf, "phase": phase}),
     )
     nutrition_block = _build_phase_support_block(
         context,
-        lambda phase: generate_nutrition_block(flags={**context.training_context.to_flags(), "phase": phase}),
+        lambda phase, bf=base_flags: generate_nutrition_block(flags={**bf, "phase": phase}),
     )
     support_notes = generate_support_notes(context.injuries_only_text) if has_injuries else ""
 

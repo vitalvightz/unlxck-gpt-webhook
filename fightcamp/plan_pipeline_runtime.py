@@ -3,6 +3,7 @@
 import logging
 import re
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Any, Callable
 
 from .camp_phases import calculate_phase_weeks
@@ -76,11 +77,41 @@ STYLE_MAP = {
 }
 TimingRecorder = Callable[[str, float], None]
 
+# Module-level flag that tracks whether plan banks have been fully loaded at
+# least once.  Guards the fast warm path in prime_plan_banks() so that
+# subsequent requests skip the three individual prime-function calls entirely.
+#
+# Thread-safety note: No lock is used here intentionally.  The underlying bank
+# loaders (e.g. `if _exercise_bank_cache is None: …`) follow the same
+# unsynchronised pattern throughout this codebase, which targets a
+# single-process async deployment (uvicorn single-worker).  In the rare
+# multi-threaded edge-case two threads may both execute the cold path once;
+# that is harmless because the loaders are idempotent.
+_BANKS_WARM: bool = False
 
-def prime_plan_banks() -> None:
+
+def prime_plan_banks(*, logger: logging.Logger | None = None) -> None:
+    """Prime all plan banks, loading JSON data into memory the first time.
+
+    On the first call (cold path) all three bank modules are primed and a
+    module-level flag is set.  Subsequent calls (warm path) short-circuit
+    immediately, logging a lightweight debug message rather than re-entering
+    each bank's load function.
+
+    Passing *logger* routes messages through the caller's logger; when omitted
+    a module-level logger is used instead.
+    """
+    global _BANKS_WARM
+    _log = logger or logging.getLogger(__name__)
+    if _BANKS_WARM:
+        _log.debug("[bank-prime] path=warm (all caches populated, skipping)")
+        return
+    _t = perf_counter()
     prime_strength_banks()
     prime_conditioning_banks()
     prime_rehab_bank()
+    _BANKS_WARM = True
+    _log.info("[bank-prime] path=cold elapsed=%.3fs", perf_counter() - _t)
 
 
 @dataclass(frozen=True)
