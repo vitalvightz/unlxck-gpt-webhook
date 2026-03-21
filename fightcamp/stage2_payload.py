@@ -2296,12 +2296,38 @@ def _derive_global_priorities(
     }
 
 
-def _build_phase_strategy(phase_briefs: dict[str, dict], candidate_pools: dict[str, dict]) -> dict[str, dict]:
+def _resolve_visible_phase_framing(phase: str, brief: dict, week_by_week_progression: dict) -> dict[str, str]:
+    weeks = [
+        week
+        for week in (week_by_week_progression.get("weeks", []) or [])
+        if week.get("phase") == phase
+    ]
+    if len(weeks) != 1:
+        return {
+            "label": phase,
+            "objective": brief.get("objective", ""),
+        }
+
+    week = weeks[0]
+    return {
+        "label": week.get("stage_label") or phase,
+        "objective": week.get("stage_objective") or brief.get("objective", ""),
+    }
+
+
+def _build_phase_strategy(
+    phase_briefs: dict[str, dict],
+    candidate_pools: dict[str, dict],
+    week_by_week_progression: dict,
+) -> dict[str, dict]:
     strategy: dict[str, dict] = {}
     for phase, brief in phase_briefs.items():
         pool = candidate_pools.get(phase, {})
+        visible_framing = _resolve_visible_phase_framing(phase, brief, week_by_week_progression)
         strategy[phase] = {
             "objective": brief.get("objective", ""),
+            "visible_label": visible_framing["label"],
+            "visible_objective": visible_framing["objective"],
             "build": _clean_list(brief.get("emphasize", [])),
             "protect": _clean_list(brief.get("risk_flags", [])),
             "deprioritize": _clean_list(brief.get("deprioritize", [])),
@@ -2367,7 +2393,7 @@ def build_planning_brief(
         "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
         "main_risks": _derive_main_risks(athlete_model, restrictions),
         "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
-        "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools),
+        "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools, week_by_week_progression),
         "weekly_stress_map": weekly_stress_map,
         "week_by_week_progression": week_by_week_progression,
         "weekly_role_map": weekly_role_map,
