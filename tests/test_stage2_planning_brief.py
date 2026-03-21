@@ -285,6 +285,47 @@ def test_safety_and_readiness_override_limiter_ambition_in_stress_map():
     assert "Because this is short notice" in taper_stress["cut_first_when_collisions_rise"]
 
 
+def test_short_camp_priorities_are_compressed_into_primary_maintenance_and_support_buckets():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 5,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power", "skill_refinement", "mobility"],
+            "weaknesses": ["gas_tank", "footwork"],
+            "equipment": ["bodyweight", "bands"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["moderate_fatigue", "fight_week", "short_notice"],
+        },
+        phase="TAPER",
+    )
+
+    compressed = brief["compressed_priorities"]
+
+    assert compressed["is_short_camp"] is True
+    assert compressed["is_ultra_short_camp"] is True
+    assert [entry["label"] for entry in compressed["primary_targets"]] == [
+        "footwork / technical sharpness",
+        "power expression",
+    ]
+    assert [entry["label"] for entry in compressed["maintenance_targets"]] == [
+        "gas tank maintenance"
+    ]
+    assert any(entry["label"] == "mobility support" for entry in compressed["embedded_support"])
+    assert any(entry["label"] == "skill refinement as standalone work" for entry in compressed["deferred"])
+    assert any("Keep the week selective" in item for item in brief["global_priorities"]["preserve"])
+    assert any("Do not turn every selected goal or weakness into its own session objective" in item for item in brief["global_priorities"]["avoid"])
+
+
 
 def test_sport_load_collision_rules_beat_goal_push_when_collisions_rise():
     brief = _build_brief(

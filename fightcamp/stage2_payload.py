@@ -562,7 +562,7 @@ def _build_athlete_model(
     camp_length_weeks: int,
     short_notice: bool,
 ) -> dict:
-    return {
+    athlete_model = {
         "sport": sport,
         "status": training_context.status,
         "record": record,
@@ -593,6 +593,163 @@ def _build_athlete_model(
             short_notice=short_notice,
             days_until_fight=training_context.days_until_fight,
         ),
+    }
+    athlete_model["compressed_priorities"] = _compress_short_camp_priorities(athlete_model)
+    return athlete_model
+
+
+def _priority_bucket(label: str, kind: str, reason: str) -> dict:
+    return {"label": label, "kind": kind, "reason": reason}
+
+
+def _priority_bucket_labels(entries: list[dict]) -> list[str]:
+    return [str(entry.get("label", "")).strip() for entry in entries if str(entry.get("label", "")).strip()]
+
+
+def _compress_short_camp_priorities(athlete_model: dict) -> dict:
+    days_until_fight = athlete_model.get("days_until_fight")
+    camp_length_weeks = athlete_model.get("camp_length_weeks")
+    if isinstance(days_until_fight, int):
+        timeline_days = days_until_fight
+    elif isinstance(camp_length_weeks, int):
+        timeline_days = camp_length_weeks * 7
+    else:
+        timeline_days = None
+
+    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
+    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    short_window = isinstance(timeline_days, int) and timeline_days <= 7
+    ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
+
+    if not short_window:
+        return {
+            "timeline_days": timeline_days,
+            "is_short_camp": False,
+            "is_ultra_short_camp": False,
+            "primary_targets": [],
+            "maintenance_targets": [],
+            "embedded_support": [],
+            "deferred": [],
+        }
+
+    primary: list[dict] = []
+    maintenance: list[dict] = []
+    embedded: list[dict] = []
+    deferred: list[dict] = []
+    used_labels: set[str] = set()
+
+    def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
+        if label in used_labels:
+            return
+        bucket.append(_priority_bucket(label, kind, reason))
+        used_labels.add(label)
+
+    immediate_performance_limiter = (
+        weakness_tokens & {"footwork", "coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm", "boxing"}
+        or goal_tokens & {"skill_refinement", "striking"}
+    )
+    if immediate_performance_limiter:
+        add_unique(
+            primary,
+            "footwork / technical sharpness",
+            "technical_sharpness",
+            "Collapse footwork, timing, boxing quality, and skill refinement into one practical fight-week target.",
+        )
+
+    if goal_tokens & {"power", "speed", "explosive_power"} or weakness_tokens & {"sharpness", "speed", "speed_reaction", "reaction", "cns_fatigue"}:
+        add_unique(
+            primary,
+            "power expression",
+            "power_expression",
+            "Keep neural speed and power output as one sharpness-oriented target.",
+        )
+
+    if readiness_flags & {"fight_week", "high_fatigue", "active_weight_cut", "aggressive_weight_cut"} or athlete_model.get("injuries"):
+        add_unique(
+            primary,
+            "fight-readiness and freshness protection",
+            "freshness_protection",
+            "Freshness, symptom stability, and readiness outrank optional development in the final week.",
+        )
+
+    if not primary:
+        add_unique(
+            primary,
+            "fight-readiness and sharpness",
+            "fight_readiness",
+            "Short camps default to a readiness-first target when no clearer immediate limiter is present.",
+        )
+
+    while len(primary) > 2:
+        moved = primary.pop()
+        destination = embedded if moved["kind"] == "freshness_protection" else maintenance
+        destination.append(
+            _priority_bucket(
+                moved["label"],
+                moved["kind"],
+                "Downgraded to keep short-camp objectives selective.",
+            )
+        )
+
+    conditioning_selected = bool(
+        weakness_tokens & {"conditioning", "gas_tank", "aerobic", "endurance", "recovery"}
+        or goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}
+    )
+    if conditioning_selected:
+        target_bucket = maintenance
+        reason = "Conditioning stays as one small exposure unless the athlete is clearly underprepared this week."
+        if not primary and not ultra_short_window:
+            target_bucket = primary
+            reason = "Conditioning remains primary only because no more urgent fight-week target displaced it."
+        add_unique(target_bucket, "gas tank maintenance", "conditioning_maintenance", reason)
+
+    if weakness_tokens & {"mobility", "stiffness"} or goal_tokens & {"mobility", "durability"}:
+        mobility_reason = "Mobility is embedded through warm-up, tissue care, and exercise choice unless it is the direct limiter."
+        if weakness_tokens & {"mobility", "stiffness"} and athlete_model.get("injuries") and not any(
+            entry["kind"] == "freshness_protection" for entry in primary
+        ):
+            add_unique(primary, "tissue protection / mobility bottleneck", "tissue_state", "Mobility stays primary only because tissue state is the direct limiter.")
+        else:
+            add_unique(embedded, "mobility support", "mobility_support", mobility_reason)
+
+    if goal_tokens & {"skill_refinement"}:
+        add_unique(
+            deferred,
+            "skill refinement as standalone work",
+            "skill_refinement",
+            "Absorb skill refinement into technical sharpness instead of giving it its own session objective.",
+        )
+
+    raw_other_labels = [
+        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("key_goals", []))),
+        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("weaknesses", []))),
+    ]
+    claimed_terms = " ".join(_priority_bucket_labels(primary) + _priority_bucket_labels(maintenance) + _priority_bucket_labels(embedded) + _priority_bucket_labels(deferred)).lower()
+    for label in raw_other_labels:
+        normalized_label = str(label).strip()
+        if not normalized_label or normalized_label.lower() in claimed_terms:
+            continue
+        add_unique(
+            embedded if not ultra_short_window else deferred,
+            normalized_label,
+            "selection_only",
+            "Selected item is acknowledged but not promoted to a standalone short-camp objective.",
+        )
+
+    if len(maintenance) > 1:
+        overflow = maintenance[1:]
+        maintenance = maintenance[:1]
+        deferred.extend(_priority_bucket(item["label"], item["kind"], "Extra maintenance targets were deferred to keep the week selective.") for item in overflow)
+
+    return {
+        "timeline_days": timeline_days,
+        "is_short_camp": True,
+        "is_ultra_short_camp": ultra_short_window,
+        "primary_targets": primary,
+        "maintenance_targets": maintenance[:1],
+        "embedded_support": embedded,
+        "deferred": deferred,
     }
 
 
@@ -687,6 +844,10 @@ def _derive_athlete_archetype(athlete_model: dict) -> dict:
 
 
 def _derive_main_limiter(athlete_model: dict) -> str:
+    compressed = athlete_model.get("compressed_priorities") or {}
+    primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
+    if primary_labels:
+        return f"Primary limiter is {primary_labels[0]}."
     weaknesses = _clean_list(athlete_model.get("weaknesses", []))
     goals = _clean_list(athlete_model.get("key_goals", []))
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
@@ -855,6 +1016,20 @@ def _normalize_limiter_tokens(values: list[str]) -> set[str]:
 
 
 def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
+    compressed = athlete_model.get("compressed_priorities") or {}
+    compressed_labels = " ".join(
+        _priority_bucket_labels(compressed.get("primary_targets", []))
+        + _priority_bucket_labels(compressed.get("maintenance_targets", []))
+    ).lower()
+    if "technical sharpness" in compressed_labels or "footwork" in compressed_labels:
+        return "boxing_quality_under_load"
+    if "power expression" in compressed_labels:
+        return "sharpness_under_fatigue"
+    if "freshness protection" in compressed_labels or "fight-readiness and sharpness" in compressed_labels:
+        return "sharpness_under_fatigue"
+    if "gas tank maintenance" in compressed_labels:
+        return "aerobic_repeatability"
+
     weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
     goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
     style_tokens = _normalize_limiter_tokens(
@@ -915,6 +1090,8 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     if weakness_tokens & {"boxing", "striking", "skill_refinement"}:
         return "boxing_quality_under_load"
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
+        return "tissue_state"
+    if athlete_model.get("injuries") and tissue_pressure:
         return "tissue_state"
 
     if goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}:
@@ -1944,6 +2121,11 @@ def _derive_global_priorities(
     hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
     technical_skill_days = _clean_list(athlete_model.get("technical_skill_days", []))
     high_pressure_cut = _is_high_pressure_weight_cut(athlete_model=athlete_model)
+    compressed = athlete_model.get("compressed_priorities") or {}
+    primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
+    maintenance_labels = _priority_bucket_labels(compressed.get("maintenance_targets", []))
+    embedded_labels = _priority_bucket_labels(compressed.get("embedded_support", []))
+    deferred_labels = _priority_bucket_labels(compressed.get("deferred", []))
 
     if injuries:
         preserve.append("Keep rehab continuity and remove only clearly conflicting work.")
@@ -1967,6 +2149,17 @@ def _derive_global_priorities(
         avoid.append("Do not stack the main glycolytic stressor directly beside declared hard sparring unless the schedule truly forces it.")
     if technical_skill_days:
         preserve.append("Use declared technical skill days for lower-noise support work when the weekly rhythm needs a lighter combat touch.")
+    if compressed.get("is_short_camp"):
+        preserve.append(
+            f"Keep the week selective by driving sessions from {', '.join(primary_labels)} and at most one maintenance target."
+        )
+        avoid.append("Do not turn every selected goal or weakness into its own session objective inside a short camp.")
+        if maintenance_labels:
+            push.append(f"Keep {maintenance_labels[0]} to one small exposure instead of a full extra emphasis day.")
+        if embedded_labels:
+            avoid.append(f"Treat {', '.join(embedded_labels)} as embedded support through warm-up, recovery, or drill selection.")
+        if deferred_labels:
+            avoid.append(f"Defer {', '.join(deferred_labels)} as standalone objectives in this short window.")
 
     for phase, brief in phase_briefs.items():
         guardrails = brief.get("selection_guardrails", {})
@@ -2023,6 +2216,10 @@ def build_planning_brief(
     omission_ledger: dict[str, dict],
     rewrite_guidance: dict,
 ) -> dict:
+    athlete_model = dict(athlete_model)
+    athlete_model["compressed_priorities"] = athlete_model.get("compressed_priorities") or _compress_short_camp_priorities(
+        athlete_model
+    )
     limiter_profile = _build_limiter_profile(athlete_model, restrictions)
     sport_load_profile = _build_sport_load_profile(athlete_model)
     weekly_stress_map = _build_weekly_stress_map(
@@ -2055,6 +2252,7 @@ def build_planning_brief(
         },
         "archetype_summary": _derive_athlete_archetype(athlete_model),
         "main_limiter": _derive_main_limiter(athlete_model),
+        "compressed_priorities": athlete_model.get("compressed_priorities", {}),
         "limiter_profile": limiter_profile,
         "sport_load_profile": sport_load_profile,
         "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
@@ -2491,6 +2689,7 @@ def build_stage2_payload(
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
+            "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
         ],
@@ -2649,7 +2848,3 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
-
-
-
-
