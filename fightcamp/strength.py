@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import logging
 import os
 import json
@@ -35,6 +35,7 @@ from .strength_session_quality import (
     session_support_count_before_anchor,
     strength_quality_adjustment,
 )
+from .session_restraint import NEAR_EQUAL_SCORE_BAND, sort_weighted_candidates
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,38 @@ def normalize_style_tags(tags):
 
 STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}
 SESSION_SUPPORT_CAP_MULTIPLIER = 2
+
+FATIGUE_COST_BY_QUALITY_CLASS = {
+    "anchor_loaded": 3.0,
+    "anchor_power": 2.5,
+    "anchor_force_isometric": 2.0,
+    "support_isometric": 1.5,
+    "support_accessory": 1.0,
+    "rehab_support": 0.5,
+}
+
+
+def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
+    """Return a small recovery-cost proxy for near-equal Rule 2 ordering.
+
+    The exercise bank does not currently expose a native ``fatigue_cost`` field, so
+    the restraint layer derives a deterministic proxy from existing planner signals
+    instead of defaulting every candidate to zero. The proxy stays intentionally
+    small and only helps break near-equal score groups; scoring remains primary.
+    """
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
+    fatigue_cost = FATIGUE_COST_BY_QUALITY_CLASS.get(quality_profile.get("quality_class"), 1.0)
+
+    if "high_volume" in tags:
+        fatigue_cost += 1.0
+    if tags & {"eccentric", "plyometric", "contrast_pairing", "triple_extension"}:
+        fatigue_cost += 0.5
+    if equipment & {"barbell", "trap_bar", "sandbag", "atlas_stone", "log"}:
+        fatigue_cost += 0.5
+
+    return round(fatigue_cost, 2)
+
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = normalize_equipment_list(entry_equip)
@@ -681,6 +714,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         breakdown["anchor_capable"] = quality_profile["anchor_capable"]
         breakdown["support_only"] = quality_profile["support_only"]
         breakdown["base_categories"] = quality_profile["base_categories"]
+        breakdown["fatigue_cost"] = _exercise_fatigue_cost(ex, quality_profile)
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
@@ -706,7 +740,24 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if score >= 0:
             weighted_exercises.append((ex, score, breakdown))
 
-    weighted_exercises.sort(key=lambda x: x[1], reverse=True)
+    weighted_candidates = [
+        {
+            "name": ex.get("name", ""),
+            "score": score,
+            "fatigue_cost": breakdown.get("fatigue_cost", ex.get("fatigue_cost", 0.0)),
+            "payload": (ex, score, breakdown),
+        }
+        for ex, score, breakdown in weighted_exercises
+    ]
+    # Keep score-driven ordering primary while only allowing local fatigue-cost
+    # reordering inside leader-anchored near-equal groups.
+    weighted_exercises = [
+        candidate["payload"]
+        for candidate in sort_weighted_candidates(
+            weighted_candidates,
+            near_equal_score_band=NEAR_EQUAL_SCORE_BAND,
+        )
+    ]
     days_count = len(training_days) if isinstance(training_days, list) else training_days
     if not isinstance(days_count, int):
         days_count = 3
