@@ -514,6 +514,54 @@ PHASE_SELECTION_GUARDRAILS = {
 }
 
 
+_RECORD_PATTERN = re.compile(r"^(\d+)-(\d+)(?:-(\d+))?$")
+_UNKNOWN_COMPETITIVE_MATURITY = "unknown_competitive_maturity"
+
+
+def _parse_record(record: str) -> dict:
+    normalized = str(record or "").strip()
+    match = _RECORD_PATTERN.fullmatch(normalized)
+    if not match:
+        return {
+            "record": normalized,
+            "wins": None,
+            "losses": None,
+            "draws": None,
+            "total_bouts": None,
+            "competitive_maturity": _UNKNOWN_COMPETITIVE_MATURITY,
+        }
+
+    wins = int(match.group(1))
+    losses = int(match.group(2))
+    draws = int(match.group(3)) if match.group(3) is not None else 0
+    return {
+        "record": normalized,
+        "wins": wins,
+        "losses": losses,
+        "draws": draws,
+        "total_bouts": wins + losses + draws,
+        "competitive_maturity": _UNKNOWN_COMPETITIVE_MATURITY,
+    }
+
+
+def _derive_competitive_maturity(status: str, record: str) -> dict:
+    parsed_record = _parse_record(record)
+    normalized_status = str(status or "").strip().lower()
+    total_bouts = parsed_record.get("total_bouts")
+
+    competitive_maturity = _UNKNOWN_COMPETITIVE_MATURITY
+    if normalized_status == "amateur" and isinstance(total_bouts, int):
+        if total_bouts <= 4:
+            competitive_maturity = "novice_amateur"
+        elif total_bouts <= 11:
+            competitive_maturity = "developing_amateur"
+        else:
+            competitive_maturity = "experienced_amateur"
+
+    parsed_record["competitive_maturity"] = competitive_maturity
+    return parsed_record
+
+
 PLANNING_DECISION_HIERARCHY = [
     {
         "rank": 1,
@@ -562,10 +610,16 @@ def _build_athlete_model(
     camp_length_weeks: int,
     short_notice: bool,
 ) -> dict:
+    record_profile = _derive_competitive_maturity(training_context.status, record)
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
-        "record": record,
+        "record": record_profile["record"],
+        "wins": record_profile["wins"],
+        "losses": record_profile["losses"],
+        "draws": record_profile["draws"],
+        "total_bouts": record_profile["total_bouts"],
+        "competitive_maturity": record_profile["competitive_maturity"],
         "rounds_format": rounds_format,
         "camp_length_weeks": camp_length_weeks,
         "days_until_fight": training_context.days_until_fight,
@@ -829,10 +883,21 @@ def _derive_athlete_archetype(athlete_model: dict) -> dict:
     elif readiness_flags & {"moderate_fatigue", "active_weight_cut", "injury_management", "short_notice"}:
         readiness = "managed"
 
+    competitive_maturity = athlete_model.get("competitive_maturity") or _UNKNOWN_COMPETITIVE_MATURITY
+    specificity_guidance = {
+        "unknown_competitive_maturity": "Keep style framing conservative and avoid overstating identity-specific reads.",
+        "novice_amateur": "Use clear style labels, but keep tactical wording broad and amateur-safe.",
+        "developing_amateur": "Use moderately specific style framing when it matches declared styles and goals.",
+        "experienced_amateur": "Use confident athlete-specific style framing when it matches the declared style profile.",
+    }.get(competitive_maturity, "Keep style framing conservative and avoid overstating identity-specific reads.")
+
     return {
         "style_identity": style_identity,
         "training_preference": athlete_model.get("training_preference") or "balanced",
         "experience_band": athlete_model.get("status") or "unspecified",
+        "competitive_maturity": competitive_maturity,
+        "total_bouts": athlete_model.get("total_bouts"),
+        "style_specificity": specificity_guidance,
         "readiness_state": readiness,
         "equipment_profile": _clean_list(athlete_model.get("equipment", [])),
     }
@@ -2827,6 +2892,7 @@ def build_stage2_payload(
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
+            "Use athlete_model.competitive_maturity only to calibrate wording specificity; it must not change workload, session count, recovery assumptions, or injury/cut conservatism.",
         ],
     }
 

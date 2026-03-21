@@ -1,4 +1,6 @@
 ﻿from fightcamp.stage2_payload import (
+    _derive_competitive_maturity,
+    _parse_record,
     build_planning_brief,
     build_stage2_payload,
 )
@@ -37,6 +39,47 @@ def _build_brief(athlete_model: dict, *, restrictions: list[dict] | None = None,
     )
 
 
+
+
+
+def test_parse_record_accepts_x_x_format():
+    parsed = _parse_record("19-2")
+
+    assert parsed["wins"] == 19
+    assert parsed["losses"] == 2
+    assert parsed["draws"] == 0
+    assert parsed["total_bouts"] == 21
+    assert parsed["competitive_maturity"] == "unknown_competitive_maturity"
+
+
+def test_parse_record_accepts_x_x_x_format():
+    parsed = _parse_record("12-3-1")
+
+    assert parsed["wins"] == 12
+    assert parsed["losses"] == 3
+    assert parsed["draws"] == 1
+    assert parsed["total_bouts"] == 16
+
+
+def test_parse_record_invalid_string_returns_unknown_maturity():
+    parsed = _parse_record("five-and-one")
+
+    assert parsed["wins"] is None
+    assert parsed["losses"] is None
+    assert parsed["draws"] is None
+    assert parsed["total_bouts"] is None
+    assert parsed["competitive_maturity"] == "unknown_competitive_maturity"
+
+
+def test_competitive_maturity_buckets_amateur_by_total_bouts():
+    assert _derive_competitive_maturity("amateur", "2-1")["competitive_maturity"] == "novice_amateur"
+    assert _derive_competitive_maturity("amateur", "7-1")["competitive_maturity"] == "developing_amateur"
+    assert _derive_competitive_maturity("amateur", "19-2")["competitive_maturity"] == "experienced_amateur"
+
+
+def test_competitive_maturity_returns_unknown_without_valid_status_or_record():
+    assert _derive_competitive_maturity("", "19-2")["competitive_maturity"] == "unknown_competitive_maturity"
+    assert _derive_competitive_maturity("amateur", "bad")["competitive_maturity"] == "unknown_competitive_maturity"
 
 def _build_taper_payload_and_brief() -> tuple[dict, dict]:
     training_context = TrainingContext(
@@ -1631,3 +1674,72 @@ def test_weight_cut_support_blocks_keep_protocol_and_plain_acknowledgement():
     assert "Weight Cut Protocol Triggered" in nutrition
     assert "Active Weight-Cut Recovery Note" in recovery
     assert "protect freshness" in recovery.lower()
+
+
+def test_record_changes_maturity_without_changing_load_logic():
+    base_athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": 21,
+        "short_notice": False,
+        "fatigue": "moderate",
+        "training_preference": "balanced",
+        "technical_styles": ["boxing"],
+        "tactical_styles": ["pressure_fighter"],
+        "key_goals": ["conditioning", "power"],
+        "weaknesses": ["pull"],
+        "equipment": ["air_bike", "dumbbell"],
+        "injuries": ["shoulder strain"],
+        "weight_cut_risk": True,
+        "weight_cut_pct": 5.0,
+        "readiness_flags": ["moderate_fatigue", "active_weight_cut", "injury_management"],
+    }
+    phase_briefs = {
+        "SPP": {
+            "objective": "increase fight-specific repeatability and power transfer",
+            "emphasize": ["glycolytic repeatability", "sport speed"],
+            "deprioritize": ["non-specific conditioning volume"],
+            "risk_flags": ["respect injury guardrails", "manage cut stress"],
+            "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+            "selection_guardrails": {
+                "must_keep_if_present": ["rehab", "glycolytic", "alactic"],
+                "conditioning_drop_order_if_thin": ["aerobic"],
+            },
+            "weeks": 1,
+            "days": 7,
+        }
+    }
+    candidate_pools = {
+        "SPP": {
+            "strength_slots": [{"role": "hinge"}],
+            "conditioning_slots": [{"role": "glycolytic"}, {"role": "alactic"}],
+            "rehab_slots": [{"role": "rehab_shoulder_strain"}],
+        }
+    }
+
+    novice = build_planning_brief(
+        athlete_model={**base_athlete_model, **_derive_competitive_maturity("amateur", "2-1")},
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools=candidate_pools,
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+    experienced = build_planning_brief(
+        athlete_model={**base_athlete_model, **_derive_competitive_maturity("amateur", "19-2")},
+        restrictions=[],
+        phase_briefs=phase_briefs,
+        candidate_pools=candidate_pools,
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+    assert novice["archetype_summary"]["competitive_maturity"] == "novice_amateur"
+    assert novice["archetype_summary"]["style_specificity"] == "Use clear style labels, but keep tactical wording broad and amateur-safe."
+    assert experienced["archetype_summary"]["competitive_maturity"] == "experienced_amateur"
+    assert experienced["archetype_summary"]["style_specificity"] == "Use confident athlete-specific style framing when it matches the declared style profile."
+    assert novice["phase_strategy"] == experienced["phase_strategy"]
+    assert novice["weekly_stress_map"] == experienced["weekly_stress_map"]
+    assert novice["week_by_week_progression"] == experienced["week_by_week_progression"]
