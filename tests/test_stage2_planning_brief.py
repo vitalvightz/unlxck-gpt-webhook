@@ -811,6 +811,14 @@ def test_build_planning_brief_compresses_progression_for_short_notice_camp():
     assert sum(week["span_days"] for week in weeks) == 10
     assert weeks[1]["protect_first"].startswith("Because fatigue is high")
 
+    phase_strategy = brief["phase_strategy"]
+    assert phase_strategy["SPP"]["objective"] == "increase fight-specific repeatability and power transfer"
+    assert phase_strategy["SPP"]["visible_label"] == "specific density / peak"
+    assert phase_strategy["SPP"]["visible_objective"].startswith(
+        "Compress specific density build and peak transfer into one focused week"
+    )
+    assert phase_strategy["TAPER"]["visible_label"] == "fight-week survival / rhythm"
+
 
 
 def test_week_by_week_progression_inherits_phase_guardrails_and_stress_rules():
@@ -1059,6 +1067,80 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
         role["compressed_priority_label"] in {"mobility support", "skill refinement as standalone work"}
         for role in roles
     )
+
+
+def test_phase_strategy_keeps_plain_spp_framing_for_true_multiweek_spp():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 5,
+            "days_until_fight": 33,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power"],
+            "weaknesses": ["coordination_proprioception"],
+            "equipment": ["bodyweight"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+        },
+        {
+            "GPP": {
+                "objective": "build aerobic base and general force capacity",
+                "emphasize": ["aerobic repeatability", "general force"],
+                "deprioritize": ["fight-week intensity"],
+                "risk_flags": [],
+                "session_counts": {"strength": 2, "conditioning": 1, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["aerobic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["alactic", "glycolytic"],
+                },
+                "weeks": 2,
+                "days": 13,
+            },
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["sport speed", "fight-pace transfer"],
+                "deprioritize": ["non-specific volume"],
+                "risk_flags": [],
+                "session_counts": {"strength": 1, "conditioning": 2, "recovery": 0},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["glycolytic"],
+                },
+                "weeks": 2,
+                "days": 13,
+            },
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": [],
+                "session_counts": {"strength": 0, "conditioning": 1, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            },
+        },
+    )
+
+    strategy = brief["phase_strategy"]["SPP"]
+
+    assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"] if week["phase"] == "SPP"] == [
+        "specific_density_build",
+        "peak_specificity",
+    ]
+    assert strategy["visible_label"] == "SPP"
+    assert strategy["visible_objective"] == "increase fight-specific repeatability and power transfer"
 
 
 def test_weekly_role_map_inherits_existing_stress_anchors():
