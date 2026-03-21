@@ -1091,7 +1091,11 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
         return "boxing_quality_under_load"
     if weakness_tokens & {"shoulder", "shoulders", "knee", "knees", "neck", "mobility", "stiffness"}:
         return "tissue_state"
-    if athlete_model.get("injuries") and tissue_pressure:
+    if athlete_model.get("injuries") and tissue_pressure and (
+        athlete_model.get("short_notice")
+        or readiness_flags & {"fight_week", "high_fatigue"}
+        or (isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14)
+    ):
         return "tissue_state"
 
     if goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}:
@@ -1953,6 +1957,117 @@ def _resequence_session_roles(week_entry: dict, session_roles: list[dict], athle
     return ordered
 
 
+def _short_camp_priority_catalog(compressed: dict) -> dict[str, str]:
+    label_by_kind: dict[str, str] = {}
+    for bucket in ("primary_targets", "maintenance_targets", "embedded_support", "deferred"):
+        for entry in compressed.get(bucket, []) or []:
+            kind = str((entry or {}).get("kind", "")).strip()
+            label = str((entry or {}).get("label", "")).strip()
+            if kind and label and kind not in label_by_kind:
+                label_by_kind[kind] = label
+    return label_by_kind
+
+
+def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str, str]:
+    compressed = athlete_model.get("compressed_priorities") or {}
+    label_by_kind = _short_camp_priority_catalog(compressed)
+    if not compressed.get("is_short_camp"):
+        return "", ""
+
+    role_key = str(role.get("role_key", "")).strip()
+    category = str(role.get("category", "")).strip()
+    system = str(role.get("preferred_system", "")).strip()
+
+    if category == "recovery":
+        if label_by_kind.get("freshness_protection"):
+            return label_by_kind["freshness_protection"], "primary_target"
+        return "embedded recovery support", "embedded_support"
+
+    if category == "conditioning" and system == "aerobic" and label_by_kind.get("conditioning_maintenance"):
+        return label_by_kind["conditioning_maintenance"], "maintenance_target"
+
+    if category == "conditioning" and system == "glycolytic" and label_by_kind.get("conditioning_maintenance"):
+        return label_by_kind["conditioning_maintenance"], "maintenance_target"
+
+    if (
+        category == "conditioning"
+        and system == "alactic"
+        and label_by_kind.get("power_expression")
+    ):
+        return label_by_kind["power_expression"], "primary_target"
+
+    if role_key in {
+        "aerobic_coordination_day",
+        "repeatability_support_day",
+        "aerobic_support_day",
+        "controlled_repeatability_day",
+        "fight_pace_repeatability_day",
+        "light_fight_pace_touch_day",
+    } and label_by_kind.get("technical_sharpness"):
+        return label_by_kind["technical_sharpness"], "primary_target"
+
+    if role_key in {"primary_strength_day", "neural_plus_strength_day", "neural_primer_day", "alactic_sharpness_day", "alactic_speed_day"}:
+        if label_by_kind.get("power_expression"):
+            return label_by_kind["power_expression"], "primary_target"
+        if label_by_kind.get("technical_sharpness"):
+            return label_by_kind["technical_sharpness"], "primary_target"
+
+    if role_key in {"strength_touch_day", "transfer_strength_day", "small_strength_touch_day"}:
+        if label_by_kind.get("power_expression"):
+            return label_by_kind["power_expression"], "primary_target"
+
+    return "", ""
+
+
+def _apply_short_camp_role_compression(
+    week_entry: dict,
+    session_roles: list[dict],
+    suppressed_roles: list[dict],
+    athlete_model: dict,
+) -> tuple[list[dict], list[dict]]:
+    compressed = athlete_model.get("compressed_priorities") or {}
+    if not compressed.get("is_short_camp"):
+        return session_roles, suppressed_roles
+
+    allowed_primary = set(_priority_bucket_labels(compressed.get("primary_targets", [])))
+    allowed_maintenance = set(_priority_bucket_labels(compressed.get("maintenance_targets", [])))
+
+    kept_roles: list[dict] = []
+    updated_suppressed = list(suppressed_roles)
+
+    for role in session_roles:
+        label, bucket = _compressed_priority_for_role(role, athlete_model)
+        if label:
+            role["compressed_priority_label"] = label
+            role["compressed_priority_bucket"] = bucket
+            kept_roles.append(role)
+            continue
+        if role.get("category") == "recovery":
+            role["compressed_priority_label"] = "embedded recovery support"
+            role["compressed_priority_bucket"] = "embedded_support"
+            kept_roles.append(role)
+            continue
+        updated_suppressed.append(
+            {
+                "category": role.get("category"),
+                "role_key": role.get("role_key"),
+                "preferred_system": role.get("preferred_system", ""),
+                "reasons": [
+                    "Short-camp compression removed this standalone session purpose because it did not map to a compressed week-level priority."
+                ],
+                "compressed_priority_alignment": {
+                    "allowed_primary_targets": sorted(allowed_primary),
+                    "allowed_maintenance_targets": sorted(allowed_maintenance),
+                },
+                "governance": dict(role.get("governance", {})),
+            }
+        )
+
+    for idx, role in enumerate(kept_roles, start=1):
+        role["session_index"] = idx
+    return kept_roles, updated_suppressed
+
+
 def _build_weekly_role_map(
     athlete_model: dict,
     week_by_week_progression: dict,
@@ -2080,6 +2195,12 @@ def _build_weekly_role_map(
             )
             session_index += 1
 
+        session_roles, suppressed_roles = _apply_short_camp_role_compression(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+        )
         session_roles = _resequence_session_roles(week_entry, session_roles, athlete_model)
 
         weeks.append(
@@ -2780,6 +2901,7 @@ For boxer weeks, keep the default rhythm of support strength, low-damage conditi
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
+In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
 
 RULE 12 - SURGICAL REHAB INTEGRATION
 Rehab must never feel copy-pasted, generic, or repeated by default.

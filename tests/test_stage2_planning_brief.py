@@ -1005,6 +1005,62 @@ def test_weekly_role_map_compresses_to_sharpness_and_freshness_for_short_notice(
 
 
 
+def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_priorities():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 5,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power", "skill_refinement", "mobility"],
+            "weaknesses": ["gas_tank", "footwork"],
+            "equipment": ["bodyweight", "bands"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["moderate_fatigue", "fight_week", "short_notice"],
+        },
+        {
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 1, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 0,
+                "days": 5,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    roles = week["session_roles"]
+
+    assert {role["compressed_priority_label"] for role in roles} == {
+        "power expression",
+        "gas tank maintenance",
+        "fight-readiness and freshness protection",
+    }
+    assert all(
+        role["compressed_priority_bucket"] in {"primary_target", "maintenance_target"}
+        for role in roles
+    )
+    assert not any(
+        role["compressed_priority_label"] in {"mobility support", "skill refinement as standalone work"}
+        for role in roles
+    )
+
+
 def test_weekly_role_map_inherits_existing_stress_anchors():
     brief = _build_progression_brief(
         {
