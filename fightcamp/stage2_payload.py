@@ -594,12 +594,11 @@ def _build_athlete_model(
             days_until_fight=training_context.days_until_fight,
         ),
     }
-    athlete_model["compressed_priorities"] = _compress_short_camp_priorities(athlete_model)
     return athlete_model
 
 
-def _priority_bucket(label: str, kind: str, reason: str) -> dict:
-    return {"label": label, "kind": kind, "reason": reason}
+def _priority_bucket(label: str, kind: str) -> dict:
+    return {"label": label, "kind": kind}
 
 
 def _priority_bucket_labels(entries: list[dict]) -> list[str]:
@@ -642,7 +641,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
         if label in used_labels:
             return
-        bucket.append(_priority_bucket(label, kind, reason))
+        bucket.append(_priority_bucket(label, kind))
         used_labels.add(label)
 
     immediate_performance_limiter = (
@@ -685,11 +684,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         moved = primary.pop()
         destination = embedded if moved["kind"] == "freshness_protection" else maintenance
         destination.append(
-            _priority_bucket(
-                moved["label"],
-                moved["kind"],
-                "Downgraded to keep short-camp objectives selective.",
-            )
+            _priority_bucket(moved["label"], moved["kind"])
         )
 
     conditioning_selected = bool(
@@ -740,7 +735,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     if len(maintenance) > 1:
         overflow = maintenance[1:]
         maintenance = maintenance[:1]
-        deferred.extend(_priority_bucket(item["label"], item["kind"], "Extra maintenance targets were deferred to keep the week selective.") for item in overflow)
+        deferred.extend(_priority_bucket(item["label"], item["kind"]) for item in overflow)
 
     return {
         "timeline_days": timeline_days,
@@ -2029,9 +2024,6 @@ def _apply_short_camp_role_compression(
     if not compressed.get("is_short_camp"):
         return session_roles, suppressed_roles
 
-    allowed_primary = set(_priority_bucket_labels(compressed.get("primary_targets", [])))
-    allowed_maintenance = set(_priority_bucket_labels(compressed.get("maintenance_targets", [])))
-
     kept_roles: list[dict] = []
     updated_suppressed = list(suppressed_roles)
 
@@ -2055,10 +2047,6 @@ def _apply_short_camp_role_compression(
                 "reasons": [
                     "Short-camp compression removed this standalone session purpose because it did not map to a compressed week-level priority."
                 ],
-                "compressed_priority_alignment": {
-                    "allowed_primary_targets": sorted(allowed_primary),
-                    "allowed_maintenance_targets": sorted(allowed_maintenance),
-                },
                 "governance": dict(role.get("governance", {})),
             }
         )
