@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { approvePlanForRelease, submitManualStage2 } from "@/lib/api";
+import { approvePlanForRelease, rejectApprovedPlan, submitManualStage2 } from "@/lib/api";
 import type { PlanDetail } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -392,6 +392,7 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
+  const canRejectApproval = isAdmin && hasPublishedPlan;
   const approveButtonLabel = stage2ReviewSummary.isPublishable ? "Approve for athlete view" : "Approve anyway";
   const reviewPanelClassName = `support-panel stage2-review-panel ${stage2ReviewSummary.isPublishable ? "" : "support-panel-alert"}`.trim();
   const approvalSourceLabel = plan.admin_outputs?.final_plan_text?.trim()
@@ -406,6 +407,9 @@ export function PlanViewer({
   const [approvePending, setApprovePending] = useState(false);
   const [approveMessage, setApproveMessage] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [rejectPending, setRejectPending] = useState(false);
+  const [rejectMessage, setRejectMessage] = useState<string | null>(null);
+  const [rejectError, setRejectError] = useState<string | null>(null);
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(null);
   const [openAdminSection, setOpenAdminSection] = useState(() => {
@@ -486,6 +490,8 @@ export function PlanViewer({
     setApprovePending(true);
     setApproveError(null);
     setApproveMessage(null);
+    setRejectError(null);
+    setRejectMessage(null);
     try {
       const updatedPlan = await approvePlanForRelease(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
@@ -494,6 +500,32 @@ export function PlanViewer({
       setApproveError(error instanceof Error ? error.message : "Unable to approve this plan for athlete view.");
     } finally {
       setApprovePending(false);
+    }
+  }
+
+  async function handleRejectApproval() {
+    if (!accessToken) {
+      setRejectError("Admin session missing. Please sign in again.");
+      return;
+    }
+    if (!canRejectApproval) {
+      setRejectError("Only released plans can be rejected back into review.");
+      return;
+    }
+
+    setRejectPending(true);
+    setRejectError(null);
+    setRejectMessage(null);
+    setApproveError(null);
+    setApproveMessage(null);
+    try {
+      const updatedPlan = await rejectApprovedPlan(accessToken, plan.plan_id);
+      onPlanUpdated?.(updatedPlan);
+      setRejectMessage("Plan rejected and moved back to review so it can be approved again later.");
+    } catch (error) {
+      setRejectError(error instanceof Error ? error.message : "Unable to reject this released plan.");
+    } finally {
+      setRejectPending(false);
     }
   }
 
@@ -690,8 +722,15 @@ export function PlanViewer({
             <>
               <div className="plan-summary-actions">
                 <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+                {canRejectApproval ? (
+                  <button type="button" className="ghost-button" onClick={handleRejectApproval} disabled={rejectPending}>
+                    {rejectPending ? "Rejecting..." : "Reject approval"}
+                  </button>
+                ) : null}
               </div>
               <pre className="plan-text-block">{athletePlanText}</pre>
+              {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
+              {rejectError ? <div className="error-banner">{rejectError}</div> : null}
             </>
           ) : (
             <div className="plan-review-stack">
@@ -879,6 +918,8 @@ export function PlanViewer({
             ) : null}
             {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
             {approveError ? <div className="error-banner">{approveError}</div> : null}
+            {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
+            {rejectError ? <div className="error-banner">{rejectError}</div> : null}
             <div className="field">
               <label htmlFor="manual-stage2-final-plan">Final plan text</label>
               <textarea
