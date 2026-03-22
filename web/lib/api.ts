@@ -259,3 +259,10 @@ export function approvePlanForRelease(token: string, planId: string): Promise<Pl
     token,
   });
 }
+
+export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
+  return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
+    method: "POST",
+    token,
+  });
+}

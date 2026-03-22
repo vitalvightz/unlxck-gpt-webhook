@@ -1274,6 +1274,42 @@ def test_admin_can_approve_review_required_plan_for_release():
     assert body["admin_outputs"]["stage2_status"] == "admin_review_approved"
 
 
+def test_admin_can_reject_approved_plan_back_to_review():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="ready",
+            plan_text="# Released Stage 2 Output",
+            final_plan_text="# Released Stage 2 Output",
+            stage2_status="admin_review_approved",
+            stage2_retry_text="repair prompt",
+            stage2_attempt_count=2,
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/reject",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "review_required"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["final_plan_text"] == "# Released Stage 2 Output"
+    assert body["admin_outputs"]["stage2_status"] == "admin_review_rejected"
+
+
 def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
     for scenario in [item for item in SYSTEM_SCENARIOS if item.expected_resolution]:
         client, store, _ = _build_client(

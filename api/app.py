@@ -304,6 +304,26 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:
+    held_text = str(plan_row.get("final_plan_text") or plan_row.get("draft_plan_text") or plan_row.get("plan_text") or "").strip()
+    if not held_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No saved Stage 2 or draft text is available to keep in review.",
+        )
+    return {
+        "status": "review_required",
+        "plan_text": "",
+        "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
+        "final_plan_text": held_text,
+        "pdf_url": None,
+        "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
+        "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+        "stage2_status": "admin_review_rejected",
+        "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
+    }
+
+
 def create_app(
     *,
     store: AppStore,
@@ -712,6 +732,22 @@ def create_app(
         updated = store.update_plan_stage2(
             plan_id,
             _admin_approved_result(plan_row),
+        )
+        return _map_plan_detail(updated, include_admin=True)
+
+    @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
+    def reject_approved_plan(
+        plan_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> PlanDetail:
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
+        updated = store.update_plan_stage2(
+            plan_id,
+            _admin_rejected_result(plan_row),
         )
         return _map_plan_detail(updated, include_admin=True)
 
