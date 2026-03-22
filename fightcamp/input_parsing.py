@@ -173,15 +173,10 @@ def _extract_value(field: dict) -> str:
 
 def get_value(label: str, fields: list[dict]) -> str:
     field = _find_field(label, fields)
-    if not field:
-        return ""
-    return _extract_value(field)
+    return _extract_value(field) if field else ""
 
 
-def get_date_value(label: str, fields: list[dict]) -> str:
-    field = _find_field(label, fields)
-    if not field:
-        return ""
+def _extract_date_value(field: dict) -> str:
     value = field.get("value")
     if isinstance(value, dict):
         for key in ("date", "value", "text", "label"):
@@ -190,6 +185,11 @@ def get_date_value(label: str, fields: list[dict]) -> str:
     if isinstance(value, list):
         return ", ".join(str(v) for v in value)
     return str(value).strip() if value is not None else ""
+
+
+def get_date_value(label: str, fields: list[dict]) -> str:
+    field = _find_field(label, fields)
+    return _extract_date_value(field) if field else ""
 
 
 def parse_fight_date(value: str) -> datetime | None:
@@ -262,11 +262,43 @@ def is_short_notice_days(days_until_fight: int | None) -> bool:
     return isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14
 
 
+_PLAN_FIELD_LABELS = {
+    "full_name": "Full name",
+    "age": "Age",
+    "weight": "Weight (kg)",
+    "target_weight": "Target Weight (kg)",
+    "height": "Height (cm)",
+    "fighting_style_technical": "Fighting Style (Technical)",
+    "fighting_style_tactical": "Fighting Style (Tactical)",
+    "stance": "Stance",
+    "status": "Professional Status",
+    "record": "Current Record",
+    "athlete_timezone": "Athlete Time Zone",
+    "athlete_locale": "Athlete Locale",
+    "rounds_format": "Rounds x Minutes",
+    "frequency_raw": "Weekly Training Frequency",
+    "fatigue": "Fatigue Level",
+    "equipment_access": "Equipment Access",
+    "available_days": "Training Availability",
+    "hard_sparring_days_raw": "Hard Sparring Days",
+    "technical_skill_days_raw": "Technical Skill Days",
+    "key_goals": "What are your key performance goals?",
+    "weak_areas": "Where do you feel weakest right now?",
+    "training_preference": "Do you prefer certain training styles?",
+    "mental_block": "Do you struggle with any mental blockers or mindset challenges?",
+    "notes": "Are there any parts of your previous plan you hated or loved?",
+}
+
+
 def _extract_fields(data: dict) -> list[dict]:
     fields = data.get("data", {}).get("fields") if isinstance(data, dict) else None
     if not isinstance(fields, list):
         raise ValueError("payload missing required data.fields list")
     return fields
+
+
+def _get_plan_field_values(fields: list[dict]) -> dict[str, str]:
+    return {name: get_value(label, fields) for name, label in _PLAN_FIELD_LABELS.items()}
 
 
 def _compute_days_until_fight(
@@ -327,92 +359,42 @@ class PlanInput:
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
         fields = _extract_fields(data)
-
-        full_name = get_value("Full name", fields)
-        age = get_value("Age", fields)
-        weight = get_value("Weight (kg)", fields)
-        target_weight = get_value("Target Weight (kg)", fields)
-        height = get_value("Height (cm)", fields)
-        fighting_style_technical = get_value("Fighting Style (Technical)", fields)
-        fighting_style_tactical = get_value("Fighting Style (Tactical)", fields)
-        stance = get_value("Stance", fields)
-        status = get_value("Professional Status", fields)
-        record = get_value("Current Record", fields)
+        values = _get_plan_field_values(fields)
         next_fight_date = get_date_value("When is your next fight?", fields)
-        athlete_timezone = get_value("Athlete Time Zone", fields)
-        athlete_locale = get_value("Athlete Locale", fields)
-        rounds_format = get_value("Rounds x Minutes", fields)
-        frequency_raw = get_value("Weekly Training Frequency", fields)
-        fatigue = get_value("Fatigue Level", fields)
-        equipment_access = get_value("Equipment Access", fields)
-        available_days = get_value("Training Availability", fields)
-        hard_sparring_days_raw = get_value("Hard Sparring Days", fields)
-        technical_skill_days_raw = get_value("Technical Skill Days", fields)
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
         )
         parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
-        key_goals = get_value("What are your key performance goals?", fields)
-        weak_areas = get_value("Where do you feel weakest right now?", fields)
-        training_preference = get_value("Do you prefer certain training styles?", fields)
-        mental_block = get_value(
-            "Do you struggle with any mental blockers or mindset challenges?", fields
-        )
-        notes = get_value("Are there any parts of your previous plan you hated or loved?", fields)
 
-        training_days = [d.strip() for d in available_days.split(",") if d.strip()]
-        hard_sparring_days = [d.strip() for d in hard_sparring_days_raw.split(",") if d.strip()]
-        technical_skill_days = [d.strip() for d in technical_skill_days_raw.split(",") if d.strip()]
+        training_days = [d.strip() for d in values["available_days"].split(",") if d.strip()]
+        hard_sparring_days = [
+            d.strip() for d in values["hard_sparring_days_raw"].split(",") if d.strip()
+        ]
+        technical_skill_days = [
+            d.strip() for d in values["technical_skill_days_raw"].split(",") if d.strip()
+        ]
         try:
-            training_frequency = int(frequency_raw)
+            training_frequency = int(values["frequency_raw"])
         except (TypeError, ValueError):
             training_frequency = len(training_days)
 
-        weeks_out: int | str
+        weeks_out: int | str = "N/A"
         days_until_fight = None
-        if next_fight_date:
-            fight_date = parse_fight_date(next_fight_date)
-            if fight_date:
-                days_until_fight = _compute_days_until_fight(
-                    next_fight_date,
-                    fight_date,
-                    athlete_timezone=athlete_timezone,
-                )
-                weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
-            else:
-                weeks_out = "N/A"
-        else:
-            weeks_out = "N/A"
+        fight_date = parse_fight_date(next_fight_date) if next_fight_date else None
+        if fight_date:
+            days_until_fight = _compute_days_until_fight(
+                next_fight_date,
+                fight_date,
+                athlete_timezone=values["athlete_timezone"],
+            )
+            weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
 
         return cls(
-            full_name=full_name,
-            age=age,
-            weight=weight,
-            target_weight=target_weight,
-            height=height,
-            fighting_style_technical=fighting_style_technical,
-            fighting_style_tactical=fighting_style_tactical,
-            stance=stance,
-            status=status,
-            record=record,
+            **values,
             next_fight_date=next_fight_date,
-            athlete_timezone=athlete_timezone,
-            athlete_locale=athlete_locale,
-            rounds_format=rounds_format,
-            frequency_raw=frequency_raw,
-            fatigue=fatigue,
-            equipment_access=equipment_access,
-            available_days=available_days,
-            hard_sparring_days_raw=hard_sparring_days_raw,
-            technical_skill_days_raw=technical_skill_days_raw,
             injuries=injuries,
             parsed_injuries=parsed_injuries,
             restrictions=parsed_restrictions,
-            key_goals=key_goals,
-            weak_areas=weak_areas,
-            training_preference=training_preference,
-            mental_block=mental_block,
-            notes=notes,
             training_days=training_days,
             hard_sparring_days=hard_sparring_days,
             technical_skill_days=technical_skill_days,
