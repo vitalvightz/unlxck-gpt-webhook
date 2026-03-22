@@ -27,6 +27,29 @@ const BLOCKING_WARNING_CODES = new Set([
   "high_pressure_weight_cut_underaddressed",
 ]);
 
+const ISSUE_TITLES: Record<string, string> = {
+  restriction_violation: "Restriction violation",
+  missing_required_element: "Missing phase-critical element",
+  phase_section_missing: "Missing phase section",
+  weak_anchor_session: "Weak anchor session",
+  support_takeover_before_anchor: "Support work took over too early",
+  conditional_conditioning_choice: "Conditioning is still unresolved",
+  too_many_fallbacks: "Too many fallback branches",
+  unresolved_access_fallback: "Fallback does not match real access needs",
+  template_like_session_render: "Session still reads like a template",
+  taper_option_overload: "Taper is too noisy",
+  equipment_incongruent_selection: "Equipment mismatch",
+  missing_week_session_role: "Week structure is missing a session",
+  late_camp_session_incomplete: "Late-camp week is incomplete",
+  weekly_session_overage: "Too many sessions in a week",
+  weekly_rhythm_broken: "Weekly rhythm broke",
+  missing_weight_cut_acknowledgement: "Weight-cut stress is missing",
+  high_pressure_weight_cut_underaddressed: "High-pressure cut is underaddressed",
+  sport_language_leak: "Cross-sport wording leaked in",
+  overstyled_drill_name: "Naming still needs cleanup",
+  gimmick_name: "Naming still needs cleanup",
+};
+
 function humanizeStatus(value: string) {
   return value.replace(/_/g, " ");
 }
@@ -77,55 +100,31 @@ function safeIssueList(value: unknown): ValidatorIssue[] {
 }
 
 function issueTitle(code: string) {
-  const titles: Record<string, string> = {
-    restriction_violation: "Restriction violation",
-    missing_required_element: "Missing phase-critical element",
-    phase_section_missing: "Missing phase section",
-    weak_anchor_session: "Weak anchor session",
-    support_takeover_before_anchor: "Support work took over too early",
-    conditional_conditioning_choice: "Conditioning is still unresolved",
-    too_many_fallbacks: "Too many fallback branches",
-    unresolved_access_fallback: "Fallback does not match real access needs",
-    template_like_session_render: "Session still reads like a template",
-    taper_option_overload: "Taper is too noisy",
-    equipment_incongruent_selection: "Equipment mismatch",
-    missing_week_session_role: "Week structure is missing a session",
-    late_camp_session_incomplete: "Late-camp week is incomplete",
-    weekly_session_overage: "Too many sessions in a week",
-    weekly_rhythm_broken: "Weekly rhythm broke",
-    missing_weight_cut_acknowledgement: "Weight-cut stress is missing",
-    high_pressure_weight_cut_underaddressed: "High-pressure cut is underaddressed",
-    sport_language_leak: "Cross-sport wording leaked in",
-    overstyled_drill_name: "Naming still needs cleanup",
-    gimmick_name: "Naming still needs cleanup",
-  };
-  return titles[code] || humanizeStatus(code || "review issue");
+  return ISSUE_TITLES[code] || humanizeStatus(code || "review issue");
 }
 
 function joinContextBits(bits: Array<string | null | undefined>) {
   return bits.filter((bit): bit is string => Boolean(bit && bit.trim())).join(" | ");
 }
 
+function normalizeIssueText(value: unknown) {
+  return typeof value === "string" && value ? value.replace(/_/g, " ") : null;
+}
+
 function formatIssueContext(issue: ValidatorIssue) {
-  const phase = typeof issue.phase === "string" && issue.phase ? issue.phase : null;
-  const week =
-    typeof issue.week_index === "number" ? `Week ${issue.week_index}` : null;
-  const session =
-    typeof issue.session_index === "number" ? `Session ${issue.session_index}` : null;
-  const requirement =
-    typeof issue.requirement === "string" && issue.requirement
-      ? issue.requirement.replace(/_/g, " ")
-      : null;
-  const restriction =
-    typeof issue.restriction === "string" && issue.restriction
-      ? issue.restriction.replace(/_/g, " ")
-      : null;
   const equipment =
     Array.isArray(issue.required_equipment) && issue.required_equipment.length
       ? `Needs ${issue.required_equipment.map((item) => String(item).replace(/_/g, " ")).join(", ")}`
       : null;
 
-  return joinContextBits([phase, week, session, requirement, restriction, equipment]);
+  return joinContextBits([
+    typeof issue.phase === "string" && issue.phase ? issue.phase : null,
+    typeof issue.week_index === "number" ? `Week ${issue.week_index}` : null,
+    typeof issue.session_index === "number" ? `Session ${issue.session_index}` : null,
+    normalizeIssueText(issue.requirement),
+    normalizeIssueText(issue.restriction),
+    equipment,
+  ]);
 }
 
 function buildReviewIssue(issue: ValidatorIssue, severity: "error" | "warning"): ReviewIssue {
@@ -167,6 +166,10 @@ function resolveWarningBuckets(report: Record<string, unknown> | null | undefine
   };
 }
 
+function pluralize(count: number, singular: string) {
+  return `${count} ${singular}${count === 1 ? "" : "s"}`;
+}
+
 function buildReviewSummary(report: Record<string, unknown> | null | undefined, stage2Status: string) {
   const errors = safeIssueList(report?.errors).map((issue) => buildReviewIssue(issue, "error"));
   const { blockingWarnings, reviewFlags } = resolveWarningBuckets(report);
@@ -176,21 +179,23 @@ function buildReviewSummary(report: Record<string, unknown> | null | undefined, 
     typeof report?.blocking_warning_count === "number" ? report.blocking_warning_count : blocking.length;
   const reviewFlagCount =
     typeof report?.review_flag_count === "number" ? report.review_flag_count : reviewFlagsMapped.length;
-  const total = errors.length + blocking.length + reviewFlagsMapped.length;
   const isPublishable =
     typeof report?.is_publishable === "boolean"
       ? report.is_publishable
       : errors.length === 0 && blocking.length === 0;
+  const summary = {
+    errors,
+    blocking,
+    reviewFlags: reviewFlagsMapped,
+    blockingCount,
+    reviewFlagCount,
+    isPublishable,
+  };
 
-  if (total === 0) {
+  if (errors.length + blocking.length + reviewFlagsMapped.length === 0) {
     return {
-      errors,
-      blocking,
-      reviewFlags: reviewFlagsMapped,
+      ...summary,
       hasIssues: false,
-      blockingCount,
-      reviewFlagCount,
-      isPublishable,
       headline:
         stage2Status === "stage2_failed"
           ? "Stage 2 held this plan, but no detailed validator reasons were saved in the report."
@@ -202,45 +207,29 @@ function buildReviewSummary(report: Record<string, unknown> | null | undefined, 
     };
   }
 
-  const summaryParts: string[] = [];
-  if (errors.length) {
-    summaryParts.push(`${errors.length} blocking error${errors.length === 1 ? "" : "s"}`);
-  }
-  if (blocking.length) {
-    summaryParts.push(`${blocking.length} blocking issue${blocking.length === 1 ? "" : "s"}`);
-  }
-  if (reviewFlagsMapped.length) {
-    summaryParts.push(`${reviewFlagsMapped.length} review flag${reviewFlagsMapped.length === 1 ? "" : "s"}`);
-  }
+  const summaryParts = [
+    errors.length ? pluralize(errors.length, "blocking error") : null,
+    blocking.length ? pluralize(blocking.length, "blocking issue") : null,
+    reviewFlagsMapped.length ? pluralize(reviewFlagsMapped.length, "review flag") : null,
+  ].filter((part): part is string => Boolean(part));
 
   if (isPublishable) {
+    const hasReviewFlags = reviewFlagsMapped.length > 0;
     return {
-      errors,
-      blocking,
-      reviewFlags: reviewFlagsMapped,
+      ...summary,
       hasIssues: true,
-      blockingCount,
-      reviewFlagCount,
-      isPublishable,
-      headline:
-        reviewFlagsMapped.length > 0
-          ? `This plan is publishable. Only non-blocking review flags remain (${summaryParts.join(", ")}).`
-          : "This plan is publishable and clear to release.",
-      guidance:
-        reviewFlagsMapped.length > 0
-          ? "You can release this plan now. The remaining flags are cleanup notes, not hold reasons."
-          : "No blockers remain. Approval is now just a release decision.",
+      headline: hasReviewFlags
+        ? `This plan is publishable. Only non-blocking review flags remain (${summaryParts.join(", ")}).`
+        : "This plan is publishable and clear to release.",
+      guidance: hasReviewFlags
+        ? "You can release this plan now. The remaining flags are cleanup notes, not hold reasons."
+        : "No blockers remain. Approval is now just a release decision.",
     };
   }
 
   return {
-    errors,
-    blocking,
-    reviewFlags: reviewFlagsMapped,
+    ...summary,
     hasIssues: true,
-    blockingCount,
-    reviewFlagCount,
-    isPublishable,
     headline: `${summaryParts.join(" and ")} are keeping this Stage 2 plan in review.`,
     guidance:
       errors.length > 0
