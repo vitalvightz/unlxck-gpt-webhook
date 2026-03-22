@@ -313,6 +313,18 @@ function parseAreaTokens(value: string): string[] {
     .filter(Boolean);
 }
 
+function getGuidedInjuryLocationError(injuriesText: string | null | undefined, guidedInjuries: GuidedInjuryState[]): string | null {
+  const hasInjuryText = Boolean((injuriesText ?? "").trim());
+  const hasNamedAreas = guidedInjuries.some((item) => item.area.trim());
+  const hasAreaGap = guidedInjuries.some((item) => !item.area.trim());
+
+  if (hasAreaGap || (hasInjuryText && !hasNamedAreas)) {
+    return "Choose a pain area or body part for each injury or restriction before continuing.";
+  }
+
+  return null;
+}
+
 function formatSparringCollisionRisk({
   fatigueLevel,
   injuries,
@@ -521,15 +533,30 @@ export function PlanIntakeForm() {
   function addGuidedInjuryAreas(rawValue: string) {
     const nextAreas = parseAreaTokens(rawValue);
     if (!nextAreas.length) {
+      setError("Choose a pain area or body part before adding an injury restriction.");
       return;
     }
 
+    setError(null);
     setGuidedInjuries((current) => {
       const existingAreas = new Set(current.map((item) => item.area.trim().toLowerCase()).filter(Boolean));
+      const unresolvedItems = current.filter((item) => !item.area.trim());
+      const namedItems = current.filter((item) => item.area.trim());
       const appended = nextAreas
         .filter((area) => !existingAreas.has(area.toLowerCase()))
         .map((area) => createGuidedInjury(area));
-      const nextItems = [...current, ...appended];
+
+      if (unresolvedItems[0] && appended[0]) {
+        appended[0] = {
+          ...appended[0],
+          severity: unresolvedItems[0].severity,
+          trend: unresolvedItems[0].trend,
+          avoid: unresolvedItems[0].avoid,
+          notes: unresolvedItems[0].notes,
+        };
+      }
+
+      const nextItems = appended.length ? [...namedItems, ...appended] : current;
       updateField("injuries", buildGuidedInjuriesSummary(nextItems));
       if (appended[0]) {
         setActiveGuidedInjuryId(appended[0].id);
@@ -543,10 +570,10 @@ export function PlanIntakeForm() {
     setGuidedInjuries((current) => {
       const nextItems = current.map((item) =>
         item.id === activeGuidedInjuryId
-          ? normalizeGuidedInjuryState({
+          ? {
               ...item,
               [key]: value,
-            })
+            }
           : item,
       );
       updateField("injuries", buildGuidedInjuriesSummary(nextItems));
@@ -615,6 +642,13 @@ export function PlanIntakeForm() {
         return false;
       }
     }
+    if (currentStep === 3) {
+      const injuryLocationError = getGuidedInjuryLocationError(nextForm.injuries, guidedInjuries);
+      if (injuryLocationError) {
+        setError(injuryLocationError);
+        return false;
+      }
+    }
     return true;
   }
 
@@ -658,6 +692,11 @@ export function PlanIntakeForm() {
     );
     if (sparringCheck.hardError) {
       setError(sparringCheck.hardError);
+      return false;
+    }
+    const injuryLocationError = getGuidedInjuryLocationError(nextForm.injuries, guidedInjuries);
+    if (injuryLocationError) {
+      setError(injuryLocationError);
       return false;
     }
     return true;
@@ -808,32 +847,34 @@ export function PlanIntakeForm() {
     technicalStyle: form.athlete.technical_style[0] ?? "",
     hardSparringDays: selectedHardSparringLabels,
   });
+  const guidedInjuryLocationError = getGuidedInjuryLocationError(form.injuries, guidedInjuries);
   const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
   const profileReviewItems = [
-    { label: "Name", value: formatValue(form.athlete.full_name) },
+    { label: "Full name", value: formatValue(form.athlete.full_name) },
     ...(hasValue(form.athlete.age) ? [{ label: "Age", value: formatValue(form.athlete.age) }] : []),
-    ...(hasValue(form.athlete.height_cm) ? [{ label: "Height", value: `${form.athlete.height_cm} cm` }] : []),
-    ...(hasValue(form.athlete.weight_kg) ? [{ label: "Current weight", value: `${form.athlete.weight_kg} kg` }] : []),
-    ...(hasValue(form.athlete.target_weight_kg) ? [{ label: "Target weight", value: `${form.athlete.target_weight_kg} kg` }] : []),
+    ...(hasValue(form.athlete.height_cm) ? [{ label: "Height (cm)", value: formatValue(form.athlete.height_cm) }] : []),
+    ...(hasValue(form.athlete.weight_kg) ? [{ label: "Weight (kg)", value: formatValue(form.athlete.weight_kg) }] : []),
+    ...(hasValue(form.athlete.target_weight_kg) ? [{ label: "Target Weight (kg)", value: formatValue(form.athlete.target_weight_kg) }] : []),
     { label: "Stance", value: stanceLabel },
-    { label: "Technical style", value: technicalStyleLabel },
-    { label: "Tactical style", value: tacticalStyleLabel },
-    { label: "Professional status", value: statusLabel },
-    { label: "Record", value: formatValue(form.athlete.record) },
+    { label: "Fighting Style (Technical)", value: technicalStyleLabel },
+    { label: "Fighting Style (Tactical)", value: tacticalStyleLabel },
+    { label: "Professional Status", value: statusLabel },
+    { label: "Current Record", value: formatValue(form.athlete.record) },
+    { label: "Athlete Time Zone", value: formatValue(form.athlete.athlete_timezone) },
   ];
   const campSetupReviewItems = [
-    { label: "Fight date", value: formatValue(form.fight_date) },
-    { label: "Rounds", value: formatValue(form.rounds_format) },
-    { label: "Sessions per week", value: formatValue(form.weekly_training_frequency) },
-    { label: "Fatigue level", value: formatValue(form.fatigue_level || "moderate") },
+    { label: "When is your next fight?", value: formatValue(form.fight_date) },
+    { label: "Rounds x Minutes", value: formatValue(form.rounds_format) },
+    { label: "Sessions per Week", value: formatValue(form.weekly_training_frequency) },
+    { label: "Fatigue Level", value: formatValue(form.fatigue_level || "moderate") },
   ];
   const trainingReviewItems = [
-    { label: "Training availability", value: selectedTrainingAvailability },
-    { label: "Hard sparring days", value: selectedHardSparring },
-    { label: "Technical / lighter skill days", value: selectedTechnicalSkillDays },
-    { label: "Equipment access", value: selectedEquipmentAccess },
+    { label: "Training Availability", value: selectedTrainingAvailability },
+    { label: "Hard Sparring Days", value: selectedHardSparring },
+    { label: "Technical Skill Days", value: selectedTechnicalSkillDays },
+    { label: "Equipment Access", value: selectedEquipmentAccess },
     ...(availabilityConsistency.hardError
       ? [{ label: "Schedule issue", value: availabilityConsistency.hardError }]
       : availabilityConsistency.softWarning
@@ -845,22 +886,22 @@ export function PlanIntakeForm() {
         ? [{ label: "Sparring schedule note", value: sparringConsistency.softWarning }]
         : []),
     {
-      label: "Session preference",
+      label: "Do you prefer certain training styles?",
       value: hasTrainingPreference ? trainingPreferenceText : "No session preference provided.",
     },
   ];
   const constraintsReviewItems = [
-    { label: "Injuries / pain areas", value: formatValue(form.injuries) },
+    { label: "Any injuries or areas you need to work around?", value: formatValue(form.injuries) },
     ...(weightCutStatus ? [{ label: "Weight-cut status", value: weightCutStatus }] : []),
     ...(highFatigueFlag ? [{ label: "Fatigue flag", value: highFatigueFlag }] : []),
     ...(equipmentLimitations ? [{ label: "Equipment limitations", value: equipmentLimitations }] : []),
     ...(sparringCollisionRisk ? [{ label: "Sparring collision risk", value: sparringCollisionRisk }] : []),
   ];
   const performanceReviewItems = [
-    { label: "Key goals", value: selectedGoals },
-    { label: "Weak areas", value: selectedWeakAreas },
-    ...(mindsetChallengesText ? [{ label: "Mental / confidence issue", value: mindsetChallengesText }] : []),
-    ...(notesText ? [{ label: "Anything else we should know?", value: notesText }] : []),
+    { label: "What are your key performance goals?", value: selectedGoals },
+    { label: "Where do you feel weakest right now?", value: selectedWeakAreas },
+    ...(mindsetChallengesText ? [{ label: "Do you struggle with any mental blockers or mindset challenges?", value: mindsetChallengesText }] : []),
+    ...(notesText ? [{ label: "Are there any parts of your previous plan you hated or loved?", value: notesText }] : []),
     ...(!hasExtraPerformanceNotes ? [{ label: "Extra context", value: "No extra context provided." }] : []),
   ];
 
@@ -1217,6 +1258,7 @@ export function PlanIntakeForm() {
                       </button>
                     </div>
                     <p className="muted">Each selected area gets its own severity, trend, and restriction details.</p>
+                    {guidedInjuryLocationError ? <p className="error-text">{guidedInjuryLocationError}</p> : null}
                   </div>
 
                   <div className="guided-injury-chip-row" aria-label="Selected pain areas">
@@ -1231,7 +1273,7 @@ export function PlanIntakeForm() {
                               onClick={() => setActiveGuidedInjuryId(item.id)}
                               aria-pressed={active}
                             >
-                              {item.area || "Untitled area"}
+                              {item.area || "Area required"}
                             </button>
                             <button
                               type="button"
@@ -1254,7 +1296,7 @@ export function PlanIntakeForm() {
                       <div className="guided-injury-editor-header">
                         <div>
                           <p className="kicker">Active area</p>
-                          <h3>{activeGuidedInjury.area}</h3>
+                          <h3>{activeGuidedInjury.area || "Area required"}</h3>
                         </div>
                         <button
                           type="button"
