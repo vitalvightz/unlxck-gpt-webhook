@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -58,12 +58,15 @@ const INJURY_TREND_OPTIONS = [
 ];
 
 type GuidedInjuryState = {
+  id: string;
   area: string;
   severity: string;
   trend: string;
   avoid: string;
   notes: string;
 };
+
+type GuidedInjuryDraftState = Omit<GuidedInjuryState, "id">;
 
 type AvailabilityConsistency = {
   hardError: string | null;
@@ -77,16 +80,22 @@ type SparringConsistency = {
 
 type DraftMetadata = {
   current_step?: number;
-  guided_injury?: Partial<GuidedInjuryState> | null;
+  guided_injury?: Partial<GuidedInjuryDraftState> | null;
+  guided_injuries?: Partial<GuidedInjuryState>[] | null;
+  active_guided_injury_id?: string | null;
 };
 
-const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
-  area: "",
-  severity: "",
-  trend: "",
-  avoid: "",
-  notes: "",
-};
+function createGuidedInjury(area = ""): GuidedInjuryState {
+  return {
+    id: `injury-${Math.random().toString(36).slice(2, 10)}`,
+    area: area.trim(),
+    severity: "",
+    trend: "",
+    avoid: "",
+    notes: "",
+  };
+}
+
 
 function numberOrNull(value: string): number | null {
   if (!value.trim()) {
@@ -248,8 +257,10 @@ function getSparringConsistency(
   return { hardError: null, softWarning: null };
 }
 
-function normalizeGuidedInjuryState(value: Partial<GuidedInjuryState> | null | undefined): GuidedInjuryState {
+function normalizeGuidedInjuryState(value: Partial<GuidedInjuryState> | Partial<GuidedInjuryDraftState> | null | undefined): GuidedInjuryState {
+  const id = value && "id" in value && typeof value.id === "string" && value.id.trim() ? value.id.trim() : createGuidedInjury().id;
   return {
+    id,
     area: (value?.area ?? "").trim(),
     severity: (value?.severity ?? "").trim(),
     trend: (value?.trend ?? "").trim(),
@@ -258,15 +269,15 @@ function normalizeGuidedInjuryState(value: Partial<GuidedInjuryState> | null | u
   };
 }
 
-function parseGuidedInjuryState(value: string | null | undefined): GuidedInjuryState {
+function parseGuidedInjuryState(value: string | null | undefined): GuidedInjuryState[] {
   const raw = (value ?? "").trim();
   if (!raw) {
-    return EMPTY_GUIDED_INJURY;
+    return [];
   }
-  return {
-    ...EMPTY_GUIDED_INJURY,
+  return [{
+    ...createGuidedInjury(),
     notes: raw,
-  };
+  }];
 }
 
 function buildGuidedInjurySummary(value: GuidedInjuryState): string {
@@ -285,6 +296,21 @@ function buildGuidedInjurySummary(value: GuidedInjuryState): string {
   }
 
   return parts.join(". ").trim();
+}
+
+function buildGuidedInjuriesSummary(values: GuidedInjuryState[]): string {
+  return values
+    .map((value) => buildGuidedInjurySummary(value))
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join("; ");
+}
+
+function parseAreaTokens(value: string): string[] {
+  return value
+    .split(/[;,\n]/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
 }
 
 function formatSparringCollisionRisk({
@@ -430,7 +456,9 @@ export function PlanIntakeForm() {
   const { me, refreshMe, session } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
-  const [guidedInjury, setGuidedInjury] = useState<GuidedInjuryState>(EMPTY_GUIDED_INJURY);
+  const [guidedInjuries, setGuidedInjuries] = useState<GuidedInjuryState[]>([]);
+  const [activeGuidedInjuryId, setActiveGuidedInjuryId] = useState<string | null>(null);
+  const [injuryAreaInput, setInjuryAreaInput] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -444,10 +472,16 @@ export function PlanIntakeForm() {
     const nextForm = syncDeviceFields(hydratePlanRequest(me));
     const draft = (me.profile.onboarding_draft as DraftMetadata | null | undefined) ?? null;
     setForm(nextForm);
-    setGuidedInjury(
-      draft?.guided_injury
-        ? normalizeGuidedInjuryState(draft.guided_injury)
-        : parseGuidedInjuryState(nextForm.injuries),
+    const hydratedGuidedInjuries = draft?.guided_injuries?.length
+      ? draft.guided_injuries.map((item) => normalizeGuidedInjuryState(item))
+      : draft?.guided_injury
+        ? [normalizeGuidedInjuryState(draft.guided_injury)]
+        : parseGuidedInjuryState(nextForm.injuries);
+    setGuidedInjuries(hydratedGuidedInjuries);
+    setActiveGuidedInjuryId(
+      draft?.active_guided_injury_id && hydratedGuidedInjuries.some((item) => item.id === draft.active_guided_injury_id)
+        ? draft.active_guided_injury_id
+        : hydratedGuidedInjuries[0]?.id ?? null,
     );
     const savedStep = Number(draft?.current_step ?? 0);
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
@@ -484,14 +518,53 @@ export function PlanIntakeForm() {
     updateField("rounds_format", nextRounds);
   }
 
-  function updateGuidedInjury<K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) {
-    setGuidedInjury((current) => {
-      const nextValue = {
-        ...current,
-        [key]: value,
-      };
-      updateField("injuries", buildGuidedInjurySummary(nextValue));
-      return nextValue;
+  function addGuidedInjuryAreas(rawValue: string) {
+    const nextAreas = parseAreaTokens(rawValue);
+    if (!nextAreas.length) {
+      return;
+    }
+
+    setGuidedInjuries((current) => {
+      const existingAreas = new Set(current.map((item) => item.area.trim().toLowerCase()).filter(Boolean));
+      const appended = nextAreas
+        .filter((area) => !existingAreas.has(area.toLowerCase()))
+        .map((area) => createGuidedInjury(area));
+      const nextItems = [...current, ...appended];
+      updateField("injuries", buildGuidedInjuriesSummary(nextItems));
+      if (appended[0]) {
+        setActiveGuidedInjuryId(appended[0].id);
+      }
+      return nextItems;
+    });
+    setInjuryAreaInput("");
+  }
+
+  function updateGuidedInjury<K extends keyof GuidedInjuryDraftState>(key: K, value: GuidedInjuryDraftState[K]) {
+    setGuidedInjuries((current) => {
+      const nextItems = current.map((item) =>
+        item.id === activeGuidedInjuryId
+          ? normalizeGuidedInjuryState({
+              ...item,
+              [key]: value,
+            })
+          : item,
+      );
+      updateField("injuries", buildGuidedInjuriesSummary(nextItems));
+      return nextItems;
+    });
+  }
+
+  function removeGuidedInjury(id: string) {
+    setGuidedInjuries((current) => {
+      const nextItems = current.filter((item) => item.id !== id);
+      updateField("injuries", buildGuidedInjuriesSummary(nextItems));
+      setActiveGuidedInjuryId((currentActiveId) => {
+        if (currentActiveId !== id) {
+          return currentActiveId;
+        }
+        return nextItems[0]?.id ?? null;
+      });
+      return nextItems;
     });
   }
 
@@ -608,7 +681,8 @@ export function PlanIntakeForm() {
       onboarding_draft: {
         ...nextForm,
         current_step: step,
-        guided_injury: guidedInjury,
+        guided_injuries: guidedInjuries,
+        active_guided_injury_id: activeGuidedInjuryId,
       },
     });
     await refreshMe();
@@ -723,6 +797,7 @@ export function PlanIntakeForm() {
     form.hard_sparring_days,
     form.technical_skill_days,
   );
+  const activeGuidedInjury = useMemo(() => guidedInjuries.find((item) => item.id === activeGuidedInjuryId) ?? null, [guidedInjuries, activeGuidedInjuryId]);
   const trainingPreferenceText = (form.training_preference || "").trim();
   const mindsetChallengesText = (form.mindset_challenges || "").trim();
   const notesText = (form.notes || "").trim();
@@ -1117,62 +1192,139 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label htmlFor="injuryArea">Pain area or body part</label>
-                    <input
-                      id="injuryArea"
-                      value={guidedInjury.area}
-                      onChange={(event) => updateGuidedInjury("area", event.target.value)}
-                      placeholder="Left shoulder, right heel, lower back"
-                    />
+                <div className="guided-injury-shell">
+                  <div className="field compact-gap">
+                    <label htmlFor="injuryAreaInput">Pain area or body part</label>
+                    <div className="guided-injury-add-row">
+                      <input
+                        id="injuryAreaInput"
+                        value={injuryAreaInput}
+                        onChange={(event) => setInjuryAreaInput(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === ",") {
+                            event.preventDefault();
+                            addGuidedInjuryAreas(injuryAreaInput);
+                          }
+                        }}
+                        placeholder="Type one area, then press Enter or comma"
+                      />
+                      <button
+                        type="button"
+                        className="secondary-button guided-injury-add-button"
+                        onClick={() => addGuidedInjuryAreas(injuryAreaInput)}
+                      >
+                        Add area
+                      </button>
+                    </div>
+                    <p className="muted">Each selected area gets its own severity, trend, and restriction details.</p>
                   </div>
-                  <div className="field">
-                    <label htmlFor="injurySeverity">Current severity</label>
-                    <CustomSelect
-                      id="injurySeverity"
-                      value={guidedInjury.severity}
-                      options={INJURY_SEVERITY_OPTIONS}
-                      placeholder="Select severity"
-                      includeEmptyOption
-                      onChange={(value) => updateGuidedInjury("severity", value)}
-                    />
+
+                  <div className="guided-injury-chip-row" aria-label="Selected pain areas">
+                    {guidedInjuries.length ? (
+                      guidedInjuries.map((item) => {
+                        const active = item.id === activeGuidedInjuryId;
+                        return (
+                          <div key={item.id} className={`guided-injury-chip ${active ? "guided-injury-chip-active" : ""}`.trim()}>
+                            <button
+                              type="button"
+                              className="guided-injury-chip-select"
+                              onClick={() => setActiveGuidedInjuryId(item.id)}
+                              aria-pressed={active}
+                            >
+                              {item.area || "Untitled area"}
+                            </button>
+                            <button
+                              type="button"
+                              className="guided-injury-chip-remove"
+                              onClick={() => removeGuidedInjury(item.id)}
+                              aria-label={`Remove ${item.area || "injury"}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className="muted">No areas added yet. Add one to start tracking severity and restrictions.</p>
+                    )}
                   </div>
-                  <div className="field">
-                    <label htmlFor="injuryTrend">Current trend</label>
-                    <CustomSelect
-                      id="injuryTrend"
-                      value={guidedInjury.trend}
-                      options={INJURY_TREND_OPTIONS}
-                      placeholder="Select trend"
-                      includeEmptyOption
-                      onChange={(value) => updateGuidedInjury("trend", value)}
-                    />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="injuryAvoid">Movements to avoid</label>
-                    <input
-                      id="injuryAvoid"
-                      value={guidedInjury.avoid}
-                      onChange={(event) => updateGuidedInjury("avoid", event.target.value)}
-                      placeholder="Heavy overhead pressing, hard sprinting, deep knee flexion"
-                    />
-                  </div>
-                </div>
-                <div className="field">
-                  <label htmlFor="injuryNotes">Extra restriction details</label>
-                  <textarea
-                    id="injuryNotes"
-                    value={guidedInjury.notes}
-                    onChange={(event) => updateGuidedInjury("notes", event.target.value)}
-                    placeholder="What happened, what irritates it, and anything the planner should work around"
-                  />
+
+                  {activeGuidedInjury ? (
+                    <>
+                      <div className="guided-injury-editor-header">
+                        <div>
+                          <p className="kicker">Active area</p>
+                          <h3>{activeGuidedInjury.area}</h3>
+                        </div>
+                        <button
+                          type="button"
+                          className="ghost-button guided-injury-remove-button"
+                          onClick={() => removeGuidedInjury(activeGuidedInjury.id)}
+                        >
+                          Remove area
+                        </button>
+                      </div>
+                      <div className="form-grid">
+                        <div className="field">
+                          <label htmlFor="injurySeverity">Current severity</label>
+                          <CustomSelect
+                            id="injurySeverity"
+                            value={activeGuidedInjury.severity}
+                            options={INJURY_SEVERITY_OPTIONS}
+                            placeholder="Select severity"
+                            includeEmptyOption
+                            onChange={(value) => updateGuidedInjury("severity", value)}
+                          />
+                        </div>
+                        <div className="field">
+                          <label htmlFor="injuryTrend">Current trend</label>
+                          <CustomSelect
+                            id="injuryTrend"
+                            value={activeGuidedInjury.trend}
+                            options={INJURY_TREND_OPTIONS}
+                            placeholder="Select trend"
+                            includeEmptyOption
+                            onChange={(value) => updateGuidedInjury("trend", value)}
+                          />
+                        </div>
+                        <div className="field field-span-full">
+                          <label htmlFor="injuryAvoid">Movements to avoid</label>
+                          <input
+                            id="injuryAvoid"
+                            value={activeGuidedInjury.avoid}
+                            onChange={(event) => updateGuidedInjury("avoid", event.target.value)}
+                            placeholder="Heavy overhead pressing, hard sprinting, deep knee flexion"
+                          />
+                        </div>
+                      </div>
+                      <div className="field">
+                        <label htmlFor="injuryNotes">Extra restriction details</label>
+                        <textarea
+                          id="injuryNotes"
+                          value={activeGuidedInjury.notes}
+                          onChange={(event) => updateGuidedInjury("notes", event.target.value)}
+                          placeholder="What happened, what irritates it, and anything the planner should work around"
+                        />
+                      </div>
+                    </>
+                  ) : null}
                 </div>
                 <div className="support-panel support-panel-preview compact-gap">
                   <p className="kicker">Planner note preview</p>
-                  <p className="muted">
-                    {form.injuries?.trim() || "No injury or restriction note added yet."}
-                  </p>
+                  <div className="guided-injury-preview-list">
+                    {guidedInjuries.length ? (
+                      guidedInjuries.map((item) => {
+                        const summary = buildGuidedInjurySummary(item);
+                        return (
+                          <p key={item.id} className="muted">
+                            • {summary || item.area}
+                          </p>
+                        );
+                      })
+                    ) : (
+                      <p className="muted">No injury or restriction note added yet.</p>
+                    )}
+                  </div>
                 </div>
               </article>
             </div>

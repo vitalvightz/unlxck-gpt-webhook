@@ -2011,3 +2011,112 @@ select:focus-visible {
     transition: none;
   }
 }
+
+.guided-injury-shell,
+.guided-injury-preview-list {
+  display: grid;
+  gap: 16px;
+}
+
+.guided-injury-add-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.guided-injury-add-row input {
+  flex: 1;
+}
+
+.guided-injury-add-button,
+.guided-injury-remove-button {
+  width: auto;
+  min-width: 132px;
+}
+
+.guided-injury-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.guided-injury-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 21, 27, 0.92);
+}
+
+.guided-injury-chip-active {
+  border-color: rgba(181, 18, 43, 0.55);
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.18) inset;
+}
+
+.guided-injury-chip-select,
+.guided-injury-chip-remove {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.guided-injury-chip-select {
+  padding: 0;
+  font: inherit;
+}
+
+.guided-injury-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.guided-injury-chip-remove:hover,
+.guided-injury-chip-remove:focus-visible,
+.guided-injury-chip-select:focus-visible {
+  outline: none;
+  color: var(--text-primary);
+}
+
+.guided-injury-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(24, 27, 34, 0.94), rgba(18, 21, 27, 0.96));
+}
+
+.guided-injury-editor-header h3 {
+  margin: 4px 0 0;
+}
+
+.field-span-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .guided-injury-add-row,
+  .guided-injury-editor-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .guided-injury-add-button,
+  .guided-injury-remove-button {
+    width: 100%;
+  }
+}
