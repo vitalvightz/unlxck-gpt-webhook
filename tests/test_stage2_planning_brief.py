@@ -16,10 +16,13 @@ def _build_brief(athlete_model: dict, *, restrictions: list[dict] | None = None,
             "emphasize": ["sport speed", "fight-pace transfer"],
             "deprioritize": ["non-specific volume"],
             "risk_flags": ["manage accumulated fatigue"],
+            "session_counts": {"strength": 1, "conditioning": 2, "recovery": 1},
             "selection_guardrails": {
                 "must_keep_if_present": ["alactic", "rehab"],
                 "conditioning_drop_order_if_thin": ["glycolytic"],
             },
+            "weeks": 1,
+            "days": 7,
         }
     }
     candidate_pools = {
@@ -278,6 +281,121 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
     assert role_by_key["recovery_reset_day"]["scheduled_day_hint"] == "Wednesday"
     assert role_by_key["neural_plus_strength_day"]["scheduled_day_hint"] == "Thursday"
     assert role_by_key["fight_pace_repeatability_day"]["scheduled_day_hint"] == "Tuesday"
+
+
+def test_weekly_role_map_downgrades_adjacent_glycolytic_when_high_fatigue_and_hard_sparring_collision():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag", "assault_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+        }
+    )
+
+    spp_week = brief["weekly_role_map"]["weeks"][0]
+    conditioning_roles = [role for role in spp_week["session_roles"] if role["category"] == "conditioning"]
+
+    assert len(conditioning_roles) == 2
+    downgraded = next(role for role in conditioning_roles if role["scheduled_day_hint"] == "Tuesday")
+    preserved = next(role for role in conditioning_roles if role["scheduled_day_hint"] != "Tuesday")
+
+    assert downgraded["preferred_system"] == "aerobic"
+    assert downgraded["collision_repair"]["original_system"] == "glycolytic"
+    assert downgraded["collision_repair"]["applied_system"] == "aerobic"
+    assert "declared hard sparring" in downgraded["collision_repair"]["reason"].lower()
+    assert preserved["preferred_system"] == "aerobic"
+
+
+def test_weekly_role_map_downgrades_adjacent_glycolytic_when_aggressive_cut_elevates_collision_cost():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 21,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag", "assault_bike"],
+            "injuries": [],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 6.0,
+            "readiness_flags": ["aggressive_weight_cut"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+        }
+    )
+
+    spp_week = brief["weekly_role_map"]["weeks"][0]
+    downgraded = next(
+        role
+        for role in spp_week["session_roles"]
+        if role["category"] == "conditioning" and role["scheduled_day_hint"] == "Tuesday"
+    )
+
+    assert downgraded["preferred_system"] == "aerobic"
+    assert downgraded["collision_repair"]["rule"] == "hard_sparring_glycolytic_protection"
+    assert downgraded["collision_repair"]["trigger_day"] == "Tuesday"
+
+
+def test_weekly_role_map_preserves_glycolytic_when_no_hard_sparring_collision_exists():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag", "assault_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+            "training_days": ["Monday", "Wednesday", "Friday"],
+            "hard_sparring_days": [],
+            "technical_skill_days": [],
+        }
+    )
+
+    spp_week = brief["weekly_role_map"]["weeks"][0]
+    glycolytic = next(
+        role
+        for role in spp_week["session_roles"]
+        if role["category"] == "conditioning" and role["role_key"] == "fight_pace_repeatability_day"
+    )
+
+    assert glycolytic["preferred_system"] == "glycolytic"
+    assert "collision_repair" not in glycolytic
 
 
 
