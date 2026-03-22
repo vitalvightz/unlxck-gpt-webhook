@@ -2921,7 +2921,8 @@ def build_stage2_payload(
 
 STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 
-Input = PLANNING BRIEF + Stage 1 draft plan + athlete profile + restrictions + candidate pools.
+Input = PLANNING BRIEF + optional coach notes + Stage 1 draft plan.
+The PLANNING BRIEF already contains the athlete snapshot, restrictions, candidate pools, omission ledger, and rewrite rules.
 
 SOURCE OF TRUTH
 1. PLANNING BRIEF = primary authority for athlete intent, phase strategy, priorities, and risks.
@@ -3039,7 +3040,7 @@ Preserve the best of Stage 1, but remove weak exercise choices, filler, poor seq
 
 
 def _json_block(value: dict | list) -> str:
-    return "```json\n" + json.dumps(value, indent=2) + "\n```"
+    return "```json\n" + json.dumps(value, separators=(",", ":"), ensure_ascii=False) + "\n```"
 
 
 def build_stage2_handoff_text(
@@ -3049,15 +3050,17 @@ def build_stage2_handoff_text(
     coach_notes: str = "",
     planning_brief: dict | None = None,
 ) -> str:
+    context_block = planning_brief or {
+        "athlete_snapshot": stage2_payload.get("athlete_model", {}),
+        "restrictions": stage2_payload.get("restrictions", []),
+        "phase_briefs": stage2_payload.get("phase_briefs", {}),
+        "candidate_pools": stage2_payload.get("candidate_pools", {}),
+        "omission_ledger": stage2_payload.get("omission_ledger", {}),
+        "decision_rules": stage2_payload.get("rewrite_guidance", {}),
+    }
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
-        "PLANNING BRIEF\n" + _json_block(planning_brief or {}),
-        "ATHLETE PROFILE\n" + _json_block(stage2_payload.get("athlete_model", {})),
-        "RESTRICTIONS\n" + _json_block(stage2_payload.get("restrictions", [])),
-        "PHASE BRIEFS\n" + _json_block(stage2_payload.get("phase_briefs", {})),
-        "CANDIDATE POOLS\n" + _json_block(stage2_payload.get("candidate_pools", {})),
-        "OMISSION LEDGER\n" + _json_block(stage2_payload.get("omission_ledger", {})),
-        "REWRITE GUIDANCE\n" + _json_block(stage2_payload.get("rewrite_guidance", {})),
+        "PLANNING BRIEF\n" + _json_block(context_block),
     ]
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
