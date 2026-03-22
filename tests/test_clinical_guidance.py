@@ -168,6 +168,20 @@ def test_build_rehab_slots_why_today_framing():
     )
 
 
+def test_build_rehab_slots_preserves_hip_flexor_location_from_generated_block():
+    rehab_block, _ = generate_rehab_protocols(
+        injury_string="hip flexor tightness",
+        exercise_data=exercise_bank,
+        current_phase="GPP",
+        seen_drills=set()
+    )
+    slots = _build_rehab_slots(rehab_block, "GPP")
+
+    assert slots
+    assert slots[0]["role"].startswith("rehab_hip_flexor_")
+    assert "hip flexor tightness" in slots[0]["purpose"].lower()
+
+
 def test_stage2_prompt_contains_rehab_rule():
     assert "SURGICAL REHAB" in STAGE2_FINALIZER_PROMPT, (
         "Expected RULE 12 - SURGICAL REHAB INTEGRATION in the finalizer prompt"

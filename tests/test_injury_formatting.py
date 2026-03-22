@@ -92,3 +92,15 @@ def test_guardrails_render_restrictions_without_injury_summary():
     assert "Injury Summary" not in guardrails
     assert "- avoid deep knee flexion under load" in guardrails
     assert "- heavy overhead pressing" in guardrails
+
+
+def test_mixed_lower_body_locations_only_reference_present_regions():
+    guardrails = format_injury_guardrails(
+        "GPP",
+        "front of hip strain / hamstring tightness",
+        [],
+    )
+
+    assert "Hip Flexor" in guardrails
+    assert "Hamstring" in guardrails
+    assert "Calf" not in guardrails

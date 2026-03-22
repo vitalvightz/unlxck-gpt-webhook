@@ -191,6 +191,12 @@ def test_normalize_injury_regions_parses_phrases():
     assert normalize_injury_regions(["upper leg pain"]) == {"quad"}
 
 
+def test_normalize_injury_regions_keeps_hip_flexor_specific_region():
+    assert normalize_injury_regions(["hip flexor tightness"]) == {"hip_flexor"}
+    assert normalize_injury_regions(["front of hip strain"]) == {"hip_flexor"}
+    assert normalize_injury_regions(["psoas strain"]) == {"hip_flexor"}
+
+
 def test_drill_text_filter_matches_notes_and_tags():
     keyword_drill = {"name": "Landing Primer", "notes": "Avoid hard landing", "tags": []}
     keyword_reasons = _drill_text_injury_reasons(keyword_drill, ["knee pain"])

@@ -548,10 +548,18 @@ LOCATION_MAP = {
     "hand bones": "hand",
     "hip": "hip",
     "hips": "hip",
-    "hip flexor": "hip",
-    "hipflexor": "hip",
-    "hipflexors": "hip",
-    "hip flexors": "hip",
+    "hip flexor": "hip flexor",
+    "hipflexor": "hip flexor",
+    "hipflexors": "hip flexor",
+    "hip flexors": "hip flexor",
+    "front of hip": "hip flexor",
+    "front-of-hip": "hip flexor",
+    "front hip": "hip flexor",
+    "front-hip": "hip flexor",
+    "anterior hip": "hip flexor",
+    "psoas": "hip flexor",
+    "iliopsoas": "hip flexor",
+    "iliacus": "hip flexor",
     "hip joint": "hip",
     "iliac": "hip",
     "acetabulum": "hip",
@@ -819,16 +827,23 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
     if not location_matcher:
         return None
 
-    # 1) Phrase match (fast), ignore negated spans
+    # 1) Phrase match (fast), ignore negated spans and prefer the most specific hit.
+    matched_locations: list[tuple[int, int, str]] = []
     for match_id, start, end in location_matcher(doc):
         span = doc[start:end]
         if any(tok._.negex for tok in span):
             continue
         loc = location_map.get(match_id)
+        if loc:
+            matched_locations.append((end - start, len(span.text), loc))
 
-        # 2) Context routing if spine/back-ish
+    if matched_locations:
+        matched_locations.sort(key=lambda item: (item[0], item[1]), reverse=True)
+        loc = matched_locations[0][2]
+
+        # 2) Context routing if spine/back-ish and the match is itself spinal.
         txt = text.lower()
-        if ("spine" in txt) or ("back" in txt):
+        if loc in {"neck", "upper back", "lower back"} and (("spine" in txt) or ("back" in txt)):
             if any(h in txt for h in SPINE_HINTS["neck"]):
                 return "neck"
             if any(h in txt for h in SPINE_HINTS["upper_back"]):

@@ -52,6 +52,8 @@ REHAB_LOCATION_ALIASES = {
     "bicep": ["biceps"],
     "hamstring": ["hamstrings"],
     "hamstrings": ["hamstring"],
+    "hip flexor": ["hip_flexor", "hip"],
+    "hip_flexor": ["hip flexor", "hip"],
     "lower back": ["lower_back"],
     "lower_back": ["lower back"],
     "upper back": ["upper_back"],
