@@ -38,12 +38,14 @@ _LOADED_EQUIPMENT = {
     "weight_vest",
     "plate",
     "partner",
+    "sled",
 }
 
 _PUSH_HINTS = {"push", "press", "bench", "dip"}
 _PULL_HINTS = {"pull", "row", "chin", "pullup", "pull-up"}
 _LOWER_BODY_HINTS = {"squat", "hinge", "deadlift", "rdl", "lunge", "split squat", "step-up", "step up"}
 _UNILATERAL_HINTS = {"unilateral", "single_leg", "single leg", "split squat", "step-up", "step up"}
+_SLED_HINTS = {"sled", "drag"}
 _POWER_HINTS = {
     "explosive",
     "rate_of_force",
@@ -90,6 +92,25 @@ _FORCE_ISOMETRIC_HINTS = {
     "overcoming",
     "yielding",
 }
+_NON_STRENGTH_LOADING_HINTS = {
+    "activation",
+    "primer",
+    "neural_primer",
+    "speed",
+    "speed_strength",
+    "reactive",
+    "ballistic",
+    "throw",
+    "slam",
+    "jump",
+    "hop",
+    "bound",
+    "burst",
+    "punch",
+    "band",
+    "med ball",
+    "medicine_ball",
+}
 
 
 def _collect_tags(item: dict[str, Any]) -> set[str]:
@@ -120,10 +141,24 @@ def _has_any_hint(text: str, hints: set[str]) -> bool:
 def _loaded_pattern(tags: set[str], text: str, equipment: set[str]) -> bool:
     if equipment & _LOADED_EQUIPMENT:
         return True
+    if "sled" in text and _has_any_hint(text, {"push", "pull", "drag"}):
+        return True
     if "compound" in tags:
         return True
     if _has_any_hint(text, _LOWER_BODY_HINTS | _PUSH_HINTS | _PULL_HINTS):
         return any(hint in text for hint in {"deadlift", "squat", "press", "row", "pull", "split squat", "step-up", "step up"})
+    return False
+
+
+def _externally_loaded(tags: set[str], text: str, equipment: set[str]) -> bool:
+    if equipment & _LOADED_EQUIPMENT:
+        return True
+    if "sled" in text and _has_any_hint(text, {"push", "pull", "drag"}):
+        return True
+    if any(hint in text for hint in {"barbell", "trap bar", "dumbbell", "kettlebell", "landmine", "sandbag", "weighted"}):
+        return True
+    if "compound" in tags and "bodyweight" not in equipment:
+        return True
     return False
 
 
@@ -134,11 +169,19 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
     is_rehab = _has_any_hint(text, _REHAB_HINTS) or "rehab" in tags
     is_isometric = "isometric" in tags or _has_any_hint(text, _ISOMETRIC_HINTS)
     loaded_pattern = _loaded_pattern(tags, text, equipment)
+    externally_loaded = _externally_loaded(tags, text, equipment)
     lower_body_loaded = loaded_pattern and _has_any_hint(text, _LOWER_BODY_HINTS | {"quad_dominant", "posterior_chain", "hip_dominant"})
     upper_body_push_pull = loaded_pattern and _has_any_hint(text, _PUSH_HINTS | _PULL_HINTS | {"upper_body"})
+    loaded_pull = loaded_pattern and _has_any_hint(text, _PULL_HINTS)
+    loaded_push = loaded_pattern and _has_any_hint(text, _PUSH_HINTS)
     unilateral = "unilateral" in tags or _has_any_hint(text, _UNILATERAL_HINTS)
     power_pattern = bool(tags & _POWER_HINTS) or _has_any_hint(text, _POWER_HINTS)
     support_only = bool(tags & _SUPPORT_HINTS) or _has_any_hint(text, _SUPPORT_HINTS)
+    sled_force = externally_loaded and (
+        "sled" in equipment
+        or _has_any_hint(text, _SLED_HINTS)
+    )
+    non_strength_loading = bool(tags & _NON_STRENGTH_LOADING_HINTS) or _has_any_hint(text, _NON_STRENGTH_LOADING_HINTS)
     force_isometric = is_isometric and (
         loaded_pattern
         or bool(tags & {"posterior_chain", "quad_dominant", "hip_dominant", "push", "pull"})
@@ -165,6 +208,19 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
         base_categories.add("upper_body_push_pull")
     if unilateral:
         base_categories.add("unilateral")
+    if loaded_pull:
+        base_categories.add("loaded_pull")
+    if loaded_push:
+        base_categories.add("loaded_push")
+    if sled_force:
+        base_categories.add("sled_force")
+
+    true_loaded_anchor = (
+        quality_class == "anchor_loaded"
+        and externally_loaded
+        and not non_strength_loading
+        and (lower_body_loaded or unilateral or loaded_pull or sled_force)
+    )
 
     return {
         "quality_class": quality_class,
@@ -172,8 +228,10 @@ def classify_strength_item(item: dict[str, Any]) -> dict[str, Any]:
         "support_only": quality_class in SUPPORT_ONLY_CLASSES,
         "force_isometric": quality_class == "anchor_force_isometric",
         "loaded_pattern": loaded_pattern,
+        "externally_loaded": externally_loaded,
         "power_pattern": quality_class == "anchor_power",
         "rehab_support": quality_class == "rehab_support",
+        "true_loaded_anchor": true_loaded_anchor,
         "base_categories": sorted(base_categories),
     }
 

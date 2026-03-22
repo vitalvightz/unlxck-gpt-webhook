@@ -346,6 +346,13 @@ def prime_strength_banks() -> None:
     get_universal_strength()
 
 
+def _exercise_matches_available_equipment(exercise: dict, available_equipment: list[str]) -> bool:
+    required_equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
+    if not required_equipment or required_equipment == {"bodyweight"}:
+        return True
+    return required_equipment.issubset(set(normalize_equipment_list(available_equipment)))
+
+
 MOVEMENT_PATTERN_TAGS = {
     "squat": {"squat", "quad_dominant"},
     "hinge": {"hinge", "posterior_chain", "hip_dominant", "deadlift"},
@@ -488,7 +495,13 @@ def _build_strength_candidate_reservoir(
     return dict(reservoirs)
 
 
-def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> str:
+def format_strength_block(
+    phase: str,
+    fatigue: str,
+    exercises: list[dict],
+    *,
+    loaded_anchor_note: str = "",
+) -> str:
     """Return the formatted strength block for the given phase."""
     phase = phase.upper()
     weekly_progression = {
@@ -517,6 +530,8 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
 
     top_exercises = "; ".join(ex["name"] for ex in exercises)
     strength_output.append(f"**Top Exercises:** {top_exercises}")
+    if loaded_anchor_note:
+        strength_output.append(f"**Loaded Anchor Status:** {loaded_anchor_note}")
 
     prescriptions = _prescription_templates(phase)
     ordered_types = ["barbell", "ballistic", "isometric", "core", "general"]
@@ -546,6 +561,50 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
         ]
 
     return "\n".join(strength_output)
+
+
+_LOADED_ANCHOR_LIMITED_NOTE = (
+    "Injury-limited this phase: no compliant true loaded anchor remained after "
+    "equipment, pain, and fatigue filtering, so keep the safest force-preserving substitute "
+    "and do not treat primer, band, or support work as the main strength anchor."
+)
+
+
+def refresh_strength_block_metadata(
+    block: dict,
+    *,
+    phase: str,
+    fatigue: str,
+    loaded_anchor_limited: bool | None = None,
+    loaded_anchor_note: str | None = None,
+) -> dict:
+    updated = dict(block)
+    exercises = list(updated.get("exercises", []))
+    phase = str(phase or "").upper()
+    has_true_loaded_anchor = any(
+        classify_strength_item(exercise)["true_loaded_anchor"]
+        for exercise in exercises
+    )
+    if loaded_anchor_limited is None:
+        loaded_anchor_limited = bool(phase in {"GPP", "SPP"} and exercises and not has_true_loaded_anchor)
+    if has_true_loaded_anchor:
+        loaded_anchor_limited = False
+        loaded_anchor_note = ""
+    elif loaded_anchor_limited and not str(loaded_anchor_note or "").strip():
+        loaded_anchor_note = _LOADED_ANCHOR_LIMITED_NOTE
+    else:
+        loaded_anchor_note = str(loaded_anchor_note or "")
+
+    updated["block"] = format_strength_block(
+        phase,
+        fatigue,
+        exercises,
+        loaded_anchor_note=loaded_anchor_note,
+    )
+    updated["true_loaded_anchor_present"] = has_true_loaded_anchor
+    updated["loaded_anchor_limited"] = bool(loaded_anchor_limited)
+    updated["loaded_anchor_note"] = loaded_anchor_note
+    return updated
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
@@ -833,6 +892,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _selected_names(exercises: list[dict]) -> set[str]:
         return {ex.get("name") for ex in exercises if ex.get("name")}
 
+    loaded_anchor_limited = False
+    loaded_anchor_note = ""
+
     def _best_candidate(
         predicate,
         *,
@@ -846,6 +908,36 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             profile = classify_strength_item(cand)
             if predicate(cand, cand_score, cand_reasons, profile):
                 return cand, cand_score, cand_reasons, profile
+        return None
+
+    def _best_universal_true_anchor(
+        *,
+        exclude_names: set[str] | None = None,
+    ) -> tuple[dict, float, dict, dict] | None:
+        if phase != "GPP":
+            return None
+        blocked_names = set(exclude_names or set())
+        for drill in get_universal_strength():
+            drill_name = drill.get("name")
+            if not drill_name or drill_name in blocked_names:
+                continue
+            if phase not in drill.get("phases", []):
+                continue
+            if not drill.get("equipment"):
+                continue
+            if not _exercise_matches_available_equipment(drill, equipment_access):
+                continue
+            if _guarded_injury_decision(drill).action == "exclude":
+                continue
+            profile = classify_strength_item(drill)
+            if not profile["true_loaded_anchor"]:
+                continue
+            return (
+                drill,
+                0.0,
+                {"selection_source": "universal_loaded_anchor_fallback", "final_score": 0.0},
+                profile,
+            )
         return None
 
     def _replace_exercise(
@@ -943,6 +1035,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         return updated
 
     def _enforce_session_quality(exercises: list[dict]) -> list[dict]:
+        nonlocal loaded_anchor_limited, loaded_anchor_note
         updated = list(exercises)
         support_cap = max(num_strength_sessions * SESSION_SUPPORT_CAP_MULTIPLIER, 2)
         while count_support_only(updated) > support_cap:
@@ -1014,6 +1107,62 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 first_position = positions[0]
                 anchor_position = positions[anchor_local_index]
                 updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
+
+        if phase in {"GPP", "SPP"}:
+            true_loaded_anchor_index = next(
+                (
+                    idx
+                    for idx, exercise in enumerate(updated)
+                    if classify_strength_item(exercise)["true_loaded_anchor"]
+                ),
+                None,
+            )
+            if true_loaded_anchor_index is None:
+                selected_names = _selected_names(updated)
+                replacement_entry = _best_candidate(
+                    lambda cand, _score, _reasons, profile: profile["true_loaded_anchor"],
+                    exclude_names=selected_names,
+                )
+                if replacement_entry:
+                    replace_index = _support_replacement_index(updated)
+                    if replace_index is None:
+                        replace_index = 0
+                    replacement, replacement_score, replacement_reasons, _profile = replacement_entry
+                    _replace_exercise(
+                        updated,
+                        index=replace_index,
+                        replacement=replacement,
+                        replacement_score=replacement_score,
+                        replacement_reasons=replacement_reasons,
+                    )
+                    true_loaded_anchor_index = replace_index
+                    loaded_anchor_limited = False
+                    loaded_anchor_note = ""
+                else:
+                    universal_entry = _best_universal_true_anchor(exclude_names=selected_names)
+                    if universal_entry:
+                        replace_index = _support_replacement_index(updated)
+                        if replace_index is None:
+                            replace_index = 0
+                        replacement, replacement_score, replacement_reasons, _profile = universal_entry
+                        _replace_exercise(
+                            updated,
+                            index=replace_index,
+                            replacement=replacement,
+                            replacement_score=replacement_score,
+                            replacement_reasons=replacement_reasons,
+                        )
+                        true_loaded_anchor_index = replace_index
+                        loaded_anchor_limited = False
+                        loaded_anchor_note = ""
+                    else:
+                        loaded_anchor_limited = True
+                        loaded_anchor_note = _LOADED_ANCHOR_LIMITED_NOTE
+            if true_loaded_anchor_index is not None and true_loaded_anchor_index != 0:
+                updated[0], updated[true_loaded_anchor_index] = updated[true_loaded_anchor_index], updated[0]
+            elif true_loaded_anchor_index is not None:
+                loaded_anchor_limited = False
+                loaded_anchor_note = ""
         return updated
 
     top_pairs = weighted_exercises[:target_exercises]
@@ -1045,9 +1194,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 drill_name = drill.get("name")
                 if not drill_name or drill_name in existing_names:
                     continue
+                profile = classify_strength_item(drill)
+                if profile["true_loaded_anchor"] and not drill.get("equipment"):
+                    continue
+                if not _exercise_matches_available_equipment(drill, equipment_access):
+                    continue
                 if _guarded_injury_decision(drill).action == "exclude":
                     continue
-                if category not in classify_strength_item(drill)["base_categories"]:
+                if category not in profile["base_categories"]:
                     continue
                 top_exercises.append(drill)
                 existing_names.add(drill_name)
@@ -1328,7 +1482,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     used_days = training_days[:num_strength_sessions]
 
-    strength_output = format_strength_block(phase, fatigue, base_exercises)
     candidate_reservoir = _build_strength_candidate_reservoir(weighted_exercises)
 
     all_tags = []
@@ -1343,14 +1496,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         explanation = _strength_explanation(reasons)
         why_log.append({"name": name, "reasons": reasons, "explanation": explanation})
 
-    return {
-        "block": strength_output,
+    result = {
+        "block": "",
         "num_sessions": len(used_days),
         "preferred_tags": list(set(all_tags)),
         "exercises": base_exercises,
         "why_log": why_log,
         "candidate_reservoir": candidate_reservoir,
     }
+    return refresh_strength_block_metadata(
+        result,
+        phase=phase,
+        fatigue=fatigue,
+        loaded_anchor_limited=loaded_anchor_limited,
+        loaded_anchor_note=loaded_anchor_note,
+    )
     
 
 

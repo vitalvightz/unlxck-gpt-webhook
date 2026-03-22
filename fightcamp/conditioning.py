@@ -981,6 +981,7 @@ def render_conditioning_block(
     diagnostic_context: dict | None = None,
     sport: str | None = None,
     resolved_sessions: list[dict] | None = None,
+    render_overrides: dict | None = None,
 ) -> str:
     phase = phase.upper()
     phase_titles = {
@@ -1017,6 +1018,7 @@ def render_conditioning_block(
     output_lines = []
     missing_systems = set(missing_systems or [])
     diagnostic_context = diagnostic_context or {}
+    render_overrides = render_overrides or {}
     if missing_systems:
         diagnostic_blocks = [
             format_missing_system_block(
@@ -1046,11 +1048,19 @@ def render_conditioning_block(
         title = _conditioning_session_title(phase=phase, systems=systems)
         output_lines.append(f"\n#### {title}")
         output_lines.append(f"**Intent:** {phase_intent.get(phase, 'Match phase intent.')}")
-        output_lines.append(f"**Dosage Template:** {dosage_template.get(phase, 'Match system goals.')}")
+        output_lines.append(
+            f"**Dosage Template:** {render_overrides.get('dosage_template', dosage_template.get(phase, 'Match system goals.'))}"
+        )
         if phase != "TAPER":
-            output_lines.append(f"**Weekly Progression:** {weekly_progression.get(phase, 'Progress weekly.')}")
-            output_lines.append(f"**If Time Short:** {time_short.get(phase, 'Keep top 2 drills.')}")
-            output_lines.append(f"**If Fatigue High:** {fatigue_note.get(phase, 'Reduce volume.')}")
+            output_lines.append(
+                f"**Weekly Progression:** {render_overrides.get('weekly_progression', weekly_progression.get(phase, 'Progress weekly.'))}"
+            )
+            output_lines.append(
+                f"**If Time Short:** {render_overrides.get('time_short', time_short.get(phase, 'Keep top 2 drills.'))}"
+            )
+            output_lines.append(
+                f"**If Fatigue High:** {render_overrides.get('fatigue_note', fatigue_note.get(phase, 'Reduce volume.'))}"
+            )
 
         show_system_labels = len(session.get("entries", [])) > 1
 
@@ -1067,7 +1077,7 @@ def render_conditioning_block(
             if entry.get("fallback"):
                 session_drills.append(entry.get("fallback"))
             for d in [drill for drill in session_drills if drill]:
-                name = d.get("name", "Unnamed Drill")
+                name = d.get("display_name") or d.get("name", "Unnamed Drill")
 
                 timing = d.get("timing") or d.get("duration") or "—"
                 load = d.get("load") or d.get("intensity") or "—"

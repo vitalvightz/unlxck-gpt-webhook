@@ -504,8 +504,15 @@ def _strength_session_quality_warnings(
         session_slots: dict[int, list[dict]] = defaultdict(list)
         for slot in phase_pool.get("strength_slots", []) or []:
             session_slots[int(slot.get("session_index", 1) or 1)].append(slot)
+        explicit_true_loaded_signal = any(
+            "true_loaded_anchor" in (slot.get("selected") or {})
+            or "true_loaded_anchor" in slot
+            or any("true_loaded_anchor" in (option or {}) for option in (slot.get("alternates") or []))
+            for slot in (phase_pool.get("strength_slots", []) or [])
+        )
         for session_index, slots in session_slots.items():
             anchor_names: list[str] = []
+            true_loaded_anchor_names: list[str] = []
             support_names: list[str] = []
             session_names: list[str] = []
             for slot in slots:
@@ -514,15 +521,24 @@ def _strength_session_quality_warnings(
                 session_names.extend(_slot_candidate_names(slot))
                 if selected.get("anchor_capable"):
                     anchor_names.extend(_candidate_option_names([selected]))
+                if selected.get("true_loaded_anchor") or slot.get("true_loaded_anchor"):
+                    true_loaded_anchor_names.extend(_candidate_option_names([selected]))
                 if selected.get("support_only"):
                     support_names.extend(_candidate_option_names([selected]))
                 anchor_names.extend(
                     _candidate_option_names([option for option in alternates if option.get("anchor_capable")])
                 )
+                true_loaded_anchor_names.extend(
+                    _candidate_option_names([option for option in alternates if option.get("true_loaded_anchor")])
+                )
                 support_names.extend(
                     _candidate_option_names([option for option in alternates if option.get("support_only")])
                 )
+            requires_true_loaded_anchor = phase.upper() != "TAPER"
             anchor_names = _dedupe_preserve_order(anchor_names)
+            true_loaded_anchor_names = _dedupe_preserve_order(true_loaded_anchor_names)
+            if requires_true_loaded_anchor and explicit_true_loaded_signal:
+                anchor_names = true_loaded_anchor_names
             support_names = _dedupe_preserve_order(support_names)
             if not anchor_names:
                 continue
@@ -544,10 +560,11 @@ def _strength_session_quality_warnings(
                 if any(_phrase_in_text(line, name) for name in support_names)
             ]
             if not anchor_lines and support_lines:
+                anchor_label = "a true loaded anchor" if requires_true_loaded_anchor and explicit_true_loaded_signal else "a serious anchor option"
                 warnings.append(
                     {
                         "code": "weak_anchor_session",
-                        "message": f"{phase} session {session_index} is missing a serious anchor option even though the candidate pool had one.",
+                        "message": f"{phase} session {session_index} is missing {anchor_label} even though the candidate pool had one.",
                         "phase": phase,
                         "session_index": session_index,
                         "anchor_candidates": anchor_names,

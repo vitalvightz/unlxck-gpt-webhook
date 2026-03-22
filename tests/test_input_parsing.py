@@ -73,6 +73,51 @@ def test_same_day_fight_date_remains_fight_week_active():
     assert parsed.weeks_out == 1
 
 
+def test_rounds_format_common_variants_are_normalized_without_warning():
+    data = _payload(
+        [
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Rounds x Minutes", "value": "3 - 3"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.rounds_format == "3x3"
+    assert parsed.rounds_format_raw == "3 - 3"
+    assert parsed.rounds_format_warning == ""
+
+
+def test_rounds_format_unusual_for_sport_gets_non_blocking_warning():
+    data = _payload(
+        [
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Rounds x Minutes", "value": "7-4"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.rounds_format == "7x4"
+    assert parsed.rounds_format_warning
+    assert "unusual for boxing" in parsed.rounds_format_warning.lower()
+
+
+def test_rounds_format_unparseable_value_gets_non_blocking_warning():
+    data = _payload(
+        [
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Rounds x Minutes", "value": "banana"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.rounds_format == "banana"
+    assert parsed.rounds_format_warning
+    assert "could not confidently interpret" in parsed.rounds_format_warning.lower()
+
+
 def test_field_alias_matching_for_key_inputs():
     data = _payload(
         [

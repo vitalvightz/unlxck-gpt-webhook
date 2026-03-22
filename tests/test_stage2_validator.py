@@ -4,7 +4,7 @@
 
 def _planning_brief_fixture() -> dict:
     return {
-        "athlete_model": {"sport": "boxing", "equipment": ["landmine", "bike", "bands"]},
+        "athlete_model": {"sport": "boxing", "equipment": ["trap_bar", "bike", "bands"]},
         "restrictions": [
             {
                 "restriction": "heavy_overhead_pressing",
@@ -27,10 +27,22 @@ def _planning_brief_fixture() -> dict:
             "GPP": {
                 "strength_slots": [
                     {
-                        "role": "push",
+                        "role": "hinge",
                         "session_index": 1,
-                        "selected": {"name": "Landmine Press", "anchor_capable": True, "support_only": False},
-                        "alternates": [{"name": "Half-Kneeling Cable Press", "anchor_capable": True, "support_only": False}],
+                        "selected": {
+                            "name": "Trap Bar Deadlift",
+                            "anchor_capable": True,
+                            "true_loaded_anchor": True,
+                            "support_only": False,
+                        },
+                        "alternates": [
+                            {
+                                "name": "Front Squat",
+                                "anchor_capable": True,
+                                "true_loaded_anchor": True,
+                                "support_only": False,
+                            }
+                        ],
                     }
                 ],
                 "conditioning_slots": [],
@@ -39,16 +51,40 @@ def _planning_brief_fixture() -> dict:
             "SPP": {
                 "strength_slots": [
                     {
-                        "role": "push",
+                        "role": "hinge",
                         "session_index": 1,
-                        "selected": {"name": "Landmine Press", "anchor_capable": True, "support_only": False},
-                        "alternates": [{"name": "Half-Kneeling Cable Press", "anchor_capable": True, "support_only": False}],
+                        "selected": {
+                            "name": "Trap Bar Deadlift",
+                            "anchor_capable": True,
+                            "true_loaded_anchor": True,
+                            "support_only": False,
+                        },
+                        "alternates": [
+                            {
+                                "name": "Front Squat",
+                                "anchor_capable": True,
+                                "true_loaded_anchor": True,
+                                "support_only": False,
+                            }
+                        ],
                     },
                     {
                         "role": "core",
                         "session_index": 1,
-                        "selected": {"name": "Dead Bug", "anchor_capable": False, "support_only": True},
-                        "alternates": [{"name": "Pallof Press", "anchor_capable": False, "support_only": True}],
+                        "selected": {
+                            "name": "Dead Bug",
+                            "anchor_capable": False,
+                            "true_loaded_anchor": False,
+                            "support_only": True,
+                        },
+                        "alternates": [
+                            {
+                                "name": "Pallof Press",
+                                "anchor_capable": False,
+                                "true_loaded_anchor": False,
+                                "support_only": True,
+                            }
+                        ],
                     }
                 ],
                 "conditioning_slots": [
@@ -135,7 +171,7 @@ def test_validate_stage2_output_warns_when_phase_critical_elements_go_missing():
         ### Strength & Power
         - Goblet Squat - 4x5
         SPP
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         - Hard Shuttle - 6x20s / 60s
         """,
     )
@@ -280,7 +316,7 @@ def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
         final_plan_text="""
         ## PHASE 2: SPP
         ## Strength & Power
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         ## Conditioning
         - Air Bike Sprint - 6 x 6 sec
         - Hard Shuttle - 6x20s / 60s
@@ -307,6 +343,56 @@ def test_validate_stage2_output_warns_for_weak_anchor_session_only_when_anchor_e
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "weak_anchor_session" in warning_codes
     assert "support_takeover_before_anchor" in warning_codes
+
+
+def test_validate_stage2_output_treats_loaded_press_as_insufficient_when_true_loaded_anchor_exists():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["candidate_pools"]["SPP"]["strength_slots"] = [
+        {
+            "role": "push",
+            "session_index": 1,
+            "selected": {
+                "name": "Landmine Press",
+                "anchor_capable": True,
+                "true_loaded_anchor": False,
+                "support_only": False,
+            },
+            "alternates": [
+                {
+                    "name": "Trap Bar Deadlift",
+                    "anchor_capable": True,
+                    "true_loaded_anchor": True,
+                    "support_only": False,
+                }
+            ],
+        },
+        {
+            "role": "core",
+            "session_index": 1,
+            "selected": {
+                "name": "Dead Bug",
+                "anchor_capable": False,
+                "true_loaded_anchor": False,
+                "support_only": True,
+            },
+            "alternates": [],
+        },
+    ]
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Dead Bug - 2x8
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weak_anchor_session" in warning_codes
+    assert "support_takeover_before_anchor" not in warning_codes
 
 
 def test_validate_stage2_output_does_not_warn_for_force_isometric_anchor_when_justified():
@@ -348,7 +434,7 @@ def test_validate_stage2_output_warns_for_structural_conditionals():
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
         SPP
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         - Bike sprint or bag sprint depending on access
         - Trap Bar Death March - 5 x 30s
         - Band External Rotation - 2x15
@@ -364,7 +450,7 @@ def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
         planning_brief=_planning_brief_fixture(),
         final_plan_text="""
         SPP
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         - Double-leg sprint entry - 6 x 6 sec
         - Hard Shuttle - 6x20s / 60s
         - Band External Rotation - 2x15
@@ -416,7 +502,7 @@ def test_validate_stage2_output_warns_for_equipment_incongruent_selection():
         final_plan_text="""
         ## PHASE 2: SPP
         ### Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         ### Fight-Pace Conditioning
         - Bag Sprint Round - 6 x 15 sec
         ### Rehab
@@ -516,25 +602,25 @@ def test_validate_stage2_output_warns_for_missing_late_week_structure_and_broken
         ## PHASE 2: SPP
         ### Week 1
         #### Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Fight-pace conditioning
         - Hard Shuttle - 6x20s / 60s
         #### Recovery
         - Walk + mobility
         #### Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Fight-pace conditioning
         - Air Bike Sprint - 6 x 6 sec
 
         ### Week 2
         #### Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Recovery
         - Walk + mobility
         #### Fight-pace conditioning
         - Hard Shuttle - 6x20s / 60s
         #### Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
 
         ## PHASE 3: TAPER
         ### Week 3
@@ -583,7 +669,7 @@ def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count(
         ## PHASE 2: SPP
         ### Week 1
         #### Monday - Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Tuesday - Aerobic support
         - Easy Bike - 25 min
         #### Wednesday - Recovery
@@ -597,7 +683,7 @@ def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count(
 
         ### Week 2
         #### Monday - Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Tuesday - Aerobic support
         - Easy Bike - 25 min
         #### Wednesday - Recovery
@@ -644,13 +730,13 @@ def test_validate_stage2_output_does_not_false_positive_session_overage_from_pro
         Session focus: keep intensity moderate this week.
         Day 4 note: athlete reported some fatigue, adjust load downward.
         #### Monday - Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Tuesday - Aerobic support
         - Easy Bike - 25 min
 
         ### Week 5
         #### Monday - Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Tuesday - Aerobic support
         - Easy Bike - 25 min
         """,
@@ -689,7 +775,7 @@ def test_validate_stage2_output_counts_explicit_numbered_session_headings():
         ## PHASE 2: SPP
         ### Week 1
         #### Session 1 - Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Day 2: Aerobic support
         - Easy Bike - 25 min
         #### Day 3: extra bonus session
@@ -697,7 +783,7 @@ def test_validate_stage2_output_counts_explicit_numbered_session_headings():
 
         ### Week 2
         #### Session 1 - Strength
-        - Landmine Press - 4x5
+        - Trap Bar Deadlift - 4x5
         #### Day 2: Aerobic support
         - Easy Bike - 25 min
         """,

@@ -6,6 +6,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .injury_formatting import parse_injuries_and_restrictions
+from .rounds_format import assess_rounds_format
 from .restriction_parsing import ParsedRestriction
 
 
@@ -355,11 +356,21 @@ class PlanInput:
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
+    rounds_format_raw: str = ""
+    rounds_format_warning: str = ""
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
         fields = _extract_fields(data)
         values = _get_plan_field_values(fields)
+        values = {**values}
+        rounds_format_raw = values["rounds_format"]
+        tech_styles = _normalize_list(values["fighting_style_technical"])
+        rounds_assessment = assess_rounds_format(
+            rounds_format_raw,
+            sport=tech_styles[0] if tech_styles else "",
+        )
+        values["rounds_format"] = rounds_assessment.normalized or values["rounds_format"]
         next_fight_date = get_date_value("When is your next fight?", fields)
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
@@ -401,6 +412,8 @@ class PlanInput:
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,
+            rounds_format_raw=rounds_format_raw,
+            rounds_format_warning=rounds_assessment.warning or "",
         )
 
     @property

@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 from time import perf_counter
 
+from .athlete_size import apply_athlete_size_modifiers
 from .coach_review import run_coach_review
 from .conditioning import generate_conditioning_block
+from .fight_format import apply_fight_format_modifiers
 from .mindset_module import get_mindset_by_phase, get_phase_mindset_cues
 from .nutrition import generate_nutrition_block
 from .plan_pipeline_runtime import (
@@ -308,6 +310,38 @@ def generate_plan_blocks(
 
     _apply_substitution_log(strength_reason_log, substitutions, "Strength")
     _apply_substitution_log(conditioning_reason_log, substitutions, "Conditioning")
+
+    timer_start = perf_counter()
+    conditioning_blocks, fight_format_key = apply_fight_format_modifiers(
+        conditioning_blocks,
+        sport=context.tech_styles[0] if context.tech_styles else context.mapped_format,
+        status=context.plan_input.status,
+        rounds_format=context.plan_input.rounds_format,
+    )
+    record_timing("fight_format_modifiers", timer_start)
+    if fight_format_key:
+        logger.info("[stage] fight_format_modifiers=%s", fight_format_key)
+
+    timer_start = perf_counter()
+    conditioning_blocks, size_band = apply_athlete_size_modifiers(
+        conditioning_blocks,
+        sport=context.tech_styles[0] if context.tech_styles else context.mapped_format,
+        weight_kg=context.training_context.weight,
+    )
+    record_timing("athlete_size_modifiers", timer_start)
+    if size_band:
+        logger.info("[stage] athlete_size_band=%s", size_band)
+
+    if context.plan_input.rounds_format_warning:
+        warning_block = (
+            "### Input Validation\n"
+            f"- {context.plan_input.rounds_format_warning}"
+        )
+        coach_review_notes = "\n\n".join(
+            section.strip()
+            for section in [coach_review_notes, warning_block]
+            if str(section or "").strip()
+        )
 
     for phase in PHASES:
         if strength_blocks.get(phase):

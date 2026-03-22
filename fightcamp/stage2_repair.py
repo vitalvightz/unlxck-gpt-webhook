@@ -18,16 +18,17 @@ REPAIR RULES:
 6. Remove any internal/admin scaffolding such as Athlete Profile, Selection Rationale, Coach Notes, planning-brief labels, or Stage-2-only notes.
 7. Remove raw HTML, code fences, and any non-athlete formatting artifacts.
 8. If an anchor session drifted into support work, restore the strongest compliant anchor option available before accessories.
-9. Resolve conditioning choices into one primary prescription and at most one explicit fallback.
-10. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
-11. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
-12. Keep every active week present and structurally complete, especially the late-camp weeks.
-13. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
-14. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
-15. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
-16. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-17. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
-18. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+9. In non-taper weeks, restore a true externally loaded high-transfer anchor when a compliant option exists; if none exists, label the week injury-limited and keep the safest force-preserving substitute.
+10. Resolve conditioning choices into one primary prescription and at most one explicit fallback.
+11. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
+12. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
+13. Keep every active week present and structurally complete, especially the late-camp weeks.
+14. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
+15. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
+16. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
+17. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+18. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+19. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""

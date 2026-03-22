@@ -340,6 +340,7 @@ def test_stage2_payload_uses_slot_alternates_and_rehab_drills():
         "name": "Rear Foot Elevated Split Squat",
         "movement": "lunge",
         "tags": ["unilateral", "quad_dominant"],
+        "equipment": ["dumbbell"],
         "method": "3x6 each side",
     }
     selected_conditioning = {
@@ -429,6 +430,7 @@ def test_stage2_payload_uses_slot_alternates_and_rehab_drills():
     assert strength_slot["session_index"] == 1
     assert strength_slot["quality_class"] == "anchor_loaded"
     assert strength_slot["anchor_capable"] is True
+    assert strength_slot["true_loaded_anchor"] is True
     assert conditioning_slot["alternates"]
     assert conditioning_slot["alternates"][0]["name"] == "Air Bike Flush"
     assert [slot["selected"]["name"] for slot in rehab_slots] == [

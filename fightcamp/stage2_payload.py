@@ -2484,6 +2484,7 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
         "why": why or "balanced selection",
         "quality_class": quality_profile["quality_class"],
         "anchor_capable": quality_profile["anchor_capable"],
+        "true_loaded_anchor": quality_profile["true_loaded_anchor"],
         "support_only": quality_profile["support_only"],
         "base_categories": quality_profile["base_categories"],
         "required_equipment": required_equipment,
@@ -2658,6 +2659,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                 "session_index": position_to_session.get(idx - 1, 1),
                 "quality_class": quality_profile["quality_class"],
                 "anchor_capable": quality_profile["anchor_capable"],
+                "true_loaded_anchor": quality_profile["true_loaded_anchor"],
                 "support_only": quality_profile["support_only"],
                 "base_categories": quality_profile["base_categories"],
             }
@@ -2841,10 +2843,18 @@ def build_stage2_payload(
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
+        strength_block = strength_blocks.get(phase)
+        strength_slots = _build_strength_slots(strength_block, phase)
         candidate_pools[phase] = {
-            "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
+            "strength_slots": strength_slots,
             "conditioning_slots": _build_conditioning_slots(conditioning_blocks.get(phase), phase),
             "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase),
+            "loaded_anchor_rule": {
+                "required_pre_taper": phase != "TAPER",
+                "true_loaded_anchor_available": any(slot.get("true_loaded_anchor") for slot in strength_slots),
+                "injury_limited": bool((strength_block or {}).get("loaded_anchor_limited")),
+                "note": str((strength_block or {}).get("loaded_anchor_note", "")),
+            },
         }
 
     athlete_model = _build_athlete_model(
@@ -2867,6 +2877,7 @@ def build_stage2_payload(
             "Prefer selected items first only if they remain strong and compliant.",
             "If a selected item is removed, replace with the strongest compliant same-role option first.",
             "Do not let support drills take over anchor slots when stronger compliant options exist.",
+            "In GPP and SPP, keep at least one true externally loaded high-transfer anchor if a compliant option exists; speed work, med-ball work, primers, and band work may support it but cannot replace it.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
             "Do not invent new items when a strong compliant option already exists in the pool.",
             "Keep every final primary drill, support drill, and fallback equipment-valid for the athlete profile.",
@@ -2889,6 +2900,7 @@ def build_stage2_payload(
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
+            "If a non-taper week has no compliant true loaded anchor, state plainly that the week is injury-limited and use the safest force-preserving substitute instead of pretending support or primer work is the main anchor.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
@@ -2937,7 +2949,9 @@ Do not keep a weak Stage 1 choice just because it already exists.
 
 RULE 4 - ANCHOR SESSION STANDARD
 Each weekly anchor strength/power session must contain at least one serious high-transfer strength or power exercise if a compliant option exists for the athlete's sport, phase, equipment, and injury profile.
+In GPP and SPP, at least one of those anchors must be a true externally loaded high-transfer force movement when a compliant option exists: hinge, squat, unilateral lower-body force, loaded pull, or heavily loaded sled push/pull used as the main force movement.
 Do not build anchor sessions mostly from bird dogs, dead bugs, planks, carries, bridge holds, breathing drills, mobility, or rehab-level work unless restrictions clearly force that outcome.
+If no compliant true loaded anchor exists, mark the week as injury-limited and use the safest force-preserving substitute. Do not present primer, band, or support work as the main loaded anchor.
 Support work may assist the anchor. It cannot become the anchor.
 
 RULE 5 - SAFE STRONG, NOT SAFE SOFT

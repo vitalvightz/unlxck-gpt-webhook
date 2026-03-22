@@ -69,6 +69,9 @@
       "GPP"
     ],
     "name": "DB Split Squat",
+    "equipment": "dumbbells",
+    "method": "strength",
+    "movement": "squat",
     "tags": [
       "unilateral",
       "posterior_chain",

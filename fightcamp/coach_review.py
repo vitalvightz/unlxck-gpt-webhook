@@ -7,7 +7,7 @@ from .conditioning import is_banned_drill, normalize_system, render_conditioning
 from .injury_filtering import injury_match_details
 from .injury_guard import choose_injury_replacement, injury_decision
 from .rehab_protocols import build_coach_review_entries
-from .strength import format_strength_block, is_banned_exercise
+from .strength import is_banned_exercise, refresh_strength_block_metadata
 from .training_context import normalize_equipment_list
 
 logger = logging.getLogger(__name__)
@@ -309,8 +309,10 @@ def run_coach_review(
                     }
                 )
         block["exercises"] = updated_exercises
-        block["block"] = format_strength_block(
-            phase_key, training_context.get("fatigue", "low"), updated_exercises
+        block = refresh_strength_block_metadata(
+            block,
+            phase=phase_key,
+            fatigue=training_context.get("fatigue", "low"),
         )
         updated_strength[phase_key] = block
 

@@ -1635,6 +1635,7 @@ def test_strength_slots_share_session_metadata_and_injury_pressure_does_not_forc
     slots = payload["candidate_pools"]["GPP"]["strength_slots"]
     assert [slot["session_index"] for slot in slots[:2]] == [1, 2]
     assert slots[0]["anchor_capable"] is True
+    assert slots[0]["true_loaded_anchor"] is True
     assert slots[2]["support_only"] is True
     assert brief["limiter_profile"]["key"] != "tissue_state"
 
