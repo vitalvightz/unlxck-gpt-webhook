@@ -1943,6 +1943,73 @@ def _assign_declared_day_hints(ordered: list[dict], athlete_model: dict) -> list
     return ordered
 
 
+def _day_is_adjacent_to_hard_sparring(day: str, training_days: list[str], hard_sparring_days: set[str]) -> bool:
+    normalized_day = str(day or "").strip()
+    if not normalized_day or normalized_day not in training_days:
+        return False
+    if normalized_day in hard_sparring_days:
+        return True
+    day_idx = training_days.index(normalized_day)
+    for delta in (-1, 1):
+        adjacent_idx = day_idx + delta
+        if 0 <= adjacent_idx < len(training_days) and training_days[adjacent_idx] in hard_sparring_days:
+            return True
+    return False
+
+
+def _should_downgrade_sparring_collision_glycolytic(*, athlete_model: dict) -> bool:
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    return fatigue == "high" or _is_high_pressure_weight_cut(athlete_model=athlete_model)
+
+
+def _downgrade_collision_glycolytic_role(role: dict, *, week_entry: dict, collision_day: str) -> None:
+    phase = str(week_entry.get("phase", "")).upper()
+    downgraded_role_key = _conditioning_role_key(phase, "aerobic", limiter_key="general_fight_readiness")
+    reason = (
+        f"Downgraded from glycolytic work because {collision_day} sits on or beside declared hard sparring while "
+        "fatigue or cut pressure is elevated."
+    )
+
+    role["role_key"] = downgraded_role_key
+    role["preferred_system"] = "aerobic"
+    role["selection_rule"] = _role_selection_rule(downgraded_role_key, "conditioning", "aerobic")
+    role["anchor"] = "support_day" if phase != "TAPER" else "lowest_load_day"
+    role["placement_rule"] = (
+        "Keep this as low-noise aerobic support or flush work away from the main collision load when possible."
+    )
+    role["collision_repair"] = {
+        "rule": "hard_sparring_glycolytic_protection",
+        "original_system": "glycolytic",
+        "applied_system": "aerobic",
+        "trigger_day": collision_day,
+        "reason": reason,
+    }
+
+    governance = role.setdefault("governance", {})
+    suppression_rules = list(governance.get("suppression_rules", []))
+    suppression_rules.append(reason)
+    governance["suppression_rules"] = _dedupe_preserve_order(suppression_rules)
+
+
+def _repair_sparring_collision_roles(week_entry: dict, ordered: list[dict], athlete_model: dict) -> list[dict]:
+    if not ordered or not _should_downgrade_sparring_collision_glycolytic(athlete_model=athlete_model):
+        return ordered
+
+    training_days, hard_sparring_days, _ = _declared_day_sets(athlete_model)
+    if not training_days or not hard_sparring_days:
+        return ordered
+
+    for role in ordered:
+        if role.get("category") != "conditioning" or role.get("preferred_system") != "glycolytic":
+            continue
+        scheduled_day = str(role.get("scheduled_day_hint", "")).strip()
+        if not _day_is_adjacent_to_hard_sparring(scheduled_day, training_days, hard_sparring_days):
+            continue
+        _downgrade_collision_glycolytic_role(role, week_entry=week_entry, collision_day=scheduled_day)
+
+    return ordered
+
+
 def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
     phase = str(phase or "").upper()
     if phase == "GPP":
@@ -2014,6 +2081,7 @@ def _resequence_session_roles(week_entry: dict, session_roles: list[dict], athle
     for idx, role in enumerate(ordered, start=1):
         role["session_index"] = idx
     ordered = _assign_declared_day_hints(ordered, athlete_model)
+    ordered = _repair_sparring_collision_roles(week_entry, ordered, athlete_model)
     return ordered
 
 
