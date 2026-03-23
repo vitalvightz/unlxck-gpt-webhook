@@ -47,26 +47,74 @@ const FATIGUE_LEVEL_OPTIONS = [
   { label: "High", value: "high" },
 ];
 const INJURY_SEVERITY_OPTIONS = [
-  { label: "Low", value: "low" },
+  { label: "Mild", value: "mild" },
   { label: "Moderate", value: "moderate" },
-  { label: "High", value: "high" },
+  { label: "Severe", value: "severe" },
 ];
 const INJURY_TREND_OPTIONS = [
-  { label: "Stable", value: "stable" },
   { label: "Improving", value: "improving" },
-  { label: "Getting worse", value: "worsening" },
+  { label: "Stable", value: "stable" },
+  { label: "Worsening", value: "worsening" },
 ];
+const INJURY_FUNCTIONAL_IMPACT_OPTIONS = [
+  { label: "Can train fully", value: "can train fully" },
+  { label: "Can train with modifications", value: "can train with modifications" },
+  { label: "Cannot do key movements properly", value: "cannot do key movements properly" },
+];
+const INJURY_AGGRAVATOR_OPTIONS = [
+  { label: "Sprinting", value: "sprinting" },
+  { label: "Jumping", value: "jumping" },
+  { label: "Deep hip flexion", value: "deep hip flexion" },
+  { label: "Hard rotation", value: "hard rotation" },
+  { label: "Lateral cutting", value: "lateral cutting" },
+  { label: "Overhead pressing", value: "overhead pressing" },
+  { label: "Heavy hinging", value: "heavy hinging" },
+  { label: "Impact/contact", value: "impact/contact" },
+  { label: "Clinching/grappling pressure", value: "clinching/grappling pressure" },
+  { label: "Fast direction changes", value: "fast direction changes" },
+  { label: "Prolonged stance/load", value: "prolonged stance/load" },
+  { label: "Other", value: "other" },
+];
+const INJURY_SEVERITY_VALUES = new Set(INJURY_SEVERITY_OPTIONS.map((option) => option.value));
+const INJURY_TREND_VALUES = new Set(INJURY_TREND_OPTIONS.map((option) => option.value));
+const INJURY_FUNCTIONAL_IMPACT_VALUES = new Set(INJURY_FUNCTIONAL_IMPACT_OPTIONS.map((option) => option.value));
+const INJURY_AGGRAVATOR_VALUES = new Set(INJURY_AGGRAVATOR_OPTIONS.map((option) => option.value));
+const GUIDED_INJURY_STATE_ERROR = "Complete current severity, trend, and functional impact for each area before continuing.";
+const GUIDED_INJURY_SIGNAL_ERROR = "Add at least one movement/aggravator or enter restriction details for this area.";
+const GUIDED_INJURY_NOTES_ERROR = "Add restriction details for this area so the planner can work around it safely.";
 
 type GuidedInjuryState = {
   id: string;
   area: string;
   severity: string;
   trend: string;
-  avoid: string;
+  functionalImpact: string;
+  aggravators: string[];
+  aggravatorOther: string;
   notes: string;
 };
 
 type GuidedInjuryDraftState = Omit<GuidedInjuryState, "id">;
+
+type GuidedInjuryLegacyState = Partial<GuidedInjuryState> & {
+  avoid?: string | null;
+  functional_impact?: string | null;
+  aggravator_other?: string | null;
+};
+
+type GuidedInjuryValidation = {
+  hasArea: boolean;
+  hasSeverity: boolean;
+  hasTrend: boolean;
+  hasFunctionalImpact: boolean;
+  hasAggravatorSignal: boolean;
+  hasNotes: boolean;
+  hasRestrictionSignal: boolean;
+  requiresNotes: boolean;
+  missingRestrictionSignal: boolean;
+  missingRequiredNotes: boolean;
+  isValid: boolean;
+};
 
 type AvailabilityConsistency = {
   hardError: string | null;
@@ -91,8 +139,91 @@ function createGuidedInjury(area = ""): GuidedInjuryState {
     area: area.trim(),
     severity: "",
     trend: "",
-    avoid: "",
+    functionalImpact: "",
+    aggravators: [],
+    aggravatorOther: "",
     notes: "",
+  };
+}
+
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function normalizeKnownValue(
+  value: string | null | undefined,
+  allowedValues: Set<string>,
+  aliases: Record<string, string> = {},
+): string {
+  const normalized = (value ?? "").trim().toLowerCase();
+  const mapped = aliases[normalized] ?? normalized;
+  return allowedValues.has(mapped) ? mapped : "";
+}
+
+function normalizeGuidedInjuryAggravators(value: unknown): string[] {
+  return normalizeStringArray(value)
+    .map((entry) => entry.toLowerCase())
+    .filter((entry) => INJURY_AGGRAVATOR_VALUES.has(entry));
+}
+
+function getGuidedInjuryAggravators(value: GuidedInjuryState): string[] {
+  const details = normalizeGuidedInjuryState(value);
+  const selected = details.aggravators.filter((entry) => entry !== "other");
+  if (details.aggravatorOther) {
+    selected.push(details.aggravatorOther);
+  }
+  return selected;
+}
+
+function guidedInjuryRequiresNotes(value: GuidedInjuryState): boolean {
+  const details = normalizeGuidedInjuryState(value);
+  const aggravators = getGuidedInjuryAggravators(details);
+  const hasOtherAggravator = details.aggravators.includes("other") || Boolean(details.aggravatorOther);
+
+  return (
+    !aggravators.length
+    || details.severity === "severe"
+    || details.trend === "worsening"
+    || details.functionalImpact === "cannot do key movements properly"
+    || hasOtherAggravator
+  );
+}
+
+function getGuidedInjuryValidation(value: GuidedInjuryState): GuidedInjuryValidation {
+  const details = normalizeGuidedInjuryState(value);
+  const aggravators = getGuidedInjuryAggravators(details);
+  const hasNotes = Boolean(details.notes);
+  const requiresNotes = guidedInjuryRequiresNotes(details);
+  const hasRestrictionSignal = aggravators.length > 0 || hasNotes;
+  const hasArea = Boolean(details.area);
+  const hasSeverity = Boolean(details.severity);
+  const hasTrend = Boolean(details.trend);
+  const hasFunctionalImpact = Boolean(details.functionalImpact);
+
+  return {
+    hasArea,
+    hasSeverity,
+    hasTrend,
+    hasFunctionalImpact,
+    hasAggravatorSignal: aggravators.length > 0,
+    hasNotes,
+    hasRestrictionSignal,
+    requiresNotes,
+    missingRestrictionSignal: !hasRestrictionSignal,
+    missingRequiredNotes: requiresNotes && !hasNotes,
+    isValid: hasArea && hasSeverity && hasTrend && hasFunctionalImpact && hasRestrictionSignal && (!requiresNotes || hasNotes),
   };
 }
 
@@ -261,14 +392,25 @@ function getSparringConsistency(
 }
 
 function normalizeGuidedInjuryState(value: Partial<GuidedInjuryState> | Partial<GuidedInjuryDraftState> | null | undefined): GuidedInjuryState {
+  const legacyValue = (value ?? {}) as GuidedInjuryLegacyState;
   const id = value && "id" in value && typeof value.id === "string" && value.id.trim() ? value.id.trim() : createGuidedInjury().id;
   return {
     id,
-    area: (value?.area ?? "").trim(),
-    severity: (value?.severity ?? "").trim(),
-    trend: (value?.trend ?? "").trim(),
-    avoid: (value?.avoid ?? "").trim(),
-    notes: (value?.notes ?? "").trim(),
+    area: (legacyValue.area ?? "").trim(),
+    severity: normalizeKnownValue(legacyValue.severity, INJURY_SEVERITY_VALUES, {
+      low: "mild",
+      high: "severe",
+    }),
+    trend: normalizeKnownValue(legacyValue.trend, INJURY_TREND_VALUES, {
+      "getting worse": "worsening",
+    }),
+    functionalImpact: normalizeKnownValue(
+      legacyValue.functionalImpact ?? legacyValue.functional_impact,
+      INJURY_FUNCTIONAL_IMPACT_VALUES,
+    ),
+    aggravators: normalizeGuidedInjuryAggravators(legacyValue.aggravators),
+    aggravatorOther: (legacyValue.aggravatorOther ?? legacyValue.aggravator_other ?? legacyValue.avoid ?? "").trim(),
+    notes: (legacyValue.notes ?? "").trim(),
   };
 }
 
@@ -286,16 +428,19 @@ function parseGuidedInjuryState(value: string | null | undefined): GuidedInjuryS
 function buildGuidedInjurySummary(value: GuidedInjuryState): string {
   const details = normalizeGuidedInjuryState(value);
   const parts: string[] = [];
+  const aggravators = getGuidedInjuryAggravators(details);
+  const descriptors = [details.severity, details.trend, details.functionalImpact].filter(Boolean).join(", ");
 
   if (details.area) {
-    const descriptors = [details.severity, details.trend].filter(Boolean).join(", ");
-    parts.push(descriptors ? `${details.area} (${descriptors})` : details.area);
+    parts.push(descriptors ? `${details.area} - ${descriptors}` : details.area);
+  } else if (descriptors) {
+    parts.push(descriptors);
   }
-  if (details.avoid) {
-    parts.push(`avoid ${details.avoid}`);
+  if (aggravators.length) {
+    parts.push(`Avoid: ${aggravators.join(", ")}`);
   }
   if (details.notes) {
-    parts.push(details.notes);
+    parts.push(`Notes: ${details.notes}`);
   }
 
   return parts.join(". ").trim();
@@ -326,6 +471,46 @@ function getGuidedInjuryLocationError(injuriesText: string | null | undefined, g
   }
 
   return null;
+}
+
+function getGuidedInjuryError(injuriesText: string | null | undefined, guidedInjuries: GuidedInjuryState[]) {
+  const locationError = getGuidedInjuryLocationError(injuriesText, guidedInjuries);
+  if (locationError) {
+    return {
+      message: locationError,
+      focusId: guidedInjuries.find((item) => !item.area.trim())?.id ?? guidedInjuries[0]?.id ?? null,
+    };
+  }
+
+  for (const item of guidedInjuries) {
+    const validation = getGuidedInjuryValidation(item);
+
+    if (!validation.hasSeverity || !validation.hasTrend || !validation.hasFunctionalImpact) {
+      return {
+        message: GUIDED_INJURY_STATE_ERROR,
+        focusId: item.id,
+      };
+    }
+
+    if (validation.missingRestrictionSignal) {
+      return {
+        message: GUIDED_INJURY_SIGNAL_ERROR,
+        focusId: item.id,
+      };
+    }
+
+    if (validation.missingRequiredNotes) {
+      return {
+        message: GUIDED_INJURY_NOTES_ERROR,
+        focusId: item.id,
+      };
+    }
+  }
+
+  return {
+    message: null,
+    focusId: null,
+  };
 }
 
 function formatSparringCollisionRisk({
@@ -475,6 +660,7 @@ export function PlanIntakeForm() {
   const [activeGuidedInjuryId, setActiveGuidedInjuryId] = useState<string | null>(null);
   const [injuryAreaInput, setInjuryAreaInput] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [showGuidedInjuryValidation, setShowGuidedInjuryValidation] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -486,12 +672,15 @@ export function PlanIntakeForm() {
     }
     const nextForm = syncDeviceFields(hydratePlanRequest(me));
     const draft = (me.profile.onboarding_draft as DraftMetadata | null | undefined) ?? null;
-    setForm(nextForm);
     const hydratedGuidedInjuries = draft?.guided_injuries?.length
       ? draft.guided_injuries.map((item) => normalizeGuidedInjuryState(item))
       : draft?.guided_injury
         ? [normalizeGuidedInjuryState(draft.guided_injury)]
         : parseGuidedInjuryState(nextForm.injuries);
+    setForm({
+      ...nextForm,
+      injuries: buildGuidedInjuriesSummary(hydratedGuidedInjuries) || nextForm.injuries,
+    });
     setGuidedInjuries(hydratedGuidedInjuries);
     setActiveGuidedInjuryId(
       draft?.active_guided_injury_id && hydratedGuidedInjuries.some((item) => item.id === draft.active_guided_injury_id)
@@ -554,7 +743,9 @@ export function PlanIntakeForm() {
           ...appended[0],
           severity: unresolvedItems[0].severity,
           trend: unresolvedItems[0].trend,
-          avoid: unresolvedItems[0].avoid,
+          functionalImpact: unresolvedItems[0].functionalImpact,
+          aggravators: unresolvedItems[0].aggravators,
+          aggravatorOther: unresolvedItems[0].aggravatorOther,
           notes: unresolvedItems[0].notes,
         };
       }
@@ -582,6 +773,40 @@ export function PlanIntakeForm() {
       updateField("injuries", buildGuidedInjuriesSummary(nextItems));
       return nextItems;
     });
+  }
+
+  function toggleGuidedInjuryAggravator(value: string) {
+    setGuidedInjuries((current) => {
+      const nextItems = current.map((item) => {
+        if (item.id !== activeGuidedInjuryId) {
+          return item;
+        }
+
+        const hadValue = item.aggravators.includes(value);
+        return {
+          ...item,
+          aggravators: toggleListValue(item.aggravators, value),
+          aggravatorOther: value === "other" && hadValue ? "" : item.aggravatorOther,
+        };
+      });
+      updateField("injuries", buildGuidedInjuriesSummary(nextItems));
+      return nextItems;
+    });
+  }
+
+  function validateGuidedInjuryInputs(nextForm: PlanRequest): boolean {
+    const injuryError = getGuidedInjuryError(nextForm.injuries, guidedInjuries);
+    if (injuryError.message) {
+      setShowGuidedInjuryValidation(true);
+      if (injuryError.focusId) {
+        setActiveGuidedInjuryId(injuryError.focusId);
+      }
+      setError(injuryError.message);
+      return false;
+    }
+
+    setShowGuidedInjuryValidation(false);
+    return true;
   }
 
   function removeGuidedInjury(id: string) {
@@ -646,9 +871,7 @@ export function PlanIntakeForm() {
       }
     }
     if (currentStep === 3) {
-      const injuryLocationError = getGuidedInjuryLocationError(nextForm.injuries, guidedInjuries);
-      if (injuryLocationError) {
-        setError(injuryLocationError);
+      if (!validateGuidedInjuryInputs(nextForm)) {
         return false;
       }
     }
@@ -697,9 +920,7 @@ export function PlanIntakeForm() {
       setError(sparringCheck.hardError);
       return false;
     }
-    const injuryLocationError = getGuidedInjuryLocationError(nextForm.injuries, guidedInjuries);
-    if (injuryLocationError) {
-      setError(injuryLocationError);
+    if (!validateGuidedInjuryInputs(nextForm)) {
       return false;
     }
     return true;
@@ -854,6 +1075,21 @@ export function PlanIntakeForm() {
   const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
+  const activeGuidedInjuryValidation = useMemo(
+    () => (activeGuidedInjury ? getGuidedInjuryValidation(activeGuidedInjury) : null),
+    [activeGuidedInjury],
+  );
+  const showOtherAggravatorInput = Boolean(
+    activeGuidedInjury && (activeGuidedInjury.aggravators.includes("other") || activeGuidedInjury.aggravatorOther),
+  );
+  const showActiveGuidedInjurySignalError = Boolean(
+    showGuidedInjuryValidation && activeGuidedInjuryValidation?.missingRestrictionSignal,
+  );
+  const showActiveGuidedInjuryNotesError = Boolean(
+    showGuidedInjuryValidation
+      && !activeGuidedInjuryValidation?.missingRestrictionSignal
+      && activeGuidedInjuryValidation?.missingRequiredNotes,
+  );
   const profileReviewItems = [
     { label: "Full name", value: formatValue(form.athlete.full_name) },
     ...(hasValue(form.athlete.age) ? [{ label: "Age", value: formatValue(form.athlete.age) }] : []),
@@ -1260,7 +1496,7 @@ export function PlanIntakeForm() {
                         Add area
                       </button>
                     </div>
-                    <p className="muted">Each selected area gets its own severity, trend, and restriction details.</p>
+                    <p className="muted">Each selected area gets its own severity, trend, functional impact, and restriction details.</p>
                     {guidedInjuryLocationError ? <p className="error-text">{guidedInjuryLocationError}</p> : null}
                   </div>
 
@@ -1310,7 +1546,7 @@ export function PlanIntakeForm() {
                         </button>
                       </div>
                       <div className="form-grid">
-                        <div className="field">
+                        <div className={`field ${showGuidedInjuryValidation && !activeGuidedInjuryValidation?.hasSeverity ? "guided-injury-field-error" : ""}`.trim()}>
                           <label htmlFor="injurySeverity">Current severity</label>
                           <CustomSelect
                             id="injurySeverity"
@@ -1321,7 +1557,7 @@ export function PlanIntakeForm() {
                             onChange={(value) => updateGuidedInjury("severity", value)}
                           />
                         </div>
-                        <div className="field">
+                        <div className={`field ${showGuidedInjuryValidation && !activeGuidedInjuryValidation?.hasTrend ? "guided-injury-field-error" : ""}`.trim()}>
                           <label htmlFor="injuryTrend">Current trend</label>
                           <CustomSelect
                             id="injuryTrend"
@@ -1332,23 +1568,60 @@ export function PlanIntakeForm() {
                             onChange={(value) => updateGuidedInjury("trend", value)}
                           />
                         </div>
-                        <div className="field field-span-full">
-                          <label htmlFor="injuryAvoid">Movements to avoid</label>
-                          <input
-                            id="injuryAvoid"
-                            value={activeGuidedInjury.avoid}
-                            onChange={(event) => updateGuidedInjury("avoid", event.target.value)}
-                            placeholder="Heavy overhead pressing, hard sprinting, deep knee flexion"
+                        <div className={`field field-span-full ${showGuidedInjuryValidation && !activeGuidedInjuryValidation?.hasFunctionalImpact ? "guided-injury-field-error" : ""}`.trim()}>
+                          <label htmlFor="injuryFunctionalImpact">Functional impact</label>
+                          <CustomSelect
+                            id="injuryFunctionalImpact"
+                            value={activeGuidedInjury.functionalImpact}
+                            options={INJURY_FUNCTIONAL_IMPACT_OPTIONS}
+                            placeholder="Select functional impact"
+                            includeEmptyOption
+                            onChange={(value) => updateGuidedInjury("functionalImpact", value)}
                           />
                         </div>
                       </div>
-                      <div className="field">
-                        <label htmlFor="injuryNotes">Extra restriction details</label>
+                      <div className={`field compact-gap ${showActiveGuidedInjurySignalError ? "guided-injury-field-error" : ""}`.trim()}>
+                        <label>Movements or situations that aggravate it</label>
+                        <p className="muted">Select what currently flares it up. If none of these fit, add details below.</p>
+                        <div className="guided-injury-aggravator-grid" aria-label="Aggravating movements or situations">
+                          {INJURY_AGGRAVATOR_OPTIONS.map((option) => {
+                            const checked = activeGuidedInjury.aggravators.includes(option.value);
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className={`guided-injury-aggravator ${checked ? "guided-injury-aggravator-active" : ""}`.trim()}
+                                aria-pressed={checked}
+                                onClick={() => toggleGuidedInjuryAggravator(option.value)}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {showOtherAggravatorInput ? (
+                          <input
+                            id="injuryAggravatorOther"
+                            value={activeGuidedInjury.aggravatorOther}
+                            onChange={(event) => updateGuidedInjury("aggravatorOther", event.target.value)}
+                            placeholder="Describe another movement or situation"
+                          />
+                        ) : null}
+                        {showActiveGuidedInjurySignalError ? <p className="error-text">{GUIDED_INJURY_SIGNAL_ERROR}</p> : null}
+                      </div>
+                      <div className={`field compact-gap ${showActiveGuidedInjuryNotesError ? "guided-injury-field-error" : ""}`.trim()}>
+                        <label htmlFor="injuryNotes" className="guided-injury-label-row">
+                          <span>Extra restriction details</span>
+                          <span className={`guided-injury-label-meta ${activeGuidedInjuryValidation?.requiresNotes ? "guided-injury-label-meta-required" : ""}`.trim()}>
+                            {activeGuidedInjuryValidation?.requiresNotes ? "Required for this area" : "Optional"}
+                          </span>
+                        </label>
+                        <p className="muted">Tell us what happened, what irritates it, and what the planner must work around.</p>
                         <textarea
                           id="injuryNotes"
                           value={activeGuidedInjury.notes}
                           onChange={(event) => updateGuidedInjury("notes", event.target.value)}
-                          placeholder="What happened, what irritates it, and anything the planner should work around"
+                          placeholder="Pain spikes when driving the knee up, after sparring, or when loading the stance"
                         />
                       </div>
                     </>
@@ -1377,7 +1650,7 @@ export function PlanIntakeForm() {
             <aside className="step-aside">
               <div className="support-panel">
                 <p className="kicker">Safety</p>
-                <p className="muted">Start with body part, severity, trend, and what to avoid. Add free text only for the details that matter.</p>
+                <p className="muted">Start with body part, severity, trend, and functional impact. Add aggravators first, then free text only when the planner needs more context.</p>
               </div>
             </aside>
           </div>
