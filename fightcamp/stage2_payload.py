@@ -2584,7 +2584,7 @@ def _build_weekly_role_map(
         "model": "session_role_overlay.v1",
         "source_of_truth": [
             "Session roles inherit week-by-week progression rather than replacing phase logic.",
-            "Session counts come from existing deterministic phase session allocation.",
+            "Weekly structure comes from existing deterministic phase allocation.",
             "Anchors inherit the weekly stress map so phase guardrails, safety, and sport-load rules keep priority.",
             "Weekly roles are an execution layer only and cannot overrule the planning hierarchy.",
         ],
@@ -3217,13 +3217,14 @@ def build_stage2_payload(
             "In taper weeks, remove optional branches aggressively and keep the work short, final, and low-noise.",
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
-            "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
-            "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
+            "Respect the weekly structure implied by weekly_role_map; do not turn extra available days into extra active training days.",
+            "If the athlete has more available days than planned active work, leave the spare days off or clearly optional rather than rendering another full session.",
+            "Do not write visible count recaps such as '4 active sessions', 'Conditioning count = ...', or similar week-summary math; render the week directly through weekday or session headings.",
             "If a non-taper week has no compliant true loaded anchor, state plainly that the week is injury-limited and use the safest force-preserving substitute instead of pretending support or primer work is the main anchor.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
-            "Use athlete_model.competitive_maturity only to calibrate wording specificity; it must not change workload, session count, recovery assumptions, or injury/cut conservatism.",
+            "Use athlete_model.competitive_maturity only to calibrate wording specificity; it must not change workload, weekly structure, recovery assumptions, or injury/cut conservatism.",
             "If fatigue is high or fight-week pressure is active, reduce optionality and make the directive plain.",
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
             "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
@@ -3321,7 +3322,9 @@ Do not aim critique at the athlete's character.
 Collapse templates into one final prescription whenever the athlete context already resolves the choice.
 Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
-Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
+Do not render extra active days beyond the weekly structure implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
+If a day is explicitly off, rest, optional, or mobility-only, label it that way rather than presenting it as an active session.
+Do not write visible count summaries such as '4 active sessions', 'Conditioning count = ...', or similar week-summary math. Render the week directly through weekday or session headings.
 Keep every active week present and structurally complete, including late-camp weeks.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.

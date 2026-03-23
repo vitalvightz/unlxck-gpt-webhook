@@ -111,11 +111,11 @@ def _warning_detail_line(warning: dict) -> str:
     if warning.get("code") == "equipment_incongruent_selection":
         return "Replace equipment-invalid selections with same-role options that match the athlete profile."
     if warning.get("code") == "missing_week_session_role":
-        return "Restore the missing weekly session role so each active week stays structurally complete."
+        return "Restore the missing weekly structure so the week reads complete and coach-ready."
     if warning.get("code") == "late_camp_session_incomplete":
-        return "Restore late-camp week structure so the final weeks stay complete and athlete-ready."
+        return "Restore late-camp week structure so the final weeks read complete and athlete-ready."
     if warning.get("code") == "weekly_session_overage":
-        return "Trim extra weekly sessions so the final plan does not exceed the athlete's requested sessions per week."
+        return "Trim the extra active day so the rendered week structure matches the planning brief."
     if warning.get("code") == "weekly_rhythm_broken":
         return "Restore the default boxer weekly rhythm with recovery immediately before the primary strength day."
     if warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:

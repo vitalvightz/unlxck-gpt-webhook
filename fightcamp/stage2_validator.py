@@ -151,6 +151,12 @@ _WEEKDAY_HEADING = re.compile(
     re.IGNORECASE,
 )
 _NUMBERED_SESSION_HEADING = re.compile(r"^(?:session|day)\s+\d+(?:\s*[:\-|]|\s*$)", re.IGNORECASE)
+_NON_ACTIVE_SESSION_TITLE_HINTS = (
+    re.compile(r"\boptional\b", re.IGNORECASE),
+    re.compile(r"\boff\b", re.IGNORECASE),
+    re.compile(r"\brest(?:\s+day)?\b", re.IGNORECASE),
+    re.compile(r"\bmobility(?:[-\s]+only)\b", re.IGNORECASE),
+)
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -257,6 +263,19 @@ def _phase_session_blocks(phase_lines: list[str]) -> list[list[str]]:
     if current:
         blocks.append(current)
     return blocks
+
+
+def _session_block_counts_as_active(block: list[str]) -> bool:
+    if not block:
+        return False
+    title = _normalize_session_title(block[0])
+    if not title:
+        return False
+    return not any(pattern.search(title) for pattern in _NON_ACTIVE_SESSION_TITLE_HINTS)
+
+
+def _active_phase_session_blocks(phase_lines: list[str]) -> list[list[str]]:
+    return [block for block in _phase_session_blocks(phase_lines) if _session_block_counts_as_active(block)]
 
 
 def _section_blocks(plan_text: str) -> list[dict[str, Any]]:
@@ -913,7 +932,7 @@ def _week_sections(plan_text: str) -> dict[int, dict[str, Any]]:
 def _week_session_titles(week_lines: list[str]) -> list[str]:
     return [
         _normalize_session_title(block[0])
-        for block in _phase_session_blocks(week_lines)
+        for block in _active_phase_session_blocks(week_lines)
         if block
     ]
 
@@ -948,7 +967,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
             )
             continue
 
-        session_blocks = _phase_session_blocks(week_section.get("lines", []))
+        session_blocks = _active_phase_session_blocks(week_section.get("lines", []))
         actual_session_count = len(session_blocks)
         expected_session_count = len(expected_roles)
         if actual_session_count < expected_session_count:
@@ -967,7 +986,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
             warnings.append(
                 {
                     "code": "weekly_session_overage",
-                    "message": f"Week {week_index} renders {actual_session_count} active sessions even though the planning brief only allows {expected_session_count}.",
+                    "message": f"Week {week_index} renders extra active days beyond the planning brief.",
                     "week_index": week_index,
                     "phase": week.get("phase"),
                     "expected_session_count": expected_session_count,

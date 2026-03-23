@@ -127,10 +127,23 @@ function sanitizeSessionCountDisplayText(text: string) {
     return text;
   }
 
-  const filteredLines = text.split(/\r?\n/).filter((line) => {
+  const normalizedText = text
+    .replace(
+      /(\bWeek\s+\d+[^\n]*?)(?:\s*[-–—]\s*\d+\s+active sessions?(?:\s*\([^)\n]*\))?)/gi,
+      "$1",
+    )
+    .replace(
+      /(\bWeek\s+\d+[^\n]*?)(?:\s*[-–—]\s*\d+\s+sessions?(?:\s*(?:\/\s*week|per\s+week))?(?:\s*\([^)\n]*\))?)/gi,
+      "$1",
+    );
+
+  const filteredLines = normalizedText.split(/\r?\n/).filter((line) => {
     const trimmed = line.trim();
     if (!trimmed) {
       return true;
+    }
+    if (/\b\d+\s+active sessions?\b/i.test(trimmed)) {
+      return false;
     }
     if (/^(?:[-*]\s*)?(?:sessions?\s*(?:per\s+week|\/week)|weekly sessions?|weekly session count)\b/i.test(trimmed)) {
       return false;
@@ -142,6 +155,12 @@ function sanitizeSessionCountDisplayText(text: string) {
       return false;
     }
     if (/^(?:[-*]\s*)?\d+\s+active sessions?\b/i.test(trimmed)) {
+      return false;
+    }
+    if (/^(?:[-*]\s*)?(?:conditioning count|session count|weekly session count)\b/i.test(trimmed)) {
+      return false;
+    }
+    if (/^(?:[-*]\s*)?(?:conditioning|strength|recovery|sparring)\s*=/i.test(trimmed)) {
       return false;
     }
     return true;
@@ -170,6 +189,10 @@ function sanitizeValidatorDisplayText(text: string) {
   return text
     .replace(
       /"message":\s*"Week \d+ renders \d+ active sessions even though the planning brief only allows \d+\."/g,
+      '"message": "The weekly structure does not match the planning brief."',
+    )
+    .replace(
+      /"message":\s*"Week \d+ renders extra active days beyond the planning brief\."/g,
       '"message": "The weekly structure does not match the planning brief."',
     )
     .replace(

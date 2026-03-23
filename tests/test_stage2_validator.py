@@ -847,6 +847,124 @@ def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count(
     assert "weekly_session_overage" in warning_codes
 
 
+def test_validate_stage2_output_does_not_count_optional_off_day_as_active_session():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                ],
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Monday - Strength
+        - Trap Bar Deadlift - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        #### Friday - Optional (off or short mobility only)
+        - Supine breathing + light thoracic mobility
+
+        ### Week 2
+        #### Monday - Strength
+        - Trap Bar Deadlift - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_session_overage" not in warning_codes
+
+
+def test_validate_stage2_output_counts_low_noise_aerobic_support_as_active_session():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                ],
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Monday - Strength
+        - Trap Bar Deadlift - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        #### Friday - Low-noise aerobic support
+        - Swimming easy continuous - 12 min
+
+        ### Week 2
+        #### Monday - Strength
+        - Trap Bar Deadlift - 4x5
+        #### Tuesday - Aerobic support
+        - Easy Bike - 25 min
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_session_overage" in warning_codes
+
+
 def test_validate_stage2_output_does_not_false_positive_session_overage_from_prose_lines():
     planning_brief = _planning_brief_fixture()
     planning_brief["weekly_role_map"] = {
@@ -934,6 +1052,65 @@ def test_validate_stage2_output_counts_explicit_numbered_session_headings():
         - Trap Bar Deadlift - 4x5
         #### Day 2: Aerobic support
         - Easy Bike - 25 min
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weekly_session_overage" in warning_codes
+
+
+def test_validate_stage2_output_counts_preserved_hard_sparring_day_as_active_session():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["weekly_role_map"] = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                ],
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "session_roles": [
+                    {"role_key": "strength_touch_day", "category": "strength"},
+                    {"role_key": "recovery_reset_day", "category": "recovery"},
+                    {"role_key": "neural_plus_strength_day", "category": "strength"},
+                    {"role_key": "aerobic_support_day", "category": "conditioning"},
+                ],
+            },
+        ]
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Monday - Support strength
+        - Landmine Press - 4x5
+        #### Tuesday - Hard sparring (KEEP)
+        - Follow coach rounds
+        #### Wednesday - Recovery
+        - Walk + mobility
+        #### Thursday - Strength
+        - Trap Bar Deadlift - 4x3
+        #### Friday - Aerobic support
+        - Easy Bike - 20 min
+
+        ### Week 2
+        #### Monday - Strength
+        - Trap Bar Deadlift - 4x5
+        #### Tuesday - Recovery
+        - Walk + mobility
+        #### Wednesday - Strength
+        - Trap Bar Deadlift - 4x3
+        #### Thursday - Aerobic support
+        - Easy Bike - 20 min
         """,
     )
 
