@@ -73,6 +73,7 @@ export type ProfileRecord = {
 
 export type PlanSummary = {
   plan_id: string;
+  plan_name?: string | null;
   athlete_id: string;
   full_name: string;
   fight_date: string;
@@ -103,6 +104,7 @@ export type AdminPlanOutputs = {
 
 export type PlanDetail = PlanSummary & {
   outputs: PlanOutputs;
+  latest_intake?: PlanRequest | null;
   admin_outputs?: AdminPlanOutputs | null;
 };
 

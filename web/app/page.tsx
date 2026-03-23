@@ -17,6 +17,10 @@ function sortPlansByCreatedAt<T extends { created_at: string }>(plans: T[]): T[]
   return [...plans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
 }
 
+function getPlanDisplayName(plan: { plan_name?: string | null; fight_date?: string | null }) {
+  return plan.plan_name?.trim() || plan.fight_date || "Open saved plan";
+}
+
 function OverviewDetailList({ items }: { items: Array<{ label: string; value: string }> }) {
   return (
     <div className="review-detail-list">
@@ -156,7 +160,7 @@ export default function HomePage() {
                     <article key={plan.plan_id} className="plan-history-row">
                       <div className="plan-history-copy">
                         <p className="label">Fight date</p>
-                        <h3 className="plan-card-title">{plan.fight_date || "Open saved plan"}</h3>
+                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
                         <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
                       </div>
                       <div className="plan-history-meta">

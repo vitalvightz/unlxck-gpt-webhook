@@ -8,6 +8,10 @@ import { useAppSession } from "@/components/auth-provider";
 import { listAdminAthletes, listAdminPlans } from "@/lib/api";
 import type { AdminAthleteRecord, AdminPlanSummary } from "@/lib/types";
 
+function getPlanDisplayName(plan: { plan_name?: string | null; full_name?: string | null; athlete_email: string }) {
+  return plan.plan_name?.trim() || plan.full_name || plan.athlete_email;
+}
+
 export default function AdminPage() {
   const { session } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
@@ -79,7 +83,7 @@ export default function AdminPage() {
                   <div className="plan-card-header">
                     <div>
                       <Link href={`/plans/${plan.plan_id}`}>
-                        <h3 className="plan-card-title">{plan.full_name || plan.athlete_email}</h3>
+                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
                       </Link>
                       <p className="muted">{plan.athlete_email}</p>
                     </div>
