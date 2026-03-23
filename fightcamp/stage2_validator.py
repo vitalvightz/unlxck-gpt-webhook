@@ -51,6 +51,49 @@ _CONDITIONING_ALTERNATIVE_PATTERN = re.compile(
     r"\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b.{0,80}\bor\b.{0,80}\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b",
     re.IGNORECASE,
 )
+_GENERIC_FILLER_PATTERNS = (
+    re.compile(r"\bstay consistent\b", re.IGNORECASE),
+    re.compile(r"\btrust the process\b", re.IGNORECASE),
+    re.compile(r"\bdo your best\b", re.IGNORECASE),
+)
+_GENERIC_OPENER_PATTERNS = (
+    re.compile(r"^\s*(?:[-*\u2022]+\s*)?focus on\b", re.IGNORECASE),
+    re.compile(r"^\s*(?:[-*\u2022]+\s*)?ensure\b", re.IGNORECASE),
+    re.compile(r"^\s*(?:[-*\u2022]+\s*)?make sure\b", re.IGNORECASE),
+    re.compile(r"^\s*(?:[-*\u2022]+\s*)?it(?:'|’)s important to\b", re.IGNORECASE),
+    re.compile(r"^\s*(?:[-*\u2022]+\s*)?it is important to\b", re.IGNORECASE),
+)
+_GENERIC_MOTIVATION_PATTERNS = (
+    re.compile(r"\byou(?:'|’)?ve got this\b|\byou got this\b", re.IGNORECASE),
+    re.compile(r"\bstay motivated\b", re.IGNORECASE),
+    re.compile(r"\bstay positive\b", re.IGNORECASE),
+    re.compile(r"\bbelieve in yourself\b", re.IGNORECASE),
+    re.compile(r"\bpush yourself\b", re.IGNORECASE),
+)
+_HEDGED_ADJUSTMENT_PATTERNS = (
+    re.compile(r"^\s*(?:[-*\u2022]+\s*)?consider\b", re.IGNORECASE),
+    re.compile(r"\bit may be best to\b", re.IGNORECASE),
+    re.compile(r"\bit might be best to\b", re.IGNORECASE),
+    re.compile(r"\byou may want to\b", re.IGNORECASE),
+    re.compile(r"\byou might want to\b", re.IGNORECASE),
+    re.compile(r"\bcould be worth\b", re.IGNORECASE),
+    re.compile(r"\btry to\b", re.IGNORECASE),
+)
+_ADJUSTMENT_CONTEXT_PATTERN = re.compile(
+    r"\b(?:reduce|drop|cut|modify|adjust|swap|replace|skip|avoid|rest|recover|recovery|volume|intensity|load|pain|fatigue|soreness|workload|pivot)\b",
+    re.IGNORECASE,
+)
+_EMPTY_SAFETY_PATTERNS = (
+    re.compile(r"\blisten to your body\b", re.IGNORECASE),
+    re.compile(r"\bconsult (?:a|your) (?:professional|clinician|doctor|medical professional)\b", re.IGNORECASE),
+    re.compile(r"\bseek medical advice\b", re.IGNORECASE),
+    re.compile(r"\bbe careful\b", re.IGNORECASE),
+    re.compile(r"\bavoid overtraining\b", re.IGNORECASE),
+)
+_OPERATIONAL_GUARDRAIL_PATTERN = re.compile(
+    r"\b(?:if|when|unless|tomorrow|today|hours?|48|24|pain|symptom|worse|stop|reassess|pivot|rule|rules|reduce|drop|cut|switch|replace|skip)\b",
+    re.IGNORECASE,
+)
 _WEIGHT_CUT_PATTERNS = (
     re.compile(r"\bweight[- ]cut\b", re.IGNORECASE),
     re.compile(r"\bweight making\b", re.IGNORECASE),
@@ -102,6 +145,7 @@ _SESSION_TITLE_HINTS = {
     "technical polish",
 }
 _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
+_OPTION_ENUM_PATTERN = re.compile(r"\b(?:option\s+[a-c]|[a-c][\):])", re.IGNORECASE)
 _WEEKDAY_HEADING = re.compile(
     r"^(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)(?:\b|[\s:\-|])",
     re.IGNORECASE,
@@ -435,6 +479,55 @@ def _weight_cut_context(planning_brief: dict) -> dict[str, bool]:
     return {"active": active, "high_pressure": high_pressure}
 
 
+def _risk_tone_context(planning_brief: dict) -> dict[str, bool]:
+    athlete = _athlete_snapshot(planning_brief)
+    readiness_flags = set(_clean_list(athlete.get("readiness_flags", [])))
+    fatigue = str(athlete.get("fatigue", "")).strip().lower()
+    days_until_fight = athlete.get("days_until_fight")
+    weight_cut = _weight_cut_context(planning_brief)
+    injury_present = bool(_clean_list(athlete.get("injuries"))) or "injury_management" in readiness_flags
+    fight_week = bool(
+        "fight_week" in readiness_flags
+        or (isinstance(days_until_fight, int) and days_until_fight <= 7)
+    )
+    return {
+        "high_fatigue": fatigue == "high" or "high_fatigue" in readiness_flags,
+        "injury_present": injury_present,
+        "active_weight_cut": weight_cut["active"],
+        "high_pressure_weight_cut": weight_cut["high_pressure"],
+        "fight_week": fight_week,
+    }
+
+
+def _active_risk_labels(risk_context: dict[str, bool]) -> list[str]:
+    labels: list[str] = []
+    if risk_context.get("high_fatigue"):
+        labels.append("high_fatigue")
+    if risk_context.get("injury_present"):
+        labels.append("injury_present")
+    if risk_context.get("fight_week"):
+        labels.append("fight_week")
+    if risk_context.get("high_pressure_weight_cut"):
+        labels.append("high_pressure_weight_cut")
+    elif risk_context.get("active_weight_cut"):
+        labels.append("active_weight_cut")
+    return labels
+
+
+def _session_has_adjustment_context(session_lines: list[str]) -> bool:
+    return any(_ADJUSTMENT_CONTEXT_PATTERN.search(line) for line in session_lines)
+
+
+def _line_has_risk_context(line: str) -> bool:
+    normalized = line.lower()
+    return bool(
+        _ADJUSTMENT_CONTEXT_PATTERN.search(line)
+        or "weight cut" in normalized
+        or "fight week" in normalized
+        or "weigh-in" in normalized
+    )
+
+
 def _normalize_equipment_set(values: Any) -> set[str]:
     equipment: set[str] = set()
     for value in _clean_list(values):
@@ -629,8 +722,10 @@ def _conditioning_choice_warnings(plan_lines: list[str]) -> list[dict]:
     return warnings
 
 
-def _rendering_discipline_warnings(phase_sections: dict[str, list[str]]) -> list[dict]:
+def _rendering_discipline_warnings(planning_brief: dict, phase_sections: dict[str, list[str]]) -> list[dict]:
     warnings: list[dict] = []
+    risk_context = _risk_tone_context(planning_brief)
+    active_risk_labels = _active_risk_labels(risk_context)
     for phase, phase_lines in phase_sections.items():
         for session_index, session_lines in enumerate(_phase_session_blocks(phase_lines), start=1):
             normalized_lines = [_normalize_render_line(line) for line in session_lines if _normalize_render_line(line)]
@@ -648,6 +743,10 @@ def _rendering_discipline_warnings(phase_sections: dict[str, list[str]]) -> list
                 for line in session_lines
                 if any(pattern.search(line) for pattern in _CONDITIONAL_PATTERNS) or _CONDITIONING_ALTERNATIVE_PATTERN.search(line)
             ]
+            option_markers: set[str] = set()
+            for line in session_lines:
+                for match in _OPTION_ENUM_PATTERN.findall(line):
+                    option_markers.add(str(match).lower())
             if len(fallback_lines) > 1:
                 warnings.append(
                     {
@@ -666,6 +765,29 @@ def _rendering_discipline_warnings(phase_sections: dict[str, list[str]]) -> list
                         "phase": phase,
                         "session_index": session_index,
                         "matched_lines": session_lines,
+                    }
+                )
+            if len(option_markers) > 2:
+                blocking_option_overload = bool(
+                    _session_has_adjustment_context(session_lines)
+                    or phase == "TAPER"
+                    or active_risk_labels
+                )
+                warnings.append(
+                    {
+                        "code": "option_overload",
+                        "message": (
+                            f"{phase} session {session_index} still presents more than two options "
+                            "in a corrective or high-risk context."
+                            if blocking_option_overload
+                            else f"{phase} session {session_index} still presents more than two options."
+                        ),
+                        "phase": phase,
+                        "session_index": session_index,
+                        "matched_lines": session_lines,
+                        "rewrite_hint": "Collapse choices to at most two safe, materially equivalent options, or resolve to one final prescription.",
+                        "blocking": blocking_option_overload,
+                        "risk_context": active_risk_labels,
                     }
                 )
             if phase == "TAPER" and (len(fallback_lines) > 1 or len(conditional_lines) > 0 or len(template_lines) > 2):
@@ -950,6 +1072,73 @@ def _overstyled_name_warnings(plan_lines: list[str]) -> list[dict]:
     return warnings
 
 
+def _coach_voice_warnings(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
+    warnings: list[dict] = []
+    seen: set[tuple[str, str]] = set()
+    risk_context = _risk_tone_context(planning_brief)
+    active_risk_labels = _active_risk_labels(risk_context)
+
+    for line in plan_lines:
+        normalized = _normalize_render_line(line)
+        if not normalized:
+            continue
+
+        warning: dict | None = None
+        line_has_risk_context = _line_has_risk_context(line) or bool(active_risk_labels)
+        if any(pattern.search(line) for pattern in _EMPTY_SAFETY_PATTERNS) and not _OPERATIONAL_GUARDRAIL_PATTERN.search(line):
+            warning = {
+                "code": "empty_safety_language",
+                "message": (
+                    "High-risk guidance uses empty safety language instead of operational guardrails."
+                    if line_has_risk_context
+                    else "Replace empty safety language with operational guardrails that change the prescription."
+                ),
+                "line": line,
+                "rewrite_hint": "State the constraint or symptom rule plainly and say what changes today or tomorrow.",
+                "blocking": line_has_risk_context,
+                "risk_context": active_risk_labels,
+            }
+        elif any(pattern.search(line) for pattern in _GENERIC_OPENER_PATTERNS):
+            warning = {
+                "code": "generic_instruction_opener",
+                "message": "Generic opener weakens the coaching line; start with a direct verb-led instruction.",
+                "line": line,
+                "rewrite_hint": "Start with the instruction itself, then add one short reason if needed.",
+            }
+        elif any(pattern.search(line) for pattern in _GENERIC_MOTIVATION_PATTERNS):
+            warning = {
+                "code": "generic_motivation_cliche",
+                "message": "Replace generic motivation cliches with concrete confidence or execution language.",
+                "line": line,
+                "rewrite_hint": "Swap generic hype for one specific action, checkpoint, or proof-based confidence cue.",
+            }
+        elif any(pattern.search(line) for pattern in _GENERIC_FILLER_PATTERNS):
+            warning = {
+                "code": "generic_filler_phrase",
+                "message": "Replace low-trust filler with concrete coach language and next actions.",
+                "line": line,
+                "rewrite_hint": "Replace the filler phrase with a direct instruction and an operational cue.",
+            }
+        elif any(pattern.search(line) for pattern in _HEDGED_ADJUSTMENT_PATTERNS) and _ADJUSTMENT_CONTEXT_PATTERN.search(line):
+            warning = {
+                "code": "hedged_adjustment_without_decision",
+                "message": "Adjustment language stays too hedged instead of making a clear coaching call.",
+                "line": line,
+                "rewrite_hint": "Turn the suggestion into a direct coaching call, then add one short why.",
+                "blocking": True,
+            }
+
+        if not warning:
+            continue
+        dedupe_key = (str(warning.get("code", "")), normalized)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        warnings.append(warning)
+
+    return warnings
+
+
 def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
     athlete_model = planning_brief.get("athlete_model", {}) or {}
     sport_key = str(
@@ -991,7 +1180,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         plan_lines,
     )
     conditioning_choice_warnings = _conditioning_choice_warnings(plan_lines)
-    rendering_discipline_warnings = _rendering_discipline_warnings(phase_sections)
+    rendering_discipline_warnings = _rendering_discipline_warnings(planning_brief, phase_sections)
     equipment_congruence_warnings = _equipment_congruence_warnings(
         planning_brief,
         phase_sections,
@@ -1009,7 +1198,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief,
         final_plan_text,
     )
-    overstyled_name_warnings: list[dict] = []
+    overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
+    coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
 
     errors = [
@@ -1047,6 +1237,8 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(unresolved_access_fallback_warnings)
     warnings.extend(week_completeness_warnings)
     warnings.extend(weight_cut_acknowledgement_warnings)
+    warnings.extend(overstyled_name_warnings)
+    warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
 
     return {
@@ -1065,6 +1257,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
+        "coach_voice_warnings": coach_voice_warnings,
         "sport_language_warnings": sport_language_warnings,
     }
 
