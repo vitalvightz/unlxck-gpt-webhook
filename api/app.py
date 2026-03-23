@@ -225,14 +225,22 @@ def _map_admin_plan_summary(row: dict[str, Any]) -> AdminPlanSummary:
     )
 
 
-def _map_admin_athlete(row: dict[str, Any]) -> AdminAthleteRecord:
+def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None = None) -> AdminAthleteRecord:
+    onboarding_draft = row.get("onboarding_draft")
     return AdminAthleteRecord(
         athlete_id=str(row["id"]),
         email=str(row.get("email") or ""),
         role=str(row.get("role") or "athlete"),
         full_name=str(row.get("full_name") or ""),
         technical_style=list(row.get("technical_style") or []),
+        tactical_style=list(row.get("tactical_style") or []),
+        stance=str(row.get("stance") or ""),
+        professional_status=str(row.get("professional_status") or ""),
+        record=str(row.get("record") or row.get("record_summary") or ""),
         athlete_timezone=str(row.get("athlete_timezone") or ""),
+        athlete_locale=str(row.get("athlete_locale") or ""),
+        onboarding_draft=onboarding_draft if isinstance(onboarding_draft, dict) else None,
+        latest_intake=latest_intake.get("intake") if isinstance(latest_intake, dict) else None,
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
         plan_count=int(row.get("plan_count") or 0),
@@ -754,7 +762,8 @@ def create_app(
         row = store.get_admin_athlete(athlete_id)
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-        return _map_admin_athlete(row)
+        latest_intake = store.get_latest_intake(athlete_id)
+        return _map_admin_athlete(row, latest_intake=latest_intake)
 
     return app
 

@@ -129,7 +129,14 @@ export type AdminAthleteRecord = {
   role: UserRole;
   full_name: string;
   technical_style: string[];
+  tactical_style: string[];
+  stance: string;
+  professional_status: string;
+  record: string;
   athlete_timezone: string;
+  athlete_locale: string;
+  onboarding_draft?: PlanRequest | null;
+  latest_intake?: PlanRequest | null;
   created_at: string;
   updated_at: string;
   plan_count: number;

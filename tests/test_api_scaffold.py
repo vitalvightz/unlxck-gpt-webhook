@@ -554,6 +554,79 @@ def test_request_middleware_returns_json_request_id_for_unhandled_exceptions():
     assert len(response.json()["request_id"]) == 8
 
 
+def test_admin_athlete_profile_includes_latest_intake_details():
+    client, store, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+            "stance": "orthodox",
+            "professional_status": "amateur",
+            "record": "5-1",
+            "athlete_timezone": "Europe/London",
+            "athlete_locale": "en-GB",
+        },
+    )
+    assert response.status_code == 200
+
+    generate_response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json={
+            "athlete": {
+                "full_name": "Ari Mensah",
+                "age": 29,
+                "height_cm": 178,
+                "weight_kg": 74,
+                "target_weight_kg": 72,
+                "technical_style": ["boxing"],
+                "tactical_style": ["pressure_fighter"],
+                "stance": "orthodox",
+                "professional_status": "amateur",
+                "record": "5-1",
+                "athlete_timezone": "Europe/London",
+                "athlete_locale": "en-GB",
+            },
+            "fight_date": "2026-04-18",
+            "rounds_format": "3 x 3",
+            "weekly_training_frequency": 5,
+            "fatigue_level": "moderate",
+            "equipment_access": ["heavy_bag", "weights"],
+            "training_availability": ["Monday", "Wednesday"],
+            "hard_sparring_days": ["Friday"],
+            "technical_skill_days": ["Tuesday"],
+            "injuries": "Left shoulder management",
+            "key_goals": ["conditioning", "fight_sharpness"],
+            "weak_areas": ["defense", "gas_tank"],
+            "training_preference": "Short, intense pads and bag rounds.",
+            "mindset_challenges": "Starts too fast in the first round.",
+            "notes": "Loved reactive defense work in the last camp.",
+        },
+    )
+    assert generate_response.status_code == 202
+
+    admin_response = client.get(
+        "/api/admin/athletes/athlete-1",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert admin_response.status_code == 200
+    payload = admin_response.json()
+    assert payload["technical_style"] == ["boxing"]
+    assert payload["tactical_style"] == ["pressure_fighter"]
+    assert payload["stance"] == "orthodox"
+    assert payload["professional_status"] == "amateur"
+    assert payload["record"] == "5-1"
+    assert payload["athlete_locale"] == "en-GB"
+    assert payload["latest_intake"]["athlete"]["age"] == 29
+    assert payload["latest_intake"]["equipment_access"] == ["heavy_bag", "weights"]
+    assert payload["latest_intake"]["training_preference"] == "Short, intense pads and bag rounds."
+
+
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)

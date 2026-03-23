@@ -219,7 +219,14 @@ class AdminAthleteRecord(BaseModel):
     role: UserRole
     full_name: str
     technical_style: list[str] = Field(default_factory=list)
+    tactical_style: list[str] = Field(default_factory=list)
+    stance: str = ""
+    professional_status: str = ""
+    record: str = ""
     athlete_timezone: str = ""
+    athlete_locale: str = ""
+    onboarding_draft: dict[str, Any] | None = None
+    latest_intake: dict[str, Any] | None = None
     created_at: str
     updated_at: str
     plan_count: int = 0
