@@ -350,6 +350,10 @@ export function getGenerationJob(token: string, jobId: string): Promise<Generati
   return readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}`, { token });
 }
 
+export function getLatestPlan(token: string): Promise<PlanDetail> {
+  return readJson<PlanDetail>("/api/plans/latest", { token });
+}
+
 export function listPlans(token: string): Promise<PlanSummary[]> {
   return readJson<PlanSummary[]>("/api/plans", { token });
 }
