@@ -1,14 +1,151 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { deletePlan, renamePlan } from "@/lib/api";
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
+import type { PlanSummary } from "@/lib/types";
+
+function getPlanDisplayName(plan: PlanSummary): string {
+  return plan.plan_name?.trim() || plan.fight_date || "Open plan";
+}
+
+function PlanCard({
+  plan,
+  accessToken,
+  onPlanDeleted,
+  onPlanRenamed,
+}: {
+  plan: PlanSummary;
+  accessToken: string | null;
+  onPlanDeleted: (planId: string) => void;
+  onPlanRenamed: (updatedPlan: PlanSummary) => void;
+}) {
+  const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleRename() {
+    if (!accessToken) {
+      setError("Session missing. Please sign in again.");
+      return;
+    }
+
+    const currentName = plan.plan_name?.trim() || "";
+    const nextName = window.prompt("Rename this plan", currentName || plan.fight_date || "");
+    if (nextName == null) {
+      return;
+    }
+
+    const normalizedName = nextName.trim();
+    if (!normalizedName) {
+      setError("Plan name cannot be empty.");
+      return;
+    }
+    if (normalizedName === currentName) {
+      return;
+    }
+
+    setPendingAction("rename");
+    setError(null);
+    setMessage(null);
+    try {
+      const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
+      onPlanRenamed(updatedPlan);
+      setMessage("Plan renamed.");
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : "Unable to rename this plan.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!accessToken) {
+      setError("Session missing. Please sign in again.");
+      return;
+    }
+    const confirmed = window.confirm(`Delete "${getPlanDisplayName(plan)}"? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setPendingAction("delete");
+    setError(null);
+    setMessage(null);
+    try {
+      await deletePlan(accessToken, plan.plan_id);
+      onPlanDeleted(plan.plan_id);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  return (
+    <article className="list-card plan-card">
+      <div className="plan-card-header">
+        <div>
+          <p className="label">Fight date</p>
+          <Link href={`/plans/${plan.plan_id}`}>
+            <h2 className="plan-card-title">{getPlanDisplayName(plan)}</h2>
+          </Link>
+        </div>
+        <span className="badge">{plan.status}</span>
+      </div>
+      <p className="muted">{getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Unspecified style"}</p>
+      <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
+      <div className="plan-card-actions">
+        <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
+          Open plan
+        </Link>
+        <button type="button" className="ghost-button" onClick={handleRename} disabled={pendingAction !== null}>
+          {pendingAction === "rename" ? "Renaming..." : "Rename"}
+        </button>
+        <button type="button" className="ghost-button danger-button" onClick={handleDelete} disabled={pendingAction !== null}>
+          {pendingAction === "delete" ? "Deleting..." : "Delete"}
+        </button>
+        {plan.pdf_url ? (
+          <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
+            Open PDF
+          </Link>
+        ) : null}
+      </div>
+      {message ? <div className="success-banner">{message}</div> : null}
+      {error ? <div className="error-banner">{error}</div> : null}
+    </article>
+  );
+}
 
 export default function PlansPage() {
-  const { me } = useAppSession();
-  const plans = [...(me?.plans ?? [])].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
+  const router = useRouter();
+  const { me, session } = useAppSession();
+  const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
+  const plans = useMemo(() => {
+    const sourcePlans = localPlans ?? me?.plans ?? [];
+    return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
+  }, [localPlans, me?.plans]);
+
+  function handlePlanDeleted(planId: string) {
+    setLocalPlans((current) => {
+      const source = current ?? me?.plans ?? [];
+      return source.filter((plan) => plan.plan_id !== planId);
+    });
+    router.refresh();
+  }
+
+  function handlePlanRenamed(updatedPlan: PlanSummary) {
+    setLocalPlans((current) => {
+      const source = current ?? me?.plans ?? [];
+      return source.map((plan) => (plan.plan_id === updatedPlan.plan_id ? { ...plan, ...updatedPlan } : plan));
+    });
+    router.refresh();
+  }
 
   return (
     <RequireAuth>
@@ -28,29 +165,13 @@ export default function PlansPage() {
 
         <div className="plans-grid">
           {plans.map((plan) => (
-            <article key={plan.plan_id} className="list-card plan-card">
-              <div className="plan-card-header">
-                <div>
-                  <p className="label">Fight date</p>
-                  <Link href={`/plans/${plan.plan_id}`}>
-                    <h2 className="plan-card-title">{plan.fight_date || "Open plan"}</h2>
-                  </Link>
-                </div>
-                <span className="badge">{plan.status}</span>
-              </div>
-              <p className="muted">{getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Unspecified style"}</p>
-              <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
-              <div className="plan-card-actions">
-                <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-                  Open plan
-                </Link>
-                {plan.pdf_url ? (
-                  <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
-                    Open PDF
-                  </Link>
-                ) : null}
-              </div>
-            </article>
+            <PlanCard
+              key={plan.plan_id}
+              plan={plan}
+              accessToken={session?.access_token ?? null}
+              onPlanDeleted={handlePlanDeleted}
+              onPlanRenamed={handlePlanRenamed}
+            />
           ))}
 
           {!plans.length ? (
@@ -72,5 +193,4 @@ export default function PlansPage() {
     </RequireAuth>
   );
 }
-
 

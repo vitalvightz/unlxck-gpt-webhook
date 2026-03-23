@@ -229,6 +229,30 @@ export function getPlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/plans/${planId}`, { token });
 }
 
+export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
+  return readJson<PlanDetail>(`/api/plans/${planId}`, {
+    method: "PATCH",
+    token,
+    body: JSON.stringify({ plan_name: planName }),
+  });
+}
+
+export async function deletePlan(token: string, planId: string): Promise<void> {
+  const headers = new Headers();
+  headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(`${getApiBaseUrl()}/api/plans/${planId}`, {
+    method: "DELETE",
+    cache: "no-store",
+    headers,
+  });
+
+  if (!response.ok) {
+    const message = (await response.text()).trim() || `Request failed: ${response.status}`;
+    throw new ApiError(message, response.status);
+  }
+}
+
 export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {
   return readJson<AdminAthleteRecord[]>("/api/admin/athletes", { token });
 }
@@ -262,6 +286,13 @@ export function approvePlanForRelease(token: string, planId: string): Promise<Pl
 
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
+    method: "POST",
+    token,
+  });
+}
+
+export function archivePlan(token: string, planId: string): Promise<PlanDetail> {
+  return readJson<PlanDetail>(`/api/admin/plans/${planId}/archive`, {
     method: "POST",
     token,
   });

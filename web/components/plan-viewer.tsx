@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { approvePlanForRelease, rejectApprovedPlan, submitManualStage2 } from "@/lib/api";
-import type { PlanDetail } from "@/lib/types";
+import { approvePlanForRelease, archivePlan, deletePlan, rejectApprovedPlan, renamePlan, submitManualStage2 } from "@/lib/api";
+import type { PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
 type ReviewIssue = {
@@ -77,6 +78,10 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "athlete-plan";
   return `${base}-${suffix}.txt`;
+}
+
+function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
+  return plan.plan_name?.trim() || plan.fight_date || "Open plan";
 }
 
 function downloadArtifact(text: string, filename: string) {
@@ -360,13 +365,19 @@ function AdminArtifactSection({
 export function PlanViewer({
   plan,
   accessToken,
+  viewerRole,
   onPlanUpdated,
+  onPlanDeleted,
 }: {
   plan: PlanDetail;
   accessToken: string | null;
+  viewerRole: UserRole;
   onPlanUpdated?: (plan: PlanDetail) => void;
+  onPlanDeleted?: () => Promise<void> | void;
 }) {
+  const router = useRouter();
   const isAdmin = Boolean(plan.admin_outputs);
+  const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const technicalStyles = getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = Boolean(athletePlanText);
@@ -392,7 +403,7 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
-  const canRejectApproval = isAdmin && hasPublishedPlan;
+  const canRejectApproval = isAdmin;
   const approveButtonLabel = stage2ReviewSummary.isPublishable ? "Approve for athlete view" : "Approve anyway";
   const reviewPanelClassName = `support-panel stage2-review-panel ${stage2ReviewSummary.isPublishable ? "" : "support-panel-alert"}`.trim();
   const approvalSourceLabel = plan.admin_outputs?.final_plan_text?.trim()
@@ -410,6 +421,12 @@ export function PlanViewer({
   const [rejectPending, setRejectPending] = useState(false);
   const [rejectMessage, setRejectMessage] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
+  const [archivePending, setArchivePending] = useState(false);
+  const [archiveMessage, setArchiveMessage] = useState<string | null>(null);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [planActionPending, setPlanActionPending] = useState<"rename" | "delete" | null>(null);
+  const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
+  const [planActionError, setPlanActionError] = useState<string | null>(null);
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(null);
   const [openAdminSection, setOpenAdminSection] = useState(() => {
@@ -508,11 +525,6 @@ export function PlanViewer({
       setRejectError("Admin session missing. Please sign in again.");
       return;
     }
-    if (!canRejectApproval) {
-      setRejectError("Only released plans can be rejected back into review.");
-      return;
-    }
-
     setRejectPending(true);
     setRejectError(null);
     setRejectMessage(null);
@@ -521,11 +533,92 @@ export function PlanViewer({
     try {
       const updatedPlan = await rejectApprovedPlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
-      setRejectMessage("Plan rejected and moved back to review so it can be approved again later.");
+      setRejectMessage(hasPublishedPlan ? "Plan rejected and moved back to review." : "Plan rejected.");
     } catch (error) {
-      setRejectError(error instanceof Error ? error.message : "Unable to reject this released plan.");
+      setRejectError(error instanceof Error ? error.message : "Unable to reject this plan.");
     } finally {
       setRejectPending(false);
+    }
+  }
+
+  async function handleArchivePlan() {
+    if (!accessToken) {
+      setArchiveError("Admin session missing. Please sign in again.");
+      return;
+    }
+
+    const confirmed = window.confirm(`Archive "${getPlanDisplayName(plan)}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setArchivePending(true);
+    setArchiveError(null);
+    setArchiveMessage(null);
+    try {
+      const updatedPlan = await archivePlan(accessToken, plan.plan_id);
+      onPlanUpdated?.(updatedPlan);
+      setArchiveMessage("Plan archived.");
+    } catch (error) {
+      setArchiveError(error instanceof Error ? error.message : "Unable to archive this plan.");
+    } finally {
+      setArchivePending(false);
+    }
+  }
+
+  async function handleRenamePlan() {
+    if (!accessToken) {
+      setPlanActionError("Session missing. Please sign in again.");
+      return;
+    }
+
+    const currentName = plan.plan_name?.trim() || "";
+    const nextName = window.prompt("Rename this plan", currentName || plan.fight_date || "");
+    if (nextName == null) {
+      return;
+    }
+    const normalizedName = nextName.trim();
+    if (!normalizedName) {
+      setPlanActionError("Plan name cannot be empty.");
+      return;
+    }
+
+    setPlanActionPending("rename");
+    setPlanActionError(null);
+    setPlanActionMessage(null);
+    try {
+      const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
+      onPlanUpdated?.(updatedPlan);
+      setPlanActionMessage("Plan renamed.");
+    } catch (error) {
+      setPlanActionError(error instanceof Error ? error.message : "Unable to rename this plan.");
+    } finally {
+      setPlanActionPending(null);
+    }
+  }
+
+  async function handleDeletePlan() {
+    if (!accessToken) {
+      setPlanActionError("Session missing. Please sign in again.");
+      return;
+    }
+    const confirmed = window.confirm(`Delete "${getPlanDisplayName(plan)}"? This cannot be undone.`);
+    if (!confirmed) {
+      return;
+    }
+
+    setPlanActionPending("delete");
+    setPlanActionError(null);
+    setPlanActionMessage(null);
+    try {
+      await deletePlan(accessToken, plan.plan_id);
+      await onPlanDeleted?.();
+      router.push(viewerRole === "admin" ? "/admin" : "/plans");
+      router.refresh();
+    } catch (error) {
+      setPlanActionError(error instanceof Error ? error.message : "Unable to delete this plan.");
+    } finally {
+      setPlanActionPending(null);
     }
   }
 
@@ -598,7 +691,7 @@ export function PlanViewer({
         <div className="section-heading">
           <div>
             <p className="kicker">Plan Detail</p>
-            <h1>{plan.full_name}</h1>
+            <h1>{getPlanDisplayName(plan)}</h1>
             <p className="muted">
               {hasPublishedPlan
                 ? "This is the validated athlete-facing plan now stored in the app."
@@ -616,6 +709,16 @@ export function PlanViewer({
           <Link href="/plans" className="ghost-button">
             Back to plans
           </Link>
+          {canManagePlan ? (
+            <>
+              <button type="button" className="ghost-button" onClick={handleRenamePlan} disabled={planActionPending !== null}>
+                {planActionPending === "rename" ? "Renaming..." : "Rename"}
+              </button>
+              <button type="button" className="ghost-button danger-button" onClick={handleDeletePlan} disabled={planActionPending !== null}>
+                {planActionPending === "delete" ? "Deleting..." : "Delete"}
+              </button>
+            </>
+          ) : null}
           {isAdmin && plan.athlete_id ? (
             <Link href={`/admin/athletes/${plan.athlete_id}`} className="ghost-button">
               View athlete profile
@@ -627,6 +730,8 @@ export function PlanViewer({
             </Link>
           ) : null}
         </div>
+        {planActionMessage ? <div className="success-banner">{planActionMessage}</div> : null}
+        {planActionError ? <div className="error-banner">{planActionError}</div> : null}
       </section>
 
       <div className="plan-detail-layout">
@@ -727,10 +832,17 @@ export function PlanViewer({
                     {rejectPending ? "Rejecting..." : "Reject approval"}
                   </button>
                 ) : null}
+                {isAdmin ? (
+                  <button type="button" className="ghost-button" onClick={handleArchivePlan} disabled={archivePending}>
+                    {archivePending ? "Archiving..." : "Archive"}
+                  </button>
+                ) : null}
               </div>
               <pre className="plan-text-block">{athletePlanText}</pre>
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
+              {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
+              {archiveError ? <div className="error-banner">{archiveError}</div> : null}
             </>
           ) : (
             <div className="plan-review-stack">
@@ -874,11 +986,25 @@ export function PlanViewer({
                       >
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
+                      {isAdmin ? (
+                        <button type="button" className="ghost-button" onClick={handleRejectApproval} disabled={rejectPending}>
+                          {rejectPending ? "Rejecting..." : "Reject"}
+                        </button>
+                      ) : null}
+                      {isAdmin ? (
+                        <button type="button" className="ghost-button" onClick={handleArchivePlan} disabled={archivePending}>
+                          {archivePending ? "Archiving..." : "Archive"}
+                        </button>
+                      ) : null}
                     </div>
                   </>
                 ) : null}
                 {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
                 {approveError ? <div className="error-banner">{approveError}</div> : null}
+                {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
+                {rejectError ? <div className="error-banner">{rejectError}</div> : null}
+                {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
+                {archiveError ? <div className="error-banner">{archiveError}</div> : null}
               </div>
             </div>
           )}
@@ -920,6 +1046,8 @@ export function PlanViewer({
             {approveError ? <div className="error-banner">{approveError}</div> : null}
             {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
             {rejectError ? <div className="error-banner">{rejectError}</div> : null}
+            {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
+            {archiveError ? <div className="error-banner">{archiveError}</div> : null}
             <div className="field">
               <label htmlFor="manual-stage2-final-plan">Final plan text</label>
               <textarea

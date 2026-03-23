@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import {
   AthleteCoachNotesCard,
   AthleteLatestIntakeCard,
+  AthleteLatestIntakeStatus,
   AthleteProfileHero,
   AthleteScheduleCard,
   AthleteSnapshotCard,
@@ -66,6 +67,12 @@ export default function AdminAthletePage() {
           <div className="athlete-profile-grid">
             <AthleteSnapshotCard athlete={athlete} />
             <AthleteLatestIntakeCard intake={athlete.latest_intake ?? null} />
+            {!athlete.latest_intake && athlete.plan_count > 0 ? (
+              <AthleteLatestIntakeStatus
+                planCount={athlete.plan_count}
+                latestPlanCreatedAt={athlete.latest_plan_created_at ?? null}
+              />
+            ) : null}
             {athlete.latest_intake ? <AthleteScheduleCard intake={athlete.latest_intake} /> : null}
             {athlete.latest_intake ? <AthleteCoachNotesCard intake={athlete.latest_intake} /> : null}
           </div>

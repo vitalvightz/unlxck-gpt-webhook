@@ -2267,6 +2267,21 @@ select:focus-visible {
   background: rgba(255, 255, 255, 0.02);
 }
 
+.athlete-profile-inline-note {
+  grid-column: 1 / -1;
+}
+
+.danger-button {
+  border-color: rgba(181, 18, 43, 0.26);
+  color: #ffb7c0;
+}
+
+.danger-button:hover,
+.danger-button:focus-visible {
+  border-color: rgba(181, 18, 43, 0.5);
+  color: #ffd6dc;
+}
+
 @media (max-width: 900px) {
   .athlete-profile-grid,
   .athlete-profile-copy-grid,

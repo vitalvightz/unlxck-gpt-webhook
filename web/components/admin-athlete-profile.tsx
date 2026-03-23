@@ -284,6 +284,29 @@ export function AthleteLatestIntakeCard({ intake }: { intake: PlanRequest | null
   );
 }
 
+export function AthleteLatestIntakeStatus({
+  planCount,
+  latestPlanCreatedAt,
+}: {
+  planCount: number;
+  latestPlanCreatedAt?: string | null;
+}) {
+  if (!planCount) {
+    return null;
+  }
+
+  return (
+    <div className="empty-state-card athlete-profile-inline-note">
+      <p className="plan-meta-label">Latest saved plan detected</p>
+      <p className="muted">
+        This athlete has {planCount} saved {planCount === 1 ? "plan" : "plans"}
+        {latestPlanCreatedAt ? `, with the most recent created ${formatDate(latestPlanCreatedAt, { dateStyle: "medium" })}` : ""}.
+        {" "}The intake payload was not returned for this record, so the latest intake summary cannot be shown yet.
+      </p>
+    </div>
+  );
+}
+
 export function AthleteScheduleCard({ intake }: { intake: PlanRequest }) {
   const groups = buildScheduleGroups(intake);
   if (!groups.length) {
