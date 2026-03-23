@@ -1512,7 +1512,7 @@ select:focus-visible {
   display: grid;
   gap: 6px;
   padding: 12px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--divider-subtle);
 }
 
 .review-detail-row:first-child {
@@ -1541,8 +1541,8 @@ select:focus-visible {
 }
 
 .support-panel-alert {
-  border-color: rgba(255, 141, 161, 0.22);
-  background: linear-gradient(180deg, rgba(50, 20, 27, 0.92), rgba(24, 13, 17, 0.94));
+  border-color: var(--support-alert-border);
+  background: var(--support-alert-bg);
 }
 
 .support-panel-preview {
@@ -1571,19 +1571,19 @@ select:focus-visible {
 }
 
 .stage2-retry-in-progress {
-  border-color: rgba(181, 18, 43, 0.28);
-  background: linear-gradient(180deg, rgba(40, 10, 16, 0.94), rgba(20, 8, 12, 0.96));
+  border-color: var(--retry-in-progress-border);
+  background: var(--retry-in-progress-bg);
   animation: loading-panel-breathe 3s ease-in-out infinite;
 }
 
 .stage2-retry-passed {
-  border-color: rgba(125, 226, 168, 0.22);
-  background: linear-gradient(180deg, rgba(12, 36, 22, 0.94), rgba(8, 20, 14, 0.96));
+  border-color: var(--retry-passed-border);
+  background: var(--retry-passed-bg);
 }
 
 .stage2-retry-failed {
-  border-color: rgba(181, 18, 43, 0.22);
-  background: linear-gradient(180deg, rgba(32, 12, 17, 0.94), rgba(18, 8, 12, 0.96));
+  border-color: var(--retry-failed-border);
+  background: var(--retry-failed-bg);
 }
 
 .stage2-retry-in-progress .kicker {
@@ -1622,8 +1622,8 @@ select:focus-visible {
   gap: 14px;
   padding: 16px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(22, 24, 29, 0.92), rgba(15, 17, 21, 0.96));
+  border: 1px solid var(--issue-group-border);
+  background: var(--issue-group-bg);
 }
 
 .review-issue-group-header {
@@ -1652,7 +1652,7 @@ select:focus-visible {
   display: grid;
   gap: 6px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--divider-subtle);
 }
 
 .review-issue-item:first-child {
@@ -1689,15 +1689,15 @@ select:focus-visible {
 }
 
 .issue-badge-error {
-  background: rgba(202, 24, 52, 0.18);
-  border-color: rgba(255, 141, 161, 0.18);
-  color: #ffd9df;
+  background: var(--issue-badge-error-bg);
+  border-color: var(--issue-badge-error-border);
+  color: var(--issue-badge-error-text);
 }
 
 .issue-badge-warning {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  background: var(--issue-badge-warning-bg);
+  border-color: var(--issue-badge-warning-border);
+  color: var(--issue-badge-warning-text);
 }
 
 .plan-text-panel {
@@ -1710,9 +1710,9 @@ select:focus-visible {
   margin: 0;
   padding: 18px;
   border-radius: 18px;
-  background: linear-gradient(180deg, #111318, #0d0f13);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  color: #eef1f6;
+  background: var(--surface-code-bg);
+  border: 1px solid var(--surface-code-border);
+  color: var(--surface-code-text);
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1752,7 +1752,7 @@ select:focus-visible {
   align-items: center;
   gap: 16px;
   padding: 16px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--divider-subtle);
 }
 
 .plan-history-row:first-child {
@@ -1821,7 +1821,7 @@ select:focus-visible {
     padding: 0 14px;
     border-radius: 10px;
     border: 1px solid var(--border-default);
-    background: rgba(12, 13, 15, 0.96);
+    background: var(--mobile-nav-bg);
     backdrop-filter: blur(16px);
   }
 
@@ -1842,7 +1842,7 @@ select:focus-visible {
     width: min(82vw, 296px);
     height: 100vh;
     z-index: 60;
-    border-right: 1px solid var(--border-default);
+    border-right: 1px solid var(--sidebar-border);
   }
 
   .app-sidebar-open {
@@ -2002,11 +2002,9 @@ select:focus-visible {
   width: 88px;
   height: 88px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(181, 18, 43, 0.22), rgba(181, 18, 43, 0.08));
-  border: 1.5px solid rgba(181, 18, 43, 0.35);
-  box-shadow:
-    0 0 0 4px rgba(181, 18, 43, 0.09),
-    0 4px 20px rgba(0, 0, 0, 0.3);
+  background: var(--avatar-accent-bg);
+  border: 1.5px solid var(--avatar-accent-border);
+  box-shadow: var(--avatar-accent-ring-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2017,9 +2015,7 @@ select:focus-visible {
 .avatar-upload-trigger:hover .avatar-upload-circle,
 .avatar-upload-trigger:focus-visible .avatar-upload-circle {
   border-color: var(--brand-red);
-  box-shadow:
-    0 0 0 4px rgba(181, 18, 43, 0.2),
-    0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--avatar-accent-ring-hover);
 }
 
 /* Camera icon overlay — appears on hover/focus */
@@ -2027,7 +2023,7 @@ select:focus-visible {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.54);
+  background: var(--avatar-overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2118,7 +2114,7 @@ select:focus-visible {
   font-family: var(--font-display), sans-serif;
   font-size: 24px;
   font-weight: 700;
-  color: #ffd5db;
+  color: var(--avatar-text);
   letter-spacing: 0.02em;
   line-height: 1;
 }
@@ -2131,10 +2127,10 @@ select:focus-visible {
 
 @keyframes loading-panel-breathe {
   0%, 100% {
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.04);
+    box-shadow: var(--loading-panel-shadow-rest);
   }
   50% {
-    box-shadow: 0 24px 52px rgba(0, 0, 0, 0.38), 0 0 0 1px rgba(255, 255, 255, 0.09);
+    box-shadow: var(--loading-panel-shadow-active);
   }
 }
 
@@ -2212,7 +2208,7 @@ select:focus-visible {
   position: relative;
   width: 100%;
   height: 2px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--loading-rail-bg);
   border-radius: 2px;
   overflow: hidden;
   margin: 4px 0;
@@ -2266,7 +2262,7 @@ select:focus-visible {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--loading-step-divider);
   transition: opacity 500ms ease;
 }
 
@@ -2300,7 +2296,7 @@ select:focus-visible {
 
 .loading-step-active .loading-step-marker {
   background: var(--brand-red);
-  box-shadow: 0 0 6px rgba(181, 18, 43, 0.5);
+  box-shadow: var(--loading-step-active-shadow);
 }
 
 .loading-step-active .loading-step-label {
@@ -2363,13 +2359,14 @@ select:focus-visible {
   gap: 10px;
   padding: 6px 8px 6px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 21, 27, 0.92);
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
 }
 
 .guided-injury-chip-active {
-  border-color: rgba(181, 18, 43, 0.55);
-  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.18) inset;
+  border-color: var(--chip-active-border);
+  background: var(--chip-active-bg);
+  box-shadow: var(--chip-active-ring);
 }
 
 .guided-injury-chip-select,
@@ -2393,7 +2390,7 @@ select:focus-visible {
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--chip-remove-bg);
   color: var(--text-muted);
   font-size: 18px;
   line-height: 1;
@@ -2413,8 +2410,8 @@ select:focus-visible {
   gap: 16px;
   padding: 18px 20px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(24, 27, 34, 0.94), rgba(18, 21, 27, 0.96));
+  border: 1px solid var(--chip-editor-border);
+  background: var(--chip-editor-bg);
 }
 
 .guided-injury-editor-header h3 {
@@ -2429,8 +2426,8 @@ select:focus-visible {
 
 .guided-injury-aggravator {
   appearance: none;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(18, 21, 27, 0.92);
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
   color: var(--text-muted);
   border-radius: 999px;
   padding: 10px 14px;
@@ -2448,15 +2445,15 @@ select:focus-visible {
 .guided-injury-aggravator:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: var(--chip-hover-border);
   color: var(--text-primary);
 }
 
 .guided-injury-aggravator-active {
-  border-color: rgba(181, 18, 43, 0.55);
-  background: rgba(181, 18, 43, 0.16);
+  border-color: var(--chip-active-border);
+  background: var(--chip-active-bg);
   color: var(--text-primary);
-  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.16) inset;
+  box-shadow: var(--chip-active-ring);
 }
 
 .guided-injury-label-row {
@@ -2480,12 +2477,12 @@ select:focus-visible {
 .guided-injury-field-error input,
 .guided-injury-field-error textarea,
 .guided-injury-field-error .custom-select-trigger {
-  border-color: rgba(255, 107, 107, 0.52);
-  box-shadow: 0 0 0 1px rgba(255, 107, 107, 0.18) inset;
+  border-color: var(--field-error-border);
+  box-shadow: var(--field-error-ring);
 }
 
 .guided-injury-field-error .guided-injury-aggravator {
-  border-color: rgba(255, 107, 107, 0.4);
+  border-color: var(--field-error-soft-border);
 }
 
 .field-span-full {
@@ -2521,9 +2518,7 @@ select:focus-visible {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at top left, rgba(181, 18, 43, 0.16), transparent 34%),
-    radial-gradient(circle at top right, rgba(80, 96, 255, 0.12), transparent 28%);
+  background: var(--athlete-hero-glow);
   pointer-events: none;
 }
 
@@ -2582,10 +2577,8 @@ select:focus-visible {
   gap: 6px;
   padding: 14px 16px;
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background:
-    linear-gradient(180deg, rgba(27, 18, 22, 0.52), rgba(15, 18, 24, 0.42)),
-    rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--athlete-stat-border);
+  background: var(--athlete-stat-bg);
   backdrop-filter: blur(10px);
 }
 
@@ -2607,9 +2600,9 @@ select:focus-visible {
   gap: 18px;
   padding: 24px;
   border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(18, 21, 27, 0.96), rgba(11, 13, 18, 0.98));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--athlete-section-border);
+  background: var(--athlete-section-bg);
+  box-shadow: var(--athlete-section-inset);
 }
 
 .athlete-profile-section-card-wide {
@@ -2627,12 +2620,12 @@ select:focus-visible {
   gap: 14px;
   padding: 18px 20px;
   border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--athlete-block-border);
+  background: var(--athlete-block-bg);
 }
 
 .athlete-profile-block-strong {
-  background: linear-gradient(180deg, rgba(25, 28, 34, 0.82), rgba(16, 19, 24, 0.72));
+  background: var(--athlete-block-strong-bg);
 }
 
 .athlete-profile-detail-emphasis {
@@ -2652,7 +2645,7 @@ select:focus-visible {
   gap: 12px;
   align-items: start;
   padding-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--divider-subtle);
 }
 
 .athlete-profile-detail-row:first-child {
@@ -2710,8 +2703,8 @@ select:focus-visible {
   min-height: 92px;
   padding: 12px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(180deg, rgba(30, 33, 39, 0.92), rgba(18, 21, 27, 0.92));
+  border: 1px solid var(--athlete-block-border);
+  background: var(--athlete-block-strong-bg);
 }
 
 .athlete-profile-metric-value {
@@ -2728,7 +2721,7 @@ select:focus-visible {
   gap: 14px;
   align-items: start;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--athlete-detail-divider);
 }
 
 .athlete-profile-tag-rail:first-child {
@@ -2778,8 +2771,8 @@ select:focus-visible {
   gap: 10px;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--athlete-block-border);
+  background: var(--athlete-block-bg);
 }
 
 .athlete-profile-copy-text {
@@ -2796,8 +2789,8 @@ select:focus-visible {
 .empty-state-card {
   padding: 18px 20px;
   border-radius: 22px;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--surface-ghost-hover-border);
+  background: var(--surface-soft-bg);
 }
 
 .athlete-profile-inline-note {
@@ -2806,13 +2799,13 @@ select:focus-visible {
 
 .danger-button {
   border-color: rgba(181, 18, 43, 0.26);
-  color: #ffb7c0;
+  color: var(--badge-brand-text);
 }
 
 .danger-button:hover,
 .danger-button:focus-visible {
   border-color: rgba(181, 18, 43, 0.5);
-  color: #ffd6dc;
+  color: var(--brand-red-text-strong);
 }
 
 @media (max-width: 1180px) {

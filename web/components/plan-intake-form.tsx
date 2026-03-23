@@ -1106,7 +1106,6 @@ export function PlanIntakeForm() {
   const campSetupReviewItems = [
     { label: "When is your next fight?", value: formatValue(form.fight_date) },
     { label: "Rounds x Minutes", value: formatValue(form.rounds_format) },
-    { label: "Sessions per Week", value: formatValue(form.weekly_training_frequency) },
     { label: "Fatigue Level", value: formatValue(form.fatigue_level || "moderate") },
   ];
   const trainingReviewItems = [
@@ -1346,7 +1345,6 @@ export function PlanIntakeForm() {
                 <ul className="summary-list">
                   <li>Fight date: {formatValue(form.fight_date)}</li>
                   <li>Rounds: {formatValue(form.rounds_format)}</li>
-                  <li>Sessions per Week: {formatValue(form.weekly_training_frequency)}</li>
                   <li>Fatigue level: {formatValue(form.fatigue_level || "moderate")}</li>
                 </ul>
               </div>

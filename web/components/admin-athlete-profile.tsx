@@ -187,7 +187,6 @@ function buildIntakeHighlights(intake: PlanRequest): DetailItem[] {
   return [
     { label: "Fight date", value: formatDate(intake.fight_date, { dateStyle: "medium" }), accent: "athlete-profile-detail-emphasis" },
     { label: "Rounds format", value: formatValue(intake.rounds_format), accent: "athlete-profile-detail-emphasis" },
-    { label: "Sessions / week", value: formatValue(intake.weekly_training_frequency), accent: "athlete-profile-detail-emphasis" },
     {
       label: "Fatigue",
       value: formatValue(getOptionLabel(FATIGUE_LEVEL_OPTIONS, intake.fatigue_level || "")),

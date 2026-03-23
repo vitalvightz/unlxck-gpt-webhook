@@ -28,6 +28,12 @@ const BLOCKING_WARNING_CODES = new Set([
   "high_pressure_weight_cut_underaddressed",
 ]);
 
+const SESSION_COUNT_UI_CODES = new Set([
+  "missing_week_session_role",
+  "late_camp_session_incomplete",
+  "weekly_session_overage",
+]);
+
 const ISSUE_TITLES: Record<string, string> = {
   restriction_violation: "Restriction violation",
   missing_required_element: "Missing phase-critical element",
@@ -40,9 +46,9 @@ const ISSUE_TITLES: Record<string, string> = {
   template_like_session_render: "Session still reads like a template",
   taper_option_overload: "Taper is too noisy",
   equipment_incongruent_selection: "Equipment mismatch",
-  missing_week_session_role: "Week structure is missing a session",
-  late_camp_session_incomplete: "Late-camp week is incomplete",
-  weekly_session_overage: "Too many sessions in a week",
+  missing_week_session_role: "Week structure needs review",
+  late_camp_session_incomplete: "Late-camp week needs review",
+  weekly_session_overage: "Week structure needs review",
   weekly_rhythm_broken: "Weekly rhythm broke",
   missing_weight_cut_acknowledgement: "Weight-cut stress is missing",
   high_pressure_weight_cut_underaddressed: "High-pressure cut is underaddressed",
@@ -116,6 +122,67 @@ function normalizeIssueText(value: unknown) {
   return typeof value === "string" && value ? value.replace(/_/g, " ") : null;
 }
 
+function sanitizeSessionCountDisplayText(text: string) {
+  if (!text.trim()) {
+    return text;
+  }
+
+  const filteredLines = text.split(/\r?\n/).filter((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return true;
+    }
+    if (/^(?:[-*]\s*)?(?:sessions?\s*(?:per\s+week|\/week)|weekly sessions?|weekly session count)\b/i.test(trimmed)) {
+      return false;
+    }
+    if (/^(?:[-*]\s*)?(?:active sessions?)\b/i.test(trimmed)) {
+      return false;
+    }
+    if (/^(?:[-*]\s*)?\d+\s+sessions?(?:\s*\/\s*week|\s+per\s+week)\b/i.test(trimmed)) {
+      return false;
+    }
+    if (/^(?:[-*]\s*)?\d+\s+active sessions?\b/i.test(trimmed)) {
+      return false;
+    }
+    return true;
+  });
+
+  return filteredLines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function sanitizeSessionCountIssueMessage(code: string, message: string) {
+  if (!SESSION_COUNT_UI_CODES.has(code)) {
+    return message;
+  }
+
+  if (code === "late_camp_session_incomplete") {
+    return "The late-camp week structure still needs cleanup before release.";
+  }
+
+  return "The weekly structure still needs cleanup before release.";
+}
+
+function sanitizeValidatorDisplayText(text: string) {
+  if (!text.trim()) {
+    return text;
+  }
+
+  return text
+    .replace(
+      /"message":\s*"Week \d+ renders \d+ active sessions even though the planning brief only allows \d+\."/g,
+      '"message": "The weekly structure does not match the planning brief."',
+    )
+    .replace(
+      /"message":\s*"Week \d+ is structurally incomplete compared with the weekly role map\."/g,
+      '"message": "The weekly structure does not match the planning brief."',
+    )
+    .replace(/^\s*"expected_session_count":\s*\d+,?\s*$/gim, "")
+    .replace(/^\s*"actual_session_count":\s*\d+,?\s*$/gim, "")
+    .replace(/,\s*\n(\s*[}\]])/g, "\n$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function formatIssueContext(issue: ValidatorIssue) {
   const equipment =
     Array.isArray(issue.required_equipment) && issue.required_equipment.length
@@ -134,11 +201,11 @@ function formatIssueContext(issue: ValidatorIssue) {
 
 function buildReviewIssue(issue: ValidatorIssue, severity: "error" | "warning"): ReviewIssue {
   const code = typeof issue.code === "string" ? issue.code : "review_issue";
-  const message =
+  const rawMessage =
     typeof issue.message === "string" && issue.message.trim()
       ? issue.message.trim()
       : issueTitle(code);
-  const snippet =
+  const rawSnippet =
     typeof issue.line === "string" && issue.line.trim()
       ? issue.line.trim()
       : undefined;
@@ -146,10 +213,10 @@ function buildReviewIssue(issue: ValidatorIssue, severity: "error" | "warning"):
   return {
     code,
     title: issueTitle(code),
-    message,
+    message: sanitizeSessionCountIssueMessage(code, rawMessage),
     severity,
     context: formatIssueContext(issue) || undefined,
-    snippet,
+    snippet: SESSION_COUNT_UI_CODES.has(code) ? undefined : rawSnippet,
   };
 }
 
@@ -380,15 +447,20 @@ export function PlanViewer({
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const technicalStyles = getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
   const athletePlanText = plan.outputs.plan_text.trim();
+  const athletePlanDisplayText = sanitizeSessionCountDisplayText(athletePlanText);
   const hasPublishedPlan = Boolean(athletePlanText);
   const statusLabel = humanizeStatus(plan.status || "generated");
   const stage2Status = humanizeStatus(plan.admin_outputs?.stage2_status || "legacy");
   const handoffText = plan.admin_outputs?.stage2_handoff_text || "";
   const retryText = plan.admin_outputs?.stage2_retry_text || "";
   const draftText = plan.admin_outputs?.draft_plan_text || "No Stage 1 draft.";
+  const draftDisplayText = sanitizeSessionCountDisplayText(draftText);
   const latestStage2Text = plan.admin_outputs?.final_plan_text || "No Stage 2 output.";
+  const latestStage2DisplayText = sanitizeSessionCountDisplayText(latestStage2Text);
   const coachNotesText = plan.admin_outputs?.coach_notes || "No internal notes.";
-  const validatorText = formatStructuredValue(plan.admin_outputs?.stage2_validator_report, "No validator report.");
+  const validatorText = sanitizeValidatorDisplayText(
+    formatStructuredValue(plan.admin_outputs?.stage2_validator_report, "No validator report."),
+  );
   const validatorReport =
     plan.admin_outputs?.stage2_validator_report && typeof plan.admin_outputs.stage2_validator_report === "object"
       ? plan.admin_outputs.stage2_validator_report
@@ -397,6 +469,7 @@ export function PlanViewer({
   const planningBriefText = formatStructuredValue(plan.admin_outputs?.planning_brief, "No planning brief.");
   const payloadText = formatStructuredValue(plan.admin_outputs?.stage2_payload, "No Stage 2 payload.");
   const reviewPlanText = (plan.admin_outputs?.final_plan_text || "").trim();
+  const reviewPlanDisplayText = sanitizeSessionCountDisplayText(reviewPlanText);
   const approvableText =
     plan.admin_outputs?.final_plan_text?.trim() ||
     plan.admin_outputs?.draft_plan_text?.trim() ||
@@ -628,14 +701,14 @@ export function PlanViewer({
       kicker: "Stage 1",
       title: "Draft plan",
       summary: "Original planner output before the final Stage 2 rewrite.",
-      text: draftText,
+      text: draftDisplayText,
     },
     {
       artifactKey: "final",
       kicker: "Stage 2",
       title: "Latest model output",
       summary: "Most recent saved Stage 2 plan text.",
-      text: latestStage2Text,
+      text: latestStage2DisplayText,
     },
     {
       artifactKey: "internal-notes",
@@ -826,7 +899,7 @@ export function PlanViewer({
           {hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">
-                <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
+                <QuickCopyButton text={athletePlanDisplayText} artifactKey="athlete-plan" />
                 {canRejectApproval ? (
                   <button type="button" className="ghost-button" onClick={handleRejectApproval} disabled={rejectPending}>
                     {rejectPending ? "Rejecting..." : "Reject approval"}
@@ -838,7 +911,7 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
-              <pre className="plan-text-block">{athletePlanText}</pre>
+              <pre className="plan-text-block">{athletePlanDisplayText}</pre>
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}
               {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
@@ -894,9 +967,9 @@ export function PlanViewer({
                     </div>
                     <p className="review-summary-text">{stage2ReviewSummary.headline}</p>
                     <p className="muted">{stage2ReviewSummary.guidance}</p>
-                    {reviewPlanText ? (
+                    {reviewPlanDisplayText ? (
                       <div className="plan-summary-actions">
-                        <QuickCopyButton text={reviewPlanText} artifactKey="review-stage2" />
+                        <QuickCopyButton text={reviewPlanDisplayText} artifactKey="review-stage2" />
                       </div>
                     ) : null}
                     {stage2ReviewSummary.hasIssues ? (

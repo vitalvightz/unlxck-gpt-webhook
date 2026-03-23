@@ -331,18 +331,18 @@ export default function SettingsPage() {
             <article className="step-card">
               <div className="form-section-header">
                 <p className="kicker">Appearance</p>
-                <h2 className="form-section-title">Workspace background</h2>
-                <p className="muted">Choose whether the workspace canvas stays dark or uses a lighter backdrop while keeping the current dark cards and navigation.</p>
+                <h2 className="form-section-title">Workspace theme</h2>
+                <p className="muted">Keep the default dark workspace or switch the entire app into a clean white mode with light cards, forms, and sidebar.</p>
               </div>
-              <div className="appearance-toggle-group" role="group" aria-label="Workspace background">
+              <div className="appearance-toggle-group" role="group" aria-label="Workspace theme">
                 <button
                   type="button"
                   className={`appearance-toggle ${surfaceMode === "dark" ? "appearance-toggle-active" : ""}`}
                   aria-pressed={surfaceMode === "dark"}
                   onClick={() => setSurfaceMode("dark")}
                 >
-                  <span className="appearance-toggle-title">Dark background</span>
-                  <span className="appearance-toggle-copy">Keep the current low-light workspace backdrop.</span>
+                  <span className="appearance-toggle-title">Dark default</span>
+                  <span className="appearance-toggle-copy">Use the current low-light theme across the full app.</span>
                 </button>
                 <button
                   type="button"
@@ -350,14 +350,14 @@ export default function SettingsPage() {
                   aria-pressed={surfaceMode === "light"}
                   onClick={() => setSurfaceMode("light")}
                 >
-                  <span className="appearance-toggle-title">Light background</span>
-                  <span className="appearance-toggle-copy">Brighten the page canvas without changing the core UI surfaces.</span>
+                  <span className="appearance-toggle-title">White mode</span>
+                  <span className="appearance-toggle-copy">Flip the full app into a true white theme, including sidebar, cards, and form controls.</span>
                 </button>
               </div>
               <div className="support-panel appearance-preview-panel">
                 <p className="kicker">Current mode</p>
-                <h3>{isLightBackground ? "Light background enabled" : "Dark background enabled"}</h3>
-                <p className="muted">This updates immediately and stays saved in this browser, so it does not depend on the main Save settings button.</p>
+                <h3>{isLightBackground ? "White mode enabled" : "Dark default enabled"}</h3>
+                <p className="muted">This updates immediately and stays saved in this browser, so the white option remains optional and separate from profile save actions.</p>
               </div>
             </article>
           </div>
