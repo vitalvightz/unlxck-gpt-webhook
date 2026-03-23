@@ -2104,6 +2104,73 @@ select:focus-visible {
   margin: 4px 0 0;
 }
 
+.guided-injury-aggravator-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.guided-injury-aggravator {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 21, 27, 0.92);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.guided-injury-aggravator:hover,
+.guided-injury-aggravator:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text-primary);
+}
+
+.guided-injury-aggravator-active {
+  border-color: rgba(181, 18, 43, 0.55);
+  background: rgba(181, 18, 43, 0.16);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.16) inset;
+}
+
+.guided-injury-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guided-injury-label-meta {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.guided-injury-label-meta-required {
+  color: rgba(255, 167, 167, 0.96);
+}
+
+.guided-injury-field-error input,
+.guided-injury-field-error textarea,
+.guided-injury-field-error .custom-select-trigger {
+  border-color: rgba(255, 107, 107, 0.52);
+  box-shadow: 0 0 0 1px rgba(255, 107, 107, 0.18) inset;
+}
+
+.guided-injury-field-error .guided-injury-aggravator {
+  border-color: rgba(255, 107, 107, 0.4);
+}
+
 .field-span-full {
   grid-column: 1 / -1;
 }
@@ -2118,5 +2185,10 @@ select:focus-visible {
   .guided-injury-add-button,
   .guided-injury-remove-button {
     width: 100%;
+  }
+
+  .guided-injury-label-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
