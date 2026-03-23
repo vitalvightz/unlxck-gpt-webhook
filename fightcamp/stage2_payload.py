@@ -2378,7 +2378,7 @@ def _build_sparring_modifications(week_entry: dict, athlete_model: dict) -> list
             or taper_forced_convert
         )
         if forced_convert:
-            action = "DELETE_CONVERT"
+            action = "CONVERTED"
         elif injury_risk >= 5 or spar_risk >= 4 or (phase == "TAPER" and (injury_risk >= 4 or cut_pct > 0)):
             action = "DELOAD"
         else:
@@ -2391,7 +2391,7 @@ def _build_sparring_modifications(week_entry: dict, athlete_model: dict) -> list
             reason_bits.append(f"spar load risk {spar_risk}/10")
         if cut_pct:
             reason_bits.append(f"active cut {cut_pct:.1f}%")
-        if action == "DELETE_CONVERT":
+        if action == "CONVERTED":
             reason_bits.append("protecting tissue state over collision exposure")
         elif action == "DELOAD":
             reason_bits.append("keep combat rhythm but reduce collision cost")
@@ -2408,7 +2408,7 @@ def _build_sparring_modifications(week_entry: dict, athlete_model: dict) -> list
                 "active_cut_pct": cut_pct,
             },
         }
-        if action == "DELETE_CONVERT":
+        if action == "CONVERTED":
             modification["replacement"] = _replacement_focus_for_sparring(
                 athlete_model=athlete_model,
                 injury_entries=injury_entries,

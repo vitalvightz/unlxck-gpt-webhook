@@ -428,7 +428,7 @@ def test_sparring_modifications_do_not_auto_convert_mild_improving_ankle_only_fr
     modifications = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"]
 
     assert modifications
-    assert all(item["action"] != "DELETE_CONVERT" for item in modifications)
+    assert all(item["action"] != "CONVERTED" for item in modifications)
 
 
 def test_taper_sparring_modifications_deload_tiny_cut_and_mild_stable_injury_instead_of_full_convert():
@@ -654,7 +654,7 @@ def test_worsening_shoulder_instability_outranks_mild_improving_ankle_issue():
 
     modification = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]
 
-    assert modification["action"] == "DELETE_CONVERT"
+    assert modification["action"] == "CONVERTED"
     assert modification["scores"]["injury_risk"] >= 8
 
 
