@@ -2956,12 +2956,22 @@ def build_stage2_payload(
             "Keep the final plan athlete-facing and clean.",
             "Do not mention excluded items.",
             "Preserve phase objectives when rewriting text.",
+            "For any corrective or adjustment line, make one clear coaching call instead of defaulting to hedged advice.",
+            "Prefer command-then-reason on corrective lines; do not lead with explanation and then soften it into a suggestion.",
+            "Keep rationale short and tie it to performance, safety, readiness, or the week's main objective.",
+            "Do not start corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.",
+            "Use autonomy-supportive phrasing only within real guardrails; if choice is safe and useful, offer at most two practical options, and only when both options are safe and materially equivalent for the day's goal.",
+            "Replace generic motivation, empty empathy, and boilerplate safety reminders with concrete next-action language.",
+            "Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.",
+            "Do not use empty safety lines such as 'listen to your body', 'be careful', or 'avoid overtraining' unless they are followed by a concrete rule, symptom trigger, or plan change.",
+            "Aim critique at the plan, load, or execution issue, never at the athlete's character.",
             "Keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists.",
             "For conditioning, give one primary prescription and at most one explicit fallback.",
             "Collapse internal template/menu options into one final prescription whenever the athlete context already resolves the choice.",
             "Keep every active week present and structurally complete, including late-camp weeks.",
             "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
             "Do not echo Primary, Fallback, Drill, or option-menu labels across most session lines.",
+            "Avoid low-trust filler such as 'listen to your body', 'stay consistent', 'stay motivated', or 'you've got this' unless it is immediately made specific and operational.",
             "Use simple session titles such as Strength, Recovery, Aerobic support, Fight-pace conditioning, Alactic sharpness, or Neural primer.",
             "In taper weeks, remove optional branches aggressively and keep the work short, final, and low-noise.",
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
@@ -2973,6 +2983,10 @@ def build_stage2_payload(
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
             "Use athlete_model.competitive_maturity only to calibrate wording specificity; it must not change workload, session count, recovery assumptions, or injury/cut conservatism.",
+            "If fatigue is high or fight-week pressure is active, reduce optionality and make the directive plain.",
+            "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
+            "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
+            "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
         ],
     }
 
@@ -3055,6 +3069,14 @@ Keep the athlete-facing output concise, high-signal, and easy to scan.
 Minimize repetition.
 Cut filler, duplication, and generic coaching reminders.
 Keep coaching notes short and only where session-critical.
+Coach voice should feel decisive, respectful, and gym-realistic.
+For any corrective or adjustment line, make the call, give a short why, and then the next action.
+Prefer command then reason, not explanation then suggestion.
+Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'. Start with the action.
+Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
+Do not use empty safety boilerplate such as 'listen to your body', 'be careful', or 'avoid overtraining' unless the line adds a concrete rule, symptom trigger, or plan change.
+Do not aim critique at the athlete's character.
 Collapse templates into one final prescription whenever the athlete context already resolves the choice.
 Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
@@ -3062,7 +3084,10 @@ Do not exceed the weekly session count implied by weekly_role_map. If the athlet
 Keep every active week present and structurally complete, including late-camp weeks.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
+If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
 If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
+If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
 In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
 

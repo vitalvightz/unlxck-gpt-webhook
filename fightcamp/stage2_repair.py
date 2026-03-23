@@ -29,6 +29,18 @@ REPAIR RULES:
 17. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
 18. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
 19. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+20. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
+21. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
+22. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
+23. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+24. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
+25. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
+26. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
+27. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+28. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+29. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+30. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+31. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -236,7 +248,39 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "sport": warning.get("sport"),
                 }
             )
-
+        elif code in {"generic_filler_phrase", "generic_motivation_cliche", "generic_instruction_opener"}:
+            quality_fixes.append(
+                {
+                    "action": "replace_low_trust_filler_with_concrete_coaching",
+                    "line": warning.get("line"),
+                    "code": code,
+                }
+            )
+        elif code == "option_overload":
+            quality_fixes.append(
+                {
+                    "action": "collapse_options_to_safe_equivalent_choices_or_one_final_call",
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                    "line": warning.get("line"),
+                    "risk_context": _clean_list(warning.get("risk_context", [])),
+                }
+            )
+        elif code == "hedged_adjustment_without_decision":
+            quality_fixes.append(
+                {
+                    "action": "rewrite_adjustment_as_clear_call_with_short_why",
+                    "line": warning.get("line"),
+                }
+            )
+        elif code == "empty_safety_language":
+            quality_fixes.append(
+                {
+                    "action": "replace_empty_safety_line_with_operational_guardrails",
+                    "line": warning.get("line"),
+                    "risk_context": _clean_list(warning.get("risk_context", [])),
+                }
+            )
     return {
         "fix_first": restriction_fixes,
         "strip_out": formatting_fixes,

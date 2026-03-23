@@ -52,12 +52,12 @@ def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
     blocking_warnings = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") in _BLOCKING_WARNING_CODES
+        if str(warning.get("code") or "") in _BLOCKING_WARNING_CODES or bool(warning.get("blocking"))
     ]
     review_flags = [
         warning
         for warning in warnings
-        if str(warning.get("code") or "") not in _BLOCKING_WARNING_CODES
+        if str(warning.get("code") or "") not in _BLOCKING_WARNING_CODES and not bool(warning.get("blocking"))
     ]
     return blocking_warnings, review_flags
 
@@ -120,6 +120,21 @@ def _warning_detail_line(warning: dict) -> str:
         return "Restore the default boxer weekly rhythm with recovery immediately before the primary strength day."
     if warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:
         return "Replace overstyled drill naming with plain coach-readable language."
+    if warning.get("code") == "option_overload":
+        return "Collapse choices to two or fewer safe options, or resolve the line to one final prescription."
+    if warning.get("code") == "generic_filler_phrase":
+        return "Replace low-trust filler with concrete coach language and next actions."
+    if warning.get("code") == "generic_instruction_opener":
+        return "Replace generic opener wording with a direct verb-led instruction."
+    if warning.get("code") == "generic_motivation_cliche":
+        return "Replace generic motivation cliches with specific confidence or execution language."
+    if warning.get("code") == "hedged_adjustment_without_decision":
+        return "Rewrite hedged adjustment language into one clear coaching call with a short why."
+    if warning.get("code") == "empty_safety_language":
+        return "Replace empty safety lines with operational guardrails that change what the athlete does next."
+    rewrite_hint = str(warning.get("rewrite_hint") or "").strip()
+    if rewrite_hint:
+        return rewrite_hint
     if warning.get("code") == "sport_language_leak":
         return "Rewrite cross-sport language so the plan reads cleanly for the athlete's sport."
     return str(warning.get("message", "Unknown validation warning."))
