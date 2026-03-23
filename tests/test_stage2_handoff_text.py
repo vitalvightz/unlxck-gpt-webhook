@@ -58,3 +58,15 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
     assert "If injury management is active, lead with constraints, substitutions, or stop rules" in handoff
     assert "Do not write visible count summaries such as '4 active sessions', 'Conditioning count = ...', or similar week-summary math." in handoff
     assert "If a day is explicitly off, rest, optional, or mobility-only, label it that way rather than presenting it as an active session." in handoff
+
+
+def test_build_stage2_handoff_text_explicitly_preserves_mindset_blocks():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={},
+        plan_text="Week 1\n- Landmine Press - 4x5",
+        planning_brief={"athlete_snapshot": {"sport": "boxing", "mental_blocks": ["confidence"]}},
+    )
+
+    assert "RULE 6A - MINDSET CARRY-THROUGH" in handoff
+    assert "Do not drop athlete_snapshot.mental_blocks just because the main physical limiter is elsewhere." in handoff
+    assert "Retain a short summary-level mindset acknowledgement when mental_blocks are present." in handoff

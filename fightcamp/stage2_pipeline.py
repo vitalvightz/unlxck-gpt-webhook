@@ -19,6 +19,7 @@ _BLOCKING_WARNING_CODES = {
     "late_camp_session_incomplete",
     "weekly_session_overage",
     "high_pressure_weight_cut_underaddressed",
+    "mindset_underaddressed",
 }
 
 
@@ -118,6 +119,8 @@ def _warning_detail_line(warning: dict) -> str:
         return "Trim the extra active day so the rendered week structure matches the planning brief."
     if warning.get("code") == "weekly_rhythm_broken":
         return "Restore the default boxer weekly rhythm with recovery immediately before the primary strength day."
+    if warning.get("code") == "mindset_underaddressed":
+        return "Restore a short mindset focus and overview that explicitly addresses the active mental block with execution-specific cues."
     if warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:
         return "Replace overstyled drill naming with plain coach-readable language."
     if warning.get("code") == "option_overload":

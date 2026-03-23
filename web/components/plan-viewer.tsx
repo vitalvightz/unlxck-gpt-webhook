@@ -26,6 +26,7 @@ const BLOCKING_WARNING_CODES = new Set([
   "missing_week_session_role",
   "late_camp_session_incomplete",
   "high_pressure_weight_cut_underaddressed",
+  "mindset_underaddressed",
 ]);
 
 const SESSION_COUNT_UI_CODES = new Set([
@@ -52,6 +53,7 @@ const ISSUE_TITLES: Record<string, string> = {
   weekly_rhythm_broken: "Weekly rhythm broke",
   missing_weight_cut_acknowledgement: "Weight-cut stress is missing",
   high_pressure_weight_cut_underaddressed: "High-pressure cut is underaddressed",
+  mindset_underaddressed: "Mindset signal is missing",
   sport_language_leak: "Cross-sport wording leaked in",
   overstyled_drill_name: "Naming still needs cleanup",
   gimmick_name: "Naming still needs cleanup",

@@ -3288,6 +3288,12 @@ RULE 6 - SPORT SPECIFICITY
 The final plan must look like a real combat-sport camp for this athlete, not generic athletic work.
 Conditioning, power work, weekly rhythm, and taper choices must clearly match the athlete's sport, style, fatigue state, injury context, equipment access, and phase priorities.
 
+RULE 6A - MINDSET CARRY-THROUGH
+If athlete_snapshot.mental_blocks contains any non-generic item, keep a short mindset focus tied to those blocks in the final plan.
+Do not drop athlete_snapshot.mental_blocks just because the main physical limiter is elsewhere.
+Use the active block labels directly when useful (for example confidence, rushing, breath control, or composure) and tie the cue to execution, not hype.
+Retain a short summary-level mindset acknowledgement when mental_blocks are present.
+
 RULE 7 - SUPPORT WORK STAYS IN SUPPORT ROLE
 Rehab, isometrics, carries, trunk stability, breathing, mobility, and tissue-protection work should support the plan, not dominate it, unless the planning brief clearly requires a protection-first camp.
 If volume must be cut, cut accessory/support work first.

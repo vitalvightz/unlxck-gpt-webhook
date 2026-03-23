@@ -134,3 +134,10 @@ def test_overwhelmed_pattern():
     blocks = classify_mental_block(text)
     # Should detect composure or pressure
     assert any(block in blocks for block in ["composure", "pressure"])
+
+
+def test_stunned_confidence_loss_pattern():
+    """Test detection of confidence loss after getting stunned."""
+    text = "when I get stunned I lose confidence"
+    blocks = classify_mental_block(text)
+    assert "confidence" in blocks

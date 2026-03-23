@@ -4,6 +4,7 @@ import re
 from collections import defaultdict
 from typing import Any
 
+from .mindset_module import BLOCK_KEYWORDS
 from .restriction_filtering import evaluate_restriction_impact
 
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]+|\d+[.)]|#+)\s*")
@@ -298,6 +299,34 @@ def _section_blocks(plan_text: str) -> list[dict[str, Any]]:
     if current_title or current_lines:
         sections.append({"title": current_title, "lines": current_lines})
     return sections
+
+
+def _active_mental_blocks(planning_brief: dict) -> list[str]:
+    athlete = _athlete_snapshot(planning_brief)
+    return [
+        str(block).strip().lower()
+        for block in _clean_list(athlete.get("mental_blocks", []))
+        if str(block).strip() and str(block).strip().lower() != "generic"
+    ]
+
+
+def _mental_block_terms(block: str) -> list[str]:
+    return _dedupe_preserve_order(
+        [
+            str(term).strip().lower()
+            for term in [block.replace("_", " "), *BLOCK_KEYWORDS.get(block, [])]
+            if str(term).strip()
+        ]
+    )
+
+
+def _line_mentions_mental_block(line: str, block: str) -> bool:
+    normalized = _normalize_render_line(line)
+    return any(_phrase_in_text(normalized, term) for term in _mental_block_terms(block))
+
+
+def _plan_has_mindset_section(plan_text: str) -> bool:
+    return any("mindset" in str(section.get("title", "")) for section in _section_blocks(plan_text))
 
 
 def _restriction_guard_entry(restriction: dict) -> dict:
@@ -1072,6 +1101,47 @@ def _weight_cut_acknowledgement_warnings(planning_brief: dict, final_plan_text: 
     return warnings
 
 
+def _mindset_acknowledgement_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    active_blocks = _active_mental_blocks(planning_brief)
+    if not active_blocks:
+        return []
+
+    plan_lines = _extract_plan_lines(final_plan_text)
+    has_mindset_section = _plan_has_mindset_section(final_plan_text)
+    missing_blocks = [
+        block
+        for block in active_blocks
+        if not any(_line_mentions_mental_block(line, block) for line in plan_lines)
+    ]
+    if has_mindset_section and not missing_blocks:
+        return []
+
+    gap_bits: list[str] = []
+    if not has_mindset_section:
+        gap_bits.append("no explicit mindset section is present")
+    if missing_blocks:
+        gap_bits.append(
+            "missing explicit acknowledgement of "
+            + ", ".join(block.replace("_", " ") for block in missing_blocks)
+        )
+
+    rendered_blocks = ", ".join(block.replace("_", " ") for block in active_blocks)
+    summary = "; ".join(gap_bits) if gap_bits else "the mindset signal is not explicit enough"
+    return [
+        {
+            "code": "mindset_underaddressed",
+            "message": f"Athlete mental blocks are active ({rendered_blocks}), but the final plan underaddresses them: {summary}.",
+            "mental_blocks": active_blocks,
+            "missing_blocks": missing_blocks,
+            "has_mindset_section": has_mindset_section,
+            "rewrite_hint": (
+                "Restore a short Mindset Focus and Mindset Overview that explicitly addresses "
+                f"{rendered_blocks} with execution-specific cues."
+            ),
+        }
+    ]
+
+
 def _overstyled_name_warnings(plan_lines: list[str]) -> list[dict]:
     warnings: list[dict] = []
     seen_lines: set[str] = set()
@@ -1217,6 +1287,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief,
         final_plan_text,
     )
+    mindset_acknowledgement_warnings = _mindset_acknowledgement_warnings(
+        planning_brief,
+        final_plan_text,
+    )
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
@@ -1256,6 +1330,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(unresolved_access_fallback_warnings)
     warnings.extend(week_completeness_warnings)
     warnings.extend(weight_cut_acknowledgement_warnings)
+    warnings.extend(mindset_acknowledgement_warnings)
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
@@ -1274,6 +1349,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "unresolved_access_fallback_warnings": unresolved_access_fallback_warnings,
         "week_completeness_warnings": week_completeness_warnings,
         "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
+        "mindset_acknowledgement_warnings": mindset_acknowledgement_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
         "coach_voice_warnings": coach_voice_warnings,

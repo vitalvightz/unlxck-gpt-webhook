@@ -165,6 +165,52 @@ def test_review_stage2_output_promotes_empty_safety_in_high_risk_context():
     assert "empty_safety_language" in blocking_codes
 
 
+def test_review_stage2_output_warns_when_active_mindset_block_is_dropped():
+    planning_brief = _stage1_result_fixture()["planning_brief"]
+    planning_brief["athlete_model"]["mental_blocks"] = ["confidence"]
+
+    review = review_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    assert review["status"] == "WARN"
+    assert review["needs_retry"] is True
+    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
+    assert "mindset_underaddressed" in blocking_codes
+
+
+def test_review_stage2_output_passes_when_active_mindset_block_is_explicitly_rendered():
+    planning_brief = _stage1_result_fixture()["planning_brief"]
+    planning_brief["athlete_model"]["mental_blocks"] = ["confidence"]
+
+    review = review_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## Mindset Focus
+        - Confidence: Reset after clean shots with one breath, then re-enter behind the jab.
+
+        SPP
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+
+        ## Mindset Overview
+        - Confidence stays tied to reset quality, not raw aggression.
+        """,
+    )
+
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+
+
 def test_build_stage2_retry_returns_repair_prompt_when_needed():
     retry = build_stage2_retry(
         stage1_result=_stage1_result_fixture(),
