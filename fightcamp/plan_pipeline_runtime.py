@@ -292,6 +292,7 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         mental_block=mental_block_class,
         age=int(plan_input.age) if plan_input.age.isdigit() else 0,
         weight=float(weight) if weight.replace(".", "", 1).isdigit() else 0.0,
+        target_weight=float(target_weight) if target_weight.replace(".", "", 1).isdigit() else 0.0,
         prev_exercises=[],
         recent_exercises=[],
         phase_weeks=phase_weeks,

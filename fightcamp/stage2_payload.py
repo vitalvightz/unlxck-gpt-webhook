@@ -3,6 +3,7 @@
 import json
 import re
 
+from .injury_formatting import parse_injury_entry
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
@@ -625,8 +626,11 @@ def _build_athlete_model(
         "days_until_fight": training_context.days_until_fight,
         "fatigue": training_context.fatigue,
         "age": training_context.age,
+        "current_weight": training_context.weight,
+        "target_weight": training_context.target_weight,
         "weight_cut_risk": training_context.weight_cut_risk,
         "weight_cut_pct": training_context.weight_cut_pct,
+        "active_cut_pct": compute_active_cut_pct(training_context.weight, training_context.target_weight),
         "technical_styles": training_context.style_technical,
         "tactical_styles": training_context.style_tactical,
         "weaknesses": training_context.weaknesses,
@@ -649,6 +653,278 @@ def _build_athlete_model(
         ),
     }
     return athlete_model
+
+
+_SPAR_REGION_BASE = {
+    "hip": 3,
+    "groin": 3,
+    "adductor": 3,
+    "knee": 3,
+    "ankle": 3,
+    "foot": 3,
+    "lumbar": 3,
+    "pelvis": 3,
+    "low_back": 3,
+    "hamstring": 2,
+    "quad": 2,
+    "calf": 2,
+    "shoulder": 2,
+    "elbow": 1,
+    "wrist": 1,
+    "hand": 1,
+    "other": 1,
+    "unspecified": 1,
+}
+_LOWER_BODY_SPARRING_REGIONS = {"hip", "groin", "adductor", "knee", "ankle", "foot", "lumbar", "pelvis", "low_back"}
+_SPAR_CONFLICT_REGIONS = _LOWER_BODY_SPARRING_REGIONS | {"hamstring", "quad", "calf"}
+
+
+def compute_active_cut_pct(current_weight: float | int | str | None, target_weight: float | int | str | None) -> float:
+    try:
+        current = float(current_weight or 0.0)
+        target = float(target_weight or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+    if current <= 0 or target <= 0 or target >= current:
+        return 0.0
+    return round(((current - target) / current) * 100, 1)
+
+
+def _injury_text_tokens(text: str) -> dict:
+    lower = str(text or "").strip().lower()
+    entry = parse_injury_entry(lower) or {}
+    location = str(entry.get("canonical_location") or entry.get("location") or "unspecified").strip().lower().replace(" ", "_")
+    severity = "mild"
+    if any(token in lower for token in ("severe", "grade 3", "grade iii", "full tear", "fracture", "dislocation", "rupture")):
+        severity = "severe"
+    elif any(token in lower for token in ("moderate", "grade 2", "grade ii", "tear", "strain", "sprain")):
+        severity = "moderate"
+    elif any(token in lower for token in ("mild", "minor", "tightness", "soreness", "ache")):
+        severity = "mild"
+    trend = "stable"
+    if any(token in lower for token in ("worsening", "worse", "getting worse", "flared", "flare-up", "progressively")):
+        trend = "worsening"
+    elif any(token in lower for token in ("improving", "better", "settling", "calming")):
+        trend = "improving"
+    irritability = "hard_training_only"
+    if any(token in lower for token in ("at rest", "constant pain", "constant", "resting pain")):
+        irritability = "rest"
+    elif any(token in lower for token in ("daily movement", "walking", "stairs", "normal walking", "stance", "pivoting")):
+        irritability = "daily_movement"
+    elif any(token in lower for token in ("normal training", "warm-up", "light work", "during training")):
+        irritability = "normal_training"
+    functional = "full_training_possible"
+    if any(token in lower for token in ("cannot", "can't", "unable", "won't let me", "key sport tasks", "cannot cut", "cannot pivot")):
+        functional = "cannot_perform_key_sport_tasks"
+    elif any(token in lower for token in ("modification", "modified", "limited", "work around", "with restrictions")):
+        functional = "training_possible_with_modifications"
+    red_flags: list[str] = []
+    for label, terms in {
+        "instability": ("instability", "giving way", "give way", "gave way"),
+        "locking": ("locking", "locks", "catching", "catches"),
+        "swelling": ("swelling", "swollen", "bruising", "bruise"),
+        "numbness": ("numbness", "tingling", "pins and needles"),
+        "sharp_pain": ("sharp pain", "sharp", "stabbing"),
+    }.items():
+        if any(term in lower for term in terms):
+            red_flags.append(label)
+    return {
+        "raw": lower,
+        "region": location or "unspecified",
+        "severity": severity,
+        "trend": trend,
+        "irritability": irritability,
+        "functional": functional,
+        "red_flags": red_flags,
+    }
+
+
+def score_injury_risk(injuries: list[str] | None, *, fatigue_level: str = "", active_cut_pct: float = 0.0) -> dict:
+    entries: list[dict] = []
+    highest = 0
+    active_lower_body = False
+    for injury in list(injuries or []):
+        parsed = _injury_text_tokens(injury)
+        region = parsed["region"] if parsed["region"] in _SPAR_REGION_BASE else "other"
+        score = {"mild": 1, "moderate": 3, "severe": 5}[parsed["severity"]]
+        score += {"improving": -1, "stable": 0, "worsening": 2}[parsed["trend"]]
+        score += {
+            "hard_training_only": 0,
+            "normal_training": 2,
+            "daily_movement": 3,
+            "rest": 4,
+        }[parsed["irritability"]]
+        score += {
+            "full_training_possible": 0,
+            "training_possible_with_modifications": 2,
+            "cannot_perform_key_sport_tasks": 4,
+        }[parsed["functional"]]
+        score += _SPAR_REGION_BASE.get(region, 1)
+        for red_flag in parsed["red_flags"]:
+            score += {
+                "instability": 3,
+                "locking": 3,
+                "swelling": 2,
+                "numbness": 3,
+                "sharp_pain": 2,
+            }[red_flag]
+        if fatigue_level == "high" and parsed["trend"] == "worsening":
+            score += 1
+        if active_cut_pct >= 5.0 and score >= 6:
+            score += 1
+        parsed["injury_risk"] = score
+        highest = max(highest, score)
+        active_lower_body = active_lower_body or region in _LOWER_BODY_SPARRING_REGIONS
+        entries.append(parsed)
+    return {
+        "entries": entries,
+        "total": highest,
+        "active_lower_body": active_lower_body,
+        "regions": {entry["region"] for entry in entries},
+    }
+
+
+def score_spar_risk(athlete_model: dict, week_entry: dict, injury_summary: dict) -> dict:
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    phase = str(week_entry.get("phase", "")).upper()
+    active_cut_pct = float(athlete_model.get("active_cut_pct") or athlete_model.get("weight_cut_pct") or 0.0)
+    hard_spar_days = _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", [])))
+    technical_skill_days = _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", [])))
+    spar_risk = 0
+    reasons: list[str] = []
+    if fatigue == "high":
+        spar_risk += 2
+        reasons.append("high fatigue")
+    elif fatigue == "moderate":
+        spar_risk += 1
+        reasons.append("moderate fatigue")
+    if active_cut_pct >= 5.0:
+        spar_risk += 2
+        reasons.append(f"active cut {active_cut_pct:.1f}%")
+    elif active_cut_pct >= 3.0:
+        spar_risk += 1
+        reasons.append(f"active cut {active_cut_pct:.1f}%")
+    if phase in {"TAPER", "FIGHT_WEEK"} and len(hard_spar_days) >= 2:
+        spar_risk += 2
+        reasons.append("two hard spars in taper/fight week")
+    if len(hard_spar_days) + len(technical_skill_days) >= 3:
+        spar_risk += 1
+        reasons.append("three or more combat exposures this week")
+    injury_risk = int(injury_summary.get("total") or 0)
+    if injury_risk >= 12:
+        spar_risk += 3
+    elif injury_risk >= 8:
+        spar_risk += 2
+    elif injury_risk >= 4:
+        spar_risk += 1
+    if injury_risk >= 4:
+        reasons.append(f"injury risk {injury_risk}")
+    if injury_summary.get("regions", set()) & _LOWER_BODY_SPARRING_REGIONS and hard_spar_days:
+        spar_risk += 1
+        reasons.append("lower-body or lumbar-pelvic spar conflict")
+    return {"score": spar_risk, "reasons": reasons, "active_cut_pct": active_cut_pct}
+
+
+def build_deload_spar_output(day: str, rationale: str) -> dict:
+    return {
+        "day": day,
+        "label": "DELOAD",
+        "athlete_heading": f"{day} — Sparring (Deloaded)",
+        "lines": [
+            "Coach-led sparring remains scheduled.",
+            "Reduce rounds by about 25-50% and lower the collision intensity this week.",
+            "Prioritize tactical quality, timing, reads, defense, distance control, and clean entries/exits.",
+            f"Reason: {rationale}.",
+            "Coach call: keep sharpness without accumulating unnecessary fatigue or collision cost.",
+            "This change protects readiness and preserves competitive sharpness rather than backing off competitiveness.",
+        ],
+    }
+
+
+def build_converted_spar_output(day: str, rationale: str, athlete_model: dict, injury_summary: dict) -> dict:
+    sport = _athlete_sport_key(athlete_model)
+    regions = injury_summary.get("regions", set())
+    if regions & _LOWER_BODY_SPARRING_REGIONS:
+        replacement = "pads or mitts plus defensive movement rounds with controlled contact"
+    elif regions & {"shoulder", "elbow", "wrist", "hand"}:
+        replacement = "situational spar or tactical shadow / reaction work with controlled contact"
+    elif sport in {"mma", "muay_thai", "kickboxing"}:
+        replacement = "controlled situational spar or fight-pace technical rounds with coach-called limits"
+    else:
+        replacement = "technical spar or coach-called tactical rehearsal with controlled contact"
+    return {
+        "day": day,
+        "label": "DELETE_CONVERT",
+        "athlete_heading": f"{day} — Hard Spar Converted",
+        "lines": [
+            "Original plan included hard sparring.",
+            f"Replace hard spar with {replacement}.",
+            "Keep technical sharpness and specificity while removing unnecessary collision load.",
+            f"Reason: {rationale}.",
+            "Coach call: preserve readiness, timing, and confidence without paying extra fatigue or injury cost.",
+            "This change protects readiness and reduces unnecessary collision cost, not competitive sharpness.",
+        ],
+    }
+
+
+def classify_spar_modification(athlete_model: dict, week_entry: dict) -> list[dict]:
+    phase = str(week_entry.get("phase", "")).upper()
+    hard_spar_days = _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", [])))
+    if not hard_spar_days:
+        return []
+    active_cut_pct = float(athlete_model.get("active_cut_pct") or athlete_model.get("weight_cut_pct") or 0.0)
+    injury_summary = score_injury_risk(
+        athlete_model.get("injuries", []),
+        fatigue_level=str(athlete_model.get("fatigue", "")).strip().lower(),
+        active_cut_pct=active_cut_pct,
+    )
+    spar_summary = score_spar_risk(athlete_model, week_entry, injury_summary)
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    modifications: list[dict] = []
+    fight_week_like = phase == "TAPER" or str(week_entry.get("stage_key", "")) == "fight_week_survival_rhythm"
+    forced_convert = (
+        (fatigue == "high" and active_cut_pct >= 5.0)
+        or (fatigue == "high" and injury_summary["total"] >= 8)
+        or (fatigue == "high" and injury_summary["active_lower_body"])
+        or any(
+            entry["trend"] == "worsening" and entry["region"] in {"hip", "groin", "adductor"}
+            for entry in injury_summary["entries"]
+        )
+        or any(
+            {"instability", "locking"} & set(entry["red_flags"])
+            for entry in injury_summary["entries"]
+            if entry["region"] in _SPAR_CONFLICT_REGIONS | {"shoulder", "hand", "wrist", "elbow"}
+        )
+        or any(
+            entry["irritability"] == "daily_movement"
+            or "walking" in entry["raw"]
+            or "stance" in entry["raw"]
+            or "pivot" in entry["raw"]
+            for entry in injury_summary["entries"]
+        )
+        or (fight_week_like and len(hard_spar_days) >= 2 and bool(injury_summary["entries"]) and active_cut_pct > 0)
+    )
+    for idx, day in enumerate(hard_spar_days):
+        classification = "KEEP"
+        score = spar_summary["score"]
+        if forced_convert or score >= 6:
+            classification = "DELETE_CONVERT"
+        elif score >= 3:
+            classification = "DELOAD"
+        if fight_week_like and len(hard_spar_days) >= 2 and idx >= 1 and classification == "KEEP":
+            classification = "DELOAD"
+        rationale_bits = []
+        if fight_week_like:
+            rationale_bits.append("taper-week readiness preservation")
+        rationale_bits.extend(spar_summary["reasons"][:3])
+        rationale = " + ".join(_dedupe_preserve_order(rationale_bits)) or "readiness protection"
+        if classification == "DELOAD":
+            modifications.append(build_deload_spar_output(day, rationale))
+        elif classification == "DELETE_CONVERT":
+            modifications.append(build_converted_spar_output(day, rationale, athlete_model, injury_summary))
+        else:
+            modifications.append({"day": day, "label": "KEEP"})
+    return modifications
 
 
 def _priority_bucket(label: str, kind: str) -> dict:
@@ -2334,6 +2610,7 @@ def _build_weekly_role_map(
                 "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_technical_skill_days": _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+                "sparring_modifications": classify_spar_modification(athlete_model, week_entry),
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
             }
@@ -2951,6 +3228,7 @@ def build_stage2_payload(
             "Keep every final primary drill, support drill, and fallback equipment-valid for the athlete profile.",
             "Only keep an explicit fallback when a real unresolved access or availability contingency still exists.",
             "If declared hard sparring days exist, treat them as fixed collision points when placing the main glycolytic stressor or primary neural strength session.",
+            "Apply weekly_role_map.sparring_modifications after weekly structure is assembled; athlete-entered hard sparring is not automatically sacred in taper, fight-week, or unusually high-risk SPP contexts.",
         ],
         "writing_rules": [
             "Keep the final plan athlete-facing and clean.",
@@ -2986,6 +3264,7 @@ def build_stage2_payload(
             "If fatigue is high or fight-week pressure is active, reduce optionality and make the directive plain.",
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
             "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
+            "For every sparring day that weekly_role_map.sparring_modifications marks DELOAD or DELETE_CONVERT, explicitly acknowledge the original hard spar input, include the modification label, give one sentence tying the change to taper, fatigue, cut, injury, or readiness, and frame it as readiness protection rather than reduced competitiveness.",
             "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
         ],
     }
@@ -3063,6 +3342,9 @@ In taper weeks, simplify aggressively.
 Remove novelty, reduce accessory volume, avoid soreness-inducing density, and keep only the most useful sharpness, rhythm, confidence, and freshness work.
 Do not render taper sessions as option menus or branching templates.
 In normal taper sessions, resolve to one final prescription with no default fallback branch.
+Athlete-entered hard sparring days are not automatically sacred. Use weekly_role_map.sparring_modifications to decide whether each hard spar stays hard, gets deloaded, or is converted.
+In taper or fight-week contexts, allow at most one true hard spar exposure in the week. If two or more hard spar days were declared, downgrade at least one even when the score is only modest.
+If a sparring day is converted, do not leave a blank hole. Replace it with the prescribed technical or tactical contact alternative that preserves sharpness while removing unnecessary collision cost.
 
 RULE 11 - OUTPUT DISCIPLINE
 Keep the athlete-facing output concise, high-signal, and easy to scan.
@@ -3090,6 +3372,7 @@ If active weight cut is present, say so plainly in the final plan and explain th
 If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
 In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
+For every modified sparring day, acknowledge the original hard spar input, label it clearly as deloaded or converted, give one sentence of rationale tied to taper, fatigue, cut, injury, or readiness, and say plainly that the change protects readiness rather than reducing competitiveness.
 
 RULE 12 - SURGICAL REHAB INTEGRATION
 Rehab must never feel copy-pasted, generic, or repeated by default.

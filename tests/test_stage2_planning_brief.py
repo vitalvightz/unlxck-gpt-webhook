@@ -3,6 +3,9 @@
     _parse_record,
     build_planning_brief,
     build_stage2_payload,
+    classify_spar_modification,
+    compute_active_cut_pct,
+    score_injury_risk,
 )
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
@@ -83,6 +86,77 @@ def test_competitive_maturity_buckets_amateur_by_total_bouts():
 def test_competitive_maturity_returns_unknown_without_valid_status_or_record():
     assert _derive_competitive_maturity("", "19-2")["competitive_maturity"] == "unknown_competitive_maturity"
     assert _derive_competitive_maturity("amateur", "bad")["competitive_maturity"] == "unknown_competitive_maturity"
+
+
+
+def test_compute_active_cut_pct_uses_current_weight_denominator():
+    assert compute_active_cut_pct(80.0, 76.0) == 5.0
+
+
+def test_score_injury_risk_distinguishes_worsening_hip_from_mild_improving_ankle():
+    mild = score_injury_risk(["mild improving ankle soreness"], fatigue_level="low", active_cut_pct=0.0)
+    severe = score_injury_risk(
+        ["moderate worsening hip pain with instability during daily movement and modified training"],
+        fatigue_level="high",
+        active_cut_pct=5.0,
+    )
+
+    assert mild["total"] < severe["total"]
+    assert severe["active_lower_body"] is True
+
+
+def test_classify_spar_modification_deloads_second_taper_spar_even_when_risk_modest():
+    athlete = {
+        "fatigue": "low",
+        "active_cut_pct": 0.0,
+        "weight_cut_pct": 0.0,
+        "hard_sparring_days": ["Tuesday", "Thursday"],
+        "technical_skill_days": [],
+        "injuries": [],
+        "sport": "boxing",
+    }
+
+    mods = classify_spar_modification(athlete, {"phase": "TAPER", "stage_key": "fight_week_survival_rhythm"})
+
+    assert mods[0]["label"] == "KEEP"
+    assert mods[1]["label"] == "DELOAD"
+
+
+def test_weekly_role_map_includes_converted_hard_sparring_when_taper_risk_is_high():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 5,
+            "short_notice": True,
+            "fatigue": "high",
+            "current_weight": 80.0,
+            "target_weight": 76.0,
+            "active_cut_pct": 5.0,
+            "weight_cut_risk": True,
+            "weight_cut_pct": 5.3,
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power"],
+            "weaknesses": ["coordination_proprioception"],
+            "equipment": ["bodyweight"],
+            "training_days": ["Tuesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "technical_skill_days": ["Saturday"],
+            "injuries": ["moderate worsening groin pain with instability during daily movement"],
+            "readiness_flags": ["high_fatigue", "fight_week", "short_notice", "active_weight_cut"],
+        },
+        phase="TAPER",
+    )
+
+    mods = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"]
+
+    assert all(item["label"] == "DELETE_CONVERT" for item in mods)
+    assert "Original plan included hard sparring." in mods[0]["lines"]
+
 
 def _build_taper_payload_and_brief() -> tuple[dict, dict]:
     training_context = TrainingContext(
