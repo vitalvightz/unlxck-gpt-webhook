@@ -359,6 +359,154 @@ def test_validate_stage2_output_warns_for_structural_conditionals():
     assert "conditional_conditioning_choice" in warning_codes
 
 
+def test_validate_stage2_output_warns_for_low_trust_filler_and_motivation_cliches():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Stay consistent this week.
+        - You've got this.
+        - Trap Bar Deadlift - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "generic_filler_phrase" in warning_codes
+    assert "generic_motivation_cliche" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_generic_instruction_openers_with_rewrite_hint():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Focus on recovery today.
+        - Ensure you keep the pace under control.
+        - Trap Bar Deadlift - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    opener_warnings = [warning for warning in report["warnings"] if warning["code"] == "generic_instruction_opener"]
+    assert opener_warnings
+    assert all("rewrite_hint" in warning for warning in opener_warnings)
+
+
+def test_validate_stage2_output_warns_for_hedged_adjustment_without_decision():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Consider reducing intensity and prioritizing recovery.
+        - Trap Bar Deadlift - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    hedged_warnings = [warning for warning in report["warnings"] if warning["code"] == "hedged_adjustment_without_decision"]
+    assert hedged_warnings
+    assert hedged_warnings[0]["blocking"] is True
+
+
+def test_validate_stage2_output_warns_for_empty_safety_language():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - Consult a clinician before training.
+        - Trap Bar Deadlift - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    safety_warnings = [warning for warning in report["warnings"] if warning["code"] == "empty_safety_language"]
+    assert safety_warnings
+    assert safety_warnings[0].get("blocking") is False
+
+
+def test_validate_stage2_output_blocks_empty_safety_language_in_high_risk_context():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["athlete_model"]["fatigue"] = "high"
+    planning_brief["athlete_model"]["readiness_flags"] = ["high_fatigue", "fight_week"]
+    planning_brief["athlete_model"]["injuries"] = ["right shoulder pain"]
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        SPP
+        - Listen to your body with upper-body loading.
+        - Trap Bar Deadlift - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    safety_warnings = [warning for warning in report["warnings"] if warning["code"] == "empty_safety_language"]
+    assert safety_warnings
+    assert safety_warnings[0]["blocking"] is True
+    assert "high_fatigue" in safety_warnings[0]["risk_context"]
+
+
+def test_validate_stage2_output_warns_when_session_presents_more_than_two_options():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Fight-Pace Conditioning
+        - Option A: Air Bike Sprint - 6 x 6 sec
+        - Option B: Short Sprint - 6 x 6 sec
+        - Option C: Bag Sprint Round - 6 x 10 sec
+        """,
+    )
+
+    overload_warnings = [warning for warning in report["warnings"] if warning["code"] == "option_overload"]
+    assert overload_warnings
+    assert overload_warnings[0].get("blocking") is False
+
+
+def test_validate_stage2_output_blocks_option_overload_in_adjustment_context():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        Strength
+        - Option A: Reduce volume to 4 rounds.
+        - Option B: Drop intensity and keep the same rounds.
+        - Option C: Skip the hard finish and move to easy bike work.
+        """,
+    )
+
+    overload_warnings = [warning for warning in report["warnings"] if warning["code"] == "option_overload"]
+    assert overload_warnings
+    assert overload_warnings[0]["blocking"] is True
+
+
+def test_validate_stage2_output_does_not_false_positive_clear_coach_language():
+    report = validate_stage2_output(
+        planning_brief=_planning_brief_fixture(),
+        final_plan_text="""
+        SPP
+        - We are dropping volume today because fatigue is high and extra work buys soreness, not progress.
+        - If pain is worse tomorrow morning, stop upper-body loading and reassess.
+        - Trap Bar Deadlift - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "generic_filler_phrase" not in warning_codes
+    assert "generic_instruction_opener" not in warning_codes
+    assert "generic_motivation_cliche" not in warning_codes
+    assert "hedged_adjustment_without_decision" not in warning_codes
+    assert "empty_safety_language" not in warning_codes
+
+
 def test_validate_stage2_output_warns_for_boxing_sport_language_leaks():
     report = validate_stage2_output(
         planning_brief=_planning_brief_fixture(),

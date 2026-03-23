@@ -122,6 +122,49 @@ def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
     assert "sport_language_leak" in review_flag_codes
 
 
+def test_review_stage2_output_promotes_hedged_adjustment_to_blocking_warning():
+    review = review_stage2_output(
+        planning_brief=_stage1_result_fixture()["planning_brief"],
+        final_plan_text="""
+        SPP
+        - Consider reducing intensity and prioritizing recovery.
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    assert review["status"] == "WARN"
+    assert review["needs_retry"] is True
+    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
+    assert "hedged_adjustment_without_decision" in blocking_codes
+
+
+def test_review_stage2_output_promotes_empty_safety_in_high_risk_context():
+    planning_brief = _stage1_result_fixture()["planning_brief"]
+    planning_brief["athlete_model"]["fatigue"] = "high"
+    planning_brief["athlete_model"]["readiness_flags"] = ["high_fatigue", "fight_week"]
+    planning_brief["athlete_model"]["injuries"] = ["left hamstring strain"]
+
+    review = review_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        SPP
+        - Listen to your body with lower-body loading.
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    assert review["status"] == "WARN"
+    assert review["needs_retry"] is True
+    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
+    assert "empty_safety_language" in blocking_codes
+
+
 def test_build_stage2_retry_returns_repair_prompt_when_needed():
     retry = build_stage2_retry(
         stage1_result=_stage1_result_fixture(),

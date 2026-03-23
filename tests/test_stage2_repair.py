@@ -135,6 +135,11 @@ def test_build_stage2_repair_prompt_requests_athlete_facing_output_only():
 
     assert "Return only the revised athlete-facing final plan." in prompt
     assert "Do not mention the validator" in prompt
+    assert "make one clear coaching call" in prompt
+    assert "Replace generic motivation, scripted empathy, and empty safety language" in prompt
+    assert "Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'" in prompt
+    assert "If fatigue is high or fight-week pressure is active, reduce optionality" in prompt
+    assert "If injury management is active, lead with constraints, substitutions, or stop rules" in prompt
 
 
 def test_build_stage2_repair_prompt_surfaces_internal_scaffolding_cleanup():
@@ -240,6 +245,12 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
                 "summary_lines": [],
                 "support_lines": [],
             },
+            {
+                "code": "option_overload",
+                "phase": "SPP",
+                "session_index": 1,
+                "risk_context": ["high_fatigue"],
+            },
         ],
         "missing_required_elements": [],
         "restricted_hits": [],
@@ -258,9 +269,40 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
     assert "simplify_taper_session" in prompt
     assert "replace_with_equipment_valid_same_role_option" in prompt
     assert "remove_unneeded_fallback_branch_or_make_contingency_explicit" in prompt
-    assert "restore_missing_week_structure" in prompt
-    assert "complete_late_camp_week" in prompt
-    assert "trim_extra_week_sessions_to_match_profile" in prompt
-    assert "restore_default_boxer_weekly_rhythm" in prompt
-    assert "add_weight_cut_acknowledgement" in prompt
-    assert "add_summary_and_support_weight_cut_notes" in prompt
+    assert "collapse_options_to_safe_equivalent_choices_or_one_final_call" in prompt
+
+
+def test_build_stage2_repair_prompt_surfaces_style_repairs():
+    validator_report = {
+        "is_valid": True,
+        "errors": [],
+        "warnings": [
+            {
+                "code": "generic_motivation_cliche",
+                "line": "You've got this.",
+            },
+            {
+                "code": "generic_instruction_opener",
+                "line": "Focus on recovery today.",
+            },
+            {
+                "code": "hedged_adjustment_without_decision",
+                "line": "Consider reducing intensity and prioritizing recovery.",
+            },
+            {
+                "code": "empty_safety_language",
+                "line": "If you have pain, consult a clinician.",
+            },
+        ],
+        "missing_required_elements": [],
+        "restricted_hits": [],
+    }
+    prompt = build_stage2_repair_prompt(
+        planning_brief=_planning_brief_fixture(),
+        failed_plan_text="SPP\n- You've got this.",
+        validator_report=validator_report,
+    )
+
+    assert "replace_low_trust_filler_with_concrete_coaching" in prompt
+    assert "rewrite_adjustment_as_clear_call_with_short_why" in prompt
+    assert "replace_empty_safety_line_with_operational_guardrails" in prompt
