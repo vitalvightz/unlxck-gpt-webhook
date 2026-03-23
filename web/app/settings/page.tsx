@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { useAppearance } from "@/components/appearance-provider";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
@@ -48,6 +49,7 @@ function isSafeImageUrl(url: string): boolean {
 const MAX_AVATAR_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export default function SettingsPage() {
+  const { surfaceMode, setSurfaceMode } = useAppearance();
   const { me, refreshMe, session } = useAppSession();
   const [fullName, setFullName] = useState("");
   const [technicalStyle, setTechnicalStyle] = useState("");
@@ -70,6 +72,7 @@ export default function SettingsPage() {
   const stanceLabel = getOptionLabel(STANCE_OPTIONS, stance) || "Unspecified";
   const professionalStatusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, professionalStatus) || "Unspecified";
   const lastUpdatedLabel = me?.profile.updated_at ? new Date(me.profile.updated_at).toLocaleString() : "Not saved yet";
+  const isLightBackground = surfaceMode === "light";
 
   const initials = getInitials(fullName || "Athlete");
 
@@ -322,6 +325,39 @@ export default function SettingsPage() {
                     <p className="muted">Time is taken from the device automatically and kept here for admin context only.</p>
                   </div>
                 ) : null}
+              </div>
+            </article>
+
+            <article className="step-card">
+              <div className="form-section-header">
+                <p className="kicker">Appearance</p>
+                <h2 className="form-section-title">Workspace background</h2>
+                <p className="muted">Choose whether the workspace canvas stays dark or uses a lighter backdrop while keeping the current dark cards and navigation.</p>
+              </div>
+              <div className="appearance-toggle-group" role="group" aria-label="Workspace background">
+                <button
+                  type="button"
+                  className={`appearance-toggle ${surfaceMode === "dark" ? "appearance-toggle-active" : ""}`}
+                  aria-pressed={surfaceMode === "dark"}
+                  onClick={() => setSurfaceMode("dark")}
+                >
+                  <span className="appearance-toggle-title">Dark background</span>
+                  <span className="appearance-toggle-copy">Keep the current low-light workspace backdrop.</span>
+                </button>
+                <button
+                  type="button"
+                  className={`appearance-toggle ${surfaceMode === "light" ? "appearance-toggle-active" : ""}`}
+                  aria-pressed={surfaceMode === "light"}
+                  onClick={() => setSurfaceMode("light")}
+                >
+                  <span className="appearance-toggle-title">Light background</span>
+                  <span className="appearance-toggle-copy">Brighten the page canvas without changing the core UI surfaces.</span>
+                </button>
+              </div>
+              <div className="support-panel appearance-preview-panel">
+                <p className="kicker">Current mode</p>
+                <h3>{isLightBackground ? "Light background enabled" : "Dark background enabled"}</h3>
+                <p className="muted">This updates immediately and stays saved in this browser, so it does not depend on the main Save settings button.</p>
               </div>
             </article>
           </div>

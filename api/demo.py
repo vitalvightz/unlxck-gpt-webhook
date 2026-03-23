@@ -145,6 +145,12 @@ class DemoStore:
             row = self.plans.get(plan_id)
             return dict(row) if row else None
 
+    def delete_plan(self, plan_id: str) -> None:
+        with self._lock:
+            if plan_id not in self.plans:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            del self.plans[plan_id]
+
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
             row = self.plans.get(plan_id)

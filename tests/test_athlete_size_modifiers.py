@@ -23,6 +23,7 @@ LOGGER = logging.getLogger(__name__)
 def _payload(
     *,
     weight: str,
+    target_weight: str | None = None,
     technical_style: str = "boxing",
     tactical_style: str = "counter striker",
     status: str = "professional",
@@ -36,7 +37,7 @@ def _payload(
                 {"label": "Full name", "value": "Maya Carter"},
                 {"label": "Age", "value": "24"},
                 {"label": "Weight (kg)", "value": weight},
-                {"label": "Target Weight (kg)", "value": weight},
+                {"label": "Target Weight (kg)", "value": target_weight if target_weight is not None else weight},
                 {"label": "Height (cm)", "value": "168"},
                 {"label": "Fighting Style (Technical)", "value": [technical_style]},
                 {"label": "Fighting Style (Tactical)", "value": [tactical_style]},
@@ -136,6 +137,23 @@ def _build_blocks(monkeypatch: pytest.MonkeyPatch, *, weight: str):
         record_timing=lambda *_: None,
         logger=LOGGER,
     )
+
+
+def test_runtime_weight_cut_pct_uses_current_weight_denominator(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: FIXED_NOW)
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: FIXED_NOW)
+    payload = _payload(weight="105", target_weight="98")
+    plan_input = PlanInput.from_payload(payload)
+
+    context = build_runtime_context(
+        plan_input=plan_input,
+        random_seed=payload["random_seed"],
+        logger=LOGGER,
+    )
+
+    assert context.weight_cut_pct_val == 6.7
+    assert context.training_context.weight_cut_pct == 6.7
+    assert context.weight_cut_risk_flag is True
 
 
 def test_get_athlete_size_band_uses_rough_weight_bands():

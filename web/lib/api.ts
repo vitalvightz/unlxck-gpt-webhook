@@ -196,6 +196,135 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
 }
 
+async function readEmpty(path: string, init?: ApiRequestInit): Promise<void> {
+  const headers = new Headers(init?.headers ?? {});
+  if (init?.body) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (init?.token) {
+    headers.set("Authorization", `Bearer ${init.token}`);
+  }
+
+  const method = init?.method ?? "GET";
+  const url = `${getApiBaseUrl()}${path}`;
+  const startedAt = Date.now();
+
+  console.info("[api] request:start", {
+    path,
+    method,
+    url,
+    hasBody: Boolean(init?.body),
+    hasToken: Boolean(init?.token),
+    startedAtIso: new Date(startedAt).toISOString(),
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      cache: "no-store",
+      headers,
+    });
+  } catch (networkError) {
+    const durationMs = Date.now() - startedAt;
+    console.error("[api] request:network_error", {
+      path,
+      method,
+      url,
+      durationMs,
+      online: typeof navigator !== "undefined" ? navigator.onLine : "unknown",
+      error:
+        networkError instanceof Error
+          ? { name: networkError.name, message: networkError.message, stack: networkError.stack }
+          : networkError,
+    });
+    throw new Error("Unable to reach the server. Please check your connection and try again.", {
+      cause: networkError,
+    });
+  }
+
+  const durationMs = Date.now() - startedAt;
+  const contentType = response.headers.get("content-type") ?? "";
+  const requestId = response.headers.get("x-request-id");
+
+  if (!response.ok) {
+    const rawText = await response.text();
+    const trimmedText = rawText.trim();
+    let parsedBody: unknown = null;
+
+    if (trimmedText && contentType.includes("application/json")) {
+      try {
+        parsedBody = JSON.parse(trimmedText);
+      } catch (parseError) {
+        console.warn("[api] request:error_body_json_parse_failed", {
+          path,
+          method,
+          url,
+          requestId,
+          status: response.status,
+          contentType,
+          durationMs,
+          parseError:
+            parseError instanceof Error
+              ? { name: parseError.name, message: parseError.message }
+              : parseError,
+        });
+      }
+    }
+
+    console.error("[api] request:failed", {
+      path,
+      method,
+      url,
+      requestId,
+      status: response.status,
+      statusText: response.statusText,
+      contentType,
+      durationMs,
+      rawText: truncateForLog(trimmedText),
+      parsedBody,
+    });
+
+    if (parsedBody && typeof parsedBody === "object" && parsedBody !== null) {
+      const detail = "detail" in parsedBody ? (parsedBody as { detail?: unknown }).detail : null;
+      const bodyRequestId =
+        "request_id" in parsedBody ? (parsedBody as { request_id?: unknown }).request_id : null;
+
+      if (typeof detail === "string") {
+        throw new ApiError(
+          bodyRequestId ? `${detail} (request id: ${String(bodyRequestId)})` : detail,
+          response.status,
+        );
+      }
+
+      if (detail != null) {
+        throw new ApiError(
+          bodyRequestId
+            ? `${JSON.stringify(detail)} (request id: ${String(bodyRequestId)})`
+            : JSON.stringify(detail),
+          response.status,
+        );
+      }
+    }
+
+    throw new ApiError(
+      requestId
+        ? `${trimmedText || `Request failed: ${response.status}`} (request id: ${requestId})`
+        : trimmedText || `Request failed: ${response.status}`,
+      response.status,
+    );
+  }
+
+  console.info("[api] request:success", {
+    path,
+    method,
+    url,
+    requestId,
+    status: response.status,
+    durationMs,
+  });
+}
+
 export function getMe(token: string): Promise<MeResponse> {
   return readJson<MeResponse>("/api/me", { token });
 }
@@ -238,19 +367,10 @@ export function renamePlan(token: string, planId: string, planName: string): Pro
 }
 
 export async function deletePlan(token: string, planId: string): Promise<void> {
-  const headers = new Headers();
-  headers.set("Authorization", `Bearer ${token}`);
-
-  const response = await fetch(`${getApiBaseUrl()}/api/plans/${planId}`, {
+  await readEmpty(`/api/plans/${planId}`, {
     method: "DELETE",
-    cache: "no-store",
-    headers,
+    token,
   });
-
-  if (!response.ok) {
-    const message = (await response.text()).trim() || `Request failed: ${response.status}`;
-    throw new ApiError(message, response.status);
-  }
 }
 
 export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {

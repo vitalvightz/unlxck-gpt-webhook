@@ -241,8 +241,9 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
     target_weight = plan_input.target_weight
     weight_val = float(weight) if weight.replace(".", "", 1).isdigit() else 0.0
     target_val = float(target_weight) if target_weight.replace(".", "", 1).isdigit() else 0.0
-    weight_cut_risk_flag = weight_val - target_val >= 0.05 * target_val if target_val else False
-    weight_cut_pct_val = round((weight_val - target_val) / target_val * 100, 1) if target_val else 0.0
+    weight_cut_delta = max(weight_val - target_val, 0.0)
+    weight_cut_pct_val = round(weight_cut_delta / weight_val * 100, 1) if weight_val > 0 and target_val > 0 else 0.0
+    weight_cut_risk_flag = weight_cut_pct_val >= 5.0
     mental_block_class = classify_mental_block(plan_input.mental_block or "")
     mental_block_class = _filter_mindset_blocks(mental_block_class, tech_styles, tactical_styles)
 

@@ -129,6 +129,11 @@ class FakeStore:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
 
+    def delete_plan(self, plan_id: str) -> None:
+        if plan_id not in self.plans:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        del self.plans[plan_id]
+
     def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
         row = self.plans.get(plan_id)
         if not row:
@@ -1110,6 +1115,90 @@ def test_legacy_rows_with_only_plan_text_remain_readable():
 
     assert response.status_code == 200
     assert response.json()["outputs"]["plan_text"] == "# Stage 1 Draft"
+
+
+def test_athlete_can_delete_own_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_admin_can_delete_any_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_athlete_cannot_delete_someone_elses_plan():
+    client, store, _ = _build_client()
+    owner = AuthenticatedUser(
+        user_id="athlete-owner",
+        email="owner@example.com",
+        full_name="Owner Athlete",
+        metadata={},
+    )
+    intruder = AuthenticatedUser(
+        user_id="athlete-intruder",
+        email="intruder@example.com",
+        full_name="Intruder Athlete",
+        metadata={},
+    )
+    client.app.state.auth_service.users_by_token["owner-token"] = owner
+    client.app.state.auth_service.users_by_token["intruder-token"] = intruder
+    store.ensure_profile(owner)
+    store.ensure_profile(intruder)
+    plan = store.create_plan(
+        athlete_id="athlete-owner",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer intruder-token"},
+    )
+
+    assert response.status_code == 403
+    assert store.get_plan(plan["id"]) is not None
 
 
 def test_manual_stage2_submission_publishes_validated_admin_result():

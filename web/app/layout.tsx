@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 
 import { AppNav } from "@/components/app-nav";
+import { AppearanceProvider } from "@/components/appearance-provider";
 import { AuthProvider } from "@/components/auth-provider";
 import "./globals.css";
 
@@ -22,14 +23,16 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         />
       </head>
       <body>
-        <AuthProvider>
-          <div className="app-shell">
-            <AppNav />
-            <main className="app-main">
-              <div className="page">{children}</div>
-            </main>
-          </div>
-        </AuthProvider>
+        <AppearanceProvider>
+          <AuthProvider>
+            <div className="app-shell">
+              <AppNav />
+              <main className="app-main">
+                <div className="page">{children}</div>
+              </main>
+            </div>
+          </AuthProvider>
+        </AppearanceProvider>
       </body>
     </html>
   );
