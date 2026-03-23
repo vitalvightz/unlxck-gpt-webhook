@@ -215,3 +215,35 @@ def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
     assert retry["status"] == "PASS"
     assert retry["needs_retry"] is False
     assert retry["repair_prompt"] is None
+
+
+def test_build_stage2_retry_weekly_session_overage_uses_active_session_language():
+    stage1_result = _stage1_result_fixture()
+    retry = build_stage2_retry(
+        stage1_result=stage1_result,
+        final_plan_text="""
+        SPP
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+        validator_report={
+            "is_valid": True,
+            "errors": [],
+            "warnings": [
+                {
+                    "code": "weekly_session_overage",
+                    "phase": "SPP",
+                    "week_index": 5,
+                    "expected_session_count": 4,
+                    "actual_session_count": 5,
+                }
+            ],
+            "missing_required_elements": [],
+            "restricted_hits": [],
+        },
+    )
+
+    assert "planned active sessions for the week" in retry["repair_prompt"]
+    assert "requested sessions per week" not in retry["repair_prompt"]

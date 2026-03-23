@@ -2974,9 +2974,12 @@ def build_stage2_payload(
             "Avoid low-trust filler such as 'listen to your body', 'stay consistent', 'stay motivated', or 'you've got this' unless it is immediately made specific and operational.",
             "Use simple session titles such as Strength, Recovery, Aerobic support, Fight-pace conditioning, Alactic sharpness, or Neural primer.",
             "In taper weeks, remove optional branches aggressively and keep the work short, final, and low-noise.",
+            "If the week is taper, call it taper; do not frame taper work as SPP with slightly less volume or shorter sessions.",
+            "If the week is SPP, call it SPP; do not label true SPP weeks as taper just because volume trims slightly.",
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
-            "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
+            "Respect the active session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
+            "Do not describe this limit as sessions per week; frame it as planned active sessions for the week.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
             "If a non-taper week has no compliant true loaded anchor, state plainly that the week is injury-limited and use the safest force-preserving substitute instead of pretending support or primer work is the main anchor.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
@@ -3062,6 +3065,8 @@ RULE 10 - TAPER DISCIPLINE
 In taper weeks, simplify aggressively.
 Remove novelty, reduce accessory volume, avoid soreness-inducing density, and keep only the most useful sharpness, rhythm, confidence, and freshness work.
 Do not render taper sessions as option menus or branching templates.
+If the week is taper, call it taper; do not describe taper as merely shorter SPP.
+If the week is SPP, call it SPP; do not relabel SPP as taper unless the planning brief actually places the week in taper.
 In normal taper sessions, resolve to one final prescription with no default fallback branch.
 
 RULE 11 - OUTPUT DISCIPLINE
@@ -3080,7 +3085,8 @@ Do not aim critique at the athlete's character.
 Collapse templates into one final prescription whenever the athlete context already resolves the choice.
 Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
-Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
+Do not exceed the active session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
+Do not describe this limit as "sessions per week"; use the plan's active session count or planned sessions for the week.
 Keep every active week present and structurally complete, including late-camp weeks.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.

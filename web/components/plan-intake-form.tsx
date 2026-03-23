@@ -202,7 +202,7 @@ function getAvailabilityConsistency(
 
   if (sessionsPerWeek > availableDays) {
     return {
-      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but asked for ${sessionsPerWeek} sessions per week.`,
+      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but planned ${sessionsPerWeek} active session${sessionsPerWeek === 1 ? "" : "s"}.`,
       softWarning: null,
     };
   }
@@ -1080,7 +1080,7 @@ export function PlanIntakeForm() {
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="sessionsPerWeek">Sessions per Week</label>
+                    <label htmlFor="sessionsPerWeek">Planned Active Sessions</label>
                     <input id="sessionsPerWeek" type="number" min="1" max="14" value={form.weekly_training_frequency ?? ""} onChange={(event) => updateField("weekly_training_frequency", numberOrNull(event.target.value))} />
                   </div>
                   <div className="field">

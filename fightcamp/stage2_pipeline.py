@@ -115,7 +115,7 @@ def _warning_detail_line(warning: dict) -> str:
     if warning.get("code") == "late_camp_session_incomplete":
         return "Restore late-camp week structure so the final weeks stay complete and athlete-ready."
     if warning.get("code") == "weekly_session_overage":
-        return "Trim extra weekly sessions so the final plan does not exceed the athlete's requested sessions per week."
+        return "Trim extra active sessions so the final plan stays within the planned session count for that week."
     if warning.get("code") == "weekly_rhythm_broken":
         return "Restore the default boxer weekly rhythm with recovery immediately before the primary strength day."
     if warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:

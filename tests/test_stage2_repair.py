@@ -270,6 +270,8 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
     assert "replace_with_equipment_valid_same_role_option" in prompt
     assert "remove_unneeded_fallback_branch_or_make_contingency_explicit" in prompt
     assert "collapse_options_to_safe_equivalent_choices_or_one_final_call" in prompt
+    assert "If the week is taper, call it taper" in prompt
+    assert "Do not describe weekly_role_map limits as sessions per week" in prompt
 
 
 def test_build_stage2_repair_prompt_surfaces_style_repairs():
