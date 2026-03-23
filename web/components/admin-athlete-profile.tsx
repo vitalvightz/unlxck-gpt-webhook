@@ -26,7 +26,8 @@ type DetailItem = {
 
 type DetailGroup = {
   label: string;
-  items: DetailItem[];
+  items?: DetailItem[];
+  highlight?: string;
 };
 
 type PillGroup = {
@@ -78,6 +79,50 @@ function formatDate(value: string | null | undefined, opts?: Intl.DateTimeFormat
 
 function formatMeasurement(value: number | null | undefined, unit: string): string | null {
   return value == null ? null : `${value} ${unit}`;
+}
+
+function getLocaleRegion(locale: string | null | undefined): string | null {
+  const normalized = formatOptionalValue(locale)?.replace(/_/g, "-");
+  if (!normalized) {
+    return null;
+  }
+
+  try {
+    const region = new Intl.Locale(normalized).region;
+    if (region) {
+      return region.toUpperCase();
+    }
+  } catch {
+    // Fall through to manual parsing for malformed or unsupported locale strings.
+  }
+
+  const match = normalized.match(/(?:^|[-_])([A-Za-z]{2}|\d{3})(?:[-_]|$)/);
+  return match ? match[1].toUpperCase() : null;
+}
+
+function regionToFlag(region: string | null): string {
+  if (!region || !/^[A-Z]{2}$/.test(region)) {
+    return "";
+  }
+
+  return String.fromCodePoint(...region.split("").map((char) => 127397 + char.charCodeAt(0)));
+}
+
+function formatCountry(locale: string | null | undefined): string {
+  const region = getLocaleRegion(locale);
+  if (!region) {
+    return "Not provided";
+  }
+
+  let countryName = region;
+  try {
+    countryName = new Intl.DisplayNames(["en"], { type: "region" }).of(region) ?? region;
+  } catch {
+    countryName = region;
+  }
+
+  const flag = regionToFlag(region);
+  return flag ? `${flag} ${countryName}` : countryName;
 }
 
 function toneClassName(tone: PillGroup["tone"]): string {
@@ -132,11 +177,8 @@ function buildSnapshotGroups(athlete: AdminAthleteRecord): DetailGroup[] {
       ],
     },
     {
-      label: "Region",
-      items: [
-        { label: "Timezone", value: formatValue(athlete.athlete_timezone) },
-        { label: "Locale", value: formatValue(athlete.athlete_locale) },
-      ],
+      label: "Country",
+      highlight: formatCountry(athlete.athlete_locale),
     },
   ];
 }
@@ -288,7 +330,11 @@ export function AthleteSnapshotCard({ athlete }: { athlete: AdminAthleteRecord }
         {groups.map((group) => (
           <section key={group.label} className="athlete-profile-block">
             <p className="plan-meta-label">{group.label}</p>
-            <DetailList items={group.items} />
+            {group.highlight ? (
+              <p className="athlete-profile-country-value">{group.highlight}</p>
+            ) : (
+              <DetailList items={group.items ?? []} />
+            )}
           </section>
         ))}
       </div>
