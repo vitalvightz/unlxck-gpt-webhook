@@ -399,6 +399,266 @@ def test_weekly_role_map_preserves_glycolytic_when_no_hard_sparring_collision_ex
 
 
 
+def test_sparring_modifications_do_not_auto_convert_mild_improving_ankle_only_from_location_bias():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": ["mild improving ankle soreness"],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+        }
+    )
+
+    modifications = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"]
+
+    assert modifications
+    assert all(item["action"] != "DELETE_CONVERT" for item in modifications)
+
+
+def test_taper_sparring_modifications_deload_tiny_cut_and_mild_stable_injury_instead_of_full_convert():
+    brief = build_planning_brief(
+        athlete_model={
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 6,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": ["mild stable shoulder soreness"],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 1.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+        },
+        restrictions=[],
+        phase_briefs={
+            "TAPER": {
+                "objective": "protect freshness",
+                "emphasize": ["sharpness"],
+                "deprioritize": ["extra fatigue"],
+                "risk_flags": ["protect tissue"],
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+                "selection_guardrails": {},
+                "weeks": 1,
+                "days": 7,
+            }
+        },
+        candidate_pools={"TAPER": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []}},
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+    modifications = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"]
+
+    assert modifications
+    assert all(item["action"] == "DELOAD" for item in modifications)
+
+
+def test_taper_two_hard_spar_days_never_both_remain_keep_under_modest_risk():
+    brief = build_planning_brief(
+        athlete_model={
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 7,
+            "short_notice": True,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+        },
+        restrictions=[],
+        phase_briefs={
+            "TAPER": {
+                "objective": "protect freshness",
+                "emphasize": ["sharpness"],
+                "deprioritize": ["extra fatigue"],
+                "risk_flags": ["protect tissue"],
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+                "selection_guardrails": {},
+                "weeks": 1,
+                "days": 7,
+            }
+        },
+        candidate_pools={"TAPER": {"strength_slots": [], "conditioning_slots": [], "rehab_slots": []}},
+        omission_ledger={},
+        rewrite_guidance={},
+    )
+
+    modifications = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"]
+
+    assert len(modifications) == 2
+    assert any(item["action"] == "DELOAD" for item in modifications)
+    assert not all(item["action"] == "KEEP" for item in modifications)
+
+
+def test_sparring_modifications_count_combat_exposures_with_unique_days():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "technical_skill_days": ["Tuesday", "Wednesday"],
+        }
+    )
+
+    scores = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]["scores"]
+
+    assert scores["spar_risk"] == 2
+
+
+def test_active_cut_pct_uses_current_weight_denominator_when_runtime_values_exist():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 14,
+            "short_notice": False,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": [],
+            "weight": 80.0,
+            "target_weight": 76.0,
+            "weight_cut_risk": True,
+            "weight_cut_pct": 5.3,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday"],
+            "technical_skill_days": ["Thursday"],
+        }
+    )
+
+    scores = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]["scores"]
+
+    assert scores["active_cut_pct"] == 5.0
+
+
+def test_runtime_cut_pct_wins_when_precomputed_weight_cut_pct_disagrees():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 14,
+            "short_notice": False,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": [],
+            "weight": 80.0,
+            "target_weight": 76.0,
+            "weight_cut_risk": True,
+            "weight_cut_pct": 8.6,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday"],
+            "technical_skill_days": ["Thursday"],
+        }
+    )
+
+    scores = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]["scores"]
+
+    assert scores["active_cut_pct"] == 5.0
+
+
+
+def test_worsening_shoulder_instability_outranks_mild_improving_ankle_issue():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 18,
+            "short_notice": False,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": ["mild improving ankle soreness", "moderate worsening shoulder instability"],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "technical_skill_days": ["Wednesday"],
+        }
+    )
+
+    modification = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]
+
+    assert modification["action"] == "DELETE_CONVERT"
+    assert modification["scores"]["injury_risk"] >= 8
+
+
+
 def test_phase_survival_rules_keep_taper_slot_priorities_above_sport_load_pressure():
     payload, brief = _build_taper_payload_and_brief()
 
