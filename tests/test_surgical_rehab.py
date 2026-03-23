@@ -492,6 +492,14 @@ def test_stage2_prompt_mentions_day_type_sensitivity():
     assert "strength" in lower, "Expected strength day guidance in RULE 12"
 
 
+def test_stage2_prompt_requires_sparring_modification_labels_and_readiness_rationale():
+    lower = STAGE2_FINALIZER_PROMPT.lower()
+    assert "original hard spar input" in lower
+    assert "deload" in lower
+    assert "converted" in lower
+    assert "readiness" in lower
+
+
 # ---------------------------------------------------------------------------
 # REHAB_QUALITY_CHECKS constant
 # ---------------------------------------------------------------------------
