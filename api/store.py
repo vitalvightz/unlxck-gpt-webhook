@@ -47,6 +47,8 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def delete_plan(self, plan_id: str) -> None: ...
+
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_admin_plans(self) -> list[dict[str, Any]]: ...
@@ -382,6 +384,15 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .order("created_at", desc=True)
         )
+
+    def delete_plan(self, plan_id: str) -> None:
+        try:
+            logger.info("[store] delete_plan:start plan_id=%s", plan_id)
+            self.client.table("plans").delete().eq("id", plan_id).execute()
+            logger.info("[store] delete_plan:success plan_id=%s", plan_id)
+        except Exception:
+            logger.exception("[store] delete_plan:exception plan_id=%s", plan_id)
+            raise
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         payload = {

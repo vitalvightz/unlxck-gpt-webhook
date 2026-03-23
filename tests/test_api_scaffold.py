@@ -129,6 +129,11 @@ class FakeStore:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
 
+    def delete_plan(self, plan_id: str) -> None:
+        row = self.plans.pop(plan_id, None)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
     def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
         row = self.plans.get(plan_id)
         if not row:
@@ -977,6 +982,63 @@ def test_athlete_cannot_read_another_athlete_plan():
     )
 
     assert response.status_code == 403
+
+
+def test_athlete_can_delete_own_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_athlete_cannot_delete_another_users_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    other_user = AuthenticatedUser(
+        user_id="athlete-2",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    store.ensure_profile(other_user)
+    plan = store.create_plan(
+        athlete_id="athlete-2",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 403
+    assert store.get_plan(plan["id"]) is not None
 
 
 def test_admin_can_view_internal_plan_outputs():
