@@ -62,6 +62,10 @@
     radial-gradient(circle at 86% 18%, rgba(181, 18, 43, 0.1), transparent 22%),
     radial-gradient(circle at 62% 88%, rgba(181, 18, 43, 0.08), transparent 24%);
   --app-accent-opacity: 0;
+  --sidebar-accent-edge: linear-gradient(180deg, transparent, transparent);
+  --sidebar-accent-glow: radial-gradient(circle at top left, transparent 0%, transparent 100%);
+  --surface-accent-line: linear-gradient(90deg, transparent, transparent);
+  --surface-accent-glow: radial-gradient(circle at top left, transparent 0%, transparent 100%);
   --sidebar-bg: linear-gradient(180deg, rgba(14, 16, 19, 0.97), rgba(10, 10, 12, 0.94));
   --sidebar-border: rgba(255, 255, 255, 0.04);
   --sidebar-divider: rgba(255, 255, 255, 0.06);
@@ -212,18 +216,22 @@ html[data-surface-mode="light"] {
   --app-grid-opacity: 0;
   --app-grid-mask: none;
   --app-accent-wash:
-    radial-gradient(circle at 8% 10%, rgba(181, 18, 43, 0.1), transparent 18%),
-    radial-gradient(circle at 88% 16%, rgba(181, 18, 43, 0.06), transparent 16%),
-    radial-gradient(circle at 70% 82%, rgba(181, 18, 43, 0.05), transparent 18%);
-  --app-accent-opacity: 0.72;
+    radial-gradient(circle at 8% 10%, rgba(181, 18, 43, 0.16), transparent 20%),
+    radial-gradient(circle at 88% 16%, rgba(181, 18, 43, 0.09), transparent 17%),
+    radial-gradient(circle at 70% 82%, rgba(181, 18, 43, 0.075), transparent 19%);
+  --app-accent-opacity: 0.92;
+  --sidebar-accent-edge: linear-gradient(180deg, rgba(181, 18, 43, 0.82), rgba(181, 18, 43, 0.22) 36%, transparent 76%);
+  --sidebar-accent-glow: radial-gradient(circle at top left, rgba(181, 18, 43, 0.12), transparent 48%);
+  --surface-accent-line: linear-gradient(90deg, rgba(181, 18, 43, 0.7) 0%, rgba(181, 18, 43, 0.22) 24%, rgba(181, 18, 43, 0.08) 42%, transparent 62%);
+  --surface-accent-glow: radial-gradient(circle at top left, rgba(181, 18, 43, 0.13), transparent 62%);
   --sidebar-bg:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 249, 252, 0.98)),
-    radial-gradient(circle at top left, rgba(181, 18, 43, 0.045), transparent 34%);
+    radial-gradient(circle at top left, rgba(181, 18, 43, 0.08), transparent 38%);
   --sidebar-border: rgba(17, 24, 39, 0.1);
   --sidebar-divider: rgba(17, 24, 39, 0.1);
   --sidebar-link-hover-bg: rgba(17, 24, 39, 0.045);
   --sidebar-link-hover-border: rgba(17, 24, 39, 0.12);
-  --sidebar-link-active-bg: rgba(181, 18, 43, 0.06);
+  --sidebar-link-active-bg: linear-gradient(90deg, rgba(181, 18, 43, 0.13), rgba(181, 18, 43, 0.045));
   --sidebar-link-active-border: var(--brand-red-outline);
   --sidebar-link-active-shadow: inset 3px 0 0 var(--brand-red), inset 0 0 0 1px rgba(181, 18, 43, 0.04);
   --sidebar-admin-divider: linear-gradient(90deg, rgba(181, 18, 43, 0.18), rgba(17, 24, 39, 0.08), transparent);
@@ -444,7 +452,28 @@ select:focus-visible {
   border-right: 1px solid var(--sidebar-border);
   background: var(--sidebar-bg);
   backdrop-filter: blur(20px);
+  overflow: hidden;
   z-index: 40;
+}
+
+.app-sidebar::before,
+.app-sidebar::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.app-sidebar::before {
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--sidebar-accent-edge);
+}
+
+.app-sidebar::after {
+  inset: -12% auto auto -8%;
+  width: 220px;
+  height: 220px;
+  background: var(--sidebar-accent-glow);
 }
 
 .sidebar-shell {
@@ -668,6 +697,91 @@ html[data-surface-mode="light"] .sidebar-user-email {
 .plan-meta-item {
   border-radius: var(--radius-stat);
   padding: 12px 14px;
+}
+
+html[data-surface-mode="light"] .hero-panel,
+html[data-surface-mode="light"] .step-card,
+html[data-surface-mode="light"] .review-card,
+html[data-surface-mode="light"] .list-card,
+html[data-surface-mode="light"] .viewer-panel,
+html[data-surface-mode="light"] .support-panel,
+html[data-surface-mode="light"] .plan-summary-card,
+html[data-surface-mode="light"] .status-card,
+html[data-surface-mode="light"] .sidebar-user-card,
+html[data-surface-mode="light"] .summary-card,
+html[data-surface-mode="light"] .metric-card,
+html[data-surface-mode="light"] .plan-meta-item {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+html[data-surface-mode="light"] .hero-panel::before,
+html[data-surface-mode="light"] .step-card::before,
+html[data-surface-mode="light"] .review-card::before,
+html[data-surface-mode="light"] .list-card::before,
+html[data-surface-mode="light"] .viewer-panel::before,
+html[data-surface-mode="light"] .support-panel::before,
+html[data-surface-mode="light"] .plan-summary-card::before,
+html[data-surface-mode="light"] .status-card::before,
+html[data-surface-mode="light"] .sidebar-user-card::before,
+html[data-surface-mode="light"] .summary-card::before,
+html[data-surface-mode="light"] .metric-card::before,
+html[data-surface-mode="light"] .plan-meta-item::before,
+html[data-surface-mode="light"] .hero-panel::after,
+html[data-surface-mode="light"] .status-card::after,
+html[data-surface-mode="light"] .sidebar-user-card::after,
+html[data-surface-mode="light"] .support-panel::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+html[data-surface-mode="light"] .hero-panel::before,
+html[data-surface-mode="light"] .step-card::before,
+html[data-surface-mode="light"] .review-card::before,
+html[data-surface-mode="light"] .list-card::before,
+html[data-surface-mode="light"] .viewer-panel::before,
+html[data-surface-mode="light"] .support-panel::before,
+html[data-surface-mode="light"] .plan-summary-card::before,
+html[data-surface-mode="light"] .status-card::before,
+html[data-surface-mode="light"] .sidebar-user-card::before,
+html[data-surface-mode="light"] .summary-card::before,
+html[data-surface-mode="light"] .metric-card::before,
+html[data-surface-mode="light"] .plan-meta-item::before {
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: var(--surface-accent-line);
+  z-index: 0;
+}
+
+html[data-surface-mode="light"] .hero-panel::after,
+html[data-surface-mode="light"] .status-card::after,
+html[data-surface-mode="light"] .sidebar-user-card::after,
+html[data-surface-mode="light"] .support-panel::after {
+  inset: -20% auto auto -10%;
+  width: 220px;
+  height: 180px;
+  background: var(--surface-accent-glow);
+  opacity: 0.95;
+  z-index: 0;
+}
+
+html[data-surface-mode="light"] .hero-panel > *,
+html[data-surface-mode="light"] .step-card > *,
+html[data-surface-mode="light"] .review-card > *,
+html[data-surface-mode="light"] .list-card > *,
+html[data-surface-mode="light"] .viewer-panel > *,
+html[data-surface-mode="light"] .support-panel > *,
+html[data-surface-mode="light"] .plan-summary-card > *,
+html[data-surface-mode="light"] .status-card > *,
+html[data-surface-mode="light"] .sidebar-user-card > *,
+html[data-surface-mode="light"] .summary-card > *,
+html[data-surface-mode="light"] .metric-card > *,
+html[data-surface-mode="light"] .plan-meta-item > * {
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar-footer {
