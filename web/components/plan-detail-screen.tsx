@@ -10,7 +10,7 @@ import { getPlan } from "@/lib/api";
 import type { PlanDetail } from "@/lib/types";
 
 export function PlanDetailScreen({ planId }: { planId: string }) {
-  const { session } = useAppSession();
+  const { me, session, refreshMe } = useAppSession();
   const searchParams = useSearchParams();
   const [plan, setPlan] = useState<PlanDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,13 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         </section>
       ) : null}
       {plan ? (
-        <PlanViewer plan={plan} accessToken={session?.access_token ?? null} onPlanUpdated={setPlan} />
+        <PlanViewer
+          plan={plan}
+          accessToken={session?.access_token ?? null}
+          viewerRole={me?.profile.role ?? "athlete"}
+          onPlanUpdated={setPlan}
+          onPlanDeleted={refreshMe}
+        />
       ) : (
         <section className="panel loading-card">
           <p className="kicker">Plan Detail</p>
