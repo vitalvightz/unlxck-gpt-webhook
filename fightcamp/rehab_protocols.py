@@ -3,7 +3,7 @@ import json
 import logging
 from typing import Iterable
 
-from .injury_formatting import format_injury_summary, parse_injury_entry
+from .injury_formatting import format_injury_summary, parse_injuries_and_restrictions
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
 from .config import STAGE_2
 from .injury_synonyms import parse_injury_phrase, split_injury_text
@@ -780,22 +780,33 @@ def generate_support_notes(injury_string: str) -> str:
 
 
 def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]:
-    injury_phrases = split_injury_text(injury_string)
-    parsed_entries = []
-    for phrase in injury_phrases:
-        entry = parse_injury_entry(phrase)
-        if entry:
-            base_severity = INJURY_TYPE_SEVERITY.get(entry.get("injury_type") or "", "moderate")
+    parsed_entries, _ = parse_injuries_and_restrictions(injury_string)
+    normalized_entries: list[dict[str, str | None]] = []
+    severity_map = {
+        "low": "mild",
+        "mild": "mild",
+        "moderate": "moderate",
+        "high": "severe",
+        "severe": "severe",
+    }
+
+    for entry in parsed_entries:
+        normalized_entry = dict(entry)
+        existing_severity = severity_map.get(str(normalized_entry.get("severity") or "").lower())
+        if existing_severity:
+            normalized_entry["severity"] = existing_severity
+        else:
+            phrase = str(normalized_entry.get("original_phrase") or "")
+            base_severity = INJURY_TYPE_SEVERITY.get(normalized_entry.get("injury_type") or "", "moderate")
             phrase_severity, phrase_hits = normalize_severity(phrase)
-            severity_map = {"low": "mild", "moderate": "moderate", "high": "severe"}
             mapped_severity = severity_map.get(phrase_severity, "moderate")
-            entry["severity"] = mapped_severity if phrase_hits else base_severity
-            parsed_entries.append(entry)
+            normalized_entry["severity"] = mapped_severity if phrase_hits else base_severity
+        normalized_entries.append(normalized_entry)
 
     seen_pairs = set()
     seen_locations = set()
     unique_entries = []
-    for entry in parsed_entries:
+    for entry in normalized_entries:
         itype = entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")

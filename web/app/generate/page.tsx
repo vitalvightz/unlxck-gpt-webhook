@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
-import { createGenerationJob, getGenerationJob, getPlan, ApiError } from "@/lib/api";
+import { createGenerationJob, getGenerationJob, ApiError } from "@/lib/api";
 import { hydratePlanRequest } from "@/lib/onboarding";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
@@ -68,13 +68,15 @@ export default function GeneratePage() {
               throw new Error("Generation finished, but no saved plan was returned.");
             }
 
-            const plan = await getPlan(session.access_token, planId);
-            await refreshMe();
+            setStatusMessage("Your plan is ready. Opening the saved plan now.");
+            void refreshMe().catch((refreshError) => {
+              console.warn("[generate-page] refreshMe:failed_after_generation", refreshError);
+            });
             const search = new URLSearchParams();
             if (currentJob.status === "review_required") {
               search.set("review_required", "1");
             }
-            router.replace(`/plans/${plan.plan_id}${search.toString() ? `?${search.toString()}` : ""}`);
+            router.replace(`/plans/${encodeURIComponent(planId)}${search.toString() ? `?${search.toString()}` : ""}`);
             return;
           }
 

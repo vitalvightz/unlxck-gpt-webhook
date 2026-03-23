@@ -140,6 +140,41 @@ def test_parse_injuries_and_restrictions_complex_case():
     assert restrictions[0]["strength"] == "avoid"
 
 
+def test_parse_guided_injury_summary_with_aggravators():
+    text = (
+        "Hip / groin - moderate, worsening, can train with modifications. "
+        "Avoid: sprinting, deep hip flexion. "
+        "Notes: pain spikes when driving knee up and after sparring."
+    )
+
+    injuries, restrictions = parse_injuries_and_restrictions(text)
+
+    assert len(injuries) == 1
+    assert injuries[0]["original_phrase"] == "Hip / groin"
+    assert injuries[0]["severity"] == "moderate"
+    assert injuries[0]["trend"] == "worsening"
+    assert injuries[0]["functional_impact"] == "can train with modifications"
+    assert len(restrictions) == 2
+    assert any(restriction["restriction"] == "high_impact_lower" for restriction in restrictions)
+    assert any(restriction.get("region") for restriction in restrictions)
+
+
+def test_parse_multiple_guided_injury_summaries_separated_by_semicolon():
+    text = (
+        "Hip - mild, improving, can train fully. Avoid: sprinting; "
+        "Shoulder - severe, worsening, cannot do key movements properly. "
+        "Notes: pain with any overhead motion."
+    )
+
+    injuries, restrictions = parse_injuries_and_restrictions(text)
+
+    assert len(injuries) == 2
+    assert {injury["original_phrase"] for injury in injuries} == {"Hip", "Shoulder"}
+    assert len(restrictions) == 2
+    assert any(restriction["restriction"] == "high_impact_lower" for restriction in restrictions)
+    assert any(restriction["restriction"] == "generic_constraint" for restriction in restrictions)
+
+
 def test_constraint_phrases_not_parsed_as_injuries():
     """Ensure constraint phrases are NOT mistakenly parsed as injuries."""
     constraint_phrases = [

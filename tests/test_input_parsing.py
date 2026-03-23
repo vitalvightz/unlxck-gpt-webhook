@@ -255,6 +255,50 @@ def test_messy_injury_input_keeps_real_issue_and_discards_empty_markers():
     assert parsed.parsed_injuries
 
 
+def test_guided_injury_summary_is_preserved_and_parsed():
+    summary = (
+        "Hip / groin - moderate, worsening, can train with modifications. "
+        "Avoid: sprinting, deep hip flexion. "
+        "Notes: pain spikes when driving knee up and after sparring."
+    )
+    data = _payload(
+        [
+            {"label": "Any injuries or areas you need to work around?", "value": summary},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.injuries == summary
+    assert len(parsed.parsed_injuries) == 1
+    assert parsed.parsed_injuries[0]["original_phrase"] == "Hip / groin"
+    assert parsed.parsed_injuries[0]["severity"] == "moderate"
+    assert len(parsed.restrictions) == 2
+    assert any(restriction["restriction"] == "high_impact_lower" for restriction in parsed.restrictions)
+    assert any(restriction.get("region") for restriction in parsed.restrictions)
+
+
+def test_guided_injury_notes_only_still_create_restriction_signal():
+    summary = (
+        "Shoulder - severe, worsening, cannot do key movements properly. "
+        "Notes: pain with any overhead motion and after sparring."
+    )
+    data = _payload(
+        [
+            {"label": "Any injuries or areas you need to work around?", "value": summary},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.injuries == summary
+    assert len(parsed.parsed_injuries) == 1
+    assert len(parsed.restrictions) == 1
+    assert parsed.restrictions[0]["restriction"] == "generic_constraint"
+    assert parsed.restrictions[0]["region"] == "shoulder"
+    assert parsed.restrictions[0]["strength"] == "avoid"
+
+
 def test_incomplete_input_can_still_be_salvaged_when_training_days_exist():
     data = _payload(
         [

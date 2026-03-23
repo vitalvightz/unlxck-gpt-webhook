@@ -107,6 +107,36 @@ CANONICAL_RESTRICTIONS = {
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
 _WORD_BOUNDARY_PATTERN = re.compile(r"[a-z]+")
 _APOSTROPHE_PATTERN = re.compile(r"['’]")
+_EXPLICIT_INJURY_SIGNAL_TOKENS = {
+    "pain",
+    "painful",
+    "hurt",
+    "hurting",
+    "ache",
+    "aching",
+    "sore",
+    "soreness",
+    "strain",
+    "strained",
+    "sprain",
+    "sprained",
+    "tear",
+    "torn",
+    "tight",
+    "tightness",
+    "stiff",
+    "stiffness",
+    "swelling",
+    "swollen",
+    "impingement",
+    "instability",
+    "tendonitis",
+    "tendinitis",
+    "tendinopathy",
+    "contusion",
+    "bruise",
+    "bruised",
+}
 
 
 def _extract_laterality(text: str) -> str | None:
@@ -197,6 +227,10 @@ def _contains_trigger_token(text: str) -> bool:
     return bool(tokens & CONSTRAINT_TRIGGER_TOKENS)
 
 
+def _has_explicit_injury_signal(text: str) -> bool:
+    return bool(_tokenize_words(text) & _EXPLICIT_INJURY_SIGNAL_TOKENS)
+
+
 def is_restriction_phrase(text: str) -> bool:
     """Check whether a phrase should be treated as a restriction."""
     if not text:
@@ -206,6 +240,8 @@ def is_restriction_phrase(text: str) -> bool:
     restriction_key, _ = _match_canonical_restriction(text)
     if not restriction_key:
         return False
+    if not _has_explicit_injury_signal(text):
+        return True
     injury_type, _ = parse_injury_phrase(text)
     return injury_type is None
 

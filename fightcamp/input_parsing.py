@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .injury_formatting import parse_injuries_and_restrictions
+from .injury_formatting import looks_like_guided_injury_text, parse_injuries_and_restrictions
 from .rounds_format import assess_rounds_format
 from .restriction_parsing import ParsedRestriction
 
@@ -47,6 +47,16 @@ def normalize_injury_text(raw: str | None) -> str:
     normalized_full = _normalize_injury_marker(cleaned)
     if normalized_full in _EMPTY_INJURY_MARKERS_NORMALIZED:
         return ""
+
+    if looks_like_guided_injury_text(cleaned):
+        parts = [part.strip() for part in cleaned.split(";") if part.strip()]
+        remaining: list[str] = []
+        for part in parts:
+            normalized_part = _normalize_injury_marker(part)
+            if not normalized_part or normalized_part in _EMPTY_INJURY_MARKERS_NORMALIZED:
+                continue
+            remaining.append(part)
+        return "; ".join(remaining)
 
     parts = [
         part.strip()
