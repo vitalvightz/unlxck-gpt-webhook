@@ -151,6 +151,9 @@ function formatWeightCutStatus(currentWeight: number | null | undefined, targetW
   }
 
   const difference = Number((currentWeight - targetWeight).toFixed(1));
+  const cutPercentage = currentWeight > 0 ? Number((((currentWeight - targetWeight) / currentWeight) * 100).toFixed(1)) : null;
+  const cutSummary = cutPercentage == null ? `${difference} kg` : `${difference} kg (${cutPercentage}% of current weight; formula: (current - target) / current × 100)`;
+
   if (difference <= -0.5) {
     return `Target weight is ${Math.abs(difference)} kg above current weight`;
   }
@@ -158,12 +161,12 @@ function formatWeightCutStatus(currentWeight: number | null | undefined, targetW
     return `At target range (${targetWeight} kg)`;
   }
   if (difference <= 2) {
-    return `Small cut of ${difference} kg`;
+    return `Small cut of ${cutSummary}`;
   }
   if (difference <= 4) {
-    return `Moderate cut pressure (${difference} kg)`;
+    return `Moderate cut pressure (${cutSummary})`;
   }
-  return `High cut pressure (${difference} kg)`;
+  return `High cut pressure (${cutSummary})`;
 }
 
 function formatEquipmentLimitations(selectedEquipment: string[]): string | null {
