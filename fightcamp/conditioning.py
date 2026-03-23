@@ -73,7 +73,11 @@ PLAIN_CONDITIONING_NAME_MAP = {
     "Assault Bike Steady State - Counter Striker": "Assault Bike Steady State",
     "Assault Bike Zone 2 Steady": "Easy Assault Bike",
     "Bike Zone 2 (Nasal Only)": "Easy Bike",
+    "Bike Steady-State (Easy Gear)": "Easy Bike",
     "Tempo Shadowboxing (Aerobic)": "Tempo Shadowboxing",
+    "Tempo Shadowboxing (Slow Reps)": "Tempo Shadowboxing",
+    "Incline Treadmill Walk": "Incline Walk",
+    "Partner Tempo Mitt Flow": "Low-Impact Partner Tempo Work",
     "Sled Harness Backward Drag": "Backward Sled Drag",
     "Dynamic Plank-to-Punch": "Plank Punch Reach",
     "Ankle Snap Bounce": "Ankling",
@@ -549,6 +553,36 @@ def _is_shadowbox_aerobic_drill(drill: dict) -> bool:
     return modality == "shadowbox" or "shadowboxing" in name
 
 
+def _is_walk_aerobic_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    modality = str(drill.get("modality", "")).lower()
+    return modality == "walk" or "walk" in name
+
+
+def _is_run_aerobic_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    modality = str(drill.get("modality", "")).lower()
+    if any(token in name for token in ("pool running", "water jogging", "pool walking")):
+        return False
+    if modality in {"run", "jog"}:
+        return True
+    return bool(re.search(r"\b(jog|run|running)\b", name))
+
+
+def _is_partner_tempo_aerobic_drill(drill: dict) -> bool:
+    name = str(drill.get("name", "")).lower()
+    modality = str(drill.get("modality", "")).lower()
+    equipment = set(normalize_equipment_list(drill.get("equipment", [])))
+    tags = set(normalize_tags(drill.get("tags", [])))
+    has_partner_signal = (
+        bool(equipment & {"partner", "partner_mitts"})
+        or modality == "partner_tempo"
+        or "partner tempo" in name
+        or "mitt flow" in name
+    )
+    return has_partner_signal and ("aerobic" in tags or "tempo" in name or "flow" in name)
+
+
 def _is_sled_drag_aerobic_drill(drill: dict) -> bool:
     name = str(drill.get("name", "")).lower()
     modality = str(drill.get("modality", "")).lower()
@@ -583,10 +617,28 @@ def _boxing_aerobic_priority_adjustment(
     if modality == "bike" or "bike" in str(drill.get("name", "")).lower():
         return 1.5
 
+    if _is_walk_aerobic_drill(drill):
+        bonus = 0.45
+        if context["impact_tolerance_reduced"]:
+            bonus += 0.35
+        if context["active_tissue_irritation"]:
+            bonus += 0.15
+        if context["lower_limb_unload_desirable"]:
+            bonus -= 0.6
+        return bonus
+
     if _is_continuous_swim_drill(drill):
         bonus = 1.1
         if context["upper_body_swim_sensitive"]:
             bonus -= 0.6
+        return bonus
+
+    if _is_partner_tempo_aerobic_drill(drill):
+        bonus = 0.55
+        if context["impact_tolerance_reduced"]:
+            bonus += 0.25
+        if context["lower_limb_unload_desirable"]:
+            bonus -= 0.15
         return bonus
 
     if _is_shadowbox_aerobic_drill(drill):
@@ -603,6 +655,16 @@ def _boxing_aerobic_priority_adjustment(
 
     if modality == "swim":
         return 0.55 if context["pool_treading_justified"] else 0.8
+
+    if _is_run_aerobic_drill(drill):
+        penalty = -0.1
+        if context["impact_tolerance_reduced"]:
+            penalty -= 1.0
+        if context["active_tissue_irritation"]:
+            penalty -= 0.6
+        if context["lower_limb_unload_desirable"]:
+            penalty -= 0.35
+        return penalty
 
     return 0.0
 
@@ -679,14 +741,30 @@ def _boxing_aerobic_preference_rank(
         if context["pool_treading_justified"]:
             return 4
         return 5
+    if _is_walk_aerobic_drill(drill):
+        if context["lower_limb_unload_desirable"]:
+            return 3
+        if context["impact_tolerance_reduced"] or context["active_tissue_irritation"]:
+            return 1
+        return 2
     if _is_continuous_swim_drill(drill):
         return 3 if context["upper_body_swim_sensitive"] else 1
+    if _is_partner_tempo_aerobic_drill(drill):
+        return 2 if context["impact_tolerance_reduced"] else 3
     if _is_shadowbox_aerobic_drill(drill):
         return 4 if context["lower_limb_unload_desirable"] or context["impact_tolerance_reduced"] else 2
     if _is_sled_drag_aerobic_drill(drill):
         return 4 if context["lower_limb_unload_desirable"] else 3
     if modality == "swim":
         return 4 if context["upper_body_swim_sensitive"] else 2
+    if _is_run_aerobic_drill(drill):
+        if (
+            context["lower_limb_unload_desirable"]
+            or context["impact_tolerance_reduced"]
+            or context["active_tissue_irritation"]
+        ):
+            return 5
+        return 3
     return 3
 
 

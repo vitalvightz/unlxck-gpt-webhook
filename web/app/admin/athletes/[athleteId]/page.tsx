@@ -5,11 +5,9 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import {
-  AthleteCoachNotesCard,
   AthleteLatestIntakeCard,
   AthleteLatestIntakeStatus,
   AthleteProfileHero,
-  AthleteScheduleCard,
   AthleteSnapshotCard,
 } from "@/components/admin-athlete-profile";
 import { RequireAuth } from "@/components/auth-guard";
@@ -56,13 +54,14 @@ export default function AdminAthletePage() {
         </section>
       ) : (
         <section className="panel athlete-profile-panel">
-          <AthleteProfileHero athlete={athlete} />
-
-          <div className="plan-summary-actions">
-            <Link href="/admin" className="ghost-button">
-              Back to admin
-            </Link>
-          </div>
+          <AthleteProfileHero
+            athlete={athlete}
+            actions={
+              <Link href="/admin" className="ghost-button">
+                Back to admin
+              </Link>
+            }
+          />
 
           <div className="athlete-profile-grid">
             <AthleteSnapshotCard athlete={athlete} />
@@ -73,8 +72,6 @@ export default function AdminAthletePage() {
                 latestPlanCreatedAt={athlete.latest_plan_created_at ?? null}
               />
             ) : null}
-            {athlete.latest_intake ? <AthleteScheduleCard intake={athlete.latest_intake} /> : null}
-            {athlete.latest_intake ? <AthleteCoachNotesCard intake={athlete.latest_intake} /> : null}
           </div>
         </section>
       )}

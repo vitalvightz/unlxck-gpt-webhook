@@ -7400,7 +7400,7 @@
       "boxing",
       "mma",
       "posterior_chain_heavy",
-      "zero_impact",
+      "low_impact",
       "aerobic"
     ],
     "notes": "Walking ≠ running impact. Incline = posterior chain work without joint stress. (3-5% grade, 2-3mph)",
@@ -8152,11 +8152,42 @@
     "tags": [
       "boxing",
       "counter_striker",
+      "aerobic",
+      "recovery",
       "mech_upper_press",
       "mech_trunk_rotation",
       "low_impact"
     ],
     "notes": "Slow, controlled reps = technique work without impact. (30% speed, form focus)",
     "equipment_note": "Mirror for feedback"
+  },
+  {
+    "name": "Partner Tempo Mitt Flow",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "partner_tempo",
+    "duration": "12-20min continuous",
+    "intensity": "zone 1-2",
+    "tags": [
+      "boxing",
+      "kickboxing",
+      "aerobic",
+      "low_impact",
+      "recovery",
+      "skill",
+      "striking",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
+    ],
+    "notes": "Touch-only partner flow or light mitt work; keep feet quiet, breathe conversationally, and stay well below sparring pace.",
+    "equipment_note": "Requires: Partner or coach"
   }
 ]

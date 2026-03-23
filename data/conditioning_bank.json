@@ -101,7 +101,7 @@
     "intensity": "zone 2",
     "tags": [
       "aerobic",
-      "low_impact",
+      "foot_impact_high",
       "recovery",
       "mech_systemic_fatigue"
     ],
@@ -253,9 +253,12 @@
       "TAPER"
     ],
     "system": "aerobic",
+    "modality": "bike",
     "duration": "40min",
     "tags": [
+      "aerobic",
       "low_impact",
+      "recovery",
       "mech_systemic_fatigue"
     ],
     "notes": "Primary hamstring rehab modality",
@@ -4615,6 +4618,7 @@
     "intensity": "zone 1",
     "tags": [
       "aerobic",
+      "low_impact",
       "parasympathetic",
       "recovery",
       "cns_freshness",

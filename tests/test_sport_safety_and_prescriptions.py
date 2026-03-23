@@ -1,8 +1,12 @@
 import re
 
 from fightcamp.conditioning import (
+    _boxing_aerobic_preference_rank,
+    _boxing_aerobic_priority_adjustment,
     _sanitize_sport_language,
     generate_conditioning_block,
+    get_conditioning_bank,
+    get_style_conditioning_bank,
     render_conditioning_block,
 )
 from fightcamp.strength import _is_over_100_percent_isometric, generate_strength_block
@@ -92,6 +96,47 @@ def test_boxing_gpp_uses_pool_treading_only_when_unloading_is_clearly_justified(
 
     assert grouped_drills.get("aerobic")
     assert grouped_drills["aerobic"][0]["name"] == "Pool Treading Conditioning"
+
+
+def test_low_damage_aerobic_bank_marks_jog_as_impactful_and_walks_as_low_impact():
+    bank = {item["name"]: item for item in get_conditioning_bank()}
+
+    assert "low_impact" not in bank["Nasal Jog"]["tags"]
+    assert "foot_impact_high" in bank["Nasal Jog"]["tags"]
+    assert bank["Bike Zone 2 (Nasal Only)"]["modality"] == "bike"
+    assert "aerobic" in bank["Bike Zone 2 (Nasal Only)"]["tags"]
+    assert "low_impact" in bank["Nasal Breathing Walk Tempo"]["tags"]
+
+
+def test_boxing_style_bank_has_partner_tempo_aerobic_option():
+    bank = {item["name"]: item for item in get_style_conditioning_bank()}
+    drill = bank["Partner Tempo Mitt Flow"]
+
+    assert drill["system"] == "aerobic"
+    assert drill["equipment"] == ["partner"]
+    assert set(drill["phases"]) == {"GPP", "SPP", "TAPER"}
+    assert "low_impact" in drill["tags"]
+
+
+def test_boxing_aerobic_preference_penalizes_jogs_when_lower_impact_options_exist():
+    bank = {item["name"]: item for item in get_conditioning_bank()}
+    style_bank = {item["name"]: item for item in get_style_conditioning_bank()}
+    context = {
+        "injuries": ["shin soreness"],
+        "weaknesses": ["conditioning"],
+        "goals": ["conditioning"],
+        "restrictions": [{"restriction": "high_impact_lower", "strength": "avoid"}],
+        "equipment_access_set": {"treadmill", "partner"},
+    }
+
+    jog = bank["Nasal Jog"]
+    walk = style_bank["Incline Treadmill Walk"]
+    partner = style_bank["Partner Tempo Mitt Flow"]
+
+    assert _boxing_aerobic_preference_rank(walk, **context) < _boxing_aerobic_preference_rank(jog, **context)
+    assert _boxing_aerobic_preference_rank(partner, **context) < _boxing_aerobic_preference_rank(jog, **context)
+    assert _boxing_aerobic_priority_adjustment(walk, **context) > _boxing_aerobic_priority_adjustment(jog, **context)
+    assert _boxing_aerobic_priority_adjustment(partner, **context) > _boxing_aerobic_priority_adjustment(jog, **context)
 
 
 def test_supra_max_isometrics_are_gated_without_1rm_and_setup():
