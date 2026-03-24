@@ -32,8 +32,8 @@ export function PremiumLoadingScreen({ error = null, statusMessage = null }: Pre
       <div className="split-layout">
         <div className="step-main">
           <article className="status-card loading-primary-panel">
-            <p className="loading-eyebrow">GENERATING</p>
-            <h1 className="loading-title">BUILDING YOUR PLAN</h1>
+            <p className="loading-eyebrow">Generating</p>
+            <h1 className="loading-title">Building your plan</h1>
             <p className="muted loading-copy">
               Your request is saved immediately, then Stage 1 and Stage 2 run in the background while this page polls for completion.
             </p>
@@ -52,7 +52,7 @@ export function PremiumLoadingScreen({ error = null, statusMessage = null }: Pre
         <aside className="step-aside">
           <div className="support-panel loading-secondary-panel">
             <div className="form-section-header">
-              <p className="loading-eyebrow">CURRENT ACTION</p>
+              <p className="loading-eyebrow">Current action</p>
               <h2 className="form-section-title">Generation flow</h2>
             </div>
             <ol className="loading-steps" aria-label="Generation steps">

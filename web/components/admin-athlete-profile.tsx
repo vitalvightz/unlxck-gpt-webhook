@@ -295,7 +295,7 @@ export function AthleteProfileHero({
     <section className="athlete-profile-hero">
       <div className="athlete-profile-hero-heading">
         <div className="athlete-profile-hero-copy">
-          <p className="kicker">Athlete Profile</p>
+          <p className="kicker">Athlete profile</p>
           <h1>{athlete.full_name || athlete.email}</h1>
           <p className="muted">{athlete.email}</p>
         </div>

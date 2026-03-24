@@ -737,7 +737,7 @@ export function PlanViewer({
     },
     {
       artifactKey: "internal-notes",
-      kicker: "Internal Notes",
+      kicker: "Internal notes",
       title: "Coach/internal output",
       summary: "Internal notes saved alongside the current plan.",
       text: coachNotesText,
@@ -751,7 +751,7 @@ export function PlanViewer({
     },
     {
       artifactKey: "brief",
-      kicker: "Stage 2 Brief",
+      kicker: "Stage 2 brief",
       title: "Planning brief",
       summary: "Structured brief that Stage 2 used as its planning authority.",
       text: planningBriefText,
@@ -788,7 +788,7 @@ export function PlanViewer({
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="kicker">Plan Detail</p>
+            <p className="kicker">Plan detail</p>
             <h1>{getPlanDisplayName(plan)}</h1>
             <p className="muted">
               {hasPublishedPlan
@@ -914,7 +914,7 @@ export function PlanViewer({
         <section className="plan-text-panel">
           <div className="plan-header-row">
             <div>
-              <p className="kicker">Athlete Plan</p>
+              <p className="kicker">Athlete plan</p>
               <h2>{hasPublishedPlan ? "Validated final plan" : "Pending finalization"}</h2>
             </div>
             <span className={`badge ${hasPublishedPlan ? "status-badge-success" : "status-badge-neutral"}`}>
@@ -949,7 +949,7 @@ export function PlanViewer({
                   {stage2RetryInProgress ? (
                     <section className="support-panel stage2-retry-banner stage2-retry-in-progress">
                       <div className="form-section-header">
-                        <p className="kicker">Stage 2 Retry</p>
+                        <p className="kicker">Stage 2 retry</p>
                         <h3>Retry in progress</h3>
                       </div>
                       <p className="muted">
@@ -960,7 +960,7 @@ export function PlanViewer({
                   {stage2RetryJustCompleted ? (
                     <section className={`support-panel stage2-retry-banner ${stage2RetryJustCompleted === "passed" ? "stage2-retry-passed" : "stage2-retry-failed"}`}>
                       <div className="form-section-header">
-                        <p className="kicker">Stage 2 Retry — Attempt {plan.admin_outputs?.stage2_attempt_count || 1}</p>
+                        <p className="kicker">Stage 2 retry — attempt {plan.admin_outputs?.stage2_attempt_count || 1}</p>
                         <h3>{stage2RetryJustCompleted === "passed" ? "Retry passed — plan published" : "Retry completed — new validation results below"}</h3>
                       </div>
                       <p className="muted">
@@ -1113,7 +1113,7 @@ export function PlanViewer({
         <div className="admin-review-stack">
           <section className="viewer-panel">
             <div className="form-section-header">
-              <p className="kicker">Admin Review</p>
+              <p className="kicker">Admin review</p>
               <h3>Manual Stage 2 actions</h3>
             </div>
             <p className="muted">

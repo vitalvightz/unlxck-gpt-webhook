@@ -152,7 +152,7 @@ export default function PlansPage() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="kicker">Plan History</p>
+            <p className="kicker">Plan history</p>
             <h1>Your saved plans</h1>
             <p className="muted">Open current and older plans from one saved history.</p>
           </div>

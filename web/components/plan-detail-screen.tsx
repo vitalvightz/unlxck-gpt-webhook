@@ -41,7 +41,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
       ) : null}
       {error ? (
         <section className="panel loading-card">
-          <p className="kicker">Plan Detail</p>
+          <p className="kicker">Plan detail</p>
           <div className="error-banner">{error}</div>
         </section>
       ) : null}
@@ -55,7 +55,7 @@ export function PlanDetailScreen({ planId }: { planId: string }) {
         />
       ) : (
         <section className="panel loading-card">
-          <p className="kicker">Plan Detail</p>
+          <p className="kicker">Plan detail</p>
           <h1>Loading plan</h1>
           <p className="muted">Restoring the saved output and athlete-safe view now.</p>
         </section>

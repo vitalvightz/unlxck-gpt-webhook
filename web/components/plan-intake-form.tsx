@@ -30,7 +30,7 @@ import {
 import { emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
 import type { PlanRequest } from "@/lib/types";
 
-const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
+const steps = ["Profile", "Fight context", "Training", "Restrictions", "Performance", "Review"] as const;
 const ROUND_COUNT_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
   label: String(index + 1),
   value: String(index + 1),
@@ -1148,7 +1148,7 @@ export function PlanIntakeForm() {
       <section className="panel">
         <div className="section-heading">
           <div>
-            <p className="kicker">Athlete Onboarding</p>
+            <p className="kicker">Athlete onboarding</p>
             <h1>Build your camp profile.</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
           </div>
@@ -1362,7 +1362,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Schedule</p>
-                  <h2 className="form-section-title">Training Availability</h2>
+                  <h2 className="form-section-title">Training availability</h2>
                 </div>
                 <CheckboxGroup
                   label="Training Availability"
@@ -1398,7 +1398,7 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Resources</p>
-                  <h2 className="form-section-title">Equipment Access</h2>
+                  <h2 className="form-section-title">Equipment access</h2>
                 </div>
                 <CheckboxGroup
                   label="Equipment Access"
@@ -1410,18 +1410,18 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Training style</p>
-                  <h2 className="form-section-title">Training Preference</h2>
+                  <h2 className="form-section-title">Training preference</h2>
                 </div>
-                  <div className="field">
-                    <label htmlFor="trainingPreference">Session preference</label>
-                    <textarea
-                      id="trainingPreference"
-                      value={form.training_preference ?? ""}
-                      onChange={(event) => updateField("training_preference", event.target.value)}
-                      placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
-                    />
-                    <p className="muted">Use this only for session feel, pacing, or format preferences.</p>
-                  </div>
+                <div className="field">
+                  <label htmlFor="trainingPreference">Session preference</label>
+                  <textarea
+                    id="trainingPreference"
+                    value={form.training_preference ?? ""}
+                    onChange={(event) => updateField("training_preference", event.target.value)}
+                    placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
+                  />
+                  <p className="muted">Use this only for session feel, pacing, or format preferences.</p>
+                </div>
               </article>
             </div>
 

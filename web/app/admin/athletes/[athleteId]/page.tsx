@@ -38,7 +38,7 @@ export default function AdminAthletePage() {
     <RequireAuth adminOnly>
       {error ? (
         <section className="panel loading-card">
-          <p className="kicker">Athlete Profile</p>
+          <p className="kicker">Athlete profile</p>
           <div className="error-banner">{error}</div>
           <div className="plan-summary-actions">
             <Link href="/admin" className="ghost-button">
@@ -48,7 +48,7 @@ export default function AdminAthletePage() {
         </section>
       ) : !athlete ? (
         <section className="panel loading-card">
-          <p className="kicker">Athlete Profile</p>
+          <p className="kicker">Athlete profile</p>
           <h1>Loading profile</h1>
           <p className="muted">Fetching athlete record now.</p>
         </section>
