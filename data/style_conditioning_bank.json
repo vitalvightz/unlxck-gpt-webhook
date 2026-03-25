@@ -8193,15 +8193,14 @@
   {
     "name": "Fixed-Output Bag Clusters",
     "equipment": [
-      "punching_bag",
-      "round_timer"
+      "heavy_bag"
     ],
     "phases": [
       "SPP"
     ],
     "system": "glycolytic",
     "modality": "bag_intervals",
-    "duration": "15s fixed 6-punch cluster \u2192 45s relaxed bounce/reset \u00d7 10-12 rounds",
+    "duration": "15s fixed 6-punch cluster → 45s relaxed bounce/reset x 10-12 rounds",
     "intensity": "high",
     "tags": [
       "boxing",
@@ -8215,14 +8214,73 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Repeat the exact same bag cluster every work bout and keep rest fixed so output quality is measurable without turning the round sloppy.",
-    "equipment_note": "Heavy bag and timer"
+    "equipment_note": "Requires: Heavy Bag"
+  },
+  {
+    "name": "Pressure Bag Pace Builder",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "bag_work",
+    "duration": "6 x 3min rounds, 45s relaxed footwork between rounds",
+    "intensity": "zone 2 to zone 3",
+    "tags": [
+      "boxing",
+      "pressure_fighter",
+      "conditioning",
+      "low_impact",
+      "aerobic_repeatability",
+      "fight_repeatability"
+    ],
+    "notes": "Low-damage forward-pressure rounds that keep feet active and guard shape intact instead of drifting into generic cardio.",
+    "equipment_note": "Requires: Heavy Bag",
+    "cluster_ids": [
+      "boxing__repeatability_endurance__gas_tank__pressure_fighter"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
+  },
+  {
+    "name": "Pressure Ring-Cut Repeat Rounds",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bag_work",
+    "duration": "5 x 2min ring-cut rounds, 75s easy reset",
+    "intensity": "hard but technical",
+    "tags": [
+      "boxing",
+      "pressure_fighter",
+      "conditioning",
+      "low_impact",
+      "fight_repeatability",
+      "footwork"
+    ],
+    "notes": "Forward-pressure repeatability with direction changes and exits, built to beat stair or hill fillers for boxers.",
+    "equipment_note": "Requires: Heavy Bag",
+    "cluster_ids": [
+      "boxing__repeatability_endurance__gas_tank__pressure_fighter"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
   },
   {
     "name": "Tempo Pad Rounds",
     "equipment": [
-      "partner",
-      "focus_mitts",
-      "round_timer"
+      "partner"
     ],
     "phases": [
       "GPP",
@@ -8231,7 +8289,7 @@
     ],
     "system": "aerobic",
     "modality": "pad_tempo",
-    "duration": "3min rounds at 55-65 punches per min, 60s rest \u00d7 4-6",
+    "duration": "3min rounds at 55-65 punches per min, 60s rest x 4-6",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -8246,13 +8304,12 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Coach or partner holds a steady pace so the athlete can groove clean mechanics, breathing, and punch economy across repeated rounds.",
-    "equipment_note": "Focus mitts and round timer"
+    "equipment_note": "Requires: Partner or coach"
   },
   {
     "name": "Punch-Reset-Repeat Intervals",
     "equipment": [
-      "punching_bag",
-      "round_timer"
+      "heavy_bag"
     ],
     "phases": [
       "GPP",
@@ -8260,7 +8317,7 @@
     ],
     "system": "alactic",
     "modality": "bag_repeatability",
-    "duration": "6s 1-2-3 burst \u2192 18s full stance reset/walkout \u00d7 15-20 reps",
+    "duration": "6s 1-2-3 burst → 18s full stance reset/walkout x 15-20 reps",
     "intensity": "fast",
     "tags": [
       "boxing",
@@ -8274,21 +8331,49 @@
       "mech_cns_high"
     ],
     "notes": "Short bursts emphasize fast hands and instant posture recovery before repeating the same punch sequence.",
-    "equipment_note": "Heavy bag and timer"
+    "equipment_note": "Requires: Heavy Bag"
+  },
+  {
+    "name": "Counter Slip-Return Tempo Rounds",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "5 x 4min rounds with 30s nasal reset",
+    "intensity": "zone 2 to zone 3",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "coordination",
+      "skill_refinement",
+      "fight_repeatability",
+      "aerobic_repeatability",
+      "low_impact"
+    ],
+    "notes": "Slip, catch, and return at sustainable tempo so coordination stays sharp under accumulated breathing demand.",
+    "equipment_note": "",
+    "cluster_ids": [
+      "boxing__repeatability_endurance__gas_tank__counter_striker",
+      "boxing__skill_refinement__coordination_proprioception__counter_striker"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
   },
   {
     "name": "Footwork + 1-2 Density Rounds",
-    "equipment": [
-      "floor_markers",
-      "round_timer"
-    ],
+    "equipment": [],
     "phases": [
       "GPP",
       "SPP"
     ],
     "system": "glycolytic",
     "modality": "shadowbox_density",
-    "duration": "3min rounds of step-jab-cross on call, 60s rest \u00d7 4-5",
+    "duration": "3min rounds of step-jab-cross on call, 60s rest x 4-5",
     "intensity": "moderate-high",
     "tags": [
       "boxing",
@@ -8306,10 +8391,40 @@
     "equipment_note": "Tape marks or cones help control distance"
   },
   {
+    "name": "Counter Callout Return Rounds",
+    "equipment": [
+      "double_end_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bag_work",
+    "duration": "6 x 90s callout rounds, 60s easy shadow reset",
+    "intensity": "hard but crisp",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "coordination",
+      "skill_refinement",
+      "fight_repeatability",
+      "low_impact"
+    ],
+    "notes": "Reactive callouts drive counter quality under fatigue without turning the session into sloppy all-out bag work.",
+    "equipment_note": "Requires: Double-End Bag",
+    "cluster_ids": [
+      "boxing__repeatability_endurance__gas_tank__counter_striker",
+      "boxing__skill_refinement__coordination_proprioception__counter_striker"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
+  },
+  {
     "name": "Round-End Flurry + Controlled Recovery",
     "equipment": [
-      "punching_bag",
-      "round_timer"
+      "heavy_bag"
     ],
     "phases": [
       "SPP",
@@ -8317,7 +8432,7 @@
     ],
     "system": "glycolytic",
     "modality": "bag_rounds",
-    "duration": "2:30 controlled boxing \u2192 20s flurry \u2192 10s nasal-breathing recover \u00d7 4-6 rounds",
+    "duration": "2:30 controlled boxing → 20s flurry → 10s nasal-breathing recover x 4-6 rounds",
     "intensity": "high",
     "tags": [
       "boxing",
@@ -8331,13 +8446,43 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Practice closing rounds hard, then regaining composure under control instead of panicking after the burst.",
-    "equipment_note": "Heavy bag and timer"
+    "equipment_note": "Requires: Heavy Bag"
+  },
+  {
+    "name": "Distance Angle Exit Shadow Tempo",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "shadowbox",
+    "duration": "6 x 3min angle-exit rounds, 30s walk reset",
+    "intensity": "zone 2 to zone 3",
+    "tags": [
+      "boxing",
+      "distance_striker",
+      "footwork",
+      "coordination",
+      "aerobic_repeatability",
+      "fight_repeatability",
+      "low_impact"
+    ],
+    "notes": "Angle exits and re-entries hold distance-boxing quality under fatigue better than generic steady-state fillers.",
+    "equipment_note": "",
+    "cluster_ids": [
+      "boxing__repeatability_endurance__gas_tank__distance_striker",
+      "boxing__skill_refinement__footwork__distance_striker"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
   },
   {
     "name": "Technical Bag Repeatability",
     "equipment": [
-      "punching_bag",
-      "round_timer"
+      "heavy_bag"
     ],
     "phases": [
       "GPP",
@@ -8346,7 +8491,7 @@
     ],
     "system": "aerobic",
     "modality": "technical_bag",
-    "duration": "90s clean 3-4 punch pattern \u2192 30s easy footwork \u00d7 6-8 rounds",
+    "duration": "90s clean 3-4 punch pattern → 30s easy footwork x 6-8 rounds",
     "intensity": "low-moderate",
     "tags": [
       "boxing",
@@ -8361,13 +8506,42 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Low-damage fallback for days when the athlete still wants bag-specific rhythm and repeatable mechanics without hard impact.",
-    "equipment_note": "Heavy bag and timer"
+    "equipment_note": "Requires: Heavy Bag"
+  },
+  {
+    "name": "Distance Exit-and-Reenter Bag Repeats",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "bag_work",
+    "duration": "5 x 2min rounds, 75s walk reset",
+    "intensity": "hard but technical",
+    "tags": [
+      "boxing",
+      "distance_striker",
+      "footwork",
+      "coordination",
+      "fight_repeatability",
+      "low_impact"
+    ],
+    "notes": "Low-damage fight-pace repeatability for long-range boxers with built-in exit discipline and stance resets.",
+    "equipment_note": "Requires: Heavy Bag",
+    "cluster_ids": [
+      "boxing__repeatability_endurance__gas_tank__distance_striker",
+      "boxing__skill_refinement__footwork__distance_striker"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
   },
   {
     "name": "Tempo Shadowboxing with Output Targets",
-    "equipment": [
-      "round_timer"
-    ],
+    "equipment": [],
     "phases": [
       "GPP",
       "SPP",
@@ -8375,7 +8549,7 @@
     ],
     "system": "aerobic",
     "modality": "shadowbox_tempo",
-    "duration": "3min rounds with 45-60 total punches per round, 60s rest \u00d7 4-6",
+    "duration": "3min rounds with 45-60 total punches per round, 60s rest x 4-6",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -8396,7 +8570,6 @@
   {
     "name": "Pool/Bike Repeatability Circuit",
     "equipment": [
-      "pool",
       "stationary_bike"
     ],
     "phases": [
@@ -8405,7 +8578,7 @@
     ],
     "system": "aerobic",
     "modality": "cross_training",
-    "duration": "60s bike or pool effort \u2192 30s shadowbox arms-only rhythm \u00d7 8-10 rounds",
+    "duration": "60s bike or pool effort → 30s shadowbox arms-only rhythm x 8-10 rounds",
     "intensity": "zone 2-3",
     "tags": [
       "boxing",
@@ -8418,14 +8591,11 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Useful when hands, shins, or impact tolerance are limited but the athlete still needs boxing-specific repeatability work.",
-    "equipment_note": "Pool or stationary bike; switch to whichever is available"
+    "equipment_note": "Stationary bike required; pool-only athletes use Pool Running entries instead"
   },
   {
     "name": "Low-Impact Aerobic Boxing Support",
-    "equipment": [
-      "jump_rope",
-      "round_timer"
-    ],
+    "equipment": [],
     "phases": [
       "GPP",
       "SPP",
@@ -8433,7 +8603,7 @@
     ],
     "system": "aerobic",
     "modality": "boxing_support",
-    "duration": "2min boxer skip or march \u2192 1min light shadowboxing \u00d7 6-10 rounds",
+    "duration": "2min boxer skip or march → 1min light shadowboxing x 6-10 rounds",
     "intensity": "zone 2",
     "tags": [
       "boxing",
@@ -8448,5 +8618,123 @@
     ],
     "notes": "Simple support work that keeps feet, breathing, and light punch rhythm connected without adding meaningful damage.",
     "equipment_note": "Jump rope optional; marching in stance also works"
+  },
+  {
+    "name": "Muay Thai Clinch Tempo Knees",
+    "equipment": [
+      "thai_pads"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "clinch_work",
+    "duration": "6 x 2min clinch-knee flow rounds, 45s reset",
+    "intensity": "zone 2 to zone 3",
+    "tags": [
+      "muay_thai",
+      "clinch_fighter",
+      "conditioning",
+      "style_specific",
+      "low_impact"
+    ],
+    "notes": "Keeps clinch repeatability alive without turning the round into high-damage sprint work.",
+    "equipment_note": "Requires: Thai Pads",
+    "cluster_ids": [
+      "muay_thai__style_completion__repeatability_endurance__clinch_fighter"
+    ],
+    "coverage_categories": [
+      "conditioning",
+      "style_specific"
+    ]
+  },
+  {
+    "name": "Hybrid MMA Flow Circuit",
+    "equipment": [],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "mixed_skill_flow",
+    "duration": "5 x 3min shadow strike-to-shot-to-stand-up flow, 45s reset",
+    "intensity": "zone 2 to zone 3",
+    "tags": [
+      "mma",
+      "hybrid",
+      "conditioning",
+      "coordination",
+      "low_impact"
+    ],
+    "notes": "Blends striking, level change, and reset footwork without forcing a full live scramble dose.",
+    "equipment_note": "",
+    "cluster_ids": [
+      "mma__style_completion__coordination_proprioception__hybrid"
+    ],
+    "coverage_categories": [
+      "style_specific",
+      "conditioning"
+    ]
+  },
+  {
+    "name": "Scramble Reset Intervals",
+    "equipment": [],
+    "phases": [
+      "SPP"
+    ],
+    "system": "glycolytic",
+    "modality": "grappling_flow",
+    "duration": "6 x 75s scramble-to-stand-up sequences, 60s reset",
+    "intensity": "hard but repeatable",
+    "tags": [
+      "mma",
+      "wrestling",
+      "grappler",
+      "scrambler",
+      "conditioning",
+      "style_specific"
+    ],
+    "notes": "Short scramble bursts with clean resets so grappler paths get real repeatability work instead of generic prowler filler.",
+    "equipment_note": "",
+    "cluster_ids": [
+      "mma__style_completion__gas_tank__grappler",
+      "wrestling__style_completion__gas_tank__grappler"
+    ],
+    "coverage_categories": [
+      "style_specific",
+      "conditioning"
+    ]
+  },
+  {
+    "name": "BJJ Grip-to-Move Tempo Rounds",
+    "equipment": [
+      "partner"
+    ],
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "system": "aerobic",
+    "modality": "grappling_flow",
+    "duration": "5 x 3min grip-fight to angle-reset rounds, 45s reset",
+    "intensity": "zone 2 to zone 3",
+    "tags": [
+      "bjj",
+      "grappler",
+      "submission_hunter",
+      "conditioning",
+      "style_specific",
+      "low_impact"
+    ],
+    "notes": "Technical grip-fight repeatability for BJJ-heavy paths without adding unnecessary collision cost.",
+    "equipment_note": "Requires: Partner",
+    "cluster_ids": [
+      "bjj__style_completion__gas_tank__grappler"
+    ],
+    "coverage_categories": [
+      "style_specific",
+      "conditioning"
+    ]
   }
 ]

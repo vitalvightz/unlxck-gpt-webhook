@@ -145,6 +145,31 @@
       "equipment": "None or Light Gloves",
       "equipment_notes": "Gloves optional to simulate fight conditions.",
       "description": "Drop into a sprawl, then explosively pop up into a combo. Sharpens defensive-offensive transitions under fatigue."
+    },
+    {
+      "name": "Hybrid Cage-Cut Reaction Step",
+      "category": "footwork",
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
+      "movement": "level_change_restack",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "mma",
+        "hybrid",
+        "footwork"
+      ],
+      "equipment": [],
+      "equipment_notes": "Tape a center line and outside angle on the floor.",
+      "description": "Step off line, level change, and restack into stance on a partner call. Connects striking and grappling transitions without full scramble cost.",
+      "cluster_ids": [
+        "mma__style_completion__coordination_proprioception__hybrid"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ],
   "brawler_coordination_drills": [
@@ -719,6 +744,33 @@
       "equipment": "Partner",
       "equipment_notes": "Partner initiates level changes",
       "description": "From collar tie, transition to guillotine attempts as partner ducks. Trains submission awareness in clinch exchanges."
+    },
+    {
+      "name": "Clinch Frame Step-Recover Tempo",
+      "category": "clinch",
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
+      "movement": "stance_recovery",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "muay_thai",
+        "clinch_fighter",
+        "balance"
+      ],
+      "equipment": [
+        "partner"
+      ],
+      "equipment_notes": "Partner gives light frame pressure only.",
+      "description": "Recover stance after each frame or knee entry so clinch repeatability stays technical and low damage.",
+      "cluster_ids": [
+        "muay_thai__style_completion__repeatability_endurance__clinch_fighter"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ],
   "pressure_fighter_coordination_drills": [
@@ -1423,7 +1475,7 @@
         "pressure_fighter",
         "counter_striker"
       ],
-      "equipment": "None or Heavy Bag",
+      "equipment": [],
       "equipment_notes": "Use open space or a bag for light touch reference.",
       "description": "Throw a 3-4 punch combination, freeze the finish, then actively rebuild stance width, guard position, and eye line before the next rep. Trains clean structure under accumulating fatigue."
     },
@@ -1441,7 +1493,7 @@
         "pressure_fighter",
         "distance_striker"
       ],
-      "equipment": "Floor Markers or Cones",
+      "equipment": [],
       "equipment_notes": "Place markers to cue entry lane and exit angle.",
       "description": "Step into range, land a jab-cross or hook-cross, then finish every rep with a slip, roll, or pivot exit. Blends offense and defense so the athlete does not admire combinations while tired."
     },
@@ -1459,7 +1511,7 @@
         "counter_striker",
         "distance_striker"
       ],
-      "equipment": "Double-End Bag, Tennis Ball, or Small Mitt Target",
+      "equipment": [],
       "equipment_notes": "Keep the target small enough to punish sloppy eyes and hands.",
       "description": "After a short footwork or squat pulse, hit a small target with single jabs, crosses, or 1-2s while breathing stays controlled. The goal is sharp eyes and clean alignment, not reckless pace."
     },
@@ -1478,7 +1530,7 @@
         "pressure_fighter",
         "brawler"
       ],
-      "equipment": "Heavy Bag or Open Space",
+      "equipment": [],
       "equipment_notes": "Use video or mirror feedback if available.",
       "description": "Work steady punch volume for timed rounds, but any loss of stacked posture, chin position, or base requires an immediate reset. Reinforces that density only counts when mechanics stay clean."
     },
@@ -1497,9 +1549,35 @@
         "pressure_fighter",
         "counter_striker"
       ],
-      "equipment": "Round Timer",
+      "equipment": [],
       "equipment_notes": "Audible timer cues help the athlete switch gears sharply.",
       "description": "Hit a brief punch burst, settle back into stance with two calm breaths or small corrective steps, then fire a second burst on cue. Teaches rhythm control and quality re-acceleration under fatigue."
+    },
+    {
+      "name": "Pressure Step Cut-and-Stick",
+      "category": "footwork",
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
+      "movement": "stance_control",
+      "type": "unilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "pressure_fighter",
+        "balance",
+        "footwork"
+      ],
+      "equipment": [],
+      "equipment_notes": "Use tape marks on the floor if available.",
+      "description": "Step forward in stance, cut the angle, and stick the landing before re-entering. Trains boxer-specific balance instead of generic single-leg stability.",
+      "cluster_ids": [
+        "boxing__strength_general__balance__pressure_fighter"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ],
   "counter_striker_coordination_drills": [
@@ -1845,6 +1923,35 @@
       "equipment": "None",
       "equipment_notes": "Requires 2m x 2m space",
       "description": "Shadowbox while reversing all footwork directions (e.g., step left when intending right). Rewires neural pathways for adaptive counters."
+    },
+    {
+      "name": "Catch-Pivot Counter Reset",
+      "category": "counter",
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
+      "movement": "pivot_deceleration",
+      "type": "unilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "counter_striker",
+        "footwork",
+        "balance",
+        "rotational"
+      ],
+      "equipment": [],
+      "equipment_notes": "Mark left/right pivot exits with tape if useful.",
+      "description": "Catch or slip, pivot out, and reload the counter without crossing feet. Keeps timing and trunk reload quality under controlled fatigue.",
+      "cluster_ids": [
+        "boxing__skill_refinement__coordination_proprioception__counter_striker",
+        "boxing__power__trunk_strength__counter_striker"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ],
   "kicker_coordination_drills": [
@@ -2448,6 +2555,32 @@
       "equipment": "None",
       "equipment_notes": "Use smooth surface",
       "description": "Fluidly chain: shot \u2192 sprawl \u2192 stand-up \u2192 pivot \u2192 shot. Trains seamless transition proprioception without resistance."
+    },
+    {
+      "name": "Scramble Stand-Up Reset",
+      "category": "grappling",
+      "phases": [
+        "SPP"
+      ],
+      "movement": "base_recovery",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "mma",
+        "wrestling",
+        "scrambler",
+        "grappler"
+      ],
+      "equipment": [],
+      "equipment_notes": "Use mat space only.",
+      "description": "Short scramble, technical stand-up, and immediate re-base. Keeps grappler repeatability tied to real sport transitions.",
+      "cluster_ids": [
+        "mma__style_completion__gas_tank__grappler",
+        "wrestling__style_completion__gas_tank__grappler"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ],
   "distance_striker_coordination_drills": [
@@ -2877,6 +3010,34 @@
       "equipment": "1-2lb ankle weights",
       "equipment_notes": "Max 3 rounds to avoid form breakdown",
       "description": "Shadowbox with light ankle weights. Exaggerates proprioceptive feedback for technique refinement."
+    },
+    {
+      "name": "Angle Exit Decel L-Step",
+      "category": "footwork",
+      "phases": [
+        "GPP",
+        "SPP",
+        "TAPER"
+      ],
+      "movement": "deceleration_restack",
+      "type": "unilateral",
+      "tags": [
+        "coordination",
+        "boxing",
+        "distance_striker",
+        "footwork",
+        "balance"
+      ],
+      "equipment": [],
+      "equipment_notes": "Use tape marks for entry and exit points.",
+      "description": "Step out on an angle, decelerate into stance, and re-enter with hands set. Trains distance-boxing balance and braking control.",
+      "cluster_ids": [
+        "boxing__skill_refinement__footwork__distance_striker",
+        "boxing__speed__footwork__distance_striker"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ],
   "submission_hunter_coordination_drills": [
@@ -3809,6 +3970,33 @@
       ],
       "equipment": "Ring ropes (or simulated corner)",
       "description": "Cut off partner in a corner while reacting to thrown tennis balls. Conditions aggression under sensory overload."
+    },
+    {
+      "name": "Grip Pummel Angle Reset",
+      "category": "grappling",
+      "phases": [
+        "GPP",
+        "SPP"
+      ],
+      "movement": "grip_to_angle_transfer",
+      "type": "bilateral",
+      "tags": [
+        "coordination",
+        "bjj",
+        "submission_hunter",
+        "grappler"
+      ],
+      "equipment": [
+        "partner"
+      ],
+      "equipment_notes": "Partner offers light grip resistance only.",
+      "description": "Grip fight, hip shift, and reset angle before the next attack. Keeps BJJ grappler paths technical while building repeatability.",
+      "cluster_ids": [
+        "bjj__style_completion__gas_tank__grappler"
+      ],
+      "coverage_categories": [
+        "coordination_style"
+      ]
     }
   ]
 }

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Robust and deterministic JSON bank validator for all non-rehab/non-coordination banks.
+Robust and deterministic JSON bank validator for drill and exercise banks.
 
-This tool validates all *.json bank files in /data (excluding rehab*, coordination*, 
-and tag_vocabulary.json) for:
+This tool validates all *.json bank files in /data, excluding metadata/config files, for:
 - Schema consistency (supports both root list and object with items/data arrays)
 - Required keys (name, tags)
 - Tag types (tags must be a list of strings)
@@ -84,6 +83,7 @@ def discover_banks() -> List[Path]:
     - coordination
     - tag_vocabulary.json
     - bank_inferred_tags.json (metadata file)
+    - cluster_coverage_manifest.json (metadata file)
     - format_* (configuration files)
     - injury_exclusion_map.json (configuration file)
     """
@@ -99,6 +99,7 @@ def discover_banks() -> List[Path]:
             or "coordination" in filename 
             or filename == "tag_vocabulary.json"
             or filename == "bank_inferred_tags.json"
+            or filename == "cluster_coverage_manifest.json"
             or filename.startswith("format_")
             or filename == "injury_exclusion_map.json"
         ):

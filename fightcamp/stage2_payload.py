@@ -3,6 +3,7 @@
 import json
 import re
 
+from .intake_normalization import normalized_profile_from_state
 from .injury_formatting import parse_injury_entry
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
@@ -612,6 +613,24 @@ def _build_athlete_model(
     short_notice: bool,
 ) -> dict:
     record_profile = _derive_competitive_maturity(training_context.status, record)
+    normalized_profile = normalized_profile_from_state(
+        raw_goals=getattr(training_context, "raw_key_goals", None) or training_context.key_goals,
+        raw_weaknesses=getattr(training_context, "raw_weaknesses", None) or training_context.weaknesses,
+        raw_technical_styles=getattr(training_context, "raw_style_technical", None) or training_context.style_technical,
+        raw_tactical_styles=getattr(training_context, "raw_style_tactical", None) or training_context.style_tactical,
+        normalized_fields={
+            "goal_keys": getattr(training_context, "goal_keys", None),
+            "goal_secondary": getattr(training_context, "goal_secondary", None),
+            "support_flags": getattr(training_context, "support_flags", None),
+            "weakness_keys": getattr(training_context, "weakness_keys", None),
+            "weakness_secondary": getattr(training_context, "weakness_secondary", None),
+            "technical_style_keys": getattr(training_context, "technical_style_keys", None),
+            "tactical_style_keys": getattr(training_context, "tactical_style_keys", None),
+            "technical_style_secondary": getattr(training_context, "technical_style_secondary", None),
+            "tactical_style_secondary": getattr(training_context, "tactical_style_secondary", None),
+            "style_secondary": getattr(training_context, "style_secondary", None),
+        },
+    )
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -630,10 +649,20 @@ def _build_athlete_model(
         "target_weight": training_context.target_weight,
         "weight_cut_risk": training_context.weight_cut_risk,
         "weight_cut_pct": training_context.weight_cut_pct,
-        "technical_styles": training_context.style_technical,
-        "tactical_styles": training_context.style_tactical,
-        "weaknesses": training_context.weaknesses,
-        "key_goals": training_context.key_goals,
+        "technical_styles": normalized_profile.technical_style_keys,
+        "tactical_styles": normalized_profile.tactical_style_keys,
+        "weaknesses": normalized_profile.weakness_keys,
+        "weakness_secondary": normalized_profile.weakness_secondary,
+        "key_goals": normalized_profile.goal_keys,
+        "goal_secondary": normalized_profile.goal_secondary,
+        "support_flags": normalized_profile.support_flags,
+        "technical_style_secondary": normalized_profile.technical_style_secondary,
+        "tactical_style_secondary": normalized_profile.tactical_style_secondary,
+        "style_secondary": normalized_profile.style_secondary,
+        "raw_technical_styles": normalized_profile.raw_technical_styles,
+        "raw_tactical_styles": normalized_profile.raw_tactical_styles,
+        "raw_weaknesses": normalized_profile.raw_weakness_values,
+        "raw_key_goals": normalized_profile.raw_goal_values,
         "mental_blocks": _clean_list(training_context.mental_block),
         "equipment": training_context.equipment,
         "training_days": training_context.training_days,
@@ -662,6 +691,36 @@ def _priority_bucket_labels(entries: list[dict]) -> list[str]:
     return [str(entry.get("label", "")).strip() for entry in entries if str(entry.get("label", "")).strip()]
 
 
+def _athlete_goal_tokens(athlete_model: dict) -> set[str]:
+    return _normalize_limiter_tokens(
+        _clean_list(athlete_model.get("key_goals", []))
+        + _clean_list(athlete_model.get("goal_secondary", []))
+    )
+
+
+def _athlete_weakness_tokens(athlete_model: dict) -> set[str]:
+    return _normalize_limiter_tokens(
+        _clean_list(athlete_model.get("weaknesses", []))
+        + _clean_list(athlete_model.get("weakness_secondary", []))
+    )
+
+
+def _athlete_style_tokens(athlete_model: dict) -> set[str]:
+    return _normalize_limiter_tokens(
+        _clean_list(athlete_model.get("technical_styles", []))
+        + _clean_list(athlete_model.get("tactical_styles", []))
+        + _clean_list(athlete_model.get("style_secondary", []))
+    )
+
+
+def _display_goal_labels(athlete_model: dict) -> list[str]:
+    return _clean_list(athlete_model.get("raw_key_goals", [])) or _clean_list(athlete_model.get("key_goals", []))
+
+
+def _display_weakness_labels(athlete_model: dict) -> list[str]:
+    return _clean_list(athlete_model.get("raw_weaknesses", [])) or _clean_list(athlete_model.get("weaknesses", []))
+
+
 def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     days_until_fight = athlete_model.get("days_until_fight")
     camp_length_weeks = athlete_model.get("camp_length_weeks")
@@ -672,8 +731,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     else:
         timeline_days = None
 
-    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
+    weakness_tokens = _athlete_weakness_tokens(athlete_model)
+    goal_tokens = _athlete_goal_tokens(athlete_model)
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
     short_window = isinstance(timeline_days, int) and timeline_days <= 7
     ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
@@ -745,8 +804,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         )
 
     conditioning_selected = bool(
-        weakness_tokens & {"conditioning", "gas_tank", "aerobic", "endurance", "recovery"}
-        or goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}
+        weakness_tokens & {"conditioning", "gas_tank", "aerobic", "endurance", "recovery", "aerobic_repeatability", "fight_repeatability"}
+        or goal_tokens & {"repeatability_endurance", "conditioning", "conditioning_endurance", "endurance"}
     )
     if conditioning_selected:
         target_bucket = maintenance
@@ -774,8 +833,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         )
 
     raw_other_labels = [
-        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("key_goals", []))),
-        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("weaknesses", []))),
+        *(value.replace("_", " ") for value in _display_goal_labels(athlete_model)),
+        *(value.replace("_", " ") for value in _display_weakness_labels(athlete_model)),
     ]
     claimed_terms = " ".join(_priority_bucket_labels(primary) + _priority_bucket_labels(maintenance) + _priority_bucket_labels(embedded) + _priority_bucket_labels(deferred)).lower()
     for label in raw_other_labels:
@@ -875,8 +934,8 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
 
 
 def _derive_athlete_archetype(athlete_model: dict) -> dict:
-    technical_styles = _clean_list(athlete_model.get("technical_styles", []))
-    tactical_styles = _clean_list(athlete_model.get("tactical_styles", []))
+    technical_styles = _clean_list(athlete_model.get("raw_technical_styles", [])) or _clean_list(athlete_model.get("technical_styles", []))
+    tactical_styles = _clean_list(athlete_model.get("raw_tactical_styles", [])) or _clean_list(athlete_model.get("tactical_styles", []))
     style_identity = _dedupe_preserve_order(technical_styles + tactical_styles) or ["generalist"]
 
     readiness = "stable"
@@ -911,14 +970,14 @@ def _derive_main_limiter(athlete_model: dict) -> str:
     primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
     if primary_labels:
         return f"Primary limiter is {primary_labels[0]}."
-    weaknesses = _clean_list(athlete_model.get("weaknesses", []))
-    goals = _clean_list(athlete_model.get("key_goals", []))
+    weaknesses = _display_weakness_labels(athlete_model)
+    goals = _display_goal_labels(athlete_model)
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
 
     if weaknesses:
         return f"Primary limiter is {weaknesses[0].replace('_', ' ')}."
-    if "conditioning" in goals:
+    if any(goal in {"conditioning", "repeatability_endurance"} for goal in goals):
         return "Primary limiter is fight conditioning repeatability."
     if "power" in goals:
         return "Primary limiter is power expression under fight fatigue."
@@ -1093,11 +1152,9 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     if "gas tank maintenance" in compressed_labels:
         return "aerobic_repeatability"
 
-    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
-    style_tokens = _normalize_limiter_tokens(
-        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
-    )
+    weakness_tokens = _athlete_weakness_tokens(athlete_model)
+    goal_tokens = _athlete_goal_tokens(athlete_model)
+    style_tokens = _athlete_style_tokens(athlete_model)
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
     days_until_fight = athlete_model.get("days_until_fight")
     restriction_keys = {
@@ -1125,10 +1182,12 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     tissue_region_tokens = {"shoulder", "knee", "neck", "back", "spine", "hip", "ankle", "elbow", "wrist"}
     performance_priority_signals = bool(
         goal_tokens & {
+            "repeatability_endurance",
             "conditioning",
             "conditioning_endurance",
             "endurance",
             "power",
+            "strength_general",
             "strength",
             "speed",
             "skill_refinement",
@@ -1146,7 +1205,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
 
     if weakness_tokens & {"coordination", "coordination_proprioception", "proprioception", "balance", "timing", "rhythm"}:
         return "coordination"
-    if weakness_tokens & {"conditioning", "aerobic", "endurance", "gas_tank", "recovery"}:
+    if weakness_tokens & {"conditioning", "aerobic", "endurance", "gas_tank", "recovery", "aerobic_repeatability", "fight_repeatability"}:
         return "aerobic_repeatability"
     if weakness_tokens & {"sharpness", "speed_reaction", "cns_fatigue", "speed", "reaction"}:
         return "sharpness_under_fatigue"
@@ -1161,7 +1220,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     ):
         return "tissue_state"
 
-    if goal_tokens & {"conditioning", "conditioning_endurance", "endurance"}:
+    if goal_tokens & {"repeatability_endurance", "conditioning", "conditioning_endurance", "endurance"}:
         return "aerobic_repeatability"
     if style_tokens & {"boxing", "boxer"} and goal_tokens & {"skill_refinement", "striking"}:
         return "boxing_quality_under_load"
@@ -1279,9 +1338,7 @@ def _join_rule_parts(*parts: str) -> str:
 
 def _primary_sport_load_key(athlete_model: dict) -> str:
     sport_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("sport")))
-    style_tokens = _normalize_limiter_tokens(
-        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
-    )
+    style_tokens = _athlete_style_tokens(athlete_model)
     combined = sport_tokens | style_tokens
 
     if combined & {"bjj", "jiu_jitsu", "jits", "grappling"}:
@@ -1322,6 +1379,7 @@ def _resolve_phase_rule_state(
     sport_load_profile: dict,
 ) -> dict:
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    support_flags = set(_clean_list(athlete_model.get("support_flags", [])))
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     short_notice = bool(athlete_model.get("short_notice"))
     weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
@@ -1349,6 +1407,16 @@ def _resolve_phase_rule_state(
         )
     if weight_cut_risk and phase == "TAPER":
         cut_first = f"{cut_first}; during the cut, remove glycolytic density before alactic sharpness or rehab support."
+    if "recovery_support" in support_flags:
+        protect_first = _join_rule_parts(
+            protect_first,
+            "Recovery support is active, so protect freshness and low-damage repeatability before extra density.",
+        )
+    if "weight_cut_support" in support_flags:
+        cut_first = _join_rule_parts(
+            cut_first,
+            "Weight-cut support is active, so treat optional fatigue as expendable before support work.",
+        )
     cut_first = _join_rule_parts(
         cut_first,
         f"When sport load spikes, cut {sport_load_profile['cut_first_when_sport_load_spikes']} first.",
@@ -2600,7 +2668,7 @@ def _derive_global_priorities(
     avoid: list[str] = []
 
     injuries = _clean_list(athlete_model.get("injuries", []))
-    goals = _clean_list(athlete_model.get("key_goals", []))
+    goals = _display_goal_labels(athlete_model)
     hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
     technical_skill_days = _clean_list(athlete_model.get("technical_skill_days", []))
     high_pressure_cut = _is_high_pressure_weight_cut(athlete_model=athlete_model)
@@ -2620,7 +2688,7 @@ def _derive_global_priorities(
         if high_pressure_cut:
             preserve.append("Preserve freshness first when cut pressure is high.")
             avoid.append("Do not spend cut margin on optional fatigue that does not directly support the fight.")
-    if "conditioning" in goals:
+    if any(goal in {"conditioning", "repeatability_endurance"} for goal in goals):
         push.append("Prioritize conditioning slots that match the phase objective before extra accessories.")
     if "power" in goals:
         push.append("Preserve explosive and alactic work if compliant options remain.")
@@ -2658,7 +2726,7 @@ def _derive_global_priorities(
         for slot in pool.get("conditioning_slots", [])
         if slot.get("role")
     }
-    if "aerobic" in conditioning_roles and "conditioning" in goals:
+    if "aerobic" in conditioning_roles and any(goal in {"conditioning", "repeatability_endurance"} for goal in goals):
         push.append("Use aerobic work to support recovery and repeatability, not just to add volume.")
     if "alactic" in conditioning_roles:
         push.append("Keep at least one neural-speed option when the phase or taper calls for sharpness.")

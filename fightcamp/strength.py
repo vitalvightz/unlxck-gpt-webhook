@@ -12,8 +12,11 @@ from .training_context import (
     calculate_exercise_numbers,
 )
 from .bank_schema import validate_training_item
+from .cluster_coverage import active_cluster_ids
+from .intake_normalization import normalized_profile_from_flags
+from .selector_policy import sport_context_eligibility
 from .tagging import normalize_item_tags, normalize_tags
-from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
+from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
 from .injury_filtering import (
@@ -619,14 +622,12 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     tested_1rm_available = bool(flags.get("tested_1rm_available", False))
     has_isometric_setup = _has_isometric_setup_equipment(equipment_access)
     fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
-    style_input = flags.get("style_tactical", [])
-    if isinstance(style_input, str):
-        style_list = [style_input.lower()]
-    elif isinstance(style_input, list):
-        style_list = [s.lower() for s in style_input]
-    else:
-        style_list = []
-    goals = flags.get("key_goals", [])
+    normalized_profile = normalized_profile_from_flags(flags)
+    style_list = normalized_profile.tactical_style_keys
+    style_secondary = normalized_profile.style_secondary
+    technical_style_keys = normalized_profile.technical_style_keys
+    goals = normalized_profile.goal_keys + normalized_profile.goal_secondary
+    weakness_keys = normalized_profile.weakness_keys + normalized_profile.weakness_secondary
     training_days = flags.get("training_days", [])
     training_frequency = flags.get(
         "training_frequency", flags.get("days_available", len(training_days))
@@ -641,8 +642,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     style_exercises = get_style_exercises()
     universal_strength_names = get_universal_strength_names()
 
-    style_tags = [t for s in style_list for t in STYLE_TAG_MAP.get(s, [])]
-    goal_tags = [tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])]
+    style_tags = normalize_tags(
+        [t for s in style_list + style_secondary for t in STYLE_TAG_MAP.get(s, [])]
+    )
+    goal_tags = normalize_tags([tag for g in goals for tag in GOAL_TAG_MAP.get(g, [])])
+    weakness_tags = normalize_tags(
+        [tag for weakness_key in weakness_keys for tag in WEAKNESS_TAG_MAP.get(weakness_key, [])]
+    )
+    active_clusters = set(
+        active_cluster_ids(
+            sport=fight_format,
+            goal_keys=normalized_profile.goal_keys,
+            weakness_keys=normalized_profile.weakness_keys,
+            style_keys=normalized_profile.tactical_style_keys + normalized_profile.style_secondary,
+        )
+    )
     must_have_by_phase = {
         "GPP": ["compound", "posterior_chain", "unilateral", "push", "pull"],
         "SPP": ["compound", "posterior_chain", "unilateral", "explosive", "rate_of_force"],
@@ -696,6 +710,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 ex.get("notes", ""),
             ]
         )
+        if not sport_context_eligibility(
+            ex,
+            sport=fight_format,
+            technical_style_keys=technical_style_keys,
+            tactical_style_keys=style_list + style_secondary,
+        ):
+            continue
         if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
             continue
         ex_equipment = normalize_equipment_list(ex.get("equipment", []))
@@ -752,7 +773,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
         score, breakdown = score_exercise(
             exercise_tags=tags,
-            weakness_tags=weaknesses or [],
+            weakness_tags=weakness_tags or normalize_tags(weaknesses or []),
             goal_tags=goal_tags,
             style_tags=style_tags,
             must_have_tags=must_have_tags,
@@ -766,6 +787,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         if score == -999:
             continue
+        tag_set = set(normalize_tags(tags)) | {str(value).strip() for value in ex.get("cluster_ids", []) if str(value).strip()}
+        cluster_hits = len(tag_set & active_clusters)
+        if cluster_hits:
+            score += 1.2 * cluster_hits
+        if fight_format == "boxing" and {"balance", "footwork", "coordination_proprioception", "trunk_strength"} & set(normalized_profile.weakness_keys):
+            boxing_specific = "boxing" in tag_set or {"pressure_fighter", "counter_striker", "distance_striker"} & tag_set
+            generic_single_leg = "single_leg" in tag_set or "single-leg" in ex.get("name", "").lower()
+            if boxing_specific:
+                score += 0.6
+            elif generic_single_leg:
+                score -= 1.15
         quality_adjustment, quality_profile = strength_quality_adjustment(ex, phase=phase)
         score += quality_adjustment
         breakdown["quality_class"] = quality_profile["quality_class"]
@@ -774,6 +806,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         breakdown["support_only"] = quality_profile["support_only"]
         breakdown["base_categories"] = quality_profile["base_categories"]
         breakdown["fatigue_cost"] = _exercise_fatigue_cost(ex, quality_profile)
+        breakdown["cluster_hits"] = cluster_hits
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
@@ -845,6 +878,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     ex.get("movement", ""),
                 ]
             )
+            if not sport_context_eligibility(
+                ex,
+                sport=fight_format,
+                technical_style_keys=technical_style_keys,
+                tactical_style_keys=style_list + style_secondary,
+            ):
+                continue
             if is_banned_exercise(ex.get("name", ""), tags, fight_format, details):
                 continue
             if prev_exercises and ex.get("name") in prev_exercises:
@@ -1233,6 +1273,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             continue
         if _guarded_injury_decision(ex).action == "exclude":
             continue
+        if not sport_context_eligibility(
+            ex,
+            sport=fight_format,
+            technical_style_keys=technical_style_keys,
+            tactical_style_keys=style_list + style_secondary,
+        ):
+            continue
         ex_tags = set(ex.get("tags", []))
         if not ex_tags & athlete_style_set:
             continue
@@ -1245,7 +1292,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             continue
         style_score, style_reasons = score_exercise(
             exercise_tags=ex.get("tags", []),
-            weakness_tags=weaknesses or [],
+            weakness_tags=weakness_tags or normalize_tags(weaknesses or []),
             goal_tags=goal_tags,
             style_tags=style_tags,
             must_have_tags=must_have_tags,
@@ -1259,10 +1306,20 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         if style_score == -999:
             continue
+        style_cluster_hits = len(
+            (
+                set(normalize_tags(ex.get("tags", [])))
+                | {str(value).strip() for value in ex.get("cluster_ids", []) if str(value).strip()}
+            )
+            & active_clusters
+        )
+        if style_cluster_hits:
+            style_score += 1.2 * style_cluster_hits
         quality_adjustment, quality_profile = strength_quality_adjustment(ex, phase=phase)
         style_score += quality_adjustment
         style_reasons["quality_class"] = quality_profile["quality_class"]
         style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
+        style_reasons["cluster_hits"] = style_cluster_hits
         style_reasons["final_score"] = round(style_score, 4)
         if quality_profile["anchor_capable"] or style_score >= selected_cutoff - style_margin:
             style_candidates.append((ex, style_score, style_reasons))

@@ -5155,5 +5155,96 @@
       "rehab_friendly"
     ],
     "equipment": "bench"
+  },
+  {
+    "name": "Pressure Stance Sled March",
+    "category": "boxing_support",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "lunge",
+    "type": "unilateral",
+    "tags": [
+      "boxing",
+      "pressure_fighter",
+      "balance",
+      "stance_control",
+      "core",
+      "strength_support",
+      "mech_trunk_stability"
+    ],
+    "equipment": [
+      "sled"
+    ],
+    "cluster_ids": [
+      "boxing__strength_general__balance__pressure_fighter"
+    ],
+    "coverage_categories": [
+      "strength_support"
+    ],
+    "notes": "Split-stance sled march for pressure-step balance and trunk stiffness without turning into generic single-leg filler."
+  },
+  {
+    "name": "Counter Step Shotput Hold to Punch",
+    "category": "boxing_support",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": [
+      "boxing",
+      "counter_striker",
+      "rotational",
+      "anti_rotation",
+      "core",
+      "power",
+      "strength_support",
+      "mech_trunk_rotation"
+    ],
+    "equipment": [
+      "medicine_ball"
+    ],
+    "cluster_ids": [
+      "boxing__power__trunk_strength__counter_striker"
+    ],
+    "coverage_categories": [
+      "strength_support"
+    ],
+    "notes": "Load trunk re-bracing, then reconnect it directly to a clean counter shot."
+  },
+  {
+    "name": "Lead-Leg Pivot Step-Up",
+    "category": "boxing_support",
+    "phases": [
+      "GPP",
+      "SPP"
+    ],
+    "method": "strength",
+    "movement": "lunge",
+    "type": "unilateral",
+    "tags": [
+      "boxing",
+      "distance_striker",
+      "footwork",
+      "balance",
+      "strength_support",
+      "mech_trunk_stability"
+    ],
+    "equipment": [
+      "box",
+      "dumbbells"
+    ],
+    "cluster_ids": [
+      "boxing__speed__footwork__distance_striker"
+    ],
+    "coverage_categories": [
+      "strength_support"
+    ],
+    "notes": "Drive through the lead leg, pivot, and restack posture instead of defaulting to generic single-leg accessory work."
   }
 ]

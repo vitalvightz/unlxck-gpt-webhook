@@ -12,6 +12,7 @@ from .conditioning import (
     get_style_conditioning_bank,
     prime_conditioning_banks,
 )
+from .intake_normalization import normalize_intake_profile
 from .input_parsing import PlanInput, is_short_notice_days
 from .mindset_module import classify_mental_block
 from .rehab_protocols import prime_rehab_bank
@@ -19,7 +20,6 @@ from .strength import (
     get_exercise_bank as get_strength_exercise_bank,
     prime_strength_banks,
 )
-from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
 from .training_context import TrainingContext, allocate_sessions, normalize_equipment_list
 
 PHASES = ("GPP", "SPP", "TAPER")
@@ -44,12 +44,15 @@ SANITIZE_LABELS = (
 GRAPPLING_STYLES = {
     "mma",
     "bjj",
+    "bjj",
     "wrestler",
     "wrestling",
     "grappler",
     "grappling",
     "judo",
     "sambo",
+    "submission_hunter",
+    "scrambler",
 }
 MUAY_THAI_REPLACEMENTS = {
     "Philly Shell Torture": "High-Guard + Long-Guard Defense Rounds",
@@ -66,11 +69,14 @@ MUAY_THAI_TERM_REPLACEMENTS = {
 }
 STYLE_MAP = {
     "mma": "mma",
-    "boxer": "boxing",
     "boxing": "boxing",
+    "boxer": "boxing",
+    "kickboxing": "kickboxing",
     "kickboxer": "kickboxing",
+    "muay_thai": "muay_thai",
     "muay thai": "muay_thai",
     "bjj": "mma",
+    "wrestling": "mma",
     "wrestler": "mma",
     "grappler": "mma",
     "karate": "kickboxing",
@@ -183,7 +189,11 @@ def _normalize_selection_format(sport: str) -> str:
 
 
 def _is_pure_striker(tech_styles: list[str], tactical_styles: list[str]) -> bool:
-    all_styles = {style.strip().lower() for style in (tech_styles + tactical_styles) if style.strip()}
+    all_styles = {
+        style.strip().lower().replace(" ", "_")
+        for style in (tech_styles + tactical_styles)
+        if style.strip()
+    }
     return not any(style in GRAPPLING_STYLES for style in all_styles)
 
 
@@ -227,14 +237,23 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         extra={"plan_id": f"{plan_input.full_name or 'unknown'}-{plan_input.next_fight_date or 'no-date'}"},
     )
 
-    tech_styles = plan_input.tech_styles
-    primary_tech = tech_styles[0] if tech_styles else ""
+    tech_styles = list(plan_input.tech_styles)
+    tactical_styles = list(plan_input.tactical_styles)
+    if plan_input.stance.strip().lower() == "hybrid" and "hybrid" not in [style.lower() for style in tactical_styles]:
+        tactical_styles.append("hybrid")
+    normalized_profile = normalize_intake_profile(
+        goals=[goal for goal in plan_input.key_goals.split(",") if goal.strip()],
+        weaknesses=[value for value in plan_input.weak_areas.split(",") if value.strip()],
+        technical_styles=tech_styles,
+        tactical_styles=tactical_styles,
+    )
+    primary_tech = normalized_profile.technical_style_keys[0] if normalized_profile.technical_style_keys else ""
     mapped_format = STYLE_MAP.get(primary_tech, "mma")
     selection_format = _normalize_selection_format(mapped_format)
-    tactical_styles = list(plan_input.tactical_styles)
-    if plan_input.stance.strip().lower() == "hybrid" and "hybrid" not in tactical_styles:
-        tactical_styles.append("hybrid")
-    pure_striker = _is_pure_striker(tech_styles, tactical_styles)
+    pure_striker = _is_pure_striker(
+        normalized_profile.technical_style_keys,
+        normalized_profile.tactical_style_keys + normalized_profile.style_secondary,
+    )
     apply_muay_thai_filters = mapped_format == "muay_thai" and pure_striker
 
     weight = plan_input.weight
@@ -271,24 +290,16 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         days_available=len(plan_input.training_days),
         training_days=plan_input.training_days,
         injuries=raw_injury_list,
-        style_technical=tech_styles,
-        style_tactical=tactical_styles,
-        weaknesses=[
-            tag
-            for item in [value.strip().lower() for value in plan_input.weak_areas.split(",") if value.strip()]
-            for tag in WEAKNESS_NORMALIZER.get(item.lower(), [item.lower()])
-        ],
+        style_technical=normalized_profile.raw_technical_styles,
+        style_tactical=normalized_profile.raw_tactical_styles,
+        weaknesses=normalized_profile.raw_weakness_values,
         equipment=normalize_equipment_list(plan_input.equipment_access),
         weight_cut_risk=weight_cut_risk_flag,
         weight_cut_pct=weight_cut_pct_val,
         fight_format=selection_format,
         status=plan_input.status.strip().lower(),
         training_split=allocate_sessions(plan_input.training_frequency),
-        key_goals=[
-            GOAL_NORMALIZER.get(goal.strip(), goal.strip()).lower()
-            for goal in plan_input.key_goals.split(",")
-            if goal.strip()
-        ],
+        key_goals=normalized_profile.raw_goal_values,
         training_preference=plan_input.training_preference.strip().lower() if plan_input.training_preference else "",
         mental_block=mental_block_class,
         age=int(plan_input.age) if plan_input.age.isdigit() else 0,
@@ -300,6 +311,20 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         hard_sparring_days=plan_input.hard_sparring_days,
         technical_skill_days=plan_input.technical_skill_days,
         target_weight=target_val or None,
+        raw_style_technical=normalized_profile.raw_technical_styles,
+        raw_style_tactical=normalized_profile.raw_tactical_styles,
+        raw_weaknesses=normalized_profile.raw_weakness_values,
+        raw_key_goals=normalized_profile.raw_goal_values,
+        goal_keys=normalized_profile.goal_keys,
+        goal_secondary=normalized_profile.goal_secondary,
+        support_flags=normalized_profile.support_flags,
+        weakness_keys=normalized_profile.weakness_keys,
+        weakness_secondary=normalized_profile.weakness_secondary,
+        technical_style_keys=normalized_profile.technical_style_keys,
+        tactical_style_keys=normalized_profile.tactical_style_keys,
+        technical_style_secondary=normalized_profile.technical_style_secondary,
+        tactical_style_secondary=normalized_profile.tactical_style_secondary,
+        style_secondary=normalized_profile.style_secondary,
     )
 
     return PlanRuntimeContext(

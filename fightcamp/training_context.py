@@ -85,6 +85,20 @@ class TrainingContext:
     hard_sparring_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)
     target_weight: float | None = None
+    raw_style_technical: list[str] = field(default_factory=list)
+    raw_style_tactical: list[str] = field(default_factory=list)
+    raw_weaknesses: list[str] = field(default_factory=list)
+    raw_key_goals: list[str] = field(default_factory=list)
+    goal_keys: list[str] = field(default_factory=list)
+    goal_secondary: list[str] = field(default_factory=list)
+    support_flags: list[str] = field(default_factory=list)
+    weakness_keys: list[str] = field(default_factory=list)
+    weakness_secondary: list[str] = field(default_factory=list)
+    technical_style_keys: list[str] = field(default_factory=list)
+    tactical_style_keys: list[str] = field(default_factory=list)
+    technical_style_secondary: list[str] = field(default_factory=list)
+    tactical_style_secondary: list[str] = field(default_factory=list)
+    style_secondary: list[str] = field(default_factory=list)
 
     def to_flags(self) -> dict:
         return asdict(self)

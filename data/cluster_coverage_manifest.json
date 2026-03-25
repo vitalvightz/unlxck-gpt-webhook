@@ -1,0 +1,432 @@
+[
+  {
+    "cluster_id": "boxing__repeatability_endurance__gas_tank__pressure_fighter",
+    "cluster_type": "repeatability",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "pressure_fighter"
+    ],
+    "mandatory_categories": [
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style",
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__repeatability_endurance__gas_tank__counter_striker",
+    "cluster_type": "repeatability",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "counter_striker"
+    ],
+    "mandatory_categories": [
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style",
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__repeatability_endurance__gas_tank__distance_striker",
+    "cluster_type": "repeatability",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "distance_striker"
+    ],
+    "mandatory_categories": [
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style",
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__skill_refinement__coordination_proprioception__counter_striker",
+    "cluster_type": "repeatability",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "skill_refinement"
+    ],
+    "weakness_keys": [
+      "coordination_proprioception"
+    ],
+    "style_keys": [
+      "counter_striker"
+    ],
+    "mandatory_categories": [
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style",
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__skill_refinement__footwork__distance_striker",
+    "cluster_type": "repeatability",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "skill_refinement"
+    ],
+    "weakness_keys": [
+      "footwork"
+    ],
+    "style_keys": [
+      "distance_striker"
+    ],
+    "mandatory_categories": [
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style",
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__strength_general__balance__pressure_fighter",
+    "cluster_type": "balance_transfer",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "strength_general"
+    ],
+    "weakness_keys": [
+      "balance"
+    ],
+    "style_keys": [
+      "pressure_fighter"
+    ],
+    "mandatory_categories": [
+      "coordination_style"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__power__trunk_strength__counter_striker",
+    "cluster_type": "balance_transfer",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "power"
+    ],
+    "weakness_keys": [
+      "trunk_strength"
+    ],
+    "style_keys": [
+      "counter_striker"
+    ],
+    "mandatory_categories": [
+      "coordination_style"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__speed__footwork__distance_striker",
+    "cluster_type": "balance_transfer",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "speed"
+    ],
+    "weakness_keys": [
+      "footwork"
+    ],
+    "style_keys": [
+      "distance_striker"
+    ],
+    "mandatory_categories": [
+      "coordination_style"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "boxing__rehab_return__trunk_rotation_return",
+    "cluster_type": "rehab_return",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "power"
+    ],
+    "weakness_keys": [
+      "trunk_strength"
+    ],
+    "style_keys": [
+      "counter_striker"
+    ],
+    "mandatory_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [
+      "generic_fight_pace"
+    ],
+    "rehab_required": true
+  },
+  {
+    "cluster_id": "boxing__rehab_return__hip_flexor_groin_return",
+    "cluster_type": "rehab_return",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "mobility"
+    ],
+    "weakness_keys": [
+      "mobility"
+    ],
+    "style_keys": [
+      "distance_striker"
+    ],
+    "mandatory_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [
+      "generic_fight_pace"
+    ],
+    "rehab_required": true
+  },
+  {
+    "cluster_id": "boxing__rehab_return__shoulder_return_to_strike",
+    "cluster_type": "rehab_return",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "skill_refinement"
+    ],
+    "weakness_keys": [
+      "coordination_proprioception"
+    ],
+    "style_keys": [
+      "counter_striker"
+    ],
+    "mandatory_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [
+      "generic_fight_pace"
+    ],
+    "rehab_required": true
+  },
+  {
+    "cluster_id": "boxing__rehab_return__ankle_foot_balance_return",
+    "cluster_type": "rehab_return",
+    "sports": [
+      "boxing"
+    ],
+    "goal_keys": [
+      "mobility"
+    ],
+    "weakness_keys": [
+      "balance"
+    ],
+    "style_keys": [
+      "pressure_fighter"
+    ],
+    "mandatory_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "preferred_categories": [
+      "strength_support"
+    ],
+    "forbidden_categories": [
+      "generic_fight_pace"
+    ],
+    "rehab_required": true
+  },
+  {
+    "cluster_id": "muay_thai__style_completion__repeatability_endurance__clinch_fighter",
+    "cluster_type": "style_completion",
+    "sports": [
+      "muay_thai"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "clinch_fighter"
+    ],
+    "mandatory_categories": [
+      "style_specific",
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "mma__style_completion__coordination_proprioception__hybrid",
+    "cluster_type": "style_completion",
+    "sports": [
+      "mma"
+    ],
+    "goal_keys": [
+      "skill_refinement"
+    ],
+    "weakness_keys": [
+      "coordination_proprioception"
+    ],
+    "style_keys": [
+      "hybrid"
+    ],
+    "mandatory_categories": [
+      "style_specific",
+      "coordination_style"
+    ],
+    "preferred_categories": [
+      "conditioning"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "mma__style_completion__gas_tank__grappler",
+    "cluster_type": "style_completion",
+    "sports": [
+      "mma"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "grappler"
+    ],
+    "mandatory_categories": [
+      "style_specific",
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "wrestling__style_completion__gas_tank__grappler",
+    "cluster_type": "style_completion",
+    "sports": [
+      "wrestling"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "grappler"
+    ],
+    "mandatory_categories": [
+      "style_specific",
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  },
+  {
+    "cluster_id": "bjj__style_completion__gas_tank__grappler",
+    "cluster_type": "style_completion",
+    "sports": [
+      "bjj"
+    ],
+    "goal_keys": [
+      "repeatability_endurance"
+    ],
+    "weakness_keys": [
+      "gas_tank"
+    ],
+    "style_keys": [
+      "grappler"
+    ],
+    "mandatory_categories": [
+      "style_specific",
+      "conditioning"
+    ],
+    "preferred_categories": [
+      "coordination_style"
+    ],
+    "forbidden_categories": [],
+    "rehab_required": false
+  }
+]

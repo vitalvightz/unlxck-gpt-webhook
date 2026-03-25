@@ -25,3 +25,6 @@ jobs:
       
       - name: Run bank validator
         run: python tools/validate_banks.py
+
+      - name: Run cluster coverage validator
+        run: python tools/validate_cluster_coverage.py

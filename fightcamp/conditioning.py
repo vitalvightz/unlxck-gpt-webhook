@@ -7,6 +7,8 @@ from pathlib import Path
 import re
 from typing import Callable, Iterable
 from collections import defaultdict
+from .cluster_coverage import active_cluster_ids
+from .intake_normalization import normalized_profile_from_flags
 from .training_context import (
     allocate_sessions,
     normalize_equipment_list,
@@ -17,6 +19,13 @@ from .injury_filtering import injury_match_details, _log_exclusion, _log_replace
 from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
 from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
+from .selector_policy import (
+    FALLBACK_CLASS_BLOCKED,
+    FALLBACK_CLASS_PENALTY,
+    conditioning_fallback_class,
+    coordination_fallback_class,
+    sport_context_eligibility,
+)
 from .tagging import normalize_item_tags, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP, WEAKNESS_TAG_MAP
 from .config import (
@@ -943,15 +952,34 @@ def _resolved_conditioning_names(resolved_sessions: list[dict]) -> list[str]:
 
 def select_coordination_drill(flags, existing_names: set[str], injuries: list[str]):
     """Return a coordination drill matching the current phase if needed."""
-    goals = [g.lower() for g in flags.get("key_goals", [])]
-    weaknesses = [w.lower() for w in flags.get("weaknesses", [])]
-    coord_terms = {"coordination", "coordination/proprioception", "coordination / proprioception"}
-    if not any(g in coord_terms for g in goals) and not any(w in coord_terms for w in weaknesses):
+    profile = normalized_profile_from_flags(flags)
+    goal_keys = set(profile.goal_keys + profile.goal_secondary)
+    weakness_keys = set(profile.weakness_keys + profile.weakness_secondary)
+    sport = _normalize_fight_format(flags.get("fight_format", flags.get("sport", "mma")))
+    focus_keys = {
+        "skill_refinement",
+        "coordination_proprioception",
+        "footwork",
+        "balance",
+        "trunk_strength",
+        "repeatability_endurance",
+        "gas_tank",
+    }
+    if not (goal_keys & focus_keys or weakness_keys & focus_keys):
         return None
 
     phase = flags.get("phase", "GPP").upper()
     equipment_access = set(normalize_equipment_list(flags.get("equipment", [])))
-    candidates = []
+    style_keys = profile.tactical_style_keys + profile.style_secondary
+    cluster_ids = set(
+        active_cluster_ids(
+            sport=sport,
+            goal_keys=profile.goal_keys,
+            weakness_keys=profile.weakness_keys,
+            style_keys=style_keys,
+        )
+    )
+    candidates: list[tuple[float, str, dict]] = []
     for drill in get_coordination_bank():
         if phase not in [p.upper() for p in drill.get("phases", [])]:
             continue
@@ -962,10 +990,45 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
         equipment = normalize_equipment_list(drill.get("equipment", []))
         if equipment and not set(equipment).issubset(equipment_access):
             continue
-        candidates.append(drill)
+        if not sport_context_eligibility(
+            drill,
+            sport=sport,
+            technical_style_keys=profile.technical_style_keys,
+            tactical_style_keys=style_keys,
+        ):
+            continue
+        tags = set(normalize_tags(drill.get("tags", [])))
+        score = 0.0
+        score += 1.5 * len(tags & {"coordination", "footwork", "balance", "anti_rotation", "rotational"})
+        if "boxing" in tags and sport == "boxing":
+            score += 1.0
+        if tags & set(style_keys):
+            score += 0.8
+        score += 1.0 * len(
+            (tags | {str(value).strip() for value in drill.get("cluster_ids", []) if str(value).strip()})
+            & cluster_ids
+        )
+        fallback_class = coordination_fallback_class(
+            drill,
+            sport=sport,
+            weakness_keys=profile.weakness_keys,
+            weakness_secondary=profile.weakness_secondary,
+        )
+        penalty = FALLBACK_CLASS_PENALTY.get(fallback_class, 0.0)
+        if penalty <= -999:
+            continue
+        score += penalty
+        candidates.append((score, fallback_class, drill))
 
-    candidates = sorted(candidates, key=lambda d: d.get("name") or "")
-    for drill in candidates[:INJURY_GUARD_SHORTLIST]:
+    candidates.sort(key=lambda item: (-item[0], item[2].get("name") or ""))
+    has_non_downgraded_boxing_option = any(
+        cls not in {FALLBACK_CLASS_BLOCKED, "downranked"}
+        for _, cls, candidate in candidates
+        if "boxing" in normalize_tags(candidate.get("tags", []))
+    )
+    for _, fallback_class, drill in candidates[:INJURY_GUARD_SHORTLIST]:
+        if has_non_downgraded_boxing_option and fallback_class == "downranked":
+            continue
         decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
         if decision.action != "exclude":
             return drill
@@ -1259,10 +1322,11 @@ def generate_conditioning_block(flags):
     phase = flags.get("phase", "GPP")
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase.upper(), "#000")
     fatigue = flags.get("fatigue", "low")
-    style = flags.get("style_tactical", [])
-    technical = flags.get("style_technical", [])
-    goals = flags.get("key_goals", [])
-    weaknesses = flags.get("weaknesses", [])
+    normalized_profile = normalized_profile_from_flags(flags)
+    style = normalized_profile.tactical_style_keys
+    technical = normalized_profile.technical_style_keys
+    goals = normalized_profile.goal_keys + normalized_profile.goal_secondary
+    weaknesses = normalized_profile.weakness_keys + normalized_profile.weakness_secondary
     injuries = flags.get("injuries", [])
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
@@ -1271,55 +1335,58 @@ def generate_conditioning_block(flags):
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
-    # Normalize technical style(s)
-    if isinstance(technical, str):
-        tech_styles = [t.strip().lower() for t in technical.split(',') if t.strip()]
-    elif isinstance(technical, list):
-        tech_styles = [t.strip().lower() for t in technical if t]
-    else:
-        tech_styles = []
-    # First style in list determines fight format
+    tech_styles = [t.strip().lower() for t in technical if t]
     primary_tech = tech_styles[0] if tech_styles else ""
 
-    # preserve tactical style names for style drill filtering
-    if isinstance(style, list):
-        style_names = [s.lower().replace(" ", "_") for s in style]
-    elif isinstance(style, str) and style:
-        style_names = [style.lower().replace(" ", "_")]
-    else:
-        style_names = []
+    style_names = [s.lower().replace(" ", "_") for s in style]
     tech_style_tags = [t.replace(" ", "_") for t in tech_styles]
     if not style_names:
         style_names = tech_style_tags
 
-    style_tags = [s.lower() for s in style] if isinstance(style, list) else [style.lower()]
-    style_tags = normalize_tags([t for s in style_tags for t in STYLE_TAG_MAP.get(s, [])])
+    style_secondary = normalized_profile.style_secondary
+    style_tags = normalize_tags(
+        [t for s in style_names + style_secondary for t in STYLE_TAG_MAP.get(s, [])]
+    )
 
-    goal_tags = expand_tags(goals, GOAL_TAG_MAP)
+    primary_goal_tags = expand_tags(normalized_profile.goal_keys, GOAL_TAG_MAP)
+    secondary_goal_tags = expand_tags(normalized_profile.goal_secondary, GOAL_TAG_MAP)
+    goal_tags = normalize_tags(primary_goal_tags + secondary_goal_tags)
     goal_list = [g.lower() for g in goals]
-    weak_tags = expand_tags(weaknesses, WEAKNESS_TAG_MAP)
+    primary_weak_tags = expand_tags(normalized_profile.weakness_keys, WEAKNESS_TAG_MAP)
+    secondary_weak_tags = expand_tags(normalized_profile.weakness_secondary, WEAKNESS_TAG_MAP)
+    weak_tags = normalize_tags(primary_weak_tags + secondary_weak_tags)
     shoulder_focus = any('shoulder' in g.lower() for g in goals) or any(
         'shoulder' in w.lower() for w in weaknesses
     )
 
     style_map = {
         "mma": "mma",
-        "boxer": "boxing",
         "boxing": "boxing",
-        "kickboxer": "kickboxing",
+        "boxer": "boxing",
         "kickboxing": "kickboxing",
+        "kickboxer": "kickboxing",
+        "muay_thai": "muay_thai",
         "muay thai": "muay_thai",
         "muaythai": "muay_thai",
         "bjj": "mma",
         "wrestler": "mma",
-        "wrestling": "wrestler",
+        "wrestling": "mma",
         "grappler": "mma",
         "grappling": "grappler",
         "karate": "kickboxing",
     }
-    fight_format = style_map.get(primary_tech, "mma")
+    fight_format = style_map.get(primary_tech, flags.get("fight_format", "mma"))
     selection_format = _normalize_fight_format(fight_format)
     energy_weights = get_format_weights().get(selection_format, {})
+    support_flags = set(normalized_profile.support_flags)
+    active_clusters = set(
+        active_cluster_ids(
+            sport=selection_format,
+            goal_keys=normalized_profile.goal_keys,
+            weakness_keys=normalized_profile.weakness_keys,
+            style_keys=style_names + style_secondary,
+        )
+    )
 
     rename_map = BOXING_NAME_MAP if selection_format == "boxing" else {}
 
@@ -1389,6 +1456,13 @@ def generate_conditioning_block(flags):
                 d.get("equipment_note", ""),
             ]
         )
+        if not sport_context_eligibility(
+            d,
+            sport=selection_format,
+            technical_style_keys=tech_style_tags,
+            tactical_style_keys=style_names + style_secondary,
+        ):
+            continue
         if is_banned_drill(
             d.get("name", ""),
             tags,
@@ -1471,19 +1545,37 @@ def generate_conditioning_block(flags):
             for hint in restriction_result.get("no_match_hints", []):
                 restriction_warning_counts[hint] += 1
 
-        num_weak = sum(1 for t in tags if t in weak_tags)
-        num_goals = sum(1 for t in tags if t in goal_tags)
-        num_style = sum(1 for t in tags if t in style_tags)
+        primary_weak_hits = sum(1 for t in tags if t in primary_weak_tags)
+        secondary_weak_hits = sum(1 for t in tags if t in secondary_weak_tags)
+        num_weak = primary_weak_hits + secondary_weak_hits
+        primary_goal_hits = sum(1 for t in tags if t in primary_goal_tags)
+        secondary_goal_hits = sum(1 for t in tags if t in secondary_goal_tags)
+        num_goals = primary_goal_hits + secondary_goal_hits
+        primary_style_hits = sum(1 for t in tags if t in normalize_tags([tag for s in style_names for tag in STYLE_TAG_MAP.get(s, [])]))
+        secondary_style_hits = sum(1 for t in tags if t in normalize_tags([tag for s in style_secondary for tag in STYLE_TAG_MAP.get(s, [])]))
+        num_style = primary_style_hits + secondary_style_hits
         num_format = sum(1 for t in tags if t in fight_format_tags)
 
-        base_score = 2.5 * min(num_weak, 2)
-        base_score += 2.0 * min(num_goals, 2)
-        base_score += 0.75 * min(num_style, 2)
+        base_score = 2.75 * min(primary_weak_hits, 2)
+        base_score += 1.25 * min(secondary_weak_hits, 2)
+        base_score += 2.1 * min(primary_goal_hits, 2)
+        base_score += 0.9 * min(secondary_goal_hits, 2)
+        base_score += 0.85 * min(primary_style_hits, 2)
+        base_score += 0.35 * min(secondary_style_hits, 2)
         base_score += 1.0 * min(num_format, 1)
 
         energy_multiplier = energy_weights.get(system, 1.0)
         system_score = round(energy_multiplier * 1.0, 2)
         total_score = base_score + system_score
+        cluster_hits = len(
+            (
+                set(tags)
+                | {str(value).strip() for value in d.get("cluster_ids", []) if str(value).strip()}
+            )
+            & active_clusters
+        )
+        if cluster_hits:
+            total_score += 1.35 * cluster_hits
 
         penalty = 0.0
         if fatigue == "high" and "high_cns" in tags:
@@ -1503,27 +1595,50 @@ def generate_conditioning_block(flags):
                 equipment_access_set=equipment_access_set,
             )
             total_score += boxer_aerobic_adjustment
+        fallback_class = conditioning_fallback_class(
+            d,
+            sport=selection_format,
+            goal_keys=normalized_profile.goal_keys,
+            weakness_keys=normalized_profile.weakness_keys,
+            weakness_secondary=normalized_profile.weakness_secondary,
+        )
+        fallback_penalty = FALLBACK_CLASS_PENALTY.get(fallback_class, 0.0)
+        if fallback_penalty <= -999:
+            continue
+        total_score += fallback_penalty
+        penalty += min(fallback_penalty, 0.0)
+        if support_flags and "high_cns" in tags and not (primary_goal_hits or primary_weak_hits):
+            total_score -= 0.4
+            penalty -= 0.4
         if not ignore_restrictions and restriction_penalty:
             total_score += restriction_penalty
             penalty += restriction_penalty
 
         reasons = {
             "weakness_hits": num_weak,
+            "primary_weakness_hits": primary_weak_hits,
+            "secondary_weakness_hits": secondary_weak_hits,
             "goal_hits": num_goals,
+            "primary_goal_hits": primary_goal_hits,
+            "secondary_goal_hits": secondary_goal_hits,
             "style_hits": num_style,
+            "primary_style_hits": primary_style_hits,
+            "secondary_style_hits": secondary_style_hits,
             "phase_hits": 1,
             "load_adjustments": system_score,
             "equipment_boost": 0.0,
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "cluster_hits": cluster_hits,
+            "fallback_class": fallback_class,
             "final_score": round(total_score, 4),
         }
 
         system_drills[system].append((d, total_score, reasons))
 
     # ---- Style specific conditioning ----
-    target_style_tags = set(style_names + tech_style_tags)
+    target_style_tags = set(style_names + tech_style_tags + style_secondary)
     for drill in get_style_conditioning_bank():
         d = drill.copy()
         if d.get("placement", "conditioning").lower() != "conditioning":
@@ -1552,6 +1667,13 @@ def generate_conditioning_block(flags):
                 d.get("equipment_note", ""),
             ]
         )
+        if not sport_context_eligibility(
+            d,
+            sport=selection_format,
+            technical_style_keys=tech_style_tags,
+            tactical_style_keys=style_names + style_secondary,
+        ):
+            continue
         if is_banned_drill(
             d.get("name", ""),
             tags,
@@ -1642,8 +1764,12 @@ def generate_conditioning_block(flags):
             for hint in restriction_result.get("no_match_hints", []):
                 restriction_warning_counts[hint] += 1
 
-        weak_matches = sum(1 for t in tags if t in weak_tags)
-        goal_matches = sum(1 for t in tags if t in goal_tags)
+        primary_weak_hits = sum(1 for t in tags if t in primary_weak_tags)
+        secondary_weak_hits = sum(1 for t in tags if t in secondary_weak_tags)
+        weak_matches = primary_weak_hits + secondary_weak_hits
+        primary_goal_hits = sum(1 for t in tags if t in primary_goal_tags)
+        secondary_goal_hits = sum(1 for t in tags if t in secondary_goal_tags)
+        goal_matches = primary_goal_hits + secondary_goal_hits
         top_system = preferred_order[0]
         if system != top_system and not weak_matches and not goal_matches:
             continue
@@ -1654,8 +1780,19 @@ def generate_conditioning_block(flags):
         if system == top_system:
             score += 0.75
         score += equip_bonus
-        score += 0.6 * min(weak_matches, 1)
-        score += 0.5 * min(goal_matches, 1)
+        score += 0.7 * min(primary_weak_hits, 1)
+        score += 0.35 * min(secondary_weak_hits, 1)
+        score += 0.55 * min(primary_goal_hits, 1)
+        score += 0.25 * min(secondary_goal_hits, 1)
+        cluster_hits = len(
+            (
+                set(tags)
+                | {str(value).strip() for value in d.get("cluster_ids", []) if str(value).strip()}
+            )
+            & active_clusters
+        )
+        if cluster_hits:
+            score += 1.35 * cluster_hits
         penalty = 0.0
         if "high_cns" in tags:
             if fatigue == "high":
@@ -1675,12 +1812,31 @@ def generate_conditioning_block(flags):
                 equipment_access_set=equipment_access_set,
             )
             score += boxer_aerobic_adjustment
+        fallback_class = conditioning_fallback_class(
+            d,
+            sport=selection_format,
+            goal_keys=normalized_profile.goal_keys,
+            weakness_keys=normalized_profile.weakness_keys,
+            weakness_secondary=normalized_profile.weakness_secondary,
+        )
+        fallback_penalty = FALLBACK_CLASS_PENALTY.get(fallback_class, 0.0)
+        if fallback_penalty <= -999:
+            continue
+        score += fallback_penalty
+        penalty += min(fallback_penalty, 0.0)
+        if support_flags and "high_cns" in tags and not (primary_goal_hits or primary_weak_hits):
+            score -= 0.4
+            penalty -= 0.4
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             penalty += restriction_penalty
         reasons = {
             "weakness_hits": weak_matches,
+            "primary_weakness_hits": primary_weak_hits,
+            "secondary_weakness_hits": secondary_weak_hits,
             "goal_hits": goal_matches,
+            "primary_goal_hits": primary_goal_hits,
+            "secondary_goal_hits": secondary_goal_hits,
             "style_hits": 1,
             "phase_hits": 1,
             "load_adjustments": 0.75 if system == top_system else 0.0,
@@ -1688,6 +1844,8 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "cluster_hits": cluster_hits,
+            "fallback_class": fallback_class,
             "final_score": round(score, 4),
         }
 
@@ -1707,6 +1865,19 @@ def generate_conditioning_block(flags):
     if selection_format == "boxing":
         def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float]:
             drill, score, _ = item
+            fallback_class = conditioning_fallback_class(
+                drill,
+                sport=selection_format,
+                goal_keys=normalized_profile.goal_keys,
+                weakness_keys=normalized_profile.weakness_keys,
+                weakness_secondary=normalized_profile.weakness_secondary,
+            )
+            fallback_rank = {
+                "normal": 0,
+                "downranked": 1,
+                "last_resort": 2,
+                "blocked_for_profile": 3,
+            }.get(fallback_class, 0)
             return (
                 _boxing_aerobic_preference_rank(
                     drill,
@@ -1716,6 +1887,7 @@ def generate_conditioning_block(flags):
                     restrictions=restrictions,
                     equipment_access_set=equipment_access_set,
                 ),
+                fallback_rank,
                 -score,
             )
 
@@ -1891,7 +2063,7 @@ def generate_conditioning_block(flags):
     allow_glycolytic = False
     if phase.upper() == "TAPER":
         lactic_goal_tags = {"glycolytic", "anaerobic_lactic", "lactic"}
-        has_conditioning_goal = any(g in {"conditioning", "endurance"} for g in goal_list)
+        has_conditioning_goal = any(g in {"conditioning", "endurance", "repeatability_endurance"} for g in goal_list)
         has_lactic_goal = bool(set(goal_tags) & lactic_goal_tags)
         allow_glycolytic = (
             fatigue == "low"
@@ -1933,7 +2105,7 @@ def generate_conditioning_block(flags):
 
     if phase.upper() == "TAPER":
         combined_focus = [w.lower() for w in weaknesses] + goal_list
-        allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance"])
+        allow_aerobic = any(k in combined_focus for k in ["conditioning", "endurance", "repeatability_endurance", "gas_tank", "aerobic_repeatability"])
 
         d, r = blended_pick("alactic")
         if d:
