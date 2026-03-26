@@ -32,7 +32,10 @@ def test_manifest_keeps_rehab_and_style_completion_contracts():
     mma_row = rows["mma__style_completion__coordination_proprioception__hybrid"]
     assert mma_row["cluster_type"] == "style_completion"
     assert set(mma_row["mandatory_categories"]) == {"style_specific", "coordination_style"}
-    assert mma_row["preferred_categories"] == ["conditioning"]
+    assert mma_row["preferred_categories"] == ["conditioning", "strength_support"]
+
+    grappler_row = rows["mma__style_completion__gas_tank__grappler"]
+    assert grappler_row["preferred_categories"] == ["coordination_style", "strength_support"]
 
     assert rows["muay_thai__style_completion__repeatability_endurance__clinch_fighter"]["sports"] == ["muay_thai"]
     assert rows["wrestling__style_completion__gas_tank__grappler"]["sports"] == ["wrestling"]

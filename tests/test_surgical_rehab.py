@@ -33,8 +33,11 @@ from fightcamp.rehab_protocols import (
     _DAY_TYPE_REHAB_WHY,
     _PHASE_REHAB_WHY,
     _format_rehab_drill,
+    _split_notes_by_phase,
+    _split_phase_progression,
     classify_drill_function,
     generate_rehab_protocols,
+    get_rehab_bank,
 )
 from fightcamp.stage2_payload import (
     STAGE2_FINALIZER_PROMPT,
@@ -278,6 +281,83 @@ def test_day_type_drill_limit_sparring_is_one():
 def test_day_type_drill_limit_others_are_two():
     for key in ("strength", "aerobic", "recovery"):
         assert _DAY_TYPE_DRILL_LIMIT[key] == 2, f"Expected limit 2 for {key}"
+
+
+# ---------------------------------------------------------------------------
+# Phase parsing and clustered rehab-return coverage
+# ---------------------------------------------------------------------------
+
+
+def _cluster_entries(cluster_id: str) -> list[dict]:
+    return [entry for entry in get_rehab_bank() if cluster_id in entry.get("cluster_ids", [])]
+
+
+def _cluster_text(cluster_id: str) -> str:
+    parts: list[str] = []
+    for entry in _cluster_entries(cluster_id):
+        for drill in entry.get("drills", []):
+            parts.append(drill.get("name", ""))
+            parts.append(drill.get("notes", ""))
+    return " ".join(parts).lower()
+
+
+def test_split_phase_progression_accepts_ascii_arrow():
+    assert _split_phase_progression("GPP -> SPP -> TAPER") == ["GPP", "SPP", "TAPER"]
+
+
+def test_split_notes_by_phase_accepts_ascii_arrow():
+    assert _split_notes_by_phase("GPP: Build control -> SPP: Add speed -> TAPER: Keep sharp") == [
+        ("GPP", "Build control"),
+        ("SPP", "Add speed"),
+        ("TAPER", "Keep sharp"),
+    ]
+
+
+def test_rehab_return_clusters_are_three_phase_progressions():
+    cluster_ids = [
+        "boxing__rehab_return__hip_flexor_groin_return",
+        "boxing__rehab_return__trunk_rotation_return",
+        "boxing__rehab_return__shoulder_return_to_strike",
+        "boxing__rehab_return__ankle_foot_balance_return",
+    ]
+
+    for cluster_id in cluster_ids:
+        entries = _cluster_entries(cluster_id)
+        assert len(entries) >= 2, f"Expected multiple entries for {cluster_id}"
+        for entry in entries:
+            assert _split_phase_progression(entry["phase_progression"]) == ["GPP", "SPP", "TAPER"]
+
+
+def test_hip_flexor_groin_return_cluster_has_requested_bridge_themes():
+    text = _cluster_text("boxing__rehab_return__hip_flexor_groin_return")
+    assert "isometric hip flexion" in text or "hip flexor isometric" in text
+    assert "march" in text
+    assert "split-stance" in text
+    assert "knee-drive" in text or "step-in" in text
+
+
+def test_trunk_rotation_return_cluster_has_requested_bridge_themes():
+    text = _cluster_text("boxing__rehab_return__trunk_rotation_return")
+    assert "anti-rotation" in text
+    assert "reload" in text
+    assert "catch" in text and "brace" in text
+    assert "stance preservation" in text or "stance-preserved" in text
+
+
+def test_shoulder_return_cluster_has_requested_bridge_themes():
+    text = _cluster_text("boxing__rehab_return__shoulder_return_to_strike")
+    assert "scap" in text and "cuff" in text
+    assert "safe press" in text or "press angle" in text
+    assert "recoil" in text
+    assert "combo" in text
+
+
+def test_ankle_foot_return_cluster_has_requested_bridge_themes():
+    text = _cluster_text("boxing__rehab_return__ankle_foot_balance_return")
+    assert "arch" in text or "short foot" in text
+    assert "perturbation" in text
+    assert "pivot" in text and "deceleration" in text
+    assert "exit-and-restack" in text or "restack" in text
 
 
 # ---------------------------------------------------------------------------

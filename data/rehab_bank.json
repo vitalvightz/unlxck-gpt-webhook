@@ -10768,11 +10768,33 @@
     "drills": [
       {
         "name": "Tall-Kneeling Anti-Rotation Pressout",
-        "notes": "GPP: Restore trunk control without irritation -> SPP: Add faster recoil without losing rib control -> TAPER: Keep short low-fatigue sets before boxing sessions"
+        "notes": "GPP: Restore anti-rotation control without irritation -> SPP: Add controlled turn-and-return without losing rib position -> TAPER: Keep short low-fatigue brace sets before boxing sessions"
       },
       {
-        "name": "Split-Stance Return-to-Rotation Scoop Toss",
-        "notes": "GPP: Learn hip-to-rib timing at low load -> SPP: Reconnect rotation to punch transfer without full fight pace -> TAPER: Keep one crisp return-to-strike bridge set only"
+        "name": "Med-Ball Catch to Brace Scoop Return",
+        "notes": "GPP: Absorb a light catch and re-brace without pain -> SPP: Bridge into controlled rotation and punch-transfer timing instead of violent slams -> TAPER: Keep one crisp catch-and-return bridge set only"
+      }
+    ]
+  },
+  {
+    "location": "obliques",
+    "type": "pain",
+    "phase_progression": "GPP -> SPP -> TAPER",
+    "cluster_ids": [
+      "boxing__rehab_return__trunk_rotation_return"
+    ],
+    "coverage_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "drills": [
+      {
+        "name": "Split-Stance Band Rotation Reload",
+        "notes": "GPP: Rebuild low-load trunk reload with feet quiet and ribs stacked -> SPP: Add more turn speed without losing stance shape -> TAPER: Keep quick low-cost reload touches only"
+      },
+      {
+        "name": "Stance-Preserved Punch-Transfer Pressout",
+        "notes": "GPP: Rehearse rotation with stance preservation and no forced range -> SPP: Bridge trunk control into jab-cross transfer -> TAPER: Keep one sharp transfer set without fatigue"
       }
     ]
   },
@@ -10789,18 +10811,40 @@
     ],
     "drills": [
       {
-        "name": "Half-Kneeling Hip Flexor Isometric with Reach",
-        "notes": "GPP: Calm anterior hip irritation and restore pelvic control -> SPP: Add controlled march-off without pinching -> TAPER: Keep brief activation only"
+        "name": "Supine 90-90 Hip Flexor Isometric Press",
+        "notes": "GPP: Build pain-free isometric hip flexion without anterior pinch -> SPP: Add longer lever holds and controlled relax-return -> TAPER: Keep brief neural primer sets only"
       },
       {
-        "name": "Split-Stance March to Pivot Step",
-        "notes": "GPP: Rebuild front-hip loading in stance -> SPP: Bridge rehab capacity into pivot and angle changes -> TAPER: Keep low-cost return-to-strike footwork timing"
+        "name": "Supported Wall March to Knee-Drive Hold",
+        "notes": "GPP: Relearn supported march mechanics and front-side balance -> SPP: Bridge into stronger knee-drive holds without losing pelvis position -> TAPER: Keep crisp low-cost step-in timing only"
+      }
+    ]
+  },
+  {
+    "location": "groin",
+    "type": "strain",
+    "phase_progression": "GPP -> SPP -> TAPER",
+    "cluster_ids": [
+      "boxing__rehab_return__hip_flexor_groin_return"
+    ],
+    "coverage_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "drills": [
+      {
+        "name": "Split-Stance Adductor Shift Iso Hold",
+        "notes": "GPP: Control midline load without deep provocative range -> SPP: Add small stance shifts and longer holds -> TAPER: Keep short stance-control exposures only"
+      },
+      {
+        "name": "Step-In Jab Entry with Groin Restack",
+        "notes": "GPP: Rehearse step-in punch mechanics at partial depth -> SPP: Bridge adductor control into entry, recoil, and balance restack -> TAPER: Keep one clean return-to-strike bridge set without fatigue"
       }
     ]
   },
   {
     "location": "shoulder",
-    "type": "unspecified",
+    "type": "strain",
     "phase_progression": "GPP -> SPP -> TAPER",
     "cluster_ids": [
       "boxing__rehab_return__shoulder_return_to_strike"
@@ -10811,12 +10855,34 @@
     ],
     "drills": [
       {
-        "name": "Wall Slide to Jab Reach",
-        "notes": "GPP: Restore scap upward rotation and pain-free reach -> SPP: Add faster jab snap without shrugging -> TAPER: Keep one clean activation set"
+        "name": "Sidelying External Rotation to Scap Set",
+        "notes": "GPP: Prepare scap and cuff without shrug-driven compensation -> SPP: Stand it up into reach timing without losing joint position -> TAPER: Keep one clean prep set only"
       },
       {
-        "name": "Band-Resisted Jab Deceleration",
-        "notes": "GPP: Learn controlled end-range braking -> SPP: Bridge shoulder tolerance into return-to-strike transfer -> TAPER: Keep low-volume speed and recoil only"
+        "name": "Landmine Jab Return Press",
+        "notes": "GPP: Reintroduce a safe press angle with low collision cost -> SPP: Bridge press tolerance into jab-return mechanics -> TAPER: Keep low-volume sharp reps only"
+      }
+    ]
+  },
+  {
+    "location": "shoulder",
+    "type": "pain",
+    "phase_progression": "GPP -> SPP -> TAPER",
+    "cluster_ids": [
+      "boxing__rehab_return__shoulder_return_to_strike"
+    ],
+    "coverage_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "drills": [
+      {
+        "name": "Band Jab Recoil Catch",
+        "notes": "GPP: Learn end-range braking and recoil control without irritation -> SPP: Add faster snap-and-catch after single strikes -> TAPER: Keep short low-cost speed and recoil only"
+      },
+      {
+        "name": "Shadowbox 1-2 Return Bridge (Band Assist)",
+        "notes": "GPP: Reintroduce punch sequencing with assisted range and no collision -> SPP: Bridge shoulder tolerance into low-cost combo returns -> TAPER: Keep one crisp combo primer only"
       }
     ]
   },
@@ -10834,11 +10900,33 @@
     "drills": [
       {
         "name": "Short Foot Split-Stance Hold",
-        "notes": "GPP: Rebuild arch and ankle stiffness in boxing stance -> SPP: Add subtle weight shifts without collapse -> TAPER: Keep one short stance primer"
+        "notes": "GPP: Rebuild arch stiffness and stance-base awareness in boxing posture -> SPP: Add subtle weight shifts without collapse -> TAPER: Keep one short stance primer only"
       },
       {
-        "name": "Pivot Stick with Rear-Foot Load",
-        "notes": "GPP: Control small-angle turns at low speed -> SPP: Bridge balance back into pivoting and strike transfer -> TAPER: Keep crisp low-fatigue angle exits only"
+        "name": "Band Perturbation Stance Catch",
+        "notes": "GPP: Absorb light ankle perturbations and recover stance quietly -> SPP: Add glove reach or head movement without losing base -> TAPER: Keep short reactive brace touches only"
+      }
+    ]
+  },
+  {
+    "location": "foot",
+    "type": "pain",
+    "phase_progression": "GPP -> SPP -> TAPER",
+    "cluster_ids": [
+      "boxing__rehab_return__ankle_foot_balance_return"
+    ],
+    "coverage_categories": [
+      "rehab_progression",
+      "return_bridge"
+    ],
+    "drills": [
+      {
+        "name": "Pivot Stick to Rear-Foot Decel",
+        "notes": "GPP: Rebuild controlled pivot and deceleration at small angles -> SPP: Add sharper rear-foot load and clean stick positions -> TAPER: Keep crisp angle-change sticks only"
+      },
+      {
+        "name": "Exit-and-Restack Balance Step",
+        "notes": "GPP: Relearn boxing exits with full-foot contact and balance recovery -> SPP: Bridge foot control into exit-and-restack movement -> TAPER: Keep one low-fatigue footwork bridge set only"
       }
     ]
   }

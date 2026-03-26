@@ -82,23 +82,53 @@ def normalize_rehab_location(location: str | None) -> list[str]:
     return filtered or candidates
 
 
+def _normalize_phase_text(text: str | None) -> str:
+    return (text or "").replace("\u00e2\u2020\u2019", "\u2192").replace("->", "\u2192")
+
+
 def _split_phase_progression(text: str) -> list[str]:
     """Return normalized phase tokens from either arrow encoding."""
-    normalized = (text or "").replace("\u00e2\u2020\u2019", "\u2192")
+    normalized = _normalize_phase_text(text)
     return [segment.strip().upper() for segment in normalized.split("\u2192") if segment.strip()]
 
 
 def _split_notes_by_phase(notes: str) -> list[tuple[str, str]]:
     """Return (phase, text) pairs if the notes use a phase progression."""
-    if "\u2192" not in notes and "\u00e2\u2020\u2019" not in notes:
+    normalized = _normalize_phase_text(notes)
+    if "\u2192" not in normalized:
         return []
-    segments = [seg.strip() for seg in (notes or "").replace("\u00e2\u2020\u2019", "\u2192").split("\u2192")]
+    segments = [seg.strip() for seg in normalized.split("\u2192")]
     results = []
     for seg in segments:
         if ":" in seg:
             phase, desc = seg.split(":", 1)
             results.append((phase.strip().upper(), desc.strip()))
     return results
+
+
+def _rehab_entry_priority(entry: dict, loc_candidates: list[str], injury_type: str | None) -> tuple[int, int, int]:
+    location = str(entry.get("location") or "").strip()
+    entry_type = str(entry.get("type") or "").strip()
+    coverage = {str(value).strip() for value in entry.get("coverage_categories", []) if str(value).strip()}
+
+    if location == "unspecified":
+        location_score = 0
+    elif loc_candidates and location == loc_candidates[0]:
+        location_score = 2
+    else:
+        location_score = 1
+
+    if injury_type is None:
+        type_score = 1
+    elif entry_type == injury_type:
+        type_score = 2
+    elif entry_type == "unspecified":
+        type_score = 1
+    else:
+        type_score = 0
+
+    return_bridge_score = 1 if "return_bridge" in coverage else 0
+    return (return_bridge_score, type_score, location_score)
 
 INJURY_TYPES = [
     "sprain",
@@ -666,6 +696,10 @@ def generate_rehab_protocols(
             )
             and current_phase.upper() in _phases(entry)
         ]
+        matches.sort(
+            key=lambda entry: _rehab_entry_priority(entry, loc_candidates, itype),
+            reverse=True,
+        )
         if matches:
             drills: list[tuple[str, str]] = []  # (name, notes_for_phase)
             for m in matches:

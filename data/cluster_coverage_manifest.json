@@ -349,7 +349,8 @@
       "coordination_style"
     ],
     "preferred_categories": [
-      "conditioning"
+      "conditioning",
+      "strength_support"
     ],
     "forbidden_categories": [],
     "rehab_required": false
@@ -374,7 +375,8 @@
       "conditioning"
     ],
     "preferred_categories": [
-      "coordination_style"
+      "coordination_style",
+      "strength_support"
     ],
     "forbidden_categories": [],
     "rehab_required": false

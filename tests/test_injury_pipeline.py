@@ -13,6 +13,15 @@ from fightcamp.rehab_protocols import (
 from fightcamp.coach_review import build_coach_review_notes
 
 
+def _rehab_text(injury: str, phase: str) -> str:
+    text, _ = generate_rehab_protocols(
+        injury_string=injury,
+        exercise_data=[],
+        current_phase=phase,
+    )
+    return text
+
+
 def test_negation_strips_injury_phrases():
     samples = [
         "no shoulder pain",
@@ -103,3 +112,78 @@ def test_front_of_hip_strain_coach_review_avoids_lower_leg_fallback_language():
     assert "Strain" in notes
     assert "Progressive calf/hamstring strength." not in notes
     assert "Balance/proprioception for ankle." not in notes
+
+
+def test_hip_flexor_return_bridge_output_wins_across_phases():
+    phase_markers = {
+        "GPP": "Build pain-free isometric hip flexion without anterior pinch",
+        "SPP": "Bridge into stronger knee-drive holds without losing pelvis position",
+        "TAPER": "Keep crisp low-cost step-in timing only",
+    }
+
+    for phase, marker in phase_markers.items():
+        text = _rehab_text("hip flexor strain", phase)
+        assert marker in text
+        assert "General Isometric Holds" not in text
+
+
+def test_groin_return_bridge_output_wins_across_phases():
+    phase_markers = {
+        "GPP": "Control midline load without deep provocative range",
+        "SPP": "Bridge adductor control into entry, recoil, and balance restack",
+        "TAPER": "Keep one clean return-to-strike bridge set without fatigue",
+    }
+
+    for phase, marker in phase_markers.items():
+        text = _rehab_text("groin strain", phase)
+        assert marker in text
+        assert "Side-Lying Hip Adduction" not in text
+
+
+def test_trunk_rotation_return_bridge_output_wins_across_phases():
+    phase_markers = {
+        "GPP": "Rebuild low-load trunk reload with feet quiet and ribs stacked",
+        "SPP": "Bridge trunk control into jab-cross transfer",
+        "TAPER": "Keep one sharp transfer set without fatigue",
+    }
+
+    for phase, marker in phase_markers.items():
+        text = _rehab_text("obliques pain", phase)
+        assert marker in text
+        assert "Pallof Press (Light Band)" not in text
+
+
+def test_shoulder_return_bridge_output_wins_across_phases():
+    phase_markers = {
+        "GPP": "Prepare scap and cuff without shrug-driven compensation",
+        "SPP": "Bridge press tolerance into jab-return mechanics",
+        "TAPER": "Keep low-volume sharp reps only",
+    }
+
+    for phase, marker in phase_markers.items():
+        text = _rehab_text("shoulder strain", phase)
+        assert marker in text
+        assert "Wall Slides with Foam Roller" not in text
+
+
+def test_ankle_and_foot_return_bridge_output_wins_across_phases():
+    ankle_markers = {
+        "GPP": "Rebuild arch stiffness and stance-base awareness in boxing posture",
+        "SPP": "Add glove reach or head movement without losing base",
+        "TAPER": "Keep short reactive brace touches only",
+    }
+    foot_markers = {
+        "GPP": "Rebuild controlled pivot and deceleration at small angles",
+        "SPP": "Bridge foot control into exit-and-restack movement",
+        "TAPER": "Keep one low-fatigue footwork bridge set only",
+    }
+
+    for phase, marker in ankle_markers.items():
+        text = _rehab_text("ankle instability", phase)
+        assert marker in text
+        assert "Reactive Stability Drills" not in text
+
+    for phase, marker in foot_markers.items():
+        text = _rehab_text("foot pain", phase)
+        assert marker in text
+        assert "Short Foot Doming" not in text

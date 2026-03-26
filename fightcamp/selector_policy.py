@@ -40,6 +40,26 @@ _BOXING_BLOCKED_PHRASES = {
     "elbow",
 }
 _GRAPPLING_ONLY_TAGS = {"bjj", "grappler", "grappling", "wrestling", "submission_hunter", "scrambler"}
+_SUPPORT_CATEGORY_SPORTS = {"boxing", "mma", "kickboxing", "muay_thai", "wrestling", "bjj"}
+
+
+def _support_category_allowed(*, category: str, sport: str, technical: set[str]) -> bool:
+    if not category.endswith("_support"):
+        return True
+    support_sport = category[: -len("_support")]
+    if support_sport not in _SUPPORT_CATEGORY_SPORTS:
+        return True
+
+    allowed_support_sports = {sport} | technical
+    if sport == "kickboxing":
+        allowed_support_sports.add("muay_thai")
+    if sport == "muay_thai":
+        allowed_support_sports.add("kickboxing")
+    if "kickboxing" in technical:
+        allowed_support_sports.add("muay_thai")
+    if "muay_thai" in technical:
+        allowed_support_sports.add("kickboxing")
+    return support_sport in allowed_support_sports
 
 
 def _combined_text(item: Mapping[str, object]) -> str:
@@ -63,10 +83,14 @@ def sport_context_eligibility(
     tactical_style_keys: Iterable[str],
 ) -> bool:
     sport_key = str(sport or "").strip().lower()
+    category = str(item.get("category", "")).strip().lower()
     tags = set(normalize_tags(item.get("tags", [])))
     text = _combined_text(item)
     technical = {str(value).strip().lower() for value in technical_style_keys if str(value).strip()}
     tactical = {str(value).strip().lower() for value in tactical_style_keys if str(value).strip()}
+
+    if not _support_category_allowed(category=category, sport=sport_key, technical=technical):
+        return False
 
     if sport_key == "boxing":
         if tags & _BOXING_BLOCKED_TAGS:
