@@ -43,6 +43,103 @@ _BOXING_BLOCKED_PHRASES = {
 _GRAPPLING_ONLY_TAGS = {"bjj", "grappler", "grappling", "wrestling", "submission_hunter", "scrambler"}
 _SUPPORT_CATEGORY_SPORTS = {"boxing", "mma", "kickboxing", "muay_thai", "wrestling", "bjj"}
 
+# Tokens that positively identify a drill as low-noise / safe boxing-specific.
+# Intentionally broad: captures technical, pacing, tool-based, and method-based safety indicators.
+_SAFE_BOXING_POSITIVE_TOKENS = frozenset(
+    {
+        "tempo",
+        "rhythm",
+        "technical",
+        "slow",
+        "shadow",
+        "band",
+        "flow",
+        "steady",
+        "light",
+        "easy",
+        "drill",
+        "reset",
+        "metronome",
+        "pause",
+        "controlled",
+        "low_intensity",
+        "low-intensity",
+        "footwork",
+        "slip",
+        "bob",
+        "weave",
+        "defensive",
+    }
+)
+# Modalities that are inherently sport-preserving without requiring name tokens.
+_SAFE_BOXING_MODALITIES = frozenset({"shadowbox", "bag_work", "pad_work", "mitts", "heavy_bag"})
+# Hard-exclusion tokens: presence of any of these overrides positive signals.
+_SAFE_BOXING_HARD_EXCLUDES = frozenset({"reenter", "re-enter", "cut", "chase", "decel"})
+
+
+def is_safe_boxing_specific(
+    item: Mapping[str, object],
+    *,
+    text: str | None = None,
+    tags: set[str] | None = None,
+    sport: str = "boxing",
+) -> bool:
+    """Return True if *item* is a low-noise, sport-preserving boxing drill.
+
+    The check is intentionally inclusive so that safe, boxing-specific options
+    are not over-suppressed even when their names do not contain the narrow
+    legacy token set (tempo/rhythm/shadow/band).  Recognition is based on:
+
+    - Boxing tag or sport-specific modality
+    - An expanded positive token list covering technical, pacing, and tool cues
+    - Modality-based recognition (shadowbox, bag_work, pad_work are safe by default)
+    - Hard-exclusion of high-risk direction-change tokens
+    """
+    if str(sport or "").strip().lower() != "boxing":
+        return False
+
+    if tags is None:
+        tags = set(normalize_tags(item.get("tags", [])))
+    if text is None:
+        text = " ".join(
+            str(value).lower()
+            for value in (
+                item.get("name", ""),
+                item.get("notes", ""),
+                item.get("purpose", ""),
+                item.get("modality", ""),
+                item.get("equipment_note", ""),
+            )
+            if value
+        )
+    else:
+        text = text.lower()
+
+    # Hard excludes override everything.
+    if any(token in text for token in _SAFE_BOXING_HARD_EXCLUDES):
+        return False
+
+    modality = str(item.get("modality", "")).strip().lower()
+
+    # Modality-based recognition: shadowbox/bag/pad work is inherently safe.
+    if modality in _SAFE_BOXING_MODALITIES:
+        return True
+
+    # Require boxing identification (tag or shadowboxing/striking content).
+    is_boxing_identified = (
+        "boxing" in tags
+        or "shadowboxing" in text
+        or "jab" in text
+        or "cross" in text
+        or "bag_work" in tags
+        or "pad_work" in tags
+    )
+    if not is_boxing_identified:
+        return False
+
+    # Positive token presence confirms low-noise character.
+    return any(token in text for token in _SAFE_BOXING_POSITIVE_TOKENS)
+
 
 def _support_category_allowed(*, category: str, sport: str, technical: set[str]) -> bool:
     if not category.endswith("_support"):
@@ -138,14 +235,7 @@ def conditioning_fallback_class(
             {"footwork", "balance", "coordination_proprioception"} & weaknesses
             or {"coordination_proprioception", "lateral_movement"} & weakness_expansions
         )
-        low_noise_boxing = (
-            "boxing" in tags
-            and any(token in name for token in ("tempo", "rhythm", "technical", "shadow", "band"))
-            and not any(token in name for token in ("reenter", "re-enter", "cut", "chase", "decel"))
-        ) or (
-            modality in {"shadowbox", "bag_work"}
-            and not any(token in name for token in ("reenter", "re-enter", "cut", "chase", "decel"))
-        )
+        safe_specific = is_safe_boxing_specific(item, tags=tags, sport=sport_key)
         if needs_repeatability:
             if any(token in name for token in ("stair", "hill")):
                 return FALLBACK_CLASS_LAST_RESORT
@@ -165,8 +255,11 @@ def conditioning_fallback_class(
                 and constraint_context.state == "critical"
                 and any(token in name for token in ("exit", "angle", "pivot", "cut", "chase", "decel"))
             ):
+                # Critical state: block all direction-change drills regardless of
+                # safe-specific status.  Safe-specific protection only applies below
+                # critical to avoid over-suppression in guarded/constrained states.
                 return FALLBACK_CLASS_BLOCKED
-            if rotation_sensitive and not low_noise_boxing and any(
+            if rotation_sensitive and not safe_specific and any(
                 token in name for token in ("rotation", "rotational", "med ball", "slam")
             ):
                 return (
@@ -174,7 +267,7 @@ def conditioning_fallback_class(
                     if constraint_context.state == "critical"
                     else FALLBACK_CLASS_LAST_RESORT
                 )
-            if direction_change_sensitive and not low_noise_boxing and any(
+            if direction_change_sensitive and not safe_specific and any(
                 token in name for token in ("exit", "reenter", "re-enter")
             ):
                 return (
@@ -182,7 +275,7 @@ def conditioning_fallback_class(
                     if constraint_context.state in {"constrained", "critical"}
                     else FALLBACK_CLASS_LAST_RESORT
                 )
-            if direction_change_sensitive and not low_noise_boxing and any(
+            if direction_change_sensitive and not safe_specific and any(
                 token in name for token in ("pivot", "cut", "chase", "angle")
             ):
                 return (
@@ -190,7 +283,7 @@ def conditioning_fallback_class(
                     if constraint_context.state in {"constrained", "critical"}
                     else FALLBACK_CLASS_DOWNRANKED
                 )
-            if prolonged_stance_sensitive and "single_leg" in tags and not low_noise_boxing:
+            if prolonged_stance_sensitive and "single_leg" in tags and not safe_specific:
                 return (
                     FALLBACK_CLASS_LAST_RESORT
                     if constraint_context.state == "critical"
@@ -225,16 +318,14 @@ def coordination_fallback_class(
         if category in {"footwork", "stance_control", "counter", "pressure"} and boxing_specific:
             return FALLBACK_CLASS_NORMAL
         if constraint_context is not None:
-            low_noise_boxing = boxing_specific and any(
-                token in name for token in ("tempo", "rhythm", "reset", "metronome", "technical")
-            ) and not any(token in name for token in ("reenter", "re-enter", "cut", "decel", "change"))
-            if constraint_context.has_aggravator("prolonged stance/load") and generic_single_leg and not low_noise_boxing:
+            safe_specific = is_safe_boxing_specific(item, tags=tags, sport=sport_key)
+            if constraint_context.has_aggravator("prolonged stance/load") and generic_single_leg and not safe_specific:
                 return (
                     FALLBACK_CLASS_LAST_RESORT
                     if constraint_context.state == "critical"
                     else FALLBACK_CLASS_DOWNRANKED
                 )
-            if constraint_context.has_aggravator("fast direction changes", "lateral cutting") and not low_noise_boxing and any(
+            if constraint_context.has_aggravator("fast direction changes", "lateral cutting") and not safe_specific and any(
                 token in name for token in ("exit", "reenter", "re-enter", "pivot", "angle", "decel", "change")
             ):
                 return (
@@ -242,7 +333,7 @@ def coordination_fallback_class(
                     if constraint_context.state == "critical"
                     else FALLBACK_CLASS_LAST_RESORT
                 )
-            if constraint_context.has_aggravator("hard rotation") and not low_noise_boxing and (
+            if constraint_context.has_aggravator("hard rotation") and not safe_specific and (
                 "rotation" in name or "rotational" in tags
             ):
                 return (

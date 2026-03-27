@@ -28,9 +28,13 @@ from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .selector_policy import (
     FALLBACK_CLASS_BLOCKED,
+    FALLBACK_CLASS_DOWNRANKED,
+    FALLBACK_CLASS_LAST_RESORT,
+    FALLBACK_CLASS_NORMAL,
     FALLBACK_CLASS_PENALTY,
     conditioning_fallback_class,
     coordination_fallback_class,
+    is_safe_boxing_specific,
     sport_context_eligibility,
 )
 from .tagging import normalize_item_tags, normalize_tags
@@ -790,7 +794,27 @@ def _conditioning_constraint_adjustment(
     system: str,
     sport: str,
     constraint_context: ConstraintSensitivity | None,
+    fallback_class: str = FALLBACK_CLASS_NORMAL,
 ) -> tuple[float, list[str]]:
+    """Return a (penalty, reasons) pair for constraint-sensitivity scoring.
+
+    Penalty budgeting:
+    The fallback_class already captures part of the risk for drills that are
+    explicitly flagged by ``conditioning_fallback_class``.  To prevent the same
+    movement-risk family from being fully penalized in both the fallback layer
+    and this adjustment layer, a *budget_factor* is applied to reduce the
+    constraint penalty when the fallback class already carries signal.
+
+    Budget factors:
+      - NORMAL   → 1.00 (no discount; fallback contributed nothing)
+      - DOWNRANKED → 0.70 (fallback applied −1.25; reduce constraint by 30%)
+      - LAST_RESORT → 0.35 (fallback applied −4.0; reduce constraint by 65%)
+
+    BLOCKED drills never reach this function (the scoring loop skips them).
+    Critical/worsening/key-movement-limited cases are explicitly preserved
+    by the constraint_context guards below, so strict suppression still fires
+    where it matters.
+    """
     if constraint_context is None or constraint_context.state == "normal":
         return 0.0, []
 
@@ -805,49 +829,63 @@ def _conditioning_constraint_adjustment(
         )
     )
     tags = set(normalize_tags(drill.get("tags", [])))
+    safe_specific = is_safe_boxing_specific(drill, text=text, tags=tags, sport=sport)
+
+    # Budget factor: reduce per-family penalty if fallback already applied signal
+    # for the same risk.  Strict behavior is preserved for worsening/critical states.
+    if (
+        constraint_context.state == "critical"
+        or constraint_context.worsening
+        or constraint_context.cannot_do_key_movements
+    ):
+        budget_factor = 1.0
+    else:
+        budget_factor = {
+            FALLBACK_CLASS_NORMAL: 1.0,
+            FALLBACK_CLASS_DOWNRANKED: 0.70,
+            FALLBACK_CLASS_LAST_RESORT: 0.35,
+        }.get(fallback_class, 1.0)
+
     penalty = 0.0
     reasons: list[str] = []
-    low_noise_boxing = sport == "boxing" and (
-        "boxing" in tags
-        or "shadowboxing" in text
-        or "jab" in text
-        or "cross" in text
-    ) and any(token in text for token in ("tempo", "rhythm", "technical", "slow", "shadow", "band")) and not any(
-        token in text for token in ("reenter", "re-enter", "cut", "chase", "decel")
-    )
 
-    if constraint_context.has_aggravator("fast direction changes", "lateral cutting") and not low_noise_boxing and (
+    if constraint_context.has_aggravator("fast direction changes", "lateral cutting") and not safe_specific and (
         any(token in text for token in ("exit", "reenter", "re-enter", "pivot", "cut", "chase", "angle", "decel"))
         or tags & {"reactive", "single_leg"}
     ):
-        penalty -= constraint_context.penalty(guarded=0.35, constrained=1.0, critical=2.2)
-        reasons.append("direction_change")
+        # Treat direction_change + exit_reentry as one family to prevent internal
+        # stacking within this function.  Use the larger of the two values rather
+        # than summing them.
+        base = constraint_context.penalty(guarded=0.35, constrained=1.0, critical=2.2)
         if any(token in text for token in ("exit", "reenter", "re-enter")):
-            penalty -= constraint_context.penalty(guarded=0.15, constrained=0.6, critical=1.2)
+            base = max(base, constraint_context.penalty(guarded=0.45, constrained=1.4, critical=3.0))
             reasons.append("exit_reentry")
+        else:
+            reasons.append("direction_change")
+        penalty -= base * budget_factor
 
-    if constraint_context.has_aggravator("hard rotation") and not low_noise_boxing and (
+    if constraint_context.has_aggravator("hard rotation") and not safe_specific and (
         "rotation" in text or "rotational" in tags or ("med ball" in text and "slam" in text)
     ):
-        penalty -= constraint_context.penalty(guarded=0.3, constrained=0.9, critical=1.9)
+        penalty -= constraint_context.penalty(guarded=0.3, constrained=0.9, critical=1.9) * budget_factor
         reasons.append("rotation")
 
     if constraint_context.has_aggravator("prolonged stance/load") and (
         "stance" in text or "single-leg" in text or tags & {"single_leg"}
     ):
-        penalty -= constraint_context.penalty(guarded=0.2, constrained=0.6, critical=1.3)
+        penalty -= constraint_context.penalty(guarded=0.2, constrained=0.6, critical=1.3) * budget_factor
         reasons.append("stance_load")
 
     if (
         constraint_context.state in {"constrained", "critical"}
         and constraint_context.hard_sparring_days >= 2
         and system in {"glycolytic", "alactic"}
-        and ("high_cns" in tags or not low_noise_boxing)
+        and ("high_cns" in tags or not safe_specific)
     ):
         penalty -= constraint_context.penalty(guarded=0.0, constrained=0.35, critical=0.9)
         reasons.append("sparring_pressure")
 
-    if low_noise_boxing:
+    if safe_specific:
         penalty += constraint_context.penalty(guarded=0.15, constrained=0.35, critical=0.2)
         reasons.append("safe_specificity")
 
@@ -1111,6 +1149,7 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
             system="coordination",
             sport=sport,
             constraint_context=constraint_context,
+            fallback_class=fallback_class,
         )
         score += constraint_adjustment
         candidates.append((score, fallback_class, drill))
@@ -1724,6 +1763,7 @@ def generate_conditioning_block(flags):
             system=system,
             sport=selection_format,
             constraint_context=constraint_context,
+            fallback_class=fallback_class,
         )
         total_score += constraint_adjustment
         penalty += min(constraint_adjustment, 0.0)
@@ -1760,8 +1800,6 @@ def generate_conditioning_block(flags):
             reasons["constraint_reasons"] = constraint_reasons
 
         system_drills[system].append((d, total_score, reasons))
-
-    # ---- Style specific conditioning ----
     target_style_tags = set(style_names + tech_style_tags + style_secondary)
     for drill in get_style_conditioning_bank():
         d = drill.copy()
@@ -1955,6 +1993,7 @@ def generate_conditioning_block(flags):
             system=system,
             sport=selection_format,
             constraint_context=constraint_context,
+            fallback_class=fallback_class,
         )
         score += constraint_adjustment
         penalty += min(constraint_adjustment, 0.0)
