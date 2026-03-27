@@ -35,6 +35,12 @@ from .config import (
     INJURY_GUARD_SHORTLIST,
     trim_to_injury_guard_shortlist,
 )
+from .scoring_audit import (
+    build_audit_reservoir,
+    build_candidate_audit,
+    build_debug_report,
+    get_constants_snapshot,
+)
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -1319,6 +1325,7 @@ def _build_conditioning_candidate_reservoir(
 
 
 def generate_conditioning_block(flags):
+    debug_scoring = bool(flags.get("debug_scoring") or flags.get("audit_selector"))
     phase = flags.get("phase", "GPP")
     phase_color = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}.get(phase.upper(), "#000")
     fatigue = flags.get("fatigue", "low")
@@ -2609,7 +2616,38 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-    return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
+    audit = None
+    if debug_scoring:
+        selected_names: set[str] = {d.get("name") for drills in grouped_drills.values() for d in drills if d.get("name")}
+        # Flatten all scored candidates (main bank + style bank) into a unified list
+        all_scored: list[tuple[dict, float, dict]] = []
+        seen_scored: set[str] = set()
+        for source in (system_drills, style_system_drills):
+            for drill_list in source.values():
+                for drill, score, reasons in drill_list:
+                    nm = drill.get("name")
+                    if nm and nm not in seen_scored:
+                        seen_scored.add(nm)
+                        all_scored.append((drill, score, reasons))
+        all_scored.sort(key=lambda t: t[1], reverse=True)
+
+        audit_reservoir = build_audit_reservoir(
+            all_scored,
+            selected_names,
+            module="conditioning",
+            top_n=10,
+            gate_excluded=[],
+            injury_excluded=excluded_by_injury,
+            restriction_blocked=restriction_blocked_items,
+        )
+        audit = build_debug_report(
+            module="conditioning",
+            phase=phase,
+            reservoir=audit_reservoir,
+            constants_snapshot=get_constants_snapshot(),
+        )
+
+    return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir, audit
 # Map for tactical styles
 
 

@@ -50,7 +50,7 @@ def test_boxing_spp_gets_alactic_fallback_when_not_suppressed():
         "sport": "boxing",
         "days_until_fight": 12,
     }
-    _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
+    _, _, _, grouped_drills, _, _, _ = generate_conditioning_block(flags)
     assert grouped_drills.get("alactic")
     assert "6–10 sec" in grouped_drills["alactic"][0].get("timing", "")
     assert re.search(r"75.?120", grouped_drills["alactic"][0].get("rest", ""))
@@ -70,7 +70,7 @@ def test_boxing_gpp_prefers_easy_bike_over_pool_treading_when_available():
         "sport": "boxing",
         "days_until_fight": 35,
     }
-    _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
+    _, _, _, grouped_drills, _, _, _ = generate_conditioning_block(flags)
 
     assert grouped_drills.get("aerobic")
     assert grouped_drills["aerobic"][0]["name"] != "Pool Treading Conditioning"
@@ -92,7 +92,7 @@ def test_boxing_gpp_uses_pool_treading_only_when_unloading_is_clearly_justified(
         "sport": "boxing",
         "days_until_fight": 28,
     }
-    _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
+    _, _, _, grouped_drills, _, _, _ = generate_conditioning_block(flags)
 
     assert grouped_drills.get("aerobic")
     assert grouped_drills["aerobic"][0]["name"] == "Pool Treading Conditioning"

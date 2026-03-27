@@ -39,6 +39,12 @@ from .strength_session_quality import (
     strength_quality_adjustment,
 )
 from .session_restraint import NEAR_EQUAL_SCORE_BAND, sort_weighted_candidates
+from .scoring_audit import (
+    build_audit_reservoir,
+    build_candidate_audit,
+    build_debug_report,
+    get_constants_snapshot,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -610,6 +616,7 @@ def refresh_strength_block_metadata(
     return updated
 
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
+    debug_scoring = bool(flags.get("debug_scoring") or flags.get("audit_selector"))
     phase = flags.get("phase", "GPP").upper()
     seed = flags.get("random_seed")
     rng = random.Random(seed) if seed is not None else None
@@ -1561,6 +1568,25 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "why_log": why_log,
         "candidate_reservoir": candidate_reservoir,
     }
+
+    if debug_scoring:
+        selected_names = {ex.get("name") for ex in base_exercises if ex.get("name")}
+        audit_reservoir = build_audit_reservoir(
+            weighted_exercises,
+            selected_names,
+            module="strength",
+            top_n=10,
+            gate_excluded=[],
+            injury_excluded=excluded_by_injury,
+            restriction_blocked=restriction_blocked_items,
+        )
+        result["audit"] = build_debug_report(
+            module="strength",
+            phase=phase,
+            reservoir=audit_reservoir,
+            constants_snapshot=get_constants_snapshot(),
+        )
+
     return refresh_strength_block_metadata(
         result,
         phase=phase,

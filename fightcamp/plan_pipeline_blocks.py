@@ -101,6 +101,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             grouped_drills,
             missing_systems,
             candidate_reservoir,
+            _audit,
         ) = generate_conditioning_block(
             {
                 **base_flags,

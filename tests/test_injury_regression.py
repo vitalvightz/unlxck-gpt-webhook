@@ -49,7 +49,7 @@ def test_injury_filters_return_selections_and_limit_exclusions():
         assert exercises
         assert _count_exclusions(exercises, injuries) < exclusion_cap
 
-        _, _, _, grouped_drills, _, _ = generate_conditioning_block(flags)
+        _, _, _, grouped_drills, _, _, _ = generate_conditioning_block(flags)
         selected_drills = [d for drills in grouped_drills.values() for d in drills]
         assert selected_drills
         assert _count_exclusions(selected_drills, injuries) < exclusion_cap

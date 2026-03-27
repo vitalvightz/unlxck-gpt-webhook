@@ -55,7 +55,7 @@ def run_injury_self_checks() -> None:
         violations.append(
             "Shoulder injury violations in strength: " + ", ".join(shoulder_violations)
         )
-    _, shoulder_conditioning_names, _, _, _, _ = generate_conditioning_block(shoulder_flags)
+    _, shoulder_conditioning_names, _, _, _, _, _ = generate_conditioning_block(shoulder_flags)
     shoulder_cond_violations = _find_keyword_violations(
         shoulder_conditioning_names,
         ["overhead slam"],
@@ -67,7 +67,7 @@ def run_injury_self_checks() -> None:
         )
 
     achilles_flags = {**base_flags, "injuries": ["achilles"]}
-    _, achilles_conditioning_names, _, _, _, _ = generate_conditioning_block(achilles_flags)
+    _, achilles_conditioning_names, _, _, _, _, _ = generate_conditioning_block(achilles_flags)
     achilles_violations = _find_keyword_violations(
         achilles_conditioning_names, ["depth jump", "drop jump", "max sprint"]
     )
