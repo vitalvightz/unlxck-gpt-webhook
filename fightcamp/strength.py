@@ -39,6 +39,15 @@ from .strength_session_quality import (
     strength_quality_adjustment,
 )
 from .session_restraint import NEAR_EQUAL_SCORE_BAND, sort_weighted_candidates
+from .planner_mutation_log import (
+    MUST_NOT_MISS_GUARANTEE,
+    SELECTOR_COMPENSATION_INSERTION,
+    PHASE_SPECIFIC_SAFEGUARD,
+    NICHE_LATE_INSERTION,
+    MutationRecord,
+    mutation_log_to_dicts,
+    record_mutation,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -935,6 +944,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     loaded_anchor_limited = False
     loaded_anchor_note = ""
 
+    # Internal mutation ledger: records every post-score selection change so
+    # planner behaviour is observable without invasive architecture changes.
+    mutation_log: list[MutationRecord] = []
+
     def _best_candidate(
         predicate,
         *,
@@ -1026,6 +1039,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             replace_index = _support_replacement_index(updated)
             if replace_index is None:
                 break
+            replaced_name = updated[replace_index].get("name")
             replacement, replacement_score, replacement_reasons, _profile = replacement_entry
             _replace_exercise(
                 updated,
@@ -1033,6 +1047,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement=replacement,
                 replacement_score=replacement_score,
                 replacement_reasons=replacement_reasons,
+            )
+            # selector_compensation_insertion: fired because the scorer did not
+            # surface this base category on its own — architecture debt when frequent.
+            record_mutation(
+                mutation_log,
+                mechanism="promote_base_categories",
+                phase=phase,
+                original_name=replaced_name,
+                replacement_name=replacement.get("name"),
+                original_score=score_lookup.get(replaced_name),
+                replacement_score=replacement_score,
+                label=SELECTOR_COMPENSATION_INSERTION,
+                reason=f"missing base category {category!r}: replaced {replaced_name!r} with anchor-capable exercise",
             )
         return updated
 
@@ -1064,6 +1091,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if replace_index is None:
             return exercises
         replacement, replacement_score, replacement_reasons, _profile = replacement_entry
+        replaced_name = exercises[replace_index].get("name")
         updated = list(exercises)
         _replace_exercise(
             updated,
@@ -1071,6 +1099,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             replacement=replacement,
             replacement_score=replacement_score,
             replacement_reasons=replacement_reasons,
+        )
+        # phase_specific_safeguard: force-isometric insertion in GPP/SPP under
+        # protective context (injuries / restrictions / elevated fatigue).
+        record_mutation(
+            mutation_log,
+            mechanism="maybe_add_force_isometric",
+            phase=phase,
+            original_name=replaced_name,
+            replacement_name=replacement.get("name"),
+            original_score=score_lookup.get(replaced_name),
+            replacement_score=replacement_score,
+            label=PHASE_SPECIFIC_SAFEGUARD,
+            reason=f"force isometric insertion in {phase}: replaced {replaced_name!r} with force isometric exercise",
         )
         return updated
 
@@ -1087,6 +1128,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             replace_index = _support_replacement_index(updated)
             if not replacement_entry or replace_index is None:
                 break
+            replaced_name = updated[replace_index].get("name")
             replacement, replacement_score, replacement_reasons, _profile = replacement_entry
             _replace_exercise(
                 updated,
@@ -1094,6 +1136,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement=replacement,
                 replacement_score=replacement_score,
                 replacement_reasons=replacement_reasons,
+            )
+            # must_not_miss_guarantee: structural — support cap exceeded; session
+            # requires at least one anchor-capable exercise per session slot.
+            record_mutation(
+                mutation_log,
+                mechanism="enforce_session_quality/support_cap",
+                phase=phase,
+                original_name=replaced_name,
+                replacement_name=replacement.get("name"),
+                original_score=score_lookup.get(replaced_name),
+                replacement_score=replacement_score,
+                label=MUST_NOT_MISS_GUARANTEE,
+                reason=f"support cap exceeded ({support_cap}): replaced support-only {replaced_name!r} with anchor-capable exercise",
             )
 
         sessions = infer_strength_sessions(updated, num_strength_sessions)
@@ -1118,6 +1173,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         ),
                         len(items) - 1,
                     )
+                    replaced_name = updated[positions[local_support]].get("name")
                     replacement, replacement_score, replacement_reasons, _profile = replacement_entry
                     _replace_exercise(
                         updated,
@@ -1125,6 +1181,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         replacement=replacement,
                         replacement_score=replacement_score,
                         replacement_reasons=replacement_reasons,
+                    )
+                    # must_not_miss_guarantee: structural — every session needs an anchor.
+                    record_mutation(
+                        mutation_log,
+                        mechanism="enforce_session_quality/session_anchor",
+                        phase=phase,
+                        original_name=replaced_name,
+                        replacement_name=replacement.get("name"),
+                        original_score=score_lookup.get(replaced_name),
+                        replacement_score=replacement_score,
+                        label=MUST_NOT_MISS_GUARANTEE,
+                        reason=f"session {session.get('session_index')} has no anchor: replaced {replaced_name!r} with anchor-capable exercise",
                     )
 
         sessions = infer_strength_sessions(updated, num_strength_sessions)
@@ -1146,6 +1214,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if session_support_count_before_anchor(items) > 1 or session_starts_with_support_only(items):
                 first_position = positions[0]
                 anchor_position = positions[anchor_local_index]
+                # must_not_miss_guarantee: structural reorder — anchor must lead session.
+                record_mutation(
+                    mutation_log,
+                    mechanism="enforce_session_quality/anchor_reorder",
+                    phase=phase,
+                    original_name=updated[anchor_position].get("name"),
+                    replacement_name=updated[first_position].get("name"),
+                    original_score=score_lookup.get(updated[anchor_position].get("name")),
+                    replacement_score=score_lookup.get(updated[first_position].get("name")),
+                    label=MUST_NOT_MISS_GUARANTEE,
+                    reason=f"session {session.get('session_index')}: anchor {updated[anchor_position].get('name')!r} reordered to first position",
+                )
                 updated[first_position], updated[anchor_position] = updated[anchor_position], updated[first_position]
 
         if phase in {"GPP", "SPP"}:
@@ -1167,6 +1247,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     replace_index = _support_replacement_index(updated)
                     if replace_index is None:
                         replace_index = 0
+                    replaced_name = updated[replace_index].get("name")
                     replacement, replacement_score, replacement_reasons, _profile = replacement_entry
                     _replace_exercise(
                         updated,
@@ -1174,6 +1255,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         replacement=replacement,
                         replacement_score=replacement_score,
                         replacement_reasons=replacement_reasons,
+                    )
+                    # must_not_miss_guarantee: GPP/SPP requires a true loaded anchor.
+                    record_mutation(
+                        mutation_log,
+                        mechanism="enforce_session_quality/true_loaded_anchor",
+                        phase=phase,
+                        original_name=replaced_name,
+                        replacement_name=replacement.get("name"),
+                        original_score=score_lookup.get(replaced_name),
+                        replacement_score=replacement_score,
+                        label=MUST_NOT_MISS_GUARANTEE,
+                        reason=f"no true loaded anchor in {phase}: replaced {replaced_name!r} with true-loaded-anchor exercise",
                     )
                     true_loaded_anchor_index = replace_index
                     loaded_anchor_limited = False
@@ -1184,6 +1277,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         replace_index = _support_replacement_index(updated)
                         if replace_index is None:
                             replace_index = 0
+                        replaced_name = updated[replace_index].get("name")
                         replacement, replacement_score, replacement_reasons, _profile = universal_entry
                         _replace_exercise(
                             updated,
@@ -1191,6 +1285,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                             replacement=replacement,
                             replacement_score=replacement_score,
                             replacement_reasons=replacement_reasons,
+                        )
+                        # must_not_miss_guarantee: fallback to universal strength bank for loaded anchor.
+                        record_mutation(
+                            mutation_log,
+                            mechanism="enforce_session_quality/universal_loaded_anchor",
+                            phase=phase,
+                            original_name=replaced_name,
+                            replacement_name=replacement.get("name"),
+                            original_score=score_lookup.get(replaced_name),
+                            replacement_score=score_lookup.get(replacement.get("name")),
+                            label=MUST_NOT_MISS_GUARANTEE,
+                            reason=f"no true loaded anchor in {phase}: fallback to universal strength bank, replaced {replaced_name!r}",
                         )
                         true_loaded_anchor_index = replace_index
                         loaded_anchor_limited = False
@@ -1365,9 +1471,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _promote_base_categories(base_exercises)
     base_exercises = _apply_movement_caps(base_exercises)
     base_exercises = _maybe_add_force_isometric(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises)
+    # Structural enforcement: one pass consolidates support-cap, anchor-per-session,
+    # anchor-reorder, and true-loaded-anchor guarantee.  No additional movement-cap
+    # pass is needed here because _enforce_session_quality only replaces — it never
+    # adds net-new items beyond target_exercises.
     base_exercises = _enforce_session_quality(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises)
 
     # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------
     def _enforce_conflicts(ex_list):
@@ -1391,6 +1499,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         "medicine_ball" in cand_eq and "rotational" in cand_tags
                     ) or ("rdl" in cand_name and "heavy" in cand_name):
                         continue
+                    # niche_late_insertion: heavy RDL + med-ball rotation conflict.
+                    record_mutation(
+                        mutation_log,
+                        mechanism="enforce_conflicts",
+                        phase=phase,
+                        original_name=ex.get("name"),
+                        replacement_name=cand.get("name"),
+                        original_score=score_lookup.get(ex.get("name")),
+                        replacement_score=score_lookup.get(cand.get("name")),
+                        label=NICHE_LATE_INSERTION,
+                        reason=f"heavy RDL conflicts with med-ball rotation: replaced {ex.get('name')!r} with {cand.get('name')!r}",
+                    )
                     ex_list[idx] = cand
                     reason_lookup[cand.get("name")] = cand_reasons
                     return
@@ -1443,6 +1563,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     used_names.add(rep_name)
                 # Log replacement when INJURY_DEBUG is enabled
                 _log_replacement(f"strength:{phase}", ex.get("name", "<unnamed>"), rep_name or "<unnamed>")
+                # must_not_miss_guarantee: final injury-safe authority — this is
+                # the single true late safety pass; replacements here are structural.
+                record_mutation(
+                    mutation_log,
+                    mechanism="finalize_injury_safe_exercises",
+                    phase=phase,
+                    original_name=ex.get("name", "<unnamed>"),
+                    replacement_name=rep_name,
+                    original_score=float(score_lookup.get(ex.get("name"), 0.0)),
+                    replacement_score=float(score_lookup.get(rep_name, 0.0)) if rep_name else None,
+                    label=MUST_NOT_MISS_GUARANTEE,
+                    reason=f"injury-safe final pass: {ex.get('name', '<unnamed>')!r} excluded by injury guard, replaced with safe candidate",
+                )
                 updated.append(replacement)
             else:
                 updated.append(None)
@@ -1462,16 +1595,31 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     base_exercises = _finalize_injury_safe_exercises(base_exercises)
 
     def _final_keyword_guard(ex_list: list[dict]) -> list[dict]:
+        """Residual keyword-based catch after the main injury-safe pass.
+
+        This guard is intentionally narrow: it only acts when *both* the full
+        injury guard would also exclude the exercise (action != "allow") AND a
+        keyword match fires.  Exercises that the main injury-safe pass already
+        confirmed as safe (action == "allow") are left untouched — the main pass
+        is the single true late safety authority.
+        """
         if not injuries:
             return ex_list
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict] = []
         for ex in ex_list:
-            if not injury_match_details(
+            # Trust the main injury guard for items it explicitly confirmed safe.
+            # Only intervene as a residual catch when the full guard also agrees
+            # this exercise is problematic (action != "allow").
+            guard_decision = _guarded_injury_decision(ex)
+            keyword_hit = injury_match_details(
                 ex, injuries, fields=("name", "movement", "method"), risk_levels=("exclude",)
-            ):
+            )
+            if not keyword_hit or guard_decision.action == "allow":
                 updated.append(ex)
                 continue
+            # Both the keyword check and the main guard flag this exercise.
+            # Attempt a replacement as a narrow residual catch.
             replacement = None
             for cand, _, cand_reasons in weighted_exercises:
                 cand_name = cand.get("name")
@@ -1490,12 +1638,30 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 replacement = cand
                 used_names.add(cand_name)
                 break
+            ex_name = ex.get("name", "<unnamed>")
             if replacement:
+                # phase_specific_safeguard: residual catch only — fires when both
+                # keyword match and full injury guard agree the exercise is risky.
+                record_mutation(
+                    mutation_log,
+                    mechanism="final_keyword_guard",
+                    phase=phase,
+                    original_name=ex_name,
+                    replacement_name=replacement.get("name"),
+                    original_score=score_lookup.get(ex_name),
+                    replacement_score=score_lookup.get(replacement.get("name")),
+                    label=PHASE_SPECIFIC_SAFEGUARD,
+                    reason=f"residual keyword guard: {ex_name!r} matched injury keywords and main guard confirmed risk; replaced with safe candidate",
+                )
                 updated.append(replacement)
+            # else: no safe replacement found — drop the exercise (safety-first).
         return updated
 
+    # Residual keyword catch (narrowed): only fires when the full injury guard
+    # also agrees the exercise is risky.  The main injury-safe pass above is the
+    # true final safety authority; this is a lightweight residual net only.
     base_exercises = _final_keyword_guard(base_exercises)
-    base_exercises = _enforce_session_quality(base_exercises)
+    # Single final movement-cap pass after all safety passes are complete.
     base_exercises = _apply_movement_caps(base_exercises)
 
     for ex in base_exercises:
@@ -1560,6 +1726,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "exercises": base_exercises,
         "why_log": why_log,
         "candidate_reservoir": candidate_reservoir,
+        # Mutation ledger: post-score selection changes with classification labels.
+        # Useful for auditing planner behaviour without invasive rewrites.
+        "mutation_log": mutation_log_to_dicts(mutation_log),
     }
     return refresh_strength_block_metadata(
         result,
