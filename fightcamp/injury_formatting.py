@@ -160,6 +160,9 @@ def _build_guided_injury_entry(summary: GuidedInjurySummary) -> dict[str, str | 
         "severity": summary.severity,
         "trend": summary.trend,
         "functional_impact": summary.functional_impact,
+        "aggravators": list(summary.aggravators),
+        "notes": summary.notes,
+        "raw": summary.raw,
         "original_phrase": summary.area or context,
     }
 

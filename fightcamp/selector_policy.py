@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Iterable, Mapping
 
+from .injury_guard import ConstraintSensitivity
 from .tagging import normalize_tags
 
 FALLBACK_CLASS_NORMAL = "normal"
@@ -121,6 +122,7 @@ def conditioning_fallback_class(
     goal_keys: Iterable[str],
     weakness_keys: Iterable[str],
     weakness_secondary: Iterable[str],
+    constraint_context: ConstraintSensitivity | None = None,
 ) -> str:
     sport_key = str(sport or "").strip().lower()
     goals = {str(value).strip() for value in goal_keys if str(value).strip()}
@@ -136,6 +138,14 @@ def conditioning_fallback_class(
             {"footwork", "balance", "coordination_proprioception"} & weaknesses
             or {"coordination_proprioception", "lateral_movement"} & weakness_expansions
         )
+        low_noise_boxing = (
+            "boxing" in tags
+            and any(token in name for token in ("tempo", "rhythm", "technical", "shadow", "band"))
+            and not any(token in name for token in ("reenter", "re-enter", "cut", "chase", "decel"))
+        ) or (
+            modality in {"shadowbox", "bag_work"}
+            and not any(token in name for token in ("reenter", "re-enter", "cut", "chase", "decel"))
+        )
         if needs_repeatability:
             if any(token in name for token in ("stair", "hill")):
                 return FALLBACK_CLASS_LAST_RESORT
@@ -143,6 +153,49 @@ def conditioning_fallback_class(
                 return FALLBACK_CLASS_LAST_RESORT
         if coordination_bottleneck and "single_leg" in tags and "boxing" not in tags:
             return FALLBACK_CLASS_DOWNRANKED
+        if constraint_context is not None:
+            direction_change_sensitive = constraint_context.has_aggravator(
+                "fast direction changes",
+                "lateral cutting",
+            )
+            rotation_sensitive = constraint_context.has_aggravator("hard rotation")
+            prolonged_stance_sensitive = constraint_context.has_aggravator("prolonged stance/load")
+            if (
+                direction_change_sensitive
+                and constraint_context.state == "critical"
+                and any(token in name for token in ("exit", "angle", "pivot", "cut", "chase", "decel"))
+            ):
+                return FALLBACK_CLASS_BLOCKED
+            if rotation_sensitive and not low_noise_boxing and any(
+                token in name for token in ("rotation", "rotational", "med ball", "slam")
+            ):
+                return (
+                    FALLBACK_CLASS_BLOCKED
+                    if constraint_context.state == "critical"
+                    else FALLBACK_CLASS_LAST_RESORT
+                )
+            if direction_change_sensitive and not low_noise_boxing and any(
+                token in name for token in ("exit", "reenter", "re-enter")
+            ):
+                return (
+                    FALLBACK_CLASS_BLOCKED
+                    if constraint_context.state in {"constrained", "critical"}
+                    else FALLBACK_CLASS_LAST_RESORT
+                )
+            if direction_change_sensitive and not low_noise_boxing and any(
+                token in name for token in ("pivot", "cut", "chase", "angle")
+            ):
+                return (
+                    FALLBACK_CLASS_LAST_RESORT
+                    if constraint_context.state in {"constrained", "critical"}
+                    else FALLBACK_CLASS_DOWNRANKED
+                )
+            if prolonged_stance_sensitive and "single_leg" in tags and not low_noise_boxing:
+                return (
+                    FALLBACK_CLASS_LAST_RESORT
+                    if constraint_context.state == "critical"
+                    else FALLBACK_CLASS_DOWNRANKED
+                )
     return FALLBACK_CLASS_NORMAL
 
 
@@ -152,6 +205,7 @@ def coordination_fallback_class(
     sport: str,
     weakness_keys: Iterable[str],
     weakness_secondary: Iterable[str],
+    constraint_context: ConstraintSensitivity | None = None,
 ) -> str:
     sport_key = str(sport or "").strip().lower()
     weaknesses = {str(value).strip() for value in weakness_keys if str(value).strip()}
@@ -170,4 +224,30 @@ def coordination_fallback_class(
             return FALLBACK_CLASS_DOWNRANKED
         if category in {"footwork", "stance_control", "counter", "pressure"} and boxing_specific:
             return FALLBACK_CLASS_NORMAL
+        if constraint_context is not None:
+            low_noise_boxing = boxing_specific and any(
+                token in name for token in ("tempo", "rhythm", "reset", "metronome", "technical")
+            ) and not any(token in name for token in ("reenter", "re-enter", "cut", "decel", "change"))
+            if constraint_context.has_aggravator("prolonged stance/load") and generic_single_leg and not low_noise_boxing:
+                return (
+                    FALLBACK_CLASS_LAST_RESORT
+                    if constraint_context.state == "critical"
+                    else FALLBACK_CLASS_DOWNRANKED
+                )
+            if constraint_context.has_aggravator("fast direction changes", "lateral cutting") and not low_noise_boxing and any(
+                token in name for token in ("exit", "reenter", "re-enter", "pivot", "angle", "decel", "change")
+            ):
+                return (
+                    FALLBACK_CLASS_BLOCKED
+                    if constraint_context.state == "critical"
+                    else FALLBACK_CLASS_LAST_RESORT
+                )
+            if constraint_context.has_aggravator("hard rotation") and not low_noise_boxing and (
+                "rotation" in name or "rotational" in tags
+            ):
+                return (
+                    FALLBACK_CLASS_LAST_RESORT
+                    if constraint_context.state == "critical"
+                    else FALLBACK_CLASS_DOWNRANKED
+                )
     return FALLBACK_CLASS_NORMAL

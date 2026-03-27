@@ -16,7 +16,14 @@ from .training_context import (
 )
 from .bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES, validate_training_item
 from .injury_filtering import injury_match_details, _log_exclusion, _log_replacement
-from .injury_guard import Decision, choose_injury_replacement, injury_decision, make_guarded_decision_factory
+from .injury_guard import (
+    ConstraintSensitivity,
+    Decision,
+    choose_injury_replacement,
+    derive_constraint_sensitivity,
+    injury_decision,
+    make_guarded_decision_factory,
+)
 from .restriction_filtering import evaluate_restriction_impact
 from .diagnostics import format_missing_system_block
 from .selector_policy import (
@@ -777,6 +784,76 @@ def _boxing_aerobic_preference_rank(
     return 3
 
 
+def _conditioning_constraint_adjustment(
+    drill: dict,
+    *,
+    system: str,
+    sport: str,
+    constraint_context: ConstraintSensitivity | None,
+) -> tuple[float, list[str]]:
+    if constraint_context is None or constraint_context.state == "normal":
+        return 0.0, []
+
+    text = " ".join(
+        str(value).lower()
+        for value in (
+            drill.get("name", ""),
+            drill.get("notes", ""),
+            drill.get("purpose", ""),
+            drill.get("modality", ""),
+            drill.get("equipment_note", ""),
+        )
+    )
+    tags = set(normalize_tags(drill.get("tags", [])))
+    penalty = 0.0
+    reasons: list[str] = []
+    low_noise_boxing = sport == "boxing" and (
+        "boxing" in tags
+        or "shadowboxing" in text
+        or "jab" in text
+        or "cross" in text
+    ) and any(token in text for token in ("tempo", "rhythm", "technical", "slow", "shadow", "band")) and not any(
+        token in text for token in ("reenter", "re-enter", "cut", "chase", "decel")
+    )
+
+    if constraint_context.has_aggravator("fast direction changes", "lateral cutting") and not low_noise_boxing and (
+        any(token in text for token in ("exit", "reenter", "re-enter", "pivot", "cut", "chase", "angle", "decel"))
+        or tags & {"reactive", "single_leg"}
+    ):
+        penalty -= constraint_context.penalty(guarded=0.35, constrained=1.0, critical=2.2)
+        reasons.append("direction_change")
+        if any(token in text for token in ("exit", "reenter", "re-enter")):
+            penalty -= constraint_context.penalty(guarded=0.15, constrained=0.6, critical=1.2)
+            reasons.append("exit_reentry")
+
+    if constraint_context.has_aggravator("hard rotation") and not low_noise_boxing and (
+        "rotation" in text or "rotational" in tags or ("med ball" in text and "slam" in text)
+    ):
+        penalty -= constraint_context.penalty(guarded=0.3, constrained=0.9, critical=1.9)
+        reasons.append("rotation")
+
+    if constraint_context.has_aggravator("prolonged stance/load") and (
+        "stance" in text or "single-leg" in text or tags & {"single_leg"}
+    ):
+        penalty -= constraint_context.penalty(guarded=0.2, constrained=0.6, critical=1.3)
+        reasons.append("stance_load")
+
+    if (
+        constraint_context.state in {"constrained", "critical"}
+        and constraint_context.hard_sparring_days >= 2
+        and system in {"glycolytic", "alactic"}
+        and ("high_cns" in tags or not low_noise_boxing)
+    ):
+        penalty -= constraint_context.penalty(guarded=0.0, constrained=0.35, critical=0.9)
+        reasons.append("sparring_pressure")
+
+    if low_noise_boxing:
+        penalty += constraint_context.penalty(guarded=0.15, constrained=0.35, critical=0.2)
+        reasons.append("safe_specificity")
+
+    return round(penalty, 4), reasons
+
+
 def _violates_sport_language_blacklist(drill: dict, *, fight_format: str) -> bool:
     terms = SPORT_LANGUAGE_BLACKLIST.get(fight_format, set())
     if not terms:
@@ -953,10 +1030,20 @@ def _resolved_conditioning_names(resolved_sessions: list[dict]) -> list[str]:
 def select_coordination_drill(flags, existing_names: set[str], injuries: list[str]):
     """Return a coordination drill matching the current phase if needed."""
     profile = normalized_profile_from_flags(flags)
+    parsed_injuries = flags.get("parsed_injuries") or injuries
+    constraint_context = derive_constraint_sensitivity(
+        parsed_injuries,
+        fatigue=flags.get("fatigue", "low"),
+        support_flags=profile.support_flags,
+        hard_sparring_days=flags.get("hard_sparring_days"),
+        days_until_fight=flags.get("days_until_fight"),
+        weight_cut_pressure=bool(flags.get("weight_cut_risk") or float(flags.get("weight_cut_pct", 0) or 0) >= 5.0),
+    )
     goal_keys = set(profile.goal_keys + profile.goal_secondary)
     weakness_keys = set(profile.weakness_keys + profile.weakness_secondary)
     sport = _normalize_fight_format(flags.get("fight_format", flags.get("sport", "mma")))
     focus_keys = {
+        "coordination",
         "skill_refinement",
         "coordination_proprioception",
         "footwork",
@@ -1013,11 +1100,19 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
             sport=sport,
             weakness_keys=profile.weakness_keys,
             weakness_secondary=profile.weakness_secondary,
+            constraint_context=constraint_context,
         )
         penalty = FALLBACK_CLASS_PENALTY.get(fallback_class, 0.0)
         if penalty <= -999:
             continue
         score += penalty
+        constraint_adjustment, _ = _conditioning_constraint_adjustment(
+            drill,
+            system="coordination",
+            sport=sport,
+            constraint_context=constraint_context,
+        )
+        score += constraint_adjustment
         candidates.append((score, fallback_class, drill))
 
     candidates.sort(key=lambda item: (-item[0], item[2].get("name") or ""))
@@ -1029,7 +1124,13 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
     for _, fallback_class, drill in candidates[:INJURY_GUARD_SHORTLIST]:
         if has_non_downgraded_boxing_option and fallback_class == "downranked":
             continue
-        decision = injury_decision(drill, injuries, phase, flags.get("fatigue", "low"))
+        decision = injury_decision(
+            drill,
+            parsed_injuries,
+            phase,
+            flags.get("fatigue", "low"),
+            constraint_context=constraint_context,
+        )
         if decision.action != "exclude":
             return drill
     return None
@@ -1328,6 +1429,7 @@ def generate_conditioning_block(flags):
     goals = normalized_profile.goal_keys + normalized_profile.goal_secondary
     weaknesses = normalized_profile.weakness_keys + normalized_profile.weakness_secondary
     injuries = flags.get("injuries", [])
+    parsed_injuries = flags.get("parsed_injuries") or injuries
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
@@ -1379,6 +1481,14 @@ def generate_conditioning_block(flags):
     selection_format = _normalize_fight_format(fight_format)
     energy_weights = get_format_weights().get(selection_format, {})
     support_flags = set(normalized_profile.support_flags)
+    constraint_context = derive_constraint_sensitivity(
+        parsed_injuries,
+        fatigue=fatigue,
+        support_flags=normalized_profile.support_flags,
+        hard_sparring_days=flags.get("hard_sparring_days"),
+        days_until_fight=days_until_fight if isinstance(days_until_fight, int) else None,
+        weight_cut_pressure=bool(flags.get("weight_cut_risk") or float(flags.get("weight_cut_pct", 0) or 0) >= 5.0),
+    )
     active_clusters = set(
         active_cluster_ids(
             sport=selection_format,
@@ -1514,6 +1624,7 @@ def generate_conditioning_block(flags):
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
+            constraint_context=constraint_context,
         )
         restriction_penalty = restriction_result.get("penalty", 0.0)
         matched_restrictions = restriction_result.get("matched", [])
@@ -1601,12 +1712,21 @@ def generate_conditioning_block(flags):
             goal_keys=normalized_profile.goal_keys,
             weakness_keys=normalized_profile.weakness_keys,
             weakness_secondary=normalized_profile.weakness_secondary,
+            constraint_context=constraint_context,
         )
         fallback_penalty = FALLBACK_CLASS_PENALTY.get(fallback_class, 0.0)
         if fallback_penalty <= -999:
             continue
         total_score += fallback_penalty
         penalty += min(fallback_penalty, 0.0)
+        constraint_adjustment, constraint_reasons = _conditioning_constraint_adjustment(
+            d,
+            system=system,
+            sport=selection_format,
+            constraint_context=constraint_context,
+        )
+        total_score += constraint_adjustment
+        penalty += min(constraint_adjustment, 0.0)
         if support_flags and "high_cns" in tags and not (primary_goal_hits or primary_weak_hits):
             total_score -= 0.4
             penalty -= 0.4
@@ -1632,8 +1752,12 @@ def generate_conditioning_block(flags):
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
             "cluster_hits": cluster_hits,
             "fallback_class": fallback_class,
+            "constraint_adjustment": round(constraint_adjustment, 4),
+            "constraint_state": constraint_context.state,
             "final_score": round(total_score, 4),
         }
+        if constraint_reasons:
+            reasons["constraint_reasons"] = constraint_reasons
 
         system_drills[system].append((d, total_score, reasons))
 
@@ -1733,6 +1857,7 @@ def generate_conditioning_block(flags):
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
+            constraint_context=constraint_context,
         )
         restriction_penalty = restriction_result.get("penalty", 0.0)
         matched_restrictions = restriction_result.get("matched", [])
@@ -1818,12 +1943,21 @@ def generate_conditioning_block(flags):
             goal_keys=normalized_profile.goal_keys,
             weakness_keys=normalized_profile.weakness_keys,
             weakness_secondary=normalized_profile.weakness_secondary,
+            constraint_context=constraint_context,
         )
         fallback_penalty = FALLBACK_CLASS_PENALTY.get(fallback_class, 0.0)
         if fallback_penalty <= -999:
             continue
         score += fallback_penalty
         penalty += min(fallback_penalty, 0.0)
+        constraint_adjustment, constraint_reasons = _conditioning_constraint_adjustment(
+            d,
+            system=system,
+            sport=selection_format,
+            constraint_context=constraint_context,
+        )
+        score += constraint_adjustment
+        penalty += min(constraint_adjustment, 0.0)
         if support_flags and "high_cns" in tags and not (primary_goal_hits or primary_weak_hits):
             score -= 0.4
             penalty -= 0.4
@@ -1846,8 +1980,12 @@ def generate_conditioning_block(flags):
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
             "cluster_hits": cluster_hits,
             "fallback_class": fallback_class,
+            "constraint_adjustment": round(constraint_adjustment, 4),
+            "constraint_state": constraint_context.state,
             "final_score": round(score, 4),
         }
+        if constraint_reasons:
+            reasons["constraint_reasons"] = constraint_reasons
 
         style_system_drills[system].append((d, score, reasons))
         for st in style_names:
@@ -1871,6 +2009,7 @@ def generate_conditioning_block(flags):
                 goal_keys=normalized_profile.goal_keys,
                 weakness_keys=normalized_profile.weakness_keys,
                 weakness_secondary=normalized_profile.weakness_secondary,
+                constraint_context=constraint_context,
             )
             fallback_rank = {
                 "normal": 0,
@@ -1955,12 +2094,13 @@ def generate_conditioning_block(flags):
 
     # Refactored: Use factory function instead of local duplicate implementation
     _guarded_injury_decision = make_guarded_decision_factory(
-        injuries,
+        parsed_injuries,
         phase,
         fatigue,
         injury_guard_names,
         restrictions=restrictions,
         ignore_restrictions=ignore_restrictions,
+        constraint_context=constraint_context,
     )
 
     all_candidates_by_system = {
@@ -2611,9 +2751,3 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
-
-
-
-
-
-
