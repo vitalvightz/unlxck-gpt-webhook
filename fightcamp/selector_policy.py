@@ -82,7 +82,7 @@ def is_safe_boxing_specific(
     *,
     text: str | None = None,
     tags: set[str] | None = None,
-    sport: str = "boxing",
+    sport: str | None = "boxing",
 ) -> bool:
     """Return True if *item* is a low-noise, sport-preserving boxing drill.
 
