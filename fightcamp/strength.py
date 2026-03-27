@@ -26,7 +26,14 @@ from .injury_filtering import (
     injury_match_details,
 )
 # Refactored: Import factory function for guarded decision making
-from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
+from .injury_guard import (
+    ConstraintSensitivity,
+    Decision,
+    derive_constraint_sensitivity,
+    injury_decision,
+    make_guarded_decision_factory,
+    pick_safe_replacement,
+)
 from .restriction_filtering import evaluate_restriction_impact
 from .strength_session_quality import (
     classify_strength_item,
@@ -115,6 +122,108 @@ def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
         fatigue_cost += 0.5
 
     return round(fatigue_cost, 2)
+
+
+def _strength_constraint_adjustment(
+    exercise: dict,
+    *,
+    quality_profile: dict,
+    constraint_context: ConstraintSensitivity | None,
+) -> tuple[float, list[str]]:
+    if constraint_context is None or constraint_context.state == "normal":
+        return 0.0, []
+
+    tags = set(normalize_tags(exercise.get("tags", [])))
+    text = " ".join(
+        str(value).lower()
+        for value in (
+            exercise.get("name", ""),
+            exercise.get("movement", ""),
+            exercise.get("method", ""),
+            exercise.get("notes", ""),
+            exercise.get("category", ""),
+        )
+    )
+    penalty = 0.0
+    reasons: list[str] = []
+
+    if constraint_context.affects_region("hip", "hip_flexor", "groin"):
+        if constraint_context.has_aggravator("prolonged stance/load") and (
+            tags & {"single_leg", "unilateral", "lunge_pattern", "carry"}
+            or any(token in text for token in ("split squat", "bulgarian", "single-leg", "stance", "carry"))
+        ):
+            penalty -= constraint_context.penalty(guarded=0.35, constrained=1.35, critical=2.8)
+            reasons.append("stance_load")
+        if constraint_context.has_aggravator("deep hip flexion") and (
+            tags & {"deep_flexion", "knee_dominant_heavy"}
+            or any(token in text for token in ("squat", "deep", "knee up", "lunge"))
+        ):
+            penalty -= constraint_context.penalty(guarded=0.25, constrained=0.95, critical=2.0)
+            reasons.append("deep_hip_flexion")
+
+    if constraint_context.has_aggravator("heavy hinging") and (
+        tags & {"hinge_heavy", "lumbar_loaded", "posterior_chain_heavy", "axial_heavy"}
+        or any(token in text for token in ("deadlift", "rdl", "hinge", "bent-over"))
+    ):
+        penalty -= constraint_context.penalty(guarded=0.35, constrained=0.95, critical=1.9)
+        reasons.append("hinge")
+        if "bent-over" in text and "supported" not in text and "chest-supported" not in text:
+            penalty -= constraint_context.penalty(guarded=0.15, constrained=0.35, critical=0.7)
+            reasons.append("unsupported_trunk")
+
+    if constraint_context.has_aggravator("hard rotation") and (
+        "rotational" in tags
+        or "rotation" in text
+        or "russian twist" in text
+        or ("med ball" in text and "slam" in text)
+    ):
+        penalty -= constraint_context.penalty(guarded=0.4, constrained=1.0, critical=2.0)
+        reasons.append("rotation")
+        if "med ball" in text and "slam" in text:
+            penalty -= constraint_context.penalty(guarded=0.2, constrained=1.2, critical=2.6)
+            reasons.append("loaded_rotation")
+    elif constraint_context.has_aggravator("hard rotation") and (
+        "anti_rotation" in tags or "anti-rotation" in text
+    ):
+        penalty += constraint_context.penalty(guarded=0.1, constrained=0.25, critical=0.2)
+        reasons.append("safe_anti_rotation")
+
+    if (
+        constraint_context.state in {"constrained", "critical"}
+        and (
+            tags & {"reactive", "plyometric", "triple_extension"}
+            or any(token in text for token in ("bound", "hop", "jump", "slip", "pivot", "lateral"))
+        )
+    ):
+        penalty -= constraint_context.penalty(guarded=0.0, constrained=0.9, critical=1.8)
+        reasons.append("reactive_load")
+
+    if constraint_context.state == "critical" and any(
+        token in text for token in ("plyometric shadow boxing", "bound", "jump", "overhead med ball slam")
+    ):
+        penalty -= 2.0
+        reasons.append("critical_suppression")
+
+    if (
+        constraint_context.state in {"constrained", "critical"}
+        and quality_profile.get("support_only")
+        and not (
+            "supported" in text
+            or "anti-rotation" in text
+            or "anti_rotation" in tags
+            or "isometric" in text
+        )
+    ):
+        penalty -= constraint_context.penalty(guarded=0.0, constrained=0.25, critical=0.6)
+        reasons.append("support_only")
+
+    if constraint_context.has_aggravator("heavy hinging") and (
+        "supported" in text or "chest-supported" in text or "floor" in text
+    ):
+        penalty += constraint_context.penalty(guarded=0.1, constrained=0.25, critical=0.15)
+        reasons.append("supported_option")
+
+    return round(penalty, 4), reasons
 
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
@@ -614,6 +723,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     seed = flags.get("random_seed")
     rng = random.Random(seed) if seed is not None else None
     injuries = flags.get("injuries", [])
+    parsed_injuries = flags.get("parsed_injuries") or injuries
     restrictions = flags.get("restrictions")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
@@ -623,6 +733,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     has_isometric_setup = _has_isometric_setup_equipment(equipment_access)
     fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
     normalized_profile = normalized_profile_from_flags(flags)
+    constraint_context = derive_constraint_sensitivity(
+        parsed_injuries,
+        fatigue=fatigue,
+        support_flags=normalized_profile.support_flags,
+        hard_sparring_days=flags.get("hard_sparring_days"),
+        days_until_fight=flags.get("days_until_fight"),
+        weight_cut_pressure=bool(flags.get("weight_cut_risk") or float(flags.get("weight_cut_pct", 0) or 0) >= 5.0),
+    )
     style_list = normalized_profile.tactical_style_keys
     style_secondary = normalized_profile.style_secondary
     technical_style_keys = normalized_profile.technical_style_keys
@@ -740,6 +858,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
+            constraint_context=constraint_context,
         )
         restriction_penalty = restriction_result.get("penalty", 0.0)
         matched_restrictions = restriction_result.get("matched", [])
@@ -800,8 +919,18 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 score -= 1.15
         quality_adjustment, quality_profile = strength_quality_adjustment(ex, phase=phase)
         score += quality_adjustment
+        constraint_adjustment, constraint_reasons = _strength_constraint_adjustment(
+            ex,
+            quality_profile=quality_profile,
+            constraint_context=constraint_context,
+        )
+        score += constraint_adjustment
         breakdown["quality_class"] = quality_profile["quality_class"]
         breakdown["quality_adjustment"] = round(quality_adjustment, 2)
+        breakdown["constraint_adjustment"] = round(constraint_adjustment, 2)
+        breakdown["constraint_state"] = constraint_context.state
+        if constraint_reasons:
+            breakdown["constraint_reasons"] = constraint_reasons
         breakdown["anchor_capable"] = quality_profile["anchor_capable"]
         breakdown["support_only"] = quality_profile["support_only"]
         breakdown["base_categories"] = quality_profile["base_categories"]
@@ -920,13 +1049,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     # Refactored: Use factory function instead of local duplicate implementation
     _guarded_injury_decision = make_guarded_decision_factory(
-        injuries,
+        parsed_injuries,
         phase,
         fatigue,
         guard_names,
         guard_exercises,
         restrictions=restrictions,
         ignore_restrictions=ignore_restrictions,
+        constraint_context=constraint_context,
     )
 
     def _selected_names(exercises: list[dict]) -> set[str]:
@@ -1569,7 +1699,3 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         loaded_anchor_note=loaded_anchor_note,
     )
     
-
-
-
-

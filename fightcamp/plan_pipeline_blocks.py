@@ -60,6 +60,7 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
             **base_flags,
             "phase": phase,
             "random_seed": context.random_seed,
+            "parsed_injuries": context.plan_input.parsed_injuries,
             "restrictions": context.plan_input.restrictions,
             "ignore_restrictions": context.selection_ignore_restrictions,
         }
@@ -107,6 +108,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
                 "phase": phase,
                 "sport": context.mapped_format,
                 "random_seed": context.random_seed,
+                "parsed_injuries": context.plan_input.parsed_injuries,
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
                 "restrictions": context.plan_input.restrictions,
@@ -379,5 +381,4 @@ def generate_plan_blocks(
         coach_review_notes=coach_review_notes,
         current_phase=current_phase,
     )
-
 

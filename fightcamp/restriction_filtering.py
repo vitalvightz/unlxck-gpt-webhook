@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Iterable, TypedDict
 
+from .injury_guard import ConstraintSensitivity
 from .restriction_parsing import CANONICAL_RESTRICTIONS, MIN_KEYWORD_MATCHES, ParsedRestriction
 from .tagging import normalize_tags
 
@@ -231,6 +232,7 @@ def evaluate_restriction_impact(
     text: str,
     tags: Iterable[str],
     limit_penalty: float,
+    constraint_context: ConstraintSensitivity | None = None,
 ) -> RestrictionGuardResult:
     if not restrictions:
         return RestrictionGuardResultCompat({"allowed": True, "matched": [], "risk": 0.0, "penalty": 0.0})
@@ -246,10 +248,32 @@ def evaluate_restriction_impact(
             continue
         matched.append(detail)
         strength = detail.get("strength", "avoid")
+        restriction_key = detail.get("restriction", "generic_constraint")
+        if (
+            constraint_context is not None
+            and restriction_key == "generic_constraint"
+            and strength in {"avoid", "flare"}
+            and constraint_context.state != "critical"
+            and not constraint_context.worsening
+            and not constraint_context.cannot_do_key_movements
+        ):
+            strength = "limit"
         if strength in {"avoid", "flare"}:
             exclude = True
         else:
-            penalty += limit_penalty
+            multiplier = 1.0
+            if constraint_context is not None:
+                multiplier += {
+                    "normal": 0.0,
+                    "guarded": 0.2,
+                    "constrained": 0.55,
+                    "critical": 1.0,
+                }.get(constraint_context.state, 0.0)
+                if constraint_context.improving and constraint_context.can_train_with_modifications:
+                    multiplier -= 0.1
+                if detail.get("strength") == "flare" and constraint_context.worsening:
+                    multiplier += 0.15
+            penalty += limit_penalty * max(multiplier, 0.75)
     risk = 0.0
     if matched:
         risk = 1.0 if exclude else min(1.0, abs(penalty))

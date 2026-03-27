@@ -154,6 +154,8 @@ def test_parse_guided_injury_summary_with_aggravators():
     assert injuries[0]["severity"] == "moderate"
     assert injuries[0]["trend"] == "worsening"
     assert injuries[0]["functional_impact"] == "can train with modifications"
+    assert injuries[0]["aggravators"] == ["sprinting", "deep hip flexion"]
+    assert "after sparring" in injuries[0]["notes"]
     assert len(restrictions) == 2
     assert any(restriction["restriction"] == "high_impact_lower" for restriction in restrictions)
     assert any(restriction.get("region") for restriction in restrictions)

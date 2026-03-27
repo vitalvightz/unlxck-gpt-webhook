@@ -325,6 +325,92 @@ _INJURY_DECISION_CACHE: dict[tuple[str, ...], dict[str, object]] = {}
 _INJURY_SEVERITY_DEBUGGED = False
 _INJURY_PARSED_DEBUGGED = False
 
+_GUIDED_SEVERITY_MAP = {"mild": "low", "moderate": "moderate", "severe": "high"}
+_CONSTRAINT_AGGRAVATOR_WEIGHTS = {
+    "deep hip flexion": 0.45,
+    "hard rotation": 0.45,
+    "heavy hinging": 0.45,
+    "fast direction changes": 0.5,
+    "lateral cutting": 0.5,
+    "prolonged stance/load": 0.45,
+    "sprinting": 0.35,
+    "jumping": 0.35,
+    "impact/contact": 0.55,
+    "clinching/grappling pressure": 0.35,
+    "overhead pressing": 0.4,
+}
+_CONSTRAINT_NOTE_HINT_WEIGHTS = {
+    "sparring": 0.2,
+    "stance": 0.2,
+    "load": 0.15,
+    "knee up": 0.15,
+    "rotation": 0.2,
+    "hinge": 0.2,
+    "direction": 0.2,
+    "pivot": 0.2,
+    "cut": 0.2,
+    "impact": 0.15,
+    "contact": 0.15,
+}
+_CONSTRAINT_STATE_PENALTY = {
+    "normal": 0.0,
+    "guarded": 0.45,
+    "constrained": 1.1,
+    "critical": 2.4,
+}
+
+
+@dataclass(frozen=True)
+class ConstraintSensitivity:
+    state: str
+    score: float
+    aggravators: tuple[str, ...]
+    note_hints: tuple[str, ...]
+    affected_regions: tuple[str, ...]
+    worsening: bool
+    improving: bool
+    can_train_with_modifications: bool
+    cannot_do_key_movements: bool
+    fatigue: str
+    hard_sparring_days: int
+    days_until_fight: int | None
+    support_flags: tuple[str, ...]
+    weight_cut_pressure: bool
+
+    def penalty(self, *, guarded: float, constrained: float, critical: float) -> float:
+        penalties = {
+            "normal": 0.0,
+            "guarded": guarded,
+            "constrained": constrained,
+            "critical": critical,
+        }
+        return penalties.get(self.state, 0.0)
+
+    def risk_multiplier(self) -> float:
+        multiplier = {
+            "normal": 1.0,
+            "guarded": 1.03,
+            "constrained": 1.12,
+            "critical": 1.24,
+        }.get(self.state, 1.0)
+        if self.improving and self.can_train_with_modifications and not self.cannot_do_key_movements:
+            multiplier -= 0.03
+        if self.worsening or self.cannot_do_key_movements:
+            multiplier += 0.04
+        return max(0.9, round(multiplier, 3))
+
+    def has_aggravator(self, *values: str) -> bool:
+        normalized = {value.strip().lower() for value in values if value}
+        return bool(normalized & set(self.aggravators))
+
+    def has_note_hint(self, *values: str) -> bool:
+        normalized = {value.strip().lower() for value in values if value}
+        return bool(normalized & set(self.note_hints))
+
+    def affects_region(self, *regions: str) -> bool:
+        normalized = {value.strip().lower() for value in regions if value}
+        return bool(normalized & set(self.affected_regions))
+
 
 def _compute_tags_hash(tags: Iterable[str]) -> str:
     """
@@ -457,6 +543,7 @@ def _normalize_dict_severity(injury: dict) -> tuple[str, list[str]]:
     severity_raw = injury.get("severity")
     if severity_raw:
         severity_text = str(severity_raw).lower()
+        severity_text = _GUIDED_SEVERITY_MAP.get(severity_text, severity_text)
         if severity_text in SEVERITY_RANK:
             return severity_text, []
         return normalize_severity(severity_text)
@@ -527,7 +614,145 @@ def _injury_context(injuries: Iterable[str | dict], debug_entries: list[dict] | 
     return region_severity
 
 
-def _thresholds(phase: str | None, fatigue: str | None) -> tuple[float, float]:
+def _constraint_note_hints(text: str) -> set[str]:
+    lowered = str(text or "").lower()
+    return {hint for hint in _CONSTRAINT_NOTE_HINT_WEIGHTS if hint in lowered}
+
+
+def derive_constraint_sensitivity(
+    injuries: Iterable[str | dict] | str | dict | None,
+    *,
+    fatigue: str | None = None,
+    support_flags: Iterable[str] | None = None,
+    hard_sparring_days: Iterable[str] | int | None = None,
+    days_until_fight: int | None = None,
+    weight_cut_pressure: bool = False,
+) -> ConstraintSensitivity:
+    injuries_list = _normalize_injury_list(injuries)
+    support_flag_set = {str(flag).strip().lower() for flag in support_flags or [] if str(flag).strip()}
+    aggravators: set[str] = set()
+    note_hints: set[str] = set()
+    affected_regions: set[str] = set()
+    worsening = False
+    improving = False
+    can_train_with_modifications = False
+    cannot_do_key_movements = False
+    injury_scores: list[float] = []
+
+    for injury in injuries_list:
+        if isinstance(injury, dict):
+            severity, _ = _normalize_dict_severity(injury)
+            severity_score = {"low": 0.6, "moderate": 1.1, "high": 1.8}.get(severity, 1.1)
+            trend = str(injury.get("trend") or "").strip().lower()
+            functional_impact = str(injury.get("functional_impact") or "").strip().lower()
+            aggravator_values = [
+                str(value).strip().lower()
+                for value in injury.get("aggravators", []) or []
+                if str(value).strip()
+            ]
+            note_text = " ".join(
+                str(value)
+                for value in (
+                    injury.get("notes"),
+                    injury.get("original_phrase"),
+                    injury.get("raw"),
+                )
+                if value
+            )
+            region = str(injury.get("region") or injury.get("canonical_location") or "").strip().lower()
+            note_hints_for_injury = _constraint_note_hints(note_text)
+            if region:
+                affected_regions.add(region)
+            aggravators.update(aggravator_values)
+            note_hints.update(note_hints_for_injury)
+            worsening = worsening or trend == "worsening"
+            improving = improving or trend == "improving"
+            can_train_with_modifications = can_train_with_modifications or functional_impact == "can train with modifications"
+            cannot_do_key_movements = cannot_do_key_movements or functional_impact == "cannot do key movements properly"
+
+            score = severity_score
+            score += {"improving": -0.25, "stable": 0.15, "worsening": 0.9}.get(trend, 0.0)
+            score += {
+                "can train fully": 0.0,
+                "can train with modifications": 0.8,
+                "cannot do key movements properly": 2.0,
+            }.get(functional_impact, 0.0)
+            score += sum(_CONSTRAINT_AGGRAVATOR_WEIGHTS.get(value, 0.2) for value in aggravator_values[:6])
+            score += sum(_CONSTRAINT_NOTE_HINT_WEIGHTS.get(value, 0.0) for value in note_hints_for_injury)
+            injury_scores.append(score)
+            continue
+
+        raw_text = str(injury or "").strip().lower()
+        if not raw_text:
+            continue
+        severity, _ = normalize_severity(raw_text)
+        injury_scores.append({"low": 0.45, "moderate": 0.9, "high": 1.5}.get(severity, 0.9))
+        note_hints.update(_constraint_note_hints(raw_text))
+        if "worsen" in raw_text:
+            worsening = True
+        if "improv" in raw_text:
+            improving = True
+
+    fatigue_score = {"low": 0.0, "moderate": 0.35, "high": 0.9}.get((fatigue or "low").lower(), 0.0)
+    if isinstance(hard_sparring_days, int):
+        sparring_days = max(0, hard_sparring_days)
+    else:
+        sparring_days = len([day for day in hard_sparring_days or [] if str(day).strip()])
+    sparring_score = min(0.8, 0.22 * sparring_days)
+    days_score = 0.0
+    if isinstance(days_until_fight, int):
+        if days_until_fight <= 7:
+            days_score = 0.8
+        elif days_until_fight <= 14:
+            days_score = 0.55
+        elif days_until_fight <= 21:
+            days_score = 0.3
+        elif days_until_fight <= 28:
+            days_score = 0.15
+    support_score = 0.0
+    if "recovery_support" in support_flag_set:
+        support_score += 0.2
+    if "weight_cut_support" in support_flag_set or weight_cut_pressure:
+        support_score += 0.5
+
+    score = (max(injury_scores) if injury_scores else 0.0) + min(1.0, 0.25 * max(0, len(injury_scores) - 1))
+    score += fatigue_score + sparring_score + days_score + support_score
+
+    if score >= 7.0:
+        state = "critical"
+    elif score >= 3.1:
+        state = "constrained"
+    elif score >= 1.35:
+        state = "guarded"
+    else:
+        state = "normal"
+
+    if not injury_scores and state not in {"normal", "guarded"}:
+        state = "guarded"
+
+    return ConstraintSensitivity(
+        state=state,
+        score=round(score, 3),
+        aggravators=tuple(sorted(aggravators)),
+        note_hints=tuple(sorted(note_hints)),
+        affected_regions=tuple(sorted(affected_regions)),
+        worsening=worsening,
+        improving=improving,
+        can_train_with_modifications=can_train_with_modifications,
+        cannot_do_key_movements=cannot_do_key_movements,
+        fatigue=(fatigue or "low").lower(),
+        hard_sparring_days=sparring_days,
+        days_until_fight=days_until_fight if isinstance(days_until_fight, int) else None,
+        support_flags=tuple(sorted(support_flag_set)),
+        weight_cut_pressure=bool(weight_cut_pressure or "weight_cut_support" in support_flag_set),
+    )
+
+
+def _thresholds(
+    phase: str | None,
+    fatigue: str | None,
+    constraint_context: ConstraintSensitivity | None = None,
+) -> tuple[float, float]:
     modify_band = 0.85
     threshold = 1.2
     fatigue_key = (fatigue or "moderate").lower()
@@ -538,6 +763,19 @@ def _thresholds(phase: str | None, fatigue: str | None) -> tuple[float, float]:
         modify_band += 0.05
     if (phase or "").upper() == "TAPER":
         threshold += 0.05
+    if constraint_context is not None:
+        modify_band += {
+            "normal": 0.0,
+            "guarded": -0.02,
+            "constrained": -0.07,
+            "critical": -0.14,
+        }.get(constraint_context.state, 0.0)
+        threshold += {
+            "normal": 0.0,
+            "guarded": -0.04,
+            "constrained": -0.11,
+            "critical": -0.2,
+        }.get(constraint_context.state, 0.0)
     return modify_band, threshold
 
 
@@ -626,6 +864,7 @@ def injury_guard(
     stage: str | None = None,
     phase: str | None = None,
     fatigue: str | None = None,
+    constraint_context: ConstraintSensitivity | None = None,
 ) -> Decision:
     if ignore_restrictions:
         restrictions = None
@@ -637,10 +876,23 @@ def injury_guard(
         )
     resolved_phase = phase or item.get("phase") or ""
     resolved_fatigue = fatigue or item.get("fatigue") or ""
-    return injury_decision(item, injuries, resolved_phase, resolved_fatigue)
+    return injury_decision(
+        item,
+        injuries,
+        resolved_phase,
+        resolved_fatigue,
+        constraint_context=constraint_context,
+    )
 
 
-def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict, phase: str, fatigue: str) -> Decision:
+def injury_decision(
+    exercise: dict,
+    injuries: Iterable[str | dict] | str | dict,
+    phase: str,
+    fatigue: str,
+    *,
+    constraint_context: ConstraintSensitivity | None = None,
+) -> Decision:
     """
     Make injury-based decision for an exercise.
     
@@ -685,7 +937,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         return Decision(
             action="allow",
             risk_score=0.0,
-            threshold=_thresholds(phase, fatigue)[1],
+            threshold=_thresholds(phase, fatigue, constraint_context)[1],
             matched_tags=[],
             mods=[],
             reason={"region": None, "severity": None, "bucket": "default", "matches": []},
@@ -701,8 +953,10 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
                 % (entry["raw"], entry["region"], entry["severity"], entry["hits"])
             )
         _INJURY_SEVERITY_DEBUGGED = True
-    modify_band, threshold = _thresholds(phase, fatigue)
-    threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
+    if constraint_context is None:
+        constraint_context = derive_constraint_sensitivity(injuries_list, fatigue=fatigue)
+    modify_band, threshold = _thresholds(phase, fatigue, constraint_context)
+    threshold_version = f"{modify_band:.2f}:{threshold:.2f}:{constraint_context.state}:{constraint_context.score:.2f}"
 
     # For injury_match_details, we need to pass string representations
     # Extract strings from both string and dict injuries
@@ -772,6 +1026,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
                 risk_level_weight = RISK_LEVEL_WEIGHTS.get(detail["risk_level"], 0.8)
                 match_multiplier = _match_multiplier(detail.get("tags", []))
                 risk = region_weight * severity_weight * risk_level_weight * match_multiplier
+                risk *= constraint_context.risk_multiplier()
                 if risk > max_region_risk:
                     max_region_risk = risk
                     max_region_detail = detail
@@ -859,6 +1114,7 @@ def make_guarded_decision_factory(
     restrictions: Iterable[dict] | None = None,
     ignore_restrictions: bool = False,
     stage: str | None = None,
+    constraint_context: ConstraintSensitivity | None = None,
 ) -> Callable[[dict], Decision]:
     """
     Refactored: Create a closure factory for guarded injury decisions.
@@ -897,6 +1153,7 @@ def make_guarded_decision_factory(
             stage=stage,
             phase=phase,
             fatigue=fatigue,
+            constraint_context=constraint_context,
         )
     
     return _guarded_injury_decision
