@@ -256,6 +256,79 @@ def test_base_category_promotion_records_mutation(monkeypatch):
     )
 
 
+def test_base_category_promotion_skips_unilateral_only_gap(monkeypatch):
+    """Promotion should not fire when unilateral is the only missing category.
+
+    This keeps base-category promotion as a structural floor (loaded lower +
+    loaded upper push/pull) and avoids compensatory post-score unilateral
+    insertions.
+    """
+    bank = [
+        {
+            "name": "Back Squat",
+            "phases": ["GPP"],
+            "tags": ["Back Squat", "compound", "posterior_chain", "quad_dominant", "squat"],
+            "equipment": ["barbell"],
+            "movement": "squat",
+        },
+        {
+            "name": "Bench Press",
+            "phases": ["GPP"],
+            "tags": ["Bench Press", "compound", "push", "horizontal_power"],
+            "equipment": ["barbell"],
+            "movement": "push",
+        },
+        {
+            "name": "Core Hold",
+            "phases": ["GPP"],
+            "tags": ["Core Hold", "core", "stability"],
+            "equipment": [],
+            "movement": "core",
+        },
+        {
+            "name": "Split Squat",
+            "phases": ["GPP"],
+            "tags": ["Split Squat", "unilateral", "quad_dominant", "compound"],
+            "equipment": ["dumbbell"],
+            "movement": "squat",
+        },
+    ]
+
+    def _fake_score(exercise_tags, **_kwargs):
+        # Split Squat is intentionally lower-scoring so it is not selected by
+        # the scorer. Old behavior could still insert it via unilateral
+        # compensation in _promote_base_categories.
+        scores = {"Back Squat": 8.0, "Bench Press": 7.5, "Core Hold": 7.0, "Split Squat": 3.0}
+        tag = exercise_tags[0] if exercise_tags else ""
+        v = scores.get(tag, 1.0)
+        return v, {"final_score": v}
+
+    monkeypatch.setattr(strength_module, "get_exercise_bank", lambda: bank)
+    monkeypatch.setattr(strength_module, "get_style_exercises", lambda: [])
+    monkeypatch.setattr(strength_module, "get_universal_strength_names", lambda: set())
+    monkeypatch.setattr(strength_module, "get_universal_strength", lambda: [])
+    monkeypatch.setattr(strength_module, "score_exercise", _fake_score)
+    monkeypatch.setattr(strength_module, "allocate_sessions", lambda *a, **kw: {"strength": 1})
+    monkeypatch.setattr(strength_module, "calculate_exercise_numbers", lambda *a, **kw: {"strength": 3})
+
+    result = strength_module.generate_strength_block(
+        flags={**_base_flags("GPP"), "equipment": ["barbell", "dumbbell"]}
+    )
+
+    unilateral_promo_entries = [
+        e
+        for e in result["mutation_log"]
+        if e["mechanism"] == "promote_base_categories" and "unilateral" in e["reason"]
+    ]
+    assert unilateral_promo_entries == [], (
+        "Expected no unilateral compensation insertions from promote_base_categories; "
+        f"mutation_log: {result['mutation_log']}"
+    )
+    exercise_names = [ex.get("name") for ex in result["exercises"]]
+    assert "Back Squat" in exercise_names
+    assert "Bench Press" in exercise_names
+
+
 # ---------------------------------------------------------------------------
 # 4. Session-quality enforcement records must_not_miss_guarantee
 # ---------------------------------------------------------------------------

@@ -93,6 +93,7 @@ def normalize_style_tags(tags):
 
 STYLE_INSERT_SCORE_MARGIN = {"GPP": 0.2, "SPP": 0.35, "TAPER": 0.15}
 SESSION_SUPPORT_CAP_MULTIPLIER = 2
+STRUCTURAL_BASE_CATEGORIES = frozenset({"lower_body_loaded", "upper_body_push_pull"})
 
 FATIGUE_COST_BY_QUALITY_CLASS = {
     "anchor_loaded": 3.0,
@@ -1027,7 +1028,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     def _promote_base_categories(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
-        for category in missing_base_categories(updated):
+        # Keep promotion narrowly structural: only enforce the smallest
+        # product-critical loaded pattern floor.  Unilateral remains scorer-led
+        # (and can still appear naturally), which reduces compensatory
+        # selector repairs that were second-guessing scored outputs.
+        missing_structural_categories = [
+            category
+            for category in missing_base_categories(updated)
+            if category in STRUCTURAL_BASE_CATEGORIES
+        ]
+        for category in missing_structural_categories:
             selected_names = _selected_names(updated)
             replacement_entry = _best_candidate(
                 lambda cand, _score, _reasons, profile: profile["anchor_capable"]
@@ -1738,7 +1748,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         loaded_anchor_note=loaded_anchor_note,
     )
     
-
 
 
 
