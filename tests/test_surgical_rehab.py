@@ -578,6 +578,11 @@ def test_stage2_prompt_requires_sparring_modification_labels_and_readiness_ratio
     assert "deload" in lower
     assert "converted" in lower
     assert "readiness" in lower
+    assert "fixed anchors for weekly structure" in lower
+    assert "injury-driven" in lower
+    assert "a) voice and line quality" in lower
+    assert "b) render format and week structure" in lower
+    assert "c) readiness constraints and sparring declarations" in lower
 
 
 # ---------------------------------------------------------------------------
