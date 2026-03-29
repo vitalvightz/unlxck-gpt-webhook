@@ -361,6 +361,45 @@ def test_weekly_role_map_downgrades_adjacent_glycolytic_when_aggressive_cut_elev
     assert downgraded["collision_repair"]["trigger_day"] == "Tuesday"
 
 
+def test_weekly_role_map_keeps_strength_and_conditioning_day_hints_separated_in_cut_constrained_spar_week():
+    brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 2,
+            "days_until_fight": 12,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag", "bands"],
+            "injuries": ["hip flexor strain mild"],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 3.5,
+            "readiness_flags": ["active_weight_cut", "moderate_fatigue", "short_notice"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "technical_skill_days": ["Tuesday", "Thursday"],
+        }
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    assert len(week["session_roles"]) <= len(week["declared_training_days"])
+    assert all(role["scheduled_day_hint"] for role in week["session_roles"])
+
+    primary_strength = next(role for role in week["session_roles"] if role["role_key"] == "neural_plus_strength_day")
+    conditioning_days = {
+        role["scheduled_day_hint"]
+        for role in week["session_roles"]
+        if role["category"] == "conditioning"
+    }
+    assert primary_strength["scheduled_day_hint"] not in conditioning_days
+
+
 def test_weekly_role_map_preserves_glycolytic_when_no_hard_sparring_collision_exists():
     brief = _build_brief(
         {
