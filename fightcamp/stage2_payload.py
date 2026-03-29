@@ -3545,38 +3545,40 @@ In normal taper sessions, resolve to one final prescription with no default fall
 
 RULE 11 - OUTPUT DISCIPLINE
 Keep the athlete-facing output concise, high-signal, and easy to scan.
-Minimize repetition.
-Cut filler, duplication, and generic coaching reminders.
-Keep coaching notes short and only where session-critical.
-Coach voice should feel decisive, respectful, and gym-realistic.
-For any corrective or adjustment line, make the call, give a short why, and then the next action.
-Prefer command then reason, not explanation then suggestion.
-If the main limiter is only indirectly trained on a given day, say that plainly and support it through sequencing, dose, or embedded work rather than pretending that session directly fixes it.
-Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'. Start with the action.
-Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
-Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
-Do not use empty safety boilerplate such as 'listen to your body', 'be careful', or 'avoid overtraining' unless the line adds a concrete rule, symptom trigger, or plan change.
-Do not aim critique at the athlete's character.
-Collapse templates into one final prescription whenever the athlete context already resolves the choice.
-Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
-Allow at most one explicit fallback in a session, and only when absolutely necessary.
-Do not render extra active days beyond the weekly structure implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
-If a day is explicitly off, rest, optional, or mobility-only, label it that way rather than presenting it as an active session.
-Do not write visible count summaries such as '4 active sessions', 'Conditioning count = ...', or similar week-summary math. Render the week directly through weekday or session headings.
-Keep every active week present and structurally complete, including late-camp weeks.
-For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
-Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
-If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
-If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
-If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
-In short camps, every rendered session must map to one compressed week-level priority from the planning brief.
-Do not create a standalone session purpose for embedded-support or deferred items unless weekly_role_map explicitly keeps that session to preserve sparring rhythm, anchor structure, or phase survival.
-When weekly_role_map.weeks[].sparring_modifications is present, explicitly acknowledge the athlete's original hard spar input, then label the day as KEEP, DELOAD, or CONVERTED in the rendered plan.
-For every DELOAD or CONVERTED hard spar day, include one short rationale tied to taper, fatigue, cut, injury, or readiness state, and frame the change as protecting readiness for performance rather than reducing competitiveness.
-If a hard spar day is CONVERTED, state the replacement focus plainly. If it is DELOAD, keep the combat touch but lower collision cost.
-In taper or fight-week-like timing with 2+ hard spar days, keep declared hard sparring visible by default; only dose-adjust when readiness risk signals are present, and do not quietly turn kept hard-spar days into optional/off placeholders.
+Use this athlete-facing structure and keep each line decisive:
+A) Voice and line quality
+- Keep coaching notes short and only where session-critical.
+- For any corrective line, make the call, give a short why, then the next action (command then reason).
+- If the main limiter is indirectly trained that day, say so plainly and support it through sequencing/dose.
+- Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'.
+- Use autonomy-supportive wording only when a real safe choice exists (max two materially equivalent options).
+- Do not use generic motivation or empty safety boilerplate unless it includes a concrete trigger/rule/change.
+- Do not aim critique at the athlete's character.
+
+B) Render format and week structure
+- Collapse templates into one final prescription when athlete context resolves the choice.
+- Do not repeat Primary/Fallback/Drill menu labels across most lines.
+- Allow at most one explicit fallback in a session, and only when absolutely necessary.
+- Respect weekly_role_map structure; do not add extra active sessions from spare availability.
+- If a day is off/rest/optional/mobility-only, label it explicitly as non-active.
+- Do not write visible count math ('4 active sessions', 'Conditioning count = ...'); render sessions directly.
+- Keep every active week present and structurally complete, including late-camp weeks.
+- For boxer weeks, default to: support strength → low-damage conditioning → recovery → primary strength → main phase conditioning stressor, unless a stronger planning rule overrides.
+- Use simple session titles and coach-readable drill labels when the drill mechanics are already clear.
+
+C) Readiness constraints and sparring declarations
+- If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+- If injury management is active, lead with constraints/substitutions/stop rules instead of optional language.
+- If active weight cut is present, say so plainly, keep language shorter and safety-first, and explain reduced recovery/training tolerance.
+- If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury this in profile/nutrition data.
+- In short camps, every rendered session must map to one compressed week-level priority from the planning brief.
+- Do not create standalone session purposes for embedded-support/deferred items unless weekly_role_map explicitly keeps the session for sparring rhythm, anchor integrity, or phase survival.
+- When weekly_role_map.weeks[].sparring_modifications is present, acknowledge the athlete's original hard spar input and label the day KEEP, DELOAD, or CONVERTED.
+- Declared hard sparring days are fixed anchors for weekly structure; do not move or relabel them unless a readiness risk (especially injury) forces a change.
+- For each DELOAD or CONVERTED hard spar day, include one short readiness rationale tied to taper/fatigue/cut/injury and frame it as readiness protection.
+- If any hard sparring-day change is injury-driven, state that clearly and name the injury constraint causing the change.
+- If a hard spar day is CONVERTED, state the replacement focus plainly; if DELOAD, keep combat touch with lower collision cost.
+- In taper or fight-week-like timing with 2+ hard spar days, keep hard sparring visible by default; only dose-adjust when readiness risk signals are present, and do not quietly turn kept hard-spar days into optional/off placeholders.
 
 RULE 12 - SURGICAL REHAB INTEGRATION
 Rehab must never feel copy-pasted, generic, or repeated by default.
