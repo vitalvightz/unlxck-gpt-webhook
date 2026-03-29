@@ -1994,6 +1994,45 @@ def _assign_declared_day_hints(ordered: list[dict], athlete_model: dict) -> list
             day_assignments[aerobic_idx] = preferred_aerobic_day
             used_days.add(preferred_aerobic_day)
 
+    remaining_days = [day for day in training_days if day not in used_days]
+
+    def _assign_remaining_day(idx: int, role: dict) -> None:
+        nonlocal remaining_days
+        category = str(role.get("category", "")).strip()
+        system = str(role.get("preferred_system", "")).strip()
+
+        preferred_days: list[str] = []
+        if category == "conditioning":
+            if system == "glycolytic":
+                preferred_days.extend(day for day in remaining_days if day in hard_sparring_days)
+            if system == "aerobic":
+                preferred_days.extend(
+                    day
+                    for day in remaining_days
+                    if day in technical_skill_days and day not in hard_sparring_days
+                )
+            preferred_days.extend(day for day in remaining_days if day not in hard_sparring_days)
+        elif category == "strength":
+            preferred_days.extend(day for day in remaining_days if day not in hard_sparring_days)
+        elif category == "recovery":
+            preferred_days.extend(
+                day for day in remaining_days if day in technical_skill_days or day not in hard_sparring_days
+            )
+        preferred_days.extend(remaining_days)
+
+        preferred_day = next((day for day in _dedupe_preserve_order(preferred_days) if day not in used_days), None)
+        if preferred_day:
+            day_assignments[idx] = preferred_day
+            used_days.add(preferred_day)
+            remaining_days = [day for day in remaining_days if day != preferred_day]
+
+    for idx, role in enumerate(ordered):
+        if idx in day_assignments:
+            continue
+        if not remaining_days:
+            break
+        _assign_remaining_day(idx, role)
+
     for idx, day in day_assignments.items():
         role = ordered[idx]
         reason = ""
