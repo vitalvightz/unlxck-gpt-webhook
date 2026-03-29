@@ -3,6 +3,12 @@ from __future__ import annotations
 import re
 from typing import Iterable, TypedDict
 
+from .injury_policy import (
+    InjuryPolicy,
+    compile_injury_policy,
+    empty_policy,
+    evaluate_injury_policy,
+)
 from .restriction_parsing import CANONICAL_RESTRICTIONS, MIN_KEYWORD_MATCHES, ParsedRestriction
 from .tagging import normalize_tags
 
@@ -231,9 +237,40 @@ def evaluate_restriction_impact(
     text: str,
     tags: Iterable[str],
     limit_penalty: float,
+    injury_policy: InjuryPolicy | None = None,
 ) -> RestrictionGuardResult:
     if not restrictions:
         return RestrictionGuardResultCompat({"allowed": True, "matched": [], "risk": 0.0, "penalty": 0.0})
+    resolved_policy = injury_policy or compile_injury_policy(parsed_injuries=(), restrictions=restrictions)
+    evaluation = evaluate_injury_policy(
+        policy=resolved_policy or empty_policy(),
+        text=text,
+        tags=tags,
+        default_soft_penalty=limit_penalty,
+    )
+    matched_rules = list(evaluation.get("matched_rules", []))
+    matched: list[RestrictionMatch] = [
+        {
+            "restriction": str(rule.get("movement_key") or "generic_constraint"),
+            "strength": "avoid" if rule.get("mode") == "hard_block" else "limit",
+            "method": str(rule.get("source") or "policy"),
+            "confidence": 1.0,
+        }
+        for rule in matched_rules
+    ]
+    if matched:
+        soft_keys = {
+            str(rule.get("movement_key") or "")
+            for rule in matched_rules
+            if rule.get("mode") == "soft_caution" and rule.get("movement_key")
+        }
+        result: RestrictionGuardResult = RestrictionGuardResultCompat({
+            "allowed": evaluation.get("action") != "exclude",
+            "matched": matched,
+            "risk": 1.0 if evaluation.get("action") == "exclude" else min(1.0, abs(float(evaluation.get("score_penalty", 0.0)))),
+            "penalty": max(-1.5, round(len(soft_keys) * float(limit_penalty), 3)) if soft_keys else 0.0,
+        })
+        return result
     exclude = False
     penalty = 0.0
     matched: list[RestrictionMatch] = []

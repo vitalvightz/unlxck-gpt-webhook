@@ -6,6 +6,7 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .injury_formatting import looks_like_guided_injury_text, parse_injuries_and_restrictions
+from .injury_policy import InjuryPolicy, compile_injury_policy
 from .rounds_format import assess_rounds_format
 from .restriction_parsing import ParsedRestriction
 
@@ -353,8 +354,9 @@ class PlanInput:
     hard_sparring_days_raw: str
     technical_skill_days_raw: str
     injuries: str
-    parsed_injuries: list[dict[str, str | None]]
+    parsed_injuries: list[dict[str, object]]
     restrictions: list[ParsedRestriction]
+    injury_policy: InjuryPolicy
     key_goals: str
     weak_areas: str
     training_preference: str
@@ -386,6 +388,10 @@ class PlanInput:
             get_value("Any injuries or areas you need to work around?", fields)
         )
         parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
+        injury_policy = compile_injury_policy(
+            parsed_injuries=parsed_injuries,
+            restrictions=parsed_restrictions,
+        )
 
         training_days = [d.strip() for d in values["available_days"].split(",") if d.strip()]
         hard_sparring_days = [
@@ -416,6 +422,7 @@ class PlanInput:
             injuries=injuries,
             parsed_injuries=parsed_injuries,
             restrictions=parsed_restrictions,
+            injury_policy=injury_policy,
             training_days=training_days,
             hard_sparring_days=hard_sparring_days,
             technical_skill_days=technical_skill_days,

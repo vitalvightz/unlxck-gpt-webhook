@@ -22,7 +22,12 @@ _GUIDED_HEADER_LOOKAHEAD = (
 )
 _GUIDED_ENTRY_SPLIT_PATTERN = re.compile(rf"\s*;\s*(?={_GUIDED_HEADER_LOOKAHEAD})", re.IGNORECASE)
 _GUIDED_SEGMENT_PATTERN = re.compile(
-    r"^(?P<header>.*?)(?:\.\s*Avoid:\s*(?P<avoid>.*?))?(?:\.\s*Notes:\s*(?P<notes>.*))?$",
+    (
+        r"^(?P<header>.*?)"
+        r"(?:\.\s*Avoid:\s*(?P<avoid>.*?))?"
+        r"(?:\.\s*Caution:\s*(?P<caution>.*?))?"
+        r"(?:\.\s*Notes:\s*(?P<notes>.*))?$"
+    ),
     re.IGNORECASE | re.DOTALL,
 )
 _GUIDED_HEADER_PATTERN = re.compile(
@@ -61,6 +66,7 @@ class GuidedInjurySummary:
     trend: str
     functional_impact: str
     aggravators: list[str]
+    cautious_movements: list[str]
     notes: str
 
 
@@ -104,8 +110,10 @@ def parse_guided_injury_summary(text: str) -> GuidedInjurySummary | None:
         return None
 
     avoid_text = str(match.group("avoid") or "").strip().rstrip(".")
+    caution_text = str(match.group("caution") or "").strip().rstrip(".")
     notes = str(match.group("notes") or "").strip()
     aggravators = [item.strip() for item in avoid_text.split(",") if item.strip()]
+    cautious_movements = [item.strip() for item in caution_text.split(",") if item.strip()]
 
     return GuidedInjurySummary(
         raw=text.strip(),
@@ -114,6 +122,7 @@ def parse_guided_injury_summary(text: str) -> GuidedInjurySummary | None:
         trend=str(header_match.group("trend") or "").strip().lower(),
         functional_impact=str(header_match.group("functional_impact") or "").strip().lower(),
         aggravators=aggravators,
+        cautious_movements=cautious_movements,
         notes=notes,
     )
 
@@ -141,7 +150,7 @@ def _infer_guided_location(*parts: str) -> str | None:
     return None
 
 
-def _build_guided_injury_entry(summary: GuidedInjurySummary) -> dict[str, str | None] | None:
+def _build_guided_injury_entry(summary: GuidedInjurySummary) -> dict[str, object] | None:
     context = " ".join(part for part in [summary.area, summary.notes] if part).strip()
     injury_type, location = parse_injury_phrase(context)
     if not injury_type and not location:
@@ -160,6 +169,8 @@ def _build_guided_injury_entry(summary: GuidedInjurySummary) -> dict[str, str | 
         "severity": summary.severity,
         "trend": summary.trend,
         "functional_impact": summary.functional_impact,
+        "aggravating_movements": list(summary.aggravators),
+        "cautious_movements": list(summary.cautious_movements),
         "original_phrase": summary.area or context,
     }
 
@@ -211,6 +222,28 @@ def _build_guided_restrictions(summary: GuidedInjurySummary) -> list[ParsedRestr
         if restriction is not None:
             restrictions.append(_apply_guided_area_context(restriction, summary))
 
+    for movement in summary.cautious_movements:
+        normalized_movement = movement.strip().lower()
+        phrase = f"limit {movement}"
+        if summary.area:
+            phrase = f"{phrase} for {summary.area}"
+        mapped = _GUIDED_AGGRAVATOR_RESTRICTIONS.get(normalized_movement)
+        if mapped is not None:
+            restrictions.append(
+                ParsedRestriction(
+                    restriction=str(mapped.get("restriction") or "generic_constraint"),
+                    region=area_region or mapped.get("region"),
+                    strength="limit",
+                    side=side,
+                    original_phrase=phrase,
+                )
+            )
+            continue
+        restriction = parse_restriction_entry(phrase)
+        if restriction is not None:
+            restriction["strength"] = "limit"
+            restrictions.append(_apply_guided_area_context(restriction, summary))
+
     if summary.notes and not restrictions:
         restrictions.append(
             ParsedRestriction(
@@ -258,7 +291,7 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
     }
 
 
-def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
+def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, object]], list[ParsedRestriction]]:
     """Parse injury text into separate lists of injuries and restrictions.
     
     This is the main entry point that properly separates constraint phrases
@@ -272,7 +305,7 @@ def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | Non
         - injuries: List of injury dicts (legacy format)
         - restrictions: List of ParsedRestriction objects
     """
-    injuries: list[dict[str, str | None]] = []
+    injuries: list[dict[str, object]] = []
     restrictions: list[ParsedRestriction] = []
     
     if not text:

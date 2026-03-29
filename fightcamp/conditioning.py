@@ -957,6 +957,7 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
     weakness_keys = set(profile.weakness_keys + profile.weakness_secondary)
     sport = _normalize_fight_format(flags.get("fight_format", flags.get("sport", "mma")))
     focus_keys = {
+        "coordination",
         "skill_refinement",
         "coordination_proprioception",
         "footwork",
@@ -1329,6 +1330,7 @@ def generate_conditioning_block(flags):
     weaknesses = normalized_profile.weakness_keys + normalized_profile.weakness_secondary
     injuries = flags.get("injuries", [])
     restrictions = flags.get("restrictions")
+    injury_policy = flags.get("injury_policy")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
@@ -1514,6 +1516,7 @@ def generate_conditioning_block(flags):
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
+            injury_policy=injury_policy,
         )
         restriction_penalty = restriction_result.get("penalty", 0.0)
         matched_restrictions = restriction_result.get("matched", [])
@@ -1733,6 +1736,7 @@ def generate_conditioning_block(flags):
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
+            injury_policy=injury_policy,
         )
         restriction_penalty = restriction_result.get("penalty", 0.0)
         matched_restrictions = restriction_result.get("matched", [])
@@ -1960,6 +1964,7 @@ def generate_conditioning_block(flags):
         fatigue,
         injury_guard_names,
         restrictions=restrictions,
+        injury_policy=injury_policy,
         ignore_restrictions=ignore_restrictions,
     )
 
@@ -2494,6 +2499,8 @@ def generate_conditioning_block(flags):
                         injuries=injuries,
                         phase=phase,
                         fatigue=fatigue,
+                        restrictions=restrictions,
+                        injury_policy=injury_policy,
                         score_fn=score_fn,
                     )
 

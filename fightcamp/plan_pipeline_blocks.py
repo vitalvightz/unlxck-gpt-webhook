@@ -61,6 +61,7 @@ def _generate_strength_blocks(context: PlanRuntimeContext, phase_mindset_cues: d
             "phase": phase,
             "random_seed": context.random_seed,
             "restrictions": context.plan_input.restrictions,
+            "injury_policy": context.plan_input.injury_policy,
             "ignore_restrictions": context.selection_ignore_restrictions,
         }
         if previous_names:
@@ -110,6 +111,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
                 "time_to_fight_days": context.plan_input.days_until_fight,
                 "weeks_out": context.plan_input.weeks_out,
                 "restrictions": context.plan_input.restrictions,
+                "injury_policy": context.plan_input.injury_policy,
                 "ignore_restrictions": context.selection_ignore_restrictions,
             }
         )

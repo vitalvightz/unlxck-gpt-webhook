@@ -625,6 +625,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     rng = random.Random(seed) if seed is not None else None
     injuries = flags.get("injuries", [])
     restrictions = flags.get("restrictions")
+    injury_policy = flags.get("injury_policy")
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     fatigue = flags.get("fatigue", "low")
@@ -750,6 +751,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             text=restriction_text,
             tags=tags,
             limit_penalty=-0.75,
+            injury_policy=injury_policy,
         )
         restriction_penalty = restriction_result.get("penalty", 0.0)
         matched_restrictions = restriction_result.get("matched", [])
@@ -936,6 +938,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         guard_names,
         guard_exercises,
         restrictions=restrictions,
+        injury_policy=injury_policy,
         ignore_restrictions=ignore_restrictions,
     )
 
@@ -1530,7 +1533,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _finalize_injury_safe_exercises(ex_list: list[dict]) -> list[dict]:
         used_names = {ex.get("name") for ex in ex_list if ex.get("name")}
         updated: list[dict | None] = []
-        injuries_ctx = {"injuries": injuries, "phase": phase, "fatigue": fatigue}
+        injuries_ctx = {
+            "injuries": injuries,
+            "phase": phase,
+            "fatigue": fatigue,
+            "restrictions": restrictions,
+            "injury_policy": injury_policy,
+        }
         def _record_exclusion(exercise: dict, decision: Decision) -> None:
             reason = decision.reason if isinstance(decision.reason, dict) else {}
             excluded_by_injury.append({

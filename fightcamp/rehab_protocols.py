@@ -5,6 +5,7 @@ from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injuries_and_restrictions
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
+from .injury_policy import InjuryPolicy, compile_injury_policy
 from .config import STAGE_2
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction
@@ -529,6 +530,7 @@ def _format_rehab_drill(
     phase: str,
     function_tag: str,
     day_type: str | None = None,
+    return_stage: str | None = None,
 ) -> tuple[str, list[str]]:
     """Return the drill headline and its annotation lines separately.
 
@@ -572,11 +574,19 @@ def _format_rehab_drill(
     else:
         phase_key = phase.upper()
         why_today = _PHASE_REHAB_WHY.get(phase_key, "phase-appropriate rehab support")
+    if return_stage and return_stage != "perform":
+        why_today = f"{why_today}; current return stage: {return_stage.replace('_', ' ')}"
     annotations = [
         f"[Function: {label}] Purpose: {purpose}.",
         f"Why today: {why_today}.",
     ]
     return headline, annotations
+
+
+def _policy_from_injury_string(injury_string: str) -> tuple[InjuryPolicy, list[ParsedRestriction]]:
+    parsed_injuries, restrictions = parse_injuries_and_restrictions(injury_string or "")
+    policy = compile_injury_policy(parsed_injuries=parsed_injuries, restrictions=restrictions)
+    return policy, restrictions
 
 
 def generate_rehab_protocols(
@@ -620,40 +630,25 @@ def generate_rehab_protocols(
     if not injury_string:
         return "\n✅ No rehab work required.", seen_drills
 
+    policy, _ = _policy_from_injury_string(injury_string)
     injury_phrases = split_injury_text(injury_string)
-
-    parsed_entries = []
-    parsed_types = []
-    for phrase in injury_phrases:
-        itype, loc = parse_injury_phrase(phrase)
-        if not itype:
-            if loc:
-                # default to unspecified type when a location is provided
-                itype = "unspecified"
-            else:
-                continue
-        parsed_types.append(itype)
-        parsed_entries.append((itype, loc))
-
-    # Prioritize specific injuries over unspecified duplicates
-    parsed_entries.sort(key=lambda x: (x[0] is None or x[0] == "unspecified"))
-
-    # Drop injuries without a body part when at least one body part was found
-    if any(loc for _, loc in parsed_entries):
-        parsed_entries = [p for p in parsed_entries if p[1] is not None]
-
+    unique_entries: list[tuple[str | None, str | None, str | None]] = []
     seen_pairs = set()
-    seen_locations = set()
-    unique_entries = []
-    for pair in parsed_entries:
-        itype, loc = pair
+    for case in policy.cases:
+        pair = (case.injury_type, case.body_part.replace("_", " "), case.id)
         if pair in seen_pairs:
             continue
-        if loc in seen_locations:
-            continue
         seen_pairs.add(pair)
-        seen_locations.add(loc)
         unique_entries.append(pair)
+    if not unique_entries:
+        for phrase in injury_phrases:
+            itype, loc = parse_injury_phrase(phrase)
+            if not itype:
+                if loc:
+                    itype = "unspecified"
+                else:
+                    continue
+            unique_entries.append((itype, loc, None))
 
     flagged = []
     for injury in injury_phrases:
@@ -680,7 +675,8 @@ def generate_rehab_protocols(
         progress = entry.get("phase_progression", "")
         return _split_phase_progression(progress)
 
-    for itype, loc in unique_entries:
+    directive_by_case = {directive.case_id: directive for directive in policy.rehab_directives}
+    for itype, loc, case_id in unique_entries:
         loc_candidates = normalize_rehab_location(loc)
         matches = [
             entry
@@ -734,10 +730,11 @@ def generate_rehab_protocols(
                 loc_title = loc.title() if loc else "Unspecified"
                 type_title = itype.title() if itype else "Unspecified"
                 lines.append(f"- {loc_title} ({type_title}):")
+                return_stage = directive_by_case.get(case_id).return_stage if case_id in directive_by_case else None
                 for name, notes in selected:
                     fn = classify_drill_function(name, notes)
                     headline, annotations = _format_rehab_drill(
-                        name, notes, current_phase, fn, day_type
+                        name, notes, current_phase, fn, day_type, return_stage=return_stage
                     )
                     lines.append(f"  • {headline}")
                     lines.extend([f"    {ann}" for ann in annotations])
@@ -814,28 +811,20 @@ def generate_support_notes(injury_string: str) -> str:
 
 
 def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]:
-    parsed_entries, _ = parse_injuries_and_restrictions(injury_string)
+    policy, _ = _policy_from_injury_string(injury_string)
     normalized_entries: list[dict[str, str | None]] = []
-    severity_map = {
-        "low": "mild",
-        "mild": "mild",
-        "moderate": "moderate",
-        "high": "severe",
-        "severe": "severe",
-    }
-
-    for entry in parsed_entries:
-        normalized_entry = dict(entry)
-        existing_severity = severity_map.get(str(normalized_entry.get("severity") or "").lower())
-        if existing_severity:
-            normalized_entry["severity"] = existing_severity
-        else:
-            phrase = str(normalized_entry.get("original_phrase") or "")
-            base_severity = INJURY_TYPE_SEVERITY.get(normalized_entry.get("injury_type") or "", "moderate")
-            phrase_severity, phrase_hits = normalize_severity(phrase)
-            mapped_severity = severity_map.get(phrase_severity, "moderate")
-            normalized_entry["severity"] = mapped_severity if phrase_hits else base_severity
-        normalized_entries.append(normalized_entry)
+    for case in policy.cases:
+        normalized_entries.append(
+            {
+                "injury_type": case.injury_type,
+                "canonical_location": case.body_part.replace("_", " "),
+                "laterality": case.side,
+                "severity": case.severity,
+                "trend": case.trend,
+                "functional_impact": case.functional_impact,
+                "original_phrase": case.original_phrase,
+            }
+        )
 
     seen_pairs = set()
     seen_locations = set()
@@ -975,14 +964,15 @@ def format_injury_guardrails(
     restrictions: Iterable[ParsedRestriction] | None = None,
 ) -> str:
     """Return markdown injury guardrails for the current phase."""
+    policy, parsed_restrictions = _policy_from_injury_string(injuries)
+    restrictions_list = list(restrictions or parsed_restrictions)
     if not injuries:
-        restrictions_lines = _format_restrictions_block(restrictions or [])
+        restrictions_lines = _format_restrictions_block(restrictions_list)
         if restrictions_lines:
             return "\n".join(restrictions_lines)
         return "✅ No injury guardrails required."
 
     entries = _normalize_injury_entries(injuries)
-    restrictions_list = list(restrictions or [])
     if not entries and not restrictions_list:
         return "✅ No injury guardrails required."
 
@@ -1024,6 +1014,11 @@ def format_injury_guardrails(
 
     if entries:
         lines += ["", "**Rehab Priority**"]
+        directives = {directive.case_id: directive for directive in policy.rehab_directives}
+        cases_by_signature = {
+            (case.injury_type, case.body_part.replace("_", " "), case.side): case
+            for case in policy.cases
+        }
         for entry in entries:
             itype = entry.get("injury_type")
             loc = entry.get("canonical_location")
@@ -1038,11 +1033,14 @@ def format_injury_guardrails(
                     "severity": severity,
                 }
             )
+            case = cases_by_signature.get((itype, loc, laterality))
+            directive = directives.get(case.id) if case else None
+            stage_text = f" Return stage: {directive.return_stage.replace('_', ' ').title()}." if directive else ""
             if drills:
-                lines.append(f"- {summary}:")
+                lines.append(f"- {summary}:{stage_text}")
                 lines.extend([f"  - {d}" for d in drills[:4]])
             else:
-                lines.append(f"- {summary}: No rehab drills available for this phase.")
+                lines.append(f"- {summary}:{stage_text} No rehab drills available for this phase.")
 
     base_red_flags = [
         "Pain that worsens and stays elevated the next morning.",

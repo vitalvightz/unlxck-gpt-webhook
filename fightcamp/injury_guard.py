@@ -11,6 +11,13 @@ from typing import Callable, Iterable
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
 from .injury_formatting import parse_injury_entry
+from .injury_policy import (
+    DEFAULT_SOFT_PENALTY,
+    InjuryPolicy,
+    compile_injury_policy_from_inputs,
+    evaluate_injury_policy,
+    summarize_policy_text,
+)
 from .restriction_parsing import is_restriction_phrase
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .tagging import normalize_tags
@@ -370,6 +377,11 @@ class Decision:
     matched_tags: list[str]
     mods: list[str]
     reason: dict
+    score_penalty: float = 0.0
+    matched_rules: list[dict] = None
+
+    def __post_init__(self):
+        object.__setattr__(self, "matched_rules", list(self.matched_rules or []))
 
 
 def _normalize_injury_list(injuries: Iterable[str | dict] | str | dict | None) -> list[str | dict]:
@@ -621,6 +633,7 @@ def injury_guard(
     item: dict,
     injuries: Iterable[str | dict] | str | dict,
     restrictions: Iterable[dict] | None = None,
+    injury_policy: InjuryPolicy | None = None,
     *,
     ignore_restrictions: bool = False,
     stage: str | None = None,
@@ -631,16 +644,43 @@ def injury_guard(
         restrictions = None
     if INJURY_DEBUG:
         logger.info(
-            "[injury-guard-call] ignore_restrictions=%s restrictions_in=%s",
+            "[injury-guard-call] ignore_restrictions=%s restrictions_in=%s policy=%s",
             ignore_restrictions,
             bool(restrictions),
+            summarize_policy_text(injury_policy) if injury_policy else "compile-on-demand",
         )
     resolved_phase = phase or item.get("phase") or ""
     resolved_fatigue = fatigue or item.get("fatigue") or ""
-    return injury_decision(item, injuries, resolved_phase, resolved_fatigue)
+    return injury_decision(
+        item,
+        injuries,
+        resolved_phase,
+        resolved_fatigue,
+        restrictions=restrictions,
+        injury_policy=injury_policy,
+    )
 
 
-def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict, phase: str, fatigue: str) -> Decision:
+def _resolve_policy(
+    *,
+    injuries: Iterable[str | dict] | str | dict,
+    restrictions: Iterable[dict] | None,
+    injury_policy: InjuryPolicy | None,
+) -> InjuryPolicy:
+    if injury_policy is not None:
+        return injury_policy
+    return compile_injury_policy_from_inputs(injuries=injuries, restrictions=restrictions)
+
+
+def injury_decision(
+    exercise: dict,
+    injuries: Iterable[str | dict] | str | dict,
+    phase: str,
+    fatigue: str,
+    *,
+    restrictions: Iterable[dict] | None = None,
+    injury_policy: InjuryPolicy | None = None,
+) -> Decision:
     """
     Make injury-based decision for an exercise.
     
@@ -658,70 +698,24 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
     Returns:
         Decision object with action, risk_score, matched_tags, mods, and reason
     """
-    injuries_list = _normalize_injury_list(injuries)
-    debug_entries: list[dict] | None = None
-    global _INJURY_SEVERITY_DEBUGGED, _INJURY_PARSED_DEBUGGED
-    if INJURY_DEBUG and not _INJURY_PARSED_DEBUGGED:
-        parsed_dump = _build_parsed_injury_dump(injuries_list)
-        print("[injury-parse] parsed=%s" % json.dumps(parsed_dump, sort_keys=True))
-        _INJURY_PARSED_DEBUGGED = True
-    if INJURY_DEBUG and not _INJURY_SEVERITY_DEBUGGED:
-        debug_entries = []
-    for inj in injuries_list:
-        if isinstance(inj, dict):
-            raw_snapshot = dict(inj)
-            severity, hits = _normalize_dict_severity(inj)
-            inj["severity"] = severity
-            if debug_entries is not None:
-                debug_entries.append(
-                    {
-                        "raw": raw_snapshot,
-                        "region": raw_snapshot.get("region"),
-                        "severity": severity,
-                        "hits": hits,
-                    }
-                )
-    if not injuries_list:
-        return Decision(
-            action="allow",
-            risk_score=0.0,
-            threshold=_thresholds(phase, fatigue)[1],
-            matched_tags=[],
-            mods=[],
-            reason={"region": None, "severity": None, "bucket": "default", "matches": []},
-        )
-
     name = str(exercise.get("name", "") or "") or "Unnamed"
-    item_id = str(exercise.get("id") or name or id(exercise))
-    region_severity = _injury_context(injuries_list, debug_entries=debug_entries)
-    if debug_entries is not None:
-        for entry in debug_entries:
-            print(
-                "[injury-severity] raw=%r normalized={'region': %r, 'severity': %r} hits=%s"
-                % (entry["raw"], entry["region"], entry["severity"], entry["hits"])
-            )
-        _INJURY_SEVERITY_DEBUGGED = True
     modify_band, threshold = _thresholds(phase, fatigue)
-    threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
-
-    # For injury_match_details, we need to pass string representations
-    # Extract strings from both string and dict injuries
-    string_injuries_for_matching: list[str] = []
-    for injury in injuries_list:
-        if isinstance(injury, dict):
-            # For dictionary injuries, use the region as the injury string for matching
-            region = injury.get("region")
-            if region:
-                string_injuries_for_matching.append(region)
-        else:
-            string_injuries_for_matching.append(str(injury))
-    
-    details = injury_match_details(
-        exercise,
-        string_injuries_for_matching,
-        risk_levels=("exclude", "flag"),
+    injuries_list = _normalize_injury_list(injuries)
+    raw_region_severity: dict[str, str] = {}
+    for inj in injuries_list:
+        if not isinstance(inj, dict):
+            continue
+        severity, _ = _normalize_dict_severity(inj)
+        inj["severity"] = severity
+        region_key = str(inj.get("region") or inj.get("canonical_location") or "").strip().lower().replace(" ", "_")
+        if region_key and region_key not in raw_region_severity:
+            raw_region_severity[region_key] = severity
+    resolved_policy = _resolve_policy(
+        injuries=injuries_list,
+        restrictions=restrictions,
+        injury_policy=injury_policy,
     )
-    if not details:
+    if not resolved_policy.cases and not resolved_policy.movement_rules:
         return Decision(
             action="allow",
             risk_score=0.0,
@@ -731,121 +725,65 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
             reason={"region": None, "severity": None, "bucket": "default", "matches": []},
         )
 
-    max_detail_meta: dict[str, object] | None = None
-    max_risk = 0.0
-    details_by_region: dict[str, list[dict]] = {}
-    for detail in details:
-        details_by_region.setdefault(detail["region"], []).append(detail)
-    
-    # Extract module/bank information for cache key
-    module = exercise.get("placement", "").lower() or "unknown"
-    bank = exercise.get("bank", "") or exercise.get("source", "") or "unknown"
-    
-    # Compute tags hash for cache invalidation when tags change
-    exercise_tags = exercise.get("tags", [])
-    tags_hash = _compute_tags_hash(exercise_tags)
-
-    for region, region_details in details_by_region.items():
-        severity = region_severity.get(region, "moderate")
-        # Enhanced cache key includes:
-        # - item_id: unique exercise identifier
-        # - region: injury region being evaluated
-        # - severity: injury severity level
-        # - threshold_version: scoring thresholds (changes with phase/fatigue)
-        # - rules_version: injury rules version (from config)
-        # - tags_hash: hash of exercise tags (detects tag changes)
-        # - module: strength vs conditioning
-        # - bank: which bank the exercise came from
-        cache_key = (item_id, region, severity, threshold_version, INJURY_RULES_VERSION, tags_hash, module, bank)
-        cached = _INJURY_DECISION_CACHE.get(cache_key)
-        if cached:
-            risk = float(cached["risk"])
-            matched_tags = list(cached["matched_tags"])
-            bucket = str(cached["bucket"])
-            action = str(cached["action"])
-        else:
-            region_weight = REGION_RISK_WEIGHTS.get(region, 1.0)
-            severity_weight = SEVERITY_WEIGHTS.get(severity, 1.0)
-            max_region_detail = None
-            max_region_risk = 0.0
-            for detail in region_details:
-                risk_level_weight = RISK_LEVEL_WEIGHTS.get(detail["risk_level"], 0.8)
-                match_multiplier = _match_multiplier(detail.get("tags", []))
-                risk = region_weight * severity_weight * risk_level_weight * match_multiplier
-                if risk > max_region_risk:
-                    max_region_risk = risk
-                    max_region_detail = detail
-            if not max_region_detail:
-                continue
-            matched_tags = _match_tags_from_detail(max_region_detail)
-            bucket = _bucket_from_match(max_region_detail.get("tags", []), max_region_detail.get("patterns", []))
-            # Conservative safety approach: exclude when risk >= threshold
-            if max_region_risk >= threshold:
-                action = "exclude"
-            elif max_region_risk >= modify_band:
-                action = "modify"
-            else:
-                action = "allow"
-            _log_decision(
-                item_name=name,
-                region=region,
-                severity=severity,
-                risk=max_region_risk,
-                threshold=threshold,
-                matched_tags=matched_tags,
-                action=action,
-            )
-            _INJURY_DECISION_CACHE[cache_key] = {
-                "risk": max_region_risk,
-                "matched_tags": matched_tags,
-                "bucket": bucket,
-                "action": action,
-            }
-            risk = max_region_risk
-
-        if risk > max_risk:
-            max_risk = risk
-            max_detail_meta = {"region": region, "severity": severity, "bucket": bucket, "matched_tags": matched_tags}
-
-    if not max_detail_meta:
-        return Decision(
-            action="allow",
-            risk_score=0.0,
-            threshold=threshold,
-            matched_tags=[],
-            mods=[],
-            reason={"region": None, "severity": None, "bucket": "default", "matches": details},
-        )
-
-    region = str(max_detail_meta["region"])
-    severity = str(max_detail_meta["severity"])
-    matched_tags = list(max_detail_meta["matched_tags"])
-    bucket = str(max_detail_meta["bucket"])
-    # Conservative safety approach: exclude when risk >= threshold (not just >)
-    # This ensures borderline cases are excluded rather than modified
-    if max_risk >= threshold:
-        action = "exclude"
-    elif max_risk >= modify_band:
-        action = "modify"
-    else:
-        action = "allow"
-
-    mods = MODS_BY_REGION.get(region, []) if action == "modify" else []
-    
+    evaluation_text = " ".join(
+        [
+            str(exercise.get("name", "")),
+            str(exercise.get("movement", "")),
+            str(exercise.get("method", "")),
+            str(exercise.get("notes", "")),
+            str(exercise.get("modality", "")),
+        ]
+    )
+    evaluation = evaluate_injury_policy(
+        policy=resolved_policy,
+        text=evaluation_text,
+        tags=exercise.get("tags", []),
+        default_soft_penalty=DEFAULT_SOFT_PENALTY,
+    )
+    matched_rules = list(evaluation.get("matched_rules", []))
+    hard_matches = list(evaluation.get("hard_matches", []))
+    case_lookup = {case.id: case for case in resolved_policy.cases}
+    top_match = hard_matches[0] if hard_matches else (matched_rules[0] if matched_rules else None)
+    matched_tags = sorted({str(rule.get("movement_key") or "") for rule in matched_rules if rule.get("movement_key")})
+    region = None
+    severity = None
+    if top_match:
+        case = case_lookup.get(str(top_match.get("case_id")))
+        if case is not None:
+            region = case.body_part
+            severity = raw_region_severity.get(case.body_part, case.severity)
+    bucket = str(top_match.get("movement_key")) if top_match else "default"
+    score_penalty = float(evaluation.get("score_penalty", 0.0) or 0.0)
+    max_risk = 1.0 if hard_matches else min(0.95, abs(score_penalty) / abs(DEFAULT_SOFT_PENALTY or -0.6) if score_penalty else 0.0)
+    action = str(evaluation.get("action") or "allow")
+    mods = MODS_BY_REGION.get(region or "", []) if action == "modify" else []
+    _log_decision(
+        item_name=name,
+        region=region or "general",
+        severity=severity or "moderate",
+        risk=max_risk,
+        threshold=threshold,
+        matched_tags=matched_tags,
+        action=action,
+    )
     decision = Decision(
         action=action,
         risk_score=round(max_risk, 3),
         threshold=threshold,
         matched_tags=matched_tags,
         mods=mods,
+        score_penalty=score_penalty,
+        matched_rules=matched_rules,
         reason={
             "region": region,
             "severity": severity,
             "bucket": bucket,
-            "matches": details,
+            "matches": matched_rules,
+            "trace": evaluation.get("trace", []),
+            "rehab_relevance": evaluation.get("rehab_relevance", 0.0),
+            "movement_keys": evaluation.get("movement_keys", []),
         },
     )
-    
     return decision
 
 
@@ -857,6 +795,7 @@ def make_guarded_decision_factory(
     guard_list: list[dict] | None = None,
     *,
     restrictions: Iterable[dict] | None = None,
+    injury_policy: InjuryPolicy | None = None,
     ignore_restrictions: bool = False,
     stage: str | None = None,
 ) -> Callable[[dict], Decision]:
@@ -893,6 +832,7 @@ def make_guarded_decision_factory(
             item,
             injuries,
             restrictions=restrictions,
+            injury_policy=injury_policy,
             ignore_restrictions=ignore_restrictions,
             stage=stage,
             phase=phase,
@@ -909,11 +849,20 @@ def choose_injury_replacement(
     injuries: Iterable[str | dict],
     phase: str,
     fatigue: str,
+    restrictions: Iterable[dict] | None = None,
+    injury_policy: InjuryPolicy | None = None,
     score_fn: Callable[[dict], float] | None = None,
 ) -> dict | None:
     if not candidates:
         return None
-    decision = injury_decision(excluded_item, injuries, phase, fatigue)
+    decision = injury_decision(
+        excluded_item,
+        injuries,
+        phase,
+        fatigue,
+        restrictions=restrictions,
+        injury_policy=injury_policy,
+    )
     region = decision.reason.get("region") if isinstance(decision.reason, dict) else None
     bucket = decision.reason.get("bucket") if isinstance(decision.reason, dict) else None
     fallback_groups = FALLBACK_TAG_ORDER.get(region or "", {}).get(bucket or "", [])
@@ -928,7 +877,14 @@ def choose_injury_replacement(
     sorted_candidates = sorted(candidates, key=sort_key)
 
     def is_safe(cand: dict) -> bool:
-        cand_decision = injury_decision(cand, injuries, phase, fatigue)
+        cand_decision = injury_decision(
+            cand,
+            injuries,
+            phase,
+            fatigue,
+            restrictions=restrictions,
+            injury_policy=injury_policy,
+        )
         return cand_decision.action != "exclude"
 
     safe_candidates = [cand for cand in sorted_candidates if is_safe(cand)]
@@ -955,10 +911,19 @@ def pick_safe_replacement(
     injuries = injuries_ctx.get("injuries", [])
     phase = injuries_ctx.get("phase", "")
     fatigue = injuries_ctx.get("fatigue", "")
+    restrictions = injuries_ctx.get("restrictions")
+    injury_policy = injuries_ctx.get("injury_policy")
 
     def _first_safe(items: Iterable[dict]) -> tuple[dict | None, Decision | None]:
         for cand in items:
-            decision = injury_decision(cand, injuries, phase, fatigue)
+            decision = injury_decision(
+                cand,
+                injuries,
+                phase,
+                fatigue,
+                restrictions=restrictions,
+                injury_policy=injury_policy,
+            )
             if decision.action in {"allow", "modify"}:
                 return cand, decision
         return None, None
