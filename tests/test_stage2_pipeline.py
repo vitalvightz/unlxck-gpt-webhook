@@ -122,6 +122,30 @@ def test_review_stage2_output_returns_pass_with_non_blocking_review_flags():
     assert "sport_language_leak" in review_flag_codes
 
 
+def test_review_stage2_output_downgrades_adjustment_option_overload_when_not_high_risk():
+    review = review_stage2_output(
+        planning_brief=_stage1_result_fixture()["planning_brief"],
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Strength
+        - Option A: Reduce volume to 4 rounds.
+        - Option B: Drop intensity and keep the same rounds.
+        - Option C: Skip the hard finish and move to easy bike work.
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
+        """,
+    )
+
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+    blocking_codes = [warning["code"] for warning in review["validator_report"]["blocking_warnings"]]
+    review_flag_codes = [warning["code"] for warning in review["validator_report"]["review_flags"]]
+    assert "option_overload" not in blocking_codes
+    assert "option_overload" in review_flag_codes
+
+
 def test_review_stage2_output_promotes_hedged_adjustment_to_blocking_warning():
     review = review_stage2_output(
         planning_brief=_stage1_result_fixture()["planning_brief"],
@@ -255,6 +279,27 @@ def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
         - Hard Shuttle - 6x20s / 60s
         - Band External Rotation - 2x15
         - Double-leg sprint entry - 6 x 6 sec
+        """,
+    )
+
+    assert retry["status"] == "PASS"
+    assert retry["needs_retry"] is False
+    assert retry["repair_prompt"] is None
+
+
+def test_build_stage2_retry_skips_prompt_for_low_risk_adjustment_option_overload():
+    retry = build_stage2_retry(
+        stage1_result=_stage1_result_fixture(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Strength
+        - Option A: Reduce volume to 4 rounds.
+        - Option B: Drop intensity and keep the same rounds.
+        - Option C: Skip the hard finish and move to easy bike work.
+        - Landmine Press - 4x5
+        - Air Bike Sprint - 6 x 6 sec
+        - Hard Shuttle - 6x20s / 60s
+        - Band External Rotation - 2x15
         """,
     )
 

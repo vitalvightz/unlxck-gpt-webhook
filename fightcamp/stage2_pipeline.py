@@ -23,6 +23,21 @@ _BLOCKING_WARNING_CODES = {
 }
 
 
+def _downgrade_blocking_warning_if_safe(warning: dict) -> dict:
+    code = str(warning.get("code") or "")
+    risk_context = list(warning.get("risk_context") or [])
+    phase = str(warning.get("phase") or "").upper()
+
+    if code == "option_overload" and not risk_context and phase != "TAPER":
+        softened = dict(warning)
+        softened["blocking"] = False
+        softened["review_only_reason"] = (
+            "Adjustment choices were overloaded, but the context is not taper- or risk-driven, so this stays a review flag."
+        )
+        return softened
+
+    return warning
+
 
 def _require_dict(value: Any, *, name: str) -> dict:
     if not isinstance(value, dict):
@@ -49,7 +64,10 @@ def _count_candidate_slots(planning_brief: dict) -> int:
 
 
 def _warning_buckets(validator_report: dict) -> tuple[list[dict], list[dict]]:
-    warnings = list(validator_report.get("warnings", []) or [])
+    warnings = [
+        _downgrade_blocking_warning_if_safe(warning)
+        for warning in list(validator_report.get("warnings", []) or [])
+    ]
     blocking_warnings = [
         warning
         for warning in warnings
