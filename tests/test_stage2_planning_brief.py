@@ -2166,6 +2166,19 @@ def test_weight_cut_brief_and_payload_surface_cut_stress_explicitly():
     assert any("explicitly acknowledge" in line for line in payload["rewrite_guidance"]["writing_rules"])
 
 
+def test_stage2_payload_rewrite_guidance_allows_close_variants_when_bank_fit_is_awkward():
+    payload, _ = _build_taper_payload_and_brief()
+
+    selection_rules = payload["rewrite_guidance"]["selection_rules"]
+    writing_rules = payload["rewrite_guidance"]["writing_rules"]
+
+    assert any("close same-role variant" in rule for rule in selection_rules)
+    assert any("phase intent, main adaptation target, equipment reality" in rule for rule in selection_rules)
+    assert any("generic simpler drill if no sport-specific safe variant" in rule for rule in selection_rules)
+    assert any("replace it instead of preserving it just because it exists in the pool" in rule for rule in selection_rules)
+    assert any("make the mechanical change obvious" in rule for rule in writing_rules)
+
+
 def test_weight_cut_support_blocks_keep_protocol_and_plain_acknowledgement():
     flags = {
         "phase": "TAPER",

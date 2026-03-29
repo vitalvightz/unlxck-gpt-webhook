@@ -76,6 +76,22 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
     assert "If a day is explicitly off, rest, optional, or mobility-only, label it that way rather than presenting it as an active session." in handoff
 
 
+def test_build_stage2_handoff_text_allows_controlled_close_variants():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={},
+        plan_text="Week 1\n- Landmine Press - 4x5",
+        planning_brief={"athlete_snapshot": {"sport": "boxing"}},
+    )
+
+    assert "RULE 3A - CONTROLLED VARIANT / SUBSTITUTE GENERATION" in handoff
+    assert "Candidate pools = preferred exercise reservoir, not an exhaustive wording lock." in handoff
+    assert "Keep the coded drill if it is a clean fit." in handoff
+    assert "Modify the coded drill into a close variant if that solves the conflict." in handoff
+    assert "Replace it with a close substitute if modification is not enough." in handoff
+    assert "Only fall back to a generic simpler drill if no sport-specific safe variant exists." in handoff
+    assert "Do not treat exact bank wording as more important than athlete fit." in handoff
+
+
 def test_build_stage2_handoff_text_explicitly_preserves_mindset_blocks():
     handoff = build_stage2_handoff_text(
         stage2_payload={},

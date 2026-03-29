@@ -3385,12 +3385,17 @@ def build_stage2_payload(
     )
     rewrite_guidance = {
         "selection_rules": [
-            "Prefer selected items first only if they remain strong and compliant.",
-            "If a selected item is removed, replace with the strongest compliant same-role option first.",
+            "Prefer selected items first only if they remain clean, strong, and compliant.",
+            "If a selected or pooled item is a clean fit, keep it.",
+            "If a selected or pooled item is directionally right but awkward for the athlete's exact restriction, fatigue, or fight-week context, first modify it into a close same-role variant.",
+            "If modification is not enough, replace it with the strongest compliant same-role substitute.",
+            "You may create a close variant or substitute even if that exact wording is not already in code when the coded item is only partially suitable and the new choice preserves the same training role, phase intent, main adaptation target, equipment reality, and equal-or-lower fatigue or collision cost unless a higher cost is clearly justified.",
+            "If a coded drill directly clashes with the athlete's trigger, replace it instead of preserving it just because it exists in the pool.",
+            "Only fall back to a generic simpler drill if no sport-specific safe variant or same-role substitute exists.",
             "Do not let support drills take over anchor slots when stronger compliant options exist.",
             "In GPP and SPP, keep at least one true externally loaded high-transfer anchor if a compliant option exists; speed work, med-ball work, primers, and band work may support it but cannot replace it.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
-            "Do not invent new items when a strong compliant option already exists in the pool.",
+            "Do not invent a novel item when a coded drill, pool option, or close coded variant already gives a clean fit.",
             "Keep every final primary drill, support drill, and fallback equipment-valid for the athlete profile.",
             "Only keep an explicit fallback when a real unresolved access or availability contingency still exists.",
             "If declared hard sparring days exist, treat them as fixed collision points when placing the main glycolytic stressor or primary neural strength session.",
@@ -3432,6 +3437,7 @@ def build_stage2_payload(
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
             "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
             "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
+            "If you generate a close variant or substitute, name it plainly and make the mechanical change obvious instead of inventing exotic drill names.",
         ],
     }
 
@@ -3454,7 +3460,7 @@ The PLANNING BRIEF already contains the athlete snapshot, restrictions, candidat
 SOURCE OF TRUTH
 1. PLANNING BRIEF = primary authority for athlete intent, phase strategy, priorities, and risks.
 2. Restrictions = hard constraints.
-3. Candidate pools = preferred exercise reservoir.
+3. Candidate pools = preferred exercise reservoir, not an exhaustive wording lock.
 4. Stage 1 draft = raw material only, not final authority.
 
 RULE 1 - HARD FILTER
@@ -3470,11 +3476,32 @@ Treat weekly_role_map as an execution layer, not an excuse to erase structurally
 
 RULE 3 - SELECTION ORDER
 Prefer:
-1. strong compliant Stage 1 items
-2. same-role compliant alternates from candidate pools
-3. other compliant options from candidate pools
+1. strong compliant Stage 1 items that are already a clean fit
+2. clean same-role compliant alternates from candidate pools
+3. other clean compliant options from candidate pools
+4. a close same-role variant or substitute when the coded options are only partial fits
 
 Do not keep a weak Stage 1 choice just because it already exists.
+Do not treat exact bank wording as more important than athlete fit.
+
+RULE 3A - CONTROLLED VARIANT / SUBSTITUTE GENERATION
+When a selected or pooled item is only partially suitable for the athlete's restriction profile, fatigue state, or fight-week context, you may create a close variant or substitute even if that exact wording does not already exist in the candidate pools.
+This freedom is for tighter athlete fit, not random invention. Rule 1 still applies: a directly violating item must be replaced, not modified into compliance.
+Only do this when all of the following remain true:
+1. The substitute keeps the same training role: primary strength anchor, support strength, aerobic repeatability, alactic sharpness, glycolytic fight-pace, technical rhythm, or rehab / activation / reset.
+2. The substitute keeps the same phase intent: GPP = foundation / repeatability / general force; SPP = specific transfer / density / sharpness; TAPER = freshness / crispness / low fatigue cost.
+3. The substitute keeps the same main adaptation target: force, rate of force, aerobic repeatability, glycolytic repeatability, trunk stability, mobility / control, or sport-specific rhythm.
+4. The substitute is safer or cleaner for the athlete's exact restriction profile.
+5. The substitute does not increase fatigue cost or collision cost relative to the original unless a higher cost is clearly justified by a phase-critical need.
+6. The substitute stays realistic for the athlete's declared equipment.
+Use this decision hierarchy:
+1. Keep the coded drill if it is a clean fit.
+2. Modify the coded drill into a close variant if that solves the conflict.
+3. Replace it with a close substitute if modification is not enough.
+4. Only fall back to a generic simpler drill if no sport-specific safe variant exists.
+Allowed freedom includes shortening range, changing stance or support level, reducing amplitude, making a drill more technical and less reactive, converting a loaded movement into a supported or isometric version, converting conditioning into a lower-noise version with the same energy-system purpose, or converting a high-risk boxing drill into a lower-risk boxing-specific variant.
+Not allowed: changing the session's whole purpose, changing the energy-system target, adding fatigue or collision cost for novelty, ignoring phase logic, ignoring equipment, or hallucinating exotic drills when a simpler variant solves the problem.
+If a coded drill directly clashes with the athlete's trigger, replace it. Do not preserve it just because it exists in code.
 
 RULE 4 - ANCHOR SESSION STANDARD
 Each weekly anchor strength/power session must contain at least one serious high-transfer strength or power exercise if a compliant option exists for the athlete's sport, phase, equipment, and injury profile.
@@ -3507,7 +3534,7 @@ Every primary drill, support drill, and fallback must be valid for the athlete's
 If the athlete profile already resolves the access question, render only the resolved option.
 
 RULE 9 - REPLACEMENTS MUST IMPROVE QUALITY
-When removing weak or violating items, replace them with stronger compliant options, not weaker support work.
+When removing weak or violating items, replace them with stronger compliant options, cleaner same-role variants, or stronger same-role substitutes, not weaker support work.
 Do not leave unresolved access branches when one valid choice is already obvious from the athlete profile.
 
 RULE 10 - TAPER DISCIPLINE
