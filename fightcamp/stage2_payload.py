@@ -2218,6 +2218,93 @@ def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str,
     return "", ""
 
 
+def _first_short_camp_bucket_label(compressed: dict, bucket: str) -> str:
+    for entry in compressed.get(bucket, []) or []:
+        label = str((entry or {}).get("label", "")).strip()
+        if label:
+            return label
+    return ""
+
+
+def _structural_short_camp_override(
+    *,
+    role: dict,
+    week_entry: dict,
+    athlete_model: dict,
+    session_roles: list[dict],
+) -> tuple[str, str, str]:
+    compressed = athlete_model.get("compressed_priorities") or {}
+    if not compressed.get("is_short_camp"):
+        return "", "", ""
+
+    sport_key = _athlete_sport_key(athlete_model)
+    phase = str(week_entry.get("phase", "")).upper()
+    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
+    training_days = _clean_list(athlete_model.get("training_days", []))
+    strength_role_count = sum(1 for item in session_roles if item.get("category") == "strength")
+    has_recovery_role = any(item.get("category") == "recovery" for item in session_roles)
+
+    maintenance_label = _first_short_camp_bucket_label(compressed, "maintenance_targets")
+    embedded_label = _first_short_camp_bucket_label(compressed, "embedded_support")
+    primary_label = _first_short_camp_bucket_label(compressed, "primary_targets")
+
+    role_key = str(role.get("role_key", "")).strip()
+    category = str(role.get("category", "")).strip()
+    anchor = str(role.get("anchor", "")).strip()
+
+    if (
+        category == "conditioning"
+        and role_key in {"fight_pace_repeatability_day", "light_fight_pace_touch_day"}
+        and hard_sparring_days
+    ):
+        if maintenance_label:
+            return (
+                maintenance_label,
+                "maintenance_target",
+                "Short-camp compression kept this combat-rhythm slot because declared hard sparring still needs an explicit execution layer.",
+            )
+        if primary_label:
+            return (
+                primary_label,
+                "primary_target",
+                "Short-camp compression kept this combat-rhythm slot because declared hard sparring still needs a matched execution layer.",
+            )
+        return (
+            "combat rhythm maintenance",
+            "maintenance_target",
+            "Short-camp compression kept this combat-rhythm slot because declared hard sparring still needs an explicit execution layer.",
+        )
+
+    if (
+        category == "strength"
+        and anchor == "support_day"
+        and sport_key == "boxing"
+        and phase in {"GPP", "SPP"}
+        and strength_role_count >= 2
+        and has_recovery_role
+        and len(training_days) >= 4
+    ):
+        if maintenance_label:
+            return (
+                maintenance_label,
+                "maintenance_target",
+                "Short-camp compression kept this support-strength slot to preserve weekly rhythm around the primary neural anchor.",
+            )
+        if embedded_label:
+            return (
+                embedded_label,
+                "embedded_support",
+                "Short-camp compression kept this support-strength slot to preserve weekly rhythm around the primary neural anchor.",
+            )
+        return (
+            primary_label or "quality preservation",
+            "primary_target" if primary_label else "maintenance_target",
+            "Short-camp compression kept this support-strength slot to preserve weekly rhythm around the primary neural anchor.",
+        )
+
+    return "", "", ""
+
+
 def _apply_short_camp_role_compression(
     week_entry: dict,
     session_roles: list[dict],
@@ -2236,6 +2323,18 @@ def _apply_short_camp_role_compression(
         if label:
             role["compressed_priority_label"] = label
             role["compressed_priority_bucket"] = bucket
+            kept_roles.append(role)
+            continue
+        structural_label, structural_bucket, structural_reason = _structural_short_camp_override(
+            role=role,
+            week_entry=week_entry,
+            athlete_model=athlete_model,
+            session_roles=session_roles,
+        )
+        if structural_label:
+            role["compressed_priority_label"] = structural_label
+            role["compressed_priority_bucket"] = structural_bucket
+            role["compression_override_reason"] = structural_reason
             kept_roles.append(role)
             continue
         if role.get("category") == "recovery":
@@ -3331,6 +3430,7 @@ RULE 2 - PLAN THE CAMP, DON'T JUST EDIT
 Build the best final plan from the PLANNING BRIEF.
 Use week_by_week_progression and weekly_role_map to sequence the camp.
 You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing if the result is more coherent and still consistent with the planning brief and restrictions.
+Treat weekly_role_map as an execution layer, not an excuse to erase structurally useful sessions when declared sparring rhythm, weekly anchor integrity, or phase survival still require them.
 
 RULE 3 - SELECTION ORDER
 Prefer:
@@ -3388,6 +3488,7 @@ Keep coaching notes short and only where session-critical.
 Coach voice should feel decisive, respectful, and gym-realistic.
 For any corrective or adjustment line, make the call, give a short why, and then the next action.
 Prefer command then reason, not explanation then suggestion.
+If the main limiter is only indirectly trained on a given day, say that plainly and support it through sequencing, dose, or embedded work rather than pretending that session directly fixes it.
 Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'. Start with the action.
 Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
 Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
@@ -3407,7 +3508,8 @@ If injury management is active, lead with constraints, substitutions, or stop ru
 If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
 If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
-In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
+In short camps, every rendered session must map to one compressed week-level priority from the planning brief.
+Do not create a standalone session purpose for embedded-support or deferred items unless weekly_role_map explicitly keeps that session to preserve sparring rhythm, anchor structure, or phase survival.
 When weekly_role_map.weeks[].sparring_modifications is present, explicitly acknowledge the athlete's original hard spar input, then label the day as KEEP, DELOAD, or CONVERTED in the rendered plan.
 For every DELOAD or CONVERTED hard spar day, include one short rationale tied to taper, fatigue, cut, injury, or readiness state, and frame the change as protecting readiness for performance rather than reducing competitiveness.
 If a hard spar day is CONVERTED, state the replacement focus plainly. If it is DELOAD, keep the combat touch but lower collision cost.
@@ -3458,6 +3560,47 @@ def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, separators=(",", ":"), ensure_ascii=False) + "\n```"
 
 
+def _stage2_handoff_context_sections(*, planning_brief: dict, stage2_payload: dict) -> list[str]:
+    athlete_snapshot = dict(planning_brief.get("athlete_snapshot") or stage2_payload.get("athlete_model", {}) or {})
+    limiter_and_archetype = {
+        "main_limiter": planning_brief.get("main_limiter", ""),
+        "limiter_profile": planning_brief.get("limiter_profile", {}),
+        "archetype_summary": planning_brief.get("archetype_summary", {}),
+    }
+    phase_strategy = dict(planning_brief.get("phase_strategy") or stage2_payload.get("phase_briefs", {}) or {})
+    weekly_execution = {
+        "week_by_week_progression": planning_brief.get("week_by_week_progression", {}),
+        "weekly_role_map": planning_brief.get("weekly_role_map", {}),
+    }
+    constraints_and_omissions = {
+        "restrictions": planning_brief.get("restrictions", stage2_payload.get("restrictions", [])),
+        "main_risks": planning_brief.get("main_risks", []),
+        "global_priorities": planning_brief.get("global_priorities", {}),
+        "candidate_pools": planning_brief.get("candidate_pools", stage2_payload.get("candidate_pools", {})),
+        "omission_ledger": planning_brief.get("omission_ledger", stage2_payload.get("omission_ledger", {})),
+    }
+    rewrite_guidance = dict(
+        planning_brief.get("decision_rules")
+        or stage2_payload.get("rewrite_guidance", {})
+        or {}
+    )
+
+    sections: list[str] = []
+    if athlete_snapshot:
+        sections.append("ATHLETE SNAPSHOT\n" + _json_block(athlete_snapshot))
+    if any(limiter_and_archetype.values()):
+        sections.append("LIMITER AND ARCHETYPE\n" + _json_block(limiter_and_archetype))
+    if phase_strategy:
+        sections.append("PHASE STRATEGY\n" + _json_block(phase_strategy))
+    if weekly_execution["week_by_week_progression"] or weekly_execution["weekly_role_map"]:
+        sections.append("WEEKLY EXECUTION MAP\n" + _json_block(weekly_execution))
+    if any(constraints_and_omissions.values()):
+        sections.append("CONSTRAINTS AND OMISSIONS\n" + _json_block(constraints_and_omissions))
+    if rewrite_guidance:
+        sections.append("REWRITE GUIDANCE\n" + _json_block(rewrite_guidance))
+    return sections
+
+
 def build_stage2_handoff_text(
     *,
     stage2_payload: dict,
@@ -3475,8 +3618,9 @@ def build_stage2_handoff_text(
     }
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
-        "PLANNING BRIEF\n" + _json_block(context_block),
     ]
+    sections.extend(_stage2_handoff_context_sections(planning_brief=context_block, stage2_payload=stage2_payload))
+    sections.append("PLANNING BRIEF\n" + _json_block(context_block))
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)

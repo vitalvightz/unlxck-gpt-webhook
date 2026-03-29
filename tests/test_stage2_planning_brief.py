@@ -1490,6 +1490,64 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
     )
 
 
+def test_short_camp_weekly_role_map_preserves_boxer_support_strength_when_it_carries_weekly_rhythm():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 6,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["power"],
+            "weaknesses": ["gas_tank"],
+            "equipment": ["bodyweight", "bands"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "technical_skill_days": ["Monday"],
+            "readiness_flags": ["moderate_fatigue", "fight_week", "short_notice"],
+        },
+        {
+            "GPP": {
+                "objective": "keep force and rhythm alive without wasting short-camp margin",
+                "emphasize": ["general force", "aerobic repeatability"],
+                "deprioritize": ["extra accessory volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 1, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["aerobic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "alactic"],
+                },
+                "weeks": 0,
+                "days": 5,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    role_by_key = {role["role_key"]: role for role in week["session_roles"]}
+
+    assert "secondary_strength_day" in role_by_key
+    assert week["session_roles"][0]["role_key"] == "secondary_strength_day"
+    assert role_by_key["secondary_strength_day"]["compressed_priority_bucket"] in {
+        "maintenance_target",
+        "embedded_support",
+        "primary_target",
+    }
+    assert "weekly rhythm" in role_by_key["secondary_strength_day"]["compression_override_reason"].lower()
+    assert role_by_key["primary_strength_day"]["scheduled_day_hint"] == "Thursday"
+    recovery_role = role_by_key.get("fight_week_freshness_day") or role_by_key.get("recovery_reset_day")
+    assert recovery_role is not None
+    assert recovery_role["scheduled_day_hint"] == "Wednesday"
+
+
 def test_phase_strategy_keeps_plain_spp_framing_for_true_multiweek_spp():
     brief = _build_progression_brief(
         {
