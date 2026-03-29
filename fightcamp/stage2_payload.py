@@ -3466,8 +3466,10 @@ def build_stage2_payload(
             "Respect the weekly structure implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned active work, leave the spare days off or clearly optional rather than rendering another full session.",
             "Do not quietly relabel a declared hard sparring day as optional/off when weekly_role_map keeps it active; keep sparring intent visible and dose-adjust instead.",
+            "Global hard-sparring fidelity rule: declared hard sparring days must stay explicitly labeled hard sparring across every week unless an explicit high-priority readiness/injury override is documented.",
             "Do not write visible count recaps such as '4 active sessions', 'Conditioning count = ...', or similar week-summary math; render the week directly through weekday or session headings.",
             "If a non-taper week has no compliant true loaded anchor, state plainly that the week is injury-limited and use the safest force-preserving substitute instead of pretending support or primer work is the main anchor.",
+            "Short-camp simplification must not erase force identity: each week keeps one clear primary strength anchor (or clearly named injury-limited same-role substitute) while accessories are the first cuts.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
@@ -3612,12 +3614,14 @@ C) Readiness constraints and sparring declarations
 - If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury this in profile/nutrition data.
 - In short camps, every rendered session must map to one compressed week-level priority from the planning brief.
 - Do not create standalone session purposes for embedded-support/deferred items unless weekly_role_map explicitly keeps the session for sparring rhythm, anchor integrity, or phase survival.
+- Global hard-sparring fidelity rule: declared hard sparring days remain hard sparring days across all weeks; adjust dose first and only change labels with an explicit high-priority readiness or injury override.
 - When weekly_role_map.weeks[].sparring_modifications is present, acknowledge the athlete's original hard spar input and label the day KEEP, DELOAD, or CONVERTED.
 - Declared hard sparring days are fixed anchors for weekly structure; do not move or relabel them unless a readiness risk (especially injury) forces a change.
 - For each DELOAD or CONVERTED hard spar day, include one short readiness rationale tied to taper/fatigue/cut/injury and frame it as readiness protection.
 - If any hard sparring-day change is injury-driven, state that clearly and name the injury constraint causing the change.
 - If a hard spar day is CONVERTED, state the replacement focus plainly; if DELOAD, keep combat touch with lower collision cost.
 - In taper or fight-week-like timing with 2+ hard spar days, keep hard sparring visible by default; only dose-adjust when readiness risk signals are present, and do not quietly turn kept hard-spar days into optional/off placeholders.
+- For week-level force identity, keep one clear main strength anchor every active week; if cut/fatigue/injury constraints force reductions, trim accessory volume/ROM/intensity first and keep the anchor role explicit via the safest same-role variant.
 
 RULE 12 - SURGICAL REHAB INTEGRATION
 Rehab must never feel copy-pasted, generic, or repeated by default.

@@ -575,10 +575,13 @@ def test_stage2_prompt_mentions_day_type_sensitivity():
 def test_stage2_prompt_requires_sparring_modification_labels_and_readiness_rationale():
     lower = STAGE2_FINALIZER_PROMPT.lower()
     assert "original hard spar input" in lower
+    assert "global hard-sparring fidelity rule" in lower
+    assert "declared hard sparring days remain hard sparring days" in lower
     assert "deload" in lower
     assert "converted" in lower
     assert "readiness" in lower
     assert "fixed anchors for weekly structure" in lower
+    assert "keep one clear main strength anchor every active week" in lower
     assert "injury-driven" in lower
     assert "a) voice and line quality" in lower
     assert "b) render format and week structure" in lower
