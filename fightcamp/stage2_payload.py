@@ -3574,7 +3574,9 @@ If the cut is high-pressure, include one short summary-level note plus one suppo
 In short camps, every rendered session must map to one compressed week-level priority from the planning brief.
 Do not create a standalone session purpose for embedded-support or deferred items unless weekly_role_map explicitly keeps that session to preserve sparring rhythm, anchor structure, or phase survival.
 When weekly_role_map.weeks[].sparring_modifications is present, explicitly acknowledge the athlete's original hard spar input, then label the day as KEEP, DELOAD, or CONVERTED in the rendered plan.
+Declared hard sparring days are fixed anchors for weekly structure; do not move or relabel them unless a readiness risk (especially injury) forces a change.
 For every DELOAD or CONVERTED hard spar day, include one short rationale tied to taper, fatigue, cut, injury, or readiness state, and frame the change as protecting readiness for performance rather than reducing competitiveness.
+If any hard sparring-day change is injury-driven, state that clearly and name the injury constraint causing the change.
 If a hard spar day is CONVERTED, state the replacement focus plainly. If it is DELOAD, keep the combat touch but lower collision cost.
 In taper or fight-week-like timing with 2+ hard spar days, keep declared hard sparring visible by default; only dose-adjust when readiness risk signals are present, and do not quietly turn kept hard-spar days into optional/off placeholders.
 

@@ -578,6 +578,8 @@ def test_stage2_prompt_requires_sparring_modification_labels_and_readiness_ratio
     assert "deload" in lower
     assert "converted" in lower
     assert "readiness" in lower
+    assert "fixed anchors for weekly structure" in lower
+    assert "injury-driven" in lower
 
 
 # ---------------------------------------------------------------------------
