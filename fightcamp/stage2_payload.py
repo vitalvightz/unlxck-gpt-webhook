@@ -2406,16 +2406,25 @@ def _sparring_injury_entries(athlete_model: dict) -> list[dict]:
             continue
         parsed = parse_injury_entry(text) or {}
         region = str(parsed.get("canonical_location") or "unspecified").strip().lower()
+        explicit_mild = "mild" in text
+        explicit_moderate = "moderate" in text
+        explicit_severe = any(token in text for token in ("severe", "major", "rupture", "tear", "grade 3", "grade iii"))
         worsening = any(token in text for token in ("worsen", "worsening", "worse", "flared", "aggravated", "regressing"))
         improving = any(token in text for token in ("improving", "better", "settling", "resolved", "resolving"))
+        stable = any(token in text for token in ("stable", "managed", "unchanged", "tolerable"))
         instability = any(token in text for token in ("instability", "giving way", "buckled", "locking", "locked"))
         daily_symptoms = any(token in text for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
         severe = instability or any(token in text for token in ("sharp", "severe", "tear", "rupture", "can’t", "can't", "cannot"))
         moderate = severe or any(token in text for token in ("strain", "sprain", "pain", "tendon", "tendonitis", "impingement"))
-        state_score = 3 if severe else 1 if moderate else 0
+        severity_score = 6 if (explicit_severe or severe) else 3 if (explicit_moderate or moderate) else 1 if explicit_mild else 0
+        if "soreness" in text and severity_score == 0:
+            severity_score = 1
+        state_score = severity_score
         if worsening:
             state_score += 2
         elif improving:
+            state_score = max(0, state_score - 1)
+        elif stable:
             state_score = max(0, state_score - 1)
         if daily_symptoms:
             state_score += 2
@@ -2429,6 +2438,8 @@ def _sparring_injury_entries(athlete_model: dict) -> list[dict]:
                 "region": region,
                 "worsening": worsening,
                 "improving": improving,
+                "stable": stable,
+                "severity_score": severity_score,
                 "instability": instability,
                 "daily_symptoms": daily_symptoms,
                 "state_score": state_score,
@@ -2441,7 +2452,22 @@ def _sparring_injury_entries(athlete_model: dict) -> list[dict]:
 def _injury_risk_score(entries: list[dict]) -> int:
     if not entries:
         return 0
-    return min(10, max(int(entry.get("state_score", 0)) for entry in entries) + (1 if len(entries) > 1 else 0))
+    scores = sorted((int(entry.get("state_score", 0)) for entry in entries), reverse=True)
+    risk = float(scores[0])
+    if len(scores) > 1:
+        risk += min(2.0, sum(scores[1:]) / 6.0)
+
+    worsening_count = sum(1 for entry in entries if entry.get("worsening"))
+    improving_count = sum(1 for entry in entries if entry.get("improving"))
+    stable_count = sum(1 for entry in entries if entry.get("stable"))
+    if worsening_count:
+        risk += min(2.0, 0.75 * worsening_count)
+    if improving_count and not worsening_count:
+        risk -= min(1.5, 0.5 * improving_count)
+    if stable_count and not worsening_count:
+        risk -= min(1.0, 0.25 * stable_count)
+
+    return max(0, min(10, int(round(risk))))
 
 
 def _spar_risk_score(athlete_model: dict, week_entry: dict) -> int:
@@ -2583,14 +2609,23 @@ def _build_sparring_modifications(week_entry: dict, athlete_model: dict) -> list
             )
         modifications.append(modification)
 
-    if _is_fight_week_like(week_entry, athlete_model) and len(hard_days) >= 2 and all(
-        item.get("action") == "KEEP" for item in modifications
+    readiness_adjustment_needed = (
+        injury_risk > 0
+        or cut_pct > 0
+        or fatigue in {"moderate", "high"}
+        or spar_risk >= 4
+    )
+    if (
+        _is_fight_week_like(week_entry, athlete_model)
+        and len(hard_days) >= 2
+        and readiness_adjustment_needed
+        and all(item.get("action") == "KEEP" for item in modifications)
     ):
         downgraded = modifications[-1]
         downgraded["action"] = "DELOAD"
         downgraded["reason"] = (
             f"{downgraded.get('reason', '')}, taper/readiness rule: with 2+ hard spar days in fight-week-like timing, "
-            "at least one day must be downgraded to protect readiness"
+            "at least one day should be dose-adjusted to protect readiness when risk signals are present"
         ).strip(", ")
 
     return modifications
@@ -3386,6 +3421,7 @@ def build_stage2_payload(
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Respect the weekly structure implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned active work, leave the spare days off or clearly optional rather than rendering another full session.",
+            "Do not quietly relabel a declared hard sparring day as optional/off when weekly_role_map keeps it active; keep sparring intent visible and dose-adjust instead.",
             "Do not write visible count recaps such as '4 active sessions', 'Conditioning count = ...', or similar week-summary math; render the week directly through weekday or session headings.",
             "If a non-taper week has no compliant true loaded anchor, state plainly that the week is injury-limited and use the safest force-preserving substitute instead of pretending support or primer work is the main anchor.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
@@ -3513,7 +3549,7 @@ Do not create a standalone session purpose for embedded-support or deferred item
 When weekly_role_map.weeks[].sparring_modifications is present, explicitly acknowledge the athlete's original hard spar input, then label the day as KEEP, DELOAD, or CONVERTED in the rendered plan.
 For every DELOAD or CONVERTED hard spar day, include one short rationale tied to taper, fatigue, cut, injury, or readiness state, and frame the change as protecting readiness for performance rather than reducing competitiveness.
 If a hard spar day is CONVERTED, state the replacement focus plainly. If it is DELOAD, keep the combat touch but lower collision cost.
-In taper or fight-week-like timing with 2+ hard spar days, do not leave both hard spar sessions rendered as unchanged KEEP unless the planning brief gives an explicit override and you state that reason directly.
+In taper or fight-week-like timing with 2+ hard spar days, keep declared hard sparring visible by default; only dose-adjust when readiness risk signals are present, and do not quietly turn kept hard-spar days into optional/off placeholders.
 
 RULE 12 - SURGICAL REHAB INTEGRATION
 Rehab must never feel copy-pasted, generic, or repeated by default.

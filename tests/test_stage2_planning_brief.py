@@ -479,7 +479,7 @@ def test_taper_sparring_modifications_deload_tiny_cut_and_mild_stable_injury_ins
     assert all(item["action"] == "DELOAD" for item in modifications)
 
 
-def test_taper_two_hard_spar_days_never_both_remain_keep_under_modest_risk():
+def test_taper_two_hard_spar_days_can_remain_keep_when_no_readiness_risk_signals():
     brief = build_planning_brief(
         athlete_model={
             "sport": "boxing",
@@ -524,8 +524,7 @@ def test_taper_two_hard_spar_days_never_both_remain_keep_under_modest_risk():
     modifications = brief["weekly_role_map"]["weeks"][0]["sparring_modifications"]
 
     assert len(modifications) == 2
-    assert any(item["action"] == "DELOAD" for item in modifications)
-    assert not all(item["action"] == "KEEP" for item in modifications)
+    assert all(item["action"] == "KEEP" for item in modifications)
 
 
 def test_sparring_modifications_count_combat_exposures_with_unique_days():
@@ -656,6 +655,87 @@ def test_worsening_shoulder_instability_outranks_mild_improving_ankle_issue():
 
     assert modification["action"] == "CONVERTED"
     assert modification["scores"]["injury_risk"] >= 8
+
+
+def test_sparring_injury_risk_distinguishes_mild_vs_moderate_vs_severe_states():
+    mild_brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 21,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": ["mild improving ankle soreness"],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday"],
+            "technical_skill_days": [],
+        }
+    )
+    moderate_brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 21,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": ["moderate stable ankle pain"],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday"],
+            "technical_skill_days": [],
+        }
+    )
+    severe_brief = _build_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 21,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["bodyweight", "heavy_bag"],
+            "injuries": ["severe worsening shoulder instability with daily pain"],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+            "training_days": ["Monday", "Tuesday", "Thursday"],
+            "hard_sparring_days": ["Tuesday"],
+            "technical_skill_days": [],
+        }
+    )
+
+    mild_score = mild_brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]["scores"]["injury_risk"]
+    moderate_score = moderate_brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]["scores"]["injury_risk"]
+    severe_score = severe_brief["weekly_role_map"]["weeks"][0]["sparring_modifications"][0]["scores"]["injury_risk"]
+
+    assert mild_score < moderate_score < severe_score
 
 
 
