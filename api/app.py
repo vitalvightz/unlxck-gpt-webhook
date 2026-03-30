@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import time
 import uuid
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
@@ -16,6 +18,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from fightcamp.main import generate_plan
+from fightcamp.plan_pipeline import prime_plan_banks
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
@@ -128,6 +131,10 @@ def _cors_origin_regex() -> str | None:
 
 async def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return await generate_plan(payload)
+
+
+async def _run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
+    return await asyncio.to_thread(lambda: asyncio.run(planner_fn(payload)))
 
 
 def _decode_structured_text(value: Any) -> dict[str, Any] | None:
@@ -305,10 +312,16 @@ def create_app(
     stage2_automator: Stage2Automator | None = None,
     mode_label: str = "supabase-authenticated",
 ) -> FastAPI:
+    @asynccontextmanager
+    async def _app_lifespan(_: FastAPI):
+        await asyncio.to_thread(prime_plan_banks, logger=logger)
+        yield
+
     app = FastAPI(
         title="UNLXCK Fight Camp API",
         version="0.2.0",
         description="Authenticated athlete-first application API around the fight camp planner.",
+        lifespan=_app_lifespan,
     )
     app.state.store = store
     app.state.auth_service = auth_service
@@ -525,7 +538,7 @@ def create_app(
                 logger.exception("[jobs] generation:update_profile_failed athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
 
             intake = store.create_intake(profile.athlete_id, request_body)
-            stage1_result = await planner_fn(request_body.to_payload())
+            stage1_result = await _run_stage1_planner(planner_fn, request_body.to_payload())
             if stage1_result.get("status") == "invalid_input":
                 raise HTTPException(
                     status_code=422,

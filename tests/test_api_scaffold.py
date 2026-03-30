@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import copy
 import importlib
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -227,6 +229,42 @@ def _build_request(overrides: dict | None = None) -> PlanRequest:
             payload["athlete"].update(athlete_overrides)
         payload.update(merged)
     return PlanRequest.model_validate(payload)
+
+
+def test_create_app_primes_plan_banks_on_startup(monkeypatch):
+    calls: list[object] = []
+
+    def _fake_prime_plan_banks(*, logger=None):
+        calls.append(logger)
+
+    monkeypatch.setattr(app_module, "prime_plan_banks", _fake_prime_plan_banks)
+
+    app = create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+    )
+
+    with TestClient(app):
+        pass
+
+    assert len(calls) == 1
+    assert calls[0] is app_module.logger
+
+
+def test_run_stage1_planner_uses_worker_thread():
+    main_thread_id = threading.get_ident()
+    seen_thread_ids: list[int] = []
+
+    async def _planner(payload: dict) -> dict:
+        seen_thread_ids.append(threading.get_ident())
+        return {"payload": payload}
+
+    result = asyncio.run(app_module._run_stage1_planner(_planner, {"athlete": "demo"}))
+
+    assert result == {"payload": {"athlete": "demo"}}
+    assert seen_thread_ids
+    assert seen_thread_ids[0] != main_thread_id
 
 
 async def _planner(payload: dict) -> dict:

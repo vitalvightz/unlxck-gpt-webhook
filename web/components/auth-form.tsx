@@ -14,7 +14,7 @@ function inferDemoRole(email: string): "athlete" | "admin" {
 
 export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   const router = useRouter();
-  const { session, demoMode, signInDemo } = useAppSession();
+  const { isReady, session, me, demoMode, signInDemo } = useAppSession();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,10 +23,13 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    if (session) {
+    if (!isReady) {
+      return;
+    }
+    if (session && (demoMode || me)) {
       router.replace("/plans");
     }
-  }, [router, session]);
+  }, [demoMode, isReady, me, router, session]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

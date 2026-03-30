@@ -74,7 +74,8 @@ export default function GeneratePage() {
             if (currentJob.status === "review_required") {
               search.set("review_required", "1");
             }
-            router.replace(`/plans/${plan.plan_id}${search.toString() ? `?${search.toString()}` : ""}`);
+            const nextPath = `/plans/${plan.plan_id}${search.toString() ? `?${search.toString()}` : ""}`;
+            window.location.replace(nextPath);
             return;
           }
 
