@@ -665,6 +665,39 @@ def test_admin_athlete_profile_includes_latest_intake_details():
     assert payload["latest_intake"]["training_preference"] == "Short, intense pads and bag rounds."
 
 
+def test_admin_can_generate_new_plan_from_latest_intake():
+    client, _, _ = _build_client()
+
+    generate_response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    assert generate_response.status_code == 202
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 202
+    assert response.json()["athlete_id"] == "athlete-1"
+
+
+def test_admin_generate_from_latest_intake_requires_existing_intake():
+    client, _, _ = _build_client()
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert me_response.status_code == 200
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "latest intake not found for athlete"
+
+
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)

@@ -98,6 +98,51 @@ def _find_active_job_for_athlete(jobs: dict[str, GenerationJobState], athlete_id
     return min(candidates, key=lambda job: job.created_at)
 
 
+def _queue_generation_job(
+    *,
+    athlete_id: str,
+    request_body: PlanRequest,
+    background_tasks: BackgroundTasks,
+    store: AppStore,
+    planner_fn: Planner,
+    stage2: Stage2Automator,
+    jobs: dict[str, GenerationJobState],
+    run_generation_job: Callable[..., Awaitable[None]],
+    profile: ProfileRecord,
+) -> GenerationJobResponse:
+    existing_job = _find_active_job_for_athlete(jobs, athlete_id)
+    if existing_job:
+        logger.info(
+            "[jobs] generation:deduplicated athlete_id=%s job_id=%s status=%s",
+            athlete_id,
+            existing_job.job_id,
+            existing_job.status,
+        )
+        return _job_response(existing_job)
+
+    now = _utc_now_iso()
+    job = GenerationJobState(
+        job_id=f"job_{uuid.uuid4().hex[:12]}",
+        athlete_id=athlete_id,
+        status="queued",
+        created_at=now,
+        updated_at=now,
+        latest_plan_id=(store.get_latest_plan(athlete_id) or {}).get("id"),
+    )
+    jobs[job.job_id] = job
+    logger.info("[jobs] generation:queued athlete_id=%s job_id=%s", athlete_id, job.job_id)
+    background_tasks.add_task(
+        run_generation_job,
+        job=job,
+        request_body=request_body,
+        profile=profile,
+        store=store,
+        planner_fn=planner_fn,
+        stage2=stage2,
+    )
+    return _job_response(job)
+
+
 def _cors_origins() -> list[str]:
     value = os.getenv(
         "APP_CORS_ORIGINS",
@@ -628,37 +673,17 @@ def create_app(
         stage2: Stage2Automator = Depends(get_stage2_automator),
         jobs: dict[str, GenerationJobState] = Depends(get_generation_jobs),
     ) -> GenerationJobResponse:
-        existing_job = _find_active_job_for_athlete(jobs, profile.athlete_id)
-        if existing_job:
-            logger.info(
-                "[jobs] generation:deduplicated athlete_id=%s job_id=%s status=%s",
-                profile.athlete_id,
-                existing_job.job_id,
-                existing_job.status,
-            )
-            return _job_response(existing_job)
-
-        now = _utc_now_iso()
-        job = GenerationJobState(
-            job_id=f"job_{uuid.uuid4().hex[:12]}",
+        return _queue_generation_job(
             athlete_id=profile.athlete_id,
-            status="queued",
-            created_at=now,
-            updated_at=now,
-            latest_plan_id=(store.get_latest_plan(profile.athlete_id) or {}).get("id"),
-        )
-        jobs[job.job_id] = job
-        logger.info("[jobs] generation:queued athlete_id=%s job_id=%s", profile.athlete_id, job.job_id)
-        background_tasks.add_task(
-            _run_generation_job,
-            job=job,
             request_body=request_body,
-            profile=profile,
+            background_tasks=background_tasks,
             store=store,
             planner_fn=planner_fn,
             stage2=stage2,
+            jobs=jobs,
+            run_generation_job=_run_generation_job,
+            profile=profile,
         )
-        return _job_response(job)
 
     @app.get("/api/generation-jobs/{job_id}", response_model=GenerationJobResponse)
     def get_generation_job(
@@ -777,6 +802,38 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         latest_intake = store.get_latest_intake(athlete_id)
         return _map_admin_athlete(row, latest_intake=latest_intake)
+
+    @app.post("/api/admin/athletes/{athlete_id}/plans/generate-from-latest-intake", response_model=GenerationJobResponse, status_code=202)
+    async def generate_admin_athlete_plan_from_latest_intake(
+        athlete_id: str,
+        background_tasks: BackgroundTasks,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        jobs: dict[str, GenerationJobState] = Depends(get_generation_jobs),
+    ) -> GenerationJobResponse:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        latest_intake = store.get_latest_intake(athlete_id)
+        if not latest_intake or not isinstance(latest_intake.get("intake"), dict):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake not found for athlete",
+            )
+        request_body = PlanRequest.model_validate(latest_intake["intake"])
+        return _queue_generation_job(
+            athlete_id=athlete_id,
+            request_body=request_body,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            jobs=jobs,
+            run_generation_job=_run_generation_job,
+            profile=_map_profile_row(row),
+        )
 
     return app
 

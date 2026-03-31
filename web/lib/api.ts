@@ -261,6 +261,13 @@ export function getAdminAthlete(token: string, athleteId: string): Promise<Admin
   return readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token });
 }
 
+export function generateAdminAthletePlanFromLatestIntake(token: string, athleteId: string): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(`/api/admin/athletes/${athleteId}/plans/generate-from-latest-intake`, {
+    method: "POST",
+    token,
+  });
+}
+
 export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {
   return readJson<AdminPlanSummary[]>("/api/admin/plans", { token });
 }
