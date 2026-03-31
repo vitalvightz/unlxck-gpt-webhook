@@ -1,0 +1,504 @@
+from __future__ import annotations
+
+from typing import Any
+
+from .injury_formatting import parse_injury_entry
+
+_ORDERED_WEEKDAYS = (
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+)
+_HIGH_COLLISION_REGIONS = {
+    "ankle",
+    "knee",
+    "shin",
+    "hip",
+    "lower_back",
+    "foot",
+    "achilles",
+    "groin",
+    "shoulder",
+    "neck",
+}
+_LOWER_LIMB_REGIONS = {"ankle", "knee", "shin", "hip", "foot", "achilles", "groin"}
+_DISCLAIMER = "Treat this as a flag, not an automatic change to your saved plan."
+
+
+def _clean_list(values: Any) -> list[str]:
+    if values is None:
+        return []
+    if isinstance(values, list):
+        return [str(value).strip() for value in values if str(value).strip()]
+    if isinstance(values, str):
+        return [values.strip()] if values.strip() else []
+    return [str(values).strip()]
+
+
+def _humanize_token(value: str) -> str:
+    return str(value or "").strip().replace("_", " ")
+
+
+def _ordered_weekdays(values: Any) -> list[str]:
+    cleaned = _clean_list(values)
+    order = {day: idx for idx, day in enumerate(_ORDERED_WEEKDAYS)}
+    unique = list(dict.fromkeys(cleaned))
+    return sorted(unique, key=lambda day: order.get(day, len(order)))
+
+
+def _athlete_snapshot(planning_brief: dict[str, Any]) -> dict[str, Any]:
+    snapshot = planning_brief.get("athlete_snapshot")
+    if isinstance(snapshot, dict):
+        return snapshot
+    athlete_model = planning_brief.get("athlete_model")
+    if isinstance(athlete_model, dict):
+        return athlete_model
+    return {}
+
+
+def _active_cut_pct(athlete_snapshot: dict[str, Any]) -> float:
+    pct = athlete_snapshot.get("weight_cut_pct")
+    if pct is not None:
+        try:
+            return max(0.0, float(pct))
+        except (TypeError, ValueError):
+            return 0.0
+
+    weight = athlete_snapshot.get("weight")
+    target_weight = athlete_snapshot.get("target_weight")
+    try:
+        weight_val = float(weight)
+        target_val = float(target_weight)
+    except (TypeError, ValueError):
+        return 0.0
+    if target_val <= 0:
+        return 0.0
+    return round(max(0.0, (weight_val - target_val) / target_val * 100.0), 1)
+
+
+def _fatigue_score(athlete_snapshot: dict[str, Any]) -> tuple[int, str | None]:
+    fatigue = str(athlete_snapshot.get("fatigue", "")).strip().lower()
+    if fatigue == "high":
+        return 2, "fatigue is already high"
+    if fatigue == "moderate":
+        return 1, "fatigue is already elevated"
+    return 0, None
+
+
+def _cut_score(athlete_snapshot: dict[str, Any], *, cut_pct: float) -> tuple[int, str | None]:
+    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    has_active_cut_flag = "active_weight_cut" in readiness_flags
+
+    if cut_pct >= 5.0:
+        return 2, f"cut pressure is meaningful at about {cut_pct:.1f}%"
+    if cut_pct >= 3.0:
+        return 1, f"an active cut is still in play at about {cut_pct:.1f}%"
+    if has_active_cut_flag:
+        return 1, "an active cut is already in play"
+    return 0, None
+
+
+def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> tuple[int, list[str]]:
+    reasons: list[str] = []
+    score = 0
+    phase = str(week.get("phase", "")).strip().upper()
+    stage_key = str(week.get("stage_key", "")).strip().lower()
+    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+
+    if phase == "TAPER":
+        score += 2
+        reasons.append("this is taper")
+
+    if "fight_week" in readiness_flags or "fight_week" in stage_key:
+        score += 3
+        reasons.append("fight-week pressure is active")
+
+    days_until_fight = athlete_snapshot.get("days_until_fight")
+    try:
+        days_value = int(days_until_fight)
+    except (TypeError, ValueError):
+        days_value = None
+    if days_value is not None:
+        if days_value <= 7:
+            score += 2
+        elif days_value <= 14:
+            score += 1
+
+    if athlete_snapshot.get("short_notice") or "short_notice" in readiness_flags:
+        score += 1
+
+    return score, reasons
+
+
+def _week_major_minor_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> tuple[int, int]:
+    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    stage_key = str(week.get("stage_key", "")).strip().lower()
+    phase = str(week.get("phase", "")).strip().upper()
+
+    major = 0
+    minor = 0
+    if phase == "TAPER" or "fight_week" in readiness_flags or "fight_week" in stage_key:
+        major = 1
+
+    days_until_fight = athlete_snapshot.get("days_until_fight")
+    try:
+        days_value = int(days_until_fight)
+    except (TypeError, ValueError):
+        days_value = None
+    if days_value is not None:
+        if days_value <= 7:
+            major = 1
+        elif days_value <= 14:
+            minor = 1
+
+    if athlete_snapshot.get("short_notice") or "short_notice" in readiness_flags:
+        minor = 1
+
+    return major, minor
+
+
+def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for raw in _clean_list(athlete_snapshot.get("injuries", [])):
+        raw_text = str(raw).strip()
+        lowered = raw_text.lower()
+        if not raw_text:
+            continue
+
+        parsed = parse_injury_entry(raw_text) or {}
+        region = str(parsed.get("canonical_location") or "unspecified").strip().lower()
+        injury_type = str(parsed.get("injury_type") or "unspecified").strip().lower()
+        laterality = str(parsed.get("laterality") or parsed.get("side") or "").strip().lower()
+        worsening = any(token in lowered for token in ("worsen", "worsening", "worse", "flared", "aggravated", "regressing"))
+        improving = any(token in lowered for token in ("improving", "better", "settling", "resolved", "resolving"))
+        stable = any(token in lowered for token in ("stable", "managed", "manageable", "maintenance"))
+        instability = any(token in lowered for token in ("instability", "giving way", "buckled", "locking", "locked"))
+        daily_symptoms = any(token in lowered for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
+        severe = instability or daily_symptoms or any(
+            token in lowered for token in ("sharp", "severe", "tear", "rupture", "cannot", "can't", "can’t")
+        )
+        moderate = severe or any(
+            token in lowered
+            for token in (
+                "strain",
+                "sprain",
+                "pain",
+                "tendon",
+                "tendonitis",
+                "tendinopathy",
+                "impingement",
+                "soreness",
+                "stiffness",
+                "irritation",
+            )
+        )
+
+        state_score = 0
+        if moderate:
+            state_score = 2
+        if severe:
+            state_score = max(state_score, 4)
+        if worsening:
+            state_score += 2
+        if stable:
+            state_score = max(0, state_score - 1)
+        if improving:
+            state_score = max(0, state_score - 1)
+        if daily_symptoms:
+            state_score += 2
+        if instability:
+            state_score += 2
+        if region in _HIGH_COLLISION_REGIONS:
+            state_score += 1
+
+        entries.append(
+            {
+                "raw": raw_text,
+                "region": region,
+                "injury_type": injury_type,
+                "laterality": laterality,
+                "state_score": state_score,
+                "worsening": worsening,
+                "improving": improving,
+                "stable": stable,
+                "instability": instability,
+                "daily_symptoms": daily_symptoms,
+                "high_collision_region": region in _HIGH_COLLISION_REGIONS,
+                "lower_limb": region in _LOWER_LIMB_REGIONS,
+            }
+        )
+    return entries
+
+
+def _injury_risk(entries: list[dict[str, Any]]) -> int:
+    if not entries:
+        return 0
+    return min(10, max(int(entry.get("state_score", 0)) for entry in entries) + (1 if len(entries) > 1 else 0))
+
+
+def _highest_risk_entry(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not entries:
+        return None
+    return max(entries, key=lambda entry: int(entry.get("state_score", 0)))
+
+
+def _replacement_focus(*, athlete_snapshot: dict[str, Any], injuries: list[dict[str, Any]], phase: str) -> str:
+    sport_key = str(athlete_snapshot.get("sport", "")).strip().lower().replace(" ", "_")
+    if any(entry.get("lower_limb") for entry in injuries):
+        if sport_key in {"boxing", "kickboxing", "muay_thai"}:
+            return "Technical rounds with stance-stable pad or bag work."
+        return "Controlled technical drilling with lower collision cost."
+    if any(str(entry.get("region", "")) == "shoulder" for entry in injuries):
+        return "Footwork, defensive reads, and low-force tactical drilling."
+    if phase == "TAPER":
+        return "Sharpness-only technical rehearsal."
+    return "Controlled technical work with lower collision cost."
+
+
+def _join_reason_parts(parts: list[str]) -> str:
+    filtered = [part.strip() for part in parts if part and part.strip()]
+    if not filtered:
+        return ""
+    if len(filtered) == 1:
+        return filtered[0]
+    if len(filtered) == 2:
+        return f"{filtered[0]} and {filtered[1]}"
+    return ", ".join(filtered[:-1]) + f", and {filtered[-1]}"
+
+
+def _injury_label(entry: dict[str, Any] | None) -> str | None:
+    if not entry:
+        return None
+    region = _humanize_token(str(entry.get("region") or "")).strip()
+    injury_type = _humanize_token(str(entry.get("injury_type") or "")).strip()
+    laterality = _humanize_token(str(entry.get("laterality") or "")).strip()
+    qualifier = ""
+    if entry.get("worsening"):
+        qualifier = "worsening"
+    elif entry.get("improving"):
+        qualifier = "improving"
+    elif entry.get("stable"):
+        qualifier = "stable"
+    if injury_type == "unspecified":
+        injury_type = ""
+    if region == "unspecified":
+        region = ""
+
+    pieces = [piece for piece in (qualifier, laterality, region, injury_type) if piece]
+    if pieces:
+        return " ".join(pieces)
+
+    raw = str(entry.get("raw") or "").strip()
+    return raw.lower() if raw else None
+
+
+def _future_state_label(
+    *,
+    athlete_snapshot: dict[str, Any],
+    highest_injury: dict[str, Any] | None,
+    cut_pct: float,
+) -> tuple[str, str]:
+    parts: list[str] = []
+    fatigue = str(athlete_snapshot.get("fatigue", "")).strip().lower()
+    if fatigue == "high":
+        parts.append("high fatigue")
+    elif fatigue == "moderate":
+        parts.append("elevated fatigue")
+
+    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    if cut_pct >= 5.0:
+        parts.append("an aggressive cut")
+    elif cut_pct >= 3.0 or "active_weight_cut" in readiness_flags:
+        parts.append("an active cut")
+
+    injury_label = _injury_label(highest_injury)
+    if injury_label:
+        parts.append(injury_label)
+
+    if not parts:
+        return "the same readiness picture", "is"
+    if len(parts) == 1:
+        return parts[0], "is"
+    if len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}", "are"
+    return ", ".join(parts[:-1]) + f", and {parts[-1]}", "are"
+
+
+def _week_label(week: dict[str, Any]) -> str:
+    week_index = week.get("week_index") or week.get("phase_week_index") or 1
+    return f"Week {week_index}"
+
+
+def _is_future_week(week: dict[str, Any]) -> bool:
+    try:
+        return int(week.get("week_index") or 1) > 1
+    except (TypeError, ValueError):
+        return False
+
+
+def _build_week_advisory(
+    week: dict[str, Any],
+    *,
+    athlete_snapshot: dict[str, Any],
+    injuries: list[dict[str, Any]],
+    injury_risk: int,
+    cut_pct: float,
+) -> tuple[tuple[int, int, int, int], dict[str, Any]] | None:
+    if not isinstance(week, dict):
+        return None
+
+    hard_days = _ordered_weekdays(week.get("declared_hard_sparring_days") or athlete_snapshot.get("hard_sparring_days"))
+    if not hard_days:
+        return None
+    hard_day_count = len(hard_days)
+
+    pressure_score, pressure_reasons = _pressure_score(week, athlete_snapshot)
+    fatigue_score, fatigue_reason = _fatigue_score(athlete_snapshot)
+    cut_score, cut_reason = _cut_score(athlete_snapshot, cut_pct=cut_pct)
+    highest_injury = _highest_risk_entry(injuries)
+    week_major, week_minor = _week_major_minor_pressure(week, athlete_snapshot)
+
+    high_risk_injury = any(
+        entry.get("instability")
+        or entry.get("daily_symptoms")
+        or (entry.get("worsening") and entry.get("high_collision_region"))
+        or int(entry.get("state_score", 0)) >= 6
+        for entry in injuries
+    )
+    injury_major = 1 if high_risk_injury or any(entry.get("worsening") and int(entry.get("state_score", 0)) >= 4 for entry in injuries) else 0
+    injury_minor = 1 if injury_risk >= 2 else 0
+    fatigue_major = 1 if fatigue_score >= 2 else 0
+    fatigue_minor = 1 if fatigue_score == 1 else 0
+    cut_major = 1 if cut_score >= 2 else 0
+    cut_minor = 1 if cut_score == 1 else 0
+
+    stress_major_count = week_major + fatigue_major + cut_major + injury_major
+    stress_minor_count = week_minor + fatigue_minor + cut_minor + injury_minor
+    week_context_matters = hard_day_count >= 2 or week_major == 1
+
+    action: str | None = None
+    if week_context_matters and high_risk_injury and (stress_major_count >= 2 or hard_day_count >= 2):
+        action = "convert"
+    elif week_context_matters and (
+        stress_major_count >= 2
+        or (stress_major_count >= 1 and stress_minor_count >= 2)
+        or (stress_major_count >= 1 and stress_minor_count >= 1 and hard_day_count >= 2)
+    ):
+        action = "deload"
+
+    if not action:
+        return None
+
+    phase = str(week.get("phase", "")).strip().upper() or "UNKNOWN"
+    week_label = _week_label(week)
+    future_week = _is_future_week(week)
+    days_label = ", ".join(hard_days)
+    reason_parts = list(pressure_reasons)
+    if hard_day_count >= 2:
+        reason_parts.append(f"this week already carries {hard_day_count} hard sparring days")
+    if highest_injury:
+        injury_label = _injury_label(highest_injury) or str(highest_injury["raw"]).lower()
+        reason_parts.append(f"the brief shows {injury_label}")
+    if fatigue_reason:
+        reason_parts.append(fatigue_reason)
+    if cut_reason:
+        reason_parts.append(cut_reason)
+    because = _join_reason_parts(reason_parts)
+    future_state_label, future_state_verb = _future_state_label(
+        athlete_snapshot=athlete_snapshot,
+        highest_injury=highest_injury,
+        cut_pct=cut_pct,
+    )
+    if future_week:
+        reason = (
+            f"If the current readiness picture carries into {week_label}, {because} and hard sparring is still set for "
+            f"{days_label}, that collision cost is probably too high to leave untouched."
+        )
+    else:
+        reason = (
+            f"{because.capitalize()} and hard sparring is set for {days_label}, "
+            "so the collision cost is running ahead of what you are likely to absorb well this week."
+        )
+
+    if action == "convert":
+        suggestion = (
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, convert hard sparring on {days_label} to technical rounds or controlled drilling."
+            if future_week
+            else f"Convert hard sparring on {days_label} in {week_label} to technical rounds or controlled drilling."
+        )
+    else:
+        suggestion = (
+            f"If {future_state_label} {future_state_verb} still there by {week_label}, deload hard sparring on {days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            if future_week
+            else f"Deload hard sparring on {days_label} in {week_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
+        )
+
+    advisory: dict[str, Any] = {
+        "kind": "sparring_adjustment",
+        "action": action,
+        "phase": phase,
+        "week_label": week_label,
+        "days": hard_days,
+        "title": "Coach note",
+        "reason": reason,
+        "suggestion": suggestion,
+        "disclaimer": _DISCLAIMER,
+    }
+    if action == "convert":
+        advisory["replacement"] = _replacement_focus(
+            athlete_snapshot=athlete_snapshot,
+            injuries=injuries,
+            phase=phase,
+        )
+
+    rank = (
+        2 if action == "convert" else 1,
+        pressure_score,
+        hard_day_count,
+        injury_risk,
+        fatigue_score + cut_score,
+    )
+    return rank, advisory
+
+
+def build_plan_advisories(*, planning_brief: dict[str, Any] | None) -> list[dict[str, Any]]:
+    if not isinstance(planning_brief, dict):
+        return []
+
+    weekly_role_map = planning_brief.get("weekly_role_map")
+    if not isinstance(weekly_role_map, dict):
+        return []
+    weeks = weekly_role_map.get("weeks")
+    if not isinstance(weeks, list) or not weeks:
+        return []
+
+    athlete_snapshot = _athlete_snapshot(planning_brief)
+    if not athlete_snapshot:
+        return []
+
+    injuries = _sparring_injury_entries(athlete_snapshot)
+    cut_pct = _active_cut_pct(athlete_snapshot)
+
+    candidates = [
+        candidate
+        for candidate in (
+            _build_week_advisory(
+                week,
+                athlete_snapshot=athlete_snapshot,
+                injuries=injuries,
+                injury_risk=_injury_risk(injuries),
+                cut_pct=cut_pct,
+            )
+            for week in weeks
+        )
+        if candidate is not None
+    ]
+    if not candidates:
+        return []
+
+    _, best_advisory = max(candidates, key=lambda item: item[0])
+    return [best_advisory]

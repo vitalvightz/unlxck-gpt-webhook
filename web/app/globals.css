@@ -1228,6 +1228,26 @@ select:focus-visible {
   background: linear-gradient(180deg, rgba(50, 20, 27, 0.92), rgba(24, 13, 17, 0.94));
 }
 
+.sparring-advisory-card {
+  border-color: rgba(255, 215, 130, 0.2);
+  background: linear-gradient(180deg, rgba(52, 37, 12, 0.92), rgba(24, 18, 9, 0.94));
+}
+
+.sparring-advisory-convert {
+  border-color: rgba(255, 170, 148, 0.24);
+  background: linear-gradient(180deg, rgba(62, 29, 18, 0.92), rgba(27, 15, 11, 0.95));
+}
+
+.sparring-advisory-meta,
+.sparring-advisory-replacement,
+.sparring-advisory-suggestion {
+  margin: 0;
+}
+
+.sparring-advisory-suggestion {
+  color: var(--text-primary);
+}
+
 .support-panel-preview {
   padding: 16px 18px;
 }

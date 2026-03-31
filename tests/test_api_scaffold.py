@@ -299,6 +299,50 @@ def finalized_result(**overrides: object) -> dict:
     return {**base, **overrides}
 
 
+def advisory_planning_brief(
+    *,
+    phase: str = "TAPER",
+    stage_key: str = "fight_week_survival_rhythm",
+    days_until_fight: int = 6,
+    fatigue: str = "low",
+    readiness_flags: list[str] | None = None,
+    injuries: list[str] | None = None,
+    weight_cut_pct: float = 0.0,
+    hard_sparring_days: list[str] | None = None,
+) -> dict:
+    hard_days = hard_sparring_days or ["Tuesday", "Thursday"]
+    return {
+        "schema_version": "planning_brief.v1",
+        "athlete_snapshot": {
+            "sport": "boxing",
+            "days_until_fight": days_until_fight,
+            "fatigue": fatigue,
+            "short_notice": days_until_fight <= 14,
+            "readiness_flags": readiness_flags or [],
+            "injuries": injuries or [],
+            "weight_cut_pct": weight_cut_pct,
+            "hard_sparring_days": hard_days,
+            "technical_skill_days": ["Monday"],
+        },
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": phase,
+                    "week_index": 1,
+                    "phase_week_index": 1,
+                    "phase_week_total": 1,
+                    "stage_key": stage_key,
+                    "declared_hard_sparring_days": hard_days,
+                    "declared_technical_skill_days": ["Monday"],
+                    "declared_training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+                    "session_roles": [],
+                    "suppressed_roles": [],
+                }
+            ]
+        },
+    }
+
+
 def _presentation_ready_plan(*, heading: str, support_note: str) -> str:
     return (
         f"## {heading}\n"
@@ -1181,6 +1225,99 @@ def test_legacy_rows_with_only_plan_text_remain_readable():
 
     assert response.status_code == 200
     assert response.json()["outputs"]["plan_text"] == "# Stage 1 Draft"
+
+
+def test_plan_detail_returns_public_sparring_advisory_without_changing_saved_plan_text():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    original_text = "# Final Plan\n- Keep the saved plan untouched."
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            plan_text=original_text,
+            final_plan_text=original_text,
+            planning_brief=advisory_planning_brief(
+                readiness_flags=["fight_week"],
+                injuries=["mild stable shoulder soreness"],
+                hard_sparring_days=["Tuesday", "Thursday"],
+            ),
+        ),
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["outputs"]["plan_text"] == original_text
+    assert len(body["advisories"]) == 1
+    assert body["advisories"][0]["action"] == "deload"
+    assert body["advisories"][0]["days"] == ["Tuesday", "Thursday"]
+    assert body["advisories"][0]["title"] == "Coach note"
+    assert body["advisories"][0]["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."
+    assert store.get_plan(plan["id"])["plan_text"] == original_text
+
+
+def test_plan_detail_advisory_is_derived_from_structured_context_not_saved_plan_text():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    planning_brief = advisory_planning_brief(
+        readiness_flags=["fight_week", "active_weight_cut"],
+        fatigue="high",
+        injuries=["worsening ankle instability"],
+        weight_cut_pct=5.4,
+        hard_sparring_days=["Tuesday", "Thursday"],
+    )
+    first = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_1",
+        request=_build_request(),
+        result=finalized_result(
+            plan_text="# Final Plan A\n- Preserve this text.",
+            final_plan_text="# Final Plan A\n- Preserve this text.",
+            planning_brief=planning_brief,
+        ),
+    )
+    second = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_2",
+        request=_build_request(),
+        result=finalized_result(
+            plan_text="# Final Plan B\n- Different saved wording.",
+            final_plan_text="# Final Plan B\n- Different saved wording.",
+            planning_brief=planning_brief,
+        ),
+    )
+
+    first_response = client.get(
+        f"/api/plans/{first['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    second_response = client.get(
+        f"/api/plans/{second['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert first_response.json()["outputs"]["plan_text"] != second_response.json()["outputs"]["plan_text"]
+    assert first_response.json()["advisories"] == second_response.json()["advisories"]
 
 
 def test_manual_stage2_submission_publishes_validated_admin_result():

@@ -88,6 +88,19 @@ export type PlanOutputs = {
   pdf_url?: string | null;
 };
 
+export type PlanAdvisory = {
+  kind: "sparring_adjustment";
+  action: "deload" | "convert";
+  phase: string;
+  week_label: string;
+  days: string[];
+  title: string;
+  reason: string;
+  suggestion: string;
+  replacement?: string | null;
+  disclaimer: string;
+};
+
 export type AdminPlanOutputs = {
   coach_notes: string;
   why_log: Record<string, unknown>;
@@ -104,6 +117,7 @@ export type AdminPlanOutputs = {
 
 export type PlanDetail = PlanSummary & {
   outputs: PlanOutputs;
+  advisories: PlanAdvisory[];
   latest_intake?: PlanRequest | null;
   admin_outputs?: AdminPlanOutputs | null;
 };

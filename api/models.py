@@ -177,6 +177,19 @@ class PlanOutputs(BaseModel):
     pdf_url: str | None = None
 
 
+class PlanAdvisory(BaseModel):
+    kind: Literal["sparring_adjustment"]
+    action: Literal["deload", "convert"]
+    phase: str
+    week_label: str
+    days: list[str] = Field(default_factory=list)
+    title: str
+    reason: str
+    suggestion: str
+    replacement: str | None = None
+    disclaimer: str
+
+
 class AdminPlanOutputs(BaseModel):
     coach_notes: str = ""
     why_log: dict[str, Any] = Field(default_factory=dict)
@@ -193,6 +206,7 @@ class AdminPlanOutputs(BaseModel):
 
 class PlanDetail(PlanSummary):
     outputs: PlanOutputs
+    advisories: list[PlanAdvisory] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
 
 

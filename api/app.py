@@ -19,14 +19,16 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from fightcamp.main import generate_plan
 from fightcamp.plan_pipeline import prime_plan_banks
+from fightcamp.sparring_advisories import build_plan_advisories
+from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
 from .models import (
-    GenerationJobResponse,
     AdminAthleteRecord,
     AdminPlanOutputs,
     AdminPlanSummary,
+    GenerationJobResponse,
     ManualStage2SubmissionRequest,
     MeResponse,
     PlanDetail,
@@ -42,7 +44,6 @@ from .stage2_automation import (
     Stage2Automator,
     build_default_stage2_automator,
 )
-from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from .store import AppStore, SupabaseAppStore
 
 Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
@@ -242,17 +243,19 @@ def _admin_final_text(row: dict[str, Any]) -> str:
 
 def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
     summary = _map_plan_summary(row)
+    planning_brief = _decode_structured_text(row.get("planning_brief"))
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
             plan_text=str(row.get("plan_text") or ""),
             pdf_url=row.get("pdf_url"),
         ),
+        advisories=build_plan_advisories(planning_brief=planning_brief),
         admin_outputs=(
             AdminPlanOutputs(
                 coach_notes=str(row.get("coach_notes") or ""),
                 why_log=row.get("why_log") or {},
-                planning_brief=_decode_structured_text(row.get("planning_brief")),
+                planning_brief=planning_brief,
                 stage2_payload=row.get("stage2_payload"),
                 stage2_handoff_text=str(row.get("stage2_handoff_text") or ""),
                 draft_plan_text=_admin_draft_text(row),

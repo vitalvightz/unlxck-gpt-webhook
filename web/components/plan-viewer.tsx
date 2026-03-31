@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import { approvePlanForRelease, archivePlan, deletePlan, rejectApprovedPlan, renamePlan, submitManualStage2 } from "@/lib/api";
-import type { PlanDetail, UserRole } from "@/lib/types";
+import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
 type ReviewIssue = {
@@ -82,6 +82,42 @@ function buildArtifactFilename(plan: PlanDetail, suffix: string) {
 
 function getPlanDisplayName(plan: Pick<PlanDetail, "plan_name" | "fight_date">) {
   return plan.plan_name?.trim() || plan.fight_date || "Open plan";
+}
+
+function formatPhaseLabel(phase: string) {
+  const normalized = humanizeStatus(phase || "").trim();
+  if (!normalized) {
+    return "Plan week";
+  }
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
+  const actionLabel = advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
+  const daysLabel = advisory.days.join(", ") || "Declared hard sparring";
+
+  return (
+    <section className={`support-panel sparring-advisory-card sparring-advisory-${advisory.action}`}>
+      <div className="plan-header-row">
+        <div>
+          <p className="kicker">{advisory.title}</p>
+          <h3>{actionLabel}</h3>
+        </div>
+        <span className="badge">{advisory.action}</span>
+      </div>
+      <p className="muted sparring-advisory-meta">
+        {formatPhaseLabel(advisory.phase)} | {advisory.week_label} | {daysLabel}
+      </p>
+      <p>{advisory.reason}</p>
+      <p className="sparring-advisory-suggestion">{advisory.suggestion}</p>
+      {advisory.replacement ? (
+        <p className="sparring-advisory-replacement">
+          <strong>Suggested replacement:</strong> {advisory.replacement}
+        </p>
+      ) : null}
+      <p className="muted">{advisory.disclaimer}</p>
+    </section>
+  );
 }
 
 function downloadArtifact(text: string, filename: string) {
@@ -378,6 +414,7 @@ export function PlanViewer({
   const router = useRouter();
   const isAdmin = Boolean(plan.admin_outputs);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
+  const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
   const technicalStyles = getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = Boolean(athletePlanText);
@@ -823,6 +860,7 @@ export function PlanViewer({
               {hasPublishedPlan ? "Validated" : "Review required"}
             </span>
           </div>
+          {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
           {hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">
