@@ -72,13 +72,14 @@ def _parse_datetime(value: Any) -> datetime | None:
 
 def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> GenerationJobResponse:
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
+    updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
     return GenerationJobResponse(
         job_id=str(job["id"]),
         athlete_id=str(job["athlete_id"]),
         client_request_id=str(job.get("client_request_id") or ""),
         status=str(job["status"]),
         created_at=str(job["created_at"]),
-        updated_at=str(job["updated_at"]),
+        updated_at=str(updated_at),
         started_at=str(job["started_at"]) if job.get("started_at") else None,
         completed_at=str(job["completed_at"]) if job.get("completed_at") else None,
         error=str(job["error"]) if job.get("error") else None,

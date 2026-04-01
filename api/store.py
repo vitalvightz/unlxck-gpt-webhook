@@ -10,6 +10,7 @@ from typing import Any, Callable, Protocol
 
 import httpx
 from fastapi import HTTPException, status
+from postgrest.exceptions import APIError as PostgrestAPIError
 from supabase import Client, create_client
 
 from .auth import AuthenticatedUser
@@ -18,16 +19,28 @@ from .models import PlanRequest, ProfileUpdateRequest
 logger = logging.getLogger(__name__)
 
 PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
-GENERATION_JOB_SELECT = (
-    "id, athlete_id, client_request_id, source, request_payload, status, error, "
-    "intake_id, stage1_result, final_result, plan_id, attempt_count, heartbeat_at, "
-    "started_at, completed_at, created_at, updated_at"
-)
+GENERATION_JOB_SELECT = "*"
 
 _TRANSIENT_SUPABASE_ERRORS = (
     httpx.RemoteProtocolError,
     httpx.ConnectError,
     httpx.ReadTimeout,
+)
+_TRANSIENT_POSTGREST_SNIPPETS = (
+    "connection",
+    "connect",
+    "timeout",
+    "timed out",
+    "temporarily unavailable",
+    "server disconnected",
+    "remote end closed",
+    "connection reset",
+    "connection terminated",
+    "upstream",
+    "gateway",
+    "502",
+    "503",
+    "504",
 )
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 
@@ -156,7 +169,16 @@ class SupabaseAppStore:
         return self._is_transient_store_error(exc)
 
     def _is_transient_store_error(self, exc: Exception) -> bool:
-        return isinstance(exc, _TRANSIENT_SUPABASE_ERRORS)
+        if isinstance(exc, _TRANSIENT_SUPABASE_ERRORS):
+            return True
+        if isinstance(exc, PostgrestAPIError):
+            text = " ".join(
+                str(part)
+                for part in (exc.code, exc.message, exc.hint, exc.details)
+                if part
+            ).lower()
+            return any(snippet in text for snippet in _TRANSIENT_POSTGREST_SNIPPETS)
+        return False
 
     def _run_with_transient_retry(
         self,
@@ -516,7 +538,6 @@ class SupabaseAppStore:
         payload = {
             "athlete_id": athlete_id,
             "client_request_id": client_request_id,
-            "source": source,
             "request_payload": request_payload,
             "status": "queued",
             "attempt_count": 0,
@@ -631,7 +652,6 @@ class SupabaseAppStore:
                 "started_at": job.get("started_at") or now_iso,
                 "error": None,
                 "attempt_count": int(job.get("attempt_count") or 0) + 1,
-                "updated_at": now_iso,
             }
             self._run_with_transient_retry(
                 operation="claim_generation_job:update",
@@ -660,7 +680,6 @@ class SupabaseAppStore:
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
         try:
             payload = dict(changes)
-            payload["updated_at"] = _utc_now_iso()
             self._run_with_transient_retry(
                 operation="update_generation_job:update",
                 fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),

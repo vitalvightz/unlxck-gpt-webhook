@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from fastapi import HTTPException, status
+from postgrest.exceptions import APIError
 
 from api.auth import AuthenticatedUser
 from api.store import SupabaseAppStore
@@ -203,3 +204,17 @@ def test_get_generation_job_returns_503_when_lookup_is_transiently_unavailable()
 
     assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
     assert exc_info.value.detail == "generation job service temporarily unavailable"
+
+
+def test_transient_store_error_detects_postgrest_gateway_failures():
+    store = _make_store()
+    error = APIError(
+        {
+            "message": "upstream connect error or disconnect/reset before headers. retried and the latest reset reason: connection timeout",
+            "code": "503",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    assert store._is_transient_store_error(error) is True

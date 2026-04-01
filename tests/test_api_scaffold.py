@@ -805,6 +805,27 @@ def test_request_middleware_returns_json_request_id_for_unhandled_exceptions():
     assert len(response.json()["request_id"]) == 8
 
 
+def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
+    created_at = _now()
+    response = app_module._job_response(
+        {
+            "id": "job_legacy123",
+            "athlete_id": "athlete-1",
+            "client_request_id": "client-1",
+            "status": "queued",
+            "created_at": created_at,
+            "updated_at": None,
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "plan_id": None,
+        }
+    )
+
+    assert response.created_at == created_at
+    assert response.updated_at == created_at
+
+
 def test_admin_athlete_profile_includes_latest_intake_details():
     client, store, _ = _build_client()
 
