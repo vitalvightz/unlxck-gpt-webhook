@@ -16,6 +16,13 @@ RESTRICTION_PATTERN_HINTS = {
         "rear-foot-elevated split squat",
         "deep knee-dominant step-up",
     ],
+    "deep_hip_flexion": [
+        "deep hip flexion",
+        "knee drive above pelvis",
+        "loaded tuck",
+        "loaded pike",
+        "deep seated compression",
+    ],
     "high_impact": ["jump", "bound", "hop", "sprint landing", "reactive pogo"],
     "high_impact_lower": [
         "jump",
@@ -57,6 +64,7 @@ RESTRICTION_PATTERN_HINTS = {
 
 _RESTRICTION_CANONICAL_KEYS = {
     "deep_knee_flexion": "deep knee flexion",
+    "deep_hip_flexion": "deep hip flexion",
     "heavy_overhead_pressing": "heavy overhead pressing",
     "high_impact": "high impact",
     "high_impact_lower": "high impact",
@@ -126,6 +134,16 @@ _TEXT_DERIVED_RESTRICTIONS = {
         "cyclist squat",
         "deep knee flexion",
         "step-up heavy",
+    ],
+    "deep_hip_flexion": [
+        "deep hip flexion",
+        "knee drive above pelvis",
+        "high knee drive",
+        "loaded pike",
+        "loaded tuck",
+        "compression hold",
+        "seated compression",
+        "hip flexion under load",
     ],
     "heavy_overhead_pressing": [
         "overhead press",
@@ -317,6 +335,10 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
     }
     if tags & deep_knee_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_knee_flexion"]):
         derived.add("deep_knee_flexion")
+
+    deep_hip_hits = {"hip_flexion_loaded", "mech_hip_flexion", "mech_core_compression"}
+    if tags & deep_hip_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_hip_flexion"]):
+        derived.add("deep_hip_flexion")
 
     if tags & {"situp", "crunch", "flexion", "spinal_flexion", "hip_flexion_loaded", "loaded_flexion"}:
         derived.add("loaded_flexion")
@@ -1109,6 +1131,7 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     }
     tissue_restriction_keys = {
         "deep_knee_flexion",
+        "deep_hip_flexion",
         "heavy_overhead_pressing",
         "high_impact",
         "high_impact_lower",

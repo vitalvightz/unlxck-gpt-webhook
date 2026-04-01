@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .injury_formatting import parse_injuries_and_restrictions
-from .restriction_parsing import ParsedRestriction
+from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
+from .restriction_parsing import ParsedRestriction, parse_restriction_entry
 
 
 def _normalize_list(field: str | None) -> list[str]:
@@ -301,6 +301,97 @@ def _get_plan_field_values(fields: list[dict]) -> dict[str, str]:
     return {name: get_value(label, fields) for name, label in _PLAN_FIELD_LABELS.items()}
 
 
+@dataclass(frozen=True)
+class GuidedInjury:
+    area: str = ""
+    severity: str = ""
+    trend: str = ""
+    avoid: str = ""
+    notes: str = ""
+
+    def has_content(self) -> bool:
+        return any([self.area, self.severity, self.trend, self.avoid, self.notes])
+
+
+_GUIDED_TRIGGER_PREFIX = re.compile(
+    r"^(?:avoid|limit|reduce|no|dont|don't|do not|cannot|can't|cant|restricted|restriction)\b",
+    re.IGNORECASE,
+)
+_GUIDED_LATERALITY_PREFIX = re.compile(r"^\s*(left|right)\s+", re.IGNORECASE)
+_GUIDED_SEVERITY_MAP = {
+    "low": "mild",
+    "mild": "mild",
+    "moderate": "moderate",
+    "high": "severe",
+    "severe": "severe",
+}
+
+
+def _extract_guided_injury(data: dict) -> GuidedInjury | None:
+    if not isinstance(data, dict):
+        return None
+
+    raw_value = data.get("guided_injury")
+    if not isinstance(raw_value, dict):
+        raw_value = data.get("data", {}).get("guided_injury")
+    if not isinstance(raw_value, dict):
+        return None
+
+    guided = GuidedInjury(
+        area=str(raw_value.get("area") or "").strip(),
+        severity=str(raw_value.get("severity") or "").strip(),
+        trend=str(raw_value.get("trend") or "").strip(),
+        avoid=str(raw_value.get("avoid") or "").strip(),
+        notes=str(raw_value.get("notes") or "").strip(),
+    )
+    return guided if guided.has_content() else None
+
+
+def _strip_guided_laterality(area: str, laterality: str | None) -> str:
+    cleaned = str(area or "").strip()
+    if not cleaned or not laterality:
+        return cleaned
+    return _GUIDED_LATERALITY_PREFIX.sub("", cleaned, count=1).strip() or cleaned
+
+
+def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
+    injuries: list[dict[str, str | None]] = []
+    restrictions: list[ParsedRestriction] = []
+
+    if guided_injury.area:
+        injury_entry = parse_injury_entry(guided_injury.area)
+        if injury_entry is None:
+            injury_entry = {
+                "injury_type": "unspecified",
+                "canonical_location": None,
+                "side": None,
+                "laterality": None,
+                "original_phrase": guided_injury.area,
+            }
+
+        laterality = injury_entry.get("laterality") or injury_entry.get("side")
+        display_location = _strip_guided_laterality(guided_injury.area, laterality)
+        if display_location:
+            injury_entry["display_location"] = display_location
+
+        mapped_severity = _GUIDED_SEVERITY_MAP.get(guided_injury.severity.lower())
+        if mapped_severity:
+            injury_entry["severity"] = mapped_severity
+        injuries.append(injury_entry)
+
+    if guided_injury.avoid:
+        restriction_phrase = guided_injury.avoid
+        if not _GUIDED_TRIGGER_PREFIX.match(restriction_phrase):
+            restriction_phrase = f"avoid {restriction_phrase}"
+        restriction = parse_restriction_entry(restriction_phrase)
+        if restriction is not None:
+            if restriction.get("region") is None and injuries:
+                restriction["region"] = injuries[0].get("canonical_location")
+            restrictions.append(restriction)
+
+    return injuries, restrictions
+
+
 def _compute_days_until_fight(
     raw_value: str,
     fight_date: datetime,
@@ -342,6 +433,7 @@ class PlanInput:
     hard_sparring_days_raw: str
     technical_skill_days_raw: str
     injuries: str
+    guided_injury: GuidedInjury | None
     parsed_injuries: list[dict[str, str | None]]
     restrictions: list[ParsedRestriction]
     key_goals: str
@@ -364,7 +456,11 @@ class PlanInput:
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
         )
-        parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
+        guided_injury = _extract_guided_injury(data)
+        if guided_injury is not None:
+            parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
+        else:
+            parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
 
         training_days = [d.strip() for d in values["available_days"].split(",") if d.strip()]
         hard_sparring_days = [
@@ -393,6 +489,7 @@ class PlanInput:
             **values,
             next_fight_date=next_fight_date,
             injuries=injuries,
+            guided_injury=guided_injury,
             parsed_injuries=parsed_injuries,
             restrictions=parsed_restrictions,
             training_days=training_days,

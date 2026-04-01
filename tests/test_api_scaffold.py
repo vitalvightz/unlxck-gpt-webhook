@@ -575,6 +575,27 @@ def test_plan_request_to_payload_uses_existing_parser_labels():
     assert "Sessions per Week" in labels
 
 
+def test_plan_request_to_payload_includes_guided_injury_when_present():
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+        },
+        fight_date="2026-04-18",
+        injuries="hip flexor (moderate, improving). Avoid: deep hip flexion.",
+        guided_injury={
+            "area": "hip flexor",
+            "severity": "moderate",
+            "trend": "improving",
+            "avoid": "deep hip flexion",
+            "notes": "pain when driving knee up past pelvis",
+        },
+    ).to_payload()
+
+    assert payload["guided_injury"]["area"] == "hip flexor"
+    assert payload["guided_injury"]["avoid"] == "deep hip flexion"
+
+
 def test_record_format_validation_rejects_invalid_values():
     try:
         PlanRequest(

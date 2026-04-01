@@ -188,7 +188,12 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
                 )
 
     guardrails = {
-        phase: format_injury_guardrails(phase, context.plan_input.injuries, context.plan_input.restrictions)
+        phase: format_injury_guardrails(
+            phase,
+            context.plan_input.injuries,
+            context.plan_input.restrictions,
+            parsed_entries=context.plan_input.parsed_injuries,
+        )
         for phase in PHASES
     }
     has_injuries = bool(context.injuries_only_text or context.plan_input.restrictions)
@@ -299,6 +304,7 @@ def generate_plan_blocks(
         injury_string=context.injuries_only_text,
         phase=current_phase,
         training_context=context.training_context.to_flags(),
+        parsed_injury_entries=context.plan_input.parsed_injuries,
         exercise_bank=context.exercise_bank,
         conditioning_banks=[context.conditioning_bank, context.style_conditioning_bank],
         strength_blocks=strength_blocks,

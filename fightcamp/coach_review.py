@@ -219,12 +219,13 @@ def run_coach_review(
     injury_string: str,
     phase: str,
     training_context: dict,
+    parsed_injury_entries: list[dict[str, str | None]] | None = None,
     exercise_bank: list[dict],
     conditioning_banks: Iterable[list[dict]],
     strength_blocks: dict[str, dict | None],
     conditioning_blocks: dict[str, dict | None],
 ) -> tuple[str, dict[str, dict | None], dict[str, dict | None], list[dict]]:
-    entries = build_coach_review_entries(injury_string, phase)
+    entries = build_coach_review_entries(injury_string, phase, parsed_entries=parsed_injury_entries)
     if not entries:
         return "", strength_blocks, conditioning_blocks, []
 

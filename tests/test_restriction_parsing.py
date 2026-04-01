@@ -52,6 +52,12 @@ def test_parse_restriction_entry_canonical():
     assert result["restriction"] == "deep_knee_flexion"
     assert result["region"] == "knee"
     assert result["strength"] == "avoid"
+
+    result = parse_restriction_entry("avoid deep hip flexion")
+    assert result is not None
+    assert result["restriction"] == "deep_hip_flexion"
+    assert result["region"] == "hip"
+    assert result["strength"] == "avoid"
     
     result = parse_restriction_entry("no heavy overhead pressing")
     assert result is not None
@@ -138,6 +144,15 @@ def test_parse_injuries_and_restrictions_complex_case():
     assert restrictions[0]["restriction"] == "deep_knee_flexion"
     assert restrictions[0]["region"] == "knee"
     assert restrictions[0]["strength"] == "avoid"
+
+
+def test_deep_hip_flexion_does_not_alias_to_knee():
+    injuries, restrictions = parse_injuries_and_restrictions("avoid deep hip flexion")
+
+    assert len(injuries) == 0
+    assert len(restrictions) == 1
+    assert restrictions[0]["restriction"] == "deep_hip_flexion"
+    assert restrictions[0]["region"] == "hip"
 
 
 def test_constraint_phrases_not_parsed_as_injuries():
