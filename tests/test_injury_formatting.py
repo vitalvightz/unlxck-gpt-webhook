@@ -41,6 +41,21 @@ def test_format_injury_summary_basics():
     )
 
 
+def test_format_injury_summary_prefers_display_location():
+    assert (
+        format_injury_summary(
+            {
+                "canonical_location": "hip",
+                "display_location": "hip flexor",
+                "laterality": None,
+                "injury_type": "unspecified",
+                "severity": "moderate",
+            }
+        )
+        == "Hip Flexor â€” Unspecified (Severity: Moderate)"
+    )
+
+
 def test_plan_output_has_no_region_wrappers():
     data_path = Path(__file__).resolve().parents[1] / "test_data.json"
     data = json.loads(data_path.read_text(encoding="utf-8"))
@@ -92,3 +107,34 @@ def test_guardrails_render_restrictions_without_injury_summary():
     assert "Injury Summary" not in guardrails
     assert "- avoid deep knee flexion under load" in guardrails
     assert "- heavy overhead pressing" in guardrails
+
+
+def test_guardrails_preserve_guided_display_location_without_note_leak():
+    guardrails = format_injury_guardrails(
+        "SPP",
+        "hip flexor (moderate, improving). Avoid: deep hip flexion. Notes: pain when driving knee up past pelvis",
+        [
+            {
+                "restriction": "generic_constraint",
+                "region": "hip",
+                "strength": "avoid",
+                "side": None,
+                "original_phrase": "avoid deep hip flexion",
+            }
+        ],
+        parsed_entries=[
+            {
+                "injury_type": "unspecified",
+                "canonical_location": "hip",
+                "display_location": "hip flexor",
+                "laterality": None,
+                "severity": "moderate",
+                "original_phrase": "hip flexor",
+            }
+        ],
+    )
+
+    assert "Hip Flexor â€” Unspecified (Severity: Moderate)" in guardrails
+    assert "Knee â€”" not in guardrails
+    assert "Unspecified Location â€” Pain" not in guardrails
+    assert "- avoid deep hip flexion" in guardrails

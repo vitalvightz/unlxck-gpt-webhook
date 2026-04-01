@@ -17,6 +17,14 @@ export type AthleteProfileInput = {
   athlete_locale?: string;
 };
 
+export type GuidedInjuryInput = {
+  area?: string;
+  severity?: string;
+  trend?: string;
+  avoid?: string;
+  notes?: string;
+};
+
 export type PlanRequest = {
   athlete: AthleteProfileInput;
   fight_date: string;
@@ -28,6 +36,7 @@ export type PlanRequest = {
   hard_sparring_days: string[];
   technical_skill_days: string[];
   injuries?: string;
+  guided_injury?: GuidedInjuryInput | null;
   key_goals: string[];
   weak_areas: string[];
   training_preference?: string;

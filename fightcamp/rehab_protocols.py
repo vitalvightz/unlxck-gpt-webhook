@@ -783,17 +783,33 @@ def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]
     for phrase in injury_phrases:
         entry = parse_injury_entry(phrase)
         if entry:
-            base_severity = INJURY_TYPE_SEVERITY.get(entry.get("injury_type") or "", "moderate")
-            phrase_severity, phrase_hits = normalize_severity(phrase)
-            severity_map = {"low": "mild", "moderate": "moderate", "high": "severe"}
-            mapped_severity = severity_map.get(phrase_severity, "moderate")
-            entry["severity"] = mapped_severity if phrase_hits else base_severity
             parsed_entries.append(entry)
+
+    return _normalize_existing_injury_entries(parsed_entries)
+
+
+def _normalize_existing_injury_entries(
+    parsed_entries: Iterable[dict[str, str | None]],
+) -> list[dict[str, str | None]]:
+    normalized_entries: list[dict[str, str | None]] = []
+    for parsed_entry in parsed_entries:
+        entry = dict(parsed_entry)
+        phrase = str(entry.get("original_phrase") or "")
+        base_severity = INJURY_TYPE_SEVERITY.get(entry.get("injury_type") or "", "moderate")
+        phrase_severity, phrase_hits = normalize_severity(phrase)
+        severity_map = {"low": "mild", "moderate": "moderate", "high": "severe"}
+        mapped_severity = severity_map.get(phrase_severity, "moderate")
+        if not entry.get("severity"):
+            entry["severity"] = mapped_severity if phrase_hits else base_severity
+        laterality = entry.get("laterality") or entry.get("side")
+        entry["laterality"] = laterality
+        entry["side"] = laterality
+        normalized_entries.append(entry)
 
     seen_pairs = set()
     seen_locations = set()
     unique_entries = []
-    for entry in parsed_entries:
+    for entry in normalized_entries:
         itype = entry.get("injury_type")
         loc = entry.get("canonical_location")
         laterality = entry.get("laterality")
@@ -807,9 +823,17 @@ def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]
     return unique_entries
 
 
-def build_coach_review_entries(injury_string: str, phase: str) -> list[dict]:
+def build_coach_review_entries(
+    injury_string: str,
+    phase: str,
+    parsed_entries: Iterable[dict[str, str | None]] | None = None,
+) -> list[dict]:
     """Return moderate/severe injury summaries for coach review notes."""
-    entries = _normalize_injury_entries(injury_string)
+    entries = (
+        _normalize_existing_injury_entries(parsed_entries)
+        if parsed_entries is not None
+        else _normalize_injury_entries(injury_string)
+    )
     if not entries:
         return []
 
@@ -833,6 +857,7 @@ def build_coach_review_entries(injury_string: str, phase: str) -> list[dict]:
                 "laterality": laterality,
                 "injury_type": itype,
                 "severity": severity,
+                "display_location": entry.get("display_location"),
             }
         )
         rehab_drills = _rehab_drills_for_phase(itype, loc, phase, limit=3)
@@ -926,15 +951,20 @@ def format_injury_guardrails(
     phase: str,
     injuries: str,
     restrictions: Iterable[ParsedRestriction] | None = None,
+    parsed_entries: Iterable[dict[str, str | None]] | None = None,
 ) -> str:
     """Return markdown injury guardrails for the current phase."""
-    if not injuries:
+    if not injuries and parsed_entries is None:
         restrictions_lines = _format_restrictions_block(restrictions or [])
         if restrictions_lines:
             return "\n".join(restrictions_lines)
         return "✅ No injury guardrails required."
 
-    entries = _normalize_injury_entries(injuries)
+    entries = (
+        _normalize_existing_injury_entries(parsed_entries)
+        if parsed_entries is not None
+        else _normalize_injury_entries(injuries)
+    )
     restrictions_list = list(restrictions or [])
     if not entries and not restrictions_list:
         return "✅ No injury guardrails required."
@@ -955,6 +985,7 @@ def format_injury_guardrails(
                 "laterality": laterality,
                 "injury_type": itype,
                 "severity": severity,
+                "display_location": entry.get("display_location"),
             }
         )
         lines.append(f"- {summary}")
@@ -989,6 +1020,7 @@ def format_injury_guardrails(
                     "laterality": laterality,
                     "injury_type": itype,
                     "severity": severity,
+                    "display_location": entry.get("display_location"),
                 }
             )
             if drills:

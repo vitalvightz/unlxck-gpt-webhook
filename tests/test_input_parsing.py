@@ -1,10 +1,12 @@
 import re
 from datetime import datetime
+import logging
 
 import pytest
 
 from fightcamp import input_parsing
 from fightcamp.input_parsing import PlanInput
+from fightcamp.plan_pipeline_runtime import build_runtime_context
 
 
 def _payload(fields: list[dict]) -> dict:
@@ -223,6 +225,61 @@ def test_incomplete_input_can_still_be_salvaged_when_training_days_exist():
 
     assert parsed.training_frequency == 3
     assert parsed.injuries == ""
+
+
+def test_guided_injury_payload_treats_area_as_source_of_truth():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor (moderate, improving). Avoid: deep hip flexion. Notes: pain when driving knee up past pelvis"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "moderate",
+        "trend": "improving",
+        "avoid": "deep hip flexion",
+        "notes": "pain when driving knee up past pelvis",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert len(parsed.parsed_injuries) == 1
+    assert parsed.parsed_injuries[0]["canonical_location"] == "hip"
+    assert parsed.parsed_injuries[0]["display_location"] == "hip flexor"
+    assert parsed.parsed_injuries[0]["severity"] == "moderate"
+    assert len(parsed.restrictions) == 1
+    assert parsed.restrictions[0]["region"] == "hip"
+
+
+def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor (moderate, improving). Avoid: deep hip flexion. Notes: pain when driving knee up past pelvis"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "moderate",
+        "trend": "improving",
+        "avoid": "deep hip flexion",
+        "notes": "pain when driving knee up past pelvis",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert context.injuries_only_text == "hip flexor"
+    assert context.training_context.injuries == ["hip flexor"]
+    assert all("knee" not in injury for injury in context.training_context.injuries)
 
 
 def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_only_values(monkeypatch):

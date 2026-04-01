@@ -59,6 +59,13 @@ CANONICAL_RESTRICTIONS = {
         "restriction": "deep_knee_flexion",
         "region": "knee",
         "keywords": ["deep", "knee", "flexion", "squat", "depth"],
+        "required_keywords": ["knee"],
+    },
+    "deep hip flexion": {
+        "restriction": "deep_hip_flexion",
+        "region": "hip",
+        "keywords": ["deep", "hip", "flexion", "hip hinge", "knee drive"],
+        "required_keywords": ["hip"],
     },
     "heavy overhead pressing": {
         "restriction": "heavy_overhead_pressing",
@@ -249,6 +256,9 @@ def _match_canonical_restriction(text: str) -> tuple[str | None, str | None]:
             for keyword in keywords
             if (keyword in tokens) or _keyword_in_text(keyword, normalized)
         )
+        required_keywords = restriction_data.get("required_keywords", [])
+        if required_keywords and not any(_keyword_in_text(keyword, normalized) for keyword in required_keywords):
+            continue
         min_matches = MIN_KEYWORD_MATCHES
         if restriction_data["restriction"] == "high_impact":
             min_matches = 1

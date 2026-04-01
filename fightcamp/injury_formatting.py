@@ -25,6 +25,13 @@ def extract_laterality(text: str) -> str | None:
     return match.group(1).lower()
 
 
+def _strip_display_laterality(display_location: str, laterality: str | None) -> str:
+    cleaned = str(display_location or "").strip()
+    if not cleaned or not laterality:
+        return cleaned
+    return re.sub(rf"^\s*{re.escape(laterality)}\s+", "", cleaned, count=1, flags=re.IGNORECASE).strip() or cleaned
+
+
 def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
     """Parse a single injury phrase.
     
@@ -103,8 +110,15 @@ def format_injury_summary(injury_obj: Mapping[str, str | None]) -> str:
     laterality = injury_obj.get("side") or injury_obj.get("laterality")
     injury_type = injury_obj.get("injury_type")
     severity = injury_obj.get("severity")
+    display_location = _strip_display_laterality(
+        str(injury_obj.get("display_location") or "").strip(),
+        laterality,
+    )
 
-    location_label = _title_case(canonical_location) if canonical_location else "Unspecified Location"
+    if display_location:
+        location_label = _title_case(display_location)
+    else:
+        location_label = _title_case(canonical_location) if canonical_location else "Unspecified Location"
     if laterality:
         location_label = f"{_title_case(laterality)} {location_label}"
 
@@ -147,6 +161,7 @@ def format_restriction_summary(restriction: ParsedRestriction) -> str:
 
 _RESTRICTION_GUARDRAIL_DETAILS = {
     "deep_knee_flexion": ("deep loaded knee flexion", "deep squat/lunge patterns"),
+    "deep_hip_flexion": ("deep hip flexion", "loaded pike/tuck/knee-drive patterns"),
     "heavy_overhead_pressing": ("heavy overhead pressing", "overhead press/jerk/thruster/overhead slams"),
     "high_impact": ("high impact", "jumping/plyo/impact running"),
     "high_impact_lower": ("high impact (lower)", "jumping/plyo/bounds/landing drills"),

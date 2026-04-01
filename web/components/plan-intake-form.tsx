@@ -28,7 +28,7 @@ import {
   WEAK_AREA_OPTIONS,
 } from "@/lib/intake-options";
 import { emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
-import type { PlanRequest } from "@/lib/types";
+import type { GuidedInjuryInput, PlanRequest } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
 const ROUND_COUNT_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
@@ -57,13 +57,7 @@ const INJURY_TREND_OPTIONS = [
   { label: "Getting worse", value: "worsening" },
 ];
 
-type GuidedInjuryState = {
-  area: string;
-  severity: string;
-  trend: string;
-  avoid: string;
-  notes: string;
-};
+type GuidedInjuryState = Required<GuidedInjuryInput>;
 
 type AvailabilityConsistency = {
   hardError: string | null;
@@ -258,15 +252,149 @@ function normalizeGuidedInjuryState(value: Partial<GuidedInjuryState> | null | u
   };
 }
 
+function normalizeGuidedText(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function stripGuidedPunctuation(value: string): string {
+  return normalizeGuidedText(value).replace(/^[,.;:\s]+|[,.;:\s]+$/g, "");
+}
+
+function splitGuidedSummary(raw: string): string[] {
+  return raw
+    .split(/\s*\.\s*/)
+    .map((segment) => stripGuidedPunctuation(segment))
+    .filter(Boolean);
+}
+
+function parseDescriptorText(raw: string): Pick<GuidedInjuryState, "severity" | "trend"> {
+  const result: Pick<GuidedInjuryState, "severity" | "trend"> = {
+    severity: "",
+    trend: "",
+  };
+
+  for (const token of raw.split(",").map((value) => stripGuidedPunctuation(value).toLowerCase())) {
+    if (!result.severity && ["low", "moderate", "high"].includes(token)) {
+      result.severity = token;
+      continue;
+    }
+    if (!result.trend && ["stable", "improving", "worsening", "getting worse"].includes(token)) {
+      result.trend = token === "getting worse" ? "worsening" : token;
+    }
+  }
+
+  return result;
+}
+
+function parseAreaSegment(segment: string): { area: string; severity: string; trend: string } | null {
+  const trimmed = stripGuidedPunctuation(segment);
+  if (!trimmed || /^(avoid|notes?)\b/i.test(trimmed)) {
+    return null;
+  }
+
+  const parentheticalMatch = trimmed.match(/^(.*?)(?:\s*\(([^)]+)\))$/);
+  if (parentheticalMatch) {
+    const area = stripGuidedPunctuation(parentheticalMatch[1] ?? "");
+    if (!area) {
+      return null;
+    }
+    return {
+      area,
+      ...parseDescriptorText(parentheticalMatch[2] ?? ""),
+    };
+  }
+
+  const dashedMatch = trimmed.match(/^(.*?)(?:\s*[-–—]\s*)(.+)$/);
+  if (dashedMatch) {
+    const area = stripGuidedPunctuation(dashedMatch[1] ?? "");
+    if (!area) {
+      return null;
+    }
+    return {
+      area,
+      ...parseDescriptorText(dashedMatch[2] ?? ""),
+    };
+  }
+
+  if (trimmed.split(" ").length <= 4) {
+    return {
+      area: trimmed,
+      severity: "",
+      trend: "",
+    };
+  }
+
+  return null;
+}
+
+function looksLikeDuplicateGuidedSummary(
+  segment: string,
+  details: Pick<GuidedInjuryState, "area" | "severity" | "trend">,
+): boolean {
+  if (!details.area) {
+    return false;
+  }
+
+  const normalizedSegment = stripGuidedPunctuation(segment).toLowerCase();
+  const normalizedArea = stripGuidedPunctuation(details.area).toLowerCase();
+  if (!normalizedSegment.startsWith(normalizedArea)) {
+    return false;
+  }
+
+  const descriptorHits = [details.severity, details.trend]
+    .filter(Boolean)
+    .map((value) => value.toLowerCase())
+    .filter((value) => normalizedSegment.includes(value));
+
+  return descriptorHits.length > 0 || normalizedSegment.includes("can train");
+}
+
 function parseGuidedInjuryState(value: string | null | undefined): GuidedInjuryState {
-  const raw = (value ?? "").trim();
+  const raw = normalizeGuidedText(value ?? "");
   if (!raw) {
     return EMPTY_GUIDED_INJURY;
   }
-  return {
-    ...EMPTY_GUIDED_INJURY,
-    notes: raw,
-  };
+
+  const nextValue = { ...EMPTY_GUIDED_INJURY };
+  const residualNotes: string[] = [];
+
+  for (const segment of splitGuidedSummary(raw)) {
+    if (!nextValue.avoid) {
+      const avoidMatch = segment.match(/^(?:avoid|movements?\s+to\s+avoid)\s*:?\s*(.+)$/i);
+      if (avoidMatch?.[1]) {
+        nextValue.avoid = stripGuidedPunctuation(avoidMatch[1]);
+        continue;
+      }
+    }
+
+    const noteMatch = segment.match(/^notes?\s*:?\s*(.+)$/i);
+    if (noteMatch?.[1]) {
+      nextValue.notes = stripGuidedPunctuation(noteMatch[1]);
+      continue;
+    }
+
+    if (!nextValue.area) {
+      const parsedArea = parseAreaSegment(segment);
+      if (parsedArea?.area) {
+        nextValue.area = parsedArea.area;
+        nextValue.severity = parsedArea.severity;
+        nextValue.trend = parsedArea.trend;
+        continue;
+      }
+    }
+
+    if (looksLikeDuplicateGuidedSummary(segment, nextValue)) {
+      continue;
+    }
+
+    residualNotes.push(segment);
+  }
+
+  if (!nextValue.notes && residualNotes.length) {
+    nextValue.notes = residualNotes.join(". ");
+  }
+
+  return normalizeGuidedInjuryState(nextValue);
 }
 
 function buildGuidedInjurySummary(value: GuidedInjuryState): string {
@@ -278,10 +406,10 @@ function buildGuidedInjurySummary(value: GuidedInjuryState): string {
     parts.push(descriptors ? `${details.area} (${descriptors})` : details.area);
   }
   if (details.avoid) {
-    parts.push(`avoid ${details.avoid}`);
+    parts.push(`Avoid: ${details.avoid}`);
   }
   if (details.notes) {
-    parts.push(details.notes);
+    parts.push(details.area || details.avoid ? `Notes: ${details.notes}` : details.notes);
   }
 
   return parts.join(". ").trim();
@@ -443,12 +571,19 @@ export function PlanIntakeForm() {
     }
     const nextForm = syncDeviceFields(hydratePlanRequest(me));
     const draft = (me.profile.onboarding_draft as DraftMetadata | null | undefined) ?? null;
-    setForm(nextForm);
-    setGuidedInjury(
-      draft?.guided_injury
-        ? normalizeGuidedInjuryState(draft.guided_injury)
-        : parseGuidedInjuryState(nextForm.injuries),
-    );
+    const nextGuidedInjury = draft?.guided_injury
+      ? normalizeGuidedInjuryState(draft.guided_injury)
+      : nextForm.guided_injury
+        ? normalizeGuidedInjuryState(nextForm.guided_injury)
+        : parseGuidedInjuryState(nextForm.injuries);
+    const nextInjurySummary = buildGuidedInjurySummary(nextGuidedInjury);
+
+    setForm({
+      ...nextForm,
+      injuries: nextInjurySummary || nextForm.injuries,
+      guided_injury: nextGuidedInjury,
+    });
+    setGuidedInjury(nextGuidedInjury);
     const savedStep = Number(draft?.current_step ?? 0);
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
     setHydrated(true);
@@ -458,6 +593,15 @@ export function PlanIntakeForm() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
+
+  function buildFormSnapshot(currentForm: PlanRequest = form, currentGuidedInjury: GuidedInjuryState = guidedInjury): PlanRequest {
+    const normalizedGuidedInjury = normalizeGuidedInjuryState(currentGuidedInjury);
+    return syncDeviceFields({
+      ...currentForm,
+      injuries: buildGuidedInjurySummary(normalizedGuidedInjury),
+      guided_injury: normalizedGuidedInjury,
+    });
+  }
 
   function updateAthlete<K extends keyof PlanRequest["athlete"]>(key: K, value: PlanRequest["athlete"][K]) {
     setForm((current) => ({
@@ -486,11 +630,15 @@ export function PlanIntakeForm() {
 
   function updateGuidedInjury<K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) {
     setGuidedInjury((current) => {
-      const nextValue = {
+      const nextValue = normalizeGuidedInjuryState({
         ...current,
         [key]: value,
-      };
-      updateField("injuries", buildGuidedInjurySummary(nextValue));
+      });
+      setForm((currentForm) => ({
+        ...currentForm,
+        injuries: buildGuidedInjurySummary(nextValue),
+        guided_injury: nextValue,
+      }));
       return nextValue;
     });
   }
@@ -594,7 +742,7 @@ export function PlanIntakeForm() {
     if (!session?.access_token) {
       return;
     }
-    const nextForm = syncDeviceFields(form);
+    const nextForm = buildFormSnapshot();
     setForm(nextForm);
     await updateMe(session.access_token, {
       full_name: nextForm.athlete.full_name,
@@ -608,7 +756,6 @@ export function PlanIntakeForm() {
       onboarding_draft: {
         ...nextForm,
         current_step: step,
-        guided_injury: guidedInjury,
       },
     });
     await refreshMe();
@@ -618,7 +765,7 @@ export function PlanIntakeForm() {
     setMessage(null);
     setError(null);
     startTransition(async () => {
-      const nextForm = syncDeviceFields(form);
+      const nextForm = buildFormSnapshot();
       if (!validateCurrentStep(nextForm)) {
         return;
       }
@@ -640,7 +787,7 @@ export function PlanIntakeForm() {
     setMessage(null);
     setError(null);
     startTransition(async () => {
-      const nextForm = syncDeviceFields(form);
+      const nextForm = buildFormSnapshot();
       if (!validateCurrentStep(nextForm)) {
         return;
       }
@@ -682,7 +829,7 @@ export function PlanIntakeForm() {
     setMessage(null);
     setError(null);
     startTransition(async () => {
-      const nextForm = syncDeviceFields(form);
+      const nextForm = buildFormSnapshot();
       if (!validateForGeneration(nextForm)) {
         return;
       }

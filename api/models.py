@@ -52,6 +52,14 @@ class AthleteProfileInput(BaseModel):
         return _validate_record(value)
 
 
+class GuidedInjuryInput(BaseModel):
+    area: str = ""
+    severity: str = ""
+    trend: str = ""
+    avoid: str = ""
+    notes: str = ""
+
+
 class PlanRequest(BaseModel):
     athlete: AthleteProfileInput
     fight_date: str
@@ -63,6 +71,7 @@ class PlanRequest(BaseModel):
     hard_sparring_days: list[str] = Field(default_factory=list)
     technical_skill_days: list[str] = Field(default_factory=list)
     injuries: str = ""
+    guided_injury: GuidedInjuryInput | None = None
     key_goals: list[str] = Field(default_factory=list)
     weak_areas: list[str] = Field(default_factory=list)
     training_preference: str = ""
@@ -106,6 +115,8 @@ class PlanRequest(BaseModel):
             ),
         ]
         payload: dict[str, Any] = {"data": {"fields": fields}}
+        if self.guided_injury is not None:
+            payload["guided_injury"] = self.guided_injury.model_dump(mode="json")
         if self.random_seed is not None:
             payload["random_seed"] = self.random_seed
         return payload
