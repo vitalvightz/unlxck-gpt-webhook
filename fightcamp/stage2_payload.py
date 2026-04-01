@@ -2,9 +2,11 @@
 
 import json
 import re
+from typing import Any
 
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
+from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 
@@ -1872,13 +1874,26 @@ def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> 
     role["placement_rule"] = f"{placement} {extra}".strip() if placement else extra
 
 
-def _assign_declared_day_hints(ordered: list[dict], athlete_model: dict) -> list[dict]:
+def _assign_declared_day_hints(
+    ordered: list[dict],
+    athlete_model: dict,
+    *,
+    hard_sparring_plan: list[dict] | None = None,
+) -> list[dict]:
     if not ordered:
         return ordered
 
     training_days, hard_sparring_days, technical_skill_days = _declared_day_sets(athlete_model)
     if not training_days:
         return ordered
+
+    if hard_sparring_plan:
+        hard_sparring_days = set(effective_hard_days(hard_sparring_plan))
+        technical_skill_days = technical_skill_days | {
+            entry["day"]
+            for entry in hard_sparring_plan
+            if entry.get("status") == "convert_to_technical_suggested"
+        }
 
     day_assignments: dict[int, str] = {}
     used_days: set[str] = set()
@@ -1977,7 +1992,13 @@ def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: li
     return _dedupe_preserve_order(preferred + list(conditioning_sequence or []))
 
 
-def _resequence_session_roles(week_entry: dict, session_roles: list[dict], athlete_model: dict) -> list[dict]:
+def _resequence_session_roles(
+    week_entry: dict,
+    session_roles: list[dict],
+    athlete_model: dict,
+    *,
+    hard_sparring_plan: list[dict] | None = None,
+) -> list[dict]:
     if len(session_roles) <= 1:
         return session_roles
 
@@ -2036,7 +2057,7 @@ def _resequence_session_roles(week_entry: dict, session_roles: list[dict], athle
 
     for idx, role in enumerate(ordered, start=1):
         role["session_index"] = idx
-    ordered = _assign_declared_day_hints(ordered, athlete_model)
+    ordered = _assign_declared_day_hints(ordered, athlete_model, hard_sparring_plan=hard_sparring_plan)
     return ordered
 
 
@@ -2141,6 +2162,168 @@ def _apply_short_camp_role_compression(
 
     for idx, role in enumerate(kept_roles, start=1):
         role["session_index"] = idx
+    return kept_roles, updated_suppressed
+
+
+def _intentional_compression_stub() -> dict[str, Any]:
+    return {
+        "active": False,
+        "reason_codes": [],
+        "reason": "",
+        "summary": "",
+    }
+
+
+def _high_fatigue_compression_reason_codes(
+    athlete_model: dict,
+    *,
+    effective_hard_spar_count: int | None = None,
+) -> list[str]:
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    if fatigue != "high" and "high_fatigue" not in readiness_flags:
+        return []
+
+    reason_codes = ["high_fatigue"]
+    hard_spar_count = effective_hard_spar_count
+    if hard_spar_count is None:
+        hard_spar_count = len(_clean_list(athlete_model.get("hard_sparring_days", [])))
+    if hard_spar_count >= 2:
+        reason_codes.append("two_hard_spar_days")
+    if _is_high_pressure_weight_cut(athlete_model=athlete_model):
+        reason_codes.append("high_pressure_weight_cut")
+    elif athlete_model.get("weight_cut_risk") or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}:
+        reason_codes.append("active_weight_cut")
+    if athlete_model.get("injuries") or "injury_management" in readiness_flags:
+        reason_codes.append("injury_management")
+    return reason_codes
+
+
+def _compression_summary(reason_codes: list[str]) -> str:
+    if not reason_codes:
+        return ""
+    label = ", ".join(code.replace("_", " ") for code in reason_codes)
+    return f"Keep the smaller week on purpose to protect freshness under {label}."
+
+
+def _next_training_days_after_effective_hard_spar(
+    training_days: list[str],
+    effective_hard_days_list: set[str],
+) -> set[str]:
+    if not training_days or not effective_hard_days_list:
+        return set()
+
+    next_days: set[str] = set()
+    ordered_training_days = _ordered_weekdays(training_days)
+    for hard_day in effective_hard_days_list:
+        hard_day_index = _WEEKDAY_ORDER.get(str(hard_day).strip().lower(), -1)
+        if hard_day_index < 0:
+            continue
+        next_day = next(
+            (
+                day
+                for day in ordered_training_days
+                if _WEEKDAY_ORDER.get(str(day).strip().lower(), -1) > hard_day_index
+            ),
+            None,
+        )
+        if next_day:
+            next_days.add(next_day)
+    return next_days
+
+
+def _make_compression_suppression(role: dict, reason_codes: list[str], summary: str) -> dict[str, Any]:
+    return {
+        "category": role.get("category"),
+        "role_key": role.get("role_key"),
+        "preferred_system": role.get("preferred_system", ""),
+        "reasons": [summary],
+        "governance": dict(role.get("governance", {})),
+        "intentional_compression": True,
+        "compression_reason_codes": list(reason_codes),
+        "compression_summary": summary,
+    }
+
+
+def _apply_high_fatigue_week_compression(
+    week_entry: dict,
+    session_roles: list[dict],
+    suppressed_roles: list[dict],
+    athlete_model: dict,
+    *,
+    hard_sparring_plan: list[dict] | None = None,
+) -> tuple[list[dict], list[dict]]:
+    week_entry["intentional_compression"] = _intentional_compression_stub()
+    if not session_roles:
+        return session_roles, suppressed_roles
+
+    compressed = athlete_model.get("compressed_priorities") or {}
+    if compressed.get("is_short_camp"):
+        return session_roles, suppressed_roles
+
+    effective_hard_count = effective_hard_day_count(hard_sparring_plan or []) if hard_sparring_plan else None
+    reason_codes = _high_fatigue_compression_reason_codes(
+        athlete_model,
+        effective_hard_spar_count=effective_hard_count,
+    )
+    if not reason_codes:
+        return session_roles, suppressed_roles
+
+    declared_hard_days = _ordered_weekdays(
+        _clean_list(week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days"))
+    )
+    training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
+    effective_days = set(effective_hard_days(hard_sparring_plan or []))
+    has_downgraded_declared_day = bool(declared_hard_days) and len(effective_days) < len(declared_hard_days)
+    blocked_follow_on_days = _next_training_days_after_effective_hard_spar(training_days, effective_days)
+    summary = _compression_summary(reason_codes)
+
+    kept_roles = list(session_roles)
+    updated_suppressed = list(suppressed_roles)
+
+    secondary_strength_roles = [
+        role
+        for role in kept_roles
+        if role.get("category") == "strength" and role.get("role_key") not in _PRIMARY_STRENGTH_ROLE_KEYS
+    ]
+    for role in secondary_strength_roles:
+        kept_roles.remove(role)
+        updated_suppressed.append(_make_compression_suppression(role, reason_codes, summary))
+
+    conditioning_roles = [role for role in kept_roles if role.get("category") == "conditioning"]
+    retained_conditioning: dict[str, Any] | None = None
+    glycolytic_role = next(
+        (role for role in conditioning_roles if role.get("preferred_system") == "glycolytic"),
+        None,
+    )
+    if glycolytic_role is not None and has_downgraded_declared_day:
+        glycolytic_day = str(glycolytic_role.get("scheduled_day_hint") or "").strip()
+        if glycolytic_day not in blocked_follow_on_days:
+            retained_conditioning = glycolytic_role
+
+    if retained_conditioning is None:
+        retained_conditioning = next(
+            (role for role in conditioning_roles if role.get("preferred_system") != "glycolytic"),
+            None,
+        )
+    if retained_conditioning is None and conditioning_roles:
+        retained_conditioning = conditioning_roles[0]
+
+    for role in list(conditioning_roles):
+        if retained_conditioning is not None and role is retained_conditioning:
+            continue
+        kept_roles.remove(role)
+        updated_suppressed.append(_make_compression_suppression(role, reason_codes, summary))
+
+    if len(updated_suppressed) == len(suppressed_roles):
+        return kept_roles, updated_suppressed
+
+    week_entry["intentional_compression"] = {
+        "active": True,
+        "reason_codes": list(reason_codes),
+        "reason": ", ".join(reason_codes),
+        "summary": summary,
+    }
     return kept_roles, updated_suppressed
 
 
@@ -2277,7 +2460,40 @@ def _build_weekly_role_map(
             suppressed_roles,
             athlete_model,
         )
-        session_roles = _resequence_session_roles(week_entry, session_roles, athlete_model)
+        hard_sparring_plan = compute_hard_sparring_plan(
+            week={
+                "phase": week_entry.get("phase"),
+                "stage_key": week_entry.get("stage_key"),
+                "week_index": week_entry.get("week_index"),
+                "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+                "session_roles": session_roles,
+            },
+            athlete_snapshot=athlete_model,
+        )
+        effective_days = effective_hard_days(hard_sparring_plan)
+        week_entry["hard_sparring_plan"] = hard_sparring_plan
+        week_entry["effective_hard_sparring_days"] = list(effective_days)
+        week_entry["intentional_compression"] = _intentional_compression_stub()
+
+        session_roles = _resequence_session_roles(
+            week_entry,
+            session_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
+        session_roles, suppressed_roles = _apply_high_fatigue_week_compression(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
+        session_roles = _resequence_session_roles(
+            week_entry,
+            session_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
 
         weeks.append(
             {
@@ -2289,6 +2505,9 @@ def _build_weekly_role_map(
                 "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_technical_skill_days": _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+                "hard_sparring_plan": hard_sparring_plan,
+                "effective_hard_sparring_days": list(effective_days),
+                "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
             }
@@ -2922,6 +3141,7 @@ def build_stage2_payload(
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
+            "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
@@ -3022,6 +3242,7 @@ Do not repeat Primary, Fallback, Drill, or menu-style labels across most session
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
 Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
 Keep every active week present and structurally complete, including late-camp weeks.
+If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.

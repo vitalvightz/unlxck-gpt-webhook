@@ -1452,7 +1452,7 @@ def test_plan_detail_returns_public_sparring_advisory_without_changing_saved_pla
     assert body["outputs"]["plan_text"] == original_text
     assert len(body["advisories"]) == 1
     assert body["advisories"][0]["action"] == "deload"
-    assert body["advisories"][0]["days"] == ["Tuesday", "Thursday"]
+    assert body["advisories"][0]["days"] == ["Thursday"]
     assert body["advisories"][0]["title"] == "Coach note"
     assert body["advisories"][0]["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."
     assert store.get_plan(plan["id"])["plan_text"] == original_text
