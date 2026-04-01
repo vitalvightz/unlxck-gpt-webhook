@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
+from .sparring_dose_planner import compute_hard_sparring_plan
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -483,22 +484,84 @@ def build_plan_advisories(*, planning_brief: dict[str, Any] | None) -> list[dict
     injuries = _sparring_injury_entries(athlete_snapshot)
     cut_pct = _active_cut_pct(athlete_snapshot)
 
-    candidates = [
-        candidate
-        for candidate in (
-            _build_week_advisory(
-                week,
+    # Prefer reading from the pre-computed hard_sparring_plan on each week.
+    # Fall back to the original advisory logic when the plan is absent.
+    plan_candidates: list[tuple[tuple, dict[str, Any]]] = []
+    for week in weeks:
+        plan = week.get("hard_sparring_plan")
+        if plan is None:
+            plan = compute_hard_sparring_plan(
+                week=week, athlete_snapshot=athlete_snapshot,
+            )
+        downgraded = [
+            entry for entry in plan
+            if entry["status"] != "hard_as_planned"
+        ]
+        if not downgraded:
+            continue
+        # Pick the highest-priority downgraded entry
+        best_entry = max(
+            downgraded,
+            key=lambda e: (1 if e["status"] == "convert_to_technical_suggested" else 0,),
+        )
+        action = "convert" if best_entry["status"] == "convert_to_technical_suggested" else "deload"
+        # Build advisory in the existing PlanAdvisory shape using full context
+        result = _build_week_advisory(
+            week,
+            athlete_snapshot=athlete_snapshot,
+            injuries=injuries,
+            injury_risk=_injury_risk(injuries),
+            cut_pct=cut_pct,
+        )
+        if result is None:
+            continue
+        rank, advisory = result
+        # Override action from plan and narrow days to only the downgraded day
+        advisory["action"] = action
+        advisory["days"] = [best_entry["day"]]
+        if action == "convert" and "replacement" not in advisory:
+            advisory["replacement"] = _replacement_focus(
                 athlete_snapshot=athlete_snapshot,
                 injuries=injuries,
-                injury_risk=_injury_risk(injuries),
-                cut_pct=cut_pct,
+                phase=str(week.get("phase", "")),
             )
-            for week in weeks
-        )
-        if candidate is not None
-    ]
-    if not candidates:
+        plan_candidates.append((rank, advisory))
+
+    if not plan_candidates:
         return []
 
-    _, best_advisory = max(candidates, key=lambda item: item[0])
+    _, best_advisory = max(plan_candidates, key=lambda item: item[0])
     return [best_advisory]
+
+
+def build_sparring_day_statuses(
+    *,
+    week: dict[str, Any],
+    athlete_snapshot: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return a per-day sparring status for each declared hard sparring day.
+
+    Prefers reading from the pre-computed ``hard_sparring_plan`` on the week.
+    Falls back to the planner when the plan is absent.
+
+    Each entry contains:
+      day      – weekday name
+      status   – "hard_as_planned" | "deload_suggested" | "convert_to_technical_suggested"
+      reason   – present only when the status is not hard_as_planned
+    """
+    plan = week.get("hard_sparring_plan")
+    if plan is None:
+        plan = compute_hard_sparring_plan(
+            week=week, athlete_snapshot=athlete_snapshot,
+        )
+    if not plan:
+        return []
+
+    statuses: list[dict[str, Any]] = []
+    for entry in plan:
+        row: dict[str, Any] = {"day": entry["day"], "status": entry["status"]}
+        reason = entry.get("reason", "")
+        if reason:
+            row["reason"] = reason
+        statuses.append(row)
+    return statuses
