@@ -6,7 +6,7 @@ import os
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 
 import httpx
 from fastapi import HTTPException, status
@@ -29,6 +29,7 @@ _TRANSIENT_SUPABASE_ERRORS = (
     httpx.ConnectError,
     httpx.ReadTimeout,
 )
+GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 
 
 class AppStore(Protocol):
@@ -152,7 +153,56 @@ class SupabaseAppStore:
         )
 
     def _is_transient_profile_error(self, exc: Exception) -> bool:
+        return self._is_transient_store_error(exc)
+
+    def _is_transient_store_error(self, exc: Exception) -> bool:
         return isinstance(exc, _TRANSIENT_SUPABASE_ERRORS)
+
+    def _run_with_transient_retry(
+        self,
+        *,
+        operation: str,
+        fn: Callable[[], Any],
+        attempts: int = 3,
+        backoff_seconds: float = 0.25,
+    ) -> Any:
+        for attempt in range(1, attempts + 1):
+            try:
+                return fn()
+            except Exception as exc:
+                transient = self._is_transient_store_error(exc)
+                logger.warning(
+                    "[store] %s:failure attempt=%s transient=%s error_type=%s error=%s",
+                    operation,
+                    attempt,
+                    transient,
+                    type(exc).__name__,
+                    exc,
+                )
+                if not transient or attempt >= attempts:
+                    raise
+                time.sleep(backoff_seconds * attempt)
+
+        raise RuntimeError(f"{operation} exhausted retries")
+
+    def _lookup_generation_job_by_client_request_id(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+    ) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("generation_jobs")
+            .select(GENERATION_JOB_SELECT)
+            .eq("athlete_id", athlete_id)
+            .eq("client_request_id", client_request_id)
+            .order("created_at", desc=True)
+        )
+
+    def _read_generation_job(self, job_id: str) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("generation_jobs").select(GENERATION_JOB_SELECT).eq("id", job_id)
+        )
 
     def _get_profile_by_id(self, athlete_id: str) -> dict[str, Any] | None:
         return self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
@@ -437,13 +487,29 @@ class SupabaseAppStore:
         source: str,
         request_payload: dict[str, Any],
     ) -> dict[str, Any]:
-        existing = self._select_first(
-            self.client.table("generation_jobs")
-            .select(GENERATION_JOB_SELECT)
-            .eq("athlete_id", athlete_id)
-            .eq("client_request_id", client_request_id)
-            .order("created_at", desc=True)
-        )
+        last_error: Exception | None = None
+
+        try:
+            existing = self._run_with_transient_retry(
+                operation="create_or_get_generation_job:lookup_existing",
+                fn=lambda: self._lookup_generation_job_by_client_request_id(
+                    athlete_id=athlete_id,
+                    client_request_id=client_request_id,
+                ),
+            )
+        except Exception as exc:
+            if not self._is_transient_store_error(exc):
+                logger.exception(
+                    "[store] create_or_get_generation_job:lookup_exception athlete_id=%s client_request_id=%s",
+                    athlete_id,
+                    client_request_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to read generation job",
+                ) from exc
+            last_error = exc
+            existing = None
         if existing:
             return existing
 
@@ -464,81 +530,166 @@ class SupabaseAppStore:
             "plan_id": None,
         }
         try:
-            response = self.client.table("generation_jobs").insert(payload).execute()
+            response = self._run_with_transient_retry(
+                operation="create_or_get_generation_job:insert",
+                fn=lambda: self.client.table("generation_jobs").insert(payload).execute(),
+            )
             rows = getattr(response, "data", None) or []
             if rows:
                 return rows[0]
-        except Exception:
+        except Exception as exc:
+            last_error = exc
             logger.exception(
                 "[store] create_or_get_generation_job:insert_exception athlete_id=%s client_request_id=%s",
                 athlete_id,
                 client_request_id,
             )
 
-        existing = self._select_first(
-            self.client.table("generation_jobs")
-            .select(GENERATION_JOB_SELECT)
-            .eq("athlete_id", athlete_id)
-            .eq("client_request_id", client_request_id)
-            .order("created_at", desc=True)
-        )
+        try:
+            existing = self._run_with_transient_retry(
+                operation="create_or_get_generation_job:lookup_after_insert",
+                fn=lambda: self._lookup_generation_job_by_client_request_id(
+                    athlete_id=athlete_id,
+                    client_request_id=client_request_id,
+                ),
+            )
+        except Exception as exc:
+            if not self._is_transient_store_error(exc):
+                logger.exception(
+                    "[store] create_or_get_generation_job:lookup_after_insert_exception athlete_id=%s client_request_id=%s",
+                    athlete_id,
+                    client_request_id,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="failed to read generation job",
+                ) from exc
+            last_error = exc
+            existing = None
         if existing:
             return existing
+        if last_error and self._is_transient_store_error(last_error):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+            ) from last_error
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="failed to persist generation job",
         )
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
-        return self._select_first(
-            self.client.table("generation_jobs").select(GENERATION_JOB_SELECT).eq("id", job_id)
-        )
+        try:
+            return self._run_with_transient_retry(
+                operation="get_generation_job:select",
+                fn=lambda: self._read_generation_job(job_id),
+            )
+        except Exception as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] get_generation_job:transient_failure job_id=%s error_type=%s",
+                    job_id,
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            logger.exception("[store] get_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load generation job",
+            ) from exc
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
-        job = self.get_generation_job(job_id)
-        if not job:
-            return None
+        try:
+            job = self.get_generation_job(job_id)
+            if not job:
+                return None
 
-        current_status = str(job.get("status") or "")
-        now_iso = _utc_now_iso()
-        now_dt = _parse_datetime(now_iso)
-        heartbeat = _parse_datetime(job.get("heartbeat_at"))
-        is_stale_running = (
-            current_status == "running"
-            and (
-                heartbeat is None
-                or now_dt is None
-                or (now_dt - heartbeat).total_seconds() >= stale_after_seconds
+            current_status = str(job.get("status") or "")
+            now_iso = _utc_now_iso()
+            now_dt = _parse_datetime(now_iso)
+            heartbeat = _parse_datetime(job.get("heartbeat_at"))
+            is_stale_running = (
+                current_status == "running"
+                and (
+                    heartbeat is None
+                    or now_dt is None
+                    or (now_dt - heartbeat).total_seconds() >= stale_after_seconds
+                )
             )
-        )
 
-        if current_status not in {"queued", "running"}:
-            return None
-        if current_status == "running" and not is_stale_running:
-            return None
+            if current_status not in {"queued", "running"}:
+                return None
+            if current_status == "running" and not is_stale_running:
+                return None
 
-        payload = {
-            "status": "running",
-            "heartbeat_at": now_iso,
-            "started_at": job.get("started_at") or now_iso,
-            "error": None,
-            "attempt_count": int(job.get("attempt_count") or 0) + 1,
-            "updated_at": now_iso,
-        }
-        self.client.table("generation_jobs").update(payload).eq("id", job_id).execute()
-        return self.get_generation_job(job_id)
+            payload = {
+                "status": "running",
+                "heartbeat_at": now_iso,
+                "started_at": job.get("started_at") or now_iso,
+                "error": None,
+                "attempt_count": int(job.get("attempt_count") or 0) + 1,
+                "updated_at": now_iso,
+            }
+            self._run_with_transient_retry(
+                operation="claim_generation_job:update",
+                fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),
+            )
+            return self.get_generation_job(job_id)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] claim_generation_job:transient_failure job_id=%s error_type=%s",
+                    job_id,
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            logger.exception("[store] claim_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to claim generation job",
+            ) from exc
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
-        payload = dict(changes)
-        payload["updated_at"] = _utc_now_iso()
-        self.client.table("generation_jobs").update(payload).eq("id", job_id).execute()
-        updated = self.get_generation_job(job_id)
-        if not updated:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="generation job not found",
+        try:
+            payload = dict(changes)
+            payload["updated_at"] = _utc_now_iso()
+            self._run_with_transient_retry(
+                operation="update_generation_job:update",
+                fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),
             )
-        return updated
+            updated = self.get_generation_job(job_id)
+            if not updated:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="generation job not found",
+                )
+            return updated
+        except HTTPException:
+            raise
+        except Exception as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] update_generation_job:transient_failure job_id=%s error_type=%s",
+                    job_id,
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            logger.exception("[store] update_generation_job:exception job_id=%s", job_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to update generation job",
+            ) from exc
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]:
         try:

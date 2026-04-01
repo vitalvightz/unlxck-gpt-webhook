@@ -1807,6 +1807,95 @@ def test_generate_plan_returns_existing_active_job_for_same_athlete():
     assert len(store.plans) == 0
 
 
+def test_generate_plan_returns_queued_job_when_claim_is_temporarily_unavailable():
+    class ClaimTemporarilyUnavailableStore(FakeStore):
+        def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="generation job service temporarily unavailable",
+            )
+
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = ClaimTemporarilyUnavailableStore()
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "queued"
+    assert store.get_generation_job(body["job_id"])["status"] == "queued"
+    assert len(store.plans) == 0
+
+
+def test_generation_job_poll_returns_current_job_when_claim_is_temporarily_unavailable():
+    class ClaimTemporarilyUnavailableStore(FakeStore):
+        def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="generation job service temporarily unavailable",
+            )
+
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = ClaimTemporarilyUnavailableStore()
+    existing_job = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="queued-attempt",
+        source="self_serve",
+        request_payload=_build_request().model_dump(mode="json"),
+    )
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=_planner,
+            stage2_automator=FakeStage2Automator(result=finalized_result()),
+        )
+    )
+
+    response = client.get(
+        f"/api/generation-jobs/{existing_job['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["job_id"] == existing_job["id"]
+    assert response.json()["status"] == "queued"
+
+
 def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
     """Response schema must be unchanged after moving non-essential writes to background tasks."""
     client, store, _ = _build_client()

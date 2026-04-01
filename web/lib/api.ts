@@ -308,7 +308,9 @@ export function createGenerationJob(
 
 
 export function getGenerationJob(token: string, jobId: string): Promise<GenerationJobResponse> {
-  return readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}`, { token });
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>(`/api/generation-jobs/${jobId}`, { token }),
+  );
 }
 
 export function listPlans(token: string): Promise<PlanSummary[]> {

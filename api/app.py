@@ -771,9 +771,29 @@ def create_app(
         if current_status == "running" and not _is_stale_job(job):
             return job
 
-        claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
+        try:
+            claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+                logger.warning(
+                    "[jobs] generation:schedule_claim_deferred job_id=%s detail=%s",
+                    job_id,
+                    exc.detail,
+                )
+                return job
+            raise
         if not claimed:
-            refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
+            try:
+                refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
+            except HTTPException as exc:
+                if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+                    logger.warning(
+                        "[jobs] generation:schedule_refresh_deferred job_id=%s detail=%s",
+                        job_id,
+                        exc.detail,
+                    )
+                    return job
+                raise
             return refreshed or job
 
         active_tasks.add(job_id)

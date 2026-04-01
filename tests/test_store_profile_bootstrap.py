@@ -4,6 +4,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import httpx
+import pytest
+from fastapi import HTTPException, status
 
 from api.auth import AuthenticatedUser
 from api.store import SupabaseAppStore
@@ -174,3 +176,30 @@ def test_ensure_profile_falls_back_to_read_after_transient_upsert_failure():
     result = store.ensure_profile(user)
 
     assert result == recovered_profile
+
+
+def test_create_or_get_generation_job_returns_503_when_store_is_transiently_unavailable():
+    store = _make_store()
+    store._run_with_transient_retry = MagicMock(side_effect=httpx.ConnectError("Server disconnected"))
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="client-1",
+            source="self_serve",
+            request_payload={"fight_date": "2026-04-18"},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert exc_info.value.detail == "generation job service temporarily unavailable"
+
+
+def test_get_generation_job_returns_503_when_lookup_is_transiently_unavailable():
+    store = _make_store()
+    store._run_with_transient_retry = MagicMock(side_effect=httpx.ReadTimeout("timed out"))
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.get_generation_job("job-1")
+
+    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert exc_info.value.detail == "generation job service temporarily unavailable"
