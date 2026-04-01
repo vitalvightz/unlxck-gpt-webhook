@@ -1945,6 +1945,7 @@ select:focus-visible {
 
   .plan-history-row {
     display: grid;
+    grid-template-columns: 1fr;
     gap: 14px;
     align-items: start;
   }
@@ -2508,20 +2509,55 @@ select:focus-visible {
 }
 
 @media (max-width: 720px) {
+  .loading-primary-panel {
+    padding: 20px;
+    border-radius: 22px;
+    gap: 16px;
+  }
+
+  .loading-secondary-panel {
+    gap: 18px;
+  }
+
   .loading-operational-strip {
     grid-template-columns: 1fr;
   }
 
   .loading-stage-header {
+    flex-direction: column;
+    align-items: flex-start;
     gap: 14px;
+  }
+
+  .loading-phase-badge {
+    align-self: flex-start;
+  }
+
+  .loading-operational-item {
+    min-height: auto;
+    padding: 12px 14px;
+  }
+
+  .loading-step {
+    gap: 12px;
+    padding-block: 12px;
+  }
+
+  .loading-step-marker {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
   }
 
   .loading-step-current {
     margin-inline: 0;
-    padding-inline: 0;
-    background: transparent;
-    border-radius: 0;
+    padding-inline: 10px;
+    border-radius: 16px;
     transform: none;
+  }
+
+  .loading-context-panel-compact {
+    padding: 18px 18px;
   }
 }
 
