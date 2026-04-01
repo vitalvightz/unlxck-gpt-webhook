@@ -641,18 +641,22 @@ export function PlanIntakeForm() {
   function handleStepSelect(targetStep: number) {
     setMessage(null);
     setError(null);
-    const nextForm = buildFormSnapshot();
+    let nextForm: PlanRequest | null = null;
+    function getNextForm() {
+      nextForm ??= buildFormSnapshot();
+      return nextForm;
+    }
     if (!canSelectWizardStep({
       currentStep,
       targetStep,
       lastSelectableStep: steps.length - 1,
-      validateCurrentStep: () => validateCurrentStep(nextForm),
+      validateCurrentStep: () => validateCurrentStep(getNextForm()),
     })) {
       return;
     }
     setCurrentStep(targetStep);
 
-    if (!session?.access_token || !isValidRecordFormat(nextForm.athlete.record ?? "")) {
+    if (!session?.access_token || !isValidRecordFormat(getNextForm().athlete.record ?? "")) {
       return;
     }
 
