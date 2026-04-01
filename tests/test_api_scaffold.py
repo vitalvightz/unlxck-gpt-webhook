@@ -596,6 +596,41 @@ def test_plan_request_to_payload_includes_guided_injury_when_present():
     assert payload["guided_injury"]["avoid"] == "deep hip flexion"
 
 
+@pytest.mark.parametrize(
+    ("guided_severity", "expected_severity"),
+    [("low", "low"), ("mild", "low"), ("moderate", "moderate"), ("severe", "high"), ("high", "high")],
+)
+def test_plan_request_guided_injury_severity_normalizes_to_frontend_vocab(guided_severity, expected_severity):
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+        },
+        fight_date="2026-04-18",
+        guided_injury={
+            "area": "hip flexor",
+            "severity": guided_severity,
+        },
+    ).to_payload()
+
+    assert payload["guided_injury"]["severity"] == expected_severity
+
+
+def test_plan_request_guided_injury_severity_rejects_unknown_values():
+    with pytest.raises(Exception, match="guided injury severity must be one of low, moderate, or high"):
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+            },
+            fight_date="2026-04-18",
+            guided_injury={
+                "area": "hip flexor",
+                "severity": "critical",
+            },
+        )
+
+
 def test_record_format_validation_rejects_invalid_values():
     try:
         PlanRequest(
