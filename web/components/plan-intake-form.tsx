@@ -804,23 +804,25 @@ export function PlanIntakeForm() {
     <RequireAuth>
       <section className="panel">
         <div className="section-heading">
-          <div>
+          <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Athlete Onboarding</p>
             <h1>Build your camp profile.</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
           </div>
-          <div className="status-card">
+          <div className="status-card athlete-motion-slot athlete-motion-status">
             <p className="status-label">Current step</p>
             <h2 className="plan-summary-title">{steps[currentStep]}</h2>
             <p className="muted">Step {currentStep + 1} of {steps.length}. Draft keeps your selections and current step.</p>
           </div>
         </div>
 
-        <StepPills currentStep={currentStep} onStepSelect={handleStepSelect} />
+        <div className="athlete-motion-slot athlete-motion-status">
+          <StepPills currentStep={currentStep} onStepSelect={handleStepSelect} />
+        </div>
 
         {currentStep === 0 ? (
           <div className="step-layout">
-            <div className="step-main">
+            <div className="step-main athlete-motion-slot athlete-motion-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Identity</p>
@@ -920,7 +922,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Profile snapshot</p>
@@ -941,7 +943,7 @@ export function PlanIntakeForm() {
 
         {currentStep === 1 ? (
           <div className="step-layout">
-            <div className="step-main">
+            <div className="step-main athlete-motion-slot athlete-motion-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Fight context</p>
@@ -993,7 +995,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Context snapshot</p>
@@ -1016,7 +1018,7 @@ export function PlanIntakeForm() {
 
         {currentStep === 2 ? (
           <div className="step-layout">
-            <div className="step-main">
+            <div className="step-main athlete-motion-slot athlete-motion-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Schedule</p>
@@ -1083,7 +1085,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Current input</p>
@@ -1122,7 +1124,7 @@ export function PlanIntakeForm() {
 
         {currentStep === 3 ? (
           <div className="step-layout">
-            <div className="step-main">
+            <div className="step-main athlete-motion-slot athlete-motion-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Restrictions</p>
@@ -1216,7 +1218,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
               <div className="support-panel">
                 <p className="kicker">Safety</p>
                 <p className="muted">Start with body part, severity, trend, and what to avoid. Add free text only for the details that matter.</p>
@@ -1227,7 +1229,7 @@ export function PlanIntakeForm() {
 
         {currentStep === 4 ? (
           <div className="step-layout">
-            <div className="step-main">
+            <div className="step-main athlete-motion-slot athlete-motion-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Target outcomes</p>
@@ -1282,7 +1284,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Performance snapshot</p>
@@ -1300,7 +1302,7 @@ export function PlanIntakeForm() {
 
         {currentStep === 5 ? (
           <div className="step-layout">
-            <div className="step-main">
+            <div className="step-main athlete-motion-slot athlete-motion-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Review</p>
@@ -1350,7 +1352,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
               <div className="status-card">
                 <p className="status-label">Ready to generate</p>
                 <h2 className="plan-summary-title">Final pre-check</h2>
@@ -1372,10 +1374,10 @@ export function PlanIntakeForm() {
           </div>
         ) : null}
 
-        {message ? <div className="success-banner">{message}</div> : null}
-        {error ? <div className="error-banner">{error}</div> : null}
+        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
+        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        <div className="form-actions">
+        <div className="form-actions athlete-motion-slot athlete-motion-rail">
           <button type="button" className="ghost-button" onClick={handleSaveDraft} disabled={isPending}>
             {isPending ? "Saving..." : "Save draft"}
           </button>

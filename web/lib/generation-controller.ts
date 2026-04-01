@@ -5,6 +5,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getGenerationJob } from "@/lib/api";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
+export type GenerationUiPhase =
+  | "submitting"
+  | "queued"
+  | "running"
+  | "reconnecting"
+  | "finalizing"
+  | "failed";
+
 type PendingGenerationState = {
   clientRequestId: string;
   jobId?: string | null;
@@ -102,10 +110,21 @@ function statusMessageForJob(status: GenerationJobStatus, startedAtMs: number): 
   return "Finalizing your plan.";
 }
 
+function phaseForJobStatus(status: GenerationJobStatus): Exclude<GenerationUiPhase, "submitting" | "reconnecting" | "failed"> {
+  if (status === "queued") {
+    return "queued";
+  }
+  if (status === "running") {
+    return "running";
+  }
+  return "finalizing";
+}
+
 async function createJobWithReconnect(
   createJob: (clientRequestId: string) => Promise<GenerationJobResponse>,
   clientRequestId: string,
   setStatusMessage: (message: string | null) => void,
+  setPhase: (phase: GenerationUiPhase) => void,
 ): Promise<GenerationJobResponse> {
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -116,7 +135,8 @@ async function createJobWithReconnect(
       if (attempt === 3) {
         break;
       }
-      setStatusMessage("Connection dropped while starting the job. Reconnecting to the same request…");
+      setPhase("reconnecting");
+      setStatusMessage("Connection dropped while starting the job. Reconnecting to the same request.");
       await sleep(1_500 * attempt);
     }
   }
@@ -130,6 +150,9 @@ export function useGenerationController({
   onComplete,
 }: GenerationControllerOptions) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [phase, setPhase] = useState<GenerationUiPhase>(() =>
+    getPendingGeneration(storageKey) ? "reconnecting" : "submitting",
+  );
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const recoveryAttemptedRef = useRef<string | null>(null);
@@ -151,13 +174,16 @@ export function useGenerationController({
       });
 
       try {
+        setPhase(recovered ? "reconnecting" : "submitting");
         setStatusMessage(
           recovered
             ? "Reconnecting to your existing plan generation request."
             : "Submitting your plan generation request.",
         );
-        const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage);
+        const createdJob = await createJobWithReconnect(createJob, clientRequestId, setStatusMessage, setPhase);
         const createdAtMs = Date.parse(createdJob.created_at || pendingCreatedAt) || Date.now();
+        setPhase(phaseForJobStatus(createdJob.status));
+        setStatusMessage(statusMessageForJob(createdJob.status, createdAtMs));
         savePendingGeneration(storageKey, {
           clientRequestId,
           jobId: createdJob.job_id,
@@ -180,8 +206,10 @@ export function useGenerationController({
               throw new Error("Generation finished, but no saved plan was returned.");
             }
             clearPendingGeneration(storageKey);
-            setStatusMessage(null);
+            setPhase("finalizing");
+            setStatusMessage("Final checks passed. Opening your saved plan.");
             setIsGenerating(false);
+            await sleep(220);
             onComplete({
               planId,
               status: currentJob.status,
@@ -195,12 +223,14 @@ export function useGenerationController({
             throw new Error(currentJob.error || "Plan generation failed.");
           }
 
+          setPhase(phaseForJobStatus(currentJob.status));
           setStatusMessage(statusMessageForJob(currentJob.status, createdAtMs));
           await sleep(getPollDelay(createdAtMs));
         }
       } catch (generationError) {
         setIsGenerating(false);
         setStatusMessage(null);
+        setPhase("failed");
         setError(
           generationError instanceof Error ? generationError.message : "Unable to generate your plan.",
         );
@@ -229,6 +259,7 @@ export function useGenerationController({
 
   return {
     isGenerating,
+    phase,
     statusMessage,
     error,
     setError,

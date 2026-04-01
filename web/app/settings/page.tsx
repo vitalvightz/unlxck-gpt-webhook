@@ -158,12 +158,12 @@ export default function SettingsPage() {
     <RequireAuth>
       <section className="panel">
         <div className="section-heading">
-          <div>
+          <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Settings</p>
             <h1>Your athlete profile</h1>
             <p className="muted">Update the profile fields reused across onboarding and plan generation.</p>
           </div>
-          <div className="status-card">
+          <div className="status-card athlete-motion-slot athlete-motion-status">
             <p className="status-label">{isAdmin ? "Admin profile view" : "Profile sync"}</p>
             <h2 className="plan-summary-title">{isAdmin ? detectedTimeZone : "Saved to account"}</h2>
             <p className="muted">
@@ -173,7 +173,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="split-layout">
-          <div className="step-main">
+          <div className="step-main athlete-motion-slot athlete-motion-main">
             <article className="step-card">
               <div className="form-section-header">
                 <p className="kicker">Identity</p>
@@ -326,7 +326,7 @@ export default function SettingsPage() {
             </article>
           </div>
 
-          <aside className="step-aside">
+          <aside className="step-aside athlete-motion-slot athlete-motion-rail">
             <div className="support-panel">
               <div className="form-section-header">
                 <p className="kicker">Profile snapshot</p>
@@ -389,10 +389,10 @@ export default function SettingsPage() {
           </aside>
         </div>
 
-        {message ? <div className="success-banner">{message}</div> : null}
-        {error ? <div className="error-banner">{error}</div> : null}
+        {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
+        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        <div className="form-actions">
+        <div className="form-actions athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
             {isPending ? "Saving..." : "Save settings"}
           </button>

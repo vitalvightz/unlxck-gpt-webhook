@@ -172,20 +172,20 @@ export default function PlansPage() {
     <RequireAuth>
       <section className="panel">
         <div className="section-heading">
-          <div>
+          <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Plan History</p>
             <h1>Your saved plans</h1>
             <p className="muted">Open current and older plans from one saved history.</p>
           </div>
-          <div className="status-card">
+          <div className="status-card athlete-motion-slot athlete-motion-status">
             <p className="status-label">Saved</p>
             <h2 className="plan-summary-title">{visiblePlans.length}</h2>
             <p className="muted">Every generated plan stays attached to your account.</p>
           </div>
         </div>
 
-        {error ? <div className="error-banner">{error}</div> : null}
-        <div className="plans-grid">
+        {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
+        <div className="plans-grid athlete-motion-slot athlete-motion-main">
           {visiblePlans.map((plan) => (
             <PlanCard
               key={plan.plan_id}

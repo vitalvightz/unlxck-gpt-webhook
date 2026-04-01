@@ -56,7 +56,11 @@ export default function GeneratePage() {
 
   return (
     <RequireAuth>
-      <PremiumLoadingScreen error={controller.error} statusMessage={controller.statusMessage} />
+      <PremiumLoadingScreen
+        phase={controller.phase}
+        error={controller.error}
+        statusMessage={controller.statusMessage}
+      />
     </RequireAuth>
   );
 }

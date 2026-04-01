@@ -191,7 +191,7 @@ export default function HomePage() {
 
     return (
       <>
-        <section className="hero-panel overview-command-shell overview-reveal overview-reveal-delay-0">
+        <section className="hero-panel overview-command-shell athlete-motion-slot athlete-motion-header">
           <div className="overview-command-grid">
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
@@ -224,7 +224,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="overview-snapshot-strip overview-reveal overview-reveal-delay-1">
+          <div className="overview-snapshot-strip athlete-motion-slot athlete-motion-status">
             <article className="overview-snapshot-item">
               <p className="kicker">Saved plans</p>
               <p className="overview-snapshot-value">{me.plan_count}</p>
@@ -244,7 +244,7 @@ export default function HomePage() {
         </section>
 
         <section className="overview-grid overview-dashboard-grid">
-          <article className="list-card overview-card overview-reveal overview-reveal-delay-2">
+          <article className="list-card overview-card athlete-motion-slot athlete-motion-main">
             <div className="overview-card-header">
               <p className="kicker">Onboarding</p>
               <h2>Current profile state</h2>
@@ -263,7 +263,7 @@ export default function HomePage() {
             </div>
           </article>
 
-          <article className="list-card overview-card overview-reveal overview-reveal-delay-3">
+          <article className="list-card overview-card athlete-motion-slot athlete-motion-rail">
             <div className="overview-card-header">
               <p className="kicker">History</p>
               <h2>Recent plans</h2>

@@ -882,29 +882,36 @@ select:focus-visible {
   min-width: 132px;
 }
 
+.athlete-motion-slot,
 .overview-reveal {
+  --athlete-motion-delay: 0ms;
   opacity: 0;
   transform: translateY(18px);
-  animation: overview-reveal-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: athlete-reveal-in 560ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: var(--athlete-motion-delay);
 }
 
+.athlete-motion-header,
 .overview-reveal-delay-0 {
-  animation-delay: 0ms;
+  --athlete-motion-delay: 0ms;
 }
 
+.athlete-motion-status,
 .overview-reveal-delay-1 {
-  animation-delay: 90ms;
+  --athlete-motion-delay: 90ms;
 }
 
+.athlete-motion-main,
 .overview-reveal-delay-2 {
-  animation-delay: 180ms;
+  --athlete-motion-delay: 180ms;
 }
 
+.athlete-motion-rail,
 .overview-reveal-delay-3 {
-  animation-delay: 260ms;
+  --athlete-motion-delay: 260ms;
 }
 
-@keyframes overview-reveal-in {
+@keyframes athlete-reveal-in {
   from {
     opacity: 0;
     transform: translateY(18px);
@@ -1948,6 +1955,7 @@ select:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .athlete-motion-slot,
   .overview-reveal {
     opacity: 1;
     transform: none;
@@ -2160,15 +2168,76 @@ select:focus-visible {
   }
 }
 
-/* --- Shell / panels use existing .panel and .support-panel base styles --- */
+/* --- Mission-control loading states ------------------------ */
 
-/* --- Primary panel ----------------------------------------- */
+.loading-shell {
+  --loading-accent-bg: rgba(181, 18, 43, 0.08);
+  --loading-accent-border: rgba(181, 18, 43, 0.16);
+  --loading-glow: rgba(181, 18, 43, 0.18);
+  --loading-scan-duration: 3s;
+}
+
+.loading-shell .split-layout {
+  align-items: stretch;
+}
 
 .loading-primary-panel {
+  display: grid;
+  gap: 18px;
+  min-height: 100%;
+  padding: 28px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top right, rgba(181, 18, 43, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(18, 20, 26, 0.98), rgba(10, 11, 14, 0.96));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 0 1px var(--loading-accent-border),
+    0 18px 48px rgba(0, 0, 0, 0.28);
   animation: loading-panel-breathe 4s ease-in-out infinite;
 }
 
-/* --- Eyebrow label ----------------------------------------- */
+.loading-secondary-panel {
+  display: grid;
+  gap: 20px;
+  min-height: 100%;
+}
+
+.loading-stage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.loading-stage-copy {
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.loading-phase-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--loading-accent-border);
+  background: var(--loading-accent-bg);
+  color: #ffe3e7;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.loading-phase-badge-error {
+  border-color: rgba(255, 164, 178, 0.22);
+  background: rgba(101, 18, 31, 0.28);
+}
 
 .loading-eyebrow {
   margin: 0;
@@ -2181,28 +2250,54 @@ select:focus-visible {
   animation: loading-eyebrow-pulse 2.8s ease-in-out infinite;
 }
 
-/* --- Title -------------------------------------------------- */
-
 .loading-title {
   margin: 0;
   font-family: var(--font-display), sans-serif;
-  font-size: clamp(26px, 3.5vw, 40px);
+  font-size: clamp(28px, 3.8vw, 42px);
   font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.05;
+  letter-spacing: -0.03em;
+  line-height: 1;
   color: var(--text-primary);
 }
 
-/* --- Supporting copy --------------------------------------- */
-
 .loading-copy {
   margin: 0;
+  max-width: 720px;
   font-size: 14px;
   color: var(--text-secondary);
-  line-height: 1.55;
+  line-height: 1.6;
 }
 
-/* --- Scan rail --------------------------------------------- */
+.loading-operational-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.loading-operational-item {
+  display: grid;
+  gap: 6px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.loading-operational-label {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.loading-operational-value {
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--text-primary);
+}
 
 .loading-scan-rail {
   position: relative;
@@ -2211,7 +2306,7 @@ select:focus-visible {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 2px;
   overflow: hidden;
-  margin: 4px 0;
+  margin: 2px 0 0;
 }
 
 .loading-scan-line {
@@ -2224,30 +2319,31 @@ select:focus-visible {
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(181, 18, 43, 0.55) 35%,
-    rgba(181, 18, 43, 0.85) 50%,
-    rgba(181, 18, 43, 0.55) 65%,
+    rgba(181, 18, 43, 0.45) 35%,
+    rgba(181, 18, 43, 0.92) 50%,
+    rgba(181, 18, 43, 0.45) 65%,
     transparent 100%
   );
-  box-shadow: 0 0 8px rgba(181, 18, 43, 0.4);
-  animation: loading-scan-sweep 3s linear infinite;
+  box-shadow: 0 0 12px rgba(181, 18, 43, 0.42);
+  animation: loading-scan-sweep var(--loading-scan-duration) linear infinite;
 }
-
-/* --- Status strip ------------------------------------------ */
 
 .loading-status-strip {
-  border-radius: 12px;
-  padding: 10px 13px;
-  background: rgba(181, 18, 43, 0.07);
-  border: 1px solid rgba(181, 18, 43, 0.14);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: var(--loading-accent-bg);
+  border: 1px solid var(--loading-accent-border);
   color: var(--text-secondary);
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
-/* --- Secondary panel uses existing .support-panel base styles ------------ */
-
-/* --- Steps list -------------------------------------------- */
+.loading-reassurance {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
 
 .loading-steps {
   list-style: none;
@@ -2260,51 +2356,174 @@ select:focus-visible {
 .loading-step {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 0;
+  gap: 14px;
+  padding: 14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  transition: opacity 500ms ease;
+  transition:
+    opacity 420ms ease,
+    transform 420ms ease,
+    border-color 420ms ease,
+    background 420ms ease;
 }
 
 .loading-step:last-child {
   border-bottom: none;
 }
 
-/* --- Step marker (dot / accent) ---------------------------- */
-
 .loading-step-marker {
   flex-shrink: 0;
-  width: 6px;
-  height: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
   border-radius: 50%;
-  margin-top: 6px;
-  background: var(--border-strong);
-  transition: background 500ms ease, box-shadow 500ms ease;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-muted);
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  transition:
+    border-color 420ms ease,
+    background 420ms ease,
+    color 420ms ease,
+    box-shadow 420ms ease;
 }
 
-/* --- Step label -------------------------------------------- */
+.loading-step-copy {
+  display: grid;
+  gap: 4px;
+}
 
 .loading-step-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  line-height: 1.5;
-  transition: color 500ms ease, font-weight 500ms ease;
-}
-
-/* --- Active step ------------------------------------------- */
-
-.loading-step-active .loading-step-marker {
-  background: var(--brand-red);
-  box-shadow: 0 0 6px rgba(181, 18, 43, 0.5);
-}
-
-.loading-step-active .loading-step-label {
-  color: var(--text-primary);
+  font-size: 14px;
   font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  transition: color 420ms ease;
 }
 
-/* --- Reduced-motion fallback ------------------------------- */
+.loading-step-note {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  transition: color 420ms ease;
+}
+
+.loading-step-complete .loading-step-marker {
+  border-color: rgba(181, 18, 43, 0.18);
+  background: rgba(181, 18, 43, 0.12);
+  color: #ffd8de;
+}
+
+.loading-step-complete .loading-step-label {
+  color: var(--text-primary);
+}
+
+.loading-step-complete .loading-step-note {
+  color: var(--text-secondary);
+}
+
+.loading-step-current {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(40, 15, 21, 0.9), rgba(24, 15, 18, 0.94));
+  border-color: rgba(181, 18, 43, 0.16);
+  transform: translateY(-1px);
+}
+
+.loading-step-current .loading-step-marker {
+  border-color: rgba(181, 18, 43, 0.28);
+  background: rgba(181, 18, 43, 0.16);
+  color: #fff1f4;
+  box-shadow: 0 0 16px rgba(181, 18, 43, 0.18);
+}
+
+.loading-step-current .loading-step-label {
+  color: var(--text-primary);
+}
+
+.loading-step-current .loading-step-note {
+  color: var(--text-secondary);
+}
+
+.loading-step-upcoming {
+  opacity: 0.72;
+}
+
+.loading-step-error .loading-step-marker {
+  border-color: rgba(255, 164, 178, 0.22);
+  background: rgba(101, 18, 31, 0.28);
+  color: #ffe8eb;
+  box-shadow: 0 0 14px rgba(181, 18, 43, 0.16);
+}
+
+.loading-step-error .loading-step-label {
+  color: #ffe8eb;
+}
+
+.loading-step-error .loading-step-note {
+  color: #d9c0c7;
+}
+
+.loading-support-note {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.loading-context-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.loading-context-panel-compact {
+  min-height: auto;
+  padding: 20px 22px;
+}
+
+.loading-phase-reconnecting {
+  --loading-scan-duration: 1.9s;
+  --loading-accent-bg: rgba(181, 18, 43, 0.1);
+  --loading-accent-border: rgba(181, 18, 43, 0.2);
+}
+
+.loading-phase-finalizing {
+  --loading-scan-duration: 2.2s;
+  --loading-accent-bg: rgba(181, 18, 43, 0.11);
+  --loading-accent-border: rgba(181, 18, 43, 0.2);
+}
+
+.loading-phase-failed {
+  --loading-accent-bg: rgba(101, 18, 31, 0.22);
+  --loading-accent-border: rgba(255, 164, 178, 0.22);
+}
+
+.loading-phase-failed .loading-primary-panel {
+  animation: none;
+}
+
+@media (max-width: 720px) {
+  .loading-operational-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .loading-stage-header {
+    gap: 14px;
+  }
+
+  .loading-step-current {
+    margin-inline: 0;
+    padding-inline: 0;
+    background: transparent;
+    border-radius: 0;
+    transform: none;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .loading-primary-panel {
@@ -2320,7 +2539,8 @@ select:focus-visible {
   }
   .loading-step,
   .loading-step-marker,
-  .loading-step-label {
+  .loading-step-label,
+  .loading-step-note {
     transition: none;
   }
 }
