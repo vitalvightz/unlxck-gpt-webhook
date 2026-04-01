@@ -74,7 +74,7 @@ function parseAreaSegment(segment: string): { area: string; severity: string; tr
     };
   }
 
-  const dashedMatch = trimmed.match(/^(.*?)(?:\s+[–—-]\s+)(.+)$/);
+  const dashedMatch = trimmed.match(/^(.*?)(?:\s+[-–—]\s+)(.+)$/);
   if (dashedMatch) {
     const area = stripGuidedPunctuation(dashedMatch[1] ?? "");
     const descriptors = parseDescriptorText(dashedMatch[2] ?? "");
