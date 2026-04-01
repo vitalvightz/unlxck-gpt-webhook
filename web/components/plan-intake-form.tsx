@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -31,6 +31,7 @@ import {
 import {
   buildGuidedInjurySummary,
   EMPTY_GUIDED_INJURY,
+  getInjuryMismatchContextKey,
   hasMeaningfulInjuryMismatch,
   normalizeGuidedInjuryState,
   parseGuidedInjuryState,
@@ -388,6 +389,7 @@ export function PlanIntakeForm() {
   const [isPending, startTransition] = useTransition();
   const [originalInjuriesText, setOriginalInjuriesText] = useState<string>("");
   const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
+  const injuryMismatchContextKeyRef = useRef("");
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
   useEffect(() => {
@@ -419,6 +421,21 @@ export function PlanIntakeForm() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
+
+  const injuryMismatchContextKey = getInjuryMismatchContextKey(originalInjuriesText, form.injuries || "");
+
+  useEffect(() => {
+    if (!hydrated) {
+      injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
+      return;
+    }
+
+    if (injuryMismatchContextKeyRef.current !== injuryMismatchContextKey) {
+      setInjuryOverwriteAcknowledged(false);
+    }
+
+    injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
+  }, [hydrated, injuryMismatchContextKey]);
 
   function buildFormSnapshot(currentForm: PlanRequest = form, currentGuidedInjury: GuidedInjuryState = guidedInjury): PlanRequest {
     const normalizedGuidedInjury = normalizeGuidedInjuryState(currentGuidedInjury);
@@ -691,7 +708,7 @@ export function PlanIntakeForm() {
   const statusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, form.athlete.professional_status ?? "") || "Not provided";
   const stanceLabel = getOptionLabel(STANCE_OPTIONS, form.athlete.stance ?? "") || "Not provided";
   const parsedRounds = parseRoundsFormat(form.rounds_format);
-  const injuryMismatchExists = hasMeaningfulInjuryMismatch(originalInjuriesText, form.injuries || "");
+  const injuryMismatchExists = Boolean(injuryMismatchContextKey);
   const injuryGateLocked = injuryMismatchExists && !injuryOverwriteAcknowledged;
   const availabilityConsistency = getAvailabilityConsistency(
     form.training_availability,

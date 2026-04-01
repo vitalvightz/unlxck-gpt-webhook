@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { hasMeaningfulInjuryMismatch, parseGuidedInjuryState } from "./guided-injury.ts";
+import { getInjuryMismatchContextKey, hasMeaningfulInjuryMismatch, parseGuidedInjuryState } from "./guided-injury.ts";
 
 test("preserves note sentences that contain periods", () => {
   assert.deepStrictEqual(
@@ -146,5 +146,31 @@ test("hasMeaningfulInjuryMismatch: dropped monitor-swelling note triggers mismat
       "Right shoulder.",
     ),
     true,
+  );
+});
+
+test("getInjuryMismatchContextKey: formatting-only changes keep the same mismatch context", () => {
+  assert.equal(
+    getInjuryMismatchContextKey(
+      "Right shoulder surgery history. avoid deep squats.",
+      "Right shoulder. Avoid: deep squats.",
+    ),
+    getInjuryMismatchContextKey(
+      "right shoulder surgery history. Avoid: deep squats",
+      "Right shoulder. avoid deep squats",
+    ),
+  );
+});
+
+test("getInjuryMismatchContextKey: generated summary edits change the mismatch context", () => {
+  assert.notEqual(
+    getInjuryMismatchContextKey(
+      "Right shoulder surgery history. Avoid: deep squats.",
+      "Right shoulder. Avoid: deep squats.",
+    ),
+    getInjuryMismatchContextKey(
+      "Right shoulder surgery history. Avoid: deep squats.",
+      "Right shoulder. Avoid: training after sparring.",
+    ),
   );
 });
