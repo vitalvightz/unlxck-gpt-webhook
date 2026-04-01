@@ -3,6 +3,28 @@ export type IntakeOption = {
   value: string;
 };
 
+export const GUIDED_INJURY_SEVERITY_VALUES = ["low", "moderate", "high"] as const;
+export type GuidedInjurySeverity = (typeof GUIDED_INJURY_SEVERITY_VALUES)[number];
+
+export const GUIDED_INJURY_SEVERITY_OPTIONS: IntakeOption[] = [
+  { label: "Low", value: "low" },
+  { label: "Moderate", value: "moderate" },
+  { label: "High", value: "high" },
+];
+
+const GUIDED_INJURY_SEVERITY_ALIASES: Record<string, GuidedInjurySeverity> = {
+  low: "low",
+  mild: "low",
+  moderate: "moderate",
+  high: "high",
+  severe: "high",
+};
+
+export function normalizeGuidedInjurySeverity(value: string | null | undefined): GuidedInjurySeverity | "" {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return GUIDED_INJURY_SEVERITY_ALIASES[normalized] ?? "";
+}
+
 export const TECHNICAL_STYLE_OPTIONS: IntakeOption[] = [
   { label: "Boxing", value: "boxing" },
   { label: "Kickboxing", value: "kickboxing" },

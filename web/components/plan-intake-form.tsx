@@ -12,10 +12,12 @@ import {
   detectDeviceLocale,
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
+  GUIDED_INJURY_SEVERITY_OPTIONS,
   getOptionLabel,
   getOptionLabels,
   isValidRecordFormat,
   KEY_GOAL_OPTIONS,
+  normalizeGuidedInjurySeverity,
   PROFESSIONAL_STATUS_OPTIONS,
   retainKnownOptionValues,
   sanitizeRecordInput,
@@ -42,11 +44,6 @@ const ROUND_DURATION_OPTIONS = [
   { label: "5 minutes", value: "5" },
 ];
 const FATIGUE_LEVEL_OPTIONS = [
-  { label: "Low", value: "low" },
-  { label: "Moderate", value: "moderate" },
-  { label: "High", value: "high" },
-];
-const INJURY_SEVERITY_OPTIONS = [
   { label: "Low", value: "low" },
   { label: "Moderate", value: "moderate" },
   { label: "High", value: "high" },
@@ -245,7 +242,7 @@ function getSparringConsistency(
 function normalizeGuidedInjuryState(value: Partial<GuidedInjuryState> | null | undefined): GuidedInjuryState {
   return {
     area: (value?.area ?? "").trim(),
-    severity: (value?.severity ?? "").trim(),
+    severity: normalizeGuidedInjurySeverity(value?.severity),
     trend: (value?.trend ?? "").trim(),
     avoid: (value?.avoid ?? "").trim(),
     notes: (value?.notes ?? "").trim(),
@@ -274,8 +271,9 @@ function parseDescriptorText(raw: string): Pick<GuidedInjuryState, "severity" | 
   };
 
   for (const token of raw.split(",").map((value) => stripGuidedPunctuation(value).toLowerCase())) {
-    if (!result.severity && ["low", "moderate", "high"].includes(token)) {
-      result.severity = token;
+    const normalizedSeverity = normalizeGuidedInjurySeverity(token);
+    if (!result.severity && normalizedSeverity) {
+      result.severity = normalizedSeverity;
       continue;
     }
     if (!result.trend && ["stable", "improving", "worsening", "getting worse"].includes(token)) {
@@ -1279,7 +1277,7 @@ export function PlanIntakeForm() {
                     <CustomSelect
                       id="injurySeverity"
                       value={guidedInjury.severity}
-                      options={INJURY_SEVERITY_OPTIONS}
+                      options={GUIDED_INJURY_SEVERITY_OPTIONS}
                       placeholder="Select severity"
                       includeEmptyOption
                       onChange={(value) => updateGuidedInjury("severity", value)}
@@ -1511,4 +1509,3 @@ export function PlanIntakeForm() {
     </RequireAuth>
   );
 }
-

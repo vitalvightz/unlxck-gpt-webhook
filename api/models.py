@@ -6,10 +6,19 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 UserRole = Literal["athlete", "admin"]
+GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
 
 
 GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
 _RECORD_PATTERN = re.compile(r"^\d+-\d+(?:-\d+)?$")
+_GUIDED_INJURY_SEVERITY_ALIASES = {
+    "": "",
+    "low": "low",
+    "mild": "low",
+    "moderate": "moderate",
+    "high": "high",
+    "severe": "high",
+}
 
 
 def _clean_list(values: list[str] | None) -> list[str]:
@@ -54,10 +63,19 @@ class AthleteProfileInput(BaseModel):
 
 class GuidedInjuryInput(BaseModel):
     area: str = ""
-    severity: str = ""
+    severity: GuidedInjurySeverity = ""
     trend: str = ""
     avoid: str = ""
     notes: str = ""
+
+    @field_validator("severity", mode="before")
+    @classmethod
+    def validate_severity(cls, value: Any) -> GuidedInjurySeverity:
+        normalized = str(value or "").strip().lower()
+        mapped = _GUIDED_INJURY_SEVERITY_ALIASES.get(normalized)
+        if mapped is None:
+            raise ValueError("guided injury severity must be one of low, moderate, or high")
+        return mapped
 
 
 class PlanRequest(BaseModel):

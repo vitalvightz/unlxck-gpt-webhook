@@ -282,6 +282,28 @@ def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     assert all("knee" not in injury for injury in context.training_context.injuries)
 
 
+@pytest.mark.parametrize(
+    ("guided_severity", "expected_severity"),
+    [("low", "mild"), ("high", "severe")],
+)
+def test_guided_injury_payload_normalizes_guided_severity_labels(guided_severity, expected_severity):
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": guided_severity,
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.parsed_injuries[0]["severity"] == expected_severity
+
+
 def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_only_values(monkeypatch):
     monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 23, 30))
 
