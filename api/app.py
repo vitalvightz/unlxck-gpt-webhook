@@ -179,6 +179,14 @@ async def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return await generate_plan(payload)
 
 
+def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
+    return {
+        "ok": True,
+        "app": "unlxck-fight-camp-api",
+        "mode": mode_label,
+    }
+
+
 async def _run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
     return await asyncio.to_thread(lambda: asyncio.run(planner_fn(payload)))
 
@@ -548,13 +556,17 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
         return profile
 
+    @app.get("/", include_in_schema=False)
+    def root(request: Request) -> dict[str, str | bool]:
+        return _health_payload(mode_label=str(request.app.state.mode_label))
+
+    @app.head("/", include_in_schema=False)
+    def root_head() -> None:
+        return None
+
     @app.get("/health")
     def health(request: Request) -> dict[str, str | bool]:
-        return {
-            "ok": True,
-            "app": "unlxck-fight-camp-api",
-            "mode": str(request.app.state.mode_label),
-        }
+        return _health_payload(mode_label=str(request.app.state.mode_label))
 
     @app.get("/api/me", response_model=MeResponse)
     def get_me(
@@ -868,6 +880,18 @@ try:
 except RuntimeError:
     logger.exception("[app] runtime_app_build_failed")
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
+
+    @app.get("/", include_in_schema=False)
+    def root() -> dict[str, str | bool]:
+        return {
+            "ok": False,
+            "app": "unlxck-fight-camp-api",
+            "detail": "missing supabase configuration",
+        }
+
+    @app.head("/", include_in_schema=False)
+    def root_head() -> None:
+        return None
 
     @app.get("/health")
     def health() -> dict[str, str | bool]:

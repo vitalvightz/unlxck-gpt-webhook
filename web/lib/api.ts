@@ -44,6 +44,82 @@ export class ApiError extends Error {
   }
 }
 
+const RETRYABLE_GATEWAY_STATUSES = new Set([502, 503, 504]);
+const RETRYABLE_NETWORK_MESSAGE = "Unable to reach the server. Please check your connection and try again.";
+
+function looksLikeHtmlErrorPage(contentType: string, body: string): boolean {
+  return contentType.includes("text/html") || /^<!doctype html/i.test(body);
+}
+
+function extractHtmlRequestId(body: string): string | null {
+  const match = body.match(/Request ID:\s*([A-Za-z0-9-]+)/i);
+  return match?.[1] ?? null;
+}
+
+function formatGatewayErrorMessage(status: number, requestId: string | null): string {
+  const baseMessage =
+    status === 502
+      ? "The plan service is temporarily unavailable. Please try again in a minute."
+      : "The plan service is taking longer than expected. Please try again in a minute.";
+  return requestId ? `${baseMessage} (request id: ${requestId})` : baseMessage;
+}
+
+function buildPlainTextErrorMessage(params: {
+  status: number;
+  contentType: string;
+  trimmedText: string;
+  headerRequestId: string | null;
+}): string {
+  const { status, contentType, trimmedText, headerRequestId } = params;
+
+  if (looksLikeHtmlErrorPage(contentType, trimmedText)) {
+    const requestId = headerRequestId ?? extractHtmlRequestId(trimmedText);
+    return formatGatewayErrorMessage(status, requestId);
+  }
+
+  return headerRequestId
+    ? `${trimmedText || `Request failed: ${status}`} (request id: ${headerRequestId})`
+    : trimmedText || `Request failed: ${status}`;
+}
+
+function isRetryableApiFailure(error: unknown): boolean {
+  if (error instanceof ApiError) {
+    return RETRYABLE_GATEWAY_STATUSES.has(error.status);
+  }
+  return error instanceof Error && error.message === RETRYABLE_NETWORK_MESSAGE;
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => globalThis.setTimeout(resolve, ms));
+}
+
+async function withTransientRetries<T>(
+  operation: () => Promise<T>,
+  {
+    attempts = 3,
+    delayMs = 1500,
+  }: {
+    attempts?: number;
+    delayMs?: number;
+  } = {},
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableApiFailure(error) || attempt === attempts) {
+        throw error;
+      }
+      await sleep(delayMs * attempt);
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Request failed.");
+}
+
 function truncateForLog(value: string, max = 1200): string {
   return value.length > max ? `${value.slice(0, max)}…[truncated]` : value;
 }
@@ -90,7 +166,7 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
           ? { name: networkError.name, message: networkError.message, stack: networkError.stack }
           : networkError,
     });
-    throw new Error("Unable to reach the server. Please check your connection and try again.", {
+    throw new Error(RETRYABLE_NETWORK_MESSAGE, {
       cause: networkError,
     });
   }
@@ -160,9 +236,12 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     }
 
     throw new ApiError(
-      requestId
-        ? `${trimmedText || `Request failed: ${response.status}`} (request id: ${requestId})`
-        : trimmedText || `Request failed: ${response.status}`,
+      buildPlainTextErrorMessage({
+        status: response.status,
+        contentType,
+        trimmedText,
+        headerRequestId: requestId,
+      }),
       response.status,
     );
   }
@@ -209,11 +288,13 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
 }
 
 export function createGenerationJob(token: string, payload: PlanRequest): Promise<GenerationJobResponse> {
-  return readJson<GenerationJobResponse>("/api/plans/generate", {
-    method: "POST",
-    token,
-    body: JSON.stringify(payload),
-  });
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>("/api/plans/generate", {
+      method: "POST",
+      token,
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 
@@ -262,10 +343,12 @@ export function getAdminAthlete(token: string, athleteId: string): Promise<Admin
 }
 
 export function generateAdminAthletePlanFromLatestIntake(token: string, athleteId: string): Promise<GenerationJobResponse> {
-  return readJson<GenerationJobResponse>(`/api/admin/athletes/${athleteId}/plans/generate-from-latest-intake`, {
-    method: "POST",
-    token,
-  });
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>(`/api/admin/athletes/${athleteId}/plans/generate-from-latest-intake`, {
+      method: "POST",
+      token,
+    }),
+  );
 }
 
 export function listAdminPlans(token: string): Promise<AdminPlanSummary[]> {

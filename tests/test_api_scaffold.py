@@ -252,6 +252,30 @@ def test_create_app_primes_plan_banks_on_startup(monkeypatch):
     assert calls[0] is app_module.logger
 
 
+def test_root_and_health_return_ok_for_render_probes():
+    app = create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+        mode_label="test",
+    )
+
+    with TestClient(app) as client:
+        head_response = client.head("/")
+        root_response = client.get("/")
+        health_response = client.get("/health")
+
+    assert head_response.status_code == 200
+    assert root_response.status_code == 200
+    assert root_response.json() == {
+        "ok": True,
+        "app": "unlxck-fight-camp-api",
+        "mode": "test",
+    }
+    assert health_response.status_code == 200
+    assert health_response.json() == root_response.json()
+
+
 def test_run_stage1_planner_uses_worker_thread():
     main_thread_id = threading.get_ident()
     seen_thread_ids: list[int] = []
