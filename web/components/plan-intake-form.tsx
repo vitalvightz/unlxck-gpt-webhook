@@ -373,6 +373,19 @@ function syncDeviceFields(current: PlanRequest): PlanRequest {
   };
 }
 
+function normalizeInjuryForComparison(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function hasMeaningfulInjuryMismatch(original: string, generated: string): boolean {
+  const a = normalizeInjuryForComparison(original);
+  const b = normalizeInjuryForComparison(generated);
+  return Boolean(a && b && a !== b);
+}
+
 export function PlanIntakeForm() {
   const router = useRouter();
   const { me, refreshMe, session } = useAppSession();
@@ -383,6 +396,8 @@ export function PlanIntakeForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [originalInjuriesText, setOriginalInjuriesText] = useState<string>("");
+  const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
   useEffect(() => {
@@ -398,6 +413,7 @@ export function PlanIntakeForm() {
         : parseGuidedInjuryState(nextForm.injuries);
     const nextInjurySummary = buildGuidedInjurySummary(nextGuidedInjury);
 
+    setOriginalInjuriesText(nextForm.injuries || "");
     setForm({
       ...nextForm,
       injuries: nextInjurySummary || nextForm.injuries,
@@ -510,10 +526,18 @@ export function PlanIntakeForm() {
         return false;
       }
     }
+    if (currentStep === 3 && hasMeaningfulInjuryMismatch(originalInjuriesText, nextForm.injuries || "") && !injuryOverwriteAcknowledged) {
+      setError("Acknowledge the injury note overwrite warning before continuing.");
+      return false;
+    }
     return true;
   }
 
   function validateForGeneration(nextForm: PlanRequest): boolean {
+    if (hasMeaningfulInjuryMismatch(originalInjuriesText, nextForm.injuries || "") && !injuryOverwriteAcknowledged) {
+      setError("Acknowledge the injury note overwrite warning in the Restrictions step before generating.");
+      return false;
+    }
     if (!validateCurrentStep(nextForm)) {
       return false;
     }
@@ -667,6 +691,8 @@ export function PlanIntakeForm() {
   const statusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, form.athlete.professional_status ?? "") || "Not provided";
   const stanceLabel = getOptionLabel(STANCE_OPTIONS, form.athlete.stance ?? "") || "Not provided";
   const parsedRounds = parseRoundsFormat(form.rounds_format);
+  const injuryMismatchExists = hasMeaningfulInjuryMismatch(originalInjuriesText, form.injuries || "");
+  const injuryGateLocked = injuryMismatchExists && !injuryOverwriteAcknowledged;
   const availabilityConsistency = getAvailabilityConsistency(
     form.training_availability,
     form.weekly_training_frequency,
@@ -1141,6 +1167,34 @@ export function PlanIntakeForm() {
                     {form.injuries?.trim() || "No injury or restriction note added yet."}
                   </p>
                 </div>
+                {injuryMismatchExists ? (
+                  <div className={`support-panel ${injuryGateLocked ? "support-panel-alert" : ""}`.trim()}>
+                    <p className="kicker">Warning: existing injury note will be overwritten</p>
+                    <p className="muted">
+                      The structured fields produce a summary that differs from the existing injury note. Saving or generating will replace the original wording with the structured summary. Review the difference below before continuing.
+                    </p>
+                    <div className="injury-overwrite-diff">
+                      <div className="injury-overwrite-diff-block">
+                        <p className="kicker">Original note</p>
+                        <p className="muted">{originalInjuriesText}</p>
+                      </div>
+                      <div className="injury-overwrite-diff-block">
+                        <p className="kicker">Generated summary</p>
+                        <p className="muted">{form.injuries?.trim() || "No structured summary generated."}</p>
+                      </div>
+                    </div>
+                    <label className={`checkbox-card ${injuryOverwriteAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
+                      <input
+                        type="checkbox"
+                        checked={injuryOverwriteAcknowledged}
+                        onChange={(event) => setInjuryOverwriteAcknowledged(event.target.checked)}
+                      />
+                      <span className="checkbox-card-copy">
+                        <span className="checkbox-card-title">I understand the original note may be simplified or replaced. Continue with the structured summary.</span>
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
               </article>
             </div>
 
