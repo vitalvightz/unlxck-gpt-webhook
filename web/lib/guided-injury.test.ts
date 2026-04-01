@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parseGuidedInjuryState } from "./guided-injury.ts";
+import { hasMeaningfulInjuryMismatch, parseGuidedInjuryState } from "./guided-injury.ts";
 
 test("preserves note sentences that contain periods", () => {
   assert.deepStrictEqual(
@@ -78,5 +78,73 @@ test("normalizes severe severity alias to high", () => {
       avoid: "",
       notes: "",
     },
+  );
+});
+
+// ─── hasMeaningfulInjuryMismatch ─────────────────────────────────────────────
+
+test("hasMeaningfulInjuryMismatch: identical strings do not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("Right shoulder. Avoid: deep squats.", "Right shoulder. Avoid: deep squats."), false);
+});
+
+test("hasMeaningfulInjuryMismatch: capitalisation-only change does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("Shoulder Injury", "shoulder injury"), false);
+});
+
+test("hasMeaningfulInjuryMismatch: punctuation-only change does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("shoulder injury.", "shoulder injury"), false);
+});
+
+test("hasMeaningfulInjuryMismatch: Avoid label formatting does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("avoid deep squats", "Avoid: deep squats"), false);
+});
+
+test("hasMeaningfulInjuryMismatch: Notes label formatting does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("monitor swelling", "Notes: monitor swelling"), false);
+});
+
+test("hasMeaningfulInjuryMismatch: parenthetical descriptor formatting does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("right shoulder, low, stable", "right shoulder (low, stable)"), false);
+});
+
+test("hasMeaningfulInjuryMismatch: empty original does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("", "Right shoulder. Avoid: deep squats."), false);
+});
+
+test("hasMeaningfulInjuryMismatch: empty generated does not mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("Right shoulder.", ""), false);
+});
+
+test("hasMeaningfulInjuryMismatch: dropped surgery history triggers mismatch", () => {
+  assert.equal(
+    hasMeaningfulInjuryMismatch(
+      "Right shoulder surgery history. Avoid: deep squats.",
+      "Right shoulder. Avoid: deep squats.",
+    ),
+    true,
+  );
+});
+
+test("hasMeaningfulInjuryMismatch: dropped trigger context triggers mismatch", () => {
+  assert.equal(
+    hasMeaningfulInjuryMismatch(
+      "Right shoulder. Avoid: training after sparring.",
+      "Right shoulder. Avoid: training.",
+    ),
+    true,
+  );
+});
+
+test("hasMeaningfulInjuryMismatch: dropped after-sparring qualifier triggers mismatch", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("avoid training after sparring", "Avoid: training"), true);
+});
+
+test("hasMeaningfulInjuryMismatch: dropped monitor-swelling note triggers mismatch", () => {
+  assert.equal(
+    hasMeaningfulInjuryMismatch(
+      "Right shoulder. Notes: Monitor swelling.",
+      "Right shoulder.",
+    ),
+    true,
   );
 });
