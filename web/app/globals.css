@@ -2313,3 +2313,25 @@ select:focus-visible {
     padding: 22px;
   }
 }
+
+.injury-overwrite-diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.injury-overwrite-diff-block {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+@media (max-width: 640px) {
+  .injury-overwrite-diff {
+    grid-template-columns: 1fr;
+  }
+}
