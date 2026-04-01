@@ -886,7 +886,7 @@ def test_validate_stage2_output_weight_cut_profile_only_does_not_count_as_acknow
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "missing_weight_cut_acknowledgement" in warning_codes
-    assert "high_pressure_weight_cut_underaddressed" in warning_codes
+    assert "high_pressure_weight_cut_underaddressed" not in warning_codes
 
 
 def test_validate_stage2_output_accepts_summary_and_support_weight_cut_notes():

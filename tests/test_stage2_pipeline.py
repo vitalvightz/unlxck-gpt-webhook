@@ -215,3 +215,58 @@ def test_build_stage2_retry_skips_prompt_when_only_review_flags_exist():
     assert retry["status"] == "PASS"
     assert retry["needs_retry"] is False
     assert retry["repair_prompt"] is None
+
+
+def test_review_stage2_output_keeps_weekly_session_overage_as_review_flag():
+    planning_brief = {
+        "athlete_model": {"sport": "boxing"},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [
+                        {"role_key": "strength_touch_day", "category": "strength"},
+                        {"role_key": "conditioning_day", "category": "conditioning"},
+                    ],
+                },
+                {
+                    "week_index": 2,
+                    "phase": "SPP",
+                    "session_roles": [
+                        {"role_key": "strength_touch_day", "category": "strength"},
+                        {"role_key": "conditioning_day", "category": "conditioning"},
+                    ],
+                },
+            ]
+        },
+    }
+
+    review = review_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Monday - Strength
+        - Landmine Press - 4x5
+        #### Tuesday - Conditioning
+        - Easy Bike - 25 min
+        #### Wednesday - Extra work
+        - Walk + mobility
+
+        ### Week 2
+        #### Monday - Strength
+        - Landmine Press - 4x5
+        #### Tuesday - Conditioning
+        - Easy Bike - 25 min
+        """,
+    )
+
+    assert review["status"] == "PASS"
+    assert review["needs_retry"] is False
+    assert review["validator_report"]["blocking_warnings"] == []
+    review_flag_codes = [warning["code"] for warning in review["validator_report"]["review_flags"]]
+    assert "weekly_session_overage" in review_flag_codes

@@ -103,7 +103,6 @@ _WEIGHT_CUT_PATTERNS = (
     re.compile(r"\brefeed\b", re.IGNORECASE),
     re.compile(r"\brehydrat", re.IGNORECASE),
 )
-_WEIGHT_CUT_SUPPORT_SECTION_HINTS = ("nutrition", "recovery", "taper")
 _OVERSTYLED_PATTERNS = (
     re.compile(r"\bdeath march\b", re.IGNORECASE),
     re.compile(r"\bsmash\s*&\s*dash\b", re.IGNORECASE),
@@ -994,8 +993,6 @@ def _weight_cut_acknowledgement_warnings(planning_brief: dict, final_plan_text: 
     if not context["active"]:
         return []
 
-    summary_lines: list[str] = []
-    support_lines: list[str] = []
     non_profile_lines: list[str] = []
 
     for section in _section_blocks(final_plan_text):
@@ -1010,10 +1007,6 @@ def _weight_cut_acknowledgement_warnings(planning_brief: dict, final_plan_text: 
         if not matching_lines:
             continue
         non_profile_lines.extend(matching_lines)
-        if any(hint in title for hint in _WEIGHT_CUT_SUPPORT_SECTION_HINTS):
-            support_lines.extend(matching_lines)
-        else:
-            summary_lines.extend(matching_lines)
 
     warnings: list[dict] = []
     if not non_profile_lines:
@@ -1022,15 +1015,6 @@ def _weight_cut_acknowledgement_warnings(planning_brief: dict, final_plan_text: 
                 "code": "missing_weight_cut_acknowledgement",
                 "message": "Active weight cut shaped the camp, but the final plan does not acknowledge it outside raw profile fields.",
                 "line": "",
-            }
-        )
-    if context["high_pressure"] and (not summary_lines or not support_lines):
-        warnings.append(
-            {
-                "code": "high_pressure_weight_cut_underaddressed",
-                "message": "High-pressure weight cut needs both a short summary-level acknowledgement and a support-level note.",
-                "summary_lines": summary_lines,
-                "support_lines": support_lines,
             }
         )
     return warnings
