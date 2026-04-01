@@ -31,6 +31,7 @@ import {
 import {
   buildGuidedInjurySummary,
   EMPTY_GUIDED_INJURY,
+  hasMeaningfulInjuryMismatch,
   normalizeGuidedInjuryState,
   parseGuidedInjuryState,
   type GuidedInjuryState,
@@ -373,18 +374,6 @@ function syncDeviceFields(current: PlanRequest): PlanRequest {
   };
 }
 
-function normalizeInjuryForComparison(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function hasMeaningfulInjuryMismatch(original: string, generated: string): boolean {
-  const a = normalizeInjuryForComparison(original);
-  const b = normalizeInjuryForComparison(generated);
-  return Boolean(a && b && a !== b);
-}
 
 export function PlanIntakeForm() {
   const router = useRouter();

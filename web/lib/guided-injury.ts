@@ -209,3 +209,59 @@ export function buildGuidedInjurySummary(value: GuidedInjuryState): string {
 
   return parts.join(". ").trim();
 }
+
+/** Removes structured section label prefixes (e.g. "Avoid:", "Notes:") and
+ * also strips a bare leading "avoid" verb as used in free-text notes (e.g.
+ * "avoid deep squats") so that both formulations compare as equivalent. */
+function stripInjurySectionLabels(text: string): string {
+  return (
+    text
+      // Structured labels with colon: "Avoid:", "Notes:", "Movements to avoid:"
+      .replace(/\b(?:avoid|notes?|movements?\s+to\s+avoid)\s*:\s*/gi, "")
+      // Bare leading verb: "avoid deep squats" → "deep squats"
+      .replace(/^\s*avoid\s+/i, "")
+  );
+}
+
+/** Splits an injury string into normalised clause fragments.
+ * Each fragment has label prefixes removed, parentheses expanded (so
+ * "(low, stable)" and "low, stable" compare the same), punctuation stripped,
+ * and whitespace collapsed – so purely formatting differences do not count. */
+export function toNormalizedInjuryClauses(text: string): string[] {
+  return text
+    .split(/[.;]+/)
+    .map((clause) =>
+      stripInjurySectionLabels(clause)
+        .toLowerCase()
+        .replace(/[()]/g, " ")
+        .replace(/[^\w\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean);
+}
+
+/** Returns true when needle is semantically present in at least one haystack item. */
+function clauseIsCovered(needle: string, haystack: string[]): boolean {
+  return haystack.some((h) => h === needle || h.includes(needle));
+}
+
+/** Returns true when the original injury text contains meaningful content that
+ * is absent from the generated summary (indicating content would be dropped).
+ * Purely formatting differences – capitalisation, punctuation, label prefixes
+ * like "Avoid:" / "Notes:", and parenthetical descriptor groups – do not
+ * constitute a meaningful mismatch. */
+export function hasMeaningfulInjuryMismatch(original: string, generated: string): boolean {
+  const originalClauses = toNormalizedInjuryClauses(original);
+  const generatedClauses = toNormalizedInjuryClauses(generated);
+
+  if (!originalClauses.length || !generatedClauses.length) return false;
+
+  for (const clause of originalClauses) {
+    if (!clauseIsCovered(clause, generatedClauses)) {
+      return true;
+    }
+  }
+
+  return false;
+}
