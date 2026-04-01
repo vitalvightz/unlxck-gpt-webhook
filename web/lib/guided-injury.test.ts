@@ -1,7 +1,49 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getInjuryMismatchContextKey, hasMeaningfulInjuryMismatch, parseGuidedInjuryState } from "./guided-injury.ts";
+import {
+  coerceGuidedInjuryEditState,
+  getInjuryMismatchContextKey,
+  hasMeaningfulInjuryMismatch,
+  normalizeGuidedInjuryState,
+  parseGuidedInjuryState,
+} from "./guided-injury.ts";
+
+test("coerceGuidedInjuryEditState preserves spaces while typing free-text fields", () => {
+  assert.deepStrictEqual(
+    coerceGuidedInjuryEditState({
+      area: "hip flexor ",
+      severity: "moderate",
+      avoid: "deep knee drive ",
+      notes: "monitor after pads ",
+    }),
+    {
+      area: "hip flexor ",
+      severity: "moderate",
+      trend: "",
+      avoid: "deep knee drive ",
+      notes: "monitor after pads ",
+    },
+  );
+});
+
+test("normalizeGuidedInjuryState still trims persisted free-text values", () => {
+  assert.deepStrictEqual(
+    normalizeGuidedInjuryState({
+      area: "hip flexor ",
+      severity: "moderate",
+      avoid: "deep knee drive ",
+      notes: "monitor after pads ",
+    }),
+    {
+      area: "hip flexor",
+      severity: "moderate",
+      trend: "",
+      avoid: "deep knee drive",
+      notes: "monitor after pads",
+    },
+  );
+});
 
 test("preserves note sentences that contain periods", () => {
   assert.deepStrictEqual(

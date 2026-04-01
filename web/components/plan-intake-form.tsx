@@ -30,6 +30,7 @@ import {
 } from "@/lib/intake-options";
 import {
   buildGuidedInjurySummary,
+  coerceGuidedInjuryEditState,
   EMPTY_GUIDED_INJURY,
   getInjuryMismatchContextKey,
   hasMeaningfulInjuryMismatch,
@@ -473,7 +474,7 @@ export function PlanIntakeForm() {
 
   function updateGuidedInjury<K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) {
     setGuidedInjury((current) => {
-      const nextValue = normalizeGuidedInjuryState({
+      const nextValue = coerceGuidedInjuryEditState({
         ...current,
         [key]: value,
       });

@@ -15,15 +15,32 @@ export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
   notes: "",
 };
 
-export function normalizeGuidedInjuryState(
+function toGuidedTextValue(value: string | null | undefined): string {
+  return typeof value === "string" ? value : "";
+}
+
+export function coerceGuidedInjuryEditState(
   value: Partial<GuidedInjuryState> | null | undefined,
 ): GuidedInjuryState {
   return {
-    area: (value?.area ?? "").trim(),
+    area: toGuidedTextValue(value?.area),
     severity: normalizeSeverityToken(value?.severity ?? ""),
-    trend: (value?.trend ?? "").trim(),
-    avoid: (value?.avoid ?? "").trim(),
-    notes: (value?.notes ?? "").trim(),
+    trend: toGuidedTextValue(value?.trend),
+    avoid: toGuidedTextValue(value?.avoid),
+    notes: toGuidedTextValue(value?.notes),
+  };
+}
+
+export function normalizeGuidedInjuryState(
+  value: Partial<GuidedInjuryState> | null | undefined,
+): GuidedInjuryState {
+  const draft = coerceGuidedInjuryEditState(value);
+  return {
+    area: draft.area.trim(),
+    severity: draft.severity,
+    trend: draft.trend.trim(),
+    avoid: draft.avoid.trim(),
+    notes: draft.notes.trim(),
   };
 }
 
