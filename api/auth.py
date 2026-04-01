@@ -51,9 +51,10 @@ class SupabaseAuthService:
         try:
             response = self.client.auth.get_user(token)
         except Exception as exc:  # pragma: no cover - network/runtime integration
+            logger.exception("[auth] upstream token verification failed")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="invalid authentication token",
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="authentication service temporarily unavailable",
             ) from exc
 
         user = getattr(response, "user", None)

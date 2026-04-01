@@ -13,10 +13,6 @@ import {
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
 
-function sortPlansByCreatedAt<T extends { created_at: string }>(plans: T[]): T[] {
-  return [...plans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
-}
-
 function getPlanDisplayName(plan: { plan_name?: string | null; fight_date?: string | null }) {
   return plan.plan_name?.trim() || plan.fight_date || "Open saved plan";
 }
@@ -63,8 +59,7 @@ export default function HomePage() {
   }
 
   if (session && me) {
-    const plans = sortPlansByCreatedAt(me.plans);
-    const latestPlan = plans[0] ?? null;
+    const latestPlan = me.latest_plan ?? null;
     const draft = (me.profile.onboarding_draft as { current_step?: number } | null) ?? null;
     const latestIntake = me.latest_intake;
     const nextStepNumber = Number.isFinite(Number(draft?.current_step ?? 0)) ? Number(draft?.current_step ?? 0) + 1 : 1;
@@ -113,7 +108,7 @@ export default function HomePage() {
           <div className="metric-grid">
             <article className="metric-card">
               <p className="kicker">Saved plans</p>
-              <p className="metric-value">{plans.length}</p>
+              <p className="metric-value">{me.plan_count}</p>
               <p className="muted">All generations stay in history.</p>
             </article>
             <article className="metric-card">
@@ -154,23 +149,24 @@ export default function HomePage() {
               <h2>Recent plans</h2>
             </div>
             <div className="overview-card-body">
-              {plans.length ? (
+              {latestPlan ? (
                 <div className="plan-history-list">
-                  {plans.slice(0, 2).map((plan) => (
-                    <article key={plan.plan_id} className="plan-history-row">
-                      <div className="plan-history-copy">
-                        <p className="label">Fight date</p>
-                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                        <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
-                      </div>
-                      <div className="plan-history-meta">
-                        <span className="badge">{plan.status}</span>
-                        <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
-                          Open plan
-                        </Link>
-                      </div>
-                    </article>
-                  ))}
+                  <article className="plan-history-row">
+                    <div className="plan-history-copy">
+                      <p className="label">Latest saved plan</p>
+                      <h3 className="plan-card-title">{getPlanDisplayName(latestPlan)}</h3>
+                      <p className="muted">Created {new Date(latestPlan.created_at).toLocaleString()}</p>
+                    </div>
+                    <div className="plan-history-meta">
+                      <span className="badge">{latestPlan.status}</span>
+                      <Link href={`/plans/${latestPlan.plan_id}`} className="ghost-button">
+                        Open plan
+                      </Link>
+                    </div>
+                  </article>
+                  {me.plan_count > 1 ? (
+                    <p className="muted">You also have {me.plan_count - 1} older saved plan{me.plan_count - 1 === 1 ? "" : "s"}.</p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="support-panel">

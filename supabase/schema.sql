@@ -83,6 +83,27 @@ create table if not exists public.plans (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.generation_jobs (
+  id uuid primary key default gen_random_uuid(),
+  athlete_id uuid not null references public.profiles(id) on delete cascade,
+  client_request_id text not null,
+  source text not null default 'self_service',
+  request_payload jsonb not null default '{}'::jsonb,
+  status text not null default 'queued',
+  error text,
+  intake_id uuid references public.athlete_intakes(id) on delete set null,
+  stage1_result jsonb,
+  final_result jsonb,
+  plan_id uuid references public.plans(id) on delete set null,
+  attempt_count integer not null default 0,
+  heartbeat_at timestamptz,
+  started_at timestamptz,
+  completed_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint generation_jobs_athlete_client_request_key unique (athlete_id, client_request_id)
+);
+
 alter table public.plans add column if not exists draft_plan_text text not null default '';
 alter table public.plans add column if not exists final_plan_text text not null default '';
 alter table public.plans add column if not exists plan_name text not null default '';
@@ -90,10 +111,26 @@ alter table public.plans add column if not exists stage2_retry_text text not nul
 alter table public.plans add column if not exists stage2_validator_report jsonb not null default '{}'::jsonb;
 alter table public.plans add column if not exists stage2_status text not null default '';
 alter table public.plans add column if not exists stage2_attempt_count integer not null default 0;
+alter table public.generation_jobs add column if not exists source text not null default 'self_service';
+alter table public.generation_jobs add column if not exists request_payload jsonb not null default '{}'::jsonb;
+alter table public.generation_jobs add column if not exists status text not null default 'queued';
+alter table public.generation_jobs add column if not exists error text;
+alter table public.generation_jobs add column if not exists intake_id uuid references public.athlete_intakes(id) on delete set null;
+alter table public.generation_jobs add column if not exists stage1_result jsonb;
+alter table public.generation_jobs add column if not exists final_result jsonb;
+alter table public.generation_jobs add column if not exists plan_id uuid references public.plans(id) on delete set null;
+alter table public.generation_jobs add column if not exists attempt_count integer not null default 0;
+alter table public.generation_jobs add column if not exists heartbeat_at timestamptz;
+alter table public.generation_jobs add column if not exists started_at timestamptz;
+alter table public.generation_jobs add column if not exists completed_at timestamptz;
+alter table public.generation_jobs add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);
 create index if not exists plans_athlete_id_created_at_idx on public.plans (athlete_id, created_at desc);
+create index if not exists generation_jobs_athlete_id_created_at_idx on public.generation_jobs (athlete_id, created_at desc);
+create index if not exists generation_jobs_status_heartbeat_at_idx on public.generation_jobs (status, heartbeat_at);
+create unique index if not exists generation_jobs_athlete_client_request_uidx on public.generation_jobs (athlete_id, client_request_id);
 
 drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
@@ -101,9 +138,52 @@ before update on public.profiles
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists generation_jobs_set_updated_at on public.generation_jobs;
+create trigger generation_jobs_set_updated_at
+before update on public.generation_jobs
+for each row
+execute function public.set_updated_at();
+
+create or replace view public.admin_athlete_rollups as
+select
+  p.id,
+  p.email,
+  p.role,
+  p.full_name,
+  p.technical_style,
+  p.tactical_style,
+  p.stance,
+  p.professional_status,
+  p.record_summary,
+  p.athlete_timezone,
+  p.athlete_locale,
+  p.onboarding_draft,
+  p.created_at,
+  p.updated_at,
+  count(pl.id)::int as plan_count,
+  max(pl.created_at) as latest_plan_created_at
+from public.profiles p
+left join public.plans pl on pl.athlete_id = p.id
+group by
+  p.id,
+  p.email,
+  p.role,
+  p.full_name,
+  p.technical_style,
+  p.tactical_style,
+  p.stance,
+  p.professional_status,
+  p.record_summary,
+  p.athlete_timezone,
+  p.athlete_locale,
+  p.onboarding_draft,
+  p.created_at,
+  p.updated_at;
+
 alter table public.profiles enable row level security;
 alter table public.athlete_intakes enable row level security;
 alter table public.plans enable row level security;
+alter table public.generation_jobs enable row level security;
 
 drop policy if exists "profiles_self_or_admin_select" on public.profiles;
 create policy "profiles_self_or_admin_select" on public.profiles
@@ -129,6 +209,19 @@ for select using (athlete_id = auth.uid() or public.is_admin());
 drop policy if exists "plans_self_or_admin_insert" on public.plans;
 create policy "plans_self_or_admin_insert" on public.plans
 for insert with check (athlete_id = auth.uid() or public.is_admin());
+
+drop policy if exists "generation_jobs_self_or_admin_select" on public.generation_jobs;
+create policy "generation_jobs_self_or_admin_select" on public.generation_jobs
+for select using (athlete_id = auth.uid() or public.is_admin());
+
+drop policy if exists "generation_jobs_self_or_admin_insert" on public.generation_jobs;
+create policy "generation_jobs_self_or_admin_insert" on public.generation_jobs
+for insert with check (athlete_id = auth.uid() or public.is_admin());
+
+drop policy if exists "generation_jobs_self_or_admin_update" on public.generation_jobs;
+create policy "generation_jobs_self_or_admin_update" on public.generation_jobs
+for update using (athlete_id = auth.uid() or public.is_admin())
+with check (athlete_id = auth.uid() or public.is_admin());
 
 -- Grant admin role to designated admin accounts.
 -- Runs on every apply; safe to re-run (idempotent).

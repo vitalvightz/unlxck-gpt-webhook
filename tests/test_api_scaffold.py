@@ -44,6 +44,7 @@ class FakeStore:
         self.profiles: dict[str, dict] = {}
         self.intakes: dict[str, list[dict]] = {}
         self.plans: dict[str, dict] = {}
+        self.generation_jobs: dict[str, dict] = {}
 
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
@@ -100,6 +101,7 @@ class FakeStore:
         row = {
             "id": plan_id,
             "athlete_id": athlete_id,
+            "intake_id": intake_id,
             "fight_date": request.fight_date,
             "technical_style": request.athlete.technical_style,
             "plan_name": "",
@@ -124,7 +126,8 @@ class FakeStore:
         return row
 
     def list_user_plans(self, athlete_id: str) -> list[dict]:
-        return [plan for plan in self.plans.values() if plan["athlete_id"] == athlete_id]
+        rows = [plan for plan in self.plans.values() if plan["athlete_id"] == athlete_id]
+        return sorted(rows, key=lambda row: row["created_at"], reverse=True)
 
     def get_plan(self, plan_id: str) -> dict | None:
         return self.plans.get(plan_id)
@@ -144,6 +147,78 @@ class FakeStore:
         if plan_id not in self.plans:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         del self.plans[plan_id]
+
+    def create_or_get_generation_job(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+        source: str,
+        request_payload: dict,
+    ) -> dict:
+        for job in self.generation_jobs.values():
+            if job["athlete_id"] == athlete_id and job["client_request_id"] == client_request_id:
+                return dict(job)
+        now = _now()
+        job_id = f"job_{uuid4().hex[:10]}"
+        job = {
+            "id": job_id,
+            "athlete_id": athlete_id,
+            "client_request_id": client_request_id,
+            "source": source,
+            "request_payload": request_payload,
+            "status": "queued",
+            "error": None,
+            "intake_id": None,
+            "stage1_result": None,
+            "final_result": None,
+            "plan_id": None,
+            "attempt_count": 0,
+            "heartbeat_at": None,
+            "started_at": None,
+            "completed_at": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.generation_jobs[job_id] = job
+        return dict(job)
+
+    def get_generation_job(self, job_id: str) -> dict | None:
+        job = self.generation_jobs.get(job_id)
+        return dict(job) if job else None
+
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
+        job = self.generation_jobs.get(job_id)
+        if not job:
+            return None
+        heartbeat_raw = job.get("heartbeat_at")
+        heartbeat = None
+        if isinstance(heartbeat_raw, str) and heartbeat_raw:
+            heartbeat = datetime.fromisoformat(heartbeat_raw.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        is_stale_running = job["status"] == "running" and (
+            heartbeat is None or (now - heartbeat).total_seconds() >= stale_after_seconds
+        )
+        if job["status"] not in {"queued", "running"}:
+            return None
+        if job["status"] == "running" and not is_stale_running:
+            return None
+        now_iso = _now()
+        job["status"] = "running"
+        job["heartbeat_at"] = now_iso
+        job["started_at"] = job["started_at"] or now_iso
+        job["attempt_count"] = int(job.get("attempt_count") or 0) + 1
+        job["error"] = None
+        job["updated_at"] = now_iso
+        return dict(job)
+
+    def update_generation_job(self, job_id: str, **changes: dict) -> dict:
+        job = self.generation_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
+        job.update(changes)
+        job["updated_at"] = _now()
+        return dict(job)
 
     def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
         row = self.plans.get(plan_id)
@@ -1695,25 +1770,39 @@ def test_generate_plan_returns_existing_active_job_for_same_athlete():
     client, store, _ = _build_client()
 
     existing_job = {
-        "job_id": "job_existing123",
+        "id": "job_existing123",
         "athlete_id": "athlete-1",
+        "client_request_id": "same-attempt",
+        "source": "self_serve",
+        "request_payload": _build_request().model_dump(mode="json"),
         "status": "running",
         "created_at": _now(),
         "updated_at": _now(),
+        "started_at": _now(),
+        "heartbeat_at": _now(),
+        "completed_at": None,
+        "attempt_count": 1,
         "error": None,
+        "intake_id": None,
+        "stage1_result": None,
+        "final_result": None,
         "plan_id": None,
-        "latest_plan_id": None,
     }
-    client.app.state.generation_jobs[existing_job["job_id"]] = app_module.GenerationJobState(**existing_job)
+    store.generation_jobs[existing_job["id"]] = dict(existing_job)
 
     response = client.post(
         "/api/plans/generate",
-        headers={"Authorization": "Bearer athlete-token"},
+        headers={
+            "Authorization": "Bearer athlete-token",
+            "X-Client-Request-Id": "same-attempt",
+        },
         json=_build_request().model_dump(mode="json"),
     )
 
     assert response.status_code == 202
-    assert response.json() == existing_job
+    assert response.json()["job_id"] == existing_job["id"]
+    assert response.json()["client_request_id"] == "same-attempt"
+    assert response.json()["status"] == "running"
     assert store.get_latest_intake("athlete-1") is None
     assert len(store.plans) == 0
 

@@ -31,6 +31,7 @@ function getApiBaseUrl(): string {
 
 type ApiRequestInit = RequestInit & {
   token?: string | null;
+  clientRequestId?: string | null;
 };
 
 /** Error thrown for non-2xx HTTP responses. Includes the HTTP `status` code. */
@@ -131,6 +132,9 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   }
   if (init?.token) {
     headers.set("Authorization", `Bearer ${init.token}`);
+  }
+  if (init?.clientRequestId) {
+    headers.set("X-Client-Request-Id", init.clientRequestId);
   }
 
   const method = init?.method ?? "GET";
@@ -287,11 +291,16 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
   });
 }
 
-export function createGenerationJob(token: string, payload: PlanRequest): Promise<GenerationJobResponse> {
+export function createGenerationJob(
+  token: string,
+  payload: PlanRequest,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>("/api/plans/generate", {
       method: "POST",
       token,
+      clientRequestId,
       body: JSON.stringify(payload),
     }),
   );
@@ -342,11 +351,16 @@ export function getAdminAthlete(token: string, athleteId: string): Promise<Admin
   return readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token });
 }
 
-export function generateAdminAthletePlanFromLatestIntake(token: string, athleteId: string): Promise<GenerationJobResponse> {
+export function generateAdminAthletePlanFromLatestIntake(
+  token: string,
+  athleteId: string,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
   return withTransientRetries(() =>
     readJson<GenerationJobResponse>(`/api/admin/athletes/${athleteId}/plans/generate-from-latest-intake`, {
       method: "POST",
       token,
+      clientRequestId,
     }),
   );
 }

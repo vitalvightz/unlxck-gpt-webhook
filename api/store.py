@@ -5,6 +5,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Protocol
 
 import httpx
@@ -15,6 +16,13 @@ from .auth import AuthenticatedUser
 from .models import PlanRequest, ProfileUpdateRequest
 
 logger = logging.getLogger(__name__)
+
+PLAN_SUMMARY_SELECT = "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, pdf_url, created_at"
+GENERATION_JOB_SELECT = (
+    "id, athlete_id, client_request_id, source, request_payload, status, error, "
+    "intake_id, stage1_result, final_result, plan_id, attempt_count, heartbeat_at, "
+    "started_at, completed_at, created_at, updated_at"
+)
 
 _TRANSIENT_SUPABASE_ERRORS = (
     httpx.RemoteProtocolError,
@@ -51,6 +59,21 @@ class AppStore(Protocol):
 
     def delete_plan(self, plan_id: str) -> None: ...
 
+    def create_or_get_generation_job(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+        source: str,
+        request_payload: dict[str, Any],
+    ) -> dict[str, Any]: ...
+
+    def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
+
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
+
+    def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
+
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_admin_plans(self) -> list[dict[str, Any]]: ...
@@ -68,6 +91,24 @@ def _encode_structured_text(value: Any) -> str | None:
     if isinstance(value, str):
         return value
     return json.dumps(value)
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_datetime(value: Any) -> datetime | None:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            normalized = value.replace("Z", "+00:00")
+            return datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    return None
 
 
 @dataclass
@@ -313,6 +354,7 @@ class SupabaseAppStore:
             "fight_date": request.fight_date,
             "technical_style": request.athlete.technical_style,
             "full_name": request.athlete.full_name,
+            "plan_name": "",
             "status": result.get("status", "generated"),
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
@@ -369,7 +411,7 @@ class SupabaseAppStore:
     def list_user_plans(self, athlete_id: str) -> list[dict[str, Any]]:
         response = (
             self.client.table("plans")
-            .select("*")
+            .select(PLAN_SUMMARY_SELECT)
             .eq("athlete_id", athlete_id)
             .order("created_at", desc=True)
             .execute()
@@ -386,6 +428,117 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .order("created_at", desc=True)
         )
+
+    def create_or_get_generation_job(
+        self,
+        *,
+        athlete_id: str,
+        client_request_id: str,
+        source: str,
+        request_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        existing = self._select_first(
+            self.client.table("generation_jobs")
+            .select(GENERATION_JOB_SELECT)
+            .eq("athlete_id", athlete_id)
+            .eq("client_request_id", client_request_id)
+            .order("created_at", desc=True)
+        )
+        if existing:
+            return existing
+
+        payload = {
+            "athlete_id": athlete_id,
+            "client_request_id": client_request_id,
+            "source": source,
+            "request_payload": request_payload,
+            "status": "queued",
+            "attempt_count": 0,
+            "heartbeat_at": None,
+            "started_at": None,
+            "completed_at": None,
+            "error": None,
+            "intake_id": None,
+            "stage1_result": None,
+            "final_result": None,
+            "plan_id": None,
+        }
+        try:
+            response = self.client.table("generation_jobs").insert(payload).execute()
+            rows = getattr(response, "data", None) or []
+            if rows:
+                return rows[0]
+        except Exception:
+            logger.exception(
+                "[store] create_or_get_generation_job:insert_exception athlete_id=%s client_request_id=%s",
+                athlete_id,
+                client_request_id,
+            )
+
+        existing = self._select_first(
+            self.client.table("generation_jobs")
+            .select(GENERATION_JOB_SELECT)
+            .eq("athlete_id", athlete_id)
+            .eq("client_request_id", client_request_id)
+            .order("created_at", desc=True)
+        )
+        if existing:
+            return existing
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="failed to persist generation job",
+        )
+
+    def get_generation_job(self, job_id: str) -> dict[str, Any] | None:
+        return self._select_first(
+            self.client.table("generation_jobs").select(GENERATION_JOB_SELECT).eq("id", job_id)
+        )
+
+    def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
+        job = self.get_generation_job(job_id)
+        if not job:
+            return None
+
+        current_status = str(job.get("status") or "")
+        now_iso = _utc_now_iso()
+        now_dt = _parse_datetime(now_iso)
+        heartbeat = _parse_datetime(job.get("heartbeat_at"))
+        is_stale_running = (
+            current_status == "running"
+            and (
+                heartbeat is None
+                or now_dt is None
+                or (now_dt - heartbeat).total_seconds() >= stale_after_seconds
+            )
+        )
+
+        if current_status not in {"queued", "running"}:
+            return None
+        if current_status == "running" and not is_stale_running:
+            return None
+
+        payload = {
+            "status": "running",
+            "heartbeat_at": now_iso,
+            "started_at": job.get("started_at") or now_iso,
+            "error": None,
+            "attempt_count": int(job.get("attempt_count") or 0) + 1,
+            "updated_at": now_iso,
+        }
+        self.client.table("generation_jobs").update(payload).eq("id", job_id).execute()
+        return self.get_generation_job(job_id)
+
+    def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]:
+        payload = dict(changes)
+        payload["updated_at"] = _utc_now_iso()
+        self.client.table("generation_jobs").update(payload).eq("id", job_id).execute()
+        updated = self.get_generation_job(job_id)
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="generation job not found",
+            )
+        return updated
 
     def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]:
         try:
@@ -457,7 +610,10 @@ class SupabaseAppStore:
     def list_admin_plans(self) -> list[dict[str, Any]]:
         response = (
             self.client.table("plans")
-            .select("*, profiles!plans_athlete_id_fkey(email, full_name)")
+            .select(
+                "id, athlete_id, full_name, fight_date, technical_style, plan_name, status, "
+                "pdf_url, created_at, profiles!plans_athlete_id_fkey(email, full_name)"
+            )
             .order("created_at", desc=True)
             .execute()
         )
@@ -465,26 +621,17 @@ class SupabaseAppStore:
 
     def list_admin_athletes(self) -> list[dict[str, Any]]:
         response = (
-            self.client.table("profiles")
+            self.client.table("admin_athlete_rollups")
             .select("*")
             .order("updated_at", desc=True)
             .execute()
         )
-        athletes = getattr(response, "data", None) or []
-        for athlete in athletes:
-            plans = self.list_user_plans(str(athlete["id"]))
-            athlete["plan_count"] = len(plans)
-            athlete["latest_plan_created_at"] = plans[0]["created_at"] if plans else None
-        return athletes
+        return getattr(response, "data", None) or []
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
-        profile = self._select_first(self.client.table("profiles").select("*").eq("id", athlete_id))
-        if not profile:
-            return None
-        plans = self.list_user_plans(athlete_id)
-        profile["plan_count"] = len(plans)
-        profile["latest_plan_created_at"] = plans[0]["created_at"] if plans else None
-        return profile
+        return self._select_first(
+            self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
+        )
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:

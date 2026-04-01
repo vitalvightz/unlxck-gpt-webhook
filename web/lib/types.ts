@@ -134,9 +134,12 @@ export type PlanDetail = PlanSummary & {
 export type GenerationJobResponse = {
   job_id: string;
   athlete_id: string;
+  client_request_id: string;
   status: GenerationJobStatus;
   created_at: string;
   updated_at: string;
+  started_at?: string | null;
+  completed_at?: string | null;
   error?: string | null;
   plan_id?: string | null;
   latest_plan_id?: string | null;
@@ -145,7 +148,8 @@ export type GenerationJobResponse = {
 export type MeResponse = {
   profile: ProfileRecord;
   latest_intake?: PlanRequest | null;
-  plans: PlanSummary[];
+  latest_plan?: PlanSummary | null;
+  plan_count: number;
 };
 
 export type AdminAthleteRecord = {

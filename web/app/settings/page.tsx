@@ -48,7 +48,7 @@ function isSafeImageUrl(url: string): boolean {
 const MAX_AVATAR_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export default function SettingsPage() {
-  const { me, refreshMe, session } = useAppSession();
+  const { me, replaceMe, session } = useAppSession();
   const [fullName, setFullName] = useState("");
   const [technicalStyle, setTechnicalStyle] = useState("");
   const [tacticalStyle, setTacticalStyle] = useState("");
@@ -103,7 +103,7 @@ export default function SettingsPage() {
 
     startTransition(async () => {
       try {
-        await updateMe(session.access_token, {
+        const updatedMe = await updateMe(session.access_token, {
           full_name: fullName,
           athlete_timezone: detectDeviceTimeZone() || me?.profile.athlete_timezone || "",
           athlete_locale: detectDeviceLocale() || me?.profile.athlete_locale || "",
@@ -114,7 +114,7 @@ export default function SettingsPage() {
           record,
           avatar_url: avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? avatarUrl.trim() : null,
         });
-        await refreshMe();
+        replaceMe(updatedMe);
         setMessage("Settings updated.");
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : "Unable to update settings.");

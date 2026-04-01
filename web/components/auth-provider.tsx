@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -14,10 +14,12 @@ type DemoRole = "athlete" | "admin";
 
 type AppSessionValue = {
   isReady: boolean;
+  isMeHydrated: boolean;
   session: AppSession | null;
   me: MeResponse | null;
   demoMode: boolean;
   refreshMe: () => Promise<void>;
+  replaceMe: (nextMe: MeResponse | null) => void;
   signOut: () => Promise<void>;
   signInDemo: (role?: DemoRole) => Promise<void>;
 };
@@ -32,35 +34,65 @@ function tokenForRole(role: DemoRole): string {
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [isReady, setIsReady] = useState(false);
+  const [isMeHydrated, setIsMeHydrated] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
+  const handledAccessTokenRef = useRef<string | null>(null);
+  const loadGenerationRef = useRef(0);
 
-  async function loadMe(nextSession: AppSession | null) {
+  async function loadMe(nextSession: AppSession | null, options: { allowRefresh?: boolean } = {}) {
+    const allowRefresh = options.allowRefresh ?? true;
+    const currentLoadId = loadGenerationRef.current + 1;
+    loadGenerationRef.current = currentLoadId;
+
     if (!nextSession?.access_token) {
-      setMe(null);
-      setIsReady(true);
+      if (loadGenerationRef.current === currentLoadId) {
+        setMe(null);
+        setIsMeHydrated(true);
+        setIsReady(true);
+      }
       return;
     }
 
+    setIsMeHydrated(false);
+
     try {
       const nextMe = await getMe(nextSession.access_token);
+      if (loadGenerationRef.current !== currentLoadId) {
+        return;
+      }
       setMe(nextMe);
+      setSession(nextSession);
     } catch (err) {
-      setMe(null);
-      // If the token is rejected as unauthorized, clear the stale session so
-      // the browser stops hammering /api/me with an invalid credential.
-      if (err instanceof ApiError && err.status === 401) {
-        if (!DEMO_MODE) {
-          try {
-            await getSupabaseBrowserClient().auth.signOut();
-          } catch {
-            // Ignore errors during cleanup sign-out.
+      if (loadGenerationRef.current !== currentLoadId) {
+        return;
+      }
+
+      if (!DEMO_MODE && err instanceof ApiError && err.status === 401 && allowRefresh) {
+        try {
+          const client = getSupabaseBrowserClient();
+          const refreshResult = await client.auth.refreshSession();
+          const refreshedAccessToken = refreshResult.data.session?.access_token ?? null;
+          if (refreshedAccessToken) {
+            const refreshedSession = { access_token: refreshedAccessToken };
+            handledAccessTokenRef.current = refreshedAccessToken;
+            await loadMe(refreshedSession, { allowRefresh: false });
+            return;
           }
+        } catch {
+          // Treat refresh failures as a genuine session expiry below.
         }
+      }
+
+      if (err instanceof ApiError && err.status === 401) {
         setSession(null);
+        setMe(null);
       }
     } finally {
-      setIsReady(true);
+      if (loadGenerationRef.current === currentLoadId) {
+        setIsMeHydrated(true);
+        setIsReady(true);
+      }
     }
   }
 
@@ -72,11 +104,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       const token = window.localStorage.getItem(DEMO_TOKEN_KEY);
       if (!token) {
         setIsReady(true);
+        setIsMeHydrated(true);
         return () => {
           active = false;
         };
       }
       const nextSession = { access_token: token };
+      handledAccessTokenRef.current = token;
       setSession(nextSession);
       void loadMe(nextSession);
       return () => {
@@ -89,21 +123,20 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       client = getSupabaseBrowserClient();
     } catch {
       setIsReady(true);
+      setIsMeHydrated(true);
       return () => {
         active = false;
       };
     }
 
-    // Use onAuthStateChange as the single source of truth for session and /api/me
-    // loads. The INITIAL_SESSION event fires on subscription with the stored
-    // session, so a separate getSession() call is only used to set the session
-    // state for the initial render without triggering a duplicate /api/me call.
     client.auth.getSession().then(({ data }) => {
       if (!active) {
         return;
       }
       const nextSession = data.session ? { access_token: data.session.access_token } : null;
+      handledAccessTokenRef.current = nextSession?.access_token ?? null;
       setSession(nextSession);
+      void loadMe(nextSession);
     });
 
     const authState = client.auth.onAuthStateChange((_event, nextSession) => {
@@ -111,6 +144,11 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         return;
       }
       const mappedSession = nextSession ? { access_token: nextSession.access_token } : null;
+      const nextToken = mappedSession?.access_token ?? null;
+      if (handledAccessTokenRef.current === nextToken) {
+        return;
+      }
+      handledAccessTokenRef.current = nextToken;
       setSession(mappedSession);
       void loadMe(mappedSession);
     });
@@ -126,20 +164,29 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     await loadMe(session);
   }
 
+  function replaceMe(nextMe: MeResponse | null) {
+    setMe(nextMe);
+    setIsMeHydrated(true);
+  }
+
   async function signInDemo(role: DemoRole = "athlete") {
     const nextSession = { access_token: tokenForRole(role) };
     window.localStorage.setItem(DEMO_TOKEN_KEY, nextSession.access_token);
+    handledAccessTokenRef.current = nextSession.access_token;
     setSession(nextSession);
     setIsReady(false);
+    setIsMeHydrated(false);
     await loadMe(nextSession);
   }
 
   async function signOut() {
     if (DEMO_MODE) {
       window.localStorage.removeItem(DEMO_TOKEN_KEY);
+      handledAccessTokenRef.current = null;
       setSession(null);
       setMe(null);
       setIsReady(true);
+      setIsMeHydrated(true);
       return;
     }
 
@@ -148,13 +195,27 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     } catch {
       // Ignore missing client during sign-out cleanup.
     }
+    handledAccessTokenRef.current = null;
     setSession(null);
     setMe(null);
     setIsReady(true);
+    setIsMeHydrated(true);
   }
 
   return (
-    <AppSessionContext.Provider value={{ isReady, session, me, demoMode: DEMO_MODE, refreshMe, signOut, signInDemo }}>
+    <AppSessionContext.Provider
+      value={{
+        isReady,
+        isMeHydrated,
+        session,
+        me,
+        demoMode: DEMO_MODE,
+        refreshMe,
+        replaceMe,
+        signOut,
+        signInDemo,
+      }}
+    >
       {children}
     </AppSessionContext.Provider>
   );

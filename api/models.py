@@ -257,9 +257,12 @@ class PlanDetail(PlanSummary):
 class GenerationJobResponse(BaseModel):
     job_id: str
     athlete_id: str
+    client_request_id: str
     status: GenerationJobStatus
     created_at: str
     updated_at: str
+    started_at: str | None = None
+    completed_at: str | None = None
     error: str | None = None
     plan_id: str | None = None
     latest_plan_id: str | None = None
@@ -268,7 +271,8 @@ class GenerationJobResponse(BaseModel):
 class MeResponse(BaseModel):
     profile: ProfileRecord
     latest_intake: dict[str, Any] | None = None
-    plans: list[PlanSummary] = Field(default_factory=list)
+    latest_plan: PlanSummary | None = None
+    plan_count: int = 0
 
 
 class AdminAthleteRecord(BaseModel):

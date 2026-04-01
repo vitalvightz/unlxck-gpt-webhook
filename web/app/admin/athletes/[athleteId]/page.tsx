@@ -14,11 +14,9 @@ import {
 } from "@/components/admin-athlete-profile";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
-import { ApiError, generateAdminAthletePlanFromLatestIntake, getAdminAthlete, getGenerationJob } from "@/lib/api";
+import { generateAdminAthletePlanFromLatestIntake, getAdminAthlete } from "@/lib/api";
+import { useGenerationController } from "@/lib/generation-controller";
 import type { AdminAthleteRecord } from "@/lib/types";
-
-const POLL_INTERVAL_MS = 2000;
-const POLL_TIMEOUT_MS = 5 * 60 * 1000;
 
 export default function AdminAthletePage() {
   const { session } = useAppSession();
@@ -26,8 +24,27 @@ export default function AdminAthletePage() {
   const athleteId = typeof params?.athleteId === "string" ? params.athleteId : null;
   const [athlete, setAthlete] = useState<AdminAthleteRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generationMessage, setGenerationMessage] = useState<string | null>(null);
+
+  const controller = useGenerationController({
+    token: session?.access_token ?? null,
+    storageKey: athleteId ? `unlxck:pending-generation:admin:${athleteId}` : null,
+    createJob: async (clientRequestId) => {
+      if (!session?.access_token || !athleteId) {
+        throw new Error("Session or athlete context is missing.");
+      }
+      return generateAdminAthletePlanFromLatestIntake(session.access_token, athleteId, clientRequestId);
+    },
+    onComplete: ({ planId, status, recovered }) => {
+      const search = new URLSearchParams();
+      if (status === "review_required") {
+        search.set("review_required", "1");
+      }
+      if (recovered) {
+        search.set("recovered", "1");
+      }
+      window.location.replace(`/plans/${planId}${search.toString() ? `?${search.toString()}` : ""}`);
+    },
+  });
 
   useEffect(() => {
     if (!session?.access_token || !athleteId) {
@@ -41,46 +58,18 @@ export default function AdminAthletePage() {
       });
   }, [athleteId, session?.access_token]);
 
+  useEffect(() => {
+    if (controller.error) {
+      setError(controller.error);
+    }
+  }, [controller.error]);
+
   async function handleGenerateNewPlan() {
-    if (!session?.access_token || !athleteId || isGenerating) {
+    if (!athlete?.latest_intake || !athleteId || controller.isGenerating) {
       return;
     }
-    setIsGenerating(true);
     setError(null);
-    setGenerationMessage("Submitting a new generation job using the athlete's latest saved intake.");
-    try {
-      const job = await generateAdminAthletePlanFromLatestIntake(session.access_token, athleteId);
-      const startedAt = Date.now();
-
-      while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
-        const currentJob = await getGenerationJob(session.access_token, job.job_id);
-        if (currentJob.status === "queued") {
-          setGenerationMessage("Job queued. Stage 1 and Stage 2 will start shortly.");
-        } else if (currentJob.status === "running") {
-          setGenerationMessage("Generating plan now (Stage 1 + Stage 2).");
-        } else if (currentJob.status === "failed") {
-          throw new Error(currentJob.error || "Plan generation failed.");
-        } else if (currentJob.status === "completed" || currentJob.status === "review_required") {
-          const planId = currentJob.plan_id || currentJob.latest_plan_id;
-          if (!planId) {
-            throw new Error("Generation completed but no plan ID was returned.");
-          }
-          window.location.replace(`/plans/${planId}${currentJob.status === "review_required" ? "?review_required=1" : ""}`);
-          return;
-        }
-
-        await new Promise((resolve) => window.setTimeout(resolve, POLL_INTERVAL_MS));
-      }
-      throw new Error("Plan generation is taking longer than expected. Please try again in a moment.");
-    } catch (generationError) {
-      if (generationError instanceof ApiError || generationError instanceof Error) {
-        setError(generationError.message);
-      } else {
-        setError("Unable to generate a new plan from the latest intake.");
-      }
-      setGenerationMessage(null);
-      setIsGenerating(false);
-    }
+    await controller.startGeneration();
   }
 
   return (
@@ -113,12 +102,12 @@ export default function AdminAthletePage() {
               type="button"
               className="primary-button"
               onClick={handleGenerateNewPlan}
-              disabled={!athlete.latest_intake || isGenerating}
+              disabled={!athlete.latest_intake || controller.isGenerating}
             >
-              {isGenerating ? "Generating…" : "Generate new plan"}
+              {controller.isGenerating ? "Generating..." : "Generate new plan"}
             </button>
           </div>
-          {generationMessage ? <p className="muted">{generationMessage}</p> : null}
+          {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
           {!athlete.latest_intake ? (
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
           ) : null}

@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
-import { deletePlan, renamePlan } from "@/lib/api";
+import { deletePlan, listPlans, renamePlan } from "@/lib/api";
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import type { PlanSummary } from "@/lib/types";
 
@@ -124,16 +124,37 @@ function PlanCard({
 
 export default function PlansPage() {
   const router = useRouter();
-  const { me, session } = useAppSession();
+  const { session } = useAppSession();
+  const [plans, setPlans] = useState<PlanSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
-  const plans = useMemo(() => {
-    const sourcePlans = localPlans ?? me?.plans ?? [];
+  const visiblePlans = useMemo(() => {
+    const sourcePlans = localPlans ?? plans;
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
-  }, [localPlans, me?.plans]);
+  }, [localPlans, plans]);
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    listPlans(session.access_token)
+      .then((nextPlans) => {
+        setPlans(nextPlans);
+      })
+      .catch((plansError) => {
+        setError(plansError instanceof Error ? plansError.message : "Unable to load plan history.");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [session?.access_token]);
 
   function handlePlanDeleted(planId: string) {
     setLocalPlans((current) => {
-      const source = current ?? me?.plans ?? [];
+      const source = current ?? plans;
       return source.filter((plan) => plan.plan_id !== planId);
     });
     router.refresh();
@@ -141,7 +162,7 @@ export default function PlansPage() {
 
   function handlePlanRenamed(updatedPlan: PlanSummary) {
     setLocalPlans((current) => {
-      const source = current ?? me?.plans ?? [];
+      const source = current ?? plans;
       return source.map((plan) => (plan.plan_id === updatedPlan.plan_id ? { ...plan, ...updatedPlan } : plan));
     });
     router.refresh();
@@ -158,13 +179,14 @@ export default function PlansPage() {
           </div>
           <div className="status-card">
             <p className="status-label">Saved</p>
-            <h2 className="plan-summary-title">{plans.length}</h2>
+            <h2 className="plan-summary-title">{visiblePlans.length}</h2>
             <p className="muted">Every generated plan stays attached to your account.</p>
           </div>
         </div>
 
+        {error ? <div className="error-banner">{error}</div> : null}
         <div className="plans-grid">
-          {plans.map((plan) => (
+          {visiblePlans.map((plan) => (
             <PlanCard
               key={plan.plan_id}
               plan={plan}
@@ -174,7 +196,7 @@ export default function PlansPage() {
             />
           ))}
 
-          {!plans.length ? (
+          {!isLoading && !visiblePlans.length ? (
             <article className="list-card plan-card">
               <div className="form-section-header">
                 <p className="kicker">No plans yet</p>
@@ -186,6 +208,15 @@ export default function PlansPage() {
                   Start onboarding
                 </Link>
               </div>
+            </article>
+          ) : null}
+          {isLoading ? (
+            <article className="list-card plan-card">
+              <div className="form-section-header">
+                <p className="kicker">Loading</p>
+                <h2>Fetching your saved plans</h2>
+              </div>
+              <p className="muted">Rebuilding your plan history now.</p>
             </article>
           ) : null}
         </div>

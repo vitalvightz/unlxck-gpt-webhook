@@ -379,7 +379,7 @@ function syncDeviceFields(current: PlanRequest): PlanRequest {
 
 export function PlanIntakeForm() {
   const router = useRouter();
-  const { me, refreshMe, session } = useAppSession();
+  const { me, replaceMe, session } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
   const [guidedInjury, setGuidedInjury] = useState<GuidedInjuryState>(EMPTY_GUIDED_INJURY);
@@ -595,7 +595,7 @@ export function PlanIntakeForm() {
     }
     const nextForm = buildFormSnapshot();
     setForm(nextForm);
-    await updateMe(session.access_token, {
+    const updatedMe = await updateMe(session.access_token, {
       full_name: nextForm.athlete.full_name,
       technical_style: nextForm.athlete.technical_style,
       tactical_style: nextForm.athlete.tactical_style,
@@ -609,7 +609,7 @@ export function PlanIntakeForm() {
         current_step: step,
       },
     });
-    await refreshMe();
+    replaceMe(updatedMe);
   }
 
   function handleSaveDraft() {
