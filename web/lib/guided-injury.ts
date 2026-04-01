@@ -241,6 +241,26 @@ export function toNormalizedInjuryClauses(text: string): string[] {
     .filter(Boolean);
 }
 
+export function getInjuryMismatchContextKey(original: string, generated: string): string {
+  const originalClauses = toNormalizedInjuryClauses(original);
+  const generatedClauses = toNormalizedInjuryClauses(generated);
+
+  if (!originalClauses.length || !generatedClauses.length) {
+    return "";
+  }
+
+  for (const clause of originalClauses) {
+    if (!clauseIsCovered(clause, generatedClauses)) {
+      return JSON.stringify({
+        original: originalClauses,
+        generated: generatedClauses,
+      });
+    }
+  }
+
+  return "";
+}
+
 /** Returns true when needle is semantically present in at least one haystack item. */
 function clauseIsCovered(needle: string, haystack: string[]): boolean {
   return haystack.some((h) => h === needle || h.includes(needle));
@@ -252,16 +272,5 @@ function clauseIsCovered(needle: string, haystack: string[]): boolean {
  * like "Avoid:" / "Notes:", and parenthetical descriptor groups – do not
  * constitute a meaningful mismatch. */
 export function hasMeaningfulInjuryMismatch(original: string, generated: string): boolean {
-  const originalClauses = toNormalizedInjuryClauses(original);
-  const generatedClauses = toNormalizedInjuryClauses(generated);
-
-  if (!originalClauses.length || !generatedClauses.length) return false;
-
-  for (const clause of originalClauses) {
-    if (!clauseIsCovered(clause, generatedClauses)) {
-      return true;
-    }
-  }
-
-  return false;
+  return Boolean(getInjuryMismatchContextKey(original, generated));
 }
