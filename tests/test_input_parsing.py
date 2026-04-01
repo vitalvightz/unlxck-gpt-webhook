@@ -286,7 +286,7 @@ def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     ("guided_severity", "expected_severity"),
     [("low", "mild"), ("high", "severe")],
 )
-def test_guided_injury_payload_normalizes_guided_severity_labels(guided_severity, expected_severity):
+def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guided_severity, expected_severity):
     payload = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},

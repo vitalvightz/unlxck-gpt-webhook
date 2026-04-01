@@ -11,6 +11,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 import api.app as app_module
 from api.app import create_app
@@ -600,7 +601,7 @@ def test_plan_request_to_payload_includes_guided_injury_when_present():
     ("guided_severity", "expected_severity"),
     [("low", "low"), ("mild", "low"), ("moderate", "moderate"), ("severe", "high"), ("high", "high")],
 )
-def test_plan_request_guided_injury_severity_normalizes_to_frontend_vocab(guided_severity, expected_severity):
+def test_plan_request_guided_injury_severity_accepts_and_normalizes_aliases(guided_severity, expected_severity):
     payload = PlanRequest(
         athlete={
             "full_name": "Ari Mensah",
@@ -617,7 +618,7 @@ def test_plan_request_guided_injury_severity_normalizes_to_frontend_vocab(guided
 
 
 def test_plan_request_guided_injury_severity_rejects_unknown_values():
-    with pytest.raises(Exception, match="guided injury severity must be one of low, moderate, or high"):
+    with pytest.raises(ValidationError, match="guided injury severity must be one of low, moderate, or high"):
         PlanRequest(
             athlete={
                 "full_name": "Ari Mensah",

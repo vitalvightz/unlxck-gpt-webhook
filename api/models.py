@@ -11,6 +11,8 @@ GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
 
 GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
 _RECORD_PATTERN = re.compile(r"^\d+-\d+(?:-\d+)?$")
+# Keep this alias map aligned with web/lib/intake-options.ts so the API accepts
+# legacy mild/severe inputs while normalizing to the frontend low/moderate/high vocabulary.
 _GUIDED_INJURY_SEVERITY_ALIASES = {
     "": "",
     "low": "low",
