@@ -54,3 +54,29 @@ test("captures notes-only text that begins with Notes and includes later sentenc
     },
   );
 });
+
+test("normalizes mild severity alias to low", () => {
+  assert.deepStrictEqual(
+    parseGuidedInjuryState("Right knee (mild, stable)"),
+    {
+      area: "Right knee",
+      severity: "low",
+      trend: "stable",
+      avoid: "",
+      notes: "",
+    },
+  );
+});
+
+test("normalizes severe severity alias to high", () => {
+  assert.deepStrictEqual(
+    parseGuidedInjuryState("Left shoulder (severe, worsening)"),
+    {
+      area: "Left shoulder",
+      severity: "high",
+      trend: "worsening",
+      avoid: "",
+      notes: "",
+    },
+  );
+});

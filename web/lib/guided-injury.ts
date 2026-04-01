@@ -1,19 +1,10 @@
+import { normalizeGuidedInjurySeverity } from "./intake-options.ts";
 import type { GuidedInjuryInput } from "./types";
 
 export type GuidedInjuryState = Required<GuidedInjuryInput>;
 
-// Mirrors the alias map from intake-options.ts so that mild/severe
-// are accepted in addition to the canonical low/moderate/high values.
-const SEVERITY_ALIASES: Record<string, "low" | "moderate" | "high"> = {
-  low: "low",
-  mild: "low",
-  moderate: "moderate",
-  high: "high",
-  severe: "high",
-};
-
 function normalizeSeverityToken(token: string): "low" | "moderate" | "high" | "" {
-  return SEVERITY_ALIASES[token.trim().toLowerCase()] ?? "";
+  return normalizeGuidedInjurySeverity(token);
 }
 
 export const EMPTY_GUIDED_INJURY: GuidedInjuryState = {
