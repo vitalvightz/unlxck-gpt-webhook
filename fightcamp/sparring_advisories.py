@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
+from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -347,6 +348,7 @@ def _build_week_advisory(
     injuries: list[dict[str, Any]],
     injury_risk: int,
     cut_pct: float,
+    hard_sparring_plan: list[dict[str, Any]] | None = None,
 ) -> tuple[tuple[int, int, int, int], dict[str, Any]] | None:
     if not isinstance(week, dict):
         return None
@@ -354,52 +356,31 @@ def _build_week_advisory(
     hard_days = _ordered_weekdays(week.get("declared_hard_sparring_days") or athlete_snapshot.get("hard_sparring_days"))
     if not hard_days:
         return None
+    plan = hard_sparring_plan or week.get("hard_sparring_plan")
+    if not isinstance(plan, list):
+        plan = compute_hard_sparring_plan(week=week, athlete_snapshot=athlete_snapshot)
+    downgraded = [entry for entry in plan if entry.get("status") != "hard_as_planned"]
+    if not downgraded:
+        return None
+    target_entry = next(
+        (entry for entry in downgraded if entry.get("status") == "convert_to_technical_suggested"),
+        downgraded[0],
+    )
     hard_day_count = len(hard_days)
 
     pressure_score, pressure_reasons = _pressure_score(week, athlete_snapshot)
     fatigue_score, fatigue_reason = _fatigue_score(athlete_snapshot)
     cut_score, cut_reason = _cut_score(athlete_snapshot, cut_pct=cut_pct)
     highest_injury = _highest_risk_entry(injuries)
-    week_major, week_minor = _week_major_minor_pressure(week, athlete_snapshot)
-
-    high_risk_injury = any(
-        entry.get("instability")
-        or entry.get("daily_symptoms")
-        or (entry.get("worsening") and entry.get("high_collision_region"))
-        or int(entry.get("state_score", 0)) >= 6
-        for entry in injuries
-    )
-    injury_major = 1 if high_risk_injury or any(entry.get("worsening") and int(entry.get("state_score", 0)) >= 4 for entry in injuries) else 0
-    injury_minor = 1 if injury_risk >= 2 else 0
-    fatigue_major = 1 if fatigue_score >= 2 else 0
-    fatigue_minor = 1 if fatigue_score == 1 else 0
-    cut_major = 1 if cut_score >= 2 else 0
-    cut_minor = 1 if cut_score == 1 else 0
-
-    stress_major_count = week_major + fatigue_major + cut_major + injury_major
-    stress_minor_count = week_minor + fatigue_minor + cut_minor + injury_minor
-    week_context_matters = hard_day_count >= 2 or week_major == 1
-
-    action: str | None = None
-    if week_context_matters and high_risk_injury and (stress_major_count >= 2 or hard_day_count >= 2):
-        action = "convert"
-    elif week_context_matters and (
-        stress_major_count >= 2
-        or (stress_major_count >= 1 and stress_minor_count >= 2)
-        or (stress_major_count >= 1 and stress_minor_count >= 1 and hard_day_count >= 2)
-    ):
-        action = "deload"
-
-    if not action:
-        return None
+    action = "convert" if target_entry.get("status") == "convert_to_technical_suggested" else "deload"
 
     phase = str(week.get("phase", "")).strip().upper() or "UNKNOWN"
     week_label = _week_label(week)
     future_week = _is_future_week(week)
-    days_label = ", ".join(hard_days)
+    days_label = str(target_entry.get("day") or "").strip()
     reason_parts = list(pressure_reasons)
     if hard_day_count >= 2:
-        reason_parts.append(f"this week already carries {hard_day_count} hard sparring days")
+        reason_parts.append(f"this week already carries {hard_day_count} declared hard sparring days")
     if highest_injury:
         injury_label = _injury_label(highest_injury) or str(highest_injury["raw"]).lower()
         reason_parts.append(f"the brief shows {injury_label}")
@@ -407,6 +388,8 @@ def _build_week_advisory(
         reason_parts.append(fatigue_reason)
     if cut_reason:
         reason_parts.append(cut_reason)
+    if effective_hard_day_count(plan) < hard_day_count:
+        reason_parts.append(f"{days_label} is the lower-priority hard sparring day this week")
     because = _join_reason_parts(reason_parts)
     future_state_label, future_state_verb = _future_state_label(
         athlete_snapshot=athlete_snapshot,
@@ -442,7 +425,7 @@ def _build_week_advisory(
         "action": action,
         "phase": phase,
         "week_label": week_label,
-        "days": hard_days,
+        "days": [days_label],
         "title": "Coach note",
         "reason": reason,
         "suggestion": suggestion,

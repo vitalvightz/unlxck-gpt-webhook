@@ -1,5 +1,7 @@
 ﻿from fightcamp.stage2_payload import (
+    _apply_high_fatigue_week_compression,
     _derive_competitive_maturity,
+    _high_fatigue_compression_reason_codes,
     _parse_record,
     build_planning_brief,
     build_stage2_payload,
@@ -1558,6 +1560,218 @@ def test_weekly_role_map_does_not_create_strength_roles_when_strength_count_is_z
 
     assert all(role["category"] != "strength" for role in week["session_roles"])
     assert all(item["category"] != "strength" for item in week["suppressed_roles"])
+
+
+def test_high_fatigue_compression_uses_effective_hard_day_count_not_declared_count():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["air_bike"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "technical_skill_days": ["Monday"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 6,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+
+    assert week["declared_hard_sparring_days"] == ["Tuesday", "Thursday"]
+    assert [entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"] == ["Thursday"]
+    assert week["effective_hard_sparring_days"] == ["Tuesday"]
+    assert "two_hard_spar_days" not in week["intentional_compression"]["reason_codes"]
+    assert _high_fatigue_compression_reason_codes(
+        {"fatigue": "high", "hard_sparring_days": ["Tuesday", "Thursday"]},
+        effective_hard_spar_count=1,
+    ) == ["high_fatigue"]
+
+
+def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downgrade():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["air_bike"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "technical_skill_days": ["Monday"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 6,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    role_keys = [role["role_key"] for role in week["session_roles"]]
+    suppressed_keys = {item["role_key"] for item in week["suppressed_roles"]}
+
+    assert week["intentional_compression"]["active"] is True
+    assert suppressed_keys & {"secondary_strength_day", "strength_touch_day"}
+    assert role_keys.count("fight_pace_repeatability_day") == 1
+    assert sum(1 for role in week["session_roles"] if role["category"] == "conditioning") == 1
+
+
+def test_high_fatigue_compression_blocks_glycolytic_on_next_training_day_after_remaining_hard_spar():
+    session_roles = [
+        {
+            "category": "strength",
+            "role_key": "secondary_strength_day",
+            "governance": {},
+        },
+        {
+            "category": "strength",
+            "role_key": "neural_plus_strength_day",
+            "governance": {},
+        },
+        {
+            "category": "conditioning",
+            "role_key": "fight_pace_repeatability_day",
+            "preferred_system": "glycolytic",
+            "scheduled_day_hint": "Tuesday",
+            "governance": {},
+        },
+        {
+            "category": "conditioning",
+            "role_key": "aerobic_support_day",
+            "preferred_system": "aerobic",
+            "scheduled_day_hint": "Monday",
+            "governance": {},
+        },
+    ]
+
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {
+            "phase": "SPP",
+            "week_index": 1,
+            "declared_hard_sparring_days": ["Monday", "Wednesday"],
+            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+        },
+        session_roles,
+        [],
+        {
+            "fatigue": "high",
+            "readiness_flags": ["high_fatigue"],
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "deload_suggested"},
+        ],
+    )
+
+    assert "fight_pace_repeatability_day" not in [role["role_key"] for role in kept_roles]
+    assert "fight_pace_repeatability_day" in [item["role_key"] for item in suppressed]
+    assert "aerobic_support_day" in [role["role_key"] for role in kept_roles]
+
+
+def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_day_after_effective_hard_spar():
+    session_roles = [
+        {
+            "category": "strength",
+            "role_key": "secondary_strength_day",
+            "governance": {},
+        },
+        {
+            "category": "strength",
+            "role_key": "neural_plus_strength_day",
+            "governance": {},
+        },
+        {
+            "category": "conditioning",
+            "role_key": "fight_pace_repeatability_day",
+            "preferred_system": "glycolytic",
+            "scheduled_day_hint": "Tuesday",
+            "governance": {},
+        },
+        {
+            "category": "conditioning",
+            "role_key": "aerobic_support_day",
+            "preferred_system": "aerobic",
+            "scheduled_day_hint": "Monday",
+            "governance": {},
+        },
+    ]
+
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {
+            "phase": "SPP",
+            "week_index": 1,
+            "declared_hard_sparring_days": ["Monday", "Wednesday"],
+            "resolved_rule_state": {"must_keep": ["glycolytic", "primary_strength"]},
+        },
+        session_roles,
+        [],
+        {
+            "fatigue": "high",
+            "readiness_flags": ["high_fatigue"],
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "deload_suggested"},
+            {"day": "Wednesday", "status": "hard_as_planned"},
+        ],
+    )
+
+    assert "fight_pace_repeatability_day" in [role["role_key"] for role in kept_roles]
+    assert "aerobic_support_day" not in [role["role_key"] for role in kept_roles]
+    assert "aerobic_support_day" in [item["role_key"] for item in suppressed]
 
 
 def test_strength_slots_share_session_metadata_and_injury_pressure_does_not_force_tissue_state():
