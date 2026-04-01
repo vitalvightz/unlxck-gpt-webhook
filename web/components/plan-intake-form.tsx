@@ -37,6 +37,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
+import { canSelectWizardStep } from "@/lib/step-navigation";
 import type { PlanRequest } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
@@ -638,14 +639,20 @@ export function PlanIntakeForm() {
   }
 
   function handleStepSelect(targetStep: number) {
-    if (targetStep < 0 || targetStep >= steps.length - 1) {
-      return;
-    }
     setMessage(null);
     setError(null);
+    const nextForm = buildFormSnapshot();
+    if (!canSelectWizardStep({
+      currentStep,
+      targetStep,
+      lastSelectableStep: steps.length - 1,
+      validateCurrentStep: () => validateCurrentStep(nextForm),
+    })) {
+      return;
+    }
     setCurrentStep(targetStep);
 
-    if (!session?.access_token || !isValidRecordFormat(form.athlete.record ?? "")) {
+    if (!session?.access_token || !isValidRecordFormat(nextForm.athlete.record ?? "")) {
       return;
     }
 
