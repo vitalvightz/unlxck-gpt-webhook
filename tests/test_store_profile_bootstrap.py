@@ -218,3 +218,42 @@ def test_transient_store_error_detects_postgrest_gateway_failures():
     )
 
     assert store._is_transient_store_error(error) is True
+
+
+def test_generation_job_schema_error_detects_missing_generation_jobs_table():
+    store = _make_store()
+    error = APIError(
+        {
+            "message": "Could not find the table 'public.generation_jobs' in the schema cache",
+            "code": "PGRST205",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    assert store._is_generation_job_schema_error(error) is True
+
+
+def test_create_or_get_generation_job_returns_schema_detail_when_generation_jobs_table_is_missing():
+    store = _make_store()
+    store._run_with_transient_retry = MagicMock(
+        side_effect=APIError(
+            {
+                "message": "Could not find the table 'public.generation_jobs' in the schema cache",
+                "code": "PGRST205",
+                "hint": None,
+                "details": None,
+            }
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_or_get_generation_job(
+            athlete_id="athlete-1",
+            client_request_id="client-1",
+            source="self_serve",
+            request_payload={"fight_date": "2026-04-18"},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == "generation job store is not ready; apply the latest Supabase schema and redeploy"

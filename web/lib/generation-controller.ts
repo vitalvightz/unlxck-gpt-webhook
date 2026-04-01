@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { getGenerationJob } from "@/lib/api";
+import { getGenerationJob, isRetryableApiFailure } from "@/lib/api";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
 export type GenerationUiPhase =
@@ -132,6 +132,9 @@ async function createJobWithReconnect(
       return await createJob(clientRequestId);
     } catch (error) {
       lastError = error;
+      if (!isRetryableApiFailure(error)) {
+        throw error;
+      }
       if (attempt === 3) {
         break;
       }

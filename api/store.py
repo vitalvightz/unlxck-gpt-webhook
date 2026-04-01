@@ -42,7 +42,16 @@ _TRANSIENT_POSTGREST_SNIPPETS = (
     "503",
     "504",
 )
+_GENERATION_JOB_SCHEMA_SNIPPETS = (
+    "schema cache",
+    "could not find the table",
+    "relation",
+    "does not exist",
+    "column",
+    "generation_jobs",
+)
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
+GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
 
 class AppStore(Protocol):
@@ -179,6 +188,18 @@ class SupabaseAppStore:
             ).lower()
             return any(snippet in text for snippet in _TRANSIENT_POSTGREST_SNIPPETS)
         return False
+
+    def _is_generation_job_schema_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        has_generation_job_context = "generation_jobs" in text
+        has_schema_mismatch_signal = any(snippet in text for snippet in _GENERATION_JOB_SCHEMA_SNIPPETS)
+        return has_generation_job_context and has_schema_mismatch_signal
 
     def _run_with_transient_retry(
         self,
@@ -521,6 +542,16 @@ class SupabaseAppStore:
             )
         except Exception as exc:
             if not self._is_transient_store_error(exc):
+                if self._is_generation_job_schema_error(exc):
+                    logger.exception(
+                        "[store] create_or_get_generation_job:schema_mismatch athlete_id=%s client_request_id=%s",
+                        athlete_id,
+                        client_request_id,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=GENERATION_JOB_SCHEMA_DETAIL,
+                    ) from exc
                 logger.exception(
                     "[store] create_or_get_generation_job:lookup_exception athlete_id=%s client_request_id=%s",
                     athlete_id,
@@ -576,6 +607,16 @@ class SupabaseAppStore:
             )
         except Exception as exc:
             if not self._is_transient_store_error(exc):
+                if self._is_generation_job_schema_error(exc):
+                    logger.exception(
+                        "[store] create_or_get_generation_job:schema_mismatch_after_insert athlete_id=%s client_request_id=%s",
+                        athlete_id,
+                        client_request_id,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=GENERATION_JOB_SCHEMA_DETAIL,
+                    ) from exc
                 logger.exception(
                     "[store] create_or_get_generation_job:lookup_after_insert_exception athlete_id=%s client_request_id=%s",
                     athlete_id,
@@ -615,6 +656,12 @@ class SupabaseAppStore:
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] get_generation_job:schema_mismatch job_id=%s", job_id)
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
                 ) from exc
             logger.exception("[store] get_generation_job:exception job_id=%s", job_id)
             raise HTTPException(

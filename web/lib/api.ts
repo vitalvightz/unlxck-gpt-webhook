@@ -83,7 +83,7 @@ function buildPlainTextErrorMessage(params: {
     : trimmedText || `Request failed: ${status}`;
 }
 
-function isRetryableApiFailure(error: unknown): boolean {
+export function isRetryableApiFailure(error: unknown): boolean {
   if (error instanceof ApiError) {
     return RETRYABLE_GATEWAY_STATUSES.has(error.status);
   }
