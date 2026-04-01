@@ -143,6 +143,18 @@ class ManualStage2SubmissionRequest(BaseModel):
         return normalized
 
 
+class PlanRenameRequest(BaseModel):
+    plan_name: str
+
+    @field_validator("plan_name")
+    @classmethod
+    def validate_plan_name(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("plan_name is required")
+        return normalized
+
+
 class ProfileRecord(BaseModel):
     athlete_id: str
     email: str
@@ -163,6 +175,7 @@ class ProfileRecord(BaseModel):
 
 class PlanSummary(BaseModel):
     plan_id: str
+    plan_name: str | None = None
     athlete_id: str
     full_name: str
     fight_date: str = ""

@@ -115,6 +115,7 @@ class DemoStore:
                 "intake_id": intake_id,
                 "fight_date": request.fight_date,
                 "technical_style": request.athlete.technical_style,
+                "plan_name": "",
                 "status": result.get("status", "generated"),
                 "plan_text": result.get("plan_text", ""),
                 "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
@@ -144,6 +145,20 @@ class DemoStore:
         with self._lock:
             row = self.plans.get(plan_id)
             return dict(row) if row else None
+
+    def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]:
+        with self._lock:
+            row = self.plans.get(plan_id)
+            if not row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            row["plan_name"] = plan_name
+            return dict(row)
+
+    def delete_plan(self, plan_id: str) -> None:
+        with self._lock:
+            if plan_id not in self.plans:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            del self.plans[plan_id]
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         with self._lock:

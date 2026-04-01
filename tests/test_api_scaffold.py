@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
-from api.models import ManualStage2SubmissionRequest, PlanRequest, ProfileUpdateRequest
+from api.models import ManualStage2SubmissionRequest, PlanRenameRequest, PlanRequest, ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from conftest import RENDER_BACKEND_URL
 
@@ -101,6 +101,7 @@ class FakeStore:
             "athlete_id": athlete_id,
             "fight_date": request.fight_date,
             "technical_style": request.athlete.technical_style,
+            "plan_name": "",
             "status": result.get("status", "generated"),
             "plan_text": result.get("plan_text", ""),
             "draft_plan_text": result.get("draft_plan_text", result.get("plan_text", "")),
@@ -130,6 +131,18 @@ class FakeStore:
     def get_latest_plan(self, athlete_id: str) -> dict | None:
         plans = self.list_user_plans(athlete_id)
         return plans[0] if plans else None
+
+    def rename_plan(self, plan_id: str, plan_name: str) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        row["plan_name"] = plan_name
+        return row
+
+    def delete_plan(self, plan_id: str) -> None:
+        if plan_id not in self.plans:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        del self.plans[plan_id]
 
     def update_plan_stage2(self, plan_id: str, result: dict) -> dict:
         row = self.plans.get(plan_id)
@@ -1853,6 +1866,92 @@ def test_latest_plan_endpoint_returns_latest_saved_plan():
 
     assert latest.status_code == 200
     assert latest.json()["plan_id"] == next(iter(store.plans.values()))["id"]
+
+
+def test_athlete_can_rename_their_saved_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.patch(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=PlanRenameRequest(plan_name="April Fight Camp").model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["plan_name"] == "April Fight Camp"
+    assert store.get_plan(plan["id"])["plan_name"] == "April Fight Camp"
+
+
+def test_athlete_can_delete_their_saved_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 204
+    assert store.get_plan(plan["id"]) is None
+
+
+def test_athlete_cannot_delete_someone_elses_plan():
+    client, store, _ = _build_client()
+    owner = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    other_user = AuthenticatedUser(
+        user_id="athlete-2",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    store.ensure_profile(owner)
+    store.ensure_profile(other_user)
+    client.app.state.auth_service.users_by_token["other-token"] = other_user
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.delete(
+        f"/api/plans/{plan['id']}",
+        headers={"Authorization": "Bearer other-token"},
+    )
+
+    assert response.status_code == 403
+    assert store.get_plan(plan["id"]) is not None
 
 
 def test_generation_job_endpoint_requires_same_athlete_or_admin():

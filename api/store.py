@@ -47,6 +47,10 @@ class AppStore(Protocol):
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]: ...
+
+    def delete_plan(self, plan_id: str) -> None: ...
+
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
 
     def list_admin_plans(self) -> list[dict[str, Any]]: ...
@@ -382,6 +386,43 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .order("created_at", desc=True)
         )
+
+    def rename_plan(self, plan_id: str, plan_name: str) -> dict[str, Any]:
+        try:
+            logger.info("[store] rename_plan:start plan_id=%s", plan_id)
+            self.client.table("plans").update({"plan_name": plan_name}).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning("[store] rename_plan:plan_missing_after_update plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] rename_plan:success plan_id=%s", plan_id)
+            return updated
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("[store] rename_plan:exception plan_id=%s", plan_id)
+            raise
+
+    def delete_plan(self, plan_id: str) -> None:
+        try:
+            existing = self.get_plan(plan_id)
+            if not existing:
+                logger.warning("[store] delete_plan:not_found plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] delete_plan:start plan_id=%s", plan_id)
+            self.client.table("plans").delete().eq("id", plan_id).execute()
+            logger.info("[store] delete_plan:success plan_id=%s", plan_id)
+        except HTTPException:
+            raise
+        except Exception:
+            logger.exception("[store] delete_plan:exception plan_id=%s", plan_id)
+            raise
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         payload = {

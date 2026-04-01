@@ -65,6 +65,7 @@ create table if not exists public.plans (
   fight_date date,
   technical_style text[] not null default '{}',
   full_name text not null default '',
+  plan_name text not null default '',
   status text not null default 'generated',
   plan_text text not null default '',
   draft_plan_text text not null default '',
@@ -84,6 +85,7 @@ create table if not exists public.plans (
 
 alter table public.plans add column if not exists draft_plan_text text not null default '';
 alter table public.plans add column if not exists final_plan_text text not null default '';
+alter table public.plans add column if not exists plan_name text not null default '';
 alter table public.plans add column if not exists stage2_retry_text text not null default '';
 alter table public.plans add column if not exists stage2_validator_report jsonb not null default '{}'::jsonb;
 alter table public.plans add column if not exists stage2_status text not null default '';
