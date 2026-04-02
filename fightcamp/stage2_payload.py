@@ -657,6 +657,7 @@ def _build_athlete_model(
         "key_goals": training_context.key_goals,
         "mental_blocks": _clean_list(training_context.mental_block),
         "equipment": training_context.equipment,
+        "training_frequency": training_context.training_frequency,
         "training_days": training_context.training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
         "technical_skill_days": training_context.technical_skill_days,
@@ -2405,6 +2406,144 @@ def _make_compression_suppression(role: dict, reason_codes: list[str], summary: 
     }
 
 
+def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
+    """True when the athlete has a non-trivial active weight cut."""
+    if athlete_model.get("weight_cut_risk"):
+        return True
+    weight_cut_pct = float(athlete_model.get("weight_cut_pct") or 0.0)
+    if weight_cut_pct >= 3.0:
+        return True
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    return bool(readiness_flags & {"active_weight_cut", "aggressive_weight_cut"})
+
+
+def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
+    """True when the athlete has an active injury or restriction at moderate or greater severity."""
+    if athlete_model.get("injuries"):
+        return True
+    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    return "injury_management" in readiness_flags
+
+
+def _compute_readiness_compression(athlete_model: dict) -> int:
+    """
+    Compute readiness compression score (0–4) based on:
+    - High fatigue (+1)
+    - Meaningful active weight cut (+1)
+    - Active injury/restriction at moderate or greater severity (+1)
+    - Proximity to fight (≤17 days) (+1)
+    """
+    compression = 0
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    if fatigue == "high":
+        compression += 1
+    if _active_weight_cut_is_meaningful(athlete_model):
+        compression += 1
+    if _active_injury_is_moderate_plus(athlete_model):
+        compression += 1
+    days_to_fight = athlete_model.get("days_until_fight")
+    if isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
+        compression += 1
+    return compression
+
+
+def _compression_floor_value(compression: int) -> int:
+    """Convert compression score to compression_floor (number of non-spar slots to remove)."""
+    if compression == 0:
+        return 0
+    if compression <= 2:
+        return 1
+    return 2  # compression >= 3
+
+
+def _non_spar_role_priority_rank(
+    role: dict,
+    phase: str,
+    is_hard_spar_week: bool,
+    is_meaningful_cut: bool,
+    must_keep: set[str] | None = None,
+) -> int:
+    """
+    Return a priority rank for a non-sparring role.
+    Higher rank = higher priority (kept when budget is tight).
+    Must-keep roles receive the highest rank (100).
+    """
+    if must_keep is None:
+        must_keep = set()
+
+    role_key = str(role.get("role_key") or "").strip()
+    preferred_system = str(role.get("preferred_system") or "").strip()
+    category = str(role.get("category") or "").strip()
+
+    # Must-keep roles always survive compression
+    if preferred_system in must_keep or role_key in must_keep:
+        return 100
+
+    demote_glycolytic = is_hard_spar_week or is_meaningful_cut
+
+    if phase == "GPP":
+        # GPP priority (highest → lowest): primary_strength > aerobic > secondary_strength > recovery
+        if role_key in {"primary_strength_day", "structural_strength_day"}:
+            return 4
+        if category == "conditioning" and preferred_system == "aerobic":
+            return 3
+        if role_key in {"aerobic_support_day", "aerobic_base_day", "aerobic_coordination_day"}:
+            return 3
+        if category == "strength":
+            return 2
+        if category == "recovery":
+            return 1
+        return 2  # other roles default to secondary strength level
+
+    if phase == "SPP":
+        # SPP priority (highest → lowest, normal): neural_plus > repeatability > fight_pace > recovery
+        # With demote_glycolytic: fight_pace demoted to first-cut (rank 1), recovery promoted to rank 2
+        if role_key == "neural_plus_strength_day":
+            return 4
+        if role_key == "repeatability_support_day" or (category == "conditioning" and preferred_system == "aerobic"):
+            return 3
+        if role_key == "fight_pace_repeatability_day" or (category == "conditioning" and preferred_system == "glycolytic"):
+            return 1 if demote_glycolytic else 2
+        if category == "recovery":
+            return 2 if demote_glycolytic else 1
+        if category == "strength":
+            return 2  # secondary strength in SPP
+        return 2  # other roles default
+
+    # TAPER: alactic sharpness > aerobic support > glycolytic > recovery
+    if category == "conditioning" and preferred_system == "alactic":
+        return 4
+    if category == "conditioning" and preferred_system == "aerobic":
+        return 3
+    if category == "conditioning" and preferred_system == "glycolytic":
+        return 1 if demote_glycolytic else 2
+    if category == "recovery":
+        return 1
+    return 2
+
+
+def _build_spar_allocation_reason_codes(
+    athlete_model: dict,
+    compression: int,
+    is_hard_spar_week: bool,
+    is_meaningful_cut: bool,
+) -> list[str]:
+    reason_codes: list[str] = []
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    if fatigue == "high":
+        reason_codes.append("high_fatigue")
+    if is_hard_spar_week:
+        reason_codes.append("two_hard_spar_days")
+    if is_meaningful_cut:
+        reason_codes.append("active_weight_cut")
+    if _active_injury_is_moderate_plus(athlete_model):
+        reason_codes.append("injury_management")
+    days_to_fight = athlete_model.get("days_until_fight")
+    if isinstance(days_to_fight, int) and 0 <= days_to_fight <= 17:
+        reason_codes.append("proximity_to_fight")
+    return reason_codes
+
+
 def _apply_high_fatigue_week_compression(
     week_entry: dict,
     session_roles: list[dict],
@@ -2413,6 +2552,13 @@ def _apply_high_fatigue_week_compression(
     *,
     hard_sparring_plan: list[dict] | None = None,
 ) -> tuple[list[dict], list[dict]]:
+    """
+    Spar-first weekly allocation:
+    1. Count sparring against the weekly cap
+    2. Apply readiness compression (fatigue, weight cut, injury, proximity) to non-sparring slots only
+    3. Select only the highest-priority non-sparring roles up to non_spar_target
+    4. Suppress excess roles and mark intentionally unused training days
+    """
     week_entry["intentional_compression"] = _intentional_compression_stub()
     if not session_roles:
         return session_roles, suppressed_roles
@@ -2421,6 +2567,133 @@ def _apply_high_fatigue_week_compression(
     if compressed.get("is_short_camp"):
         return session_roles, suppressed_roles
 
+    training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
+    if not training_days:
+        # Without declared training days we cannot enforce the spar-first cap;
+        # fall back to legacy single-role high-fatigue compression.
+        return _apply_legacy_high_fatigue_compression(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+            hard_sparring_plan=hard_sparring_plan,
+        )
+
+    # Step 1: Count sparring against the weekly cap
+    hard_sparring_days_set = set(_ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))))
+    sessions_per_week = int(athlete_model.get("training_frequency", len(training_days)))
+    weekly_cap = min(sessions_per_week, len(training_days))
+    locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
+    spar_count = len(locked_spar_days)
+    non_spar_cap = max(0, weekly_cap - spar_count)
+
+    # Step 2: Compute readiness compression score (applied to non-sparring slots only)
+    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
+    compression = _compute_readiness_compression(athlete_model)
+    compression_floor = _compression_floor_value(compression)
+
+    # Step 3: Compute target number of non-sparring active sessions
+    phase = str(week_entry.get("phase", "")).strip().upper()
+    if phase in {"GPP", "SPP"}:
+        min_non_spar_active = 1
+    else:  # TAPER
+        min_non_spar_active = 0
+
+    if fatigue == "moderate":
+        non_spar_target = non_spar_cap
+    else:
+        non_spar_target = max(min_non_spar_active, non_spar_cap - compression_floor)
+    # Never exceed the available non-spar capacity
+    non_spar_target = min(non_spar_target, non_spar_cap)
+
+    # Separate sparring and non-sparring roles
+    spar_roles = [r for r in session_roles if r.get("role_key") == "hard_sparring_day"]
+    non_spar_roles = [r for r in session_roles if r.get("role_key") != "hard_sparring_day"]
+
+    current_non_spar_count = len(non_spar_roles)
+    if current_non_spar_count <= non_spar_target:
+        # Already within budget – populate intentionally unused days and return
+        week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
+            training_days, session_roles, has_recovery_role=any(r.get("category") == "recovery" for r in non_spar_roles),
+        )
+        return session_roles, suppressed_roles
+
+    # Step 4: Pick only the highest-priority non-sparring roles
+    is_hard_spar_week = len(hard_sparring_days_set) >= 2
+    is_meaningful_cut = _active_weight_cut_is_meaningful(athlete_model)
+
+    resolved_rule_state = dict(week_entry.get("resolved_rule_state") or {})
+    must_keep = set(_clean_list(resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))))
+
+    ranked_roles = sorted(
+        non_spar_roles,
+        key=lambda r: _non_spar_role_priority_rank(r, phase, is_hard_spar_week, is_meaningful_cut, must_keep),
+        reverse=True,  # highest priority first
+    )
+
+    kept_non_spar = ranked_roles[:non_spar_target]
+    dropped_non_spar = ranked_roles[non_spar_target:]
+
+    reason_codes = _build_spar_allocation_reason_codes(athlete_model, compression, is_hard_spar_week, is_meaningful_cut)
+    if not reason_codes:
+        reason_codes = ["spar_first_cap"]
+    summary = _compression_summary(reason_codes)
+
+    kept_roles = spar_roles + kept_non_spar
+    updated_suppressed = list(suppressed_roles)
+    for role in dropped_non_spar:
+        updated_suppressed.append(_make_compression_suppression(role, reason_codes, summary))
+
+    # Step 5: Identify intentionally unused training days
+    has_recovery_in_kept = any(r.get("category") == "recovery" for r in kept_non_spar)
+    week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
+        training_days, kept_roles, has_recovery_role=has_recovery_in_kept,
+    )
+
+    week_entry["intentional_compression"] = {
+        "active": True,
+        "reason_codes": list(reason_codes),
+        "reason": ", ".join(reason_codes),
+        "summary": summary,
+    }
+    return kept_roles, updated_suppressed
+
+
+def _compute_intentionally_unused_days(
+    training_days: list[str],
+    kept_roles: list[dict],
+    *,
+    has_recovery_role: bool,
+) -> list[dict[str, str]]:
+    """
+    Return the training days that are not assigned to any kept role.
+    Unused days become recovery_only_day if the week has no recovery bias yet,
+    otherwise off_day.
+    """
+    used_days: set[str] = set()
+    for role in kept_roles:
+        day = str(role.get("scheduled_day_hint") or "").strip()
+        if day:
+            used_days.add(day)
+    result = []
+    for day in training_days:
+        if day not in used_days:
+            result.append({
+                "day": day,
+                "role": "off_day" if has_recovery_role else "recovery_only_day",
+            })
+    return result
+
+
+def _apply_legacy_high_fatigue_compression(
+    week_entry: dict,
+    session_roles: list[dict],
+    suppressed_roles: list[dict],
+    athlete_model: dict,
+    *,
+    hard_sparring_plan: list[dict] | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """Legacy single-role compression used when no declared training days are available."""
     effective_hard_count = effective_hard_day_count(hard_sparring_plan or []) if hard_sparring_plan else None
     reason_codes = _high_fatigue_compression_reason_codes(
         athlete_model,
@@ -2708,6 +2981,7 @@ def _build_weekly_role_map(
                 "effective_hard_sparring_days": list(effective_days),
                 "coach_note_flags": _dedupe_clean_strings(_clean_list(week_entry.get("coach_note_flags", []))),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
+                "intentionally_unused_days": list(week_entry.get("intentionally_unused_days") or []),
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
             }

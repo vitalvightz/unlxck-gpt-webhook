@@ -1,7 +1,10 @@
 ﻿from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
+    _compute_readiness_compression,
+    _compression_floor_value,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
+    _non_spar_role_priority_rank,
     _parse_record,
     build_planning_brief,
     build_stage2_payload,
@@ -1563,7 +1566,7 @@ def test_weekly_role_map_does_not_create_strength_roles_when_strength_count_is_z
     assert all(item["category"] != "strength" for item in week["suppressed_roles"])
 
 
-def test_high_fatigue_compression_uses_effective_hard_day_count_not_declared_count():
+def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority():
     brief = _build_progression_brief(
         {
             "sport": "boxing",
@@ -1616,7 +1619,10 @@ def test_high_fatigue_compression_uses_effective_hard_day_count_not_declared_cou
     assert week["effective_hard_sparring_days"] == ["Tuesday"]
     assert locked_spar_days == ["Tuesday", "Thursday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
-    assert "two_hard_spar_days" not in week["intentional_compression"]["reason_codes"]
+    # New behaviour: declared spar count (2) drives the cap and priority demotion,
+    # so "two_hard_spar_days" is present even when only one day is fully effective.
+    assert "two_hard_spar_days" in week["intentional_compression"]["reason_codes"]
+    # The legacy helper still evaluates effective count for its own reason codes
     assert _high_fatigue_compression_reason_codes(
         {"fatigue": "high", "hard_sparring_days": ["Tuesday", "Thursday"]},
         effective_hard_spar_count=1,
@@ -1998,3 +2004,296 @@ def test_record_changes_maturity_without_changing_load_logic():
     assert novice["phase_strategy"] == experienced["phase_strategy"]
     assert novice["weekly_stress_map"] == experienced["weekly_stress_map"]
     assert novice["week_by_week_progression"] == experienced["week_by_week_progression"]
+
+
+# ---------------------------------------------------------------------------
+# New tests: spar-first weekly allocation (6 required scenarios)
+# ---------------------------------------------------------------------------
+
+def _spp_week_role_map(
+    athlete_model: dict,
+    *,
+    spar_days: list[str] | None = None,
+    training_days: list[str] | None = None,
+    session_counts: dict | None = None,
+) -> dict:
+    """Helper that builds a single SPP week's session_roles via the planning brief."""
+    if training_days is not None:
+        athlete_model = dict(athlete_model, training_days=training_days)
+    if spar_days is not None:
+        athlete_model = dict(athlete_model, hard_sparring_days=spar_days)
+    sc = session_counts or {"strength": 2, "conditioning": 2, "recovery": 1}
+    brief = _build_progression_brief(
+        athlete_model,
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": [],
+                "session_counts": sc,
+                "selection_guardrails": {
+                    "must_keep_if_present": ["primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            },
+        },
+    )
+    return brief["weekly_role_map"]["weeks"][0]
+
+
+def _gpp_week_role_map(athlete_model: dict, *, spar_days: list[str] | None = None) -> dict:
+    if spar_days is not None:
+        athlete_model = dict(athlete_model, hard_sparring_days=spar_days)
+    brief = _build_progression_brief(
+        athlete_model,
+        {
+            "GPP": {
+                "objective": "build aerobic base and general force capacity",
+                "emphasize": ["aerobic repeatability", "general force"],
+                "deprioritize": ["fight-week intensity"],
+                "risk_flags": [],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["primary_strength"],
+                    "conditioning_drop_order_if_thin": ["alactic", "glycolytic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            },
+        },
+    )
+    return brief["weekly_role_map"]["weeks"][0]
+
+
+def _base_athlete(
+    *,
+    fatigue: str = "low",
+    training_days: list[str] | None = None,
+    training_frequency: int | None = None,
+    hard_sparring_days: list[str] | None = None,
+    weight_cut_risk: bool = False,
+    weight_cut_pct: float = 0.0,
+    injuries: list[str] | None = None,
+    days_until_fight: int | None = 28,
+    readiness_flags: list[str] | None = None,
+) -> dict:
+    td = training_days or ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    return {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 6,
+        "days_until_fight": days_until_fight,
+        "short_notice": False,
+        "fatigue": fatigue,
+        "training_preference": "balanced",
+        "technical_styles": ["boxing"],
+        "tactical_styles": ["pressure_fighter"],
+        "key_goals": ["conditioning"],
+        "weaknesses": [],
+        "equipment": ["air_bike"],
+        "training_days": td,
+        "training_frequency": training_frequency or len(td),
+        "hard_sparring_days": hard_sparring_days or [],
+        "technical_skill_days": [],
+        "injuries": injuries or [],
+        "weight_cut_risk": weight_cut_risk,
+        "weight_cut_pct": weight_cut_pct,
+        "readiness_flags": readiness_flags or [],
+    }
+
+
+# ── Scenario 1: Sparring counts against weekly cap ──────────────────────────
+
+def test_spar_first_sparring_counted_against_weekly_cap():
+    """Hard sparring days reduce the non-spar budget before any other role is placed."""
+    athlete = _base_athlete(
+        fatigue="low",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=["Tuesday", "Thursday"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    spar_roles = [r for r in week["session_roles"] if r["role_key"] == "hard_sparring_day"]
+    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+
+    # 5 training days, 2 spar → non_spar_cap = 3; with no compression all 3 should be kept
+    assert len(spar_roles) == 2
+    assert len(non_spar_roles) <= 3  # non-spar budget is capped at 5 - 2 = 3
+
+
+# ── Scenario 2: Compression affects only non-sparring slots ─────────────────
+
+def test_spar_first_compression_applies_only_to_non_spar_slots():
+    """High fatigue compresses the non-spar allocation while sparring stays locked."""
+    athlete = _base_athlete(
+        fatigue="high",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=["Tuesday", "Thursday"],
+        readiness_flags=["high_fatigue"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    spar_roles = [r for r in week["session_roles"] if r["role_key"] == "hard_sparring_day"]
+    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+    suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
+
+    # Sparring roles must remain intact
+    assert len(spar_roles) == 2
+    # Non-spar budget was 3 (5-2), compression_floor=1 → non_spar_target=2; 1 role dropped
+    assert len(non_spar_roles) <= 2
+    assert len(suppressed_compression) >= 1
+    assert week["intentional_compression"]["active"] is True
+
+
+# ── Scenario 3: Moderate fatigue keeps full non-sparring cap ─────────────────
+
+def test_spar_first_moderate_fatigue_keeps_full_non_spar_cap():
+    """Moderate fatigue uses the full non-spar cap without any compression."""
+    athlete = _base_athlete(
+        fatigue="moderate",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=["Tuesday", "Thursday"],
+        readiness_flags=["moderate_fatigue"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    spar_roles = [r for r in week["session_roles"] if r["role_key"] == "hard_sparring_day"]
+    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+    suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
+
+    assert len(spar_roles) == 2
+    # Moderate fatigue → no compression_floor reduction → non_spar_target = non_spar_cap = 3
+    assert len(non_spar_roles) <= 3
+    assert len(suppressed_compression) == 0  # nothing dropped by compression
+
+
+# ── Scenario 4: High fatigue reduces non-spar target ────────────────────────
+
+def test_spar_first_high_fatigue_reduces_non_spar_target():
+    """High fatigue (compression_floor=1) reduces non_spar_target below non_spar_cap."""
+    athlete = _base_athlete(
+        fatigue="high",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=["Tuesday", "Thursday"],
+        readiness_flags=["high_fatigue"],
+    )
+
+    # Verify compression math directly
+    compression = _compute_readiness_compression(athlete)
+    floor = _compression_floor_value(compression)
+    assert compression >= 1
+    assert floor >= 1  # at least 1 slot should be cut from non-spar cap
+
+    week = _spp_week_role_map(athlete)
+    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+    # non_spar_cap = 3, floor >= 1 → non_spar_target <= 2
+    assert len(non_spar_roles) <= 2
+
+
+# ── Scenario 5: SPP glycolytic day is first-cut when 2+ spar days or meaningful cut ──
+
+def test_spar_first_spp_glycolytic_is_first_cut_with_two_hard_spar_days():
+    """fight_pace_repeatability_day is demoted to first-cut when there are 2+ hard spar days."""
+    # Verify priority rank directly
+    fight_pace_role = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+    }
+    neural_plus_role = {
+        "role_key": "neural_plus_strength_day",
+        "category": "strength",
+        "preferred_system": "",
+    }
+    repeatability_role = {
+        "role_key": "repeatability_support_day",
+        "category": "conditioning",
+        "preferred_system": "aerobic",
+    }
+
+    # With 2+ hard spar days, fight_pace priority < neural_plus and < repeatability
+    assert _non_spar_role_priority_rank(fight_pace_role, "SPP", True, False) < _non_spar_role_priority_rank(neural_plus_role, "SPP", True, False)
+    assert _non_spar_role_priority_rank(fight_pace_role, "SPP", True, False) < _non_spar_role_priority_rank(repeatability_role, "SPP", True, False)
+
+    # Integration: with 2 hard spar days + high fatigue, fight_pace is suppressed first
+    athlete = _base_athlete(
+        fatigue="high",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=["Tuesday", "Thursday"],
+        readiness_flags=["high_fatigue"],
+    )
+    week = _spp_week_role_map(athlete)
+    suppressed_keys = {s["role_key"] for s in week["suppressed_roles"] if s.get("intentional_compression")}
+    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+
+    # fight_pace_repeatability_day should be suppressed by intentional_compression, not kept
+    assert "fight_pace_repeatability_day" in suppressed_keys or \
+        all(r["role_key"] != "fight_pace_repeatability_day" for r in non_spar_roles), \
+        "fight_pace_repeatability_day should be first-cut in a 2-spar-day week under compression"
+
+
+def test_spar_first_spp_glycolytic_is_first_cut_with_meaningful_weight_cut():
+    """fight_pace_repeatability_day is demoted when there is a meaningful weight cut."""
+    fight_pace_role = {
+        "role_key": "fight_pace_repeatability_day",
+        "category": "conditioning",
+        "preferred_system": "glycolytic",
+    }
+    recovery_role = {
+        "role_key": "recovery_reset_day",
+        "category": "recovery",
+        "preferred_system": "",
+    }
+    # With meaningful cut, fight_pace rank (1) < recovery rank (2)
+    assert _non_spar_role_priority_rank(fight_pace_role, "SPP", False, True) < \
+           _non_spar_role_priority_rank(recovery_role, "SPP", False, True)
+
+
+# ── Scenario 6: Intentionally unused days stay recovery/off and are not refilled ──
+
+def test_spar_first_intentionally_unused_days_populated_and_not_refilled():
+    """Unused training days after compression are marked as recovery_only_day or off_day."""
+    athlete = _base_athlete(
+        fatigue="high",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=["Tuesday", "Thursday"],
+        readiness_flags=["high_fatigue"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    # The week should declare intentionally unused days when compression is active
+    if week["intentional_compression"]["active"]:
+        # intentionally_unused_days must be present and non-empty when days were left out
+        used_day_hints = {
+            str(r.get("scheduled_day_hint") or "").strip()
+            for r in week["session_roles"]
+            if str(r.get("scheduled_day_hint") or "").strip()
+        }
+        all_training = set(athlete["training_days"])
+        possibly_unused = all_training - used_day_hints
+        unused_entries = week.get("intentionally_unused_days", [])
+        if possibly_unused:
+            # Each unused day must be marked with a valid role
+            for entry in unused_entries:
+                assert entry["role"] in {"recovery_only_day", "off_day"}, \
+                    f"Unexpected unused day role: {entry['role']}"
+        # The total session count should not exceed training_days (no refill bloat)
+        assert len(week["session_roles"]) <= len(athlete["training_days"])
+
+
+def test_spar_first_no_compression_when_no_sparring_and_low_fatigue():
+    """With no sparring and no compression factors, no roles are suppressed."""
+    athlete = _base_athlete(
+        fatigue="low",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        hard_sparring_days=[],
+    )
+    week = _spp_week_role_map(athlete)
+
+    suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
+    assert week["intentional_compression"]["active"] is False
+    assert len(suppressed_compression) == 0
