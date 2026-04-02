@@ -908,3 +908,18 @@ def test_validate_stage2_output_accepts_summary_and_support_weight_cut_notes():
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "missing_weight_cut_acknowledgement" not in warning_codes
     assert "high_pressure_weight_cut_underaddressed" not in warning_codes
+
+
+def test_validate_stage2_output_flags_weight_cut_state_contradiction():
+    report = validate_stage2_output(
+        planning_brief=_weight_cut_planning_brief(high_pressure=False),
+        final_plan_text="""
+        ## PHASE 1: GPP
+        ### Week 1
+        - Weight cut: none active — recovery tolerance is standard.
+        - Keep the work crisp.
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "weight_cut_state_contradiction" in warning_codes

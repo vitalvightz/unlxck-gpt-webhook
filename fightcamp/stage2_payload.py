@@ -3619,6 +3619,7 @@ def build_stage2_payload(
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
+            "Never state 'weight cut none active' or 'recovery tolerance is standard' when readiness flags or weight_cut_pct indicate an active cut.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
             "Use athlete_model.competitive_maturity only to calibrate wording specificity; it must not change workload, session count, recovery assumptions, or injury/cut conservatism.",
             "If fatigue is high or fight-week pressure is active, reduce optionality and make the directive plain.",
@@ -3724,6 +3725,7 @@ Use simple session titles and coach-readable drill labels, but do not spend this
 If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
 If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
 If active weight cut is present, say so plainly in the final plan and explain that it tightens recovery and training tolerance.
+Never write 'weight cut none active' or 'recovery tolerance is standard' when active weight-cut flags are present.
 If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
 In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
