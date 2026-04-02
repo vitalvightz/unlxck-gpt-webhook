@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 
 import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -18,6 +18,7 @@ type AppSessionValue = {
   session: AppSession | null;
   me: MeResponse | null;
   demoMode: boolean;
+  previewAppearanceMode: Dispatch<SetStateAction<AppearanceMode | null>>;
   refreshMe: () => Promise<void>;
   replaceMe: (nextMe: MeResponse | null) => void;
   signOut: () => Promise<void>;
@@ -45,6 +46,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [isMeHydrated, setIsMeHydrated] = useState(false);
   const [session, setSession] = useState<AppSession | null>(null);
   const [me, setMe] = useState<MeResponse | null>(null);
+  const [appearancePreview, setAppearancePreview] = useState<AppearanceMode | null>(null);
   const handledAccessTokenRef = useRef<string | null>(null);
   const loadGenerationRef = useRef(0);
 
@@ -55,6 +57,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     if (!nextSession?.access_token) {
       if (loadGenerationRef.current === currentLoadId) {
+        setAppearancePreview(null);
         setMe(null);
         setIsMeHydrated(true);
         setIsReady(true);
@@ -93,6 +96,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       }
 
       if (err instanceof ApiError && err.status === 401) {
+        setAppearancePreview(null);
         setSession(null);
         setMe(null);
       }
@@ -172,8 +176,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     if (!isReady) {
       return;
     }
-    applyAppearanceMode(session && me?.profile.appearance_mode === "light" ? "light" : "dark");
-  }, [isReady, session, me?.profile.appearance_mode]);
+    applyAppearanceMode(
+      appearancePreview ?? (session && me?.profile.appearance_mode === "light" ? "light" : "dark"),
+    );
+  }, [appearancePreview, isReady, session, me?.profile.appearance_mode]);
 
   async function refreshMe() {
     await loadMe(session);
@@ -188,6 +194,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     const nextSession = { access_token: tokenForRole(role) };
     window.localStorage.setItem(DEMO_TOKEN_KEY, nextSession.access_token);
     handledAccessTokenRef.current = nextSession.access_token;
+    setAppearancePreview(null);
     setSession(nextSession);
     setIsReady(false);
     setIsMeHydrated(false);
@@ -198,6 +205,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     if (DEMO_MODE) {
       window.localStorage.removeItem(DEMO_TOKEN_KEY);
       handledAccessTokenRef.current = null;
+      setAppearancePreview(null);
       setSession(null);
       setMe(null);
       setIsReady(true);
@@ -212,6 +220,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       // Ignore missing client during sign-out cleanup.
     }
     handledAccessTokenRef.current = null;
+    setAppearancePreview(null);
     setSession(null);
     setMe(null);
     setIsReady(true);
@@ -227,6 +236,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         session,
         me,
         demoMode: DEMO_MODE,
+        previewAppearanceMode: setAppearancePreview,
         refreshMe,
         replaceMe,
         signOut,
