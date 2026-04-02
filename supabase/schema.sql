@@ -45,6 +45,7 @@ create table if not exists public.profiles (
   athlete_timezone text not null default '',
   athlete_locale text not null default '',
   appearance_mode text not null default 'dark',
+  avatar_url text,
   onboarding_draft jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
@@ -126,6 +127,7 @@ alter table public.generation_jobs add column if not exists started_at timestamp
 alter table public.generation_jobs add column if not exists completed_at timestamptz;
 alter table public.generation_jobs add column if not exists updated_at timestamptz not null default timezone('utc', now());
 alter table public.profiles add column if not exists appearance_mode text not null default 'dark';
+alter table public.profiles add column if not exists avatar_url text;
 
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);
