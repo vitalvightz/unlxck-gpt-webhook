@@ -917,6 +917,14 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
         if week_index <= 0:
             continue
         expected_roles = list(week.get("session_roles") or [])
+        expected_role_days = [
+            {
+                "role_key": role.get("role_key"),
+                "scheduled_day_hint": role.get("scheduled_day_hint", ""),
+            }
+            for role in expected_roles
+            if role.get("role_key")
+        ]
         week_section = week_sections.get(week_index)
         if not week_section:
             warnings.append(
@@ -926,6 +934,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
                     "week_index": week_index,
                     "phase": week.get("phase"),
                     "expected_roles": [role.get("role_key") for role in expected_roles],
+                    "expected_role_days": expected_role_days,
                 }
             )
             continue
@@ -943,6 +952,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
                     "expected_session_count": expected_session_count,
                     "actual_session_count": actual_session_count,
                     "expected_roles": [role.get("role_key") for role in expected_roles],
+                    "expected_role_days": expected_role_days,
                 }
             )
         elif actual_session_count > expected_session_count:
@@ -955,6 +965,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
                     "expected_session_count": expected_session_count,
                     "actual_session_count": actual_session_count,
                     "expected_roles": [role.get("role_key") for role in expected_roles],
+                    "expected_role_days": expected_role_days,
                 }
             )
 
@@ -1227,4 +1238,3 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "coach_voice_warnings": coach_voice_warnings,
         "sport_language_warnings": sport_language_warnings,
     }
-
