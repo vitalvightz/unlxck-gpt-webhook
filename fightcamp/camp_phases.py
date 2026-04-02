@@ -281,8 +281,10 @@ def calculate_phase_weeks(
 
     short_notice = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14
     if not short_notice:
-        weeks["GPP"] = max(1, weeks["GPP"])
-        if camp_length >= 2:
+        if camp_length >= 3:
+            weeks["GPP"] = max(1, weeks["GPP"])
+            weeks["SPP"] = max(1, weeks["SPP"])
+        elif camp_length == 2:
             weeks["SPP"] = max(1, weeks["SPP"])
         _rebalance(weeks)
 
