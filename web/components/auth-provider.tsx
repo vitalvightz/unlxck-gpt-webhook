@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 
 import { ApiError, getMe } from "@/lib/api";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import type { MeResponse } from "@/lib/types";
+import type { AppearanceMode, MeResponse } from "@/lib/types";
 
 type AppSession = {
   access_token: string;
@@ -28,6 +28,14 @@ const AppSessionContext = createContext<AppSessionValue | undefined>(undefined);
 
 function tokenForRole(role: DemoRole): string {
   return role === "admin" ? "demo-admin" : "demo-athlete";
+}
+
+function applyAppearanceMode(mode: AppearanceMode) {
+  if (typeof document === "undefined") {
+    return;
+  }
+  document.documentElement.dataset.theme = mode;
+  document.documentElement.style.colorScheme = mode;
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
@@ -122,6 +130,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+    applyAppearanceMode(session && me?.profile.appearance_mode === "light" ? "light" : "dark");
+  }, [isReady, session, me?.profile.appearance_mode]);
+
   async function refreshMe() {
     await loadMe(session);
   }
@@ -140,6 +155,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       setSession(null);
       setMe(null);
       setIsReady(true);
+      applyAppearanceMode("dark");
       return;
     }
 
@@ -151,6 +167,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setSession(null);
     setMe(null);
     setIsReady(true);
+    applyAppearanceMode("dark");
   }
 
   return (

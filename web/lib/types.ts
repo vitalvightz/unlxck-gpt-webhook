@@ -1,4 +1,5 @@
 export type UserRole = "athlete" | "admin";
+export type AppearanceMode = "dark" | "light";
 
 export type GenerationJobStatus = "queued" | "running" | "completed" | "review_required" | "failed";
 
@@ -58,6 +59,7 @@ export type ProfileUpdateRequest = {
   record?: string;
   athlete_timezone?: string;
   athlete_locale?: string;
+  appearance_mode?: AppearanceMode;
   onboarding_draft?: Record<string, unknown> | null;
   avatar_url?: string | null;
 };
@@ -74,6 +76,7 @@ export type ProfileRecord = {
   record: string;
   athlete_timezone: string;
   athlete_locale: string;
+  appearance_mode: AppearanceMode;
   onboarding_draft?: Record<string, unknown> | null;
   avatar_url?: string | null;
   created_at: string;
@@ -160,6 +163,7 @@ export type AdminAthleteRecord = {
   record: string;
   athlete_timezone: string;
   athlete_locale: string;
+  appearance_mode: AppearanceMode;
   onboarding_draft?: PlanRequest | null;
   latest_intake?: PlanRequest | null;
   created_at: string;

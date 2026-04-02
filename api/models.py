@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 UserRole = Literal["athlete", "admin"]
+AppearanceMode = Literal["dark", "light"]
 
 
 GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
@@ -131,6 +132,7 @@ class ProfileUpdateRequest(BaseModel):
     record: str | None = None
     athlete_timezone: str | None = None
     athlete_locale: str | None = None
+    appearance_mode: AppearanceMode | None = None
     onboarding_draft: dict[str, Any] | None = None
     avatar_url: str | None = None
 
@@ -178,6 +180,7 @@ class ProfileRecord(BaseModel):
     record: str = ""
     athlete_timezone: str = ""
     athlete_locale: str = ""
+    appearance_mode: AppearanceMode = "dark"
     onboarding_draft: dict[str, Any] | None = None
     avatar_url: str | None = None
     created_at: str
@@ -263,6 +266,7 @@ class AdminAthleteRecord(BaseModel):
     record: str = ""
     athlete_timezone: str = ""
     athlete_locale: str = ""
+    appearance_mode: AppearanceMode = "dark"
     onboarding_draft: dict[str, Any] | None = None
     latest_intake: dict[str, Any] | None = None
     created_at: str

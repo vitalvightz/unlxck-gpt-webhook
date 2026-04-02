@@ -44,6 +44,7 @@ create table if not exists public.profiles (
   record_summary text not null default '',
   athlete_timezone text not null default '',
   athlete_locale text not null default '',
+  appearance_mode text not null default 'dark',
   onboarding_draft jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
@@ -90,6 +91,7 @@ alter table public.plans add column if not exists stage2_retry_text text not nul
 alter table public.plans add column if not exists stage2_validator_report jsonb not null default '{}'::jsonb;
 alter table public.plans add column if not exists stage2_status text not null default '';
 alter table public.plans add column if not exists stage2_attempt_count integer not null default 0;
+alter table public.profiles add column if not exists appearance_mode text not null default 'dark';
 
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);

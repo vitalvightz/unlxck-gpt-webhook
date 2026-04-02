@@ -63,6 +63,7 @@ class DemoStore:
                 "record_summary": "",
                 "athlete_timezone": "",
                 "athlete_locale": "",
+                "appearance_mode": "dark",
                 "onboarding_draft": None,
                 "created_at": _now(),
                 "updated_at": _now(),
