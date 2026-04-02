@@ -1874,20 +1874,26 @@ def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> 
     role["placement_rule"] = f"{placement} {extra}".strip() if placement else extra
 
 
-def _dedupe_strings(values: list[str]) -> list[str]:
+def _dedupe_clean_strings(values: list[Any]) -> list[str]:
     return _dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
 
 
 def _append_week_coach_note_flag(week_entry: dict, flag: str) -> None:
-    current_flags = _dedupe_strings(_clean_list(week_entry.get("coach_note_flags", [])))
+    current_flags = _dedupe_clean_strings(_clean_list(week_entry.get("coach_note_flags", [])))
     if flag and flag not in current_flags:
         current_flags.append(flag)
     week_entry["coach_note_flags"] = current_flags
 
 
+def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) -> list[str]:
+    status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
+    return ["deload hard sparring"] if status != "hard_as_planned" else []
+
+
 def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
     reason_codes = list((plan_entry or {}).get("reason_codes") or [])
+    coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
     role: dict[str, Any] = {
         "category": "sparring",
         "role_key": "hard_sparring_day",
@@ -1921,7 +1927,7 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "hard_sparring_status": status,
         "hard_sparring_reason_codes": reason_codes,
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
-        "coach_note_flags": ["deload hard sparring"] if status != "hard_as_planned" else [],
+        "coach_note_flags": coach_note_flags,
     }
     if role["coach_note_flags"]:
         role["placement_rule"] += " Deload the sparring dose instead of changing the slot."
@@ -2646,8 +2652,12 @@ def _build_weekly_role_map(
         week_entry["hard_sparring_plan"] = hard_sparring_plan
         week_entry["effective_hard_sparring_days"] = list(effective_days)
         week_entry["intentional_compression"] = _intentional_compression_stub()
-        week_entry["coach_note_flags"] = _dedupe_strings(
-            ["deload hard sparring" for entry in hard_sparring_plan if entry.get("status") != "hard_as_planned"]
+        week_entry["coach_note_flags"] = _dedupe_clean_strings(
+            [
+                flag
+                for entry in hard_sparring_plan
+                for flag in _hard_sparring_coach_note_flags(entry)
+            ]
         )
 
         session_roles = _resequence_session_roles(
@@ -2696,7 +2706,7 @@ def _build_weekly_role_map(
                 "declared_technical_skill_days": _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
-                "coach_note_flags": _dedupe_strings(_clean_list(week_entry.get("coach_note_flags", []))),
+                "coach_note_flags": _dedupe_clean_strings(_clean_list(week_entry.get("coach_note_flags", []))),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
