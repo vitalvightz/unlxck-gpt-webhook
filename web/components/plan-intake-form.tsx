@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -496,6 +496,84 @@ function StepPills({
   );
 }
 
+function MobileStepRail({
+  currentStep,
+  onStepSelect,
+}: {
+  currentStep: number;
+  onStepSelect: (step: number) => void;
+}) {
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Array<HTMLElement | null>>([]);
+
+  useEffect(() => {
+    const rail = railRef.current;
+    const activeItem = itemRefs.current[currentStep];
+    if (!rail || !activeItem) {
+      return;
+    }
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const itemCenter = activeItem.offsetLeft + activeItem.offsetWidth / 2;
+    const targetLeft = Math.max(itemCenter - rail.clientWidth / 2, 0);
+    const maxScrollLeft = Math.max(rail.scrollWidth - rail.clientWidth, 0);
+
+    rail.scrollTo({
+      left: Math.min(targetLeft, maxScrollLeft),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, [currentStep]);
+
+  return (
+    <div className="mobile-step-rail" data-state="open">
+      <div ref={railRef} className="mobile-step-rail-scroll" aria-label="Onboarding steps">
+        {steps.map((label, index) => {
+          const isJumpable = index < steps.length - 1;
+          const statusClass = index < currentStep ? "mobile-step-rail-item-complete" : index === currentStep ? "mobile-step-rail-item-active" : "";
+          const pillContent = (
+            <>
+              <span className="mobile-step-rail-index">{String(index + 1).padStart(2, "0")}</span>
+              <span className="mobile-step-rail-label">{label}</span>
+            </>
+          );
+
+          if (!isJumpable) {
+            return (
+              <div
+                key={label}
+                ref={(node) => {
+                  itemRefs.current[index] = node;
+                }}
+                className={`mobile-step-rail-item ${statusClass}`.trim()}
+                aria-current={index === currentStep ? "step" : undefined}
+                aria-label={`${label}, step ${index + 1}, ${index === currentStep ? "current" : "upcoming"}`}
+              >
+                {pillContent}
+              </div>
+            );
+          }
+
+          return (
+            <button
+              key={label}
+              type="button"
+              ref={(node) => {
+                itemRefs.current[index] = node;
+              }}
+              className={`mobile-step-rail-item ${statusClass}`.trim()}
+              onClick={() => onStepSelect(index)}
+              aria-current={index === currentStep ? "step" : undefined}
+              aria-label={`${label}, step ${index + 1}, ${index < currentStep ? "complete" : index === currentStep ? "current" : "upcoming"}`}
+            >
+              {pillContent}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MobileOnboardingHeader({
   currentStep,
   isOpen,
@@ -514,7 +592,13 @@ function MobileOnboardingHeader({
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
       </div>
-      <div className="status-card onboarding-mobile-step-summary">
+      <button
+        type="button"
+        className="status-card onboarding-mobile-step-summary onboarding-mobile-step-trigger"
+        aria-expanded={isOpen}
+        aria-controls="onboarding-mobile-steps"
+        onClick={onToggle}
+      >
         <div className="onboarding-mobile-step-summary-row">
           <div className="onboarding-mobile-step-copy">
             <p className="status-label">Current step</p>
@@ -523,22 +607,17 @@ function MobileOnboardingHeader({
               Step {currentStep + 1} of {steps.length}. Draft keeps your selections and current step.
             </p>
           </div>
-          <button
-            type="button"
-            className="secondary-button onboarding-mobile-progress-toggle"
-            aria-expanded={isOpen}
-            aria-controls="onboarding-mobile-steps"
-            onClick={onToggle}
-          >
-            {isOpen ? "Hide steps" : "Show steps"}
-          </button>
+          <span className="onboarding-mobile-step-affordance" aria-hidden="true">
+            <span className="onboarding-mobile-step-affordance-label">{isOpen ? "Close" : "All steps"}</span>
+            <span className="onboarding-mobile-step-chevron" />
+          </span>
         </div>
-        {isOpen ? (
-          <div id="onboarding-mobile-steps" className="onboarding-mobile-progress-panel">
-            <StepPills currentStep={currentStep} onStepSelect={onStepSelect} />
-          </div>
-        ) : null}
-      </div>
+      </button>
+      {isOpen ? (
+        <div id="onboarding-mobile-steps" className="onboarding-mobile-progress-panel">
+          <MobileStepRail currentStep={currentStep} onStepSelect={onStepSelect} />
+        </div>
+      ) : null}
     </div>
   );
 }
