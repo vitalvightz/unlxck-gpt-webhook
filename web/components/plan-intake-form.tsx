@@ -320,6 +320,53 @@ function StepPills({
   );
 }
 
+function MobileOnboardingHeader({
+  currentStep,
+  isOpen,
+  onToggle,
+  onStepSelect,
+}: {
+  currentStep: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  onStepSelect: (step: number) => void;
+}) {
+  return (
+    <div className="onboarding-heading-mobile">
+      <div className="onboarding-mobile-header-copy">
+        <p className="kicker">Athlete Onboarding</p>
+        <p className="onboarding-mobile-title">Build your camp profile.</p>
+        <p className="muted">Saved, resumable athlete intake.</p>
+      </div>
+      <div className="status-card onboarding-mobile-step-summary">
+        <div className="onboarding-mobile-step-summary-row">
+          <div className="onboarding-mobile-step-copy">
+            <p className="status-label">Current step</p>
+            <h2 className="plan-summary-title">{steps[currentStep]}</h2>
+            <p className="muted">
+              Step {currentStep + 1} of {steps.length}. Draft keeps your selections and current step.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="secondary-button onboarding-mobile-progress-toggle"
+            aria-expanded={isOpen}
+            aria-controls="onboarding-mobile-steps"
+            onClick={onToggle}
+          >
+            {isOpen ? "Hide steps" : "Show steps"}
+          </button>
+        </div>
+        {isOpen ? (
+          <div id="onboarding-mobile-steps" className="onboarding-mobile-progress-panel">
+            <StepPills currentStep={currentStep} onStepSelect={onStepSelect} />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function CheckboxGroup({
   label,
   options,
@@ -382,6 +429,7 @@ export function PlanIntakeForm() {
   const router = useRouter();
   const { me, replaceMe, session } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
+  const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
   const [guidedInjury, setGuidedInjury] = useState<GuidedInjuryState>(EMPTY_GUIDED_INJURY);
   const [hydrated, setHydrated] = useState(false);
@@ -419,6 +467,7 @@ export function PlanIntakeForm() {
   }, [hydrated, me]);
 
   useEffect(() => {
+    setIsMobileProgressOpen(false);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
@@ -672,6 +721,7 @@ export function PlanIntakeForm() {
     })) {
       return;
     }
+    setIsMobileProgressOpen(false);
     setCurrentStep(targetStep);
 
     if (!session?.access_token || !isValidRecordFormat(getNextForm().athlete.record ?? "")) {
@@ -802,8 +852,8 @@ export function PlanIntakeForm() {
 
   return (
     <RequireAuth>
-      <section className="panel">
-        <div className="section-heading">
+      <section className="panel onboarding-panel">
+        <div className="section-heading onboarding-heading-desktop">
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Athlete Onboarding</p>
             <h1>Build your camp profile.</h1>
@@ -816,13 +866,20 @@ export function PlanIntakeForm() {
           </div>
         </div>
 
-        <div className="athlete-motion-slot athlete-motion-status">
+        <MobileOnboardingHeader
+          currentStep={currentStep}
+          isOpen={isMobileProgressOpen}
+          onToggle={() => setIsMobileProgressOpen((current) => !current)}
+          onStepSelect={handleStepSelect}
+        />
+
+        <div className="athlete-motion-slot athlete-motion-status onboarding-progress-desktop">
           <StepPills currentStep={currentStep} onStepSelect={handleStepSelect} />
         </div>
 
         {currentStep === 0 ? (
-          <div className="step-layout">
-            <div className="step-main athlete-motion-slot athlete-motion-main">
+          <div className="step-layout onboarding-step-layout">
+            <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Identity</p>
@@ -922,7 +979,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Profile snapshot</p>
@@ -942,8 +999,8 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 1 ? (
-          <div className="step-layout">
-            <div className="step-main athlete-motion-slot athlete-motion-main">
+          <div className="step-layout onboarding-step-layout">
+            <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Fight context</p>
@@ -995,7 +1052,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Context snapshot</p>
@@ -1017,8 +1074,8 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 2 ? (
-          <div className="step-layout">
-            <div className="step-main athlete-motion-slot athlete-motion-main">
+          <div className="step-layout onboarding-step-layout">
+            <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Schedule</p>
@@ -1085,7 +1142,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Current input</p>
@@ -1123,8 +1180,8 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 3 ? (
-          <div className="step-layout">
-            <div className="step-main athlete-motion-slot athlete-motion-main">
+          <div className="step-layout onboarding-step-layout">
+            <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Restrictions</p>
@@ -1218,7 +1275,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <p className="kicker">Safety</p>
                 <p className="muted">Start with body part, severity, trend, and what to avoid. Add free text only for the details that matter.</p>
@@ -1228,8 +1285,8 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 4 ? (
-          <div className="step-layout">
-            <div className="step-main athlete-motion-slot athlete-motion-main">
+          <div className="step-layout onboarding-step-layout">
+            <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Target outcomes</p>
@@ -1284,7 +1341,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Performance snapshot</p>
@@ -1301,8 +1358,8 @@ export function PlanIntakeForm() {
         ) : null}
 
         {currentStep === 5 ? (
-          <div className="step-layout">
-            <div className="step-main athlete-motion-slot athlete-motion-main">
+          <div className="step-layout onboarding-step-layout">
+            <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Review</p>
@@ -1352,7 +1409,7 @@ export function PlanIntakeForm() {
               </article>
             </div>
 
-            <aside className="step-aside athlete-motion-slot athlete-motion-rail">
+            <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="status-card">
                 <p className="status-label">Ready to generate</p>
                 <h2 className="plan-summary-title">Final pre-check</h2>

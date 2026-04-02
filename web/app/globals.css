@@ -42,6 +42,14 @@
   --space-5: 32px;
   --space-6: 40px;
   --space-7: 56px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --mobile-nav-offset-top: 16px;
+  --mobile-nav-offset-side: 16px;
+  --mobile-nav-min-height: 44px;
+  --mobile-nav-clearance: calc(var(--safe-area-top) + var(--mobile-nav-offset-top) + var(--mobile-nav-min-height) + 18px);
   --transition-fast: 160ms ease;
   --transition-base: 220ms ease;
 }
@@ -1373,6 +1381,25 @@ select:focus-visible {
   color: var(--text-primary);
 }
 
+.onboarding-heading-mobile {
+  display: none;
+}
+
+.onboarding-mobile-header-copy,
+.onboarding-mobile-step-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.onboarding-mobile-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: clamp(30px, 7vw, 40px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
 .step-layout,
 .split-layout,
 .plan-detail-layout,
@@ -1762,17 +1789,18 @@ select:focus-visible {
   .mobile-nav-toggle {
     display: inline-flex;
     position: fixed;
-    top: 16px;
-    left: 16px;
+    top: calc(var(--mobile-nav-offset-top) + var(--safe-area-top));
+    left: calc(var(--mobile-nav-offset-side) + var(--safe-area-left));
     z-index: 70;
     align-items: center;
     gap: 10px;
-    min-height: 44px;
+    min-height: var(--mobile-nav-min-height);
     padding: 0 14px;
     border-radius: 10px;
     border: 1px solid var(--border-default);
     background: rgba(12, 13, 15, 0.96);
     backdrop-filter: blur(16px);
+    max-width: calc(100vw - var(--safe-area-left) - var(--safe-area-right) - 32px);
   }
 
   .nav-scrim {
@@ -1791,6 +1819,10 @@ select:focus-visible {
     transition: transform var(--transition-base);
     width: min(82vw, 296px);
     height: 100vh;
+    padding-top: calc(20px + var(--safe-area-top));
+    padding-right: calc(20px + var(--safe-area-right));
+    padding-bottom: calc(20px + var(--safe-area-bottom));
+    padding-left: calc(20px + var(--safe-area-left));
     z-index: 60;
     border-right: 1px solid var(--border-default);
   }
@@ -1800,7 +1832,10 @@ select:focus-visible {
   }
 
   .app-main {
-    padding: 78px 18px 36px;
+    padding-top: var(--mobile-nav-clearance);
+    padding-right: calc(18px + var(--safe-area-right));
+    padding-bottom: calc(36px + var(--safe-area-bottom));
+    padding-left: calc(18px + var(--safe-area-left));
   }
 
   .auth-layout,
@@ -1822,7 +1857,8 @@ select:focus-visible {
 
 @media (max-width: 720px) {
   .app-main {
-    padding-inline: 14px;
+    padding-right: calc(14px + var(--safe-area-right));
+    padding-left: calc(14px + var(--safe-area-left));
   }
 
   .panel,
@@ -1949,6 +1985,94 @@ select:focus-visible {
 
   .plan-history-meta {
     justify-items: start;
+  }
+
+  .onboarding-panel {
+    gap: 18px;
+  }
+
+  .onboarding-heading-desktop,
+  .onboarding-progress-desktop {
+    display: none;
+  }
+
+  .onboarding-heading-mobile {
+    display: grid;
+    gap: 14px;
+  }
+
+  .onboarding-mobile-title {
+    font-size: clamp(28px, 8vw, 34px);
+  }
+
+  .onboarding-mobile-step-summary {
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .onboarding-mobile-step-summary-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .onboarding-mobile-step-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .onboarding-mobile-progress-toggle {
+    width: auto;
+    min-width: 132px;
+    padding-inline: 16px;
+    justify-self: start;
+  }
+
+  .onboarding-mobile-progress-panel {
+    display: grid;
+    gap: 12px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .onboarding-step-layout {
+    gap: 18px;
+  }
+
+  .onboarding-step-main,
+  .onboarding-step-aside {
+    gap: 14px;
+  }
+
+  .onboarding-step-main .form-section-header,
+  .onboarding-step-aside .form-section-header {
+    margin-bottom: 12px;
+  }
+
+  .onboarding-step-main .step-card,
+  .onboarding-step-aside .support-panel,
+  .onboarding-step-aside .status-card {
+    gap: 12px;
+  }
+
+  .onboarding-step-aside .summary-list {
+    gap: 6px;
+  }
+
+  .onboarding-panel .form-actions {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 460px) {
+  .step-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-mobile-progress-toggle {
+    width: 100%;
   }
 }
 
