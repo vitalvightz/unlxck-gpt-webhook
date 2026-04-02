@@ -204,6 +204,37 @@ def _contains_trigger_token(text: str) -> bool:
     return bool(tokens & CONSTRAINT_TRIGGER_TOKENS)
 
 
+def _strip_keywords_from_text(text: str, keywords: list[str]) -> str:
+    """Remove matched canonical movement keywords so only surrounding context remains."""
+    stripped = _normalize_text(text)
+    for keyword in sorted(keywords, key=len, reverse=True):
+        if " " in keyword or "-" in keyword:
+            parts = [re.escape(part) for part in re.split(r"[\s-]+", keyword.strip()) if part]
+            if not parts:
+                continue
+            pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
+        else:
+            pattern = rf"\b{re.escape(keyword.lower())}\b"
+        stripped = re.sub(pattern, " ", stripped)
+    return re.sub(r"\s+", " ", stripped).strip()
+
+
+def _has_injury_context_beside_canonical_restriction(text: str, restriction_key: str) -> bool:
+    """Detect explicit injury language that appears outside a matched restriction phrase."""
+    base_restriction_key = "high_impact" if restriction_key.startswith("high_impact") else restriction_key
+
+    for restriction_data in CANONICAL_RESTRICTIONS.values():
+        if restriction_data["restriction"] != base_restriction_key:
+            continue
+        surrounding_context = _strip_keywords_from_text(text, restriction_data["keywords"])
+        if not surrounding_context:
+            return False
+        injury_type, location = parse_injury_phrase(surrounding_context)
+        return injury_type is not None or location is not None
+
+    return False
+
+
 def is_restriction_phrase(text: str) -> bool:
     """Check whether a phrase should be treated as a restriction."""
     if not text:
@@ -213,8 +244,7 @@ def is_restriction_phrase(text: str) -> bool:
     restriction_key, _ = _match_canonical_restriction(text)
     if not restriction_key:
         return False
-    injury_type, _ = parse_injury_phrase(text)
-    return injury_type is None
+    return not _has_injury_context_beside_canonical_restriction(text, restriction_key)
 
 
 def _infer_restriction_strength(text: str) -> str:

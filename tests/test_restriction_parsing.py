@@ -47,11 +47,21 @@ def test_restriction_triggers_with_apostrophes():
 
 def test_parse_restriction_entry_canonical():
     """Test parsing of canonical restriction phrases."""
+    result = parse_restriction_entry("deep knee flexion")
+    assert result is not None
+    assert result["restriction"] == "deep_knee_flexion"
+    assert result["region"] == "knee"
+
     result = parse_restriction_entry("avoid deep knee flexion under load")
     assert result is not None
     assert result["restriction"] == "deep_knee_flexion"
     assert result["region"] == "knee"
     assert result["strength"] == "avoid"
+
+    result = parse_restriction_entry("deep hip flexion")
+    assert result is not None
+    assert result["restriction"] == "deep_hip_flexion"
+    assert result["region"] == "hip"
 
     result = parse_restriction_entry("avoid deep hip flexion")
     assert result is not None
@@ -159,6 +169,8 @@ def test_constraint_phrases_not_parsed_as_injuries():
     """Ensure constraint phrases are NOT mistakenly parsed as injuries."""
     constraint_phrases = [
         "avoid deep knee flexion under load",
+        "deep knee flexion",
+        "deep hip flexion",
         "no heavy overhead pressing",
         "heavy overhead pressing",
         "limit high impact activities",
@@ -288,6 +300,8 @@ def test_restriction_parsing_logging_multiple(caplog):
 
 def test_is_restriction_phrase_skips_injury_context():
     """Ensure restrictions without triggers still parse and injuries still pass."""
+    assert is_restriction_phrase("deep knee flexion")
+    assert not is_restriction_phrase("pain with deep knee flexion")
     assert is_restriction_phrase("heavy overhead pressing")
     assert not is_restriction_phrase("pain with heavy overhead pressing")
 
