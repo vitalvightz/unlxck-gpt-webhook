@@ -39,6 +39,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
+import { getPerformanceFocusCap } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
 import type { PlanRequest } from "@/lib/types";
 
@@ -451,11 +452,13 @@ function CheckboxGroup({
   options,
   selectedValues,
   onToggle,
+  disableAdditionalSelections = false,
 }: {
   label: string;
   options: IntakeOption[];
   selectedValues: string[];
   onToggle: (value: string) => void;
+  disableAdditionalSelections?: boolean;
 }) {
   return (
     <div className="field">
@@ -463,9 +466,14 @@ function CheckboxGroup({
       <div className="checkbox-grid">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
+          const disabled = disableAdditionalSelections && !checked;
           return (
-            <label key={option.value} className={`checkbox-card ${checked ? "checkbox-card-checked" : ""}`.trim()}>
-              <input type="checkbox" checked={checked} onChange={() => onToggle(option.value)} />
+            <label
+              key={option.value}
+              className={`checkbox-card ${checked ? "checkbox-card-checked" : ""} ${disabled ? "checkbox-card-disabled" : ""}`.trim()}
+              aria-disabled={disabled}
+            >
+              <input type="checkbox" checked={checked} disabled={disabled} onChange={() => onToggle(option.value)} />
               <span className="checkbox-card-copy">
                 <span className="checkbox-card-title">{option.label}</span>
               </span>
@@ -623,6 +631,16 @@ export function PlanIntakeForm() {
       const currentValues = key === "equipment_access"
         ? retainKnownOptionValues(current[key], EQUIPMENT_ACCESS_OPTIONS)
         : current[key];
+      const alreadySelected = currentValues.includes(value);
+      const isPerformanceFocusField = key === "key_goals" || key === "weak_areas";
+      const performanceFocusCap = isPerformanceFocusField
+        ? getPerformanceFocusCap(current.fight_date, { timeZone: current.athlete.athlete_timezone })
+        : null;
+      const totalSelectedPerformanceFocus = current.key_goals.length + current.weak_areas.length;
+
+      if (isPerformanceFocusField && !alreadySelected && performanceFocusCap && totalSelectedPerformanceFocus >= performanceFocusCap.maxSelections) {
+        return current;
+      }
 
       return {
         ...current,
@@ -850,12 +868,34 @@ export function PlanIntakeForm() {
   const selectedTechnicalSkillLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.technical_skill_days);
   const selectedGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals);
   const selectedWeakAreaLabels = getOptionLabels(WEAK_AREA_OPTIONS, form.weak_areas);
+  const performanceFocusCap = getPerformanceFocusCap(form.fight_date, {
+    timeZone: form.athlete.athlete_timezone,
+  });
+  const selectedPerformanceFocusCount = form.key_goals.length + form.weak_areas.length;
+  const performanceFocusCapValue = performanceFocusCap?.maxSelections ?? null;
+  const performanceFocusCapReached = performanceFocusCapValue !== null && selectedPerformanceFocusCount >= performanceFocusCapValue;
+  const performanceFocusCapExceeded = performanceFocusCapValue !== null && selectedPerformanceFocusCount > performanceFocusCapValue;
+  const remainingPerformanceFocusSelections = performanceFocusCapValue === null
+    ? null
+    : Math.max(performanceFocusCapValue - selectedPerformanceFocusCount, 0);
+  const performanceFocusWindowLabel = performanceFocusCap?.windowLabel.toLowerCase() ?? "this camp window";
+  const performanceFocusReason = performanceFocusCap?.reason ?? "";
   const selectedTrainingAvailability = formatJoinedLabels(selectedTrainingAvailabilityLabels, "No availability selected");
   const selectedEquipmentAccess = formatJoinedLabels(selectedEquipmentAccessLabels, "No equipment selected");
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
   const selectedTechnicalSkillDays = formatJoinedLabels(selectedTechnicalSkillLabels, "No fixed technical-only days");
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
+  const performanceFocusCapTitle = performanceFocusCapValue === null
+    ? "Set a fight date to calculate your focus cap"
+    : `${selectedPerformanceFocusCount} of ${performanceFocusCapValue} focus picks used`;
+  const performanceFocusCapDetail = performanceFocusCapValue === null
+    ? "Goals and weak areas share a cap once the fight date is set so the plan can match the camp window."
+    : performanceFocusCapExceeded
+      ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You are ${selectedPerformanceFocusCount - performanceFocusCapValue} over the current cap, so unselect to get back within it.`
+      : performanceFocusCapReached
+        ? `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} Cap reached. Unselect one to change your focus.`
+        : `Goals and weak areas share this ${performanceFocusCapValue}-pick cap for ${performanceFocusWindowLabel}. ${performanceFocusReason} You can add ${remainingPerformanceFocusSelections} more.`;
   const weightCutStatus = formatWeightCutStatus(form.athlete.weight_kg, form.athlete.target_weight_kg);
   const equipmentLimitations = formatEquipmentLimitations(form.equipment_access);
   const sparringConsistency = getSparringConsistency(
@@ -1366,6 +1406,13 @@ export function PlanIntakeForm() {
         {currentStep === 4 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
+              <article className={`support-panel ${performanceFocusCapExceeded ? "support-panel-alert" : ""}`.trim()}>
+                <div className="form-section-header">
+                  <p className="kicker">Focus cap</p>
+                  <h2 className="form-section-title">{performanceFocusCapTitle}</h2>
+                </div>
+                <p className="muted">{performanceFocusCapDetail}</p>
+              </article>
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Target outcomes</p>
@@ -1376,6 +1423,7 @@ export function PlanIntakeForm() {
                   options={KEY_GOAL_OPTIONS}
                   selectedValues={form.key_goals}
                   onToggle={(value) => toggleFieldValue("key_goals", value)}
+                  disableAdditionalSelections={performanceFocusCapReached}
                 />
               </article>
               <article className="step-card">
@@ -1388,6 +1436,7 @@ export function PlanIntakeForm() {
                   options={WEAK_AREA_OPTIONS}
                   selectedValues={form.weak_areas}
                   onToggle={(value) => toggleFieldValue("weak_areas", value)}
+                  disableAdditionalSelections={performanceFocusCapReached}
                 />
               </article>
               <article className="step-card">
