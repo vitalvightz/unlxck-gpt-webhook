@@ -1428,6 +1428,7 @@ select:focus-visible {
 
 .mobile-step-rail-item {
   position: relative;
+  appearance: none;
   display: grid;
   gap: 10px;
   flex: 0 0 148px;
@@ -1440,6 +1441,7 @@ select:focus-visible {
   text-align: left;
   scroll-snap-align: center;
   box-shadow: var(--shadow-support);
+  cursor: default;
 }
 
 .mobile-step-rail-item::after {
@@ -1453,9 +1455,8 @@ select:focus-visible {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.mobile-step-rail-item button,
-.mobile-step-rail-item div {
-  appearance: none;
+button.mobile-step-rail-item {
+  cursor: pointer;
 }
 
 .mobile-step-rail-item-complete {
