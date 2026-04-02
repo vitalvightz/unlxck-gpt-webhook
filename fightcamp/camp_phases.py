@@ -149,7 +149,7 @@ def _apply_style_rules(rules: dict, camp_length: int, weeks: dict) -> None:
             weeks["SPP"] = min_spp
             weeks["GPP"] = max(1, weeks["GPP"] - diff)
     if "MAX_TAPER" in rules:
-        max_taper = int(camp_length * rules["MAX_TAPER"])
+        max_taper = max(1, round(camp_length * rules["MAX_TAPER"]))
         if weeks["TAPER"] > max_taper:
             excess = weeks["TAPER"] - max_taper
             weeks["TAPER"] = max_taper
@@ -279,12 +279,22 @@ def calculate_phase_weeks(
 
     _rebalance(weeks)
 
-    short_notice = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 14
+    short_notice = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 21
     if not short_notice:
-        weeks["GPP"] = max(1, weeks["GPP"])
-        if camp_length >= 2:
+        if camp_length >= 3:
+            weeks["GPP"] = max(1, weeks["GPP"])
+            weeks["SPP"] = max(1, weeks["SPP"])
+        elif camp_length == 2:
             weeks["SPP"] = max(1, weeks["SPP"])
         _rebalance(weeks)
+
+        if camp_length >= 2 and weeks["TAPER"] == 0:
+            if weeks["SPP"] > 1 or (camp_length == 2 and weeks["SPP"] > 0):
+                weeks["SPP"] -= 1
+                weeks["TAPER"] = 1
+            elif weeks["GPP"] > 1 or (camp_length == 2 and weeks["GPP"] > 0):
+                weeks["GPP"] -= 1
+                weeks["TAPER"] = 1
 
     # 6. Apply post-conversion style rules when relevant
     for s in all_styles:
@@ -292,8 +302,18 @@ def calculate_phase_weeks(
         if rules:
             _apply_style_rules(rules, camp_length, weeks)
 
+
     # Ensure totals still sum to camp_length after adjustments
     _rebalance(weeks)
+
+    if camp_length >= 2 and weeks["TAPER"] == 0:
+        if weeks["SPP"] > 1 or (camp_length == 2 and weeks["SPP"] > 0):
+            weeks["SPP"] -= 1
+            weeks["TAPER"] = 1
+        elif weeks["GPP"] > 1 or (camp_length == 2 and weeks["GPP"] > 0):
+            weeks["GPP"] -= 1
+            weeks["TAPER"] = 1
+        _rebalance(weeks)
 
     # Translate final week splits into day counts for reporting
     days = {
