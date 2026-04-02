@@ -21,3 +21,45 @@ def test_calculate_phase_weeks_uses_same_day_fight_as_exact_days_input():
     assert same_day == same_day_equivalent
     assert same_day != week_only
     assert sum(same_day["days"].values()) == 0
+
+def test_calculate_phase_weeks_keeps_taper_for_16_day_camps():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=16)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] == 1
+    assert phases["TAPER"] == 1
+    assert phases["days"]["TAPER"] > 0
+    assert sum(phases["days"].values()) == 16
+
+
+def test_calculate_phase_weeks_keeps_taper_for_18_day_camps():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=18)
+
+    assert phases["TAPER"] == 1
+    assert phases["days"]["TAPER"] > 0
+    assert sum(phases["days"].values()) == 18
+
+
+def test_calculate_phase_weeks_keeps_taper_for_16_day_pressure_fighter():
+    phases = calculate_phase_weeks(6, "boxing", style="pressure fighter", days_until_fight=16)
+
+    assert phases["TAPER"] == 1
+    assert phases["SPP"] == 1
+    assert phases["days"]["TAPER"] > 0
+
+
+def test_calculate_phase_weeks_keeps_taper_for_16_day_grappler():
+    phases = calculate_phase_weeks(6, "boxing", style="grappler", days_until_fight=16)
+
+    assert phases["TAPER"] == 1
+    assert phases["days"]["TAPER"] > 0
+
+
+def test_calculate_phase_weeks_treats_21_days_as_short_notice_boundary():
+    at_boundary = calculate_phase_weeks(6, "boxing", days_until_fight=21)
+    above_boundary = calculate_phase_weeks(6, "boxing", days_until_fight=22)
+
+    assert at_boundary["GPP"] == 0
+    assert above_boundary["GPP"] >= 1
+    assert at_boundary["TAPER"] >= 1
+    assert above_boundary["TAPER"] >= 1
