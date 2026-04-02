@@ -1,6 +1,6 @@
 # Restriction Parsing Documentation
 
-## Overview
+# Overview
 
 The restriction parsing module provides a clean separation between actual injuries and physical constraints/restrictions. Previously, phrases like "avoid deep knee flexion under load" were incorrectly parsed as injuries (e.g., `injury_type="contusion"`, `severity="moderate"`). This module properly identifies and categorizes them as restrictions.
 
