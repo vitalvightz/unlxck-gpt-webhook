@@ -65,7 +65,7 @@ const APPEARANCE_OPTIONS: Array<{
 ];
 
 export default function SettingsPage() {
-  const { me, replaceMe, session } = useAppSession();
+  const { me, previewAppearanceMode, replaceMe, session } = useAppSession();
   const [fullName, setFullName] = useState("");
   const [technicalStyle, setTechnicalStyle] = useState("");
   const [tacticalStyle, setTacticalStyle] = useState("");
@@ -109,6 +109,12 @@ export default function SettingsPage() {
       setUrlInputValue(storedAvatar);
     }
   }, [me]);
+
+  useEffect(() => {
+    return () => {
+      previewAppearanceMode(null);
+    };
+  }, [previewAppearanceMode]);
 
   function handleSave() {
     if (!session?.access_token) {
@@ -199,7 +205,7 @@ export default function SettingsPage() {
               <div className="form-section-header">
                 <p className="kicker">Appearance</p>
                 <h2 className="form-section-title">Workspace theme</h2>
-                <p className="muted">Choose how the whole control room should look after you save.</p>
+                <p className="muted">Preview applies immediately. Save to sync it across your account.</p>
               </div>
 
               <div className="appearance-mode-grid" role="radiogroup" aria-label="Workspace theme">
@@ -212,7 +218,10 @@ export default function SettingsPage() {
                       role="radio"
                       aria-checked={isSelected}
                       className={`appearance-mode-card ${isSelected ? "appearance-mode-card-active" : ""}`.trim()}
-                      onClick={() => setAppearanceMode(option.value)}
+                      onClick={() => {
+                        setAppearanceMode(option.value);
+                        previewAppearanceMode(option.value);
+                      }}
                     >
                       <span
                         className={`appearance-mode-preview appearance-mode-preview-${option.value}`}
