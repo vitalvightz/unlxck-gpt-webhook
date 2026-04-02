@@ -1,6 +1,6 @@
 # Top-K Injury Guard Implementation
 
-# Overview
+## Overview
 
 This document describes the implementation of the Top-K shortlist logic with starvation safeguards, enhanced caching with proper invalidation, and strict regex matching for injury filtering in the UNLXCK Fight Camp Builder.
 
