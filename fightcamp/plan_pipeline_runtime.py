@@ -21,6 +21,7 @@ from .strength import (
 )
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
 from .training_context import TrainingContext, allocate_sessions, normalize_equipment_list
+from .weight_cut import compute_weight_cut_pct, parse_weight_value
 
 PHASES = ("GPP", "SPP", "TAPER")
 PHASE_COLORS = {"GPP": "#4CAF50", "SPP": "#FF9800", "TAPER": "#F44336"}
@@ -239,10 +240,10 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
 
     weight = plan_input.weight
     target_weight = plan_input.target_weight
-    weight_val = float(weight) if weight.replace(".", "", 1).isdigit() else 0.0
-    target_val = float(target_weight) if target_weight.replace(".", "", 1).isdigit() else 0.0
-    weight_cut_risk_flag = weight_val - target_val >= 0.05 * target_val if target_val else False
-    weight_cut_pct_val = round((weight_val - target_val) / target_val * 100, 1) if target_val else 0.0
+    weight_val = parse_weight_value(weight)
+    target_val = parse_weight_value(target_weight)
+    weight_cut_pct_val = compute_weight_cut_pct(weight_val, target_val)
+    weight_cut_risk_flag = weight_cut_pct_val >= 3.0
     mental_block_class = classify_mental_block(plan_input.mental_block or "")
     mental_block_class = _filter_mindset_blocks(mental_block_class, tech_styles, tactical_styles)
 

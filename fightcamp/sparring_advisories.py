@@ -4,6 +4,7 @@ from typing import Any
 
 from .injury_formatting import parse_injury_entry
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
+from .weight_cut import compute_weight_cut_pct
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -69,16 +70,10 @@ def _active_cut_pct(athlete_snapshot: dict[str, Any]) -> float:
         except (TypeError, ValueError):
             return 0.0
 
-    weight = athlete_snapshot.get("weight")
-    target_weight = athlete_snapshot.get("target_weight")
-    try:
-        weight_val = float(weight)
-        target_val = float(target_weight)
-    except (TypeError, ValueError):
-        return 0.0
-    if target_val <= 0:
-        return 0.0
-    return round(max(0.0, (weight_val - target_val) / target_val * 100.0), 1)
+    return compute_weight_cut_pct(
+        athlete_snapshot.get("weight"),
+        athlete_snapshot.get("target_weight"),
+    )
 
 
 def _fatigue_score(athlete_snapshot: dict[str, Any]) -> tuple[int, str | None]:

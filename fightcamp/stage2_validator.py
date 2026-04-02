@@ -103,6 +103,11 @@ _WEIGHT_CUT_PATTERNS = (
     re.compile(r"\brefeed\b", re.IGNORECASE),
     re.compile(r"\brehydrat", re.IGNORECASE),
 )
+_WEIGHT_CUT_NONE_PATTERNS = (
+    re.compile(r"\bweight\s*cut\b.{0,40}\bnone active\b", re.IGNORECASE),
+    re.compile(r"\bno active weight[-\s]*cut\b", re.IGNORECASE),
+    re.compile(r"\brecovery tolerance is standard\b", re.IGNORECASE),
+)
 _OVERSTYLED_PATTERNS = (
     re.compile(r"\bdeath march\b", re.IGNORECASE),
     re.compile(r"\bsmash\s*&\s*dash\b", re.IGNORECASE),
@@ -1031,6 +1036,29 @@ def _weight_cut_acknowledgement_warnings(planning_brief: dict, final_plan_text: 
     return warnings
 
 
+def _weight_cut_contradiction_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    context = _weight_cut_context(planning_brief)
+    if not context["active"]:
+        return []
+
+    contradictory_lines = [
+        line
+        for line in _extract_plan_lines(final_plan_text)
+        if any(pattern.search(line) for pattern in _WEIGHT_CUT_NONE_PATTERNS)
+    ]
+    if not contradictory_lines:
+        return []
+
+    return [
+        {
+            "code": "weight_cut_state_contradiction",
+            "message": "Plan marks weight cut as inactive/standard recovery even though active cut stress is present in the planning context.",
+            "line": contradictory_lines[0],
+            "high_pressure": context["high_pressure"],
+        }
+    ]
+
+
 def _overstyled_name_warnings(plan_lines: list[str]) -> list[dict]:
     warnings: list[dict] = []
     seen_lines: set[str] = set()
@@ -1176,6 +1204,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief,
         final_plan_text,
     )
+    weight_cut_contradiction_warnings = _weight_cut_contradiction_warnings(
+        planning_brief,
+        final_plan_text,
+    )
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
@@ -1215,6 +1247,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(unresolved_access_fallback_warnings)
     warnings.extend(week_completeness_warnings)
     warnings.extend(weight_cut_acknowledgement_warnings)
+    warnings.extend(weight_cut_contradiction_warnings)
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
@@ -1233,6 +1266,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "unresolved_access_fallback_warnings": unresolved_access_fallback_warnings,
         "week_completeness_warnings": week_completeness_warnings,
         "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
+        "weight_cut_contradiction_warnings": weight_cut_contradiction_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
         "coach_voice_warnings": coach_voice_warnings,
