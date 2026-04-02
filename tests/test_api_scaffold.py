@@ -63,6 +63,7 @@ class FakeStore:
             "record_summary": "",
             "athlete_timezone": "",
             "athlete_locale": "",
+            "appearance_mode": "dark",
             "onboarding_draft": None,
             "created_at": _now(),
             "updated_at": _now(),
@@ -1120,6 +1121,32 @@ def test_saved_onboarding_draft_round_trips_through_me_and_clears_after_generati
     refreshed_me = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
     assert refreshed_me.json()["profile"]["onboarding_draft"] is None
     assert refreshed_me.json()["latest_intake"]["fight_date"] == "2026-04-18"
+
+
+def test_me_route_defaults_profile_appearance_mode_to_dark():
+    client, _, _ = _build_client()
+
+    response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+
+    assert response.status_code == 200
+    assert response.json()["profile"]["appearance_mode"] == "dark"
+
+
+def test_update_me_persists_profile_appearance_mode():
+    client, store, _ = _build_client()
+
+    response = client.put(
+        "/api/me",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=ProfileUpdateRequest(
+            full_name="Ari Mensah",
+            appearance_mode="light",
+        ).model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["profile"]["appearance_mode"] == "light"
+    assert store.profiles["athlete-1"]["appearance_mode"] == "light"
 
 
 def test_generate_plan_persists_validated_final_plan_and_history():

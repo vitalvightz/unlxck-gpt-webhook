@@ -17,6 +17,7 @@ import {
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
+import type { AppearanceMode } from "@/lib/types";
 
 function getInitials(name: string): string {
   const result = name
@@ -46,6 +47,22 @@ function isSafeImageUrl(url: string): boolean {
 }
 
 const MAX_AVATAR_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+const APPEARANCE_OPTIONS: Array<{
+  value: AppearanceMode;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "dark",
+    label: "Dark",
+    description: "Original control-room contrast with a deeper red heat.",
+  },
+  {
+    value: "light",
+    label: "Light",
+    description: "Paper-forward workspace with painterly red impact corners.",
+  },
+];
 
 export default function SettingsPage() {
   const { me, replaceMe, session } = useAppSession();
@@ -55,6 +72,7 @@ export default function SettingsPage() {
   const [stance, setStance] = useState("");
   const [professionalStatus, setProfessionalStatus] = useState("");
   const [record, setRecord] = useState("");
+  const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>("dark");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [urlInputValue, setUrlInputValue] = useState("");
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -69,6 +87,7 @@ export default function SettingsPage() {
   const tacticalStyleLabel = getOptionLabel(TACTICAL_STYLE_OPTIONS, tacticalStyle) || "Unspecified";
   const stanceLabel = getOptionLabel(STANCE_OPTIONS, stance) || "Unspecified";
   const professionalStatusLabel = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, professionalStatus) || "Unspecified";
+  const appearanceModeLabel = appearanceMode === "light" ? "Light" : "Dark";
   const lastUpdatedLabel = me?.profile.updated_at ? new Date(me.profile.updated_at).toLocaleString() : "Not saved yet";
 
   const initials = getInitials(fullName || "Athlete");
@@ -83,6 +102,7 @@ export default function SettingsPage() {
     setStance(me.profile.stance ?? "");
     setProfessionalStatus(me.profile.professional_status);
     setRecord(me.profile.record);
+    setAppearanceMode(me.profile.appearance_mode ?? "dark");
     const storedAvatar = me.profile.avatar_url ?? "";
     setAvatarUrl(storedAvatar);
     if (!isDataUrl(storedAvatar)) {
@@ -112,6 +132,7 @@ export default function SettingsPage() {
           stance,
           professional_status: professionalStatus,
           record,
+          appearance_mode: appearanceMode,
           avatar_url: avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? avatarUrl.trim() : null,
         });
         replaceMe(updatedMe);
@@ -174,6 +195,47 @@ export default function SettingsPage() {
 
         <div className="split-layout">
           <div className="step-main athlete-motion-slot athlete-motion-main">
+            <article className="step-card">
+              <div className="form-section-header">
+                <p className="kicker">Appearance</p>
+                <h2 className="form-section-title">Workspace theme</h2>
+                <p className="muted">Choose how the whole control room should look after you save.</p>
+              </div>
+
+              <div className="appearance-mode-grid" role="radiogroup" aria-label="Workspace theme">
+                {APPEARANCE_OPTIONS.map((option) => {
+                  const isSelected = appearanceMode === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      className={`appearance-mode-card ${isSelected ? "appearance-mode-card-active" : ""}`.trim()}
+                      onClick={() => setAppearanceMode(option.value)}
+                    >
+                      <span
+                        className={`appearance-mode-preview appearance-mode-preview-${option.value}`}
+                        aria-hidden="true"
+                      >
+                        <span className="appearance-mode-preview-header" />
+                        <span className="appearance-mode-preview-panel" />
+                        <span className="appearance-mode-preview-line" />
+                        <span className="appearance-mode-preview-line appearance-mode-preview-line-short" />
+                      </span>
+                      <span className="appearance-mode-copy">
+                        <span className="appearance-mode-title-row">
+                          <span className="appearance-mode-title">{option.label}</span>
+                          {isSelected ? <span className="appearance-mode-state">Selected</span> : null}
+                        </span>
+                        <span className="appearance-mode-description">{option.description}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </article>
+
             <article className="step-card">
               <div className="form-section-header">
                 <p className="kicker">Identity</p>
@@ -356,6 +418,10 @@ export default function SettingsPage() {
                 <article className="plan-meta-item">
                   <p className="plan-meta-label">Record</p>
                   <p className="plan-meta-value">{record || "Unspecified"}</p>
+                </article>
+                <article className="plan-meta-item">
+                  <p className="plan-meta-label">Appearance</p>
+                  <p className="plan-meta-value">{appearanceModeLabel}</p>
                 </article>
               </div>
             </div>

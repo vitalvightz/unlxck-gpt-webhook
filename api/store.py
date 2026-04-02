@@ -269,6 +269,7 @@ class SupabaseAppStore:
             "record_summary": existing.get("record_summary") or "",
             "athlete_timezone": existing.get("athlete_timezone") or "",
             "athlete_locale": existing.get("athlete_locale") or "",
+            "appearance_mode": existing.get("appearance_mode") or "dark",
             "onboarding_draft": existing.get("onboarding_draft"),
             "avatar_url": existing.get("avatar_url"),
         }
