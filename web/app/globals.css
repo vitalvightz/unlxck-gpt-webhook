@@ -1884,15 +1884,12 @@ select:focus-visible {
   }
 
   .step-progress {
-    display: flex;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    scroll-snap-type: x proximity;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: clip;
   }
 
   .step-pill {
-    min-width: 160px;
-    scroll-snap-align: start;
+    min-width: 0;
   }
 
   .hero-actions,
@@ -1952,6 +1949,13 @@ select:focus-visible {
 
   .plan-history-meta {
     justify-items: start;
+  }
+}
+
+
+@media (max-width: 460px) {
+  .step-progress {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2558,6 +2562,13 @@ select:focus-visible {
 
   .loading-context-panel-compact {
     padding: 18px 18px;
+  }
+}
+
+
+@media (max-width: 460px) {
+  .step-progress {
+    grid-template-columns: 1fr;
   }
 }
 
