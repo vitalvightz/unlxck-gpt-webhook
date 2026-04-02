@@ -26,22 +26,23 @@ REPAIR RULES:
 14. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
 15. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
 16. If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
-17. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
-18. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-19. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
-20. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
-21. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
-22. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
-23. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
-24. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
-25. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
-26. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
-27. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
-28. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-29. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-30. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-31. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-32. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+17. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
+18. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
+19. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+20. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+21. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+22. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
+23. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
+24. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
+25. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+26. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
+27. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
+28. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
+29. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+30. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+31. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+32. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+33. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -191,6 +192,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                    "expected_role_days": list(warning.get("expected_role_days") or []),
                 }
             )
         elif code == "late_camp_session_incomplete":
@@ -200,6 +202,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                    "expected_role_days": list(warning.get("expected_role_days") or []),
                 }
             )
         elif code == "weekly_session_overage":

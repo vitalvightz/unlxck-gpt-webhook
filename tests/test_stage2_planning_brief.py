@@ -276,10 +276,11 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
 
     spp_week = next(week for week in brief["weekly_role_map"]["weeks"] if week["phase"] == "SPP")
     role_by_key = {role["role_key"]: role for role in spp_week["session_roles"]}
+    hard_spar_days = [role["scheduled_day_hint"] for role in spp_week["session_roles"] if role["role_key"] == "hard_sparring_day"]
 
     assert role_by_key["recovery_reset_day"]["scheduled_day_hint"] == "Wednesday"
     assert role_by_key["neural_plus_strength_day"]["scheduled_day_hint"] == "Thursday"
-    assert role_by_key["fight_pace_repeatability_day"]["scheduled_day_hint"] == "Tuesday"
+    assert sorted(hard_spar_days) == ["Saturday", "Tuesday"]
 
 
 
@@ -1604,10 +1605,17 @@ def test_high_fatigue_compression_uses_effective_hard_day_count_not_declared_cou
     )
 
     week = brief["weekly_role_map"]["weeks"][0]
+    locked_spar_days = [
+        role["scheduled_day_hint"]
+        for role in week["session_roles"]
+        if role["role_key"] == "hard_sparring_day"
+    ]
 
     assert week["declared_hard_sparring_days"] == ["Tuesday", "Thursday"]
     assert [entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"] == ["Thursday"]
     assert week["effective_hard_sparring_days"] == ["Tuesday"]
+    assert locked_spar_days == ["Tuesday", "Thursday"]
+    assert week["coach_note_flags"] == ["deload hard sparring"]
     assert "two_hard_spar_days" not in week["intentional_compression"]["reason_codes"]
     assert _high_fatigue_compression_reason_codes(
         {"fatigue": "high", "hard_sparring_days": ["Tuesday", "Thursday"]},
@@ -1659,15 +1667,34 @@ def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downg
     week = brief["weekly_role_map"]["weeks"][0]
     role_keys = [role["role_key"] for role in week["session_roles"]]
     suppressed_keys = {item["role_key"] for item in week["suppressed_roles"]}
+    hard_spar_days = [
+        role["scheduled_day_hint"]
+        for role in week["session_roles"]
+        if role["role_key"] == "hard_sparring_day"
+    ]
 
     assert week["intentional_compression"]["active"] is True
-    assert suppressed_keys & {"secondary_strength_day", "strength_touch_day"}
-    assert role_keys.count("fight_pace_repeatability_day") == 1
+    assert hard_spar_days == ["Tuesday", "Thursday"]
+    assert suppressed_keys & {"fight_pace_repeatability_day", "aerobic_support_day", "strength_touch_day"}
+    assert role_keys.count("hard_sparring_day") == 2
     assert sum(1 for role in week["session_roles"] if role["category"] == "conditioning") == 1
+    assert len([item for item in week["suppressed_roles"] if item.get("intentional_compression")]) == 1
 
 
 def test_high_fatigue_compression_blocks_glycolytic_on_next_training_day_after_remaining_hard_spar():
     session_roles = [
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Monday",
+            "governance": {},
+        },
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Wednesday",
+            "governance": {},
+        },
         {
             "category": "strength",
             "role_key": "secondary_strength_day",
@@ -1715,13 +1742,26 @@ def test_high_fatigue_compression_blocks_glycolytic_on_next_training_day_after_r
         ],
     )
 
-    assert "fight_pace_repeatability_day" not in [role["role_key"] for role in kept_roles]
-    assert "fight_pace_repeatability_day" in [item["role_key"] for item in suppressed]
-    assert "aerobic_support_day" in [role["role_key"] for role in kept_roles]
+    assert "secondary_strength_day" not in [role["role_key"] for role in kept_roles]
+    assert "secondary_strength_day" in [item["role_key"] for item in suppressed]
+    assert [role["scheduled_day_hint"] for role in kept_roles if role["role_key"] == "hard_sparring_day"] == ["Monday", "Wednesday"]
+    assert "fight_pace_repeatability_day" in [role["role_key"] for role in kept_roles]
 
 
 def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_day_after_effective_hard_spar():
     session_roles = [
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Monday",
+            "governance": {},
+        },
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Wednesday",
+            "governance": {},
+        },
         {
             "category": "strength",
             "role_key": "secondary_strength_day",
@@ -1770,8 +1810,9 @@ def test_high_fatigue_compression_allows_glycolytic_when_not_on_next_training_da
     )
 
     assert "fight_pace_repeatability_day" in [role["role_key"] for role in kept_roles]
-    assert "aerobic_support_day" not in [role["role_key"] for role in kept_roles]
-    assert "aerobic_support_day" in [item["role_key"] for item in suppressed]
+    assert "secondary_strength_day" not in [role["role_key"] for role in kept_roles]
+    assert "secondary_strength_day" in [item["role_key"] for item in suppressed]
+    assert [role["scheduled_day_hint"] for role in kept_roles if role["role_key"] == "hard_sparring_day"] == ["Monday", "Wednesday"]
 
 
 def test_strength_slots_share_session_metadata_and_injury_pressure_does_not_force_tissue_state():
