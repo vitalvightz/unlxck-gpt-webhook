@@ -2348,66 +2348,91 @@ button.mobile-step-rail-item {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 46px;
-  min-width: min(100%, 440px);
-  padding: 11px 14px;
-  border-radius: var(--radius-input);
-  border: 1px solid var(--border-default);
-  background: linear-gradient(180deg, rgba(20, 22, 27, 0.98), rgba(15, 17, 21, 0.98));
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px 8px 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(18, 20, 24, 0.98), rgba(12, 14, 18, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 24px rgba(0, 0, 0, 0.18);
   color: var(--text-primary);
   text-align: left;
   cursor: pointer;
+  white-space: nowrap;
+  backdrop-filter: blur(18px);
   transition:
     border-color var(--transition-fast),
     background-color var(--transition-fast),
-    color var(--transition-fast);
+    box-shadow var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .plans-history-toggle:hover {
-  border-color: rgba(181, 18, 43, 0.24);
+  border-color: rgba(181, 18, 43, 0.18);
+  background: linear-gradient(180deg, rgba(24, 27, 32, 0.98), rgba(16, 18, 22, 0.98));
+  transform: translateY(-1px);
+}
+
+.plans-history-toggle-open {
+  border-color: rgba(181, 18, 43, 0.26);
+  background: linear-gradient(180deg, rgba(31, 19, 24, 0.98), rgba(18, 12, 16, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.14), 0 14px 28px rgba(0, 0, 0, 0.22);
 }
 
 .plans-history-toggle-copy {
-  flex: 1;
-  min-width: 0;
+  font-size: 14px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .plans-history-toggle-meta {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
 }
 
+.plans-history-toggle .custom-select-chevron {
+  width: 9px;
+  height: 9px;
+  margin-top: -2px;
+}
+
 .plans-history-toggle-open .custom-select-chevron {
-  margin-top: 3px;
+  margin-top: 2px;
+  border-color: #ffd8df;
+  transform: rotate(225deg);
 }
 
 .plans-history-toggle-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 24px;
-  padding: 0 10px;
+  min-height: 28px;
+  padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
   font-family: var(--font-mono), monospace;
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .plans-history-dropdown {
   display: grid;
   gap: 12px;
-  padding: 12px;
-  border-radius: 18px;
+  padding: 14px 16px 10px;
+  border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(180deg, rgba(17, 19, 23, 0.98), rgba(12, 14, 18, 0.98));
-  box-shadow: var(--shadow-support);
+  background: linear-gradient(180deg, rgba(16, 18, 22, 0.98), rgba(11, 13, 17, 0.98));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02), var(--shadow-support);
   animation: custom-select-menu-in 140ms ease forwards;
 }
 
@@ -4539,6 +4564,43 @@ html[data-theme="light"] .plans-featured-meta-chip-accent {
 
 html[data-theme="light"] .plan-history-row-card:hover {
   background: rgba(255, 250, 244, 0.88);
+}
+
+html[data-theme="light"] .plans-history-toggle {
+  border-color: rgba(98, 77, 69, 0.12);
+  background: linear-gradient(180deg, rgba(255, 254, 250, 0.98), rgba(249, 242, 235, 0.96));
+  box-shadow: 0 14px 28px rgba(79, 60, 52, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+html[data-theme="light"] .plans-history-toggle:hover {
+  border-color: rgba(163, 21, 45, 0.18);
+  background: linear-gradient(180deg, rgba(255, 250, 246, 0.98), rgba(250, 241, 234, 0.96));
+}
+
+html[data-theme="light"] .plans-history-toggle-open {
+  border-color: rgba(163, 21, 45, 0.24);
+  background: linear-gradient(180deg, rgba(255, 243, 239, 0.98), rgba(253, 241, 236, 0.96));
+  box-shadow: inset 0 0 0 1px rgba(163, 21, 45, 0.1), 0 16px 30px rgba(79, 60, 52, 0.1);
+}
+
+html[data-theme="light"] .plans-history-toggle-meta {
+  border-left-color: rgba(98, 77, 69, 0.08);
+}
+
+html[data-theme="light"] .plans-history-toggle-count {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: rgba(255, 255, 255, 0.68);
+  color: rgba(88, 62, 58, 0.78);
+}
+
+html[data-theme="light"] .plans-history-toggle-open .custom-select-chevron {
+  border-color: var(--brand-red);
+}
+
+html[data-theme="light"] .plans-history-dropdown {
+  border-color: rgba(98, 77, 69, 0.1);
+  background: linear-gradient(180deg, rgba(252, 248, 242, 0.99), rgba(245, 239, 231, 0.985));
+  box-shadow: 0 12px 28px rgba(79, 60, 52, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.68);
 }
 
 html[data-theme="light"] .plans-history-empty {

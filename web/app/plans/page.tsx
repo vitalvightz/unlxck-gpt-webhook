@@ -207,6 +207,7 @@ export default function PlansPage() {
   }, [localPlans, plans]);
   const featuredPlan = visiblePlans[0] ?? null;
   const historicalPlans = featuredPlan ? visiblePlans.slice(1) : [];
+  const archiveCountLabel = historicalPlans.length === 1 ? "1 plan" : `${historicalPlans.length} plans`;
   const latestSavedLabel = featuredPlan ? formatPlanTimestamp(featuredPlan.created_at) : isLoading ? "Loading..." : "No saved plans yet";
   const latestFightLabel = featuredPlan ? formatPlanFightDate(featuredPlan.fight_date) : "Set during onboarding";
   const latestStyleLabel = featuredPlan ? getPlanStyleSummary(featuredPlan) : "Appears after the first generation";
@@ -348,22 +349,23 @@ export default function PlansPage() {
             <div className="plans-history-header">
               <div className="plans-history-header-copy">
                 <p className="kicker">Archive</p>
-                <h2>Earlier saved plans</h2>
-                <p className="muted">Keep the newest camp prominent, then expand the archive only when you need an earlier save.</p>
+                <h2>Earlier saves</h2>
+                <p className="muted">Open the archive for older versions.</p>
               </div>
               {historicalPlans.length ? (
                 <button
                   type="button"
-                  className={`plans-history-toggle custom-select-trigger ${isArchiveOpen ? "plans-history-toggle-open" : ""}`.trim()}
+                  className={`plans-history-toggle ${isArchiveOpen ? "plans-history-toggle-open" : ""}`.trim()}
                   onClick={() => setIsArchiveOpen((current) => !current)}
                   aria-expanded={isArchiveOpen}
                   aria-controls="plans-history-dropdown"
+                  aria-label={isArchiveOpen ? "Hide earlier saves" : "Show earlier saves"}
                 >
                   <span className="plans-history-toggle-copy">
-                    {isArchiveOpen ? "Hide earlier saved plans" : "Show earlier saved plans"}
+                    {isArchiveOpen ? "Hide archive" : "View archive"}
                   </span>
                   <span className="plans-history-toggle-meta">
-                    <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
+                    <span className="plans-history-toggle-count">{archiveCountLabel}</span>
                     <span className="custom-select-chevron" aria-hidden="true" />
                   </span>
                 </button>
@@ -387,7 +389,7 @@ export default function PlansPage() {
                 </div>
               </div>
             ) : (
-              <p className="plans-history-empty">The latest save is the only plan in history right now.</p>
+              <p className="plans-history-empty">No older saves yet.</p>
             )}
           </div>
         ) : null}
