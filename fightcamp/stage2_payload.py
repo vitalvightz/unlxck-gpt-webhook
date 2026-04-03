@@ -3775,6 +3775,18 @@ def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, separators=(",", ":"), ensure_ascii=False) + "\n```"
 
 
+def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) -> dict:
+    if isinstance(planning_brief, dict):
+        athlete_snapshot = planning_brief.get("athlete_snapshot")
+        if isinstance(athlete_snapshot, dict):
+            return athlete_snapshot
+        athlete_model = planning_brief.get("athlete_model")
+        if isinstance(athlete_model, dict):
+            return athlete_model
+    athlete_model = stage2_payload.get("athlete_model")
+    return athlete_model if isinstance(athlete_model, dict) else {}
+
+
 def build_stage2_handoff_text(
     *,
     stage2_payload: dict,
@@ -3790,9 +3802,11 @@ def build_stage2_handoff_text(
         "omission_ledger": stage2_payload.get("omission_ledger", {}),
         "decision_rules": stage2_payload.get("rewrite_guidance", {}),
     }
+    athlete_profile = _athlete_profile_block(planning_brief, stage2_payload)
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
         "PLANNING BRIEF\n" + _json_block(context_block),
+        "ATHLETE PROFILE\n" + _json_block(athlete_profile),
     ]
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
