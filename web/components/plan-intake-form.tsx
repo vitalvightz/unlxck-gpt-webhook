@@ -773,6 +773,10 @@ export function PlanIntakeForm() {
       setError("Sessions per Week must be at least 1.");
       return false;
     }
+    if (nextForm.weekly_training_frequency > 7) {
+      setError("Sessions per Week cannot exceed 7.");
+      return false;
+    }
     const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
     if (!parsedRounds.roundCount || !parsedRounds.roundDuration) {
       setError("Choose both round count and round duration before generating your plan.");
@@ -1212,7 +1216,20 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="field">
                     <label htmlFor="sessionsPerWeek">Sessions per Week</label>
-                    <input id="sessionsPerWeek" type="number" min="1" max="14" value={form.weekly_training_frequency ?? ""} onChange={(event) => updateField("weekly_training_frequency", numberOrNull(event.target.value))} />
+                    <input
+                      id="sessionsPerWeek"
+                      type="number"
+                      min="1"
+                      max="7"
+                      value={form.weekly_training_frequency ?? ""}
+                      onChange={(event) => {
+                        const nextValue = numberOrNull(event.target.value);
+                        updateField(
+                          "weekly_training_frequency",
+                          nextValue === null ? null : Math.min(Math.max(nextValue, 1), 7),
+                        );
+                      }}
+                    />
                   </div>
                   <div className="field">
                     <label htmlFor="fatigueLevel">Fatigue level</label>
