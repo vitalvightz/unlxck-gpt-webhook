@@ -365,7 +365,7 @@ export default function PlansPage() {
                   <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
                 </button>
               ) : (
-                <span className="badge status-badge-neutral">No archive yet</span>
+                <span className="badge status-badge-neutral">No earlier plans</span>
               )}
             </div>
 
