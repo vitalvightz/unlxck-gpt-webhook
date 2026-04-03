@@ -1,120 +1,125 @@
+from __future__ import annotations
+
+from .phases import PHASE_REBALANCE_ORDER, PhaseEnum
+
+GPP = PhaseEnum.GPP.value
+SPP = PhaseEnum.SPP.value
+TAPER = PhaseEnum.TAPER.value
+
+
+def _phase_ratios(gpp: float, spp: float, taper: float) -> dict[str, float]:
+    return {GPP: gpp, SPP: spp, TAPER: taper}
+
+
 BASE_PHASE_RATIOS = {
-        # Ultra-short phases (1–3 weeks): quick tune-up, not much base-building
     1: {
-        "boxing":      {"GPP": 0.00, "SPP": 0.60, "TAPER": 0.40},
-        "muay_thai":   {"GPP": 0.00, "SPP": 0.55, "TAPER": 0.45},
-        "mma":         {"GPP": 0.00, "SPP": 0.65, "TAPER": 0.35},
-        "kickboxing":  {"GPP": 0.00, "SPP": 0.60, "TAPER": 0.40},
+        "boxing": _phase_ratios(0.00, 0.60, 0.40),
+        "muay_thai": _phase_ratios(0.00, 0.55, 0.45),
+        "mma": _phase_ratios(0.00, 0.65, 0.35),
+        "kickboxing": _phase_ratios(0.00, 0.60, 0.40),
     },
     2: {
-        "boxing":      {"GPP": 0.10, "SPP": 0.55, "TAPER": 0.35},
-        "muay_thai":   {"GPP": 0.10, "SPP": 0.50, "TAPER": 0.40},
-        "mma":         {"GPP": 0.10, "SPP": 0.60, "TAPER": 0.30},
-        "kickboxing":  {"GPP": 0.10, "SPP": 0.55, "TAPER": 0.35},
+        "boxing": _phase_ratios(0.10, 0.55, 0.35),
+        "muay_thai": _phase_ratios(0.10, 0.50, 0.40),
+        "mma": _phase_ratios(0.10, 0.60, 0.30),
+        "kickboxing": _phase_ratios(0.10, 0.55, 0.35),
     },
     3: {
-        "boxing":      {"GPP": 0.15, "SPP": 0.60, "TAPER": 0.25},
-        "muay_thai":   {"GPP": 0.20, "SPP": 0.55, "TAPER": 0.25},
-        "mma":         {"GPP": 0.15, "SPP": 0.65, "TAPER": 0.20},
-        "kickboxing":  {"GPP": 0.15, "SPP": 0.60, "TAPER": 0.25},
+        "boxing": _phase_ratios(0.15, 0.60, 0.25),
+        "muay_thai": _phase_ratios(0.20, 0.55, 0.25),
+        "mma": _phase_ratios(0.15, 0.65, 0.20),
+        "kickboxing": _phase_ratios(0.15, 0.60, 0.25),
     },
-
-    # Standard short camps (4–6 weeks)
     4: {
-        "boxing": {"GPP": 0.24, "SPP": 0.45, "TAPER": 0.31},
-        "muay_thai": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
-        "mma": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
-        "kickboxing": {"GPP": 0.24, "SPP": 0.45, "TAPER": 0.31},
+        "boxing": _phase_ratios(0.24, 0.45, 0.31),
+        "muay_thai": _phase_ratios(0.29, 0.40, 0.31),
+        "mma": _phase_ratios(0.29, 0.40, 0.31),
+        "kickboxing": _phase_ratios(0.24, 0.45, 0.31),
     },
     5: {
-        "boxing": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
-        "muay_thai": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
-        "mma": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
-        "kickboxing": {"GPP": 0.24, "SPP": 0.45, "TAPER": 0.31},
+        "boxing": _phase_ratios(0.29, 0.40, 0.31),
+        "muay_thai": _phase_ratios(0.29, 0.40, 0.31),
+        "mma": _phase_ratios(0.29, 0.40, 0.31),
+        "kickboxing": _phase_ratios(0.24, 0.45, 0.31),
     },
     6: {
-        "boxing": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
-        "muay_thai": {"GPP": 0.34, "SPP": 0.35, "TAPER": 0.31},
-        "mma": {"GPP": 0.34, "SPP": 0.35, "TAPER": 0.31},
-        "kickboxing": {"GPP": 0.29, "SPP": 0.40, "TAPER": 0.31},
+        "boxing": _phase_ratios(0.29, 0.40, 0.31),
+        "muay_thai": _phase_ratios(0.34, 0.35, 0.31),
+        "mma": _phase_ratios(0.34, 0.35, 0.31),
+        "kickboxing": _phase_ratios(0.29, 0.40, 0.31),
     },
-
-    # Mid-length fight camps (7–10 weeks)
     7: {
-        "boxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "mma": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.34, 0.40, 0.26),
+        "muay_thai": _phase_ratios(0.39, 0.35, 0.26),
+        "mma": _phase_ratios(0.39, 0.35, 0.26),
+        "kickboxing": _phase_ratios(0.34, 0.40, 0.26),
     },
     8: {
-        "boxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "mma": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.39, 0.35, 0.26),
+        "muay_thai": _phase_ratios(0.39, 0.35, 0.26),
+        "mma": _phase_ratios(0.39, 0.35, 0.26),
+        "kickboxing": _phase_ratios(0.34, 0.40, 0.26),
     },
     9: {
-        "boxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "mma": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.39, 0.35, 0.26),
+        "muay_thai": _phase_ratios(0.39, 0.35, 0.26),
+        "mma": _phase_ratios(0.39, 0.35, 0.26),
+        "kickboxing": _phase_ratios(0.34, 0.40, 0.26),
     },
     10: {
-        "boxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "mma": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.34, "SPP": 0.40, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.39, 0.35, 0.26),
+        "muay_thai": _phase_ratios(0.39, 0.35, 0.26),
+        "mma": _phase_ratios(0.39, 0.35, 0.26),
+        "kickboxing": _phase_ratios(0.34, 0.40, 0.26),
     },
-
-    # Long camps (11–16 weeks) – longer base, full development
     11: {
-        "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "mma": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.44, 0.30, 0.26),
+        "muay_thai": _phase_ratios(0.44, 0.30, 0.26),
+        "mma": _phase_ratios(0.44, 0.30, 0.26),
+        "kickboxing": _phase_ratios(0.39, 0.35, 0.26),
     },
     12: {
-        "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "mma": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.44, 0.30, 0.26),
+        "muay_thai": _phase_ratios(0.44, 0.30, 0.26),
+        "mma": _phase_ratios(0.44, 0.30, 0.26),
+        "kickboxing": _phase_ratios(0.39, 0.35, 0.26),
     },
     13: {
-        "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "mma": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.44, 0.30, 0.26),
+        "muay_thai": _phase_ratios(0.44, 0.30, 0.26),
+        "mma": _phase_ratios(0.44, 0.30, 0.26),
+        "kickboxing": _phase_ratios(0.39, 0.35, 0.26),
     },
     14: {
-        "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "mma": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.44, 0.30, 0.26),
+        "muay_thai": _phase_ratios(0.44, 0.30, 0.26),
+        "mma": _phase_ratios(0.44, 0.30, 0.26),
+        "kickboxing": _phase_ratios(0.39, 0.35, 0.26),
     },
     15: {
-        "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "mma": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.44, 0.30, 0.26),
+        "muay_thai": _phase_ratios(0.44, 0.30, 0.26),
+        "mma": _phase_ratios(0.44, 0.30, 0.26),
+        "kickboxing": _phase_ratios(0.39, 0.35, 0.26),
     },
     16: {
-        "boxing": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "muay_thai": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "mma": {"GPP": 0.44, "SPP": 0.30, "TAPER": 0.26},
-        "kickboxing": {"GPP": 0.39, "SPP": 0.35, "TAPER": 0.26},
+        "boxing": _phase_ratios(0.44, 0.30, 0.26),
+        "muay_thai": _phase_ratios(0.44, 0.30, 0.26),
+        "mma": _phase_ratios(0.44, 0.30, 0.26),
+        "kickboxing": _phase_ratios(0.39, 0.35, 0.26),
     },
 }
 
 STYLE_ADJUSTMENTS = {
-    "pressure fighter": {"SPP": +0.05, "GPP": -0.05},
-    "counter striker": {"GPP": +0.04, "SPP": -0.04},
-    "grappler": {"GPP": +0.06, "TAPER": -0.06},
-    "muay_thai": {"SPP": +0.03, "GPP": -0.03},
-    "hybrid": {"SPP": +0.04, "TAPER": -0.04},
-    "clinch fighter": {"GPP": +0.05, "SPP": -0.05},
-    "scrambler": {"GPP": +0.03, "TAPER": -0.03},
+    "pressure fighter": {SPP: +0.05, GPP: -0.05},
+    "counter striker": {GPP: +0.04, SPP: -0.04},
+    "grappler": {GPP: +0.06, TAPER: -0.06},
+    "muay_thai": {SPP: +0.03, GPP: -0.03},
+    "hybrid": {SPP: +0.04, TAPER: -0.04},
+    "clinch fighter": {GPP: +0.05, SPP: -0.05},
+    "scrambler": {GPP: +0.03, TAPER: -0.03},
 }
 
-# Cap for combined deltas when multiple styles push the same phase
 STYLE_ADJUSTMENT_CAP = 0.07
 
 STYLE_RULES = {
@@ -136,36 +141,37 @@ def _normalize_styles(style: str | list[str] | None) -> list[str]:
     if style is None:
         return []
     if isinstance(style, str):
-        return [s.strip().lower() for s in style.split(',') if s.strip()]
-    return [s.strip().lower() for s in style if s.strip()]
+        return [item.strip().lower() for item in style.split(",") if item.strip()]
+    return [item.strip().lower() for item in style if item.strip()]
 
 
-def _apply_style_rules(rules: dict, camp_length: int, weeks: dict) -> None:
-    """Adjust phase weeks according to style rules."""
+def _apply_style_rules(rules: dict, camp_length: int, weeks: dict[str, int]) -> None:
     if "SPP_MIN_PERCENT" in rules:
         min_spp = int(camp_length * rules["SPP_MIN_PERCENT"])
-        if weeks["SPP"] < min_spp:
-            diff = min_spp - weeks["SPP"]
-            weeks["SPP"] = min_spp
-            weeks["GPP"] = max(1, weeks["GPP"] - diff)
+        if weeks[SPP] < min_spp:
+            diff = min_spp - weeks[SPP]
+            weeks[SPP] = min_spp
+            weeks[GPP] = max(1, weeks[GPP] - diff)
     if "MAX_TAPER" in rules:
         max_taper = max(1, round(camp_length * rules["MAX_TAPER"]))
-        if weeks["TAPER"] > max_taper:
-            excess = weeks["TAPER"] - max_taper
-            weeks["TAPER"] = max_taper
-            weeks["SPP"] += excess
+        if weeks[TAPER] > max_taper:
+            excess = weeks[TAPER] - max_taper
+            weeks[TAPER] = max_taper
+            weeks[SPP] += excess
     if "TAPER_MAX_DAYS" in rules:
         max_taper_weeks = max(1, rules["TAPER_MAX_DAYS"] // 7)
-        if weeks["TAPER"] > max_taper_weeks:
-            delta = weeks["TAPER"] - max_taper_weeks
-            weeks["TAPER"] = max_taper_weeks
-            weeks["SPP"] += delta
+        if weeks[TAPER] > max_taper_weeks:
+            delta = weeks[TAPER] - max_taper_weeks
+            weeks[TAPER] = max_taper_weeks
+            weeks[SPP] += delta
     if "SPP_CLINCH_RATIO" in rules:
         min_spp = int(camp_length * rules["SPP_CLINCH_RATIO"])
-        if weeks["SPP"] < min_spp:
-            diff = min_spp - weeks["SPP"]
-            weeks["SPP"] = min_spp
-            weeks["GPP"] = max(1, weeks["GPP"] - diff)
+        if weeks[SPP] < min_spp:
+            diff = min_spp - weeks[SPP]
+            weeks[SPP] = min_spp
+            weeks[GPP] = max(1, weeks[GPP] - diff)
+
+
 def calculate_phase_weeks(
     camp_length: int,
     sport: str,
@@ -177,27 +183,16 @@ def calculate_phase_weeks(
     weight_cut_pct: float | None = None,
     days_until_fight: int | None = None,
 ) -> dict:
-    """Return weeks per phase for a fight camp.
-
-    The calculation prioritizes the base ratios for 1–16 week camps, then
-    applies any style adjustments followed by min/max rules.  Output weeks
-    always sum to ``camp_length`` and taper is limited to two weeks.  If the
-    athlete is ``pro``/``professional`` and the camp is at least four weeks
-    long, GPP time is shifted to SPP based on fatigue, weight cut and mental
-    block state.
-    """
-
-    # 1. Prefer exact days when available, then map back to the closest weekly template
+    """Return weeks per phase for a fight camp."""
     total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight >= 0 else camp_length * 7
     camp_length = max(1, min(16, round(total_days / 7)))
-    closest = min(BASE_PHASE_RATIOS.keys(), key=lambda x: abs((x * 7) - total_days))
+    closest = min(BASE_PHASE_RATIOS.keys(), key=lambda value: abs((value * 7) - total_days))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
-    # 2. Apply style adjustments with cap when multiple styles stack
-    accumulated = {"GPP": 0.0, "SPP": 0.0, "TAPER": 0.0}
-    for s in _normalize_styles(style):
-        if s in STYLE_ADJUSTMENTS:
-            for phase, delta in STYLE_ADJUSTMENTS[s].items():
+    accumulated = {GPP: 0.0, SPP: 0.0, TAPER: 0.0}
+    for current_style in _normalize_styles(style):
+        if current_style in STYLE_ADJUSTMENTS:
+            for phase, delta in STYLE_ADJUSTMENTS[current_style].items():
                 if phase in accumulated:
                     accumulated[phase] += delta
 
@@ -209,25 +204,23 @@ def calculate_phase_weeks(
         if phase in ratios:
             ratios[phase] = max(0.05, ratios[phase] + delta)
 
-    # 3. Apply style rules for min/max enforcement on ratios
     all_styles = _normalize_styles(style)
     if sport in STYLE_RULES:
         all_styles.append(sport)
-    for s in all_styles:
-        rules = STYLE_RULES.get(s, {})
+    for current_style in all_styles:
+        rules = STYLE_RULES.get(current_style, {})
         if "SPP_MIN_PERCENT" in rules:
-            ratios["SPP"] = max(ratios["SPP"], rules["SPP_MIN_PERCENT"])
+            ratios[SPP] = max(ratios[SPP], rules["SPP_MIN_PERCENT"])
         if "MAX_TAPER" in rules:
-            ratios["TAPER"] = min(ratios["TAPER"], rules["MAX_TAPER"])
+            ratios[TAPER] = min(ratios[TAPER], rules["MAX_TAPER"])
         if "TAPER_MAX_DAYS" in rules:
             max_taper_ratio = max(1, rules["TAPER_MAX_DAYS"] // 7) / camp_length
-            ratios["TAPER"] = min(ratios["TAPER"], max_taper_ratio)
+            ratios[TAPER] = min(ratios[TAPER], max_taper_ratio)
         if "SPP_CLINCH_RATIO" in rules:
-            ratios["SPP"] = max(ratios["SPP"], rules["SPP_CLINCH_RATIO"])
+            ratios[SPP] = max(ratios[SPP], rules["SPP_CLINCH_RATIO"])
         if "GPP_MIN_PERCENT" in rules:
-            ratios["GPP"] = max(ratios["GPP"], rules["GPP_MIN_PERCENT"])
+            ratios[GPP] = max(ratios[GPP], rules["GPP_MIN_PERCENT"])
 
-    # 3b. Professional adjustment based on fatigue, cut and mindset
     if status and status.strip().lower() in {"professional", "pro"} and camp_length >= 4:
         fat = (fatigue or "").strip().lower()
         cut_pct = weight_cut_pct if weight_cut_pct is not None else 0.0
@@ -236,41 +229,41 @@ def calculate_phase_weeks(
         if isinstance(mental_block, str):
             blocks = [mental_block.lower()]
         elif isinstance(mental_block, list):
-            blocks = [b.lower() for b in mental_block]
+            blocks = [block.lower() for block in mental_block]
 
-        if fat == "low" and not cut_flag and all(b in {"generic", "confidence"} for b in blocks):
-            ratios["SPP"] += 0.10
-            ratios["GPP"] -= 0.10
-        elif fat in ["low", "moderate"] and cut_pct <= 5 and not any(b in {"motivation", "gas tank", "injury fear"} for b in blocks):
-            ratios["SPP"] += 0.075
-            ratios["GPP"] -= 0.075
+        if fat == "low" and not cut_flag and all(block in {"generic", "confidence"} for block in blocks):
+            ratios[SPP] += 0.10
+            ratios[GPP] -= 0.10
+        elif fat in ["low", "moderate"] and cut_pct <= 5 and not any(
+            block in {"motivation", "gas tank", "injury fear"} for block in blocks
+        ):
+            ratios[SPP] += 0.075
+            ratios[GPP] -= 0.075
         else:
-            ratios["SPP"] += 0.05
-            ratios["GPP"] -= 0.05
+            ratios[SPP] += 0.05
+            ratios[GPP] -= 0.05
 
-        if ratios["GPP"] < 0.15:
-            diff = 0.15 - ratios["GPP"]
-            ratios["GPP"] = 0.15
-            ratios["SPP"] = max(0.05, ratios["SPP"] - diff)
+        if ratios[GPP] < 0.15:
+            diff = 0.15 - ratios[GPP]
+            ratios[GPP] = 0.15
+            ratios[SPP] = max(0.05, ratios[SPP] - diff)
 
-    # 4. Re-normalize so GPP + SPP + TAPER == 1.0
-    total = ratios["GPP"] + ratios["SPP"] + ratios["TAPER"]
-    ratios = {k: v / total for k, v in ratios.items()}
+    total_ratio = ratios[GPP] + ratios[SPP] + ratios[TAPER]
+    ratios = {phase: value / total_ratio for phase, value in ratios.items()}
 
-    # 5. Convert ratios to week counts
     weeks = {
-        "GPP": max(0, round(ratios["GPP"] * camp_length)),
-        "SPP": max(0, round(ratios["SPP"] * camp_length)),
-        "TAPER": max(0, min(2, round(ratios["TAPER"] * camp_length))),
+        GPP: max(0, round(ratios[GPP] * camp_length)),
+        SPP: max(0, round(ratios[SPP] * camp_length)),
+        TAPER: max(0, min(2, round(ratios[TAPER] * camp_length))),
     }
 
-    def _rebalance(weeks_dict: dict) -> None:
-        total = weeks_dict["GPP"] + weeks_dict["SPP"] + weeks_dict["TAPER"]
-        if total < camp_length:
-            weeks_dict["SPP"] += camp_length - total
-        elif total > camp_length:
-            excess = total - camp_length
-            for phase in ("TAPER", "GPP", "SPP"):
+    def _rebalance(weeks_dict: dict[str, int]) -> None:
+        total_weeks = weeks_dict[GPP] + weeks_dict[SPP] + weeks_dict[TAPER]
+        if total_weeks < camp_length:
+            weeks_dict[SPP] += camp_length - total_weeks
+        elif total_weeks > camp_length:
+            excess = total_weeks - camp_length
+            for phase in PHASE_REBALANCE_ORDER:
                 if excess <= 0:
                     break
                 cut = min(weeks_dict[phase], excess)
@@ -282,52 +275,48 @@ def calculate_phase_weeks(
     short_notice = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 21
     if not short_notice:
         if camp_length >= 3:
-            weeks["GPP"] = max(1, weeks["GPP"])
-            weeks["SPP"] = max(1, weeks["SPP"])
+            weeks[GPP] = max(1, weeks[GPP])
+            weeks[SPP] = max(1, weeks[SPP])
         elif camp_length == 2:
-            weeks["SPP"] = max(1, weeks["SPP"])
+            weeks[SPP] = max(1, weeks[SPP])
         _rebalance(weeks)
 
-        if camp_length >= 2 and weeks["TAPER"] == 0:
-            if weeks["SPP"] > 1 or (camp_length == 2 and weeks["SPP"] > 0):
-                weeks["SPP"] -= 1
-                weeks["TAPER"] = 1
-            elif weeks["GPP"] > 1 or (camp_length == 2 and weeks["GPP"] > 0):
-                weeks["GPP"] -= 1
-                weeks["TAPER"] = 1
+        if camp_length >= 2 and weeks[TAPER] == 0:
+            if weeks[SPP] > 1 or (camp_length == 2 and weeks[SPP] > 0):
+                weeks[SPP] -= 1
+                weeks[TAPER] = 1
+            elif weeks[GPP] > 1 or (camp_length == 2 and weeks[GPP] > 0):
+                weeks[GPP] -= 1
+                weeks[TAPER] = 1
 
-    # 6. Apply post-conversion style rules when relevant
-    for s in all_styles:
-        rules = STYLE_RULES.get(s, {})
+    for current_style in all_styles:
+        rules = STYLE_RULES.get(current_style, {})
         if rules:
             _apply_style_rules(rules, camp_length, weeks)
 
-
-    # Ensure totals still sum to camp_length after adjustments
     _rebalance(weeks)
 
-    if camp_length >= 2 and weeks["TAPER"] == 0:
-        if weeks["SPP"] > 1 or (camp_length == 2 and weeks["SPP"] > 0):
-            weeks["SPP"] -= 1
-            weeks["TAPER"] = 1
-        elif weeks["GPP"] > 1 or (camp_length == 2 and weeks["GPP"] > 0):
-            weeks["GPP"] -= 1
-            weeks["TAPER"] = 1
+    if camp_length >= 2 and weeks[TAPER] == 0:
+        if weeks[SPP] > 1 or (camp_length == 2 and weeks[SPP] > 0):
+            weeks[SPP] -= 1
+            weeks[TAPER] = 1
+        elif weeks[GPP] > 1 or (camp_length == 2 and weeks[GPP] > 0):
+            weeks[GPP] -= 1
+            weeks[TAPER] = 1
         _rebalance(weeks)
 
-    # Translate final week splits into day counts for reporting
     days = {
         phase: max(0, round(total_days * (weeks[phase] / camp_length)))
-        for phase in ("GPP", "SPP", "TAPER")
+        for phase in (GPP, SPP, TAPER)
     }
 
-    def _rebalance_days(days_dict: dict) -> None:
-        total = days_dict["GPP"] + days_dict["SPP"] + days_dict["TAPER"]
-        if total < total_days:
-            days_dict["SPP"] += total_days - total
-        elif total > total_days:
-            excess = total - total_days
-            for phase in ("TAPER", "GPP", "SPP"):
+    def _rebalance_days(days_dict: dict[str, int]) -> None:
+        total_phase_days = days_dict[GPP] + days_dict[SPP] + days_dict[TAPER]
+        if total_phase_days < total_days:
+            days_dict[SPP] += total_days - total_phase_days
+        elif total_phase_days > total_days:
+            excess = total_phase_days - total_days
+            for phase in PHASE_REBALANCE_ORDER:
                 if excess <= 0:
                     break
                 cut = min(days_dict[phase], excess)
@@ -336,7 +325,6 @@ def calculate_phase_weeks(
 
     _rebalance_days(days)
 
-    # 7. Return dictionary with both weeks and estimated days
     return {
         **weeks,
         "days": days,

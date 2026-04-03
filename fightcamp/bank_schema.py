@@ -1,5 +1,7 @@
 import logging
 
+from .phases import PHASE_VALUES
+
 SYSTEM_ALIASES = {
     "atp-pcr": "alactic",
     "anaerobic_alactic": "alactic",
@@ -12,7 +14,7 @@ SYSTEM_ALIASES = {
 
 KNOWN_SYSTEMS = {"aerobic", "glycolytic", "alactic"}
 
-DEFAULT_PHASES = ["GPP", "SPP", "TAPER"]
+DEFAULT_PHASES = list(PHASE_VALUES)
 _SCHEMA_WARNINGS_LOGGED: set[tuple[str, str, str]] = set()
 
 logger = logging.getLogger(__name__)

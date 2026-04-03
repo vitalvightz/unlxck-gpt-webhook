@@ -240,14 +240,15 @@ class FakeStore:
         )
         return row
 
-    def list_admin_plans(self) -> list[dict]:
+    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
         rows = []
         for plan in self.plans.values():
             profile = self.profiles[plan["athlete_id"]]
             rows.append({**plan, "profiles": {"email": profile["email"], "full_name": profile["full_name"]}})
-        return rows
+        rows.sort(key=lambda row: row["created_at"], reverse=True)
+        return rows[offset:offset + limit]
 
-    def list_admin_athletes(self) -> list[dict]:
+    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
         rows = []
         for profile in self.profiles.values():
             plans = self.list_user_plans(profile["id"])
@@ -256,7 +257,8 @@ class FakeStore:
                 "plan_count": len(plans),
                 "latest_plan_created_at": plans[-1]["created_at"] if plans else None,
             })
-        return rows
+        rows.sort(key=lambda row: row["updated_at"], reverse=True)
+        return rows[offset:offset + limit]
 
     def get_admin_athlete(self, athlete_id: str) -> dict | None:
         profile = self.profiles.get(athlete_id)
@@ -1417,6 +1419,53 @@ def test_admin_can_list_and_open_review_required_plan_for_resolution():
     admin_detail = client.get(f"/api/plans/{plan_id}", headers={"Authorization": "Bearer admin-token"})
     assert admin_detail.status_code == 200
     assert admin_detail.json()["admin_outputs"]["stage2_retry_text"] == "repair prompt"
+
+
+def test_admin_plans_support_limit_and_offset_query_params():
+    client, _, _ = _build_client()
+
+    _, first_job = _start_generation(client, _build_request({"full_name": "First Athlete"}))
+    _, second_job = _start_generation(client, _build_request({"full_name": "Second Athlete"}))
+
+    response = client.get(
+        "/api/admin/plans?limit=1&offset=1",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
+    assert body[0]["plan_id"] == first_job["plan_id"]
+    assert body[0]["plan_id"] != second_job["plan_id"]
+
+
+def test_admin_athletes_support_limit_and_offset_query_params():
+    client, store, _ = _build_client()
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-extra-1",
+            email="extra1@example.com",
+            full_name="Extra One",
+            metadata={},
+        )
+    )
+    store.ensure_profile(
+        AuthenticatedUser(
+            user_id="athlete-extra-2",
+            email="extra2@example.com",
+            full_name="Extra Two",
+            metadata={},
+        )
+    )
+
+    response = client.get(
+        "/api/admin/athletes?limit=1&offset=1",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 1
 
 
 def test_legacy_rows_with_only_plan_text_remain_readable():

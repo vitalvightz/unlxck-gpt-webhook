@@ -1,4 +1,12 @@
 from fightcamp.camp_phases import calculate_phase_weeks
+from fightcamp.phases import PHASE_VALUES, PhaseEnum
+
+
+def test_phase_enum_exposes_supported_phase_values():
+    assert PhaseEnum.GPP.value == "GPP"
+    assert PhaseEnum.SPP.value == "SPP"
+    assert PhaseEnum.TAPER.value == "TAPER"
+    assert PHASE_VALUES == ("GPP", "SPP", "TAPER")
 
 
 

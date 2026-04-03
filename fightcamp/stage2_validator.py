@@ -4,12 +4,14 @@ import re
 from collections import defaultdict
 from typing import Any
 
+from .phases import PHASE_HEADER_PATTERN
+from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
 
-_BULLET_PREFIX = re.compile(r"^\s*(?:[-*\u2022]+|\d+[.)]|#+)\s*")
-_PHASE_HEADER = re.compile(r"\b(?:GPP|SPP|TAPER)\b", re.IGNORECASE)
-_WEEK_HEADER = re.compile(r"\bweek\s+(\d+)\b", re.IGNORECASE)
-_MARKDOWN_HEADER = re.compile(r"^\s*(#{1,6})\s*(.+?)\s*$")
+_BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
+_PHASE_HEADER = PHASE_HEADER_PATTERN
+_WEEK_HEADER = compile_regex("stage2_validator", "week_header", flags=re.IGNORECASE)
+_MARKDOWN_HEADER = compile_regex("stage2_validator", "markdown_header")
 _NEGATION_MARKERS = (
     "avoid",
     "do not",
@@ -42,83 +44,22 @@ _NON_PHASE_TOP_LEVEL_SECTIONS = {
     "nutrition adjustments for unknown sparring load",
     "athlete profile",
 }
-_CONDITIONAL_PATTERNS = (
-    re.compile(r"\boption\s+[ab]\b", re.IGNORECASE),
-    re.compile(r"\bdepending on access\b", re.IGNORECASE),
-    re.compile(r"\bif available\b", re.IGNORECASE),
+_CONDITIONAL_PATTERNS = compile_regex_list("stage2_validator", "conditional_patterns", flags=re.IGNORECASE)
+_CONDITIONING_ALTERNATIVE_PATTERN = compile_regex(
+    "stage2_validator",
+    "conditioning_alternative_pattern",
+    flags=re.IGNORECASE,
 )
-_CONDITIONING_ALTERNATIVE_PATTERN = re.compile(
-    r"\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b.{0,80}\bor\b.{0,80}\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\b",
-    re.IGNORECASE,
-)
-_GENERIC_FILLER_PATTERNS = (
-    re.compile(r"\bstay consistent\b", re.IGNORECASE),
-    re.compile(r"\btrust the process\b", re.IGNORECASE),
-    re.compile(r"\bdo your best\b", re.IGNORECASE),
-)
-_GENERIC_OPENER_PATTERNS = (
-    re.compile(r"^\s*(?:[-*\u2022]+\s*)?focus on\b", re.IGNORECASE),
-    re.compile(r"^\s*(?:[-*\u2022]+\s*)?ensure\b", re.IGNORECASE),
-    re.compile(r"^\s*(?:[-*\u2022]+\s*)?make sure\b", re.IGNORECASE),
-    re.compile(r"^\s*(?:[-*\u2022]+\s*)?it(?:'|’)s important to\b", re.IGNORECASE),
-    re.compile(r"^\s*(?:[-*\u2022]+\s*)?it is important to\b", re.IGNORECASE),
-)
-_GENERIC_MOTIVATION_PATTERNS = (
-    re.compile(r"\byou(?:'|’)?ve got this\b|\byou got this\b", re.IGNORECASE),
-    re.compile(r"\bstay motivated\b", re.IGNORECASE),
-    re.compile(r"\bstay positive\b", re.IGNORECASE),
-    re.compile(r"\bbelieve in yourself\b", re.IGNORECASE),
-    re.compile(r"\bpush yourself\b", re.IGNORECASE),
-)
-_HEDGED_ADJUSTMENT_PATTERNS = (
-    re.compile(r"^\s*(?:[-*\u2022]+\s*)?consider\b", re.IGNORECASE),
-    re.compile(r"\bit may be best to\b", re.IGNORECASE),
-    re.compile(r"\bit might be best to\b", re.IGNORECASE),
-    re.compile(r"\byou may want to\b", re.IGNORECASE),
-    re.compile(r"\byou might want to\b", re.IGNORECASE),
-    re.compile(r"\bcould be worth\b", re.IGNORECASE),
-    re.compile(r"\btry to\b", re.IGNORECASE),
-)
-_ADJUSTMENT_CONTEXT_PATTERN = re.compile(
-    r"\b(?:reduce|drop|cut|modify|adjust|swap|replace|skip|avoid|rest|recover|recovery|volume|intensity|load|pain|fatigue|soreness|workload|pivot)\b",
-    re.IGNORECASE,
-)
-_EMPTY_SAFETY_PATTERNS = (
-    re.compile(r"\blisten to your body\b", re.IGNORECASE),
-    re.compile(r"\bconsult (?:a|your) (?:professional|clinician|doctor|medical professional)\b", re.IGNORECASE),
-    re.compile(r"\bseek medical advice\b", re.IGNORECASE),
-    re.compile(r"\bbe careful\b", re.IGNORECASE),
-    re.compile(r"\bavoid overtraining\b", re.IGNORECASE),
-)
-_OPERATIONAL_GUARDRAIL_PATTERN = re.compile(
-    r"\b(?:if|when|unless|tomorrow|today|hours?|48|24|pain|symptom|worse|stop|reassess|pivot|rule|rules|reduce|drop|cut|switch|replace|skip)\b",
-    re.IGNORECASE,
-)
-_WEIGHT_CUT_PATTERNS = (
-    re.compile(r"\bweight[- ]cut\b", re.IGNORECASE),
-    re.compile(r"\bweight making\b", re.IGNORECASE),
-    re.compile(r"\bweigh[- ]in\b", re.IGNORECASE),
-    re.compile(r"\bcut stress\b", re.IGNORECASE),
-    re.compile(r"\bdehydrat", re.IGNORECASE),
-    re.compile(r"\brefeed\b", re.IGNORECASE),
-    re.compile(r"\brehydrat", re.IGNORECASE),
-)
-_WEIGHT_CUT_NONE_PATTERNS = (
-    re.compile(r"\bweight\s*cut\b.{0,40}\bnone active\b", re.IGNORECASE),
-    re.compile(r"\bno active weight[-\s]*cut\b", re.IGNORECASE),
-    re.compile(r"\brecovery tolerance is standard\b", re.IGNORECASE),
-)
-_OVERSTYLED_PATTERNS = (
-    re.compile(r"\bdeath march\b", re.IGNORECASE),
-    re.compile(r"\bsmash\s*&\s*dash\b", re.IGNORECASE),
-    re.compile(r"\bbully\b", re.IGNORECASE),
-    re.compile(r"\bframe-and-pop\b", re.IGNORECASE),
-    re.compile(r"\bclinch-fighter\b", re.IGNORECASE),
-    re.compile(r"\brope-a-dope\b", re.IGNORECASE),
-    re.compile(r"\bdynamic plank-to-punch\b", re.IGNORECASE),
-    re.compile(r"\bankle snap bounce\b", re.IGNORECASE),
-    re.compile(r"\bhand-fight emom\b", re.IGNORECASE),
-)
+_GENERIC_FILLER_PATTERNS = compile_regex_list("stage2_validator", "generic_filler_patterns", flags=re.IGNORECASE)
+_GENERIC_OPENER_PATTERNS = compile_regex_list("stage2_validator", "generic_opener_patterns", flags=re.IGNORECASE)
+_GENERIC_MOTIVATION_PATTERNS = compile_regex_list("stage2_validator", "generic_motivation_patterns", flags=re.IGNORECASE)
+_HEDGED_ADJUSTMENT_PATTERNS = compile_regex_list("stage2_validator", "hedged_adjustment_patterns", flags=re.IGNORECASE)
+_ADJUSTMENT_CONTEXT_PATTERN = compile_regex("stage2_validator", "adjustment_context_pattern", flags=re.IGNORECASE)
+_EMPTY_SAFETY_PATTERNS = compile_regex_list("stage2_validator", "empty_safety_patterns", flags=re.IGNORECASE)
+_OPERATIONAL_GUARDRAIL_PATTERN = compile_regex("stage2_validator", "operational_guardrail_pattern", flags=re.IGNORECASE)
+_WEIGHT_CUT_PATTERNS = compile_regex_list("stage2_validator", "weight_cut_patterns", flags=re.IGNORECASE)
+_WEIGHT_CUT_NONE_PATTERNS = compile_regex_list("stage2_validator", "weight_cut_none_patterns", flags=re.IGNORECASE)
+_OVERSTYLED_PATTERNS = compile_regex_list("stage2_validator", "overstyled_patterns", flags=re.IGNORECASE)
 _SPORT_LANGUAGE_LEAKS = {
     "boxing": {
         "takedown",
@@ -149,12 +90,9 @@ _SESSION_TITLE_HINTS = {
     "technical polish",
 }
 _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
-_OPTION_ENUM_PATTERN = re.compile(r"\b(?:option\s+[a-c]|[a-c][\):])", re.IGNORECASE)
-_WEEKDAY_HEADING = re.compile(
-    r"^(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)(?:\b|[\s:\-|])",
-    re.IGNORECASE,
-)
-_NUMBERED_SESSION_HEADING = re.compile(r"^(?:session|day)\s+\d+(?:\s*[:\-|]|\s*$)", re.IGNORECASE)
+_OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
+_WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
+_NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
 
 
 def _clean_list(values: Any) -> list[str]:

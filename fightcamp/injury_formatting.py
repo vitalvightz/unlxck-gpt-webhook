@@ -6,6 +6,7 @@ from typing import Mapping
 
 from . import injury_synonyms
 from .injury_synonyms import parse_injury_phrase, split_injury_text
+from .normalization import normalize_lower_text, strip_surrounding_punctuation as _strip_surrounding_punct
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry, is_restriction_phrase
 
 logger = logging.getLogger(__name__)
@@ -54,12 +55,6 @@ def _strip_display_laterality(display_location: str, laterality: str | None) -> 
     return re.sub(rf"^\s*{re.escape(laterality)}\s+", "", cleaned, count=1, flags=re.IGNORECASE).strip() or cleaned
 
 
-def _strip_surrounding_punct(text: str) -> str:
-    if not text:
-        return ""
-    return re.sub(r"^[\W_]+|[\W_]+$", "", text.strip())
-
-
 def _split_restriction_sentences(text: str) -> list[str]:
     return [
         cleaned
@@ -69,7 +64,7 @@ def _split_restriction_sentences(text: str) -> list[str]:
 
 
 def _expand_triggered_restriction_clause(clause: str) -> list[str]:
-    normalized_clause = re.sub(r"\s+", " ", clause.strip().lower())
+    normalized_clause = normalize_lower_text(clause)
     if not normalized_clause:
         return []
 

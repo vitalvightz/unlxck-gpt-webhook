@@ -185,7 +185,7 @@ function getAvailabilityConsistency(
 
   if (sessionsPerWeek > availableDays) {
     return {
-      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but asked for ${sessionsPerWeek} sessions per week.`,
+      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but planned ${sessionsPerWeek} weekly session${sessionsPerWeek === 1 ? "" : "s"}.`,
       softWarning: null,
     };
   }
@@ -193,8 +193,8 @@ function getAvailabilityConsistency(
   if (unusedDays >= 3 && sessionsPerWeek <= 3) {
     return {
       hardError: null,
-      softWarning: `You have ${availableDays} days available but only ${sessionsPerWeek} planned sessions. That's fine if some days are optional.`,
-    };
+      softWarning: `You have ${availableDays} days available but only ${sessionsPerWeek} planned weekly session${sessionsPerWeek === 1 ? "" : "s"}. That's fine if some days are optional.`,
+      };
   }
 
   return { hardError: null, softWarning: null };
@@ -217,7 +217,7 @@ function getSparringConsistency(
   const invalidTechnical = technicalSkillDays.filter((day) => !available.has(day));
   if (invalidTechnical.length) {
     return {
-      hardError: `Technical skill days must also be selected as available days: ${invalidTechnical.join(", ")}.`,
+      hardError: `Technical / lighter skill days must also be selected as available days: ${invalidTechnical.join(", ")}.`,
       softWarning: null,
     };
   }
@@ -225,7 +225,7 @@ function getSparringConsistency(
   const overlap = hardSparringDays.filter((day) => technicalSkillDays.includes(day));
   if (overlap.length) {
     return {
-      hardError: `A day cannot be both hard sparring and technical-only: ${overlap.join(", ")}.`,
+      hardError: `A day cannot be both hard sparring and technical / lighter skill: ${overlap.join(", ")}.`,
       softWarning: null,
     };
   }
@@ -233,7 +233,7 @@ function getSparringConsistency(
   if (!hardSparringDays.length && technicalSkillDays.length) {
     return {
       hardError: null,
-      softWarning: "Technical skill days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
+      softWarning: "Technical / lighter skill days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
     };
   }
 
@@ -770,11 +770,11 @@ export function PlanIntakeForm() {
       return false;
     }
     if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) {
-      setError("Sessions per Week must be at least 1.");
+    setError("Planned sessions per week must be at least 1.");
       return false;
     }
     if (nextForm.weekly_training_frequency > 7) {
-      setError("Sessions per Week cannot exceed 7.");
+    setError("Planned sessions per week cannot exceed 7.");
       return false;
     }
     const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
@@ -997,7 +997,7 @@ export function PlanIntakeForm() {
   const campSetupReviewItems = [
     { label: "Fight date", value: formatValue(form.fight_date) },
     { label: "Rounds", value: formatValue(form.rounds_format) },
-    { label: "Sessions per week", value: formatValue(form.weekly_training_frequency) },
+    { label: "Planned sessions per week", value: formatValue(form.weekly_training_frequency) },
     { label: "Fatigue level", value: formatValue(form.fatigue_level || "moderate") },
   ];
   const trainingReviewItems = [
@@ -1215,7 +1215,7 @@ export function PlanIntakeForm() {
                     />
                   </div>
                   <div className="field">
-                    <label htmlFor="sessionsPerWeek">Sessions per Week</label>
+                    <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
                     <input
                       id="sessionsPerWeek"
                       type="number"
@@ -1230,6 +1230,10 @@ export function PlanIntakeForm() {
                         );
                       }}
                     />
+                    <p className="muted">
+                      Count the total training sessions the week should carry. Hard sparring days and technical / lighter skill
+                      days are labels inside that weekly total, not extra sessions on top.
+                    </p>
                   </div>
                   <div className="field">
                     <label htmlFor="fatigueLevel">Fatigue level</label>
@@ -1255,13 +1259,13 @@ export function PlanIntakeForm() {
                 <ul className="summary-list">
                   <li>Fight date: {formatValue(form.fight_date)}</li>
                   <li>Rounds: {formatValue(form.rounds_format)}</li>
-                  <li>Sessions per Week: {formatValue(form.weekly_training_frequency)}</li>
+                  <li>Planned sessions per week: {formatValue(form.weekly_training_frequency)}</li>
                   <li>Fatigue level: {formatValue(form.fatigue_level || "moderate")}</li>
                 </ul>
               </div>
               <div className="support-panel">
                 <p className="kicker">Guidance</p>
-                <p className="muted">Fight date and training frequency shape the camp timeline.</p>
+                <p className="muted">Fight date and your planned weekly session count shape the camp timeline.</p>
               </div>
             </aside>
           </div>
@@ -1285,8 +1289,12 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Combat load</p>
-                  <h2 className="form-section-title">Sparring and skill days</h2>
+                  <h2 className="form-section-title">Sparring and skill day tags</h2>
                 </div>
+                <p className="muted">
+                  These selections do not add extra sessions. They just show which available days are hard-contact days versus
+                  lighter technical work inside the same weekly total.
+                </p>
                 <CheckboxGroup
                   label="Hard Sparring Days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
@@ -1294,7 +1302,10 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("hard_sparring_days", value)}
                 />
                 <div className="field">
-                  <p className="muted">Pick the days that usually carry the hardest live rounds or highest collision combat load.</p>
+                  <p className="muted">
+                    Pick the days that usually carry the hardest live rounds or highest collision load. These are part of the
+                    weekly session total above.
+                  </p>
                 </div>
                 <CheckboxGroup
                   label="Technical / lighter skill days"
@@ -1303,7 +1314,10 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("technical_skill_days", value)}
                 />
                 <div className="field">
-                  <p className="muted">Use this for lighter technical boxing or skill-focused days that should stay cleaner than hard sparring days.</p>
+                  <p className="muted">
+                    Use this for lighter drilling, pads, partner technical work, or skill-focused days that should stay cleaner
+                    than hard sparring days.
+                  </p>
                 </div>
               </article>
               <article className="step-card">
@@ -1621,7 +1635,7 @@ export function PlanIntakeForm() {
                   <li>Technical Style must be selected.</li>
                   <li>Fight date must be set.</li>
                   <li>Training Availability needs at least one selected option.</li>
-                  <li>Sessions per Week must be at least 1.</li>
+                  <li>Planned sessions per week must be at least 1.</li>
                   {availabilityConsistency.hardError ? <li>{availabilityConsistency.hardError}</li> : null}
                   {sparringConsistency.hardError ? <li>{sparringConsistency.hardError}</li> : null}
                 </ul>

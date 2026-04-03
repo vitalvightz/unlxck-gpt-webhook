@@ -1,0 +1,81 @@
+{
+  "stage2_validator": {
+    "bullet_prefix": "^\\s*(?:[-*\\u2022]+|\\d+[.)]|#+)\\s*",
+    "week_header": "\\bweek\\s+(\\d+)\\b",
+    "markdown_header": "^\\s*(#{1,6})\\s*(.+?)\\s*$",
+    "conditional_patterns": [
+      "\\boption\\s+[ab]\\b",
+      "\\bdepending on access\\b",
+      "\\bif available\\b"
+    ],
+    "conditioning_alternative_pattern": "\\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\\b.{0,80}\\bor\\b.{0,80}\\b(?:bag|bike|run|row|rope|sprint|shadowbox|shadowboxing|pad|round|rounds|interval|tempo)\\b",
+    "generic_filler_patterns": [
+      "\\bstay consistent\\b",
+      "\\btrust the process\\b",
+      "\\bdo your best\\b"
+    ],
+    "generic_opener_patterns": [
+      "^\\s*(?:[-*\\u2022]+\\s*)?focus on\\b",
+      "^\\s*(?:[-*\\u2022]+\\s*)?ensure\\b",
+      "^\\s*(?:[-*\\u2022]+\\s*)?make sure\\b",
+      "^\\s*(?:[-*\\u2022]+\\s*)?it(?:'|’)s important to\\b",
+      "^\\s*(?:[-*\\u2022]+\\s*)?it is important to\\b"
+    ],
+    "generic_motivation_patterns": [
+      "\\byou(?:'|’)?ve got this\\b|\\byou got this\\b",
+      "\\bstay motivated\\b",
+      "\\bstay positive\\b",
+      "\\bbelieve in yourself\\b",
+      "\\bpush yourself\\b"
+    ],
+    "hedged_adjustment_patterns": [
+      "^\\s*(?:[-*\\u2022]+\\s*)?consider\\b",
+      "\\bit may be best to\\b",
+      "\\bit might be best to\\b",
+      "\\byou may want to\\b",
+      "\\byou might want to\\b",
+      "\\bcould be worth\\b",
+      "\\btry to\\b"
+    ],
+    "adjustment_context_pattern": "\\b(?:reduce|drop|cut|modify|adjust|swap|replace|skip|avoid|rest|recover|recovery|volume|intensity|load|pain|fatigue|soreness|workload|pivot)\\b",
+    "empty_safety_patterns": [
+      "\\blisten to your body\\b",
+      "\\bconsult (?:a|your) (?:professional|clinician|doctor|medical professional)\\b",
+      "\\bseek medical advice\\b",
+      "\\bbe careful\\b",
+      "\\bavoid overtraining\\b"
+    ],
+    "operational_guardrail_pattern": "\\b(?:if|when|unless|tomorrow|today|hours?|48|24|pain|symptom|worse|stop|reassess|pivot|rule|rules|reduce|drop|cut|switch|replace|skip)\\b",
+    "weight_cut_patterns": [
+      "\\bweight[- ]cut\\b",
+      "\\bweight making\\b",
+      "\\bweigh[- ]in\\b",
+      "\\bcut stress\\b",
+      "\\bdehydrat",
+      "\\brefeed\\b",
+      "\\brehydrat"
+    ],
+    "weight_cut_none_patterns": [
+      "\\bweight\\s*cut\\b.{0,40}\\bnone active\\b",
+      "\\bno active weight[-\\s]*cut\\b",
+      "\\brecovery tolerance is standard\\b"
+    ],
+    "overstyled_patterns": [
+      "\\bdeath march\\b",
+      "\\bsmash\\s*&\\s*dash\\b",
+      "\\bbully\\b",
+      "\\bframe-and-pop\\b",
+      "\\bclinch-fighter\\b",
+      "\\brope-a-dope\\b",
+      "\\bdynamic plank-to-punch\\b",
+      "\\bankle snap bounce\\b",
+      "\\bhand-fight emom\\b"
+    ],
+    "option_enum_pattern": "\\b(?:option\\s+[a-c]|[a-c][\\):])",
+    "weekday_heading": "^(?:mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:sday)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)(?:\\b|[\\s:\\-|])",
+    "numbered_session_heading": "^(?:session|day)\\s+\\d+(?:\\s*[:\\-|]|\\s*$)"
+  },
+  "injury_synonyms": {
+    "negation_cue_pattern": "\\b(?:no|not|never|without|deny|denies|denied|neither)\\b"
+  }
+}

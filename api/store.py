@@ -100,9 +100,9 @@ class AppStore(Protocol):
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
 
-    def list_admin_plans(self) -> list[dict[str, Any]]: ...
+    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]: ...
 
-    def list_admin_athletes(self) -> list[dict[str, Any]]: ...
+    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]: ...
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None: ...
 
@@ -861,7 +861,7 @@ class SupabaseAppStore:
                 exc=exc,
             )
 
-    def list_admin_plans(self) -> list[dict[str, Any]]:
+    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         response = (
             self.client.table("plans")
             .select(
@@ -869,15 +869,17 @@ class SupabaseAppStore:
                 "pdf_url, created_at, profiles!plans_athlete_id_fkey(email, full_name)"
             )
             .order("created_at", desc=True)
+            .range(offset, offset + limit - 1)
             .execute()
         )
         return getattr(response, "data", None) or []
 
-    def list_admin_athletes(self) -> list[dict[str, Any]]:
+    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         response = (
             self.client.table("admin_athlete_rollups")
             .select("*")
             .order("updated_at", desc=True)
+            .range(offset, offset + limit - 1)
             .execute()
         )
         return getattr(response, "data", None) or []

@@ -16,3 +16,4 @@ supabase
 markdown2
 openai
 pytest
+structlog>=24.0,<26.0

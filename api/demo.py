@@ -257,7 +257,7 @@ class DemoStore:
             )
             return dict(row)
 
-    def list_admin_plans(self) -> list[dict[str, Any]]:
+    def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         with self._lock:
             rows: list[dict[str, Any]] = []
             for plan in self.plans.values():
@@ -271,9 +271,9 @@ class DemoStore:
                         },
                     }
                 )
-        return sorted(rows, key=lambda row: row["created_at"], reverse=True)
+        return sorted(rows, key=lambda row: row["created_at"], reverse=True)[offset:offset + limit]
 
-    def list_admin_athletes(self) -> list[dict[str, Any]]:
+    def list_admin_athletes(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:
         with self._lock:
             rows: list[dict[str, Any]] = []
             for profile in self.profiles.values():
@@ -289,7 +289,7 @@ class DemoStore:
                         "latest_plan_created_at": plans[0]["created_at"] if plans else None,
                     }
                 )
-        return sorted(rows, key=lambda row: row["updated_at"], reverse=True)
+        return sorted(rows, key=lambda row: row["updated_at"], reverse=True)[offset:offset + limit]
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
         with self._lock:

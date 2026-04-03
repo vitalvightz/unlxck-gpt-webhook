@@ -4,6 +4,7 @@ import json
 import re
 from typing import Any
 
+from .normalization import normalize_lower_text
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
@@ -254,7 +255,7 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 
 
 def _normalize_text(value: str) -> str:
-    return re.sub(r"\s+", " ", (value or "").strip().lower())
+    return normalize_lower_text(value)
 
 
 def _phrase_in_text(text: str, phrase: str) -> bool:

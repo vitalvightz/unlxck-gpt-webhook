@@ -3,6 +3,9 @@ import logging
 import re
 from difflib import SequenceMatcher
 
+from .normalization import strip_surrounding_punctuation as _strip_surrounding_punct
+from .regex_config import compile_regex
+
 _SPACY_AVAILABLE = importlib.util.find_spec("spacy") is not None
 _RAPIDFUZZ_AVAILABLE = importlib.util.find_spec("rapidfuzz") is not None
 _NEGSPACY_AVAILABLE = _SPACY_AVAILABLE and importlib.util.find_spec("negspacy") is not None
@@ -213,7 +216,7 @@ NEGATION_CUES = {
     "neither",
 }
 
-_NEGATION_CUE_PATTERN = re.compile(r"\b(?:no|not|never|without|deny|denies|denied|neither)\b")
+_NEGATION_CUE_PATTERN = compile_regex("injury_synonyms", "negation_cue_pattern")
 
 
 INJURY_SYNONYM_MAP = {
@@ -670,12 +673,6 @@ _NEGATION_TARGETS = sorted(
     key=len,
     reverse=True,
 )
-
-
-def _strip_surrounding_punct(text: str) -> str:
-    if not text:
-        return ""
-    return re.sub(r"^[\W_]+|[\W_]+$", "", text.strip())
 
 
 def _has_negated_injury(text: str) -> bool:

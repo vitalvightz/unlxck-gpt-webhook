@@ -6,6 +6,8 @@ import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
+from .normalization import normalize_injury_marker as _normalize_injury_marker
+from .normalization import normalize_label as _normalize_label
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry
 
 
@@ -25,11 +27,6 @@ _EMPTY_INJURY_MARKERS = {
     "none noted",
     "no issues",
 }
-
-
-def _normalize_injury_marker(value: str) -> str:
-    cleaned = re.sub(r"[^\w\s-]", "", value.lower())
-    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 _EMPTY_INJURY_MARKERS_NORMALIZED = {
@@ -63,11 +60,6 @@ def normalize_injury_text(raw: str | None) -> str:
     if not remaining:
         return ""
     return ", ".join(remaining)
-
-
-def _normalize_label(label: str) -> str:
-    cleaned = re.sub(r"[^\w\s]", " ", str(label or "").lower())
-    return re.sub(r"\s+", " ", cleaned).strip()
 
 
 _CRITICAL_LABEL_ALIASES = {

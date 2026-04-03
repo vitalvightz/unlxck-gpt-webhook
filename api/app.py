@@ -14,11 +14,12 @@ from threading import Lock
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
 from fightcamp.main import generate_plan
 from fightcamp.plan_pipeline import prime_plan_banks
 from fightcamp.sparring_advisories import build_plan_advisories
@@ -428,6 +429,8 @@ def create_app(
     stage2_automator: Stage2Automator | None = None,
     mode_label: str = "supabase-authenticated",
 ) -> FastAPI:
+    configure_logging()
+
     @asynccontextmanager
     async def _app_lifespan(_: FastAPI):
         await asyncio.to_thread(prime_plan_banks, logger=logger)
@@ -444,7 +447,7 @@ def create_app(
     app.state.planner = planner
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
-    app.state.active_generation_tasks: set[str] = set()
+    app.state.active_generation_tasks = set()
     rate_limit_requests = _plan_generate_rate_limit_requests()
     app.state.plan_generate_rate_limiter = (
         SlidingWindowRateLimiter(
@@ -468,6 +471,7 @@ def create_app(
         request_id = str(uuid.uuid4())[:8]
         request.state.request_id = request_id
         started = time.perf_counter()
+        bind_log_context(request_id=request_id, method=request.method, path=request.url.path)
 
         logger.info(
             "[http] request:start request_id=%s method=%s path=%s query=%s client=%s",
@@ -527,6 +531,8 @@ def create_app(
                 },
                 headers={"X-Request-ID": request_id},
             )
+        finally:
+            clear_log_context()
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
@@ -1000,9 +1006,11 @@ def create_app(
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
     def list_admin_plans(
         _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0),
         store: AppStore = Depends(get_store),
     ) -> list[AdminPlanSummary]:
-        return [_map_admin_plan_summary(row) for row in store.list_admin_plans()]
+        return [_map_admin_plan_summary(row) for row in store.list_admin_plans(limit=limit, offset=offset)]
 
     @app.post("/api/admin/plans/{plan_id}/manual-stage2", response_model=PlanDetail)
     def submit_manual_stage2(
@@ -1056,9 +1064,11 @@ def create_app(
     @app.get("/api/admin/athletes", response_model=list[AdminAthleteRecord])
     def list_admin_athletes(
         _: ProfileRecord = Depends(require_admin),
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0),
         store: AppStore = Depends(get_store),
     ) -> list[AdminAthleteRecord]:
-        return [_map_admin_athlete(row) for row in store.list_admin_athletes()]
+        return [_map_admin_athlete(row) for row in store.list_admin_athletes(limit=limit, offset=offset)]
 
     @app.get("/api/admin/athletes/{athlete_id}", response_model=AdminAthleteRecord)
     def get_admin_athlete(
