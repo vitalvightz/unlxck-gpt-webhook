@@ -1105,7 +1105,6 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
 
     assert {role["compressed_priority_label"] for role in roles} == {
         "power expression",
-        "gas tank maintenance",
         "fight-readiness and freshness protection",
     }
     assert all(
@@ -1116,6 +1115,97 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
         role["compressed_priority_label"] in {"mobility support", "skill refinement as standalone work"}
         for role in roles
     )
+
+
+def test_fight_week_override_0_to_1_days_outputs_protocol_only_and_no_week_roles():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 1,
+            "short_notice": True,
+            "fatigue": "moderate",
+            "training_preference": "technical",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["counter_striker"],
+            "key_goals": ["power"],
+            "weaknesses": ["gas_tank"],
+            "equipment": ["bodyweight"],
+            "injuries": [],
+            "weight_cut_risk": True,
+            "weight_cut_pct": 3.0,
+            "readiness_flags": ["fight_week", "short_notice", "active_weight_cut"],
+        },
+        {
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue", "manage cut stress"],
+                "session_counts": {"strength": 1, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 0,
+                "days": 1,
+            },
+        },
+    )
+
+    assert brief["fight_week_override"]["active"] is True
+    assert brief["fight_week_override"]["band"] == "final_day_protocol"
+    assert brief["weekly_role_map"]["fight_week_override"]["band"] == "final_day_protocol"
+    assert brief["weekly_role_map"]["weeks"] == []
+
+
+def test_fight_week_override_2_to_3_days_limits_to_micro_taper_roles():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 3,
+            "short_notice": True,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["power"],
+            "weaknesses": ["gas_tank"],
+            "equipment": ["bodyweight", "bands"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["fight_week", "short_notice"],
+        },
+        {
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 0,
+                "days": 3,
+            },
+        },
+    )
+
+    assert brief["fight_week_override"]["active"] is True
+    assert brief["fight_week_override"]["band"] == "micro_taper_protocol"
+    week = brief["weekly_role_map"]["weeks"][0]
+    assert [role["role_key"] for role in week["session_roles"]] == [
+        "alactic_sharpness_day",
+        "fight_week_freshness_day",
+    ]
 
 
 def test_phase_strategy_keeps_plain_spp_framing_for_true_multiweek_spp():
