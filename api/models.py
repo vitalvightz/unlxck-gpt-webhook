@@ -49,7 +49,7 @@ class AthleteProfileInput(BaseModel):
     age: int | None = None
     weight_kg: float | None = None
     target_weight_kg: float | None = None
-    height_cm: int | None = None
+    height_cm: float | None = None
     technical_style: list[str] = Field(default_factory=list)
     tactical_style: list[str] = Field(default_factory=list)
     stance: str = ""
