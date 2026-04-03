@@ -710,7 +710,7 @@ def test_plan_request_guided_injury_severity_rejects_unknown_values():
         )
 
 
-def test_plan_request_accepts_fractional_height_values_for_saved_retries():
+def test_plan_request_coerces_fractional_height_values_for_saved_retries():
     req = PlanRequest(
         athlete={
             "full_name": "Ari Mensah",
@@ -719,8 +719,17 @@ def test_plan_request_accepts_fractional_height_values_for_saved_retries():
         },
         fight_date="2026-04-18",
     )
+    req_from_string = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "height_cm": "182.2",
+        },
+        fight_date="2026-04-18",
+    )
 
-    assert req.athlete.height_cm == 182.8
+    assert req.athlete.height_cm == 183
+    assert req_from_string.athlete.height_cm == 182
 
 
 def test_record_format_validation_rejects_invalid_values():
