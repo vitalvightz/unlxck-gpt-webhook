@@ -2788,7 +2788,7 @@ def _fight_week_override_band(days_until_fight: Any) -> str:
         return "final_day_protocol"
     if days <= 3:
         return "micro_taper_protocol"
-    if days <= 6:
+    if days <= 5:
         return "mini_taper_protocol"
     return "none"
 
@@ -3729,7 +3729,7 @@ def build_stage2_payload(
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
-            "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-6 days, output mini taper only (freshness-first, minimal volume).",
+            "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-5 days, output mini taper only (freshness-first, minimal volume).",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "Never state 'weight cut none active' or 'recovery tolerance is standard' when readiness flags or weight_cut_pct indicate an active cut.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
@@ -3814,7 +3814,7 @@ In normal taper sessions, resolve to one final prescription with no default fall
 If planning_brief.fight_week_override.active is true, follow it as a hard override:
 - 0-1 days: no training week; output coach note plus readiness protocol only.
 - 2-3 days: micro-taper only (one short primer max + one light mobility/recovery session).
-- 4-6 days: mini taper only (freshness-first, reduced volume, 1-2 sharpness sessions).
+- 4-5 days: mini taper only (freshness-first, reduced volume, 1-2 sharpness sessions).
 Never chase fitness in these windows.
 
 RULE 11 - OUTPUT DISCIPLINE
