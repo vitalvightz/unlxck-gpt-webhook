@@ -388,9 +388,7 @@ export default function PlansPage() {
                   ))}
                 </div>
               </div>
-            ) : (
-              <p className="plans-history-empty">No older saves yet.</p>
-            )}
+            ) : null}
           </div>
         ) : null}
       </section>
