@@ -54,7 +54,7 @@ export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | 
     return formatPlanFightDate(plan.fight_date);
   }
 
-  return "Saved plan";
+  return "Open saved plan";
 }
 
 export function getFeaturedPlanTitle(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
