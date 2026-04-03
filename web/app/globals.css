@@ -4147,6 +4147,43 @@ html[data-theme="light"] .step-pill-active .step-pill-index {
   background: rgba(146, 43, 45, 0.08);
 }
 
+html[data-theme="light"] .mobile-step-rail-item {
+  border-color: rgba(98, 77, 69, 0.14);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.98), rgba(251, 244, 238, 0.98));
+  color: var(--text-primary);
+  box-shadow: 0 10px 24px rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .mobile-step-rail-item::after {
+  background: rgba(84, 70, 63, 0.18);
+}
+
+html[data-theme="light"] .mobile-step-rail-item-complete {
+  border-color: rgba(37, 131, 82, 0.24);
+  background: linear-gradient(180deg, rgba(241, 251, 245, 0.98), rgba(232, 245, 237, 0.98));
+}
+
+html[data-theme="light"] .mobile-step-rail-item-active {
+  border-color: rgba(146, 43, 45, 0.24);
+  background: linear-gradient(180deg, rgba(255, 243, 242, 0.98), rgba(255, 233, 236, 0.98));
+  box-shadow: 0 14px 30px rgba(146, 43, 45, 0.12), 0 0 0 1px rgba(146, 43, 45, 0.06);
+}
+
+html[data-theme="light"] .mobile-step-rail-index {
+  border-color: rgba(84, 70, 63, 0.2);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .mobile-step-rail-item-active .mobile-step-rail-index {
+  border-color: rgba(146, 43, 45, 0.32);
+  background: rgba(146, 43, 45, 0.08);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .mobile-step-rail-item-complete .mobile-step-rail-index {
+  border-color: rgba(37, 131, 82, 0.24);
+}
+
 html[data-theme="light"] .success-banner {
   border-color: rgba(37, 131, 82, 0.14);
 }
