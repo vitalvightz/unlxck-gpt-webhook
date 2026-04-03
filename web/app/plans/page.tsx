@@ -153,7 +153,7 @@ function PlanCard({
             </div>
             <div className="plans-featured-meta-chip">
               <span className="label">Status</span>
-               <span className="plans-featured-meta-value">{statusLabel}</span>
+              <span className="plans-featured-meta-value">{statusLabel}</span>
             </div>
             <div className="plans-featured-meta-chip">
               <span className="label">PDF</span>
@@ -170,17 +170,17 @@ function PlanCard({
   return (
     <article className="plan-history-row plan-history-row-card">
       <div className="plan-history-copy">
-         <p className="label">{fightDateLabel}</p>
-         <Link href={`/plans/${plan.plan_id}`}>
-           <h2 className="plan-card-title">{planTitle}</h2>
-         </Link>
+        <p className="label">{fightDateLabel}</p>
+        <Link href={`/plans/${plan.plan_id}`}>
+          <h2 className="plan-card-title">{planTitle}</h2>
+        </Link>
         <div className="plan-card-meta">
           <span className="muted">{styleSummary}</span>
           <span className="muted">Created {createdLabel}</span>
         </div>
       </div>
       <div className="plan-history-meta">
-         <span className="badge">{statusLabel}</span>
+        <span className="badge">{statusLabel}</span>
         <div className="plan-card-actions plans-history-actions">{actionButtons}</div>
       </div>
       {message || error ? (
@@ -256,11 +256,11 @@ export default function PlansPage() {
       <section className="panel">
         <div className="section-heading">
           <div className="athlete-motion-slot athlete-motion-header">
-             <p className="kicker">Plan History</p>
-             <h1>Your saved plans</h1>
-             <p className="muted">Open the latest camp fast, then reopen older saves from the archive dropdown.</p>
-           </div>
-         </div>
+            <p className="kicker">Plan History</p>
+            <h1>Your saved plans</h1>
+            <p className="muted">Open the latest camp fast, then reopen older saves from the archive dropdown.</p>
+          </div>
+        </div>
 
         <div className="plans-status-strip athlete-motion-slot athlete-motion-status" aria-label="Plan history status">
           <div className="plans-status-item">
@@ -346,45 +346,45 @@ export default function PlansPage() {
         {featuredPlan ? (
           <div className="plans-history-block athlete-motion-slot athlete-motion-main">
             <div className="plans-history-header">
-               <div className="plans-history-header-copy">
-                 <p className="kicker">Archive</p>
-                 <h2>Earlier saved plans</h2>
-                 <p className="muted">Keep the newest camp prominent, then expand the archive only when you need an earlier save.</p>
-               </div>
-               {historicalPlans.length ? (
-                 <button
-                   type="button"
-                   className={`plans-history-toggle ${isArchiveOpen ? "plans-history-toggle-open" : ""}`}
-                   onClick={() => setIsArchiveOpen((current) => !current)}
-                   aria-expanded={isArchiveOpen}
-                   aria-controls="plans-history-dropdown"
-                 >
-                   <span className="plans-history-toggle-copy">
-                     {isArchiveOpen ? "Hide earlier saved plans" : "Show earlier saved plans"}
-                   </span>
-                   <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
-                 </button>
-               ) : (
-                 <span className="badge status-badge-neutral">No archive yet</span>
-               )}
-             </div>
+              <div className="plans-history-header-copy">
+                <p className="kicker">Archive</p>
+                <h2>Earlier saved plans</h2>
+                <p className="muted">Keep the newest camp prominent, then expand the archive only when you need an earlier save.</p>
+              </div>
+              {historicalPlans.length ? (
+                <button
+                  type="button"
+                  className={`plans-history-toggle ${isArchiveOpen ? "plans-history-toggle-open" : ""}`}
+                  onClick={() => setIsArchiveOpen((current) => !current)}
+                  aria-expanded={isArchiveOpen}
+                  aria-controls="plans-history-dropdown"
+                >
+                  <span className="plans-history-toggle-copy">
+                    {isArchiveOpen ? "Hide earlier saved plans" : "Show earlier saved plans"}
+                  </span>
+                  <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
+                </button>
+              ) : (
+                <span className="badge status-badge-neutral">No archive yet</span>
+              )}
+            </div>
 
-             {historicalPlans.length ? (
-               <div id="plans-history-dropdown" className="plans-history-dropdown" hidden={!isArchiveOpen}>
-                 <div className="plan-history-list plans-history-list">
-                   {historicalPlans.map((plan) => (
-                     <PlanCard
-                       key={plan.plan_id}
-                       plan={plan}
-                       accessToken={session?.access_token ?? null}
-                       onPlanDeleted={handlePlanDeleted}
-                       onPlanRenamed={handlePlanRenamed}
-                     />
-                   ))}
-                 </div>
-               </div>
-             ) : (
-               <p className="plans-history-empty">The latest save is the only plan in history right now.</p>
+            {historicalPlans.length ? (
+              <div id="plans-history-dropdown" className="plans-history-dropdown" hidden={!isArchiveOpen}>
+                <div className="plan-history-list plans-history-list">
+                  {historicalPlans.map((plan) => (
+                    <PlanCard
+                      key={plan.plan_id}
+                      plan={plan}
+                      accessToken={session?.access_token ?? null}
+                      onPlanDeleted={handlePlanDeleted}
+                      onPlanRenamed={handlePlanRenamed}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="plans-history-empty">The latest save is the only plan in history right now.</p>
             )}
           </div>
         ) : null}
