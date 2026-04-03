@@ -73,7 +73,7 @@ function OverviewDetailList({
           key={`${item.label}-${item.value}`}
           className={item.highlight ? "review-detail-row overview-detail-row-highlight" : "review-detail-row"}
         >
-          <div className="overview-detail-heading">
+          <div className={item.highlight ? "overview-detail-heading overview-detail-heading-highlight" : "overview-detail-heading"}>
             <p className="review-detail-label">{item.label}</p>
             {item.badgeText ? <span className="overview-inline-badge">{item.badgeText}</span> : null}
           </div>
