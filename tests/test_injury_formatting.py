@@ -106,7 +106,7 @@ def test_guardrails_render_restrictions_without_injury_summary():
     assert "**Restrictions (Stage-2 daily planner only)**" in guardrails
     assert "Injury Summary" not in guardrails
     assert "- avoid deep knee flexion under load" in guardrails
-    assert "- heavy overhead pressing" in guardrails
+    assert "- avoid heavy overhead pressing" in guardrails
 
 
 def test_guardrails_preserve_guided_display_location_without_note_leak():

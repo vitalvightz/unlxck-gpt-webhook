@@ -10,6 +10,27 @@ from .restriction_parsing import ParsedRestriction, parse_restriction_entry, is_
 logger = logging.getLogger(__name__)
 
 _LATERALITY_PATTERN = re.compile(r"\b(left|right)\b", re.IGNORECASE)
+_RESTRICTION_SENTENCE_BOUNDARY_PATTERN = re.compile(r"[.!?;\n]+")
+_LIST_SPLIT_PATTERN = re.compile(r"\s*,\s*|\s+\band\b\s+", re.IGNORECASE)
+_LEADING_RESTRICTION_TRIGGERS = (
+    "do not",
+    "don't",
+    "dont",
+    "cannot",
+    "can't",
+    "cant",
+    "avoid",
+    "limit",
+    "reduce",
+    "skip",
+    "no",
+)
+_LEADING_RESTRICTION_TRIGGER_PATTERN = re.compile(
+    r"^\s*(?P<trigger>"
+    + "|".join(re.escape(trigger) for trigger in _LEADING_RESTRICTION_TRIGGERS)
+    + r")(?=\b|:)\s*:?\s*(?P<remainder>.+?)\s*$",
+    re.IGNORECASE,
+)
 
 
 def _title_case(value: str) -> str:
@@ -30,6 +51,52 @@ def _strip_display_laterality(display_location: str, laterality: str | None) -> 
     if not cleaned or not laterality:
         return cleaned
     return re.sub(rf"^\s*{re.escape(laterality)}\s+", "", cleaned, count=1, flags=re.IGNORECASE).strip() or cleaned
+
+
+def _strip_surrounding_punct(text: str) -> str:
+    if not text:
+        return ""
+    return re.sub(r"^[\W_]+|[\W_]+$", "", text.strip())
+
+
+def _split_restriction_sentences(text: str) -> list[str]:
+    return [
+        cleaned
+        for chunk in _RESTRICTION_SENTENCE_BOUNDARY_PATTERN.split(text)
+        if (cleaned := chunk.strip())
+    ]
+
+
+def _expand_triggered_restriction_clause(clause: str) -> list[str]:
+    normalized_clause = re.sub(r"\s+", " ", clause.strip().lower())
+    if not normalized_clause:
+        return []
+
+    match = _LEADING_RESTRICTION_TRIGGER_PATTERN.match(normalized_clause)
+    if not match:
+        return []
+
+    trigger = match.group("trigger").lower()
+    remainder = re.sub(r",\s+and\s+", ", ", match.group("remainder"), flags=re.IGNORECASE)
+    items = [
+        cleaned
+        for raw_item in _LIST_SPLIT_PATTERN.split(remainder)
+        if (
+            cleaned := _strip_surrounding_punct(
+                re.sub(
+                    rf"^\s*{re.escape(trigger)}(?=\b|:)\s*:?\s*",
+                    "",
+                    raw_item.strip(),
+                    count=1,
+                    flags=re.IGNORECASE,
+                )
+            )
+        )
+    ]
+    if not items:
+        return []
+
+    return [f"{trigger} {item}" for item in items]
 
 
 def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
@@ -83,21 +150,28 @@ def parse_injuries_and_restrictions(text: str) -> tuple[list[dict[str, str | Non
     if not text:
         return injuries, restrictions
     
-    # Split into phrases
-    phrases = split_injury_text(text)
-    
-    for phrase in phrases:
-        # Try to parse as restriction first
-        restriction = parse_restriction_entry(phrase)
-        if restriction is not None:
-            logger.info(f"[restriction-parse] parsed={restriction!r}")
-            restrictions.append(restriction)
+    for sentence in _split_restriction_sentences(text):
+        inherited_restriction_phrases = _expand_triggered_restriction_clause(sentence)
+        if inherited_restriction_phrases:
+            for phrase in inherited_restriction_phrases:
+                restriction = parse_restriction_entry(phrase)
+                if restriction is not None:
+                    logger.info(f"[restriction-parse] parsed={restriction!r}")
+                    restrictions.append(restriction)
             continue
-        
-        # Otherwise, parse as injury (legacy behavior)
-        injury = parse_injury_entry(phrase)
-        if injury is not None:
-            injuries.append(injury)
+
+        for phrase in split_injury_text(sentence):
+            # Try to parse as restriction first
+            restriction = parse_restriction_entry(phrase)
+            if restriction is not None:
+                logger.info(f"[restriction-parse] parsed={restriction!r}")
+                restrictions.append(restriction)
+                continue
+
+            # Otherwise, parse as injury (legacy behavior)
+            injury = parse_injury_entry(phrase)
+            if injury is not None:
+                injuries.append(injury)
     
     # Log the complete list of restrictions after parsing finishes
     logger.info(f"[restriction-parse] total restrictions parsed: {len(restrictions)}")

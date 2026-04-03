@@ -218,8 +218,47 @@ def test_mixed_injuries_and_restrictions():
     assert "knee" in locations
     assert "shoulder" in locations
     
-    # Should have restrictions
-    assert len(restrictions) > 0
+    assert len(restrictions) == 2
+    assert {restriction["original_phrase"] for restriction in restrictions} == {
+        "avoid deep squats",
+        "avoid heavy lifting",
+    }
+    assert {restriction["strength"] for restriction in restrictions} == {"avoid"}
+
+
+def test_triggered_restriction_list_inherits_prefix():
+    injuries, restrictions = parse_injuries_and_restrictions("Avoid deep squats and heavy lifting.")
+
+    assert injuries == []
+    assert len(restrictions) == 2
+    assert {restriction["original_phrase"] for restriction in restrictions} == {
+        "avoid deep squats",
+        "avoid heavy lifting",
+    }
+    assert {restriction["strength"] for restriction in restrictions} == {"avoid"}
+
+
+def test_triggered_restriction_comma_list_inherits_prefix():
+    injuries, restrictions = parse_injuries_and_restrictions(
+        "Avoid deep squats, heavy lifting, and running."
+    )
+
+    assert injuries == []
+    assert len(restrictions) == 3
+    assert {restriction["original_phrase"] for restriction in restrictions} == {
+        "avoid deep squats",
+        "avoid heavy lifting",
+        "avoid running",
+    }
+    assert {restriction["strength"] for restriction in restrictions} == {"avoid"}
+
+
+def test_non_triggered_heavy_lifting_phrase_remains_injury_context():
+    injuries, restrictions = parse_injuries_and_restrictions("pain with heavy lifting")
+
+    assert len(injuries) == 1
+    assert injuries[0]["injury_type"] == "pain"
+    assert restrictions == []
 
 
 def test_format_restriction_summary():

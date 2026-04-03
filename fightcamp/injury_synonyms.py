@@ -200,6 +200,7 @@ SPINE_HINTS = {
     "upper_back": {"upper back", "upper-back", "thoracic", "t-spine", "mid back", "mid-back"},
     "lower_back": {"lower back", "lower-back", "lumbar", "l-spine", "sciatic", "sciatica", "sacrum"},
 }
+POSTERIOR_THIGH_HINTS = {"back of thigh", "back thigh", "rear thigh", "posterior thigh"}
 
 NEGATION_CUES = {
     "no",
@@ -825,10 +826,14 @@ def canonicalize_location(text: str, threshold: int = 85) -> str | None:
         if any(tok._.negex for tok in span):
             continue
         loc = location_map.get(match_id)
+        matched_text = span.text.lower()
 
         # 2) Context routing if spine/back-ish
         txt = text.lower()
         if ("spine" in txt) or ("back" in txt):
+            # Explicit posterior-thigh phrases must beat generic back routing.
+            if matched_text in POSTERIOR_THIGH_HINTS:
+                return loc
             if any(h in txt for h in SPINE_HINTS["neck"]):
                 return "neck"
             if any(h in txt for h in SPINE_HINTS["upper_back"]):
