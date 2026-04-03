@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import html
+from html.parser import HTMLParser
 import importlib
 import logging
 from typing import Optional
@@ -27,6 +28,120 @@ import re
 import unicodedata
 
 logger = logging.getLogger(__name__)
+
+_ALLOWED_HTML_TAGS = {
+    "a",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "strong",
+    "table",
+    "tbody",
+    "td",
+    "th",
+    "thead",
+    "tr",
+    "ul",
+}
+_VOID_HTML_TAGS = {"br", "hr"}
+_DROP_CONTENT_TAGS = {"script", "style", "iframe", "object", "embed", "link", "meta"}
+_ALLOWED_HTML_ATTRS = {
+    "a": {"href", "title"},
+    "td": {"colspan", "rowspan"},
+    "th": {"colspan", "rowspan"},
+}
+
+
+class _SafeHtmlFragmentParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._blocked_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag_name = tag.lower()
+        if tag_name in _DROP_CONTENT_TAGS:
+            self._blocked_depth += 1
+            return
+        if self._blocked_depth or tag_name not in _ALLOWED_HTML_TAGS:
+            return
+        safe_attrs = self._sanitize_attrs(tag_name, attrs)
+        self.parts.append(f"<{tag_name}{safe_attrs}>")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        tag_name = tag.lower()
+        if tag_name in _DROP_CONTENT_TAGS:
+            return
+        if self._blocked_depth or tag_name not in _ALLOWED_HTML_TAGS:
+            return
+        safe_attrs = self._sanitize_attrs(tag_name, attrs)
+        self.parts.append(f"<{tag_name}{safe_attrs}>")
+
+    def handle_endtag(self, tag: str) -> None:
+        tag_name = tag.lower()
+        if tag_name in _DROP_CONTENT_TAGS:
+            if self._blocked_depth:
+                self._blocked_depth -= 1
+            return
+        if self._blocked_depth or tag_name not in _ALLOWED_HTML_TAGS or tag_name in _VOID_HTML_TAGS:
+            return
+        self.parts.append(f"</{tag_name}>")
+
+    def handle_data(self, data: str) -> None:
+        if self._blocked_depth or not data:
+            return
+        self.parts.append(html.escape(data, quote=False))
+
+    def handle_entityref(self, name: str) -> None:
+        if self._blocked_depth:
+            return
+        self.parts.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        if self._blocked_depth:
+            return
+        self.parts.append(f"&#{name};")
+
+    def _sanitize_attrs(self, tag_name: str, attrs: list[tuple[str, str | None]]) -> str:
+        allowed = _ALLOWED_HTML_ATTRS.get(tag_name, set())
+        rendered: list[str] = []
+        for attr_name, attr_value in attrs:
+            name = attr_name.lower()
+            if name.startswith("on") or name == "style" or name not in allowed:
+                continue
+            value = (attr_value or "").strip()
+            if name == "href" and not self._is_safe_href(value):
+                continue
+            rendered.append(f' {name}="{html.escape(value, quote=True)}"')
+        return "".join(rendered)
+
+    @staticmethod
+    def _is_safe_href(value: str) -> bool:
+        lowered = value.lower()
+        return lowered.startswith(("http://", "https://", "mailto:")) or lowered.startswith("#")
+
+
+def _sanitize_html_fragment(fragment: str) -> str:
+    if not fragment:
+        return ""
+    parser = _SafeHtmlFragmentParser()
+    parser.feed(fragment)
+    parser.close()
+    return "".join(parser.parts)
 
 
 def _load_optional_module(module_name: str):
@@ -210,7 +325,7 @@ def _md_to_html(text: str) -> str:
     cleaned_text = _upgrade_symbols(_clean_text("\n".join(cleaned_lines)))
     safe_text = _escape_html_text(cleaned_text)
     if markdown2:
-        return markdown2.markdown(safe_text)
+        return _sanitize_html_fragment(markdown2.markdown(safe_text))
     # simple HTML if markdown2 unavailable
     lines = [text_line.rstrip() for text_line in safe_text.splitlines() if text_line.strip()]
     html_parts = []
@@ -237,7 +352,7 @@ def _md_to_html(text: str) -> str:
             html_parts.append(f"<p>{line}</p>")
     if in_list:
         html_parts.append("</ul>")
-    return "\n".join(html_parts)
+    return _sanitize_html_fragment("\n".join(html_parts))
 
 
 
@@ -290,6 +405,12 @@ def build_html_document(
     include_injury_sections: bool = True,
 ) -> str:
     """Assemble the full HTML string."""
+
+    rehab_html = _sanitize_html_fragment(rehab_html)
+    adjustments_table = _sanitize_html_fragment(adjustments_table)
+    sparring_nutrition_html = _sanitize_html_fragment(sparring_nutrition_html)
+    athlete_profile_html = _sanitize_html_fragment(athlete_profile_html)
+    selection_rationale_html = _sanitize_html_fragment(selection_rationale_html)
 
     style_sheet = """
     <style>

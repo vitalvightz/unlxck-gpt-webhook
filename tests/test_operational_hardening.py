@@ -51,6 +51,24 @@ def test_build_html_document_escapes_inline_user_fields():
     assert "boxing&lt;script&gt;" in rendered
 
 
+def test_build_html_document_sanitizes_raw_html_fragments():
+    rendered = build_block.build_html_document(
+        full_name="Ari Mensah",
+        sport="boxing",
+        phase_split="2 / 2 / 1",
+        status="active",
+        athlete_profile_html='''<p onclick="alert(1)">Safe</p><script>alert(1)</script><a href="javascript:alert(1)">bad</a><a href="https://example.com">ok</a>''',
+        selection_rationale_html='<iframe src="https://example.com"></iframe><p>Selection</p>',
+    )
+
+    assert "<script>" not in rendered
+    assert "<iframe" not in rendered
+    assert "onclick=" not in rendered
+    assert 'href="javascript:alert(1)"' not in rendered
+    assert '<a href="https://example.com">ok</a>' in rendered
+    assert "<p>Selection</p>" in rendered
+
+
 def test_resolve_supabase_url_requires_explicit_override(monkeypatch, caplog):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("ALLOW_DEFAULT_SUPABASE_URL", raising=False)

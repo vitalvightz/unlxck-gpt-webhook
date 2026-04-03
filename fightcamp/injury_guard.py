@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import OrderedDict
 import hashlib
 import json
 import logging
@@ -320,7 +321,8 @@ _INJURY_DECISION_LOGGED: set[tuple] = set()
 # - Exercise tags change (tags_hash)
 # - Scoring thresholds change (threshold_version)
 # - Item identity changes (item_id)
-_INJURY_DECISION_CACHE: dict[tuple[str, ...], dict[str, object]] = {}
+_INJURY_DECISION_CACHE_MAX_SIZE = max(128, int(os.environ.get("INJURY_DECISION_CACHE_MAX_SIZE", "10000")))
+_INJURY_DECISION_CACHE: OrderedDict[tuple[str, ...], dict[str, object]] = OrderedDict()
 _INJURY_SEVERITY_DEBUGGED = False
 _INJURY_PARSED_DEBUGGED = False
 
@@ -359,6 +361,13 @@ def clear_injury_decision_cache() -> int:
     if count > 0:
         logger.info("[injury-guard] Cache cleared: %d entries invalidated", count)
     return count
+
+
+def _cache_injury_decision(cache_key: tuple[str, ...], payload: dict[str, object]) -> None:
+    _INJURY_DECISION_CACHE[cache_key] = payload
+    _INJURY_DECISION_CACHE.move_to_end(cache_key)
+    while len(_INJURY_DECISION_CACHE) > _INJURY_DECISION_CACHE_MAX_SIZE:
+        _INJURY_DECISION_CACHE.popitem(last=False)
 
 
 @dataclass(frozen=True)
@@ -758,6 +767,7 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         cache_key = (item_id, region, severity, threshold_version, INJURY_RULES_VERSION, tags_hash, module, bank)
         cached = _INJURY_DECISION_CACHE.get(cache_key)
         if cached:
+            _INJURY_DECISION_CACHE.move_to_end(cache_key)
             risk = float(cached["risk"])
             matched_tags = list(cached["matched_tags"])
             bucket = str(cached["bucket"])
@@ -794,12 +804,15 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
                 matched_tags=matched_tags,
                 action=action,
             )
-            _INJURY_DECISION_CACHE[cache_key] = {
-                "risk": max_region_risk,
-                "matched_tags": matched_tags,
-                "bucket": bucket,
-                "action": action,
-            }
+            _cache_injury_decision(
+                cache_key,
+                {
+                    "risk": max_region_risk,
+                    "matched_tags": matched_tags,
+                    "bucket": bucket,
+                    "action": action,
+                },
+            )
             risk = max_region_risk
 
         if risk > max_risk:

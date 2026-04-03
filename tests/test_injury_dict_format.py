@@ -4,6 +4,8 @@ Tests for injury_decision function with dictionary format injuries.
 import sys
 from pathlib import Path
 
+import fightcamp.injury_guard as injury_guard_module
+
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.injury_guard import injury_decision
@@ -226,3 +228,28 @@ def test_injury_decision_missing_severity_defaults_to_moderate():
     # Should still work, defaulting to moderate
     assert decision.action in {"exclude", "modify"}
     assert decision.reason["severity"] == "moderate"
+
+
+def test_injury_decision_cache_is_bounded(monkeypatch):
+    monkeypatch.setattr(injury_guard_module, "_INJURY_DECISION_CACHE_MAX_SIZE", 2)
+    injury_guard_module.clear_injury_decision_cache()
+
+    try:
+        for index in range(3):
+            injury_decision(
+                {
+                    "id": f"exercise-{index}",
+                    "name": "Bench Press",
+                    "tags": ["press_heavy"],
+                },
+                [{"region": "shoulder", "severity": "high"}],
+                "GPP",
+                "low",
+            )
+
+        cache_keys = list(injury_guard_module._INJURY_DECISION_CACHE.keys())
+
+        assert len(cache_keys) == 2
+        assert all(key[0] != "exercise-0" for key in cache_keys)
+    finally:
+        injury_guard_module.clear_injury_decision_cache()

@@ -26,6 +26,7 @@ _TRANSIENT_SUPABASE_ERRORS = (
     httpx.ConnectError,
     httpx.ReadTimeout,
 )
+_STORE_CLIENT_ERRORS = (PostgrestAPIError, httpx.HTTPError)
 _TRANSIENT_POSTGREST_SNIPPETS = (
     "connection",
     "connect",
@@ -201,6 +202,29 @@ class SupabaseAppStore:
         has_schema_mismatch_signal = any(snippet in text for snippet in _GENERATION_JOB_SCHEMA_SNIPPETS)
         return has_generation_job_context and has_schema_mismatch_signal
 
+    def _raise_operation_http_error(
+        self,
+        *,
+        operation: str,
+        detail: str,
+        exc: Exception,
+    ) -> None:
+        if self._is_transient_store_error(exc):
+            logger.warning(
+                "[store] %s:transient_failure error_type=%s",
+                operation,
+                type(exc).__name__,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="store service temporarily unavailable",
+            ) from exc
+        logger.exception("[store] %s:exception", operation)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=detail,
+        ) from exc
+
     def _run_with_transient_retry(
         self,
         *,
@@ -212,7 +236,7 @@ class SupabaseAppStore:
         for attempt in range(1, attempts + 1):
             try:
                 return fn()
-            except Exception as exc:
+            except _STORE_CLIENT_ERRORS as exc:
                 transient = self._is_transient_store_error(exc)
                 logger.warning(
                     "[store] %s:failure attempt=%s transient=%s error_type=%s error=%s",
@@ -288,7 +312,7 @@ class SupabaseAppStore:
                 self.client.table("profiles").upsert(payload, on_conflict="id").execute()
                 self._log_profile_event(operation="upsert_success", user=user, attempt=attempt)
                 return
-            except Exception as exc:
+            except _STORE_CLIENT_ERRORS as exc:
                 transient = self._is_transient_profile_error(exc)
                 logger.warning(
                     "[store] profile:upsert_failure user_id=%s email=%s attempt=%s transient=%s error_type=%s error=%s",
@@ -330,7 +354,7 @@ class SupabaseAppStore:
             payload = self._build_profile_payload(user=user, existing=None)
             try:
                 self._upsert_profile_with_retry(user=user, payload=payload)
-            except Exception as exc:
+            except _STORE_CLIENT_ERRORS as exc:
                 logger.exception(
                     "[store] profile:ensure_upsert_exception user_id=%s email=%s error_type=%s",
                     user.user_id,
@@ -353,7 +377,7 @@ class SupabaseAppStore:
             return profile
         except HTTPException:
             raise
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             logger.exception(
                 "[store] ensure_profile:exception athlete_id=%s email=%s error_type=%s",
                 user.user_id,
@@ -381,9 +405,12 @@ class SupabaseAppStore:
             return profile
         except HTTPException:
             raise
-        except Exception:
-            logger.exception("[store] update_profile:exception athlete_id=%s", athlete_id)
-            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_profile athlete_id={athlete_id}",
+                detail="failed to update profile",
+                exc=exc,
+            )
 
     def get_latest_intake(self, athlete_id: str) -> dict[str, Any] | None:
         return self._select_first(
@@ -427,7 +454,7 @@ class SupabaseAppStore:
             return rows[0]
         except HTTPException:
             raise
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             logger.exception("[store] create_intake:exception athlete_id=%s", athlete_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -495,7 +522,7 @@ class SupabaseAppStore:
             return rows[0]
         except HTTPException:
             raise
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             logger.exception("[store] create_plan:exception athlete_id=%s intake_id=%s", athlete_id, intake_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -541,7 +568,7 @@ class SupabaseAppStore:
                     client_request_id=client_request_id,
                 ),
             )
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             if not self._is_transient_store_error(exc):
                 if self._is_generation_job_schema_error(exc):
                     logger.exception(
@@ -590,7 +617,7 @@ class SupabaseAppStore:
             rows = getattr(response, "data", None) or []
             if rows:
                 return rows[0]
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             last_error = exc
             logger.exception(
                 "[store] create_or_get_generation_job:insert_exception athlete_id=%s client_request_id=%s",
@@ -606,7 +633,7 @@ class SupabaseAppStore:
                     client_request_id=client_request_id,
                 ),
             )
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             if not self._is_transient_store_error(exc):
                 if self._is_generation_job_schema_error(exc):
                     logger.exception(
@@ -647,7 +674,7 @@ class SupabaseAppStore:
                 operation="get_generation_job:select",
                 fn=lambda: self._read_generation_job(job_id),
             )
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
                     "[store] get_generation_job:transient_failure job_id=%s error_type=%s",
@@ -708,7 +735,7 @@ class SupabaseAppStore:
             return self.get_generation_job(job_id)
         except HTTPException:
             raise
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
                     "[store] claim_generation_job:transient_failure job_id=%s error_type=%s",
@@ -741,7 +768,7 @@ class SupabaseAppStore:
             return updated
         except HTTPException:
             raise
-        except Exception as exc:
+        except _STORE_CLIENT_ERRORS as exc:
             if self._is_transient_store_error(exc):
                 logger.warning(
                     "[store] update_generation_job:transient_failure job_id=%s error_type=%s",
@@ -773,9 +800,12 @@ class SupabaseAppStore:
             return updated
         except HTTPException:
             raise
-        except Exception:
-            logger.exception("[store] rename_plan:exception plan_id=%s", plan_id)
-            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"rename_plan plan_id={plan_id}",
+                detail="failed to rename plan",
+                exc=exc,
+            )
 
     def delete_plan(self, plan_id: str) -> None:
         try:
@@ -791,9 +821,12 @@ class SupabaseAppStore:
             logger.info("[store] delete_plan:success plan_id=%s", plan_id)
         except HTTPException:
             raise
-        except Exception:
-            logger.exception("[store] delete_plan:exception plan_id=%s", plan_id)
-            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"delete_plan plan_id={plan_id}",
+                detail="failed to delete plan",
+                exc=exc,
+            )
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]:
         payload = {
@@ -821,9 +854,12 @@ class SupabaseAppStore:
             return updated
         except HTTPException:
             raise
-        except Exception:
-            logger.exception("[store] update_plan_stage2:exception plan_id=%s", plan_id)
-            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_plan_stage2 plan_id={plan_id}",
+                detail="failed to update plan stage 2",
+                exc=exc,
+            )
 
     def list_admin_plans(self) -> list[dict[str, Any]]:
         response = (
@@ -856,6 +892,9 @@ class SupabaseAppStore:
             logger.info("[store] clear_onboarding_draft:start athlete_id=%s", athlete_id)
             self.client.table("profiles").update({"onboarding_draft": None}).eq("id", athlete_id).execute()
             logger.info("[store] clear_onboarding_draft:success athlete_id=%s", athlete_id)
-        except Exception:
-            logger.exception("[store] clear_onboarding_draft:exception athlete_id=%s", athlete_id)
-            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"clear_onboarding_draft athlete_id={athlete_id}",
+                detail="failed to clear onboarding draft",
+                exc=exc,
+            )

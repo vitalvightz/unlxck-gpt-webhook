@@ -1961,6 +1961,30 @@ def test_generate_plan_response_shape_is_preserved_with_deferred_writes():
     assert body["athlete_id"] == "athlete-1"
 
 
+def test_generate_plan_rate_limits_repeat_requests():
+    client, _, _ = _build_client()
+    client.app.state.plan_generate_rate_limiter = app_module.SlidingWindowRateLimiter(
+        max_requests=1,
+        window_seconds=60.0,
+        time_fn=lambda: 100.0,
+    )
+
+    first = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+    second = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=_build_request().model_dump(mode="json"),
+    )
+
+    assert first.status_code == 202
+    assert second.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert second.json()["detail"]["retry_after_seconds"] == 60
+
+
 def test_generate_plan_essential_writes_happen_synchronously():
     """create_intake and create_plan must be persisted before the response is returned."""
     client, store, _ = _build_client()

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from fastapi import HTTPException, status
+import httpx
+from gotrue.errors import AuthApiError
 from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
@@ -50,7 +52,19 @@ class SupabaseAuthService:
     def get_user_from_token(self, token: str) -> AuthenticatedUser:
         try:
             response = self.client.auth.get_user(token)
-        except Exception as exc:  # pragma: no cover - network/runtime integration
+        except AuthApiError as exc:  # pragma: no cover - upstream auth integration
+            status_code = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+            if status_code in {400, 401, 403}:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="authentication required",
+                ) from exc
+            logger.exception("[auth] upstream token verification failed")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="authentication service temporarily unavailable",
+            ) from exc
+        except httpx.HTTPError as exc:  # pragma: no cover - network/runtime integration
             logger.exception("[auth] upstream token verification failed")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

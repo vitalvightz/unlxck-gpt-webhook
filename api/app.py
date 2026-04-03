@@ -6,9 +6,11 @@ import logging
 import os
 import time
 import uuid
+from collections import deque
 from contextlib import suppress
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from threading import Lock
 from typing import Any, Awaitable, Callable
 from urllib.parse import urlsplit
 
@@ -51,6 +53,34 @@ Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
+
+
+class SlidingWindowRateLimiter:
+    def __init__(
+        self,
+        *,
+        max_requests: int,
+        window_seconds: float,
+        time_fn: Callable[[], float] | None = None,
+    ):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self._time_fn = time_fn or time.monotonic
+        self._lock = Lock()
+        self._requests_by_key: dict[str, deque[float]] = {}
+
+    def check(self, key: str) -> int | None:
+        now = self._time_fn()
+        cutoff = now - self.window_seconds
+        with self._lock:
+            bucket = self._requests_by_key.setdefault(key, deque())
+            while bucket and bucket[0] <= cutoff:
+                bucket.popleft()
+            if len(bucket) >= self.max_requests:
+                retry_after = max(1, int(self.window_seconds - (now - bucket[0])))
+                return retry_after
+            bucket.append(now)
+        return None
 
 
 def _utc_now_iso() -> str:
@@ -151,6 +181,27 @@ def _normalize_origin(origin: str) -> str:
 def _cors_origin_regex() -> str | None:
     value = os.getenv("APP_CORS_ORIGIN_REGEX", "").strip()
     return value or None
+
+
+def _plan_generate_rate_limit_requests() -> int:
+    raw_value = os.getenv("APP_PLAN_GENERATE_RATE_LIMIT", "5").strip()
+    try:
+        return max(0, int(raw_value))
+    except ValueError:
+        logger.warning("[rate-limit] invalid APP_PLAN_GENERATE_RATE_LIMIT=%r; falling back to 5", raw_value)
+        return 5
+
+
+def _plan_generate_rate_limit_window_seconds() -> float:
+    raw_value = os.getenv("APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS", "60").strip()
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning(
+            "[rate-limit] invalid APP_PLAN_GENERATE_RATE_LIMIT_WINDOW_SECONDS=%r; falling back to 60",
+            raw_value,
+        )
+        return 60.0
 
 
 async def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
@@ -394,6 +445,15 @@ def create_app(
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
     app.state.active_generation_tasks: set[str] = set()
+    rate_limit_requests = _plan_generate_rate_limit_requests()
+    app.state.plan_generate_rate_limiter = (
+        SlidingWindowRateLimiter(
+            max_requests=rate_limit_requests,
+            window_seconds=_plan_generate_rate_limit_window_seconds(),
+        )
+        if rate_limit_requests > 0
+        else None
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_cors_origins(),
@@ -491,6 +551,9 @@ def create_app(
 
     def get_active_generation_tasks(request: Request) -> set[str]:
         return request.app.state.active_generation_tasks
+
+    def get_plan_generate_rate_limiter(request: Request) -> SlidingWindowRateLimiter | None:
+        return request.app.state.plan_generate_rate_limiter
 
     def require_user(
         credentials: HTTPAuthorizationCredentials | None = Depends(security),
@@ -820,7 +883,18 @@ def create_app(
         planner_fn: Planner = Depends(get_planner),
         stage2: Stage2Automator = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
+        rate_limiter: SlidingWindowRateLimiter | None = Depends(get_plan_generate_rate_limiter),
     ) -> GenerationJobResponse:
+        if rate_limiter is not None:
+            retry_after = rate_limiter.check(profile.athlete_id)
+            if retry_after is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail={
+                        "message": "Too many plan generation requests. Try again shortly.",
+                        "retry_after_seconds": retry_after,
+                    },
+                )
         client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
