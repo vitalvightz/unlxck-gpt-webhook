@@ -7,61 +7,15 @@ import { useRouter } from "next/navigation";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { deletePlan, listPlans, renamePlan } from "@/lib/api";
-import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
+import {
+  formatPlanFightDate,
+  formatPlanStatus,
+  formatPlanTimestamp,
+  getFeaturedPlanTitle,
+  getPlanDisplayName,
+  getPlanStyleSummary,
+} from "@/lib/plan-format";
 import type { PlanSummary } from "@/lib/types";
-
-function getPlanDisplayName(plan: PlanSummary): string {
-  return plan.plan_name?.trim() || plan.fight_date || "Open plan";
-}
-
-function getPlanStyleSummary(plan: PlanSummary): string {
-  return getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Unspecified style";
-}
-
-function getFeaturedPlanTitle(plan: PlanSummary): string {
-  const customName = plan.plan_name?.trim() || "";
-  if (!customName || customName === plan.fight_date) {
-    return "Fight camp plan";
-  }
-  return customName;
-}
-
-function formatTimestamp(value?: string | null): string {
-  if (!value) {
-    return "Not available";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
-function formatFightDate(value?: string | null): string {
-  if (!value) {
-    return "Not provided";
-  }
-
-  const parsed = new Date(`${value}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(parsed);
-}
 
 function PlanCard({
   plan,
@@ -81,9 +35,10 @@ function PlanCard({
   const [error, setError] = useState<string | null>(null);
   const planTitle = getPlanDisplayName(plan);
   const featuredTitle = getFeaturedPlanTitle(plan);
-  const fightDateLabel = formatFightDate(plan.fight_date);
-  const createdLabel = formatTimestamp(plan.created_at);
+  const fightDateLabel = formatPlanFightDate(plan.fight_date);
+  const createdLabel = formatPlanTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
+  const statusLabel = formatPlanStatus(plan.status);
 
   const actionButtons = (
     <>
@@ -170,7 +125,7 @@ function PlanCard({
             <p className="kicker">Latest saved plan</p>
             <p className="muted">Created {createdLabel}</p>
           </div>
-          <span className="badge">{plan.status}</span>
+          <span className="badge">{statusLabel}</span>
         </div>
         <div className="plans-featured-main">
           <div className="plans-featured-copy">
@@ -198,7 +153,7 @@ function PlanCard({
             </div>
             <div className="plans-featured-meta-chip">
               <span className="label">Status</span>
-              <span className="plans-featured-meta-value">{plan.status}</span>
+               <span className="plans-featured-meta-value">{statusLabel}</span>
             </div>
             <div className="plans-featured-meta-chip">
               <span className="label">PDF</span>
@@ -215,17 +170,17 @@ function PlanCard({
   return (
     <article className="plan-history-row plan-history-row-card">
       <div className="plan-history-copy">
-        <p className="label">{fightDateLabel}</p>
-        <Link href={`/plans/${plan.plan_id}`}>
-          <h2 className="plan-card-title">{planTitle}</h2>
-        </Link>
+         <p className="label">{fightDateLabel}</p>
+         <Link href={`/plans/${plan.plan_id}`}>
+           <h2 className="plan-card-title">{planTitle}</h2>
+         </Link>
         <div className="plan-card-meta">
           <span className="muted">{styleSummary}</span>
           <span className="muted">Created {createdLabel}</span>
         </div>
       </div>
       <div className="plan-history-meta">
-        <span className="badge">{plan.status}</span>
+         <span className="badge">{statusLabel}</span>
         <div className="plan-card-actions plans-history-actions">{actionButtons}</div>
       </div>
       {message || error ? (
@@ -245,14 +200,15 @@ export default function PlansPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [localPlans, setLocalPlans] = useState<PlanSummary[] | null>(null);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
   const visiblePlans = useMemo(() => {
     const sourcePlans = localPlans ?? plans;
     return [...sourcePlans].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime());
   }, [localPlans, plans]);
   const featuredPlan = visiblePlans[0] ?? null;
   const historicalPlans = featuredPlan ? visiblePlans.slice(1) : [];
-  const latestSavedLabel = featuredPlan ? formatTimestamp(featuredPlan.created_at) : isLoading ? "Loading..." : "No saved plans yet";
-  const latestFightLabel = featuredPlan ? formatFightDate(featuredPlan.fight_date) : "Set during onboarding";
+  const latestSavedLabel = featuredPlan ? formatPlanTimestamp(featuredPlan.created_at) : isLoading ? "Loading..." : "No saved plans yet";
+  const latestFightLabel = featuredPlan ? formatPlanFightDate(featuredPlan.fight_date) : "Set during onboarding";
   const latestStyleLabel = featuredPlan ? getPlanStyleSummary(featuredPlan) : "Appears after the first generation";
 
   useEffect(() => {
@@ -272,6 +228,12 @@ export default function PlansPage() {
         setIsLoading(false);
       });
   }, [session?.access_token]);
+
+  useEffect(() => {
+    if (!historicalPlans.length) {
+      setIsArchiveOpen(false);
+    }
+  }, [historicalPlans.length]);
 
   function handlePlanDeleted(planId: string) {
     setLocalPlans((current) => {
@@ -294,11 +256,11 @@ export default function PlansPage() {
       <section className="panel">
         <div className="section-heading">
           <div className="athlete-motion-slot athlete-motion-header">
-            <p className="kicker">Plan History</p>
-            <h1>Your saved plans</h1>
-            <p className="muted">Open the latest camp fast, then drop into older saves below.</p>
-          </div>
-        </div>
+             <p className="kicker">Plan History</p>
+             <h1>Your saved plans</h1>
+             <p className="muted">Open the latest camp fast, then reopen older saves from the archive dropdown.</p>
+           </div>
+         </div>
 
         <div className="plans-status-strip athlete-motion-slot athlete-motion-status" aria-label="Plan history status">
           <div className="plans-status-item">
@@ -384,30 +346,45 @@ export default function PlansPage() {
         {featuredPlan ? (
           <div className="plans-history-block athlete-motion-slot athlete-motion-main">
             <div className="plans-history-header">
-              <div className="plans-history-header-copy">
-                <p className="kicker">Archive</p>
-                <h2>Earlier saved plans</h2>
-                <p className="muted">Keep the newest camp prominent, then reopen older saves without digging through repeated cards.</p>
-              </div>
-              <span className="badge status-badge-neutral">
-                {historicalPlans.length} previous
-              </span>
-            </div>
+               <div className="plans-history-header-copy">
+                 <p className="kicker">Archive</p>
+                 <h2>Earlier saved plans</h2>
+                 <p className="muted">Keep the newest camp prominent, then expand the archive only when you need an earlier save.</p>
+               </div>
+               {historicalPlans.length ? (
+                 <button
+                   type="button"
+                   className={`plans-history-toggle ${isArchiveOpen ? "plans-history-toggle-open" : ""}`}
+                   onClick={() => setIsArchiveOpen((current) => !current)}
+                   aria-expanded={isArchiveOpen}
+                   aria-controls="plans-history-dropdown"
+                 >
+                   <span className="plans-history-toggle-copy">
+                     {isArchiveOpen ? "Hide earlier saved plans" : "Show earlier saved plans"}
+                   </span>
+                   <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
+                 </button>
+               ) : (
+                 <span className="badge status-badge-neutral">No archive yet</span>
+               )}
+             </div>
 
-            {historicalPlans.length ? (
-              <div className="plan-history-list plans-history-list">
-                {historicalPlans.map((plan) => (
-                  <PlanCard
-                    key={plan.plan_id}
-                    plan={plan}
-                    accessToken={session?.access_token ?? null}
-                    onPlanDeleted={handlePlanDeleted}
-                    onPlanRenamed={handlePlanRenamed}
-                  />
-                ))}
-              </div>
-            ) : (
-              <p className="plans-history-empty">The latest save is the only plan in history right now.</p>
+             {historicalPlans.length ? (
+               <div id="plans-history-dropdown" className="plans-history-dropdown" hidden={!isArchiveOpen}>
+                 <div className="plan-history-list plans-history-list">
+                   {historicalPlans.map((plan) => (
+                     <PlanCard
+                       key={plan.plan_id}
+                       plan={plan}
+                       accessToken={session?.access_token ?? null}
+                       onPlanDeleted={handlePlanDeleted}
+                       onPlanRenamed={handlePlanRenamed}
+                     />
+                   ))}
+                 </div>
+               </div>
+             ) : (
+               <p className="plans-history-empty">The latest save is the only plan in history right now.</p>
             )}
           </div>
         ) : null}
@@ -415,4 +392,3 @@ export default function PlansPage() {
     </RequireAuth>
   );
 }
-

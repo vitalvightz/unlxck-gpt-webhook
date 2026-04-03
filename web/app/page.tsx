@@ -12,50 +12,10 @@ import {
   TACTICAL_STYLE_OPTIONS,
   TECHNICAL_STYLE_OPTIONS,
 } from "@/lib/intake-options";
+import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/lib/plan-format";
 import type { PlanSummary } from "@/lib/types";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
-
-function getPlanDisplayName(plan: { plan_name?: string | null; fight_date?: string | null }) {
-  return plan.plan_name?.trim() || plan.fight_date || "Open saved plan";
-}
-
-function formatTimestamp(value?: string | null): string {
-  if (!value) {
-    return "Not available";
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(parsed);
-}
-
-function formatFightDate(value?: string | null): string {
-  if (!value) {
-    return "Not provided";
-  }
-
-  const parsed = new Date(`${value}T12:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(parsed);
-}
 
 function formatPlanCount(value: number): string {
   return `${value} saved plan${value === 1 ? "" : "s"}`;
@@ -196,13 +156,13 @@ export default function HomePage() {
     const status = getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, me.profile.professional_status ?? "") || "Not provided";
     const readinessBadge = draft ? "In progress" : "Ready to start";
     const nextActionSummary = latestPlan
-      ? `Latest plan saved ${formatTimestamp(latestPlan.created_at)}.`
+      ? `Latest plan saved ${formatPlanTimestamp(latestPlan.created_at)}.`
       : draft
         ? `Draft is parked on step ${nextStepNumber} of 6.`
         : "Profile is ready for the first intake.";
     const operationalItems = [
-      { label: "Latest update", value: latestPlan ? formatTimestamp(latestPlan.created_at) : formatTimestamp(me.profile.updated_at) },
-      { label: "Fight date", value: formatFightDate(fightDate) },
+      { label: "Latest update", value: latestPlan ? formatPlanTimestamp(latestPlan.created_at) : formatPlanTimestamp(me.profile.updated_at) },
+      { label: "Fight date", value: formatPlanFightDate(fightDate) },
       { label: "History", value: formatPlanCount(me.plan_count) },
     ];
     const profileStateItems = [
@@ -274,7 +234,7 @@ export default function HomePage() {
             </article>
             <article className="overview-snapshot-item">
               <p className="kicker">Fight date</p>
-              <p className="overview-snapshot-value">{formatFightDate(fightDate)}</p>
+              <p className="overview-snapshot-value">{formatPlanFightDate(fightDate)}</p>
               <p className="muted">Using the latest saved intake.</p>
             </article>
           </div>
@@ -314,7 +274,7 @@ export default function HomePage() {
                       <div className="plan-history-copy">
                         <p className="label">{index === 0 ? "Latest saved plan" : "Recent saved plan"}</p>
                         <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                        <p className="overview-history-meta-line">Created {formatTimestamp(plan.created_at)}</p>
+                        <p className="overview-history-meta-line">Created {formatPlanTimestamp(plan.created_at)}</p>
                       </div>
                       <div className="plan-history-meta">
                         <span className="badge">{plan.status}</span>
