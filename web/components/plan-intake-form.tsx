@@ -88,6 +88,11 @@ function numberOrNull(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function integerOrNull(value: string): number | null {
+  const parsed = numberOrNull(value);
+  return parsed === null ? null : Math.round(parsed);
+}
+
 function formatValue(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === "") {
     return "Not provided";
@@ -1087,7 +1092,7 @@ export function PlanIntakeForm() {
                   </div>
                   <div className="field">
                     <label htmlFor="heightCm">Height (cm)</label>
-                    <input id="heightCm" type="number" min="0" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", numberOrNull(event.target.value))} />
+                    <input id="heightCm" type="number" min="0" step="1" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
                   <div className="field">
                     <label htmlFor="stance">Stance</label>

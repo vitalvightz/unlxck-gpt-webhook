@@ -49,7 +49,7 @@ class AthleteProfileInput(BaseModel):
     age: int | None = None
     weight_kg: float | None = None
     target_weight_kg: float | None = None
-    height_cm: float | None = None
+    height_cm: int | None = None
     technical_style: list[str] = Field(default_factory=list)
     tactical_style: list[str] = Field(default_factory=list)
     stance: str = ""
@@ -62,6 +62,23 @@ class AthleteProfileInput(BaseModel):
     @classmethod
     def validate_record(cls, value: str) -> str:
         return _validate_record(value)
+
+    @field_validator("height_cm", mode="before")
+    @classmethod
+    def coerce_height_cm(cls, value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                return None
+            try:
+                return int(round(float(normalized)))
+            except ValueError:
+                return value
+        if isinstance(value, (int, float)):
+            return int(round(float(value)))
+        return value
 
 
 class GuidedInjuryInput(BaseModel):
