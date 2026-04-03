@@ -2777,10 +2777,82 @@ def _apply_legacy_high_fatigue_compression(
     return kept_roles, updated_suppressed
 
 
+def _fight_week_override_band(days_until_fight: Any) -> str:
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return "none"
+    if days < 0:
+        return "none"
+    if days <= 1:
+        return "final_day_protocol"
+    if days <= 3:
+        return "micro_taper_protocol"
+    if days <= 6:
+        return "mini_taper_protocol"
+    return "none"
+
+
+def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None:
+    band = _fight_week_override_band(days_until_fight)
+    if band == "none":
+        return None
+
+    base = {
+        "active": True,
+        "days_until_fight": days_until_fight,
+        "band": band,
+        "red_flags": ["do not chase fitness now"],
+    }
+
+    if band == "final_day_protocol":
+        return {
+            **base,
+            "plan_mode": "readiness_protocol_only",
+            "coach_note": "Fight is immediate. Do not run a normal training week or add fitness work.",
+            "allowed_session_roles": [],
+            "protocol": [
+                "No strength work, no conditioning blocks, and no volume accumulation.",
+                "Optional short neural primer only if movement quality is crisp and fatigue is low.",
+                "Use mobility, activation, breathing, and short shakeout only.",
+                "Include hydration, fuel, sleep, and weight-cut execution reminders.",
+                "Today should usually be warm-up guidance, activation, mental cues, and post-fight recovery/refuel notes only.",
+            ],
+        }
+
+    if band == "micro_taper_protocol":
+        return {
+            **base,
+            "plan_mode": "micro_taper_only",
+            "coach_note": "Use a micro-taper only. Do not render a normal weekly build.",
+            "allowed_session_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
+            "max_sessions": 2,
+            "protocol": [
+                "At most one short primer session plus one light mobility/recovery session.",
+                "No hard conditioning, no muscle-damaging lifts, and no new drills.",
+                "Keep intensity sharp and volume tiny to arrive fresh.",
+            ],
+        }
+
+    return {
+        **base,
+        "plan_mode": "mini_taper_only",
+        "coach_note": "Use a mini taper only. Do not render a full normal week.",
+        "allowed_session_roles": ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"],
+        "max_sessions": 3,
+        "protocol": [
+            "Reduce volume and keep only high-value sharpness exposures.",
+            "Preserve speed, timing, and rhythm with one to two key sessions.",
+            "Allow only very low-cost conditioning if truly needed.",
+        ],
+    }
+
+
 def _build_weekly_role_map(
     athlete_model: dict,
     week_by_week_progression: dict,
     limiter_profile: dict,
+    fight_week_override: dict[str, Any] | None = None,
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
@@ -2986,6 +3058,42 @@ def _build_weekly_role_map(
             }
         )
 
+    if fight_week_override and fight_week_override.get("active"):
+        band = str(fight_week_override.get("band") or "")
+        if band == "final_day_protocol":
+            weeks = []
+        else:
+            allowed_roles = set(_clean_list(fight_week_override.get("allowed_session_roles", [])))
+            max_sessions = int(fight_week_override.get("max_sessions") or 0)
+            trimmed_weeks: list[dict] = []
+            if weeks:
+                week = dict(weeks[0])
+                roles = list(week.get("session_roles") or [])
+                filtered_roles = [role for role in roles if role.get("role_key") in allowed_roles]
+                if max_sessions > 0:
+                    filtered_roles = filtered_roles[:max_sessions]
+                week["session_roles"] = filtered_roles
+                suppressed_roles = list(week.get("suppressed_roles") or [])
+                suppressed_roles.append(
+                    {
+                        "category": "plan",
+                        "role_key": "fight_week_override",
+                        "reasons": [str(fight_week_override.get("coach_note") or "fight-week override active")],
+                    }
+                )
+                week["suppressed_roles"] = suppressed_roles
+                week["coach_note_flags"] = _dedupe_clean_strings(
+                    _clean_list(week.get("coach_note_flags", [])) + ["fight-week override active"]
+                )
+                week["intentional_compression"] = {
+                    "active": True,
+                    "reason_codes": ["fight_week_override"],
+                    "reason": "fight_week_override",
+                    "summary": str(fight_week_override.get("coach_note") or "fight-week override active"),
+                }
+                trimmed_weeks = [week]
+            weeks = trimmed_weeks
+
     return {
         "model": "session_role_overlay.v1",
         "source_of_truth": [
@@ -2994,6 +3102,7 @@ def _build_weekly_role_map(
             "Anchors inherit the weekly stress map so phase guardrails, safety, and sport-load rules keep priority.",
             "Weekly roles are an execution layer only and cannot overrule the planning hierarchy.",
         ],
+        "fight_week_override": fight_week_override or {"active": False},
         "weeks": weeks,
     }
 def _derive_global_priorities(
@@ -3148,10 +3257,12 @@ def build_planning_brief(
         phase_briefs,
         weekly_stress_map,
     )
+    fight_week_override = _fight_week_override_payload(athlete_model.get("days_until_fight"))
     weekly_role_map = _build_weekly_role_map(
         athlete_model,
         week_by_week_progression,
         limiter_profile,
+        fight_week_override=fight_week_override,
     )
     return {
         "schema_version": "planning_brief.v1",
@@ -3176,6 +3287,7 @@ def build_planning_brief(
         "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools, week_by_week_progression),
         "weekly_stress_map": weekly_stress_map,
         "week_by_week_progression": week_by_week_progression,
+        "fight_week_override": fight_week_override or {"active": False},
         "weekly_role_map": weekly_role_map,
         "restrictions": restrictions,
         "candidate_pools": candidate_pools,
@@ -3617,6 +3729,7 @@ def build_stage2_payload(
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
+            "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-6 days, output mini taper only (freshness-first, minimal volume).",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "Never state 'weight cut none active' or 'recovery tolerance is standard' when readiness flags or weight_cut_pct indicate an active cut.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
@@ -3698,6 +3811,11 @@ In taper weeks, simplify aggressively.
 Remove novelty, reduce accessory volume, avoid soreness-inducing density, and keep only the most useful sharpness, rhythm, confidence, and freshness work.
 Do not render taper sessions as option menus or branching templates.
 In normal taper sessions, resolve to one final prescription with no default fallback branch.
+If planning_brief.fight_week_override.active is true, follow it as a hard override:
+- 0-1 days: no training week; output coach note plus readiness protocol only.
+- 2-3 days: micro-taper only (one short primer max + one light mobility/recovery session).
+- 4-6 days: mini taper only (freshness-first, reduced volume, 1-2 sharpness sessions).
+Never chase fitness in these windows.
 
 RULE 11 - OUTPUT DISCIPLINE
 Keep the athlete-facing output concise, high-signal, and easy to scan.
