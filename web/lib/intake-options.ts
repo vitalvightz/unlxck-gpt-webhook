@@ -80,6 +80,9 @@ export const EQUIPMENT_ACCESS_OPTIONS: IntakeOption[] = [
   { label: "Thai Pads", value: "thai_pads" },
   { label: "Assault Bike", value: "assault_bike" },
   { label: "Rower", value: "rower" },
+  { label: "Pool", value: "pool" },
+  { label: "Sandbag", value: "sandbag" },
+  { label: "Battle Ropes", value: "battle_ropes" },
   { label: "Partner", value: "partner" },
 ];
 
