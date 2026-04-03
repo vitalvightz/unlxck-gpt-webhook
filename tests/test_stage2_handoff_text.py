@@ -24,8 +24,11 @@ def test_build_stage2_handoff_text_uses_planning_brief_as_single_structured_cont
     )
     json_block = handoff.split("PLANNING BRIEF\n", 1)[1].split("\n\n---\n\n", 1)[0]
     json_body = json_block.removeprefix("```json\n").removesuffix("\n```")
+    athlete_profile_block = handoff.split("ATHLETE PROFILE\n", 1)[1].split("\n\n---\n\n", 1)[0]
+    athlete_profile_body = athlete_profile_block.removeprefix("```json\n").removesuffix("\n```")
 
     assert "PLANNING BRIEF" in handoff
+    assert "ATHLETE PROFILE" in handoff
     assert '"athlete_snapshot"' in handoff
     assert '"candidate_pools"' in handoff
     assert "COACH NOTES\nKeep this coach-facing note short." in handoff
@@ -33,8 +36,10 @@ def test_build_stage2_handoff_text_uses_planning_brief_as_single_structured_cont
     assert json_block.startswith("```json\n")
     assert json_block.endswith("\n```")
     assert json_body.startswith('{"athlete_snapshot":{"sport":"boxing","status":"amateur"}')
+    assert athlete_profile_block.startswith("```json\n")
+    assert athlete_profile_block.endswith("\n```")
+    assert athlete_profile_body == '{"sport":"boxing","status":"amateur"}'
     assert '\n  "' not in json_body
-    assert "ATHLETE PROFILE" not in handoff
     assert "RESTRICTIONS\n[" not in handoff
     assert "PHASE BRIEFS" not in handoff
     assert "CANDIDATE POOLS\n{" not in handoff
