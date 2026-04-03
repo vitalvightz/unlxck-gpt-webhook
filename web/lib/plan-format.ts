@@ -7,6 +7,11 @@ type PlanDisplayFields = {
   technical_style?: string[] | null;
 };
 
+function hasCustomPlanName(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): boolean {
+  const customName = plan.plan_name?.trim();
+  return Boolean(customName && customName !== plan.fight_date);
+}
+
 export function formatPlanTimestamp(value?: string | null): string {
   if (!value) {
     return "Not available";
@@ -45,9 +50,8 @@ export function formatPlanFightDate(value?: string | null): string {
 }
 
 export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
-  const customName = plan.plan_name?.trim();
-  if (customName && customName !== plan.fight_date) {
-    return customName;
+  if (hasCustomPlanName(plan)) {
+    return plan.plan_name!.trim();
   }
 
   if (plan.fight_date) {
@@ -58,12 +62,11 @@ export function getPlanDisplayName(plan: Pick<PlanDisplayFields, "fight_date" | 
 }
 
 export function getFeaturedPlanTitle(plan: Pick<PlanDisplayFields, "fight_date" | "plan_name">): string {
-  const customName = plan.plan_name?.trim();
-  if (!customName || customName === plan.fight_date) {
+  if (!hasCustomPlanName(plan)) {
     return "Fight camp plan";
   }
 
-  return customName;
+  return plan.plan_name!.trim();
 }
 
 export function getPlanStyleSummary(plan: Pick<PlanDisplayFields, "technical_style">): string {
