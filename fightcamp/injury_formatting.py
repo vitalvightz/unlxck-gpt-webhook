@@ -4,6 +4,7 @@ import logging
 import re
 from typing import Mapping
 
+from . import injury_synonyms
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry, is_restriction_phrase
 
@@ -111,12 +112,23 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
     Returns:
         Dict with injury data, or None if not an injury (e.g., if it's a constraint)
     """
-    # Filter out constraint phrases first
-    if is_restriction_phrase(phrase):
+    original_phrase = str(phrase or "").strip()
+    if not original_phrase:
         return None
-    
-    injury_type, location = parse_injury_phrase(phrase)
-    laterality = extract_laterality(phrase)
+
+    phrase_to_parse = original_phrase
+    if injury_synonyms.contains_negated_injury(original_phrase) and not injury_synonyms.negation_detection_available():
+        phrase_to_parse = injury_synonyms.remove_negated_phrases(original_phrase)
+        if not phrase_to_parse:
+            return None
+
+    # Filter out constraint phrases after fallback negation cleanup so mixed
+    # inputs like "no shoulder pain - knee soreness" still yield the active injury.
+    if is_restriction_phrase(phrase_to_parse):
+        return None
+
+    injury_type, location = parse_injury_phrase(phrase_to_parse)
+    laterality = extract_laterality(original_phrase)
     if not injury_type and not location:
         return None
     if not injury_type and location:
@@ -126,7 +138,7 @@ def parse_injury_entry(phrase: str) -> dict[str, str | None] | None:
         "canonical_location": location,
         "side": laterality,
         "laterality": laterality,
-        "original_phrase": phrase,
+        "original_phrase": original_phrase,
     }
 
 

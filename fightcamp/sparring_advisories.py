@@ -29,6 +29,7 @@ _HIGH_COLLISION_REGIONS = {
 }
 _LOWER_LIMB_REGIONS = {"ankle", "knee", "shin", "hip", "foot", "achilles", "groin"}
 _DISCLAIMER = "Treat this as a flag, not an automatic change to your saved plan."
+_SPARRING_INJURY_STATE_SCORE_CAP = 10
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -210,6 +211,7 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
             state_score += 2
         if region in _HIGH_COLLISION_REGIONS:
             state_score += 1
+        state_score = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, state_score))
 
         entries.append(
             {

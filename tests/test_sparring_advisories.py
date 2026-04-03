@@ -1,4 +1,4 @@
-from fightcamp.sparring_advisories import build_plan_advisories
+from fightcamp.sparring_advisories import _sparring_injury_entries, build_plan_advisories
 
 
 def _planning_brief(
@@ -115,6 +115,17 @@ def test_convert_advisory_for_worsening_instability_during_high_pressure_week():
     assert advisory["action"] == "convert"
     assert advisory["replacement"] == "Technical rounds with stance-stable pad or bag work."
     assert "worsening ankle instability" in advisory["reason"]
+
+
+def test_sparring_injury_state_scores_are_capped():
+    entries = _sparring_injury_entries(
+        {
+            "injuries": ["worsening shoulder instability with constant pain and cannot move"],
+        }
+    )
+
+    assert len(entries) == 1
+    assert entries[0]["state_score"] == 10
 
 
 def test_returns_only_one_best_advisory_when_multiple_weeks_qualify():

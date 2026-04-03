@@ -691,6 +691,16 @@ def _has_negated_injury(text: str) -> bool:
     return False
 
 
+def negation_detection_available() -> bool:
+    return bool(get_nlp() and _NEGSPACY_AVAILABLE)
+
+
+def contains_negated_injury(text: str) -> bool:
+    if not text:
+        return False
+    return _has_negated_injury(text)
+
+
 def remove_negated_phrases(text: str) -> str:
     """Strip words marked as negated by Negex from the text."""
     if not text:

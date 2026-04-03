@@ -3,6 +3,8 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+import fightcamp.injury_guard as injury_guard_module
+
 from fightcamp.conditioning import (
     _drill_text_injury_reasons,
     _is_drill_text_safe,
@@ -240,6 +242,19 @@ def test_normalize_severity_synonyms():
     severity, hits = normalize_severity("unknown phrasing")
     assert severity == "moderate"
     assert hits == []
+
+
+def test_normalize_severity_does_not_match_overlapping_substrings():
+    severity, hits = normalize_severity("worsening ankle instability")
+
+    assert severity == "moderate"
+    assert "stable" not in hits
+
+
+def test_compute_tags_hash_uses_normalized_tags():
+    assert injury_guard_module._compute_tags_hash(["Muay Thai", "skill refinement", "muay_thai"]) == injury_guard_module._compute_tags_hash(
+        ["muay_thai", "skill_refinement"]
+    )
 
 
 def test_dict_severity_normalization():

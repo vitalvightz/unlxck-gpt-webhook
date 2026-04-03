@@ -52,6 +52,18 @@ def test_negated_phrase_fallback_normalizes_dash_variants(monkeypatch):
     )
 
 
+def test_parse_injury_entry_checks_negation_availability_at_parse_time(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    assert not injury_synonyms.negation_detection_available()
+
+    entry = parse_injury_entry("no shoulder pain - knee soreness")
+
+    assert entry is not None
+    assert entry["canonical_location"] == "knee"
+    assert entry["injury_type"] == "soreness"
+
+
 def test_canonical_injury_types_are_allowed():
     allowed = {
         "sprain",

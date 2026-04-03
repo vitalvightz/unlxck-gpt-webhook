@@ -30,6 +30,18 @@ def test_just_outside_default_band_starts_a_new_group():
     assert _names(ordered) == ["Leader", "Outside"]
 
 
+def test_score_rounding_keeps_float_noise_on_the_band_boundary_in_group():
+    ordered = sort_weighted_candidates(
+        [
+            {"name": "Leader", "score": 10.0, "fatigue_cost": 4},
+            {"name": "Boundary", "score": 9.8499999999, "fatigue_cost": 1},
+        ],
+        near_equal_score_band=NEAR_EQUAL_SCORE_BAND,
+    )
+
+    assert _names(ordered) == ["Boundary", "Leader"]
+
+
 def test_grouping_is_leader_anchored_under_custom_wider_band_not_chain_based():
     ordered = sort_weighted_candidates(
         [

@@ -6,6 +6,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 from typing import Callable, Iterable
 
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
@@ -325,6 +326,38 @@ _INJURY_DECISION_CACHE_MAX_SIZE = max(128, int(os.environ.get("INJURY_DECISION_C
 _INJURY_DECISION_CACHE: OrderedDict[tuple[str, ...], dict[str, object]] = OrderedDict()
 _INJURY_SEVERITY_DEBUGGED = False
 _INJURY_PARSED_DEBUGGED = False
+_SEVERITY_SYNONYM_PATTERN_CACHE: dict[str, re.Pattern[str]] = {}
+
+
+def _severity_synonym_pattern(synonym: str) -> re.Pattern[str]:
+    cached = _SEVERITY_SYNONYM_PATTERN_CACHE.get(synonym)
+    if cached is not None:
+        return cached
+
+    parts = [re.escape(part) for part in re.split(r"[\s_-]+", synonym.strip().lower()) if part]
+    if not parts:
+        pattern = re.compile(r"$^")
+    else:
+        pattern = re.compile(rf"(?<![a-z0-9]){'[\\s_-]+'.join(parts)}(?![a-z0-9])")
+    _SEVERITY_SYNONYM_PATTERN_CACHE[synonym] = pattern
+    return pattern
+
+
+def _find_severity_hits(text: str) -> list[tuple[str, str]]:
+    hits: list[tuple[int, str, str]] = []
+    matched_spans: list[tuple[int, int]] = []
+    for level in ("high", "moderate", "low"):
+        for synonym in sorted(SEVERITY_SYNONYMS[level], key=len, reverse=True):
+            match = _severity_synonym_pattern(synonym).search(text)
+            if match is None:
+                continue
+            span = (match.start(), match.end())
+            if any(not (span[1] <= existing_start or span[0] >= existing_end) for existing_start, existing_end in matched_spans):
+                continue
+            matched_spans.append(span)
+            hits.append((match.start(), level, synonym))
+    hits.sort(key=lambda item: item[0])
+    return [(level, synonym) for _, level, synonym in hits]
 
 
 def _compute_tags_hash(tags: Iterable[str]) -> str:
@@ -340,7 +373,7 @@ def _compute_tags_hash(tags: Iterable[str]) -> str:
     Returns:
         Hex digest of SHA256 hash (first 16 chars for brevity)
     """
-    normalized = sorted(str(t).lower() for t in tags if t)
+    normalized = sorted(normalize_tags(str(tag) for tag in tags if tag))
     tags_str = ",".join(normalized)
     return hashlib.sha256(tags_str.encode()).hexdigest()[:16]
 
@@ -392,15 +425,12 @@ def normalize_severity(text: str) -> tuple[str, list[str]]:
     if not text:
         return "moderate", []
     lowered = text.lower()
-    hits: list[str] = []
+    hits = _find_severity_hits(lowered)
     severity = None
-    for level in ("high", "moderate", "low"):
-        for synonym in SEVERITY_SYNONYMS[level]:
-            if synonym in lowered:
-                hits.append(synonym)
-                if severity is None:
-                    severity = level
-    return severity or "moderate", hits
+    for level, _ in hits:
+        if severity is None or SEVERITY_RANK[level] > SEVERITY_RANK[severity]:
+            severity = level
+    return severity or "moderate", [synonym for _, synonym in hits]
 
 
 def _normalize_phrase_severity(text: str) -> tuple[str, list[str]]:

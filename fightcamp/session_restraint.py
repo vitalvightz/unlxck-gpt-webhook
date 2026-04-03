@@ -5,6 +5,7 @@ from typing import Any
 # Match the score_exercise noise ceiling (uniform +/-0.15) so Rule 2 only treats
 # candidates inside the scorer's normal jitter band as near-equal.
 NEAR_EQUAL_SCORE_BAND = 0.15
+_SCORE_COMPARISON_PRECISION = 4
 
 
 def _candidate_name(candidate: dict[str, Any]) -> str:
@@ -12,7 +13,7 @@ def _candidate_name(candidate: dict[str, Any]) -> str:
 
 
 def _candidate_score(candidate: dict[str, Any]) -> float:
-    return float(candidate.get("score", 0.0))
+    return round(float(candidate.get("score", 0.0)), _SCORE_COMPARISON_PRECISION)
 
 
 def _candidate_fatigue_cost(candidate: dict[str, Any]) -> float:
@@ -46,7 +47,10 @@ def sort_weighted_candidates(
     group_start = 0
     while group_start < len(score_sorted):
         group_end = group_start + 1
-        group_floor = _candidate_score(score_sorted[group_start]) - near_equal_score_band
+        group_floor = round(
+            _candidate_score(score_sorted[group_start]) - near_equal_score_band,
+            _SCORE_COMPARISON_PRECISION,
+        )
         while group_end < len(score_sorted) and _candidate_score(score_sorted[group_end]) >= group_floor:
             group_end += 1
 
