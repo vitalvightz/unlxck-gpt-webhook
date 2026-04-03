@@ -921,7 +921,7 @@ select:focus-visible {
 }
 
 .overview-detail-heading-highlight {
-  align-items: flex-start;
+  align-items: center;
 }
 
 .overview-inline-badge {
@@ -941,14 +941,14 @@ select:focus-visible {
 }
 
 .overview-detail-row-highlight {
-  margin-top: 4px;
+  margin-top: 0;
   display: grid;
   gap: 10px;
-  padding: 16px 18px 18px;
-  border-top: 0;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(26, 29, 35, 0.9), rgba(18, 21, 26, 0.94));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  padding: 14px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .overview-detail-value-strong {
@@ -1060,63 +1060,15 @@ select:focus-visible {
 }
 
 .accordion-item {
-  --accordion-border-color: var(--border-default);
-  --accordion-item-surface: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--bg-surface) 96%, transparent),
-    color-mix(in srgb, var(--bg-support) 98%, transparent)
-  );
   border-radius: 18px;
-  border: 1px solid var(--accordion-border-color);
-  background: var(--accordion-item-surface);
+  border: 1px solid var(--border-default);
+  background: linear-gradient(180deg, rgba(17, 19, 24, 0.98), rgba(13, 15, 19, 0.98));
   box-shadow: var(--shadow-support);
   overflow: hidden;
 }
 
 .accordion-item-open {
-  --accordion-border-color: color-mix(in srgb, var(--border-active) 28%, transparent);
-}
-
-.accordion-item-draft {
-  position: relative;
-  margin-top: 14px;
-  overflow: visible;
-}
-
-.accordion-item-draft .accordion-trigger {
-  padding-top: 24px;
-}
-
-.accordion-item-draft .accordion-trigger-copy {
-  gap: 7px;
-}
-
-.accordion-notch-heading {
-  position: relative;
-  min-height: 0;
-  line-height: 1;
-}
-
-.accordion-notch-label {
-  position: absolute;
-  top: -32px;
-  left: 0;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 10px;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  isolation: isolate;
-}
-
-.accordion-notch-label::before {
-  content: "";
-  position: absolute;
-  inset: -7px -10px;
-  border-radius: 12px;
-  background: var(--accordion-item-surface);
-  z-index: -1;
+  border-color: rgba(181, 18, 43, 0.28);
 }
 
 .accordion-trigger {
@@ -1161,9 +1113,9 @@ select:focus-visible {
 }
 
 .accordion-item-open .accordion-chevron {
-  border-color: color-mix(in srgb, var(--border-active) 32%, transparent);
-  background: color-mix(in srgb, var(--border-active) 12%, transparent);
-  color: var(--danger-ink);
+  border-color: rgba(181, 18, 43, 0.32);
+  background: rgba(181, 18, 43, 0.12);
+  color: #ffd7dd;
 }
 
 .accordion-panel {
@@ -4151,8 +4103,8 @@ html[data-theme="light"] .overview-inline-badge {
 }
 
 html[data-theme="light"] .overview-detail-row-highlight {
-  background: linear-gradient(180deg, rgba(255, 252, 247, 0.99), rgba(246, 241, 233, 0.985));
-  box-shadow: inset 0 0 0 1px rgba(98, 77, 69, 0.1);
+  background: transparent;
+  box-shadow: none;
 }
 
 html[data-theme="light"] .overview-progress-track {
