@@ -375,12 +375,25 @@ function AdminArtifactSection({
   text: string;
   filename?: string;
 }) {
+  const isDraftArtifact = artifactKey === "draft";
+
   return (
-    <section className={`accordion-item ${isOpen ? "accordion-item-open" : ""}`}>
+    <section className={`accordion-item ${isOpen ? "accordion-item-open" : ""} ${isDraftArtifact ? "accordion-item-draft" : ""}`}>
       <button type="button" className="accordion-trigger" onClick={onToggle} aria-expanded={isOpen}>
         <div className="accordion-trigger-copy">
-          <p className="kicker">{kicker}</p>
-          <h3>{title}</h3>
+          {isDraftArtifact ? (
+            <>
+              <h3 className="accordion-notch-heading">
+                <span className="accordion-notch-label">{title}</span>
+              </h3>
+              <p className="kicker">{kicker}</p>
+            </>
+          ) : (
+            <>
+              <p className="kicker">{kicker}</p>
+              <h3>{title}</h3>
+            </>
+          )}
           <p className="muted accordion-summary">{summary}</p>
         </div>
         <span className="accordion-chevron" aria-hidden="true">
