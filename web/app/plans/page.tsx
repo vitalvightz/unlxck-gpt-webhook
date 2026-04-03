@@ -354,7 +354,7 @@ export default function PlansPage() {
               {historicalPlans.length ? (
                 <button
                   type="button"
-                  className={`plans-history-toggle ${isArchiveOpen ? "plans-history-toggle-open" : ""}`}
+                  className={`plans-history-toggle custom-select-trigger ${isArchiveOpen ? "plans-history-toggle-open" : ""}`.trim()}
                   onClick={() => setIsArchiveOpen((current) => !current)}
                   aria-expanded={isArchiveOpen}
                   aria-controls="plans-history-dropdown"
@@ -362,15 +362,18 @@ export default function PlansPage() {
                   <span className="plans-history-toggle-copy">
                     {isArchiveOpen ? "Hide earlier saved plans" : "Show earlier saved plans"}
                   </span>
-                  <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
+                  <span className="plans-history-toggle-meta">
+                    <span className="plans-history-toggle-count">{historicalPlans.length} previous</span>
+                    <span className="custom-select-chevron" aria-hidden="true" />
+                  </span>
                 </button>
               ) : (
                 <span className="badge status-badge-neutral">No earlier plans</span>
               )}
             </div>
 
-            {historicalPlans.length ? (
-              <div id="plans-history-dropdown" className="plans-history-dropdown" hidden={!isArchiveOpen}>
+            {historicalPlans.length && isArchiveOpen ? (
+              <div id="plans-history-dropdown" className="plans-history-dropdown" role="region" aria-label="Earlier saved plans">
                 <div className="plan-history-list plans-history-list">
                   {historicalPlans.map((plan) => (
                     <PlanCard
