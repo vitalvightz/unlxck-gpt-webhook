@@ -64,7 +64,14 @@ function formatPlanCount(value: number): string {
 function OverviewDetailList({
   items,
 }: {
-  items: Array<{ label: string; value: string; highlight?: boolean; badgeText?: string }>;
+  items: Array<{
+    label: string;
+    value: string;
+    highlight?: boolean;
+    badgeText?: string;
+    helperText?: string;
+    progressValue?: number;
+  }>;
 }) {
   return (
     <div className="review-detail-list overview-detail-list">
@@ -78,6 +85,15 @@ function OverviewDetailList({
             {item.badgeText ? <span className="overview-inline-badge">{item.badgeText}</span> : null}
           </div>
           <p className={item.highlight ? "review-detail-value overview-detail-value-strong" : "review-detail-value"}>{item.value}</p>
+          {typeof item.progressValue === "number" ? (
+            <div className="overview-progress-track" role="presentation" aria-hidden="true">
+              <span
+                className="overview-progress-fill"
+                style={{ width: `${Math.max(0, Math.min(100, item.progressValue))}%` }}
+              />
+            </div>
+          ) : null}
+          {item.helperText ? <p className="overview-progress-helper">{item.helperText}</p> : null}
         </div>
       ))}
     </div>
@@ -87,7 +103,14 @@ function OverviewDetailList({
 function OverviewDetailGrid({
   items,
 }: {
-  items: Array<{ label: string; value: string; highlight?: boolean; badgeText?: string }>;
+  items: Array<{
+    label: string;
+    value: string;
+    highlight?: boolean;
+    badgeText?: string;
+    helperText?: string;
+    progressValue?: number;
+  }>;
 }) {
   const midpoint = Math.ceil(items.length / 2);
   const columns = [items.slice(0, midpoint), items.slice(midpoint)].filter((column) => column.length);
@@ -162,6 +185,9 @@ export default function HomePage() {
     const draft = (me.profile.onboarding_draft as { current_step?: number } | null) ?? null;
     const latestIntake = me.latest_intake;
     const nextStepNumber = Number.isFinite(Number(draft?.current_step ?? 0)) ? Number(draft?.current_step ?? 0) + 1 : 1;
+    const totalOnboardingSteps = 6;
+    const remainingSteps = draft ? Math.max(totalOnboardingSteps - nextStepNumber, 0) : totalOnboardingSteps;
+    const progressValue = draft ? (nextStepNumber / totalOnboardingSteps) * 100 : 0;
     const displayedPlans = recentPlans.length ? recentPlans : latestPlan ? [latestPlan] : [];
     const fightDate = latestIntake?.fight_date || latestPlan?.fight_date || null;
     const primaryStyle = getOptionLabel(TECHNICAL_STYLE_OPTIONS, me.profile.technical_style[0] ?? "") || "Not provided";
@@ -186,7 +212,18 @@ export default function HomePage() {
       { label: "Stance", value: stance },
       { label: "Status", value: status },
       { label: "Record", value: me.profile.record || "Not provided" },
-      { label: "Draft step", value: draft ? `${nextStepNumber} / 6` : "Not started", highlight: true, badgeText: readinessBadge },
+      {
+        label: "Onboarding progress",
+        value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
+        highlight: true,
+        badgeText: readinessBadge,
+        helperText: draft
+          ? remainingSteps === 0
+            ? "All onboarding steps are complete."
+            : `${remainingSteps} step${remainingSteps === 1 ? "" : "s"} remaining before plan generation.`
+          : "Start onboarding to unlock guided plan generation.",
+        progressValue,
+      },
     ];
 
     return (

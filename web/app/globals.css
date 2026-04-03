@@ -931,9 +931,9 @@ select:focus-visible {
   min-height: 22px;
   padding: 0 8px;
   border-radius: 999px;
-  border: 1px solid rgba(181, 18, 43, 0.2);
-  background: rgba(181, 18, 43, 0.1);
-  color: #ffd5db;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(250, 241, 230, 0.92);
   font-family: var(--font-mono), monospace;
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -942,18 +942,42 @@ select:focus-visible {
 
 .overview-detail-row-highlight {
   margin-top: 4px;
+  display: grid;
   gap: 10px;
   padding: 16px 18px 18px;
   border-top: 0;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(45, 15, 21, 0.9), rgba(23, 15, 19, 0.94));
-  box-shadow: inset 0 0 0 1px rgba(181, 18, 43, 0.12);
+  background: linear-gradient(180deg, rgba(26, 29, 35, 0.9), rgba(18, 21, 26, 0.94));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
 .overview-detail-value-strong {
   font-size: 20px;
   line-height: 1.25;
   font-weight: 700;
+}
+
+.overview-progress-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.overview-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(214, 175, 106, 0.94), rgba(238, 214, 168, 0.96));
+}
+
+.overview-progress-helper {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .overview-card-actions {
@@ -4073,14 +4097,22 @@ html[data-theme="light"] .overview-detail-list .review-detail-row {
 }
 
 html[data-theme="light"] .overview-inline-badge {
-  border-color: rgba(146, 43, 45, 0.14);
-  background: rgba(146, 43, 45, 0.06);
-  color: var(--brand-red);
+  border-color: rgba(98, 77, 69, 0.16);
+  background: rgba(98, 77, 69, 0.08);
+  color: rgba(68, 53, 47, 0.92);
 }
 
 html[data-theme="light"] .overview-detail-row-highlight {
-  background: linear-gradient(180deg, rgba(252, 246, 240, 0.99), rgba(246, 239, 230, 0.985));
-  box-shadow: inset 0 0 0 1px rgba(146, 43, 45, 0.08);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.99), rgba(246, 241, 233, 0.985));
+  box-shadow: inset 0 0 0 1px rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .overview-progress-track {
+  background: rgba(98, 77, 69, 0.12);
+}
+
+html[data-theme="light"] .overview-progress-fill {
+  background: linear-gradient(90deg, rgba(150, 113, 59, 0.94), rgba(194, 154, 100, 0.95));
 }
 
 html[data-theme="light"] .custom-select-trigger[aria-expanded="true"] {
