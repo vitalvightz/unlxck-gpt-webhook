@@ -321,6 +321,82 @@ function StepPills({
   );
 }
 
+function getOnboardingProgressState(currentStep: number) {
+  const stepNumber = currentStep + 1;
+  const totalSteps = steps.length;
+  const remainingSteps = Math.max(totalSteps - stepNumber, 0);
+
+  return {
+    stepNumber,
+    totalSteps,
+    progressValue: (stepNumber / totalSteps) * 100,
+    badgeText: remainingSteps === 0 ? "Ready" : "In progress",
+    helperText:
+      remainingSteps === 0
+        ? "All onboarding steps are complete. Review your answers, then generate the plan."
+        : `${remainingSteps} step${remainingSteps === 1 ? "" : "s"} remaining before plan generation.`,
+  };
+}
+
+function OnboardingProgressStrip({
+  currentStep,
+  isExpandable = false,
+  isExpanded = false,
+  onToggle,
+  controlsId,
+}: {
+  currentStep: number;
+  isExpandable?: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  controlsId?: string;
+}) {
+  const progress = getOnboardingProgressState(currentStep);
+  const content = (
+    <>
+      <div className="onboarding-progress-strip-topline">
+        <p className="kicker">Onboarding progress</p>
+        <span
+          className={`onboarding-progress-badge ${progress.badgeText === "Ready" ? "onboarding-progress-badge-ready" : ""}`.trim()}
+        >
+          {progress.badgeText}
+        </span>
+      </div>
+      <p className="onboarding-progress-strip-title">
+        Step {progress.stepNumber} of {progress.totalSteps}
+      </p>
+      <div className="overview-progress-track onboarding-progress-track" role="presentation" aria-hidden="true">
+        <span className="overview-progress-fill onboarding-progress-fill" style={{ width: `${progress.progressValue}%` }} />
+      </div>
+      <div className="onboarding-progress-strip-footer">
+        <p className="overview-progress-helper onboarding-progress-helper">{progress.helperText}</p>
+        {isExpandable ? (
+          <span className="onboarding-progress-affordance" aria-hidden="true">
+            <span className="onboarding-progress-affordance-label">{isExpanded ? "Close" : "All steps"}</span>
+            <span className="onboarding-progress-chevron" />
+          </span>
+        ) : null}
+      </div>
+    </>
+  );
+
+  if (isExpandable && onToggle && controlsId) {
+    return (
+      <button
+        type="button"
+        className="onboarding-progress-strip onboarding-progress-strip-button onboarding-mobile-step-trigger"
+        aria-expanded={isExpanded}
+        aria-controls={controlsId}
+        onClick={onToggle}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="onboarding-progress-strip">{content}</div>;
+}
+
 function MobileStepRail({
   currentStep,
   onStepSelect,
@@ -417,27 +493,13 @@ function MobileOnboardingHeader({
         <p className="onboarding-mobile-title">Build your camp profile.</p>
         <p className="muted">Saved, resumable athlete intake.</p>
       </div>
-      <button
-        type="button"
-        className="status-card onboarding-mobile-step-summary onboarding-mobile-step-trigger"
-        aria-expanded={isOpen}
-        aria-controls="onboarding-mobile-steps"
-        onClick={onToggle}
-      >
-        <div className="onboarding-mobile-step-summary-row">
-          <div className="onboarding-mobile-step-copy">
-            <p className="status-label">Current step</p>
-            <h2 className="plan-summary-title">{steps[currentStep]}</h2>
-            <p className="muted">
-              Step {currentStep + 1} of {steps.length}. Draft keeps your selections and current step.
-            </p>
-          </div>
-          <span className="onboarding-mobile-step-affordance" aria-hidden="true">
-            <span className="onboarding-mobile-step-affordance-label">{isOpen ? "Close" : "All steps"}</span>
-            <span className="onboarding-mobile-step-chevron" />
-          </span>
-        </div>
-      </button>
+      <OnboardingProgressStrip
+        currentStep={currentStep}
+        isExpandable
+        isExpanded={isOpen}
+        onToggle={onToggle}
+        controlsId="onboarding-mobile-steps"
+      />
       {isOpen ? (
         <div id="onboarding-mobile-steps" className="onboarding-mobile-progress-panel">
           <MobileStepRail currentStep={currentStep} onStepSelect={onStepSelect} />
@@ -978,11 +1040,6 @@ export function PlanIntakeForm() {
             <h1>Build your camp profile.</h1>
             <p className="muted">Saved, resumable athlete intake.</p>
           </div>
-          <div className="status-card athlete-motion-slot athlete-motion-status">
-            <p className="status-label">Current step</p>
-            <h2 className="plan-summary-title">{steps[currentStep]}</h2>
-            <p className="muted">Step {currentStep + 1} of {steps.length}. Draft keeps your selections and current step.</p>
-          </div>
         </div>
 
         <MobileOnboardingHeader
@@ -993,6 +1050,7 @@ export function PlanIntakeForm() {
         />
 
         <div className="athlete-motion-slot athlete-motion-status onboarding-progress-desktop">
+          <OnboardingProgressStrip currentStep={currentStep} />
           <StepPills currentStep={currentStep} onStepSelect={handleStepSelect} />
         </div>
 
