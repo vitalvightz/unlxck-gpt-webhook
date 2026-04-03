@@ -64,7 +64,6 @@ Example output:
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -178,7 +177,7 @@ def parse_bank_schema(data: Any) -> Tuple[List[Dict], str]:
             entries = data["data"]
             return entries, f"object with 'data' array containing {len(entries)} entries"
     
-    raise ValueError(f"Unrecognized bank schema structure. Expected list or object with items/data array.")
+    raise ValueError("Unrecognized bank schema structure. Expected list or object with items/data array.")
 
 
 def validate_bank(bank_path: Path, tag_vocab: Set[str], injury_rules: Dict) -> Tuple[bool, int, Set[str]]:

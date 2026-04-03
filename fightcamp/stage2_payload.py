@@ -1359,10 +1359,8 @@ def _resolve_phase_rule_state(
     sport_load_owns_density = phase == "TAPER" and bool(sport_load_profile.get("highest_collision_load"))
 
     protect_first = limiter_profile["protect_first"]
-    protect_first_driver = "main_limiter"
     if fatigue in {"moderate", "high"}:
         protect_first = f"Because fatigue is {fatigue}, protect the limiter quality and freshness before adding extra work."
-        protect_first_driver = "safety_and_readiness"
 
     cut_first = limiter_profile["cut_first"]
     if short_notice and phase in {"SPP", "TAPER"}:

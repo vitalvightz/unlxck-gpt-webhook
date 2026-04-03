@@ -10,9 +10,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES
-from fightcamp.injury_filtering import collect_banks
-from fightcamp.tagging import load_tag_vocabulary, normalize_tags
+from fightcamp.bank_schema import KNOWN_SYSTEMS, SYSTEM_ALIASES  # noqa: E402
+from fightcamp.injury_filtering import collect_banks  # noqa: E402
+from fightcamp.tagging import load_tag_vocabulary, normalize_tags  # noqa: E402
 
 
 DATA_DIR = REPO_ROOT / "data"

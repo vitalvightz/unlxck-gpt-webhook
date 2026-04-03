@@ -1,11 +1,9 @@
-from pathlib import Path
 import json
 import logging
 from typing import Iterable
 
 from .injury_formatting import format_injury_summary, parse_injury_entry
 from .injury_guard import INJURY_TYPE_SEVERITY, normalize_severity
-from .config import STAGE_2
 from .injury_synonyms import parse_injury_phrase, split_injury_text
 from .restriction_parsing import ParsedRestriction
 # Refactored: Import centralized DATA_DIR from config

@@ -1,4 +1,3 @@
-from pathlib import Path
 import logging
 import os
 import json
@@ -7,7 +6,6 @@ import re
 from collections import defaultdict
 from .training_context import (
     normalize_equipment_list,
-    known_equipment,
     allocate_sessions,
     calculate_exercise_numbers,
 )
@@ -23,7 +21,7 @@ from .injury_filtering import (
     injury_match_details,
 )
 # Refactored: Import factory function for guarded decision making
-from .injury_guard import Decision, injury_decision, pick_safe_replacement, make_guarded_decision_factory
+from .injury_guard import Decision, pick_safe_replacement, make_guarded_decision_factory
 from .restriction_filtering import evaluate_restriction_impact
 from .strength_session_quality import (
     classify_strength_item,

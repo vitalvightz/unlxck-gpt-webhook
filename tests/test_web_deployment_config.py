@@ -14,10 +14,12 @@ def _expected_destination(api_base_url: str) -> str:
     return f"{api_base_url}/api/:path*"
 
 
-def test_vercel_frontend_rewrite_requires_backend_url_in_production():
+def test_vercel_frontend_rewrite_skips_production_proxy_without_backend_url():
     assert 'source: "/api/:path*"' in NEXT_CONFIG_SOURCE
-    assert 'NEXT_PUBLIC_API_BASE_URL must be set in production for /api rewrites.' in NEXT_CONFIG_SOURCE
+    assert "NEXT_PUBLIC_API_BASE_URL is not set; skipping /api rewrites for this production build." in NEXT_CONFIG_SOURCE
     assert 'process.env.NODE_ENV !== "production"' in NEXT_CONFIG_SOURCE
+    assert "return null;" in NEXT_CONFIG_SOURCE
+    assert "return [];" in NEXT_CONFIG_SOURCE
     assert 'http://127.0.0.1:8000' in NEXT_CONFIG_SOURCE
     assert '`/api/:path*`' not in NEXT_CONFIG_SOURCE
 

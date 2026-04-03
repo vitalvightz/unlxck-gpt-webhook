@@ -212,7 +212,7 @@ def _md_to_html(text: str) -> str:
     if markdown2:
         return markdown2.markdown(safe_text)
     # simple HTML if markdown2 unavailable
-    lines = [l.rstrip() for l in safe_text.splitlines() if l.strip()]
+    lines = [text_line.rstrip() for text_line in safe_text.splitlines() if text_line.strip()]
     html_parts = []
     in_list = False
     for line in lines:

@@ -29,7 +29,7 @@ def test_normalize_time_labels_already_bold():
 def test_normalize_time_labels_empty():
     """Test that empty text is handled gracefully."""
     assert _normalize_time_labels("") == ""
-    assert _normalize_time_labels(None) == None
+    assert _normalize_time_labels(None) is None
 
 
 def test_sanitize_stage_output_removes_excess_newlines():
@@ -63,7 +63,7 @@ def test_sanitize_stage_output_normalizes_time_labels():
 def test_sanitize_stage_output_empty():
     """Test that empty text is handled gracefully."""
     assert _sanitize_stage_output("") == ""
-    assert _sanitize_stage_output(None) == None
+    assert _sanitize_stage_output(None) is None
 
 
 def test_sanitize_stage_output_full_integration():

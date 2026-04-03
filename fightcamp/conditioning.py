@@ -983,11 +983,6 @@ def render_conditioning_block(
     resolved_sessions: list[dict] | None = None,
 ) -> str:
     phase = phase.upper()
-    phase_titles = {
-        "GPP": "Aerobic Base & Durability",
-        "SPP": "Fight-Specific Conditioning",
-        "TAPER": "Neural Sharpness & Rhythm",
-    }
     phase_intent = {
         "GPP": "Build aerobic base, improve repeatability, low damage.",
         "SPP": "Match fight demands with intervals and skill-relevant density.",

@@ -26,6 +26,14 @@ from .strength import get_exercise_bank as get_strength_exercise_bank
 # PDF export is off by default; set UNLXCK_ENABLE_PLAN_PDF=1 to enable.
 _PDF_ENABLED_BY_DEFAULT: bool = os.environ.get("UNLXCK_ENABLE_PLAN_PDF", "0") == "1"
 
+# Keep historical imports from fightcamp.main stable for tests and scripts.
+__all__ = [
+    "_filter_mindset_blocks",
+    "_normalize_time_labels",
+    "_sanitize_phase_text",
+    "_sanitize_stage_output",
+]
+
 _INPUT_ERROR_LABELS = {
     "missing_fighting_style_technical": "technical fighting style",
     "missing_next_fight_date": "fight date",

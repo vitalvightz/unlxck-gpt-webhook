@@ -95,7 +95,6 @@ def test_false_positives_not_excluded():
         "World Record Lift",  # Contains "rdl" letters separately but not as keyword
     ]
     
-    hamstring_keywords = INJURY_RULES["hamstring"]["ban_keywords"]
     rdl_keywords = ["romanian deadlift", "rdl"]  # Just test these two
     
     for text in test_cases:

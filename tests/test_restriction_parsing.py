@@ -7,7 +7,6 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from fightcamp.restriction_parsing import (
     parse_restriction_entry,
     _contains_trigger_token,
-    _infer_restriction_strength,
     is_restriction_phrase,
 )
 from fightcamp.injury_formatting import (
