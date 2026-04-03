@@ -1069,6 +1069,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     athlete_style_set = normalize_style_tags(style_list)
     available_eq = set(equipment_access)
     style_candidates: list[tuple[dict, float, dict]] = []
+    protected_style_choice: tuple[dict, float, dict] | None = None
     selected_cutoff = min(
         (score_lookup.get(ex.get("name"), 0.0) for ex in base_exercises if ex.get("name")),
         default=0.0,
@@ -1112,6 +1113,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         style_reasons["final_score"] = round(style_score, 4)
         if quality_profile["anchor_capable"] or style_score >= selected_cutoff - style_margin:
             style_candidates.append((ex, style_score, style_reasons))
+            if quality_profile["anchor_capable"] and (
+                protected_style_choice is None or style_score > protected_style_choice[1]
+            ):
+                protected_style_choice = (ex, style_score, style_reasons)
 
     for ex, ex_score, ex_reasons in sorted(style_candidates, key=lambda entry: entry[1], reverse=True):
         base_exercises.append(ex)
@@ -1126,12 +1131,79 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             reverse=True,
         )[:target_exercises]
 
-    def _apply_movement_caps(exercises: list[dict]) -> list[dict]:
+    protected_style_names = (
+        {protected_style_choice[0]["name"]}
+        if protected_style_choice and protected_style_choice[0].get("name")
+        else set()
+    )
+
+    def _ensure_protected_style_selection(exercises: list[dict]) -> list[dict]:
+        if not protected_style_choice or not protected_style_names:
+            return exercises
+
+        protected_ex, protected_score, protected_reasons = protected_style_choice
+        protected_name = protected_ex.get("name")
+        if not protected_name or any(ex.get("name") == protected_name for ex in exercises):
+            return exercises
+
+        updated = list(exercises)
+        if len(updated) < target_exercises:
+            updated.append(protected_ex)
+            score_lookup[protected_name] = protected_score
+            reason_lookup[protected_name] = protected_reasons
+            return updated
+
+        protected_movement = normalize_exercise_movement(protected_ex)
+        replaceable_indices = [
+            idx for idx, exercise in enumerate(updated) if exercise.get("name") not in protected_style_names
+        ]
+        if not replaceable_indices:
+            return exercises
+
+        same_movement_indices = [
+            idx
+            for idx in replaceable_indices
+            if normalize_exercise_movement(updated[idx]) == protected_movement
+        ]
+        candidate_indices = same_movement_indices or replaceable_indices
+        replace_index = min(
+            candidate_indices,
+            key=lambda idx: score_lookup.get(updated[idx].get("name"), 0.0),
+        )
+        _replace_exercise(
+            updated,
+            index=replace_index,
+            replacement=protected_ex,
+            replacement_score=protected_score,
+            replacement_reasons=protected_reasons,
+        )
+        return updated
+
+    def _apply_movement_caps(
+        exercises: list[dict],
+        *,
+        protected_names: set[str] | None = None,
+    ) -> list[dict]:
+        protected_names = {name for name in (protected_names or set()) if name}
         movement_counts: dict[str, int] = {}
         capped: list[dict] = []
         for ex in exercises:
+            name = ex.get("name")
             movement = normalize_exercise_movement(ex)
             if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
+                if name in protected_names:
+                    replaceable_indices = [
+                        idx
+                        for idx, existing in enumerate(capped)
+                        if existing.get("name") not in protected_names
+                        and normalize_exercise_movement(existing) == movement
+                    ]
+                    if replaceable_indices:
+                        replace_index = min(
+                            replaceable_indices,
+                            key=lambda idx: score_lookup.get(capped[idx].get("name"), 0.0),
+                        )
+                        capped[replace_index] = ex
                 continue
             movement_counts[movement] = movement_counts.get(movement, 0) + 1
             capped.append(ex)
@@ -1150,13 +1222,17 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     break
         return capped
 
-    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _ensure_protected_style_selection(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
     base_exercises = _promote_base_categories(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _ensure_protected_style_selection(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
     base_exercises = _maybe_add_force_isometric(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _ensure_protected_style_selection(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
     base_exercises = _enforce_session_quality(base_exercises)
-    base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _ensure_protected_style_selection(base_exercises)
+    base_exercises = _apply_movement_caps(base_exercises, protected_names=protected_style_names)
 
     # ------ CONFLICT GUARD: heavy RDL with med-ball rotation ------
     def _enforce_conflicts(ex_list):
