@@ -894,6 +894,32 @@ def parse_injury_phrase(phrase: str) -> tuple[str | None, str | None]:
     return injury_type, location
 
 
+_INJURY_TEXT_SEPARATORS = [
+    ",",
+    ";",
+    "\n",
+    " - ",
+    f" {chr(0x2013)} ",
+    f" {chr(0x2014)} ",
+    " then ",
+    " + ",
+    "+",
+    "/",
+    "|",
+]
+_LEGACY_MOJIBAKE_DASH_SEPARATORS = [
+    f" {chr(0x00e2)}{chr(0x20ac)}{chr(0x201c)} ",
+    f" {chr(0x00e2)}{chr(0x20ac)}{chr(0x201d)} ",
+]
+
+
+def _normalize_injury_text_separators(text: str) -> str:
+    normalized = text
+    for sep in [*_INJURY_TEXT_SEPARATORS, *_LEGACY_MOJIBAKE_DASH_SEPARATORS]:
+        normalized = normalized.replace(sep, ". ")
+    return normalized
+
+
 def split_injury_text(raw_text: str) -> list[str]:
     """Normalize free-form injury text into a list of phrases using spaCy."""
     nlp = get_nlp()
@@ -903,8 +929,7 @@ def split_injury_text(raw_text: str) -> list[str]:
         text = raw_text.lower()
         text = re.sub(r"[()]", " ", text)
         text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-        for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-            text = text.replace(sep, ". ")
+        text = _normalize_injury_text_separators(text)
         return [
             cleaned
             for chunk in text.split(".")
@@ -914,8 +939,7 @@ def split_injury_text(raw_text: str) -> list[str]:
     text = re.sub(r"[()]", " ", text)
     # Replace common connectors with punctuation so spaCy can split sentences
     text = re.sub(r"\b(and|but|also)\b,?", ". ", text)
-    for sep in [",", ";", "\n", " - ", " – ", " — ", " then ", " + ", "+", "/", "|"]:
-        text = text.replace(sep, ". ")
+    text = _normalize_injury_text_separators(text)
     doc = nlp(text)
     return [
         cleaned
@@ -928,8 +952,7 @@ def _strip_negated_chunks_fallback(text: str) -> str:
     normalized = text.lower()
     normalized = re.sub(r"[()]", " ", normalized)
     normalized = re.sub(r"\b(and|but|also|however|except)\b,?", ". ", normalized)
-    for sep in [",", ";", "\n", " - ", " â€“ ", " â€” ", " then ", " + ", "+", "/", "|"]:
-        normalized = normalized.replace(sep, ". ")
+    normalized = _normalize_injury_text_separators(normalized)
     phrases = [
         cleaned
         for chunk in re.split(r"\.\s*", normalized)

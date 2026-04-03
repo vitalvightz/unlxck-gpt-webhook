@@ -52,7 +52,7 @@ def test_format_injury_summary_prefers_display_location():
                 "severity": "moderate",
             }
         )
-        == "Hip Flexor â€” Unspecified (Severity: Moderate)"
+        == "Hip Flexor — Unspecified (Severity: Moderate)"
     )
 
 
@@ -134,7 +134,7 @@ def test_guardrails_preserve_guided_display_location_without_note_leak():
         ],
     )
 
-    assert "Hip Flexor â€” Unspecified (Severity: Moderate)" in guardrails
-    assert "Knee â€”" not in guardrails
-    assert "Unspecified Location â€” Pain" not in guardrails
+    assert "Hip Flexor — Unspecified (Severity: Moderate)" in guardrails
+    assert "Knee —" not in guardrails
+    assert "Unspecified Location — Pain" not in guardrails
     assert "- avoid deep hip flexion" in guardrails

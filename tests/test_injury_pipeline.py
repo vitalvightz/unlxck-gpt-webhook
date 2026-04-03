@@ -5,7 +5,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.injury_filtering import normalize_injury_regions
 from fightcamp.injury_formatting import parse_injury_entry
-from fightcamp.injury_synonyms import parse_injury_phrase, split_injury_text
+import fightcamp.injury_synonyms as injury_synonyms
+from fightcamp.injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from fightcamp.rehab_protocols import generate_rehab_protocols
 
 
@@ -37,6 +38,18 @@ def test_punctuation_and_hyphenated_phrases_parse():
     entries = [parse_injury_phrase(phrase) for phrase in phrases]
     locations = {loc for _, loc in entries if loc}
     assert {"shoulder", "ankle", "knee"} <= locations
+
+
+def test_negated_phrase_fallback_normalizes_dash_variants(monkeypatch):
+    monkeypatch.setattr(injury_synonyms, "get_nlp", lambda: None)
+
+    assert remove_negated_phrases("no shoulder pain — knee soreness") == "knee soreness"
+    assert (
+        remove_negated_phrases(
+            f"no shoulder pain {chr(0x00E2)}{chr(0x20AC)}{chr(0x201D)} knee soreness"
+        )
+        == "knee soreness"
+    )
 
 
 def test_canonical_injury_types_are_allowed():

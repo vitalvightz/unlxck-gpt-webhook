@@ -131,6 +131,15 @@ def _normalize_text(text: str) -> str:
     return text.lower().strip()
 
 
+def _normalize_phrase_for_exact_match(text: str) -> str:
+    return re.sub(r"[\s-]+", " ", _normalize_text(text)).strip()
+
+
+_CANONICAL_RESTRICTION_PHRASES = {
+    _normalize_phrase_for_exact_match(phrase) for phrase in CANONICAL_RESTRICTIONS
+}
+
+
 def _tokenize_words(text: str) -> set[str]:
     """Tokenize words while normalizing punctuation and apostrophes."""
     normalized = _APOSTROPHE_PATTERN.sub("", _normalize_text(text))
@@ -240,6 +249,8 @@ def is_restriction_phrase(text: str) -> bool:
     if not text:
         return False
     if _contains_trigger_token(text):
+        return True
+    if _normalize_phrase_for_exact_match(text) in _CANONICAL_RESTRICTION_PHRASES:
         return True
     restriction_key, _ = _match_canonical_restriction(text)
     if not restriction_key:
