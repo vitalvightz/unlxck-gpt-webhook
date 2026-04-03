@@ -18,6 +18,14 @@ function getPlanStyleSummary(plan: PlanSummary): string {
   return getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Unspecified style";
 }
 
+function getFeaturedPlanTitle(plan: PlanSummary): string {
+  const customName = plan.plan_name?.trim() || "";
+  if (!customName || customName === plan.fight_date) {
+    return "Fight camp plan";
+  }
+  return customName;
+}
+
 function formatTimestamp(value?: string | null): string {
   if (!value) {
     return "Not available";
@@ -72,6 +80,7 @@ function PlanCard({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const planTitle = getPlanDisplayName(plan);
+  const featuredTitle = getFeaturedPlanTitle(plan);
   const fightDateLabel = formatFightDate(plan.fight_date);
   const createdLabel = formatTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
@@ -168,11 +177,21 @@ function PlanCard({
             <p className="label">Fight date</p>
             <p className="plans-featured-fight-date">{fightDateLabel}</p>
             <Link href={`/plans/${plan.plan_id}`}>
-              <h2 className="plan-card-title plans-featured-title">{planTitle}</h2>
+              <h2 className="plan-card-title plans-featured-title">{featuredTitle}</h2>
             </Link>
-            <p className="muted plans-featured-summary">Latest camp ready to reopen, export, or refine without digging through the archive.</p>
+            <p className="muted plans-featured-summary">Reopen, export, or refine the latest camp without digging through the archive.</p>
+            <div className="plans-featured-footer">
+              <div className="plans-featured-accent" aria-hidden="true">
+                <span />
+              </div>
+              <div className="plan-card-actions plans-featured-actions">{actionButtons}</div>
+            </div>
           </div>
           <div className="plans-featured-meta">
+            <div className="plans-featured-meta-chip">
+              <span className="label">Athlete</span>
+              <span className="plans-featured-meta-value">{plan.full_name || "Athlete profile"}</span>
+            </div>
             <div className="plans-featured-meta-chip plans-featured-meta-chip-accent">
               <span className="label">Style</span>
               <span className="plans-featured-meta-value">{styleSummary}</span>
@@ -187,10 +206,6 @@ function PlanCard({
             </div>
           </div>
         </div>
-        <div className="plans-featured-accent" aria-hidden="true">
-          <span />
-        </div>
-        <div className="plan-card-actions plans-featured-actions">{actionButtons}</div>
         {message ? <div className="success-banner">{message}</div> : null}
         {error ? <div className="error-banner">{error}</div> : null}
       </article>
