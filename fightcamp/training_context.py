@@ -12,6 +12,9 @@ EQUIP_ALIASES = {
     "medicine ball": "medicine_ball",
     "band": "bands",
     "plates": "plate",
+    "sandbags": "sandbag",
+    "battle rope": "battle_ropes",
+    "battle ropes": "battle_ropes",
 }
 
 
@@ -53,7 +56,7 @@ known_equipment = [
     "treadmill", "rower", "agility_ladder", "battle_ropes", "sledgehammer",
     "climbing_rope", "bosu_ball", "foam_roller", "assault_bike",
     "stationary_bike", "step_mill", "recumbent_bike", "arm_ergometer",
-    "elliptical", "bodyweight", "battle_rope", "kettlebells"
+    "elliptical", "pool", "bodyweight", "battle_rope", "kettlebells"
 ]
 
 
