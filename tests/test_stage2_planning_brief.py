@@ -1208,6 +1208,56 @@ def test_fight_week_override_2_to_3_days_limits_to_micro_taper_roles():
     ]
 
 
+def test_fight_week_override_4_to_5_days_limits_to_mini_taper_roles():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 1,
+            "days_until_fight": 5,
+            "short_notice": True,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["power"],
+            "weaknesses": ["gas_tank"],
+            "equipment": ["bodyweight", "bands"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["fight_week", "short_notice"],
+        },
+        {
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 0,
+                "days": 5,
+            },
+        },
+    )
+
+    assert brief["fight_week_override"]["active"] is True
+    assert brief["fight_week_override"]["band"] == "mini_taper_protocol"
+    week = brief["weekly_role_map"]["weeks"][0]
+    role_keys = [role["role_key"] for role in week["session_roles"]]
+    assert len(role_keys) == 3
+    assert set(role_keys) == {
+        "neural_primer_day",
+        "alactic_sharpness_day",
+        "fight_week_freshness_day",
+    }
+
+
 def test_phase_strategy_keeps_plain_spp_framing_for_true_multiweek_spp():
     brief = _build_progression_brief(
         {
