@@ -272,12 +272,6 @@ def calculate_phase_weeks(
 
     _rebalance(weeks)
 
-    ultra_short_notice = isinstance(days_until_fight, int) and 0 <= days_until_fight < 7
-    if ultra_short_notice and camp_length == 1:
-        weeks[GPP] = 0
-        weeks[SPP] = 0
-        weeks[TAPER] = 1
-
     short_notice = isinstance(days_until_fight, int) and 0 <= days_until_fight <= 21
     if not short_notice:
         if camp_length >= 3:
