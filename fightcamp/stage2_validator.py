@@ -845,6 +845,9 @@ def _week_session_titles(week_lines: list[str]) -> list[str]:
 
 def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[dict]:
     weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    fight_week_override = planning_brief.get("fight_week_override") or weekly_role_map.get("fight_week_override") or {}
+    if fight_week_override.get("active"):
+        return []
     weeks = list(weekly_role_map.get("weeks") or [])
     if len(weeks) <= 1:
         return []
@@ -860,6 +863,9 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
         if week_index <= 0:
             continue
         expected_roles = list(week.get("session_roles") or [])
+        intentional_compression = dict(week.get("intentional_compression") or {})
+        if intentional_compression.get("active"):
+            continue
         expected_role_days = [
             {
                 "role_key": role.get("role_key"),

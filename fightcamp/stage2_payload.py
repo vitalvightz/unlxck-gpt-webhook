@@ -2784,8 +2784,10 @@ def _fight_week_override_band(days_until_fight: Any) -> str:
         return "none"
     if days < 0:
         return "none"
-    if days <= 1:
-        return "final_day_protocol"
+    if days == 0:
+        return "fight_day_activation_protocol"
+    if days == 1:
+        return "day_before_primer_protocol"
     if days <= 3:
         return "micro_taper_protocol"
     if days <= 6:
@@ -2805,18 +2807,34 @@ def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None
         "red_flags": ["do not chase fitness now"],
     }
 
-    if band == "final_day_protocol":
+    if band == "fight_day_activation_protocol":
         return {
             **base,
-            "plan_mode": "readiness_protocol_only",
-            "coach_note": "Fight is immediate. Do not run a normal training week or add fitness work.",
+            "plan_mode": "fight_day_activation_only",
+            "coach_note": "Fight day activation mode. Keep this to a short walk-through and timing activation only.",
             "allowed_session_roles": [],
+            "max_blocks_per_session": 3,
             "protocol": [
-                "No strength work, no conditioning blocks, and no volume accumulation.",
-                "Optional short neural primer only if movement quality is crisp and fatigue is low.",
-                "Use mobility, activation, breathing, and short shakeout only.",
-                "Include hydration, fuel, sleep, and weight-cut execution reminders.",
-                "Today should usually be warm-up guidance, activation, mental cues, and post-fight recovery/refuel notes only.",
+                "Session length must stay very short and should read as activation, not training.",
+                "Only keep walk-through, timing cues, and 2–4 hyper-short bursts if needed.",
+                "No strength work, no conditioning development, no balance gadgets, and no extra rehab blocks.",
+                "Use a brief warm-up, mobility/breathing reset, then stop once timing is crisp.",
+            ],
+        }
+
+    if band == "day_before_primer_protocol":
+        return {
+            **base,
+            "plan_mode": "day_before_primer_only",
+            "coach_note": "Day-before primer mode. Keep a true primer and avoid turning this into a training session.",
+            "allowed_session_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
+            "max_sessions": 1,
+            "max_blocks_per_session": 4,
+            "protocol": [
+                "No glycolytic prescriptions or fight-pace repeatability work.",
+                "No hinge-transfer lifts, no jumps, and no repeated directional sprint efforts.",
+                "Use at most one neural sharpness element, one short technical touch block, and one brief mobility/breathing block.",
+                "Good shape: short warm-up, 3–5 alactic punch bursts or one tiny ballistic primer, 2–4 short technical touches, breathing/mobility, done.",
             ],
         }
 
@@ -2824,26 +2842,31 @@ def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None
         return {
             **base,
             "plan_mode": "micro_taper_only",
-            "coach_note": "Use a micro-taper only. Do not render a normal weekly build.",
+            "coach_note": "Use a micro-taper only. Preserve freshness and remove all glycolytic carryover.",
             "allowed_session_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
             "max_sessions": 2,
+            "max_blocks_per_session": 5,
+            "suppressed_role_keys": ["fight_pace_repeatability_day", "light_fight_pace_touch_day"],
             "protocol": [
                 "At most one short primer session plus one light mobility/recovery session.",
-                "No hard conditioning, no muscle-damaging lifts, and no new drills.",
-                "Keep intensity sharp and volume tiny to arrive fresh.",
+                "No hard conditioning, no glycolytic primer language, no muscle-damaging lifts, and no new drills.",
+                "If sparring is still declared, keep at most one meaningful hard spar exposure and frame any later contact as technical rhythm deload.",
+                "Keep intensity sharp and volume tiny; end early once quality is present.",
             ],
         }
 
     return {
         **base,
         "plan_mode": "mini_taper_only",
-        "coach_note": "Use a mini taper only. Do not render a full normal week.",
-        "allowed_session_roles": ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"],
-        "max_sessions": 3,
+        "coach_note": "Use final-week restraint mode. Keep only preservation work and do not chase weekly completeness.",
+        "allowed_session_roles": ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"],
+        "max_sessions": 2,
+        "max_hard_spar_sessions": 1,
+        "max_blocks_per_session": 5,
         "protocol": [
-            "Reduce volume and keep only high-value sharpness exposures.",
-            "Preserve speed, timing, and rhythm with one to two key sessions.",
-            "Allow only very low-cost conditioning if truly needed.",
+            "Shift from development to preservation: freshness first, then timing/confidence, then neural sharpness, then minimal mobility/rehab.",
+            "Remove non-essential accessory work and treat intentionally unused days as valid.",
+            "Do not preserve normal weekly completeness just because availability exists.",
         ],
     }
 
@@ -3060,16 +3083,30 @@ def _build_weekly_role_map(
 
     if fight_week_override and fight_week_override.get("active"):
         band = str(fight_week_override.get("band") or "")
-        if band == "final_day_protocol":
+        if band == "fight_day_activation_protocol":
             weeks = []
         else:
             allowed_roles = set(_clean_list(fight_week_override.get("allowed_session_roles", [])))
             max_sessions = int(fight_week_override.get("max_sessions") or 0)
+            max_hard_spar_sessions = int(fight_week_override.get("max_hard_spar_sessions") or 0)
             trimmed_weeks: list[dict] = []
             if weeks:
                 week = dict(weeks[0])
                 roles = list(week.get("session_roles") or [])
                 filtered_roles = [role for role in roles if role.get("role_key") in allowed_roles]
+                suppressed_role_keys = set(_clean_list(fight_week_override.get("suppressed_role_keys", [])))
+                if suppressed_role_keys:
+                    filtered_roles = [role for role in filtered_roles if role.get("role_key") not in suppressed_role_keys]
+                if max_hard_spar_sessions > 0:
+                    hard_spar_kept = 0
+                    constrained: list[dict] = []
+                    for role in filtered_roles:
+                        if role.get("role_key") == "hard_sparring_day":
+                            hard_spar_kept += 1
+                            if hard_spar_kept > max_hard_spar_sessions:
+                                continue
+                        constrained.append(role)
+                    filtered_roles = constrained
                 if max_sessions > 0:
                     filtered_roles = filtered_roles[:max_sessions]
                 week["session_roles"] = filtered_roles
@@ -3716,7 +3753,7 @@ def build_stage2_payload(
             "Keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists.",
             "For conditioning, give one primary prescription and at most one explicit fallback.",
             "Collapse internal template/menu options into one final prescription whenever the athlete context already resolves the choice.",
-            "Keep every active week present and structurally complete, including late-camp weeks.",
+            "Keep every active week present and structurally complete, except when fight_week_override or intentional final-week restraint intentionally strips sessions.",
             "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
             "Do not echo Primary, Fallback, Drill, or option-menu labels across most session lines.",
             "Avoid low-trust filler such as 'listen to your body', 'stay consistent', 'stay motivated', or 'you've got this' unless it is immediately made specific and operational.",
@@ -3729,7 +3766,7 @@ def build_stage2_payload(
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
-            "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-6 days, output mini taper only (freshness-first, minimal volume).",
+            "When fight_week_override.active is true, treat it as mandatory. For day 0, output activation protocol only. For day -1, output one true primer session max. For 2-3 days, output micro-taper only (one short primer max + one light recovery session, no glycolytic carryover). For 4-6 days, output final-week restraint mode (freshness-first, intentionally sparse, no completeness padding).",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
             "Never state 'weight cut none active' or 'recovery tolerance is standard' when readiness flags or weight_cut_pct indicate an active cut.",
             "If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or nutrition numbers.",
@@ -3812,9 +3849,10 @@ Remove novelty, reduce accessory volume, avoid soreness-inducing density, and ke
 Do not render taper sessions as option menus or branching templates.
 In normal taper sessions, resolve to one final prescription with no default fallback branch.
 If planning_brief.fight_week_override.active is true, follow it as a hard override:
-- 0-1 days: no training week; output coach note plus readiness protocol only.
-- 2-3 days: micro-taper only (one short primer max + one light mobility/recovery session).
-- 4-6 days: mini taper only (freshness-first, reduced volume, 1-2 sharpness sessions).
+- day 0: fight-day activation only (very short walk-through, timing, optional 2-4 hyper-short bursts).
+- day -1: day-before primer only (single primer session max, no glycolytic work).
+- 2-3 days: micro-taper only (one short primer max + one light mobility/recovery session, no glycolytic carryover).
+- 4-6 days: final-week restraint mode (freshness-first, intentionally sparse, reduced density, no completeness padding).
 Never chase fitness in these windows.
 
 RULE 11 - OUTPUT DISCIPLINE
@@ -3835,7 +3873,7 @@ Do not repeat Primary, Fallback, Drill, or menu-style labels across most session
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
 Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload the sparring dose on that day instead of replacing the day role.
 Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
-Keep every active week present and structurally complete, including late-camp weeks.
+Keep every active week present and structurally complete, except when fight_week_override or intentional final-week restraint intentionally strips sessions.
 If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.

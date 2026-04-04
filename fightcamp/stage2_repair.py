@@ -22,10 +22,10 @@ REPAIR RULES:
 10. Resolve conditioning choices into one primary prescription and at most one explicit fallback.
 11. Collapse menu-like session templates into one final prescription whenever the athlete context already resolves the choice.
 12. Keep all primary drills, support drills, and fallbacks equipment-valid for the athlete profile.
-13. Keep every active week present and structurally complete, especially the late-camp weeks.
+13. Keep every active week present and structurally complete, especially the late-camp weeks, except when fight-week restraint intentionally strips sessions.
 14. Preserve the default boxer weekly rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a higher-order planning rule forces a different order.
 15. Do not create more active weekly sessions than the weekly_role_map allows. If the athlete has extra available days, leave them off or clearly optional rather than turning them into extra training days.
-16. If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
+16. If weekly_role_map, week_by_week_progression, or fight_week_override marks intentional compression/restraint, keep that smaller week on purpose and do not restore suppressed standalone roles.
 17. If a week contains intentionally_unused_days entries, leave those days as light recovery or completely off. Do not add active training sessions to intentionally unused days.
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
 19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
