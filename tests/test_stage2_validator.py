@@ -855,6 +855,31 @@ def test_validate_stage2_output_counts_explicit_numbered_session_headings():
     assert "weekly_session_overage" in warning_codes
 
 
+def test_validate_stage2_output_skips_week_completeness_when_fight_week_override_active():
+    planning_brief = _planning_brief_fixture()
+    planning_brief["fight_week_override"] = {"active": True, "band": "day_before_primer_protocol"}
+    planning_brief["weekly_role_map"] = {
+        "fight_week_override": {"active": True, "band": "day_before_primer_protocol"},
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "TAPER",
+                "intentional_compression": {"active": True},
+                "session_roles": [{"role_key": "alactic_sharpness_day", "category": "conditioning"}],
+            }
+        ],
+    }
+
+    report = validate_stage2_output(
+        planning_brief=planning_brief,
+        final_plan_text="## PHASE 3: TAPER\n### Coach Note\n- Activation and timing only today.\n",
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "missing_week_session_role" not in warning_codes
+    assert "late_camp_session_incomplete" not in warning_codes
+
+
 def _weight_cut_planning_brief(high_pressure: bool = True) -> dict:
     readiness_flags = ["active_weight_cut"]
     if high_pressure:
