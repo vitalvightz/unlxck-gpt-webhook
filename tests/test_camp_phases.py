@@ -71,3 +71,13 @@ def test_calculate_phase_weeks_treats_21_days_as_short_notice_boundary():
     assert above_boundary["GPP"] >= 1
     assert at_boundary["TAPER"] >= 1
     assert above_boundary["TAPER"] >= 1
+
+
+def test_calculate_phase_weeks_under_7_days_forces_taper_phase():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=6)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] == 0
+    assert phases["TAPER"] == 1
+    assert phases["days"]["TAPER"] == 6
+    assert sum(phases["days"].values()) == 6
