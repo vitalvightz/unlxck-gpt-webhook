@@ -341,6 +341,27 @@ def get_mindset_by_phase(phase: str, flags: dict) -> str:
     phase_key = phase.upper()
     blocks = _normalize_blocks(flags.get("mental_block"))
     phase_bank = MINDSET_BANK.get(phase_key, MINDSET_BANK["GPP"])
+
+    # ── Days-out policy: near-fight cue compression ────────────────────
+    _days_out_policy = flags.get("days_out_policy")
+    _dop_perms = _days_out_policy.get("planner_permissions", {}) if isinstance(_days_out_policy, dict) else {}
+    if _dop_perms.get("fight_day_protocol"):
+        # D-0: single fight-day cue only.
+        return "- **Fight Cue:** Trust your preparation. Breathe. Execute."
+    if _dop_perms.get("freshness_priority") and not _dop_perms.get("allow_development_blocks", True):
+        # D-3 and closer: one cue + one breathing rule + one confidence line.
+        primary_block = blocks[0] if blocks else "generic"
+        cue = phase_bank.get(primary_block, phase_bank.get("generic", ""))
+        # Truncate to the first sentence for conciseness.
+        if cue and "." in cue:
+            cue = cue[: cue.index(".") + 1]
+        lines = []
+        if cue:
+            lines.append(f"- **{primary_block.title()}:** {cue}")
+        lines.append("- **Breathing:** 4-count inhale, 6-count exhale between rounds.")
+        lines.append("- **Confidence:** You earned this. Stay composed.")
+        return "\n".join(lines)
+
     lines = []
     for block in blocks:
         cue = phase_bank.get(block, phase_bank.get("generic", ""))

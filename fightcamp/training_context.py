@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
+from typing import Any
 
 from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
+from .days_out_policy import DaysOutContext, build_days_out_context, get_effective_planning_inputs
 
 EQUIP_ALIASES = {
     "med balls": "medicine_ball",
@@ -87,12 +89,45 @@ class TrainingContext:
     days_until_fight: int | None
     hard_sparring_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)
+    days_out_context: DaysOutContext | None = None
 
     def to_flags(self) -> dict:
-        return asdict(self)
+        """Return flags dict with both raw and effective planning values.
 
-def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
-    """Return weekly session counts based on frequency and phase."""
+        When a ``days_out_context`` is present, fields that the policy marks as
+        ``ignore_for_planning`` are neutralised in the top-level keys (so
+        downstream consumers automatically receive the effective value) while
+        the original athlete-entered values are preserved under ``raw_*`` keys.
+        """
+        base = asdict(self)
+        # Remove the non-serialisable context object from the flat dict.
+        base.pop("days_out_context", None)
+        if self.days_out_context is None:
+            return base
+        # Build effective overlay and stash raw mirrors for overridden fields.
+        effective = get_effective_planning_inputs(base, self.days_out_context)
+        for key in base:
+            if effective.get(key) != base[key]:
+                effective[f"raw_{key}"] = base[key]
+        # Attach serialisable policy summary so downstream modules can branch.
+        effective["days_out_policy"] = self.days_out_context.to_dict()
+        return effective
+
+def allocate_sessions(
+    training_frequency: int,
+    phase: str = "GPP",
+    days_out_context: DaysOutContext | None = None,
+) -> dict:
+    """Return weekly session counts based on frequency and phase.
+
+    When *days_out_context* is provided the allocation is clamped by the
+    days-out policy:
+    * D-3 and below: strength and conditioning counts are reduced, recovery
+      counts increase.
+    * When ``allow_weekly_architecture`` is False the frequency-based lookup
+      is bypassed entirely and a fight-week-specific minimal allocation is
+      returned.
+    """
     freq = max(1, min(int(training_frequency), 6))
     phase = phase.upper()
 
@@ -129,7 +164,37 @@ def allocate_sessions(training_frequency: int, phase: str = "GPP") -> dict:
         },
     }
 
-    return plan.get(freq, plan[6]).get(phase, {"strength": 1, "conditioning": 1, "recovery": 1})
+    base = plan.get(freq, plan[6]).get(phase, {"strength": 1, "conditioning": 1, "recovery": 1})
+
+    if days_out_context is None:
+        return base
+
+    perms = days_out_context.planner_permissions
+
+    # D-0: fight-day protocol — no normal sessions
+    if perms.fight_day_protocol:
+        return {"strength": 0, "conditioning": 0, "recovery": 0}
+
+    # When weekly architecture is disabled the frequency table is irrelevant.
+    if not perms.allow_weekly_architecture:
+        s = 1 if perms.allow_strength_anchor or perms.allow_strength_primer_only else 0
+        c = 0 if perms.max_conditioning_stressors == 0 else min(1, base.get("conditioning", 0))
+        r = max(1, freq - s - c)
+        return {"strength": s, "conditioning": c, "recovery": r}
+
+    # Clamp conditioning stressors
+    max_cs = perms.max_conditioning_stressors
+    if max_cs is not None:
+        base = {**base, "conditioning": min(base.get("conditioning", 0), max_cs)}
+
+    # Clamp strength if no full block allowed
+    if not perms.allow_full_strength_block and not perms.allow_strength_anchor:
+        if perms.allow_strength_primer_only:
+            base = {**base, "strength": min(base.get("strength", 0), 1)}
+        else:
+            base = {**base, "strength": 0}
+
+    return base
 
 
 def calculate_exercise_numbers(training_frequency: int, phase: str) -> dict:

@@ -1,0 +1,19 @@
+........................................................................ [ 12%]
+........................................................................ [ 25%]
+........................................................................ [ 38%]
+........................................................................ [ 51%]
+........................................................................ [ 64%]
+........................................................................ [ 77%]
+........................................................................ [ 90%]
+......................................................                   [100%]
+============================== warnings summary ===============================
+api\auth.py:10
+  C:\Users\Micha\OneDrive\Documents\GitHub\unlxck-gpt-webhook\api\auth.py:10: DeprecationWarning: The `gotrue` package is deprecated, is not going to receive updates in the future. Please, use `supabase_auth` instead.
+    from gotrue.errors import AuthApiError
+
+..\..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\spacy\cli\_util.py:23
+  C:\Users\Micha\AppData\Local\Programs\Python\Python312\Lib\site-packages\spacy\cli\_util.py:23: DeprecationWarning: Importing 'parser.split_arg_string' is deprecated, it will only be available in 'shell_completion' in Click 9.0.
+    from click.parser import split_arg_string
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+558 passed, 2 warnings in 508.34s (0:08:28)

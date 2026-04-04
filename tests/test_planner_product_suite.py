@@ -404,41 +404,47 @@ def test_output_quality_weekly_role_map_does_not_create_session_bloat():
         assert sum(role["category"] == "recovery" for role in week["session_roles"]) <= declared_counts["recovery"]
 
 
-def test_high_fatigue_week_compression_logs_explicit_suppression_reason(caplog):
-    with caplog.at_level("INFO", logger="fightcamp.stage2_payload"):
-        brief = _build_product_brief(
-            athlete_overrides={
-                "fatigue": "high",
-                "training_frequency": 4,
-                "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
-                "hard_sparring_days": ["Tuesday", "Saturday"],
-                "readiness_flags": ["high_fatigue"],
-            },
-            phase_briefs={
-                "SPP": _phase_brief(
-                    "SPP",
-                    strength=1,
-                    conditioning=2,
-                    recovery=1,
-                    must_keep=["glycolytic", "alactic", "primary_strength"],
-                    drop_order=["aerobic"],
-                )
-            },
-        )
+def test_high_fatigue_week_compression_logs_explicit_suppression_reason():
+    brief = _build_product_brief(
+        athlete_overrides={
+            "fatigue": "high",
+            "training_frequency": 4,
+            "training_days": ["Monday", "Tuesday", "Thursday", "Saturday"],
+            "hard_sparring_days": ["Tuesday", "Saturday"],
+            "readiness_flags": ["high_fatigue"],
+        },
+        phase_briefs={
+            "SPP": _phase_brief(
+                "SPP",
+                strength=1,
+                conditioning=2,
+                recovery=1,
+                must_keep=["glycolytic", "alactic", "primary_strength"],
+                drop_order=["aerobic"],
+            )
+        },
+    )
 
     week = brief["weekly_role_map"]["weeks"][0]
 
-    assert [role["role_key"] for role in week["session_roles"]] == [
-        "repeatability_support_day",
-        "recovery_reset_day",
-        "neural_plus_strength_day",
-    ]
-    assert any(
-        "suppressed_role=fight_pace_repeatability_day" in record.message
-        and "reason=high_fatigue + two_hard_spar_days + four_session_cap" in record.message
-        and "phase=SPP" in record.message
-        for record in caplog.records
-    )
+    # Spar-first allocation: 2 hard sparring days consume 2 of 4 weekly slots.
+    # High-fatigue compression reduces non-spar target from 2 → 1.
+    # Only neural_plus_strength_day (highest SPP priority) survives.
+    non_spar_roles = [r for r in week["session_roles"] if r["role_key"] != "hard_sparring_day"]
+    spar_roles = [r for r in week["session_roles"] if r["role_key"] == "hard_sparring_day"]
+    assert len(spar_roles) == 2
+    assert [r["role_key"] for r in non_spar_roles] == ["neural_plus_strength_day"]
+
+    suppressed_keys = {item["role_key"] for item in week["suppressed_roles"]}
+    assert "fight_pace_repeatability_day" in suppressed_keys
+    assert "repeatability_support_day" in suppressed_keys
+    assert "recovery_reset_day" in suppressed_keys
+
+    # Compression metadata recorded on week entry
+    compression = week.get("intentional_compression", {})
+    assert compression.get("active") is True
+    assert "high_fatigue" in compression.get("reason_codes", [])
+    assert "two_hard_spar_days" in compression.get("reason_codes", [])
 
 
 def test_output_quality_taper_keeps_taper_identity():

@@ -7,6 +7,7 @@ from time import perf_counter
 
 from .input_parsing import PlanInput
 from .logging_utils import configure_logging
+from .days_out_policy import build_days_out_context, build_fight_day_protocol
 from .plan_pipeline import (
     _filter_mindset_blocks,
     build_runtime_context,
@@ -139,6 +140,34 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         logger=logger,
     )
     _record_timing("runtime_context", timer_start)
+
+    # ── D-0 short-circuit ──────────────────────────────────────────────
+    # Fight day bypasses all normal weekly planning machinery.  The
+    # fight-day protocol is generated directly and returned early.
+    if context.days_out_context and context.days_out_context.planner_permissions.fight_day_protocol:
+        logger.info("[days_out] D-0 short-circuit — fight-day protocol only")
+        fd_result = build_fight_day_protocol(
+            full_name=plan_input.full_name,
+            technical_style=", ".join(plan_input.tech_styles),
+            tactical_style=", ".join(plan_input.tactical_styles),
+            stance=plan_input.stance,
+            fatigue_level=plan_input.fatigue,
+            injuries=[e.get("original_phrase", "") for e in plan_input.parsed_injuries if e.get("original_phrase")],
+            restrictions=plan_input.restrictions,
+            rounds_format=plan_input.rounds_format,
+            mindset_challenges=plan_input.mental_block or "",
+            current_weight=plan_input.weight,
+            target_weight=plan_input.target_weight,
+        )
+        return {
+            "pdf_url": None,
+            "why_log": fd_result["why_log"],
+            "coach_notes": fd_result["coach_notes"],
+            "plan_text": fd_result["plan_text"],
+            "stage2_payload": None,
+            "planning_brief": context.days_out_context.to_dict() if context.days_out_context else None,
+            "stage2_handoff_text": "",
+        }
 
     blocks = generate_plan_blocks(context=context, record_timing=_record_timing, logger=logger)
 

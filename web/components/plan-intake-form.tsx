@@ -41,6 +41,15 @@ import {
 import { emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
 import { getPerformanceFocusCap } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
+import {
+  buildDaysOutContext,
+  computeDaysUntilFight,
+  shouldHideField,
+  shouldDisableField,
+  shouldDeEmphasizeField,
+  getFieldHelperText,
+  type DaysOutContext,
+} from "@/lib/days-out-policy";
 import type { PlanRequest } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
@@ -520,12 +529,14 @@ function CheckboxGroup({
   selectedValues,
   onToggle,
   disableAdditionalSelections = false,
+  disableAll = false,
 }: {
   label: string;
   options: IntakeOption[];
   selectedValues: string[];
   onToggle: (value: string) => void;
   disableAdditionalSelections?: boolean;
+  disableAll?: boolean;
 }) {
   return (
     <div className="field">
@@ -533,7 +544,7 @@ function CheckboxGroup({
       <div className="checkbox-grid">
         {options.map((option) => {
           const checked = selectedValues.includes(option.value);
-          const disabled = disableAdditionalSelections && !checked;
+          const disabled = disableAll || (disableAdditionalSelections && !checked);
           return (
             <label
               key={option.value}
@@ -594,6 +605,10 @@ export function PlanIntakeForm() {
   const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
   const injuryMismatchContextKeyRef = useRef("");
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
+
+  // ── Days-out policy: compute field visibility/disablement ───────────
+  const daysUntilFight = computeDaysUntilFight(form.fight_date);
+  const daysOutCtx: DaysOutContext = buildDaysOutContext(daysUntilFight);
 
   useEffect(() => {
     if (!me || hydrated) {
@@ -1063,6 +1078,20 @@ export function PlanIntakeForm() {
           <StepPills currentStep={currentStep} onStepSelect={handleStepSelect} />
         </div>
 
+        {daysOutCtx.uiHints.fight_proximity_banner ? (
+          <div className="fight-proximity-banner" role="status" style={{
+            background: "var(--color-warning-bg, #fff3cd)",
+            color: "var(--color-warning-text, #856404)",
+            padding: "0.75rem 1rem",
+            borderRadius: "0.5rem",
+            marginBottom: "1rem",
+            fontWeight: 500,
+            fontSize: "0.9rem",
+          }}>
+            {daysOutCtx.uiHints.fight_proximity_banner}
+          </div>
+        ) : null}
+
         {currentStep === 0 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
@@ -1219,13 +1248,19 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateRoundsField("roundDuration", value)}
                     />
                   </div>
+                  {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
                   <div className="field">
+                    <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
+                  </div>
+                  ) : (
+                  <div className="field" style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}>
                     <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
                     <input
                       id="sessionsPerWeek"
                       type="number"
                       min="1"
                       max="7"
+                      disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
                       value={form.weekly_training_frequency ?? ""}
                       onChange={(event) => {
                         const nextValue = numberOrNull(event.target.value);
@@ -1236,10 +1271,11 @@ export function PlanIntakeForm() {
                       }}
                     />
                     <p className="muted">
-                      Count the total training sessions the week should carry. Hard sparring days and technical / lighter skill
-                      days are labels inside that weekly total, not extra sessions on top.
+                      {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
+                        "Count the total training sessions the week should carry. Hard sparring days and technical / lighter skill days are labels inside that weekly total, not extra sessions on top."}
                     </p>
                   </div>
+                  )}
                   <div className="field">
                     <label htmlFor="fatigueLevel">Fatigue level</label>
                     <CustomSelect
@@ -1284,12 +1320,19 @@ export function PlanIntakeForm() {
                   <p className="kicker">Schedule</p>
                   <h2 className="form-section-title">Training Availability</h2>
                 </div>
+                {shouldHideField(daysOutCtx, "training_availability") ? (
+                  <div className="field">
+                    <p className="muted" style={{ opacity: 0.5 }}>Training availability is not used for planning at this stage.</p>
+                  </div>
+                ) : (
                 <CheckboxGroup
                   label="Training Availability"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.training_availability}
                   onToggle={(value) => toggleFieldValue("training_availability", value)}
+                  disableAll={shouldDisableField(daysOutCtx, "training_availability")}
                 />
+                )}
               </article>
               <article className="step-card">
                 <div className="form-section-header">
@@ -1300,30 +1343,48 @@ export function PlanIntakeForm() {
                   These selections do not add extra sessions. They just show which available days are hard-contact days versus
                   lighter technical work inside the same weekly total.
                 </p>
+                {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
+                  <div className="field">
+                    <p className="muted" style={{ opacity: 0.5 }}>Hard sparring day selection is not used for planning at this stage.</p>
+                  </div>
+                ) : (
+                <>
                 <CheckboxGroup
                   label="Hard Sparring Days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.hard_sparring_days}
                   onToggle={(value) => toggleFieldValue("hard_sparring_days", value)}
+                  disableAll={shouldDisableField(daysOutCtx, "hard_sparring_days")}
                 />
                 <div className="field">
                   <p className="muted">
-                    Pick the days that usually carry the hardest live rounds or highest collision load. These are part of the
-                    weekly session total above.
+                    {getFieldHelperText(daysOutCtx, "hard_sparring_days") ||
+                      "Pick the days that usually carry the hardest live rounds or highest collision load. These are part of the weekly session total above."}
                   </p>
                 </div>
+                </>
+                )}
+                {shouldHideField(daysOutCtx, "technical_skill_days") ? (
+                  <div className="field">
+                    <p className="muted" style={{ opacity: 0.5 }}>Technical / skill day selection is not used for planning at this stage.</p>
+                  </div>
+                ) : (
+                <>
                 <CheckboxGroup
                   label="Technical / lighter skill days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
                   selectedValues={form.technical_skill_days}
                   onToggle={(value) => toggleFieldValue("technical_skill_days", value)}
+                  disableAll={shouldDisableField(daysOutCtx, "technical_skill_days")}
                 />
                 <div className="field">
                   <p className="muted">
-                    Use this for lighter drilling, pads, partner technical work, or skill-focused days that should stay cleaner
-                    than hard sparring days.
+                    {getFieldHelperText(daysOutCtx, "technical_skill_days") ||
+                      "Use this for lighter drilling, pads, partner technical work, or skill-focused days that should stay cleaner than hard sparring days."}
                   </p>
                 </div>
+                </>
+                )}
               </article>
               <article className="step-card">
                 <div className="form-section-header">
@@ -1337,7 +1398,8 @@ export function PlanIntakeForm() {
                   onToggle={(value) => toggleFieldValue("equipment_access", value)}
                 />
               </article>
-              <article className="step-card">
+              {shouldHideField(daysOutCtx, "training_preference") ? null : (
+              <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "training_preference") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
                   <p className="kicker">Training style</p>
                   <h2 className="form-section-title">Training Preference</h2>
@@ -1346,13 +1408,18 @@ export function PlanIntakeForm() {
                     <label htmlFor="trainingPreference">Session preference</label>
                     <textarea
                       id="trainingPreference"
+                      disabled={shouldDisableField(daysOutCtx, "training_preference")}
                       value={form.training_preference ?? ""}
                       onChange={(event) => updateField("training_preference", event.target.value)}
                       placeholder="Example: shorter hard sessions, less circuit work, more technical warm-ups, avoid long grinders"
                     />
-                    <p className="muted">Use this only for session feel, pacing, or format preferences.</p>
+                    <p className="muted">
+                      {getFieldHelperText(daysOutCtx, "training_preference") ||
+                        "Use this only for session feel, pacing, or format preferences."}
+                    </p>
                   </div>
               </article>
+              )}
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
@@ -1507,7 +1574,16 @@ export function PlanIntakeForm() {
                 </div>
                 <p className="muted">{performanceFocusCapDetail}</p>
               </article>
+              {shouldHideField(daysOutCtx, "key_goals") ? (
               <article className="step-card">
+                <div className="form-section-header">
+                  <p className="kicker">Target outcomes</p>
+                  <h2 className="form-section-title">Key goals</h2>
+                </div>
+                <p className="muted" style={{ opacity: 0.5 }}>Goal selection is not used for planning at this stage.</p>
+              </article>
+              ) : (
+              <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "key_goals") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
                   <p className="kicker">Target outcomes</p>
                   <h2 className="form-section-title">Key goals</h2>
@@ -1518,9 +1594,23 @@ export function PlanIntakeForm() {
                   selectedValues={form.key_goals}
                   onToggle={(value) => toggleFieldValue("key_goals", value)}
                   disableAdditionalSelections={performanceFocusCapReached}
+                  disableAll={shouldDisableField(daysOutCtx, "key_goals")}
                 />
+                {getFieldHelperText(daysOutCtx, "key_goals") ? (
+                  <p className="muted">{getFieldHelperText(daysOutCtx, "key_goals")}</p>
+                ) : null}
               </article>
+              )}
+              {shouldHideField(daysOutCtx, "weak_areas") ? (
               <article className="step-card">
+                <div className="form-section-header">
+                  <p className="kicker">Performance gaps</p>
+                  <h2 className="form-section-title">Weak areas</h2>
+                </div>
+                <p className="muted" style={{ opacity: 0.5 }}>Weak area selection is not used for planning at this stage.</p>
+              </article>
+              ) : (
+              <article className="step-card" style={shouldDeEmphasizeField(daysOutCtx, "weak_areas") ? { opacity: 0.55 } : undefined}>
                 <div className="form-section-header">
                   <p className="kicker">Performance gaps</p>
                   <h2 className="form-section-title">Weak areas</h2>
@@ -1531,7 +1621,13 @@ export function PlanIntakeForm() {
                   selectedValues={form.weak_areas}
                   onToggle={(value) => toggleFieldValue("weak_areas", value)}
                   disableAdditionalSelections={performanceFocusCapReached}
+                  disableAll={shouldDisableField(daysOutCtx, "weak_areas")}
                 />
+                {getFieldHelperText(daysOutCtx, "weak_areas") ? (
+                  <p className="muted">{getFieldHelperText(daysOutCtx, "weak_areas")}</p>
+                ) : null}
+              </article>
+              )}
               </article>
               <article className="step-card">
                 <div className="form-section-header">

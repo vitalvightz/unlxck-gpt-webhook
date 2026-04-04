@@ -1178,6 +1178,15 @@ def generate_conditioning_block(flags):
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
+
+    # ── Days-out policy enforcement ────────────────────────────────────
+    _days_out_policy = flags.get("days_out_policy")
+    _dop_perms = _days_out_policy.get("planner_permissions", {}) if isinstance(_days_out_policy, dict) else {}
+    if _dop_perms.get("fight_day_protocol"):
+        return ("", [], [], {}, [], [])
+    if _dop_perms.get("max_conditioning_stressors") == 0 and not _dop_perms.get("allow_conditioning_reminder_only", False):
+        return ("", [], [], {}, [], [])
+    _dop_allow_glycolytic = _dop_perms.get("allow_glycolytic", True)
     # Normalize technical style(s)
     if isinstance(technical, str):
         tech_styles = [t.strip().lower() for t in technical.split(',') if t.strip()]
@@ -1724,6 +1733,11 @@ def generate_conditioning_block(flags):
         k: max(1 if v > 0 else 0, round(total_drills * v))
         for k, v in PHASE_SYSTEM_RATIOS.get(phase.upper(), {}).items()
     }
+    # Days-out policy: suppress glycolytic allocation when not permitted.
+    if not _dop_allow_glycolytic and "glycolytic" in system_quota:
+        surplus = system_quota["glycolytic"]
+        system_quota["glycolytic"] = 0
+        system_quota["alactic"] = system_quota.get("alactic", 0) + surplus
 
     final_drills = []
     taper_selected = 0
