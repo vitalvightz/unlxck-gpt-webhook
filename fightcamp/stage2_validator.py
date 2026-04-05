@@ -1232,9 +1232,11 @@ _TECHNICAL_ROUND_SIGNALS = re.compile(
     re.IGNORECASE,
 )
 
-# Patterns that indicate a conditioning-style round structure (forbidden on D-1)
+# Patterns that indicate a conditioning-style round structure (forbidden on D-1).
+# Matches patterns like "3 rounds of 2 min", "6–10 rounds of 6–12 sec".
+# Uses \s+ (not \s*) between key tokens to prevent catastrophic backtracking.
 _CONDITIONING_ROUND_STRUCTURE = re.compile(
-    r"(\d+\s*[–\-x×]\s*\d+|\d+)\s*(rounds?|rnd)\s*(of|@|x)?\s*(\d+\s*[–\-x×]\s*\d+)?\s*(min|sec|s\b)",
+    r"(?:\d+[-–x×]\d+|\d+)\s+(?:rounds?|rnd)\s+(?:of|@|x)\s+(?:\d+[-–x×]\d+|\d+)\s*(?:min|sec)\b",
     re.IGNORECASE,
 )
 
