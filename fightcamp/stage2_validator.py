@@ -93,6 +93,67 @@ _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
 _WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
 _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
+_LATE_FIGHT_WEEK_STRENGTH_TERMS = (
+    "strength",
+    "power",
+    "deadlift",
+    "squat",
+    "press",
+    "hinge",
+    "jump",
+    "contrast",
+)
+_LATE_FIGHT_WEEK_CONDITIONING_TERMS = (
+    "conditioning",
+    "fight pace",
+    "fight-pace",
+    "shuttle",
+    "tempo",
+    "interval",
+    "roadwork",
+    "repeatability",
+    "bike sprint",
+)
+_LATE_FIGHT_D4_TO_D2_FORBIDDEN = (
+    "week ",
+    "weekly",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+    "program block",
+    "development",
+    "primary strength",
+    "strength block",
+    "glycolytic",
+    "fight-pace",
+    "repeatability",
+)
+_LATE_FIGHT_D1_FORBIDDEN = (
+    "glycolytic",
+    "fight-pace",
+    "conditioning block",
+    "primary strength",
+    "anchor",
+    "hinge",
+    "jump",
+    "contrast",
+)
+_LATE_FIGHT_D0_FORBIDDEN = (
+    "phase ",
+    "week ",
+    "weekly",
+    "strength",
+    "conditioning",
+    "sparring",
+    "weekly role map",
+    "session architecture",
+    "session 1",
+    "session 2",
+)
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -454,6 +515,74 @@ def _active_risk_labels(risk_context: dict[str, bool]) -> list[str]:
     elif risk_context.get("active_weight_cut"):
         labels.append("active_weight_cut")
     return labels
+
+
+def _late_fight_window(planning_brief: dict) -> str:
+    payload = planning_brief.get("days_out_payload") or {}
+    window = str(payload.get("late_fight_window", "")).strip().lower()
+    if window in {"d7_to_d5", "d4_to_d2", "d1", "d0"}:
+        return window
+    athlete = _athlete_snapshot(planning_brief)
+    try:
+        days = int(athlete.get("days_until_fight"))
+    except (TypeError, ValueError):
+        return "camp"
+    if 5 <= days <= 7:
+        return "d7_to_d5"
+    if 2 <= days <= 4:
+        return "d4_to_d2"
+    if days == 1:
+        return "d1"
+    if days == 0:
+        return "d0"
+    return "camp"
+
+
+def _late_fight_block_cap(planning_brief: dict) -> int | None:
+    plan_spec = planning_brief.get("late_fight_plan_spec") or {}
+    block_cap = plan_spec.get("block_cap")
+    return int(block_cap) if isinstance(block_cap, int) else None
+
+
+def _meaningful_plan_lines(plan_text: str) -> list[str]:
+    meaningful: list[str] = []
+    for line in _extract_plan_lines(plan_text):
+        normalized = _normalize_render_line(line)
+        if not normalized:
+            continue
+        if _PHASE_HEADER.search(normalized.upper()):
+            continue
+        if _WEEK_HEADER.search(normalized):
+            continue
+        if _is_session_heading(line):
+            continue
+        if normalized in _NON_PHASE_TOP_LEVEL_SECTIONS:
+            continue
+        meaningful.append(line)
+    return meaningful
+
+
+def _non_negated_phrase_hits(lines: list[str], phrases: tuple[str, ...]) -> list[str]:
+    hits: list[str] = []
+    for line in lines:
+        normalized = line.lower()
+        for phrase in phrases:
+            if not _phrase_in_text(normalized, phrase):
+                continue
+            if _line_is_instruction_only(line, phrase):
+                continue
+            hits.append(line)
+            break
+    return hits
+
+
+def _late_fight_warning(code: str, message: str, **extra: Any) -> dict[str, Any]:
+    return {
+        "code": code,
+        "message": message,
+        "blocking": True,
+        **extra,
+    }
 
 
 def _session_has_adjustment_context(session_lines: list[str]) -> bool:
@@ -1112,6 +1241,130 @@ def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> lis
     return warnings
 
 
+def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    window = _late_fight_window(planning_brief)
+    if window == "camp":
+        return []
+
+    warnings: list[dict] = []
+    plan_lines = _extract_plan_lines(final_plan_text)
+    meaningful_lines = _meaningful_plan_lines(final_plan_text)
+    normalized_text = "\n".join(plan_lines).lower()
+    block_cap = _late_fight_block_cap(planning_brief)
+
+    if block_cap is not None and len(meaningful_lines) > block_cap:
+        warnings.append(
+            _late_fight_warning(
+                "late_fight_block_overage",
+                f"Late-fight output renders {len(meaningful_lines)} meaningful blocks even though this band caps at {block_cap}.",
+                late_fight_window=window,
+                block_cap=block_cap,
+                actual_blocks=len(meaningful_lines),
+            )
+        )
+
+    if window == "d7_to_d5":
+        strength_hits = [
+            line
+            for line in meaningful_lines
+            if "spar" not in line.lower()
+            and any(_phrase_in_text(line.lower(), phrase) for phrase in _LATE_FIGHT_WEEK_STRENGTH_TERMS)
+        ]
+        conditioning_hits = [
+            line
+            for line in meaningful_lines
+            if "spar" not in line.lower()
+            and any(_phrase_in_text(line.lower(), phrase) for phrase in _LATE_FIGHT_WEEK_CONDITIONING_TERMS)
+        ]
+        if len(strength_hits) > 1:
+            warnings.append(
+                _late_fight_warning(
+                    "late_fight_strength_overage",
+                    "D-7 to D-5 should not render more than one meaningful non-sparring strength exposure.",
+                    late_fight_window=window,
+                    matched_lines=strength_hits,
+                )
+            )
+        if len(conditioning_hits) > 1:
+            warnings.append(
+                _late_fight_warning(
+                    "late_fight_conditioning_overage",
+                    "D-7 to D-5 should not render more than one meaningful non-sparring conditioning stressor.",
+                    late_fight_window=window,
+                    matched_lines=conditioning_hits,
+                )
+            )
+        if any(term in normalized_text for term in ("development week", "build week", "weakness build", "accumulation", "primary strength", "anchor")):
+            warnings.append(
+                _late_fight_warning(
+                    "late_fight_week_leakage",
+                    "D-7 to D-5 reads like a normal development week instead of a compressed late-fight week.",
+                    late_fight_window=window,
+                )
+            )
+        return warnings
+
+    if window == "d4_to_d2":
+        matched_forbidden = _non_negated_phrase_hits(plan_lines, _LATE_FIGHT_D4_TO_D2_FORBIDDEN)
+        if matched_forbidden:
+            warnings.append(
+                _late_fight_warning(
+                    "late_fight_session_leakage",
+                    "D-4 to D-2 should stay session-by-session and avoid weekly architecture, development blocks, and glycolytic build language.",
+                    late_fight_window=window,
+                    matched_lines=matched_forbidden,
+                )
+            )
+        if len(_phase_session_blocks(plan_lines)) > 2:
+            warnings.append(
+                _late_fight_warning(
+                    "late_fight_session_overstack",
+                    "D-4 to D-2 should not stack multiple session layers inside one day.",
+                    late_fight_window=window,
+                )
+            )
+        return warnings
+
+    if window == "d1":
+        matched_forbidden = _non_negated_phrase_hits(plan_lines, _LATE_FIGHT_D1_FORBIDDEN)
+        if matched_forbidden:
+            warnings.append(
+                _late_fight_warning(
+                    "fight_eve_primer_leakage",
+                    "D-1 should read like a true primer and must not reintroduce glycolytic, fight-pace, anchor, or primary-strength language.",
+                    late_fight_window=window,
+                    matched_lines=matched_forbidden,
+                )
+            )
+        sharpness_count = len(_non_negated_phrase_hits(meaningful_lines, ("primer", "sharpness", "alactic")))
+        technical_count = len(_non_negated_phrase_hits(meaningful_lines, ("technical", "pad", "shadowbox", "timing", "touch")))
+        reset_count = len(_non_negated_phrase_hits(meaningful_lines, ("mobility", "reset", "breathing", "walk", "flush")))
+        if sharpness_count > 1 or technical_count > 1 or reset_count > 1 or len(_phase_session_blocks(plan_lines)) > 1:
+            warnings.append(
+                _late_fight_warning(
+                    "fight_eve_primer_overstack",
+                    "D-1 should stay as one tiny primer with at most one sharpness, one technical touch, and one reset block.",
+                    late_fight_window=window,
+                    sharpness_blocks=sharpness_count,
+                    technical_blocks=technical_count,
+                    reset_blocks=reset_count,
+                )
+            )
+        return warnings
+
+    matched_forbidden = _non_negated_phrase_hits(plan_lines, _LATE_FIGHT_D0_FORBIDDEN)
+    if matched_forbidden:
+        warnings.append(
+            _late_fight_warning(
+                "fight_day_protocol_leakage",
+                "D-0 must stay protocol-only and cannot render training, weekly architecture, or session-role language.",
+                late_fight_window=window,
+                matched_lines=matched_forbidden,
+            )
+        )
+    return warnings
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
@@ -1149,6 +1402,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
+    late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
 
     errors = [
         {
@@ -1189,6 +1443,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
+    warnings.extend(late_fight_warnings)
 
     return {
         "is_valid": not errors,
@@ -1209,4 +1464,5 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "gimmick_name_warnings": overstyled_name_warnings,
         "coach_voice_warnings": coach_voice_warnings,
         "sport_language_warnings": sport_language_warnings,
+        "late_fight_warnings": late_fight_warnings,
     }
