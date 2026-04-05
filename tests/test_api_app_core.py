@@ -153,6 +153,23 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     }
 
 
+def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invalid(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("UNLXCK_DEMO_MODE", "1")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "://bad-origin")
+
+    reloaded = importlib.reload(app_module)
+
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": False,
+        "app": "unlxck-fight-camp-api",
+        "detail": "application startup failed",
+    }
+
+
 def test_cors_allows_normalized_production_origin(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://unlxck-gpt-webhook.vercel.app/onboarding/")
     client, _, _ = _build_client()

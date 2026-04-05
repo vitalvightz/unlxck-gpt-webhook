@@ -1146,10 +1146,14 @@ def _build_runtime_app() -> FastAPI:
     )
 
 
-try:
-    app = _build_runtime_app()
-except RuntimeError:
-    logger.exception("[app] runtime_app_build_failed")
+def _startup_failure_detail(exc: Exception) -> str:
+    if isinstance(exc, RuntimeError) and "SUPABASE" in str(exc):
+        return "missing supabase configuration"
+    return "application startup failed"
+
+
+def _build_startup_failure_app(exc: Exception) -> FastAPI:
+    detail = _startup_failure_detail(exc)
     app = FastAPI(title="UNLXCK Fight Camp API", version="0.2.0")
 
     @app.get("/", include_in_schema=False)
@@ -1157,7 +1161,7 @@ except RuntimeError:
         return {
             "ok": False,
             "app": "unlxck-fight-camp-api",
-            "detail": "missing supabase configuration",
+            "detail": detail,
         }
 
     @app.head("/", include_in_schema=False)
@@ -1169,5 +1173,14 @@ except RuntimeError:
         return {
             "ok": False,
             "app": "unlxck-fight-camp-api",
-            "detail": "missing supabase configuration",
+            "detail": detail,
         }
+
+    return app
+
+
+try:
+    app = _build_runtime_app()
+except Exception as exc:
+    logger.exception("[app] runtime_app_build_failed")
+    app = _build_startup_failure_app(exc)
