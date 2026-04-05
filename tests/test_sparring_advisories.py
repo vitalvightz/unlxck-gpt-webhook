@@ -405,3 +405,23 @@ class TestRiskBandScoreDerives:
     def test_black_score_range(self):
         score = _entry("severe worsening ankle tear")["risk_band_score"]
         assert 9 <= score <= 10
+
+
+class TestWithinBandOrdering:
+    def test_highest_risk_entry_uses_secondary_order_inside_same_band(self):
+        entries = _sparring_injury_entries(
+            {"injuries": ["ankle instability", "severe improving shoulder tear"]}
+        )
+
+        best = _highest_risk_entry(entries)
+
+        assert best is not None
+        assert best["risk_band"] == "red"
+        assert best["raw"] == "severe improving shoulder tear"
+
+    def test_injury_risk_uses_best_secondary_score_inside_same_band(self):
+        entries = _sparring_injury_entries(
+            {"injuries": ["ankle instability", "severe improving shoulder tear"]}
+        )
+
+        assert _injury_risk(entries) == 8
