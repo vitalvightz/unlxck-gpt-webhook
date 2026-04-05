@@ -1,4 +1,9 @@
-from fightcamp.sparring_advisories import _sparring_injury_entries, build_plan_advisories
+from fightcamp.sparring_advisories import (
+    _highest_risk_entry,
+    _injury_risk,
+    _sparring_injury_entries,
+    build_plan_advisories,
+)
 
 
 def _planning_brief(
@@ -203,3 +208,200 @@ def test_future_week_advisory_uses_conditional_static_app_wording():
     assert advisory["reason"].startswith("If the current readiness picture carries into Week 2")
     assert "worsening ankle instability" in advisory["reason"]
     assert advisory["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by Week 2")
+
+
+# ---------------------------------------------------------------------------
+# Step 0 – Characterization tests: lock current state_score values
+# ---------------------------------------------------------------------------
+
+
+def test_state_score_characterization_for_representative_injury_texts():
+    """Lock in current state_score outputs so the refactor cannot silently shift them."""
+    cases = {
+        "mild stable shoulder soreness": 2,
+        "worsening ankle instability": 9,
+        "severe improving shoulder tear": 4,
+        "moderate worsening knee strain": 5,
+        "stiffness in wrist": 2,
+        "stable ankle sprain": 2,
+        "improving hip tendonitis": 2,
+        "mild soreness in elbow": 2,
+    }
+    for text, expected_score in cases.items():
+        entries = _sparring_injury_entries({"injuries": [text]})
+        assert len(entries) == 1, f"expected 1 entry for {text!r}"
+        assert entries[0]["state_score"] == expected_score, (
+            f"{text!r}: expected state_score={expected_score}, got {entries[0]['state_score']}"
+        )
+
+
+def test_injury_risk_characterization_multi_injury():
+    entries = _sparring_injury_entries(
+        {"injuries": ["worsening ankle instability", "mild stable shoulder soreness"]}
+    )
+    # v2: instability → red (override floor), worsening low → band_score 7, +1 multi = 8
+    assert _injury_risk(entries) == 8
+
+
+def test_highest_risk_entry_picks_highest_score():
+    entries = _sparring_injury_entries(
+        {"injuries": ["worsening ankle instability", "mild stable shoulder soreness"]}
+    )
+    best = _highest_risk_entry(entries)
+    assert best is not None
+    assert best["raw"] == "worsening ankle instability"
+    assert best["state_score"] == 9
+
+
+# ---------------------------------------------------------------------------
+# Step 2 – V2 tiered field tests
+# ---------------------------------------------------------------------------
+
+
+def _entry(text: str) -> dict:
+    """Return the single v2-enriched entry for a one-injury snapshot."""
+    entries = _sparring_injury_entries({"injuries": [text]})
+    assert len(entries) == 1
+    return entries[0]
+
+
+class TestSeverityTierClassification:
+    def test_tear_is_high(self):
+        assert _entry("shoulder tear")["severity_tier"] == "high"
+
+    def test_severe_keyword_is_high(self):
+        assert _entry("severe knee sprain")["severity_tier"] == "high"
+
+    def test_cannot_is_high(self):
+        assert _entry("cannot punch")["severity_tier"] == "high"
+
+    def test_strain_is_moderate(self):
+        assert _entry("hamstring strain")["severity_tier"] == "moderate"
+
+    def test_sprain_is_moderate(self):
+        assert _entry("ankle sprain")["severity_tier"] == "moderate"
+
+    def test_impingement_is_moderate(self):
+        assert _entry("shoulder impingement")["severity_tier"] == "moderate"
+
+    def test_soreness_is_low(self):
+        assert _entry("mild shoulder soreness")["severity_tier"] == "low"
+
+    def test_stiffness_is_low(self):
+        assert _entry("stiffness in wrist")["severity_tier"] == "low"
+
+    def test_no_keywords_is_low(self):
+        assert _entry("elbow issue")["severity_tier"] == "low"
+
+
+class TestTrajectoryExclusiveState:
+    def test_worsening_wins_over_improving(self):
+        assert _entry("worsening but improving shoulder")["trajectory"] == "worsening"
+
+    def test_stable(self):
+        assert _entry("stable ankle sprain")["trajectory"] == "stable"
+
+    def test_improving(self):
+        assert _entry("improving hip tendonitis")["trajectory"] == "improving"
+
+    def test_no_keywords_is_unknown(self):
+        assert _entry("shoulder soreness")["trajectory"] == "unknown"
+
+
+class TestOverrideFlagsDetection:
+    def test_instability_detected(self):
+        assert "instability" in _entry("ankle instability")["override_flags"]
+
+    def test_daily_symptoms_detected(self):
+        assert "daily_symptoms" in _entry("daily knee pain")["override_flags"]
+
+    def test_rest_pain_detected(self):
+        assert "rest_pain" in _entry("rest pain in shoulder")["override_flags"]
+
+    def test_cannot_load_detected(self):
+        assert "cannot_load" in _entry("cannot punch")["override_flags"]
+
+    def test_giving_way_detected(self):
+        assert "giving_way" in _entry("knee giving way")["override_flags"]
+
+    def test_clean_injury_has_no_flags(self):
+        assert _entry("mild shoulder soreness")["override_flags"] == []
+
+    def test_multiple_flags(self):
+        flags = _entry("rest pain daily instability")["override_flags"]
+        assert "instability" in flags
+        assert "daily_symptoms" in flags
+        assert "rest_pain" in flags
+
+
+class TestCollisionContextClassification:
+    def test_knee_is_lower_limb(self):
+        assert _entry("knee strain")["collision_context"] == "lower_limb"
+
+    def test_ankle_is_lower_limb(self):
+        assert _entry("ankle sprain")["collision_context"] == "lower_limb"
+
+    def test_shoulder_is_upper_body(self):
+        assert _entry("shoulder impingement")["collision_context"] == "upper_body_collision"
+
+    def test_wrist_is_low_collision(self):
+        assert _entry("stiffness in wrist")["collision_context"] == "low_collision"
+
+    def test_elbow_is_low_collision(self):
+        assert _entry("mild soreness in elbow")["collision_context"] == "low_collision"
+
+
+class TestRiskBandKeyRules:
+    def test_severe_worsening_is_black(self):
+        assert _entry("severe worsening ankle tear")["risk_band"] == "black"
+
+    def test_severe_improving_is_red(self):
+        assert _entry("severe improving shoulder tear")["risk_band"] == "red"
+
+    def test_severe_stable_is_red(self):
+        assert _entry("severe stable knee rupture")["risk_band"] == "red"
+
+    def test_instability_forces_minimum_red(self):
+        assert _entry("ankle instability")["risk_band"] == "red"
+
+    def test_daily_symptoms_forces_minimum_red(self):
+        assert _entry("daily knee pain")["risk_band"] == "red"
+
+    def test_moderate_worsening_is_red(self):
+        assert _entry("worsening knee strain")["risk_band"] == "red"
+
+    def test_moderate_improving_is_amber(self):
+        assert _entry("improving ankle sprain")["risk_band"] == "amber"
+
+    def test_moderate_stable_is_amber(self):
+        assert _entry("stable ankle sprain")["risk_band"] == "amber"
+
+    def test_mild_stable_high_collision_is_amber(self):
+        assert _entry("mild stable shoulder soreness")["risk_band"] == "amber"
+
+    def test_mild_stable_low_collision_is_green(self):
+        assert _entry("mild soreness in elbow")["risk_band"] == "green"
+
+    def test_mild_worsening_is_amber(self):
+        assert _entry("worsening elbow stiffness")["risk_band"] == "amber"
+
+    def test_mild_improving_is_green(self):
+        assert _entry("improving wrist stiffness")["risk_band"] == "green"
+
+
+class TestRiskBandScoreDerives:
+    def test_green_score_range(self):
+        score = _entry("mild soreness in elbow")["risk_band_score"]
+        assert 0 <= score <= 2
+
+    def test_amber_score_range(self):
+        score = _entry("stable ankle sprain")["risk_band_score"]
+        assert 3 <= score <= 5
+
+    def test_red_score_range(self):
+        score = _entry("severe improving shoulder tear")["risk_band_score"]
+        assert 6 <= score <= 8
+
+    def test_black_score_range(self):
+        score = _entry("severe worsening ankle tear")["risk_band_score"]
+        assert 9 <= score <= 10
