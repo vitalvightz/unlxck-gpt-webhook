@@ -1628,7 +1628,6 @@ export function PlanIntakeForm() {
                 ) : null}
               </article>
               )}
-              </article>
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Extra context</p>
