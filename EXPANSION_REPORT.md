@@ -5,7 +5,7 @@ Successfully expanded replacement pools across 6 selection banks with **293 new 
 
 ## Validation Output Comparison
 
-### Before Expansion
+## Before Expansion
 ```
 Discovering banks in /data...
 Found 6 banks to validate.
