@@ -30,8 +30,7 @@ def _clean_list(values: list[str] | None) -> list[str]:
 
 def _field(label: str, value: Any) -> dict[str, Any]:
     if isinstance(value, list):
-        cleaned = _clean_list(value)
-        value = cleaned if cleaned else ""
+        value = _clean_list(value)
     elif value is None:
         value = ""
     return {"label": label, "value": value}

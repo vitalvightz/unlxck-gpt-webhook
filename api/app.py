@@ -122,10 +122,10 @@ def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> 
 def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
     if str(job.get("status") or "") != "running":
         return False
-    heartbeat = _parse_datetime(job.get("heartbeat_at"))
-    if heartbeat is None:
-        return True
-    return (datetime.now(timezone.utc) - heartbeat).total_seconds() >= stale_after_seconds
+    last_progress_at = _parse_datetime(job.get("heartbeat_at")) or _parse_datetime(job.get("started_at"))
+    if last_progress_at is None:
+        return False
+    return (datetime.now(timezone.utc) - last_progress_at).total_seconds() >= stale_after_seconds
 
 
 def _deserialize_plan_request(value: Any) -> PlanRequest:
