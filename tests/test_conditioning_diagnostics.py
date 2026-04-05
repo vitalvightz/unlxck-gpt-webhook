@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from fightcamp.conditioning import _glycolytic_fallback, render_conditioning_block
+from fightcamp.diagnostics import _late_fight_lever, _short_notice_lever, format_missing_system_block
 from fightcamp.main import generate_plan
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.training_context import TrainingContext
@@ -717,4 +718,108 @@ def test_short_notice_false_for_past_date():
     assert result["stage2_payload"]["athlete_model"]["days_until_fight"] is None
 
 
+# ---------------------------------------------------------------------------
+# Patch D: countdown-aware diagnostics / fallback late-fight leak tests
+# ---------------------------------------------------------------------------
 
+
+def test_short_notice_lever_alactic_not_countdown_aware():
+    """Baseline: _short_notice_lever still returns the generic large-burst text for non-late-fight use."""
+    lever = _short_notice_lever("alactic")
+    assert "6–8" in lever or "8–10s" in lever
+
+
+def test_late_fight_lever_alactic_caps_by_day():
+    """_late_fight_lever returns tighter burst prescriptions for each countdown day."""
+    d5 = _late_fight_lever("alactic", 5)
+    assert "6" in d5
+    assert "6–8" not in d5  # generic oversized prescription must not appear
+
+    d4 = _late_fight_lever("alactic", 4)
+    assert "5" in d4
+    assert "6–8 × 8–10s" not in d4
+
+    d3 = _late_fight_lever("alactic", 3)
+    assert "4" in d3
+
+    d2 = _late_fight_lever("alactic", 2)
+    assert "2–4" in d2
+
+    d1 = _late_fight_lever("alactic", 1)
+    assert "2–3" in d1
+    assert "conditioning structure" not in d1.lower() or "no conditioning structure" in d1.lower()
+
+    d0 = _late_fight_lever("alactic", 0)
+    assert "fight day" in d0.lower() or "walk-through" in d0.lower()
+
+
+def test_late_fight_lever_glycolytic_suppressed():
+    """Glycolytic conditioning must be suppressed for all late-fight days."""
+    for day in range(6):
+        lever = _late_fight_lever("glycolytic", day)
+        assert "4–6 × 2:00" not in lever, f"Generic glycolytic prescription leaked at D-{day}"
+        assert "freshness" in lever.lower() or "omitted" in lever.lower()
+
+
+def test_late_fight_lever_aerobic_caps_by_day():
+    """Aerobic lever stays within freshness-preserving limits for each countdown day."""
+    d5 = _late_fight_lever("aerobic", 5)
+    assert "20–30 min" not in d5  # generic short-notice dose must not appear
+    assert "15–20 min" in d5
+
+    d4 = _late_fight_lever("aerobic", 4)
+    d3 = _late_fight_lever("aerobic", 3)
+    for lever in (d4, d3):
+        assert "20–30 min" not in lever
+        assert "10–15 min" in lever
+
+    d1 = _late_fight_lever("aerobic", 1)
+    assert "omitted" in d1.lower() or "activation" in d1.lower()
+
+    d0 = _late_fight_lever("aerobic", 0)
+    assert "no aerobic" in d0.lower() or "fight day" in d0.lower()
+
+
+def test_format_missing_system_block_uses_late_fight_lever_for_days_le_5():
+    """format_missing_system_block picks the countdown-aware lever for D-5 to D-0."""
+    for day in range(6):
+        output = format_missing_system_block(
+            "alactic",
+            phase="TAPER",
+            sport="mma",
+            context={"days_until_fight": day},
+        )
+        # Must not contain the old generic oversized burst prescription
+        assert "6–8 × 8–10s full-rest bursts" not in output, (
+            f"Generic oversized alactic prescription leaked at D-{day}"
+        )
+        assert "Coach option:" in output
+
+
+def test_format_missing_system_block_generic_lever_outside_late_fight():
+    """format_missing_system_block keeps generic short-notice text for D-6 to D-14."""
+    for day in (6, 7, 10, 14):
+        output = format_missing_system_block(
+            "alactic",
+            phase="TAPER",
+            sport="mma",
+            context={"days_until_fight": day},
+        )
+        # Generic text is still appropriate for non-late-fight short-notice windows
+        assert "6–8 × 8–10s full-rest bursts" in output, (
+            f"Expected generic short-notice alactic text at D-{day}, got: {output}"
+        )
+
+
+def test_render_conditioning_block_missing_alactic_late_fight_no_large_burst():
+    """render_conditioning_block must not surface oversized burst cues when alactic is missing in late-fight."""
+    output = render_conditioning_block(
+        {},
+        phase="TAPER",
+        phase_color="#000",
+        missing_systems=["alactic"],
+        diagnostic_context={"days_until_fight": 3, "fatigue_level": "low", "injuries": []},
+    )
+    assert "6–8 × 8–10s full-rest bursts" not in output
+    assert "ALACTIC" in output
+    assert "Coach option:" in output
