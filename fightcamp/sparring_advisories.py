@@ -189,6 +189,15 @@ def _week_major_minor_pressure(week: dict[str, Any], athlete_snapshot: dict[str,
 
 _BAND_ORDER = ("green", "amber", "red", "black")
 _BAND_INDEX = {band: idx for idx, band in enumerate(_BAND_ORDER)}
+_SEVERITY_TIER_INDEX = {"low": 0, "moderate": 1, "high": 2}
+_TRAJECTORY_INDEX = {"improving": 0, "unknown": 1, "stable": 1, "worsening": 2}
+_COLLISION_CONTEXT_INDEX = {
+    "low_collision": 0,
+    "torso": 1,
+    "upper_body_collision": 2,
+    "lower_limb": 2,
+    "unspecified": 2,
+}
 
 
 def _max_band(*bands: str) -> str:
@@ -276,13 +285,37 @@ def _resolve_risk_band(
     return band
 
 
-def _derive_band_score(risk_band: str, override_flags: list[str], trajectory: str) -> int:
+def _derive_band_score(
+    risk_band: str,
+    severity_tier: str,
+    override_flags: list[str],
+    trajectory: str,
+) -> int:
     base = {"green": 0, "amber": 3, "red": 6, "black": 9}.get(risk_band, 0)
-    if len(override_flags) >= 2:
+    band_cap = {"green": 2, "amber": 5, "red": 8, "black": 10}.get(risk_band, 10)
+
+    if severity_tier == "high":
         base += 1
+    elif severity_tier == "moderate" and risk_band in {"amber", "red"}:
+        base += 1
+
     if trajectory == "worsening":
         base += 1
-    return min(10, max(0, base))
+    if len(override_flags) >= 2:
+        base += 1
+
+    return min(band_cap, max(0, base))
+
+
+def _injury_priority(entry: dict[str, Any]) -> tuple[int, int, int, int, int, int]:
+    return (
+        _BAND_INDEX.get(str(entry.get("risk_band", "green")), 0),
+        int(entry.get("risk_band_score", 0)),
+        _SEVERITY_TIER_INDEX.get(str(entry.get("severity_tier", "low")), 0),
+        len(entry.get("override_flags") or []),
+        _TRAJECTORY_INDEX.get(str(entry.get("trajectory", "unknown")), 0),
+        _COLLISION_CONTEXT_INDEX.get(str(entry.get("collision_context", "low_collision")), 0),
+    )
 
 
 def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -346,7 +379,7 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
         override_flags = _detect_override_flags(lowered, instability, daily_symptoms)
         collision_context = _classify_collision_context(region)
         risk_band = _resolve_risk_band(severity_tier, trajectory, override_flags, collision_context)
-        risk_band_score = _derive_band_score(risk_band, override_flags, trajectory)
+        risk_band_score = _derive_band_score(risk_band, severity_tier, override_flags, trajectory)
 
         entries.append(
             {
@@ -376,7 +409,7 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
 def _injury_risk(entries: list[dict[str, Any]]) -> int:
     if not entries:
         return 0
-    best = max(entries, key=lambda e: _BAND_INDEX.get(e.get("risk_band", "green"), 0))
+    best = max(entries, key=_injury_priority)
     score = best.get("risk_band_score", 0)
     if len(entries) > 1:
         score = min(10, score + 1)
@@ -386,7 +419,7 @@ def _injury_risk(entries: list[dict[str, Any]]) -> int:
 def _highest_risk_entry(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not entries:
         return None
-    return max(entries, key=lambda e: _BAND_INDEX.get(e.get("risk_band", "green"), 0))
+    return max(entries, key=_injury_priority)
 
 
 def _replacement_focus(*, athlete_snapshot: dict[str, Any], injuries: list[dict[str, Any]], phase: str) -> str:
