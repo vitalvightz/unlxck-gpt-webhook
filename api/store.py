@@ -926,9 +926,29 @@ class SupabaseAppStore:
         return getattr(response, "data", None) or []
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
-        return self._select_first(
-            self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
-        )
+        try:
+            return self._run_with_transient_retry(
+                operation="get_admin_athlete:select",
+                fn=lambda: self._select_first(
+                    self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
+                ),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] get_admin_athlete:transient_failure athlete_id=%s error_type=%s",
+                    athlete_id,
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="admin athlete service temporarily unavailable",
+                ) from exc
+            logger.exception("[store] get_admin_athlete:exception athlete_id=%s", athlete_id)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to load admin athlete",
+            ) from exc
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:
