@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .stage2_late_fight_utils import resolve_late_fight_window
-
 
 REPAIR_PROMPT_TEMPLATE = """You are revising a Stage 2 final plan after validation.
 
@@ -31,22 +29,21 @@ REPAIR RULES:
 17. If a week contains intentionally_unused_days entries, leave those days as light recovery or completely off. Do not add active training sessions to intentionally unused days.
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
 19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
-20. If days_until_fight is 7 or less, stay inside the exact late-fight band. Do not rebuild normal week completeness, extra session roles, anchor language, or conditioning-system build logic.
-21. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-22. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
-23. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
-24. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
-25. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
-26. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
-27. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
-28. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
-29. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
-30. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
-31. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-32. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-33. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-34. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-35. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+20. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+21. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+22. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+23. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
+24. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
+25. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
+26. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+27. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
+28. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
+29. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
+30. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+31. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -67,34 +64,8 @@ def _clean_list(values: Any) -> list[str]:
     return [str(values).strip()]
 
 
-def _late_fight_window(planning_brief: dict) -> str:
-    return resolve_late_fight_window(
-        payload=planning_brief.get("days_out_payload") or {},
-        athlete=planning_brief.get("athlete_model") or planning_brief.get("athlete_snapshot") or {},
-    )
 
-
-def _late_fight_repair_notes(planning_brief: dict) -> str:
-    window = _late_fight_window(planning_brief)
-    if window == "camp":
-        return ""
-    band_label = {
-        "d7_to_d5": "D-7 to D-5 compressed late-fight week",
-        "d4_to_d2": "D-4 to D-2 session-by-session sharpness/freshness window",
-        "d1": "D-1 fight-eve primer window",
-        "d0": "D-0 fight-day protocol window",
-    }[window]
-    return (
-        "LATE-FIGHT BAND GUARDRAILS\n"
-        f"- Stay inside the {band_label}.\n"
-        "- Do not restore suppressed week completeness, extra session roles, anchor wording, or conditioning-system build logic.\n"
-        "- Keep the repaired output compressed and athlete-facing for this exact late-fight band."
-    )
-
-
-
-def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> dict[str, list[dict]]:
-    late_fight_window = _late_fight_window(planning_brief)
+def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
     restriction_fixes: list[dict] = []
     for hit in validator_report.get("restricted_hits", []) or []:
         restriction_fixes.append(
@@ -216,10 +187,9 @@ def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> 
                 }
             )
         elif code == "missing_week_session_role":
-            action = "preserve_late_fight_compression" if late_fight_window != "camp" else "restore_missing_week_structure"
             quality_fixes.append(
                 {
-                    "action": action,
+                    "action": "restore_missing_week_structure",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
@@ -227,10 +197,9 @@ def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> 
                 }
             )
         elif code == "late_camp_session_incomplete":
-            action = "preserve_late_fight_compression" if late_fight_window != "camp" else "complete_late_camp_week"
             quality_fixes.append(
                 {
-                    "action": action,
+                    "action": "complete_late_camp_week",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
@@ -238,10 +207,9 @@ def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> 
                 }
             )
         elif code == "weekly_session_overage":
-            action = "trim_late_fight_stack" if late_fight_window != "camp" else "trim_extra_week_sessions_to_match_profile"
             quality_fixes.append(
                 {
-                    "action": action,
+                    "action": "trim_extra_week_sessions_to_match_profile",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_session_count": warning.get("expected_session_count"),
@@ -249,10 +217,9 @@ def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> 
                 }
             )
         elif code == "weekly_rhythm_broken":
-            action = "preserve_late_fight_compression" if late_fight_window != "camp" else "restore_default_boxer_weekly_rhythm"
             quality_fixes.append(
                 {
-                    "action": action,
+                    "action": "restore_default_boxer_weekly_rhythm",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                 }
@@ -319,26 +286,6 @@ def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> 
                     "risk_context": _clean_list(warning.get("risk_context", [])),
                 }
             )
-        elif code in {
-            "late_fight_block_overage",
-            "late_fight_strength_overage",
-            "late_fight_conditioning_overage",
-            "late_fight_week_leakage",
-            "late_fight_session_leakage",
-            "late_fight_session_overstack",
-            "fight_eve_primer_leakage",
-            "fight_eve_primer_overstack",
-            "fight_day_protocol_leakage",
-        }:
-            quality_fixes.append(
-                {
-                    "action": "compress_late_fight_output",
-                    "late_fight_window": warning.get("late_fight_window") or late_fight_window,
-                    "issue_code": code,
-                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
-                    "block_cap": warning.get("block_cap"),
-                }
-            )
     return {
         "fix_first": restriction_fixes,
         "strip_out": formatting_fixes,
@@ -349,10 +296,9 @@ def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> 
 
 
 def build_stage2_repair_prompt(*, planning_brief: dict, failed_plan_text: str, validator_report: dict) -> str:
-    revision_priorities = _build_revision_priorities(planning_brief, validator_report)
+    revision_priorities = _build_revision_priorities(validator_report)
     sections = [
         REPAIR_PROMPT_TEMPLATE.strip(),
-        _late_fight_repair_notes(planning_brief),
         "REVISION PRIORITIES\n" + _json_block(revision_priorities),
         "VALIDATOR REPORT\n" + _json_block(validator_report),
         "PLANNING BRIEF\n" + _json_block(planning_brief),

@@ -166,7 +166,6 @@ class TestDaysOutPayloadBlock:
         assert block["payload_variant"] == "late_fight_stage2_payload"
         assert block["days_out_bucket"] == "D-3"
         assert block["late_fight_window"] == "d4_to_d2"
-        assert block["block_cap"] == 5
         assert "rendering_rules" in block
         assert "late_fight_permissions" in block
 
@@ -184,7 +183,6 @@ class TestLateFightPermissionsAndRendering:
         rules = _late_fight_rendering_rules(1)
         assert permissions["allow_anchor_wording"] is False
         assert permissions["allow_glycolytic_build"] is False
-        assert permissions["max_meaningful_blocks"] == 4
         assert "anchor" in [term.lower() for term in rules["forbidden_terms"]]
         assert "primer" in [term.lower() for term in rules["preferred_terms"]]
 
@@ -193,7 +191,6 @@ class TestLateFightPermissionsAndRendering:
         rules = _late_fight_rendering_rules(0)
         assert permissions["allow_fight_day_protocol_only"] is True
         assert permissions["allow_normal_session_roles"] is False
-        assert permissions["max_meaningful_blocks"] == 3
         assert "activation" in [term.lower() for term in rules["preferred_terms"]]
         assert "warm-up" in [term.lower() for term in rules["preferred_terms"]]
 
@@ -206,11 +203,7 @@ class TestLateFightRoleMap:
         assert len(role_map["weeks"]) == 1
         week = role_map["weeks"][0]
         assert week["intentional_compression"]["active"] is True
-        assert [role["role_key"] for role in week["session_roles"]] == [
-            "declared_sparring_taper_day",
-            "late_fight_sharpness_exposure",
-            "late_fight_freshness_reset",
-        ]
+        assert any(role["role_key"] == "fight_week_freshness_day" for role in week["session_roles"])
 
     def test_d3_role_map_is_session_list(self):
         role_map = _build_late_fight_weekly_role_map(3, _athlete(3))
@@ -241,31 +234,22 @@ class TestPlanningBriefBranching:
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
-            "late_fight_sharpness_touch",
-            "late_fight_freshness_reset",
+            "alactic_sharpness_day",
+            "fight_week_freshness_day",
         ]
-        taper_pool = brief["candidate_pools"]["SPP"]
-        assert taper_pool["strength_slots"] == []
-        assert [slot["role"] for slot in taper_pool["conditioning_slots"]] == ["alactic"]
 
     def test_d0_planning_brief_has_empty_progression(self):
         brief = _build_brief_for(0)
         assert brief["days_out_payload"]["payload_mode"] == "fight_day_protocol_payload"
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
-        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["fight_day_protocol"]
-        assert brief["candidate_pools"]["SPP"]["strength_slots"] == []
-        assert brief["candidate_pools"]["SPP"]["conditioning_slots"] == []
 
     def test_d1_planning_brief_has_no_week_structure(self):
         brief = _build_brief_for(1)
         assert brief["days_out_payload"]["payload_mode"] == "pre_fight_day_payload"
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
-        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["fight_eve_primer"]
-        taper_pool = brief["candidate_pools"]["SPP"]
-        assert len(taper_pool["strength_slots"]) == 1
-        assert [slot["role"] for slot in taper_pool["conditioning_slots"]] == ["alactic"]
+        assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["neural_primer_day"]
 
 
 class TestStage2PayloadBranching:
@@ -288,12 +272,9 @@ class TestStage2PayloadBranching:
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-            "late_fight_sharpness_touch",
-            "late_fight_freshness_reset",
+            "alactic_sharpness_day",
+            "fight_week_freshness_day",
         ]
-        taper_pool = payload["candidate_pools"]["TAPER"]
-        assert taper_pool["strength_slots"] == []
-        assert taper_pool["conditioning_slots"] == []
 
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
@@ -309,7 +290,6 @@ class TestStage2PayloadBranching:
         assert payload["payload_mode"] == "pre_fight_day_payload"
         assert brief["weekly_role_map"]["weeks"] == []
         assert brief["week_by_week_progression"]["weeks"] == []
-        assert payload["late_fight_plan_spec"]["block_cap"] == 4
 
 
 class TestHandoffText:

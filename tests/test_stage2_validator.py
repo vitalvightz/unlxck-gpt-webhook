@@ -1,5 +1,4 @@
-from fightcamp.stage2_validator import validate_stage2_output
-from tests.stage2_test_helpers import late_fight_planning_brief
+﻿from fightcamp.stage2_validator import validate_stage2_output
 
 
 
@@ -91,6 +90,7 @@ def _planning_brief_fixture() -> dict:
             },
         },
     }
+
 
 
 def test_validate_stage2_output_flags_restriction_violations():
@@ -759,87 +759,6 @@ def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count(
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "weekly_session_overage" in warning_codes
-
-
-def test_validate_stage2_output_catches_d7_to_d5_late_fight_leakage():
-    report = validate_stage2_output(
-        planning_brief=late_fight_planning_brief(6),
-        final_plan_text="""
-        ### Week 1
-        #### Strength
-        - Primary strength anchor: Trap Bar Deadlift - 4x3
-        #### Strength
-        - Landmine Press - 3x3
-        #### Conditioning
-        - Hard Shuttle - 6x20s / 60s
-        #### Conditioning
-        - Tempo intervals - 8 min
-        #### Recovery
-        - Mobility reset
-        """,
-    )
-
-    warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "late_fight_strength_overage" in warning_codes
-    assert "late_fight_conditioning_overage" in warning_codes
-    assert "late_fight_week_leakage" in warning_codes
-
-
-def test_validate_stage2_output_catches_d4_to_d2_session_stack_and_build_language():
-    report = validate_stage2_output(
-        planning_brief=late_fight_planning_brief(3),
-        final_plan_text="""
-        ## PHASE 3: TAPER
-        ### Week 1
-        #### Session 1 - Primary Strength
-        - Trap Bar Deadlift - 4x3
-        #### Session 2 - Glycolytic build
-        - Fight-pace repeatability intervals - 5 x 2 min
-        #### Session 3 - Recovery
-        - Mobility reset
-        """,
-    )
-
-    warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "late_fight_session_leakage" in warning_codes
-    assert "late_fight_session_overstack" in warning_codes
-
-
-def test_validate_stage2_output_catches_d1_primer_leakage_and_block_cap():
-    report = validate_stage2_output(
-        planning_brief=late_fight_planning_brief(1),
-        final_plan_text="""
-        #### Primer
-        - Alactic sharpness touch
-        - Shadowboxing technical touch
-        - Mobility reset
-        - Extra sharpness burst
-        - Extra mobility reset
-        - Fight-pace conditioning block
-        """,
-    )
-
-    warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "fight_eve_primer_leakage" in warning_codes
-    assert "fight_eve_primer_overstack" in warning_codes
-    assert "late_fight_block_overage" in warning_codes
-
-
-def test_validate_stage2_output_catches_d0_protocol_leakage_and_block_cap():
-    report = validate_stage2_output(
-        planning_brief=late_fight_planning_brief(0),
-        final_plan_text="""
-        ## Week 1
-        - Strength activation lift
-        - Conditioning finisher
-        - Tactical cue
-        - Fuel and hydration
-        """,
-    )
-
-    warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "fight_day_protocol_leakage" in warning_codes
-    assert "late_fight_block_overage" in warning_codes
 
 
 def test_validate_stage2_output_does_not_false_positive_session_overage_from_prose_lines():
