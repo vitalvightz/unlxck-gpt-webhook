@@ -30,21 +30,21 @@ REPAIR RULES:
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
 19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
 20. If days_until_fight is 7 or less, stay inside the exact late-fight band. Do not rebuild normal week completeness, extra session roles, anchor language, or conditioning-system build logic.
-20. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-21. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
-22. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
-23. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
-24. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
-25. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
-26. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
-27. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
-28. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
-29. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
-30. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-31. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+21. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+22. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+23. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+24. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
+25. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
+26. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
+27. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+28. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
+29. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
+30. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
+31. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+32. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+33. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+34. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+35. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""

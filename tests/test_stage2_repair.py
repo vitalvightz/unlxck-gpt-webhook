@@ -50,15 +50,21 @@ def _planning_brief_fixture() -> dict:
 
 
 def _late_fight_planning_brief(days_until_fight: int) -> dict:
+    if days_until_fight >= 5:
+        window = "d7_to_d5"
+    elif days_until_fight >= 2:
+        window = "d4_to_d2"
+    elif days_until_fight == 1:
+        window = "d1"
+    else:
+        window = "d0"
     return {
         "athlete_model": {
             "sport": "boxing",
             "days_until_fight": days_until_fight,
             "readiness_flags": ["fight_week"],
         },
-        "days_out_payload": {
-            "late_fight_window": "d7_to_d5" if days_until_fight >= 5 else "d4_to_d2" if days_until_fight >= 2 else "d1" if days_until_fight == 1 else "d0"
-        },
+        "days_out_payload": {"late_fight_window": window},
         "phase_strategy": {},
         "candidate_pools": {},
     }

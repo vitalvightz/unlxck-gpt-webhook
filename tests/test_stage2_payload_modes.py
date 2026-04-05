@@ -207,8 +207,8 @@ class TestLateFightRoleMap:
         week = role_map["weeks"][0]
         assert week["intentional_compression"]["active"] is True
         assert [role["role_key"] for role in week["session_roles"]] == [
+            "declared_sparring_taper_day",
             "late_fight_sharpness_exposure",
-            "late_fight_conditioning_touch",
             "late_fight_freshness_reset",
         ]
 
@@ -293,7 +293,7 @@ class TestStage2PayloadBranching:
         ]
         taper_pool = payload["candidate_pools"]["TAPER"]
         assert taper_pool["strength_slots"] == []
-        assert [slot["role"] for slot in taper_pool["conditioning_slots"]] == ["alactic"]
+        assert taper_pool["conditioning_slots"] == []
 
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
