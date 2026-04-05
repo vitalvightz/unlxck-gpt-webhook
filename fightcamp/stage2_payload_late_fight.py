@@ -3,6 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
+from .stage2_late_fight_utils import late_fight_block_cap
+
 
 _PAYLOAD_MODE_MAP = {
     0: "fight_day_protocol_payload",
@@ -14,6 +16,10 @@ _PAYLOAD_MODE_MAP = {
     6: "late_fight_week_payload",
     7: "late_fight_week_payload",
 }
+_CONDITIONING_PRIORITY_ALACTIC = 0
+_CONDITIONING_PRIORITY_AEROBIC = 1
+_CONDITIONING_PRIORITY_GLYCOLYTIC = 2
+_CONDITIONING_PRIORITY_OTHER = 3
 
 _WEEKDAY_ORDER = {
     "monday": 0,
@@ -196,19 +202,6 @@ def _late_fight_window(days_until_fight: Any) -> str:
     return "camp"
 
 
-def _late_fight_block_cap(days_until_fight: Any) -> int | None:
-    mode = _days_out_payload_mode(days_until_fight)
-    if mode == "late_fight_week_payload":
-        return 5
-    if mode == "late_fight_session_payload":
-        return 5
-    if mode == "pre_fight_day_payload":
-        return 4
-    if mode == "fight_day_protocol_payload":
-        return 3
-    return None
-
-
 def _copy_slot(slot: dict[str, Any]) -> dict[str, Any]:
     return {
         **slot,
@@ -220,12 +213,12 @@ def _copy_slot(slot: dict[str, Any]) -> dict[str, Any]:
 def _conditioning_priority(slot: dict[str, Any]) -> tuple[int, str]:
     role = str(slot.get("role", "")).strip().lower()
     if role == "alactic":
-        return (0, role)
+        return (_CONDITIONING_PRIORITY_ALACTIC, role)
     if role == "aerobic":
-        return (1, role)
+        return (_CONDITIONING_PRIORITY_AEROBIC, role)
     if role == "glycolytic":
-        return (2, role)
-    return (3, role)
+        return (_CONDITIONING_PRIORITY_GLYCOLYTIC, role)
+    return (_CONDITIONING_PRIORITY_OTHER, role)
 
 
 def _preferred_conditioning_slots(slots: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
@@ -333,7 +326,7 @@ def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], li
 
 def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
     mode = _days_out_payload_mode(days_until_fight)
-    block_cap = _late_fight_block_cap(days_until_fight)
+    block_cap = late_fight_block_cap(days_until_fight)
     if mode == "camp_payload":
         return {
             "mode": mode,
@@ -488,7 +481,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
 
 def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     mode = _days_out_payload_mode(days_until_fight)
-    block_cap = _late_fight_block_cap(days_until_fight)
+    block_cap = late_fight_block_cap(days_until_fight)
     if mode == "camp_payload":
         return {"mode": mode, "rules": []}
     if mode == "late_fight_week_payload":
@@ -592,7 +585,7 @@ def _days_out_payload_block(days_until_fight: Any, athlete_model: dict) -> dict:
         "payload_variant": "late_fight_stage2_payload" if _uses_late_fight_stage2_payload(days_until_fight) else "normal_stage2_payload",
         "days_out_bucket": _days_out_bucket(days_until_fight),
         "late_fight_window": _late_fight_window(days_until_fight),
-        "block_cap": _late_fight_block_cap(days_until_fight),
+        "block_cap": late_fight_block_cap(days_until_fight),
         "fight_week_override": fight_week_override or {"active": False},
         "late_fight_permissions": permissions,
         "allowed_session_types": allowed_session_types,

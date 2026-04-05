@@ -1,4 +1,5 @@
-﻿from fightcamp.stage2_validator import validate_stage2_output
+from fightcamp.stage2_validator import validate_stage2_output
+from tests.stage2_test_helpers import late_fight_planning_brief
 
 
 
@@ -90,34 +91,6 @@ def _planning_brief_fixture() -> dict:
             },
         },
     }
-
-
-def _late_fight_planning_brief(days_until_fight: int) -> dict:
-    if 5 <= days_until_fight <= 7:
-        window = "d7_to_d5"
-        block_cap = 5
-    elif 2 <= days_until_fight <= 4:
-        window = "d4_to_d2"
-        block_cap = 5
-    elif days_until_fight == 1:
-        window = "d1"
-        block_cap = 4
-    else:
-        window = "d0"
-        block_cap = 3
-    return {
-        "athlete_model": {
-            "sport": "boxing",
-            "equipment": ["bike", "bands", "bodyweight"],
-            "days_until_fight": days_until_fight,
-            "readiness_flags": ["fight_week"],
-        },
-        "phase_strategy": {},
-        "candidate_pools": {},
-        "days_out_payload": {"late_fight_window": window},
-        "late_fight_plan_spec": {"block_cap": block_cap},
-    }
-
 
 
 def test_validate_stage2_output_flags_restriction_violations():
@@ -790,7 +763,7 @@ def test_validate_stage2_output_warns_when_week_exceeds_requested_session_count(
 
 def test_validate_stage2_output_catches_d7_to_d5_late_fight_leakage():
     report = validate_stage2_output(
-        planning_brief=_late_fight_planning_brief(6),
+        planning_brief=late_fight_planning_brief(6),
         final_plan_text="""
         ### Week 1
         #### Strength
@@ -814,7 +787,7 @@ def test_validate_stage2_output_catches_d7_to_d5_late_fight_leakage():
 
 def test_validate_stage2_output_catches_d4_to_d2_session_stack_and_build_language():
     report = validate_stage2_output(
-        planning_brief=_late_fight_planning_brief(3),
+        planning_brief=late_fight_planning_brief(3),
         final_plan_text="""
         ## PHASE 3: TAPER
         ### Week 1
@@ -834,7 +807,7 @@ def test_validate_stage2_output_catches_d4_to_d2_session_stack_and_build_languag
 
 def test_validate_stage2_output_catches_d1_primer_leakage_and_block_cap():
     report = validate_stage2_output(
-        planning_brief=_late_fight_planning_brief(1),
+        planning_brief=late_fight_planning_brief(1),
         final_plan_text="""
         #### Primer
         - Alactic sharpness touch
@@ -854,7 +827,7 @@ def test_validate_stage2_output_catches_d1_primer_leakage_and_block_cap():
 
 def test_validate_stage2_output_catches_d0_protocol_leakage_and_block_cap():
     report = validate_stage2_output(
-        planning_brief=_late_fight_planning_brief(0),
+        planning_brief=late_fight_planning_brief(0),
         final_plan_text="""
         ## Week 1
         - Strength activation lift

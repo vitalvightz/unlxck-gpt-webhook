@@ -1,4 +1,5 @@
 from fightcamp.stage2_repair import build_stage2_repair_prompt
+from tests.stage2_test_helpers import late_fight_planning_brief
 
 
 def _planning_brief_fixture() -> dict:
@@ -46,27 +47,6 @@ def _planning_brief_fixture() -> dict:
                 "mechanical_equivalents": ["thruster", "jerk"],
             }
         ],
-    }
-
-
-def _late_fight_planning_brief(days_until_fight: int) -> dict:
-    if days_until_fight >= 5:
-        window = "d7_to_d5"
-    elif days_until_fight >= 2:
-        window = "d4_to_d2"
-    elif days_until_fight == 1:
-        window = "d1"
-    else:
-        window = "d0"
-    return {
-        "athlete_model": {
-            "sport": "boxing",
-            "days_until_fight": days_until_fight,
-            "readiness_flags": ["fight_week"],
-        },
-        "days_out_payload": {"late_fight_window": window},
-        "phase_strategy": {},
-        "candidate_pools": {},
     }
 
 
@@ -367,7 +347,7 @@ def test_build_stage2_repair_prompt_keeps_late_fight_repairs_compressed():
         "restricted_hits": [],
     }
     prompt = build_stage2_repair_prompt(
-        planning_brief=_late_fight_planning_brief(3),
+        planning_brief=late_fight_planning_brief(3),
         failed_plan_text="### Week 1\n#### Primary Strength\n- Trap Bar Deadlift - 4x3",
         validator_report=validator_report,
     )
