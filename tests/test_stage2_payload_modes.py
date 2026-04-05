@@ -3,6 +3,7 @@
 import pytest
 
 from fightcamp.stage2_payload import (
+    _build_late_fight_plan_spec,
     _build_late_fight_weekly_role_map,
     _days_out_payload_block,
     _days_out_payload_mode,
@@ -48,9 +49,12 @@ _MINIMAL_ATHLETE = {
 }
 
 
-def _athlete(days_until_fight):
+def _athlete(days_until_fight, **overrides):
     athlete = dict(_MINIMAL_ATHLETE)
     athlete["days_until_fight"] = days_until_fight
+    athlete.setdefault("fatigue", "moderate")
+    athlete.setdefault("readiness_flags", [])
+    athlete.update(overrides)
     return athlete
 
 
@@ -195,6 +199,28 @@ class TestLateFightPermissionsAndRendering:
         assert "activation" in [term.lower() for term in rules["preferred_terms"]]
         assert "warm-up" in [term.lower() for term in rules["preferred_terms"]]
 
+    def test_transition_permissions_strip_week_logic_and_force_caps(self):
+        permissions = _late_fight_permissions(5, _athlete(5))
+
+        assert permissions["allow_normal_session_roles"] is False
+        assert permissions["allow_anchor_wording"] is False
+        assert permissions["allow_weekly_frequency_reasoning"] is False
+        assert permissions["allow_hard_sparring_influence"] is False
+        assert permissions["max_meaningful_strength_anchors"] == 0
+        assert permissions["max_meaningful_conditioning_stressors"] == 0
+        assert permissions["max_meaningful_stress_exposures"] == 1
+        assert permissions["max_active_roles"] == 2
+
+    def test_d3_alactic_sharpness_is_conditional(self):
+        allowed = _late_fight_permissions(3, _athlete(3))
+        suppressed = _late_fight_permissions(
+            3,
+            _athlete(3, fatigue="high", readiness_flags=["recent_hard_spar_collision_spillover"]),
+        )
+
+        assert allowed["allow_alactic_sharpness"] is True
+        assert suppressed["allow_alactic_sharpness"] is False
+
 
 class TestLateFightRoleMap:
     def test_d5_role_map_uses_transition_overlay(self):
@@ -232,6 +258,7 @@ class TestPlanningBriefBranching:
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
+            "alactic_sharpness_day",
             "fight_week_freshness_day",
         ]
 
@@ -269,8 +296,25 @@ class TestStage2PayloadBranching:
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
+            "alactic_sharpness_day",
             "fight_week_freshness_day",
         ]
+
+    def test_d2_payload_exposes_primer_only_sequence(self):
+        payload = _build_stage2(2)
+
+        assert payload["payload_mode"] == "late_fight_session_payload"
+        assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
+            "neural_primer_day",
+        ]
+
+    def test_d7_plan_spec_exposes_caps_and_forbidden_blocks(self):
+        spec = _build_late_fight_plan_spec(7, _athlete(7))
+
+        assert spec["max_blocks_per_session"] == 5
+        assert spec["max_meaningful_stress_exposures"] == 2
+        assert spec["max_active_roles"] == 3
+        assert "standalone_glycolytic" in spec["forbidden_blocks"]
 
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)

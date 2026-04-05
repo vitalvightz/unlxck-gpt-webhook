@@ -44,6 +44,10 @@ REPAIR RULES:
 32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
 33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
 34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+35. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
+36. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
+37. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
+38. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -284,6 +288,50 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "replace_empty_safety_line_with_operational_guardrails",
                     "line": warning.get("line"),
                     "risk_context": _clean_list(warning.get("risk_context", [])),
+                }
+            )
+        elif code == "late_fight_forbidden_content":
+            quality_fixes.append(
+                {
+                    "action": "remove_late_fight_forbidden_block",
+                    "forbidden_block": warning.get("forbidden_block"),
+                    "line": warning.get("line"),
+                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
+                }
+            )
+        elif code == "late_fight_block_overage":
+            quality_fixes.append(
+                {
+                    "action": "trim_late_fight_session_to_block_ceiling",
+                    "session_index": warning.get("session_index"),
+                    "line": warning.get("line"),
+                    "max_blocks_per_session": warning.get("max_blocks_per_session"),
+                    "actual_block_count": warning.get("actual_block_count"),
+                }
+            )
+        elif code == "late_fight_meaningful_stress_overage":
+            quality_fixes.append(
+                {
+                    "action": "reduce_late_fight_meaningful_stress_exposures",
+                    "actual_exposures": warning.get("actual_exposures"),
+                    "max_meaningful_stress_exposures": warning.get("max_meaningful_stress_exposures"),
+                    "exposures": list(warning.get("exposures") or []),
+                }
+            )
+        elif code == "late_fight_active_role_overage":
+            quality_fixes.append(
+                {
+                    "action": "trim_late_fight_sessions_to_cap",
+                    "actual_sessions": warning.get("actual_sessions"),
+                    "max_active_roles": warning.get("max_active_roles"),
+                }
+            )
+        elif code == "late_fight_hard_sparring_overage":
+            quality_fixes.append(
+                {
+                    "action": "remove_extra_late_fight_hard_sparring_exposures",
+                    "days_out_bucket": warning.get("days_out_bucket"),
+                    "hard_sparring_sessions": list(warning.get("hard_sparring_sessions") or []),
                 }
             )
     return {

@@ -106,6 +106,17 @@ def test_high_week_pressure_and_moderate_injury_deloads():
     assert all(entry["status"] == "deload_suggested" for entry in downgraded)
 
 
+def test_d7_caps_three_declared_hard_days_to_one_actual_hard_day():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+
+    assert [entry["status"] for entry in plan].count("hard_as_planned") == 1
+    assert [entry["status"] for entry in plan].count("deload_suggested") == 2
+    assert all(entry.get("coach_note") for entry in plan if entry["status"] == "deload_suggested")
+
+
 def test_instability_or_daily_symptoms_convert():
     instability_plan = compute_hard_sparring_plan(
         week=_week(),

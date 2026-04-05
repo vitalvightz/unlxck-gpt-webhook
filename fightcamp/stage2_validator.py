@@ -93,6 +93,23 @@ _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
 _WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
 _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
+_LATE_FIGHT_TOKEN_PHRASES = {
+    "hard_sparring": ("hard spar", "hard sparring", "live spar", "full spar", "hard contact"),
+    "standalone_glycolytic": ("glycolytic", "fight pace", "fight-pace", "repeatability", "hard shuttle", "bag sprint"),
+    "primary_strength_anchor": ("primary strength", "structural strength", "neural plus strength", "strength anchor", "loaded strength"),
+    "conditioning": ("conditioning", "fight pace", "fight-pace", "repeatability", "shuttle", "bag sprint", "air bike sprint"),
+    "glycolytic": ("glycolytic", "fight pace", "fight-pace", "repeatability", "hard shuttle", "bag sprint"),
+    "hinge_transfer": ("hinge transfer", "hip hinge", "deadlift", "rdl", "romanian deadlift"),
+    "jumps": ("jump", "jumps", "plyometric", "bounds", "hops"),
+    "contrast_work": ("contrast", "contrast pair", "complex pair"),
+    "fight_pace_conditioning": ("fight pace conditioning", "fight-pace conditioning", "fight pace", "fight-pace", "repeatability"),
+    "strength": ("strength", "deadlift", "squat", "press", "loaded carry", "trap bar"),
+    "sharpness_touch": ("alactic", "sharpness", "primer", "neural primer"),
+    "recovery": ("recovery", "freshness", "mobility", "breathing", "reset"),
+    "technical": ("technical", "rhythm", "shadowboxing", "flow rounds", "drill"),
+    "layered_rehab_stack": ("rehab stack",),
+}
+_LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -1112,6 +1129,188 @@ def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> lis
     return warnings
 
 
+def _late_fight_plan_spec(planning_brief: dict) -> dict[str, Any]:
+    spec = planning_brief.get("late_fight_plan_spec") or {}
+    return spec if isinstance(spec, dict) else {}
+
+
+def _late_fight_session_blocks(final_plan_text: str) -> list[list[str]]:
+    blocks = _phase_session_blocks(_extract_plan_lines(final_plan_text))
+    return [block for block in blocks if block]
+
+
+def _late_fight_block_body(block: list[str]) -> list[str]:
+    if len(block) <= 1:
+        return []
+    return [line for line in block[1:] if _normalize_render_line(line)]
+
+
+def _block_contains_token(block: list[str], token: str) -> bool:
+    text = " ".join(block).lower()
+    phrases = _LATE_FIGHT_TOKEN_PHRASES.get(token, ())
+    return any(_phrase_in_text(text, phrase) for phrase in phrases)
+
+
+def _line_matches_late_fight_token(line: str, token: str) -> bool:
+    if _line_is_instruction_only(line):
+        return False
+    lowered = line.lower()
+    phrases = _LATE_FIGHT_TOKEN_PHRASES.get(token, ())
+    return any(_phrase_in_text(lowered, phrase) for phrase in phrases)
+
+
+def _late_fight_meaningful_exposure_count(blocks: list[list[str]]) -> tuple[int, list[dict[str, Any]]]:
+    counted: list[dict[str, Any]] = []
+    for index, block in enumerate(blocks, start=1):
+        tags = {
+            token
+            for token in ("hard_sparring", "standalone_glycolytic", "primary_strength_anchor", "conditioning", "sharpness_touch")
+            if _block_contains_token(block, token)
+        }
+        if not tags:
+            continue
+        if tags == {"conditioning"} and _block_contains_token(block, "recovery"):
+            continue
+        counted.append(
+            {
+                "session_index": index,
+                "heading": block[0],
+                "tags": sorted(tags),
+            }
+        )
+    return len(counted), counted
+
+
+def _late_fight_forbidden_matches(token: str, plan_lines: list[str], blocks: list[list[str]]) -> list[str]:
+    if token == "layered_rehab_stack":
+        matched: list[str] = []
+        for block in blocks:
+            rehab_lines = [
+                line
+                for line in _late_fight_block_body(block)
+                if any(_phrase_in_text(line.lower(), phrase) for phrase in _LATE_FIGHT_REHAB_PHRASES)
+            ]
+            if len(rehab_lines) >= 2:
+                matched.append(block[0])
+        return matched
+    return [line for line in plan_lines if _line_matches_late_fight_token(line, token)]
+
+
+def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    spec = _late_fight_plan_spec(planning_brief)
+    payload_mode = str(spec.get("payload_mode") or "")
+    if not spec or payload_mode in {"", "camp_payload"}:
+        return []
+
+    plan_lines = _extract_plan_lines(final_plan_text)
+    blocks = _late_fight_session_blocks(final_plan_text)
+    warnings: list[dict] = []
+    days_out_bucket = str(spec.get("days_out_bucket") or "")
+
+    max_active_roles = spec.get("max_active_roles")
+    if isinstance(max_active_roles, int) and max_active_roles >= 0 and len(blocks) > max_active_roles:
+        warnings.append(
+            {
+                "code": "late_fight_active_role_overage",
+                "message": f"{days_out_bucket or payload_mode} renders {len(blocks)} active sessions even though the late-fight cap is {max_active_roles}.",
+                "payload_mode": payload_mode,
+                "days_out_bucket": days_out_bucket,
+                "actual_sessions": len(blocks),
+                "max_active_roles": max_active_roles,
+                "blocking": True,
+            }
+        )
+
+    max_blocks_per_session = spec.get("max_blocks_per_session")
+    if isinstance(max_blocks_per_session, int) and max_blocks_per_session > 0:
+        for session_index, block in enumerate(blocks, start=1):
+            body_lines = _late_fight_block_body(block)
+            if len(body_lines) <= max_blocks_per_session:
+                continue
+            warnings.append(
+                {
+                    "code": "late_fight_block_overage",
+                    "message": f"{days_out_bucket or payload_mode} session {session_index} exceeds the {max_blocks_per_session}-block ceiling.",
+                    "payload_mode": payload_mode,
+                    "days_out_bucket": days_out_bucket,
+                    "session_index": session_index,
+                    "line": block[0],
+                    "actual_block_count": len(body_lines),
+                    "max_blocks_per_session": max_blocks_per_session,
+                    "blocking": True,
+                }
+            )
+
+    max_meaningful_stress_exposures = spec.get("max_meaningful_stress_exposures")
+    if isinstance(max_meaningful_stress_exposures, int) and max_meaningful_stress_exposures >= 0:
+        exposure_count, exposures = _late_fight_meaningful_exposure_count(blocks)
+        if exposure_count > max_meaningful_stress_exposures:
+            warnings.append(
+                {
+                    "code": "late_fight_meaningful_stress_overage",
+                    "message": f"{days_out_bucket or payload_mode} carries {exposure_count} meaningful stress exposures even though the cap is {max_meaningful_stress_exposures}.",
+                    "payload_mode": payload_mode,
+                    "days_out_bucket": days_out_bucket,
+                    "actual_exposures": exposure_count,
+                    "max_meaningful_stress_exposures": max_meaningful_stress_exposures,
+                    "exposures": exposures,
+                    "blocking": True,
+                }
+            )
+
+    hard_sparring_blocks = [
+        {
+            "session_index": index,
+            "line": block[0],
+        }
+        for index, block in enumerate(blocks, start=1)
+        if _block_contains_token(block, "hard_sparring")
+    ]
+    if days_out_bucket == "D-7" and len(hard_sparring_blocks) > 1:
+        warnings.append(
+            {
+                "code": "late_fight_hard_sparring_overage",
+                "message": "D-7 contains more than one hard sparring exposure.",
+                "payload_mode": payload_mode,
+                "days_out_bucket": days_out_bucket,
+                "hard_sparring_sessions": hard_sparring_blocks,
+                "blocking": True,
+            }
+        )
+    elif days_out_bucket in {"D-6", "D-5", "D-4", "D-3", "D-2", "D-1", "D-0"} and hard_sparring_blocks:
+        warnings.append(
+            {
+                "code": "late_fight_hard_sparring_overage",
+                "message": f"{days_out_bucket} still contains true hard sparring, which late-fight logic forbids.",
+                "payload_mode": payload_mode,
+                "days_out_bucket": days_out_bucket,
+                "hard_sparring_sessions": hard_sparring_blocks,
+                "blocking": True,
+            }
+        )
+
+    for token in spec.get("forbidden_blocks", []) or []:
+        if token in {"hard_sparring", "multiple_hard_sparring_exposures"}:
+            continue
+        matches = _late_fight_forbidden_matches(token, plan_lines, blocks)
+        if not matches:
+            continue
+        warnings.append(
+            {
+                "code": "late_fight_forbidden_content",
+                "message": f"{days_out_bucket or payload_mode} includes forbidden late-fight content: {token.replace('_', ' ')}.",
+                "payload_mode": payload_mode,
+                "days_out_bucket": days_out_bucket,
+                "forbidden_block": token,
+                "line": matches[0],
+                "matched_lines": matches[:3],
+                "blocking": True,
+            }
+        )
+
+    return warnings
+
+
 def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dict:
     plan_lines = _extract_plan_lines(final_plan_text)
     phase_sections = _phase_sections(final_plan_text)
@@ -1149,6 +1348,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
+    late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
 
     errors = [
         {
@@ -1189,6 +1389,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
+    warnings.extend(late_fight_warnings)
 
     return {
         "is_valid": not errors,
@@ -1208,5 +1409,6 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
         "coach_voice_warnings": coach_voice_warnings,
+        "late_fight_warnings": late_fight_warnings,
         "sport_language_warnings": sport_language_warnings,
     }
