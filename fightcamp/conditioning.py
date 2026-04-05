@@ -910,23 +910,6 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool
     ]
     return "\n".join(parts) + "\n"
 
-    # Use HTML line breaks so bullets display vertically when converted to HTML
-    br = "<br>"
-    bullet = "•"
-    load_line = f"  {bullet} Load: {drill['load']}"
-    if drill.get("equipment_note"):
-        load_line += f" ({drill['equipment_note']})"
-    load_line += br
-    parts = [
-        f"- **Drill: {drill['name']}**",
-        load_line,
-        f"  {bullet} Rest: {drill['rest']}{br}",
-        f"  {bullet} Timing: {drill['timing']}{br}",
-        f"  {bullet} Purpose: {drill['purpose']}{br}",
-        f"  • Red Flags: {drill['red_flags']}",
-    ]
-    return "".join(parts) + "\n"
-
 
 def _normalize_fight_format(fight_format: str) -> str:
     if fight_format == "muay_thai":

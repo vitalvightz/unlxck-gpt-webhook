@@ -2,7 +2,7 @@ import asyncio
 import json
 from pathlib import Path
 
-from fightcamp.conditioning import _glycolytic_fallback, render_conditioning_block
+from fightcamp.conditioning import _glycolytic_fallback, format_drill_block, render_conditioning_block
 from fightcamp.diagnostics import _late_fight_lever, _short_notice_lever, format_missing_system_block
 from fightcamp.main import generate_plan
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
@@ -84,6 +84,24 @@ def test_render_conditioning_block_uses_plain_markdown_and_targeted_name_cleanup
     assert "**Fallback:" in output
     assert "Drill:" not in output
     assert "Conditioning Block" not in output
+
+
+def test_format_drill_block_uses_plain_markdown_without_html_markup():
+    output = format_drill_block(
+        {
+            "name": "Trap Bar Carry Intervals",
+            "load": "heavy",
+            "rest": "30s",
+            "timing": "30s work / 30s rest x 5",
+            "purpose": "Build repeatability.",
+            "red_flags": "None",
+            "equipment_note": "swap to sled if trap bar unavailable",
+        }
+    )
+
+    assert output.startswith("- **Trap Bar Carry Intervals**")
+    assert "<br>" not in output
+    assert "Drill:" not in output
 
 
 def test_render_conditioning_block_limits_fallbacks_per_session_and_simplifies_taper():

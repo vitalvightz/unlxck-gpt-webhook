@@ -9,3 +9,7 @@ def test_compute_weight_cut_pct_uses_current_body_mass_denominator():
 def test_parse_weight_value_handles_unit_suffixes():
     assert parse_weight_value("102 kg") == 102.0
     assert parse_weight_value("98.5kg") == 98.5
+
+
+def test_compute_weight_cut_pct_returns_zero_for_near_zero_current_weight():
+    assert compute_weight_cut_pct("0.001 kg", 0) == 0.0

@@ -75,7 +75,7 @@ class AthleteProfileInput(BaseModel):
             try:
                 return int(round(float(normalized)))
             except ValueError:
-                return value
+                raise ValueError("height_cm must be numeric") from None
         if isinstance(value, (int, float)):
             return int(round(float(value)))
         return value
