@@ -13,6 +13,7 @@ from fightcamp.stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
+from fightcamp.stage2_payload_late_fight import _late_fight_stage_label
 from fightcamp.training_context import TrainingContext
 
 
@@ -186,10 +187,13 @@ class TestLateFightPermissionsAndRendering:
     def test_d1_forbids_anchor_and_glycolytic_language(self):
         permissions = _late_fight_permissions(1, _athlete(1))
         rules = _late_fight_rendering_rules(1)
+        preferred_terms = [term.lower() for term in rules["preferred_terms"]]
+
         assert permissions["allow_anchor_wording"] is False
         assert permissions["allow_glycolytic_build"] is False
         assert "anchor" in [term.lower() for term in rules["forbidden_terms"]]
-        assert "neural primer" in [term.lower() for term in rules["preferred_terms"]]
+        assert "neural primer" in preferred_terms
+        assert "primer" not in preferred_terms
 
     def test_d0_restricts_output_to_protocol_language(self):
         permissions = _late_fight_permissions(0, _athlete(0))
@@ -256,6 +260,9 @@ class TestLateFightRoleMap:
 
 
 class TestPlanningBriefBranching:
+    def test_d7_stage_label_returns_sharpness_week(self):
+        assert _late_fight_stage_label(7) == "Sharpness Week"
+
     def test_camp_uses_normal_planning_brief(self):
         brief = _build_brief_for(10)
         assert brief["generator_mode"] == "deterministic_planner_plus_ai_finalizer"
