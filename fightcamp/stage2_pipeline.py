@@ -17,6 +17,11 @@ _BLOCKING_WARNING_CODES = {
     "unresolved_access_fallback",
     "missing_week_session_role",
     "late_camp_session_incomplete",
+    "late_fight_active_role_overage",
+    "late_fight_block_overage",
+    "late_fight_forbidden_content",
+    "late_fight_hard_sparring_overage",
+    "late_fight_meaningful_stress_overage",
 }
 
 

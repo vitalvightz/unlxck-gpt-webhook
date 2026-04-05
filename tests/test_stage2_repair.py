@@ -280,6 +280,52 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
     assert "collapse_options_to_safe_equivalent_choices_or_one_final_call" in prompt
     assert '"scheduled_day_hint": "Tuesday"' in prompt
 
+def test_build_stage2_repair_prompt_surfaces_late_fight_repairs():
+    validator_report = {
+        "is_valid": True,
+        "errors": [],
+        "warnings": [
+            {
+                "code": "late_fight_forbidden_content",
+                "forbidden_block": "hinge_transfer",
+                "line": "Hinge Transfer - Trap Bar Pull 3x2",
+                "matched_lines": ["Hinge Transfer - Trap Bar Pull 3x2"],
+            },
+            {
+                "code": "late_fight_block_overage",
+                "session_index": 1,
+                "line": "Friday - Primer",
+                "max_blocks_per_session": 4,
+                "actual_block_count": 5,
+            },
+            {
+                "code": "late_fight_meaningful_stress_overage",
+                "actual_exposures": 2,
+                "max_meaningful_stress_exposures": 1,
+                "exposures": [{"session_index": 1, "heading": "Friday - Primer", "tags": ["sharpness_touch"]}],
+            },
+            {
+                "code": "late_fight_hard_sparring_overage",
+                "days_out_bucket": "D-5",
+                "hard_sparring_sessions": [{"session_index": 1, "line": "Monday - Hard Sparring"}],
+            },
+        ],
+        "missing_required_elements": [],
+        "restricted_hits": [],
+    }
+
+    prompt = build_stage2_repair_prompt(
+        planning_brief={**_planning_brief_fixture(), "late_fight_plan_spec": {"days_out_bucket": "D-5"}},
+        failed_plan_text="Friday - Primer\n- Hinge Transfer - Trap Bar Pull 3x2",
+        validator_report=validator_report,
+    )
+
+    assert "remove_late_fight_forbidden_block" in prompt
+    assert "trim_late_fight_session_to_block_ceiling" in prompt
+    assert "reduce_late_fight_meaningful_stress_exposures" in prompt
+    assert "remove_extra_late_fight_hard_sparring_exposures" in prompt
+    assert "do not restore suppressed roles just to make the plan feel like a normal week" in prompt.lower()
+
 
 def test_build_stage2_repair_prompt_surfaces_style_repairs():
     validator_report = {

@@ -92,6 +92,28 @@ def _planning_brief_fixture() -> dict:
     }
 
 
+def _late_fight_planning_brief(days_out: str = "D-5") -> dict:
+    return {
+        "athlete_model": {"sport": "boxing", "days_until_fight": int(days_out.split("-")[-1])},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "late_fight_plan_spec": {
+            "payload_mode": "late_fight_transition_payload" if days_out in {"D-6", "D-5"} else "pre_fight_day_payload",
+            "days_out_bucket": days_out,
+            "session_cap": 2 if days_out in {"D-6", "D-5", "D-4", "D-3"} else 1,
+            "max_active_roles": 2 if days_out in {"D-6", "D-5", "D-4", "D-3"} else 1,
+            "max_meaningful_stress_exposures": 1,
+            "max_blocks_per_session": 4,
+            "forbidden_blocks": (
+                ["hard_sparring", "standalone_glycolytic", "primary_strength_anchor"]
+                if days_out in {"D-6", "D-5"}
+                else ["glycolytic", "hinge_transfer", "jumps", "contrast_work", "fight_pace_conditioning"]
+            ),
+        },
+    }
+
+
 
 def test_validate_stage2_output_flags_restriction_violations():
     report = validate_stage2_output(
@@ -260,6 +282,44 @@ def test_validate_stage2_output_does_not_count_post_phase_sections_for_last_phas
 
     missing_requirements = {(item["phase"], item["requirement"]) for item in report["missing_required_elements"]}
     assert ("TAPER", "rehab") in missing_requirements
+
+
+def test_validate_stage2_output_blocks_late_fight_overbuild_in_transition_window():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        Monday - Hard Sparring
+        - Hard sparring - 6 rounds
+        Tuesday - Conditioning
+        - Hard Shuttle - 6x20s / 60s
+        Wednesday - Strength
+        - Primary Strength - Trap Bar Deadlift 4x3
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_active_role_overage" in warning_codes
+    assert "late_fight_meaningful_stress_overage" in warning_codes
+    assert "late_fight_hard_sparring_overage" in warning_codes
+    assert "late_fight_forbidden_content" in warning_codes
+
+
+def test_validate_stage2_output_blocks_d1_forbidden_blocks_and_block_overage():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-1"),
+        final_plan_text="""
+        Friday - Primer
+        - Neural Primer - 2x2 med-ball scoop toss
+        - Jump Series - 3x3
+        - Hinge Transfer - Trap Bar Pull 3x2
+        - Contrast Pair - 2 rounds
+        - Fight Pace Conditioning - 3 rounds
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_block_overage" in warning_codes
+    assert "late_fight_forbidden_content" in warning_codes
 
 def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
     base = _planning_brief_fixture()

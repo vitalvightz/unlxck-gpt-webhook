@@ -262,6 +262,19 @@ def _pick_downgrade_target(
     return hard_days[-1]
 
 
+def _pick_protected_hard_day(
+    hard_days: list[str],
+    *,
+    week: dict[str, Any],
+) -> str:
+    if not hard_days:
+        return ""
+    protected_day = _main_collision_owner_day(week, hard_days)
+    if protected_day:
+        return protected_day
+    return hard_days[0]
+
+
 def _reason_codes(
     *,
     fatigue: str,
@@ -362,7 +375,40 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             for day in hard_days
         ]
 
-    # --- Single-target downgrade (D-7 cap_one or readiness-based) ---
+    # --- D-7 countdown cap: keep only one hard day and downgrade the rest ---
+    if countdown_override == "cap_one":
+        protected_day = _pick_protected_hard_day(hard_days, week=week)
+        countdown_codes = list(reason_codes_list)
+        if "fight_week_taper" not in countdown_codes:
+            countdown_codes.insert(0, "fight_week_taper")
+        countdown_reason = ", ".join(countdown_codes)
+
+        plan: list[dict[str, Any]] = []
+        for day in hard_days:
+            if day == protected_day:
+                plan.append(
+                    {
+                        "day": day,
+                        "status": "hard_as_planned",
+                        "effective_load": "hard",
+                        "reason_codes": [],
+                        "reason": "",
+                    }
+                )
+                continue
+            plan.append(
+                {
+                    "day": day,
+                    "status": target_status,
+                    "effective_load": target_load,
+                    "reason_codes": list(countdown_codes),
+                    "reason": countdown_reason,
+                    "coach_note": _sparring_override_coach_note(days_until_fight, action),
+                }
+            )
+        return plan
+
+    # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
 
     plan: list[dict[str, Any]] = []
