@@ -1070,6 +1070,19 @@ def test_late_fight_technical_round_overage_flagged_on_d5():
     assert "late_fight_technical_round_overage" in warning_codes
 
 
+def test_late_fight_technical_round_within_d5_ceiling_passes():
+    """D-5 plan with 4 technical rounds (at ceiling) must NOT emit technical_round_overage."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        Thursday - Technical Touch
+        - Shadowboxing - 4 rounds @ RPE 6
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_technical_round_overage" not in warning_codes
+
+
 def test_late_fight_alactic_overage_flagged_on_d1():
     """D-1 plan with 5 alactic bursts (> 3 cap) must emit alactic_dose_overage."""
     report = validate_stage2_output(
