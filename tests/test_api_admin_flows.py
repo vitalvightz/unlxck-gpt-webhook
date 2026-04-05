@@ -372,6 +372,96 @@ def test_admin_can_reject_approved_plan_back_to_review():
     assert body["admin_outputs"]["stage2_status"] == "admin_review_rejected"
 
 
+def test_admin_plan_mutations_emit_actor_aware_audit_logs(monkeypatch):
+    captured_calls: list[tuple[str, tuple[object, ...]]] = []
+
+    original_info = __import__("api.app", fromlist=["logger"]).logger.info
+
+    def capture_info(message, *args, **kwargs):
+        captured_calls.append((message, args))
+        return original_info(message, *args, **kwargs)
+
+    monkeypatch.setattr("api.app.logger.info", capture_info)
+
+    scenarios = [
+        {
+            "action": "manual-stage2",
+            "route_suffix": "manual-stage2",
+            "result": finalized_result(
+                status="review_required",
+                plan_text="",
+                final_plan_text="",
+                stage2_status="stage2_failed",
+                stage2_retry_text="repair prompt",
+                stage2_attempt_count=2,
+            ),
+            "json": ManualStage2SubmissionRequest(final_plan_text="# Manual GPT Final").model_dump(mode="json"),
+        },
+        {
+            "action": "approve",
+            "route_suffix": "approve",
+            "result": finalized_result(
+                status="review_required",
+                plan_text="",
+                final_plan_text="# Held Stage 2 Output",
+                stage2_status="stage2_failed",
+                stage2_retry_text="repair prompt",
+                stage2_attempt_count=2,
+            ),
+            "json": None,
+        },
+        {
+            "action": "reject",
+            "route_suffix": "reject",
+            "result": finalized_result(
+                status="ready",
+                plan_text="# Released Stage 2 Output",
+                final_plan_text="# Released Stage 2 Output",
+                stage2_status="admin_review_approved",
+                stage2_retry_text="repair prompt",
+                stage2_attempt_count=2,
+            ),
+            "json": None,
+        },
+    ]
+
+    for scenario in scenarios:
+        client, store, _ = _build_client()
+        athlete = AuthenticatedUser(
+            user_id="athlete-1",
+            email="ari@example.com",
+            full_name="Ari Mensah",
+            metadata={},
+        )
+        store.ensure_profile(athlete)
+        plan = store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake_x",
+            request=_build_request(),
+            result=scenario["result"],
+        )
+
+        response = client.post(
+            f"/api/admin/plans/{plan['id']}/{scenario['route_suffix']}",
+            headers={"Authorization": "Bearer admin-token"},
+            json=scenario["json"],
+        )
+
+        assert response.status_code == 200
+        audit_messages = [
+            message % args if args else message
+            for message, args in captured_calls
+            if "[audit] admin_plan_mutation" in message
+        ]
+        assert audit_messages
+        assert any(f"action={scenario['action']}" in message for message in audit_messages)
+        assert any("actor_id=admin-1" in message for message in audit_messages)
+        assert any("actor_email=ops@unlxck.test" in message for message in audit_messages)
+        assert any(f"plan_id={plan['id']}" in message for message in audit_messages)
+        assert any("target_athlete_id=athlete-1" in message for message in audit_messages)
+        captured_calls.clear()
+
+
 def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():
     for scenario in [item for item in SYSTEM_SCENARIOS if item.expected_resolution]:
         client, store, _ = _build_client(FakeStage2Automator(result=scenario.automator_result))

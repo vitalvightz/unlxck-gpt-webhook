@@ -63,6 +63,23 @@ def test_boxer_avoids_grappling_terms():
     assert not any(term in tags for term in banned)
 
 
+def test_generate_strength_block_coerces_string_training_inputs():
+    flags = {
+        "phase": "GPP",
+        "fight_format": "boxing",
+        "training_days": "Mon, Wed",
+        "training_frequency": "not-a-number",
+        "random_seed": 0,
+        "equipment": ["dumbbells", "bands", "kettlebell", "bodyweight"],
+        "key_goals": [],
+    }
+
+    block = generate_strength_block(flags=flags, weaknesses=[], mindset_cue=None)
+
+    assert block["num_sessions"] == 1
+    assert block["exercises"]
+
+
 def test_dedupe_against_general_bank():
     flags = {
         "phase": "SPP",

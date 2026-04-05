@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from collections import deque
@@ -54,6 +55,7 @@ Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
+DEFAULT_MAX_REQUEST_BODY_BYTES = 1_048_576
 
 
 class SlidingWindowRateLimiter:
@@ -181,7 +183,83 @@ def _normalize_origin(origin: str) -> str:
 
 def _cors_origin_regex() -> str | None:
     value = os.getenv("APP_CORS_ORIGIN_REGEX", "").strip()
-    return value or None
+    if not value:
+        return None
+    try:
+        re.compile(value)
+    except re.error as exc:
+        raise ValueError(f"APP_CORS_ORIGIN_REGEX is not a valid regular expression: {exc}") from exc
+
+    normalized = value.lstrip("^")
+    if not normalized.startswith(("https://", "http://")):
+        raise ValueError("APP_CORS_ORIGIN_REGEX must begin with http:// or https://")
+    if ".*" in value:
+        raise ValueError(
+            "APP_CORS_ORIGIN_REGEX must avoid broad wildcard tokens like '.*'; use a host-bounded pattern instead"
+        )
+    return value
+
+
+def _max_request_body_bytes() -> int:
+    raw_value = os.getenv("APP_MAX_REQUEST_BODY_BYTES", str(DEFAULT_MAX_REQUEST_BODY_BYTES)).strip()
+    try:
+        return max(1, int(raw_value))
+    except ValueError:
+        logger.warning(
+            "[request-limit] invalid APP_MAX_REQUEST_BODY_BYTES=%r; falling back to %d",
+            raw_value,
+            DEFAULT_MAX_REQUEST_BODY_BYTES,
+        )
+        return DEFAULT_MAX_REQUEST_BODY_BYTES
+
+
+def _enforce_request_body_limit(request: Request, *, max_body_bytes: int) -> None:
+    content_length = request.headers.get("content-length", "").strip()
+    if content_length:
+        with suppress(ValueError):
+            if int(content_length) > max_body_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail="Request body too large",
+                )
+
+    original_receive = request._receive
+    received_bytes = 0
+
+    async def limited_receive() -> dict[str, Any]:
+        nonlocal received_bytes
+        message = await original_receive()
+        if message["type"] == "http.request":
+            received_bytes += len(message.get("body", b""))
+            if received_bytes > max_body_bytes:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail="Request body too large",
+                )
+        return message
+
+    request._receive = limited_receive
+
+
+def _log_admin_plan_mutation(
+    *,
+    action: str,
+    actor: ProfileRecord,
+    plan_id: str,
+    original_plan: dict[str, Any],
+    updated_plan: dict[str, Any],
+) -> None:
+    logger.info(
+        "[audit] admin_plan_mutation action=%s actor_id=%s actor_email=%s plan_id=%s target_athlete_id=%s previous_status=%s next_status=%s next_stage2_status=%s",
+        action,
+        actor.athlete_id,
+        actor.email,
+        plan_id,
+        str(original_plan.get("athlete_id") or ""),
+        str(original_plan.get("status") or ""),
+        str(updated_plan.get("status") or ""),
+        str(updated_plan.get("stage2_status") or ""),
+    )
 
 
 def _plan_generate_rate_limit_requests() -> int:
@@ -448,6 +526,7 @@ def create_app(
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
     app.state.active_generation_tasks = set()
+    app.state.max_request_body_bytes = _max_request_body_bytes()
     rate_limit_requests = _plan_generate_rate_limit_requests()
     app.state.plan_generate_rate_limiter = (
         SlidingWindowRateLimiter(
@@ -483,6 +562,7 @@ def create_app(
         )
 
         try:
+            _enforce_request_body_limit(request, max_body_bytes=request.app.state.max_request_body_bytes)
             response = await call_next(request)
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
             response.headers["X-Request-ID"] = request_id
@@ -1016,7 +1096,7 @@ def create_app(
     def submit_manual_stage2(
         plan_id: str,
         submission: ManualStage2SubmissionRequest,
-        _: ProfileRecord = Depends(require_admin),
+        admin: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
@@ -1027,12 +1107,19 @@ def create_app(
             plan_id,
             _manual_stage2_result(plan_row, submission.final_plan_text),
         )
+        _log_admin_plan_mutation(
+            action="manual-stage2",
+            actor=admin,
+            plan_id=plan_id,
+            original_plan=plan_row,
+            updated_plan=updated,
+        )
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
     def approve_review_required_plan(
         plan_id: str,
-        _: ProfileRecord = Depends(require_admin),
+        admin: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
@@ -1043,12 +1130,19 @@ def create_app(
             plan_id,
             _admin_approved_result(plan_row),
         )
+        _log_admin_plan_mutation(
+            action="approve",
+            actor=admin,
+            plan_id=plan_id,
+            original_plan=plan_row,
+            updated_plan=updated,
+        )
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(
         plan_id: str,
-        _: ProfileRecord = Depends(require_admin),
+        admin: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
@@ -1058,6 +1152,13 @@ def create_app(
         updated = store.update_plan_stage2(
             plan_id,
             _admin_rejected_result(plan_row),
+        )
+        _log_admin_plan_mutation(
+            action="reject",
+            actor=admin,
+            plan_id=plan_id,
+            original_plan=plan_row,
+            updated_plan=updated,
         )
         return _map_plan_detail(updated, include_admin=True)
 
