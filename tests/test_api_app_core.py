@@ -153,9 +153,20 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
     }
 
 
-def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invalid(monkeypatch: pytest.MonkeyPatch):
+@pytest.mark.parametrize(
+    ("env_name", "env_value"),
+    [
+        ("APP_CORS_ORIGINS", "://bad-origin"),
+        ("UNLXCK_STAGE2_TIMEOUT_SECONDS", "not-a-number"),
+    ],
+)
+def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invalid(
+    monkeypatch: pytest.MonkeyPatch,
+    env_name: str,
+    env_value: str,
+):
     monkeypatch.setenv("UNLXCK_DEMO_MODE", "1")
-    monkeypatch.setenv("APP_CORS_ORIGINS", "://bad-origin")
+    monkeypatch.setenv(env_name, env_value)
 
     reloaded = importlib.reload(app_module)
 
