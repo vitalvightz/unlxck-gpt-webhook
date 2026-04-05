@@ -109,7 +109,6 @@ def _build_stage2(days):
         prev_exercises=[],
         recent_exercises=[],
         phase_weeks={"GPP": 0, "SPP": 0, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": days or 7}},
-        fight_date="2026-04-10",
         days_until_fight=days,
         hard_sparring_days=["Tue", "Thu"],
         technical_skill_days=["Fri"],
@@ -252,22 +251,6 @@ class TestPlanningBriefBranching:
         assert brief["weekly_role_map"]["weeks"] == []
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["neural_primer_day"]
 
-    @pytest.mark.parametrize(
-        ("days_until_fight", "expected_window", "expected_training_days", "expected_hard_days"),
-        [
-            (1, ["Thursday", "Friday"], ["thursday", "friday"], ["thursday"]),
-            (3, ["Tuesday", "Wednesday", "Thursday", "Friday"], ["tuesday", "wednesday", "thursday", "friday"], ["tuesday", "thursday"]),
-            (6, ["Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], ["monday", "tuesday", "wednesday", "thursday", "friday"], ["tuesday", "thursday"]),
-        ],
-    )
-    def test_late_fight_brief_trims_to_remaining_window(self, days_until_fight, expected_window, expected_training_days, expected_hard_days):
-        brief = _build_brief_for(days_until_fight)
-        athlete_snapshot = brief["athlete_snapshot"]
-        assert athlete_snapshot["active_window_weekdays"] == expected_window
-        assert athlete_snapshot["training_days"] == expected_training_days
-        assert athlete_snapshot["hard_sparring_days"] == expected_hard_days
-        assert brief["late_fight_plan_spec"]["active_window_weekdays"] == expected_window
-
 
 class TestStage2PayloadBranching:
     def test_camp_payload_stays_on_normal_stage2_schema(self):
@@ -293,15 +276,13 @@ class TestStage2PayloadBranching:
             "fight_week_freshness_day",
         ]
 
-    def test_late_fight_payload_trims_day_lists_to_remaining_window(self):
+    def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
         athlete_model = payload["athlete_model"]
-        assert athlete_model["active_window_weekdays"] == ["Thursday", "Friday"]
-        assert athlete_model["hard_sparring_days"] == ["Thu"]
-        assert athlete_model["training_days"] == ["Thu", "Fri"]
+        assert athlete_model["hard_sparring_days"] == ["Tue", "Thu"]
+        assert athlete_model["training_days"] == ["Mon", "Tue", "Wed", "Thu", "Fri"]
         assert athlete_model["technical_skill_days"] == ["Fri"]
         assert athlete_model["key_goals"] == ["power"]
-        assert payload["late_fight_plan_spec"]["active_window_weekdays"] == ["Thursday", "Friday"]
 
     def test_d1_payload_still_uses_late_fight_mode_without_week_structure(self):
         brief = _build_brief_for(1)
@@ -349,16 +330,6 @@ class TestHandoffText:
         assert expected_heading in text
         assert "STAGE 1 DRAFT PLAN" in text
         assert "Draft plan text." in text
-
-    def test_late_fight_handoff_puts_mode_instructions_before_base_prompt(self):
-        text = self._build_handoff(1)
-        assert text.index("PAYLOAD MODE INSTRUCTIONS") < text.index("You are Stage 2 (planner/finalizer).")
-
-    def test_d1_handoff_explicitly_limits_output_to_remaining_days(self):
-        payload = _build_stage2(1)
-        text = build_stage2_handoff_text(stage2_payload=payload, plan_text="Draft plan text.")
-        assert "ALLOWED DAYS ONLY: Thursday, Friday." in text
-        assert "Do not add earlier weekdays or a Monday-to-Sunday frame." in text
 
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)

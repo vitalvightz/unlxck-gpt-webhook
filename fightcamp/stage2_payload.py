@@ -5,7 +5,6 @@ import re
 from typing import Any
 
 from .stage2_payload_late_fight import (
-    _active_window_weekdays,
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
     _build_late_fight_week_by_week_progression,
@@ -16,7 +15,6 @@ from .stage2_payload_late_fight import (
     _handoff_mode_instructions,
     _late_fight_permissions,
     _late_fight_rendering_rules,
-    _windowed_weekdays,
     _uses_late_fight_stage2_payload,
 )
 from .normalization import normalize_lower_text
@@ -662,7 +660,6 @@ def _build_athlete_model(
         "competitive_maturity": record_profile["competitive_maturity"],
         "rounds_format": rounds_format,
         "camp_length_weeks": camp_length_weeks,
-        "fight_date": training_context.fight_date,
         "days_until_fight": training_context.days_until_fight,
         "fatigue": training_context.fatigue,
         "age": training_context.age,
@@ -691,21 +688,6 @@ def _build_athlete_model(
         ),
     }
     return athlete_model
-
-
-def _enrich_late_fight_athlete_model(athlete_model: dict) -> dict:
-    enriched = dict(athlete_model)
-    days_until_fight = enriched.get("days_until_fight")
-    if not _uses_late_fight_stage2_payload(days_until_fight):
-        return enriched
-    active_window = _active_window_weekdays(days_until_fight, enriched)
-    if not active_window:
-        return enriched
-    enriched["active_window_weekdays"] = active_window
-    enriched["training_days"] = _windowed_weekdays(_clean_list(enriched.get("training_days", [])), active_window)
-    enriched["hard_sparring_days"] = _windowed_weekdays(_clean_list(enriched.get("hard_sparring_days", [])), active_window)
-    enriched["technical_skill_days"] = _windowed_weekdays(_clean_list(enriched.get("technical_skill_days", [])), active_window)
-    return enriched
 
 
 def _priority_bucket(label: str, kind: str) -> dict:
@@ -3201,7 +3183,7 @@ def build_planning_brief(
     omission_ledger: dict[str, dict],
     rewrite_guidance: dict,
 ) -> dict:
-    athlete_model = _enrich_late_fight_athlete_model(dict(athlete_model))
+    athlete_model = dict(athlete_model)
     athlete_model["compressed_priorities"] = athlete_model.get("compressed_priorities") or _compress_short_camp_priorities(
         athlete_model
     )
@@ -3687,7 +3669,6 @@ def build_stage2_payload(
         camp_length_weeks=camp_len,
         short_notice=short_notice,
     )
-    athlete_model = _enrich_late_fight_athlete_model(athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
     omission_ledger = _build_omission_ledger(
@@ -3933,26 +3914,6 @@ def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) ->
     return athlete_model if isinstance(athlete_model, dict) else {}
 
 
-def _active_window_weekdays_for_handoff(planning_brief: dict | None, stage2_payload: dict) -> list[str]:
-    if isinstance(planning_brief, dict):
-        late_fight_plan_spec = planning_brief.get("late_fight_plan_spec")
-        if isinstance(late_fight_plan_spec, dict):
-            values = late_fight_plan_spec.get("active_window_weekdays")
-            if isinstance(values, list):
-                return [str(day).strip() for day in values if str(day).strip()]
-        athlete_snapshot = planning_brief.get("athlete_snapshot")
-        if isinstance(athlete_snapshot, dict):
-            values = athlete_snapshot.get("active_window_weekdays")
-            if isinstance(values, list):
-                return [str(day).strip() for day in values if str(day).strip()]
-    athlete_model = stage2_payload.get("athlete_model")
-    if isinstance(athlete_model, dict):
-        values = athlete_model.get("active_window_weekdays")
-        if isinstance(values, list):
-            return [str(day).strip() for day in values if str(day).strip()]
-    return []
-
-
 def build_stage2_handoff_text(
     *,
     stage2_payload: dict,
@@ -3972,15 +3933,13 @@ def build_stage2_handoff_text(
     payload_mode = stage2_payload.get("payload_mode") or stage2_payload.get("effective_stage2_mode") or "camp_payload"
 
     # ── Payload-mode-sensitive hard instructions ──────────────────
-    mode_instructions = _handoff_mode_instructions(
-        payload_mode,
-        _active_window_weekdays_for_handoff(planning_brief, stage2_payload),
-    )
+    mode_instructions = _handoff_mode_instructions(payload_mode)
 
-    sections = []
+    sections = [
+        STAGE2_FINALIZER_PROMPT.strip(),
+    ]
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
-    sections.append(STAGE2_FINALIZER_PROMPT.strip())
     sections.append("PLANNING BRIEF\n" + _json_block(context_block))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
     cleaned_notes = (coach_notes or "").strip()

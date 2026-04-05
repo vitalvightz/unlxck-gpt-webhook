@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
-
-from .input_parsing import parse_fight_date
 
 
 _PAYLOAD_MODE_MAP = {
@@ -59,41 +56,6 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 def _ordered_weekdays(values: list[str]) -> list[str]:
     cleaned = _dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
-
-
-def _active_window_weekdays(days_until_fight: Any, athlete_model: dict) -> list[str]:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return []
-    if days < 0:
-        return []
-    fight_date = parse_fight_date(str(athlete_model.get("fight_date", "")).strip())
-    if fight_date is None:
-        return []
-    start_date = fight_date.date() - timedelta(days=days)
-    return [(start_date + timedelta(days=offset)).strftime("%A") for offset in range(days + 1)]
-
-
-def _windowed_weekdays(values: list[str], active_window_weekdays: list[str]) -> list[str]:
-    if not active_window_weekdays:
-        return _ordered_weekdays(values)
-    canonical_to_original: dict[str, str] = {}
-    for value in _dedupe_preserve_order([str(item).strip() for item in values if str(item).strip()]):
-        lowered = value.lower()
-        if lowered in _WEEKDAY_ORDER and lowered not in canonical_to_original:
-            canonical_to_original[lowered] = value
-    ordered: list[str] = []
-    for day in active_window_weekdays:
-        lowered = str(day).strip().lower()
-        day_index = _WEEKDAY_ORDER.get(lowered)
-        if day_index is None:
-            continue
-        aliases = [key for key, index in _WEEKDAY_ORDER.items() if index == day_index]
-        original = next((canonical_to_original[alias] for alias in aliases if alias in canonical_to_original), None)
-        if original:
-            ordered.append(original)
-    return ordered
 
 
 def _role_anchor(role_key: str) -> str:
@@ -693,7 +655,6 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
 def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
     mode = _days_out_payload_mode(days_until_fight)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
-    active_window = _active_window_weekdays(days_until_fight, athlete_model)
     if mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload"}:
         weeks: list[dict[str, Any]] = []
     else:
@@ -704,9 +665,9 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
                 "stage_key": _late_fight_window(days_until_fight),
                 "phase_week_index": 1,
                 "phase_week_total": 1,
-                "declared_training_days": _windowed_weekdays(_clean_list(athlete_model.get("training_days", [])), active_window),
-                "declared_hard_sparring_days": _windowed_weekdays(_clean_list(athlete_model.get("hard_sparring_days", [])), active_window),
-                "declared_technical_skill_days": _windowed_weekdays(_clean_list(athlete_model.get("technical_skill_days", [])), active_window),
+                "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
+                "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+                "declared_technical_skill_days": _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
                 "hard_sparring_plan": [],
                 "effective_hard_sparring_days": [],
                 "coach_note_flags": [_late_fight_stage_label(days_until_fight)],
@@ -745,14 +706,12 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     payload_block = _days_out_payload_block(days_until_fight, athlete_model)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
     session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
-    active_window = _active_window_weekdays(days_until_fight, athlete_model)
     return {
         "payload_variant": "late_fight_stage2_payload",
         "payload_mode": payload_block["payload_mode"],
         "days_out_bucket": payload_block["days_out_bucket"],
         "late_fight_window": payload_block["late_fight_window"],
         "summary": _late_fight_summary(days_until_fight),
-        "active_window_weekdays": active_window,
         "session_cap": len(roles),
         "session_roles": [role.get("role_key") for role in roles],
         "session_sequence": session_sequence,
@@ -762,71 +721,55 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     }
 
 
-def _allowed_window_note(active_window_weekdays: list[str]) -> str:
-    days = [str(day).strip() for day in active_window_weekdays if str(day).strip()]
-    if not days:
-        return ""
-    return (
-        "ALLOWED DAYS ONLY: "
-        + ", ".join(days)
-        + ". Render only this remaining day window in order. Do not add earlier weekdays or a Monday-to-Sunday frame."
-    )
-
-
-def _handoff_mode_instructions(payload_mode: str, active_window_weekdays: list[str] | None = None) -> str:
-    allowed_window_note = _allowed_window_note(active_window_weekdays or [])
+def _handoff_mode_instructions(payload_mode: str) -> str:
     if payload_mode == "fight_day_protocol_payload":
         return (
             "HARD OVERRIDE — FIGHT DAY PROTOCOL\n"
             "This is D-0. The athlete fights today.\n"
-            + ((allowed_window_note + "\n") if allowed_window_note else "")
-            + "Do NOT generate a training week, session-role structure, or weekly architecture.\n"
-            + "Do NOT use strength, conditioning, session-role, anchor, or programming language.\n"
-            + "Output ONLY:\n"
-            + "- Activation / warm-up protocol\n"
-            + "- Tactical cueing (style, stance, rhythm)\n"
-            + "- Fueling / hydration / logistics\n"
-            + "- Post-fight recovery notes\n"
-            + "Keep it short, decisive, and fight-ready.\n"
-            + "Do NOT restore any suppressed roles from the planning brief."
+            "Do NOT generate a training week, session-role structure, or weekly architecture.\n"
+            "Do NOT use strength, conditioning, session-role, anchor, or programming language.\n"
+            "Output ONLY:\n"
+            "- Activation / warm-up protocol\n"
+            "- Tactical cueing (style, stance, rhythm)\n"
+            "- Fueling / hydration / logistics\n"
+            "- Post-fight recovery notes\n"
+            "Keep it short, decisive, and fight-ready.\n"
+            "Do NOT restore any suppressed roles from the planning brief."
         )
     if payload_mode == "pre_fight_day_payload":
         return (
             "HARD OVERRIDE — PRE-FIGHT DAY (D-1)\n"
             "This is the day before the fight. Do NOT build a normal training week.\n"
-            + ((allowed_window_note + "\n") if allowed_window_note else "")
-            + "Output ONLY:\n"
-            + "- Neural primer (max 1 short session)\n"
-            + "- Light technical touch if applicable\n"
-            + "- Mobility / reset protocol\n"
-            + "- Pre-fight instructions and preparation notes\n"
-            + "FORBIDDEN TERMS: anchor, primary strength, conditioning block, fight-pace density, glycolytic.\n"
-            + "PREFERRED TERMS: primer, touch, sharpness, reset, rhythm.\n"
-            + "Do NOT use weekly architecture framing.\n"
-            + "Do NOT restore suppressed session roles.\n"
-            + "Do NOT generate hard sparring or conditioning-system allocation."
+            "Output ONLY:\n"
+            "- Neural primer (max 1 short session)\n"
+            "- Light technical touch if applicable\n"
+            "- Mobility / reset protocol\n"
+            "- Pre-fight instructions and preparation notes\n"
+            "FORBIDDEN TERMS: anchor, primary strength, conditioning block, fight-pace density, glycolytic.\n"
+            "PREFERRED TERMS: primer, touch, sharpness, reset, rhythm.\n"
+            "Do NOT use weekly architecture framing.\n"
+            "Do NOT restore suppressed session roles.\n"
+            "Do NOT generate hard sparring or conditioning-system allocation."
         )
     if payload_mode == "late_fight_session_payload":
         return (
             "LATE FIGHT MODE — SESSION-BY-SESSION (D-4 to D-2)\n"
             "Do NOT frame this as a normal camp week.\n"
-            + ((allowed_window_note + "\n") if allowed_window_note else "")
-            + "Present the plan session-by-session, not as a program block.\n"
-            + "Do NOT render week headers, Monday-to-Sunday structure, or a full weekly schedule.\n"
-            + "Do NOT use broad development language, phase-explanation dumps, or long rationale sections.\n"
-            + "Do NOT generate developmental strength blocks or glycolytic build logic.\n"
-            + "Hard sparring influence narrows progressively (D-4/D-3 can still influence, D-2 advisory only).\n"
-            + "Keep output concise. No weekly frequency reasoning.\n"
-            + "No 'program block' framing. No phase-explanation dump."
+            "Present the plan session-by-session, not as a program block.\n"
+            "Do NOT render week headers, Monday-to-Sunday structure, or a full weekly schedule.\n"
+            "Do NOT use broad development language, phase-explanation dumps, or long rationale sections.\n"
+            "Do NOT generate developmental strength blocks or glycolytic build logic.\n"
+            "Hard sparring influence narrows progressively (D-4/D-3 can still influence, D-2 advisory only).\n"
+            "Keep output concise. No weekly frequency reasoning.\n"
+            "No 'program block' framing. No phase-explanation dump."
         )
     if payload_mode == "late_fight_week_payload":
         return (
             "LATE FIGHT MODE — COMPRESSED WEEK (D-7 to D-5)\n"
             "This is late fight week. Use compressed weekly framing.\n"
-            + ((allowed_window_note + "\n") if allowed_window_note else "")
-            + "Max 1 meaningful strength anchor. Max 1 meaningful conditioning stressor.\n"
-            + "Allow hard sparring logic where declared.\n"
-            + "Forbid broad development language and multiple non-sparring stressors.\n"
-            + "Keep output concise. No broad development build."
+            "Max 1 meaningful strength anchor. Max 1 meaningful conditioning stressor.\n"
+            "Allow hard sparring logic where declared.\n"
+            "Forbid broad development language and multiple non-sparring stressors.\n"
+            "Keep output concise. No broad development build."
         )
     return ""
