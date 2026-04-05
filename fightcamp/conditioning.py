@@ -971,6 +971,52 @@ def _glycolytic_fallback(phase: str) -> dict:
     }
 
 
+def _late_fight_dosage_caps(days_until_fight: int) -> str:
+    """Return a countdown-aware dosage template string for late-fight TAPER days (days_until_fight <= 5)."""
+    if days_until_fight == 5:
+        return (
+            "D-5 late-fight caps: alactic bursts 4–6 max (6–12 sec @ RPE 8–9, rest 90–120 sec); "
+            "technical rounds 2–4 short rounds max (≤3 min @ RPE 6–7); "
+            "no generic 6–10 round structures. Cap 8–10 min active. "
+            "Template applies unless a drill lists its own structure."
+        )
+    if days_until_fight == 4:
+        return (
+            "D-4 late-fight caps: alactic bursts 3–5 max (6–10 sec @ RPE 8–9, rest 90–120 sec); "
+            "technical rounds 2–3 short rounds max (≤3 min @ RPE 6–7); "
+            "cap 6–8 min active. "
+            "Template applies unless a drill lists its own structure."
+        )
+    if days_until_fight == 3:
+        return (
+            "D-3 late-fight caps: alactic bursts 0–4 conditional (6–10 sec @ RPE 8, rest 120 sec); "
+            "technical touch 1–3 short rounds max (≤2 min @ RPE 6); "
+            "cap 5–7 min active. "
+            "Template applies unless a drill lists its own structure."
+        )
+    if days_until_fight == 2:
+        return (
+            "D-2 late-fight caps: alactic bursts 2–4 max (6–8 sec @ RPE 8, rest 120 sec); "
+            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
+            "cap 4–6 min active. "
+            "Template applies unless a drill lists its own structure."
+        )
+    if days_until_fight == 1:
+        return (
+            "D-1 late-fight caps: alactic bursts 2–3 max (6–8 sec @ RPE 7–8, rest 120 sec); "
+            "technical touch 1–2 short rounds max (≤2 min @ RPE 6); "
+            "no conditioning-style round structures; cap 3–5 min active. "
+            "Template applies unless a drill lists its own structure."
+        )
+    if days_until_fight == 0:
+        return (
+            "Fight-day caps: alactic bursts 2–4 very short bursts max (4–6 sec @ RPE 7, rest 120 sec); "
+            "tiny walk-through only; no conditioning rounds; cap 3–4 min active. "
+            "Template applies unless a drill lists its own structure."
+        )
+    return "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min). Template applies unless a drill lists its own structure."
+
+
 def render_conditioning_block(
     grouped_drills: dict[str, list[dict]],
     *,
@@ -983,15 +1029,27 @@ def render_conditioning_block(
     resolved_sessions: list[dict] | None = None,
 ) -> str:
     phase = phase.upper()
+    _diag = diagnostic_context or {}
+    _days_until_fight = _diag.get("days_until_fight")
+    try:
+        _days_int = int(_days_until_fight)
+    except (TypeError, ValueError):
+        _days_int = None
+
     phase_intent = {
         "GPP": "Build aerobic base, improve repeatability, low damage.",
         "SPP": "Match fight demands with intervals and skill-relevant density.",
         "TAPER": "Speed + alactic sharpness, neural freshness, low damage.",
     }
+    _taper_dosage = (
+        _late_fight_dosage_caps(_days_int)
+        if phase == "TAPER" and _days_int is not None and _days_int <= 5
+        else "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min). Template applies unless a drill lists its own structure."
+    )
     dosage_template = {
         "GPP": "3–5 rounds of 3–5 min @ RPE 6–7, work:rest 1:1–1:0.5 (cap 20–30 min). Template applies unless a drill lists its own structure.",
         "SPP": "4–6 rounds of 2–5 min @ RPE 7–8, work:rest 1:1–1:0.5 (cap 18–25 min). Template applies unless a drill lists its own structure.",
-        "TAPER": "6–10 rounds of 6–12 sec @ RPE 8–9, rest 60–120 sec (cap 8–12 min). Template applies unless a drill lists its own structure.",
+        "TAPER": _taper_dosage,
     }
     weekly_progression = {
         "GPP": "Add 1 round or ~5–10% volume weekly; deload final week by ~20%.",

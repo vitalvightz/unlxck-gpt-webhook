@@ -22,6 +22,9 @@ _BLOCKING_WARNING_CODES = {
     "late_fight_forbidden_content",
     "late_fight_hard_sparring_overage",
     "late_fight_meaningful_stress_overage",
+    "late_fight_alactic_dose_overage",
+    "late_fight_technical_round_overage",
+    "late_fight_conditioning_round_structure_forbidden",
 }
 
 

@@ -1025,3 +1025,111 @@ def test_validate_stage2_output_flags_weight_cut_state_contradiction():
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "weight_cut_state_contradiction" in warning_codes
+
+
+# ---------------------------------------------------------------------------
+# Late-fight dosage ceiling tests
+# ---------------------------------------------------------------------------
+
+def test_late_fight_alactic_dose_overage_flagged_on_d5():
+    """D-5 plan with 8 alactic bursts (> 6 cap) must emit alactic_dose_overage."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        Thursday - Sharpness Session
+        - Air Bike Sprint - 8 bursts x 8 sec @ RPE 8–9, rest 90 sec
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_alactic_dose_overage" in warning_codes
+
+
+def test_late_fight_alactic_dose_within_d5_ceiling_passes():
+    """D-5 plan with 6 alactic bursts (at ceiling) must NOT emit alactic_dose_overage."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        Thursday - Sharpness Session
+        - Air Bike Sprint - 6 bursts x 8 sec @ RPE 8–9, rest 90 sec
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_alactic_dose_overage" not in warning_codes
+
+
+def test_late_fight_technical_round_overage_flagged_on_d5():
+    """D-5 plan with 6 technical rounds (> 4 cap) must emit technical_round_overage."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        Thursday - Technical Touch
+        - Shadowboxing - 6 rounds @ RPE 6
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_technical_round_overage" in warning_codes
+
+
+def test_late_fight_alactic_overage_flagged_on_d1():
+    """D-1 plan with 5 alactic bursts (> 3 cap) must emit alactic_dose_overage."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-1"),
+        final_plan_text="""
+        Friday - Neural Primer
+        - Short Sprint - 5 bursts x 6 sec @ RPE 7–8, rest 120 sec
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_alactic_dose_overage" in warning_codes
+
+
+def test_late_fight_d1_conditioning_round_structure_forbidden():
+    """D-1 plan with a conditioning-style round structure must emit the forbidden code."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-1"),
+        final_plan_text="""
+        Friday - Neural Primer
+        - Shadowboxing - 3 rounds of 2 min @ RPE 6
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_conditioning_round_structure_forbidden" in warning_codes
+
+
+def test_late_fight_d1_simple_bursts_no_round_structure_flag():
+    """D-1 with plain burst lines (no round structure) must NOT trigger the forbidden code."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-1"),
+        final_plan_text="""
+        Friday - Neural Primer
+        - Short Sprint - 2 bursts x 6 sec @ RPE 7, rest 120 sec
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_conditioning_round_structure_forbidden" not in warning_codes
+
+
+def test_late_fight_alactic_overage_d4():
+    """D-4 plan with 7 alactic bursts (> 5 cap) must emit alactic_dose_overage."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-4"),
+        final_plan_text="""
+        Monday - Sharpness
+        - Alactic Sprint - 7 bursts x 8 sec @ RPE 8, rest 90 sec
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_alactic_dose_overage" in warning_codes
+
+
+def test_late_fight_dosage_ceiling_not_applied_outside_countdown():
+    """Plans with days_out_bucket D-7 (> 5) should not trigger dosage ceiling checks."""
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-7"),
+        final_plan_text="""
+        Monday - Sharpness Session
+        - Air Bike Sprint - 8 bursts x 8 sec @ RPE 8–9, rest 90 sec
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_alactic_dose_overage" not in warning_codes
