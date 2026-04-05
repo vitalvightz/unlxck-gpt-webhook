@@ -1233,10 +1233,10 @@ _TECHNICAL_ROUND_SIGNALS = re.compile(
 )
 
 # Patterns that indicate a conditioning-style round structure (forbidden on D-1).
-# Matches patterns like "3 rounds of 2 min", "6–10 rounds of 6–12 sec".
-# Uses \s+ (not \s*) between key tokens to prevent catastrophic backtracking.
+# Matches patterns like "3 rounds of 2 min", "10 rounds of 6 sec".
+# Uses \s+ throughout and avoids alternation on digit groups to prevent ReDoS.
 _CONDITIONING_ROUND_STRUCTURE = re.compile(
-    r"(?:\d+[-–x×]\d+|\d+)\s+(?:rounds?|rnd)\s+(?:of|@|x)\s+(?:\d+[-–x×]\d+|\d+)\s*(?:min|sec)\b",
+    r"\d+\s+(?:rounds?|rnd)\s+(?:of|@|x)\s+\d+\s*(?:min|sec)\b",
     re.IGNORECASE,
 )
 
@@ -1303,10 +1303,13 @@ def _late_fight_dosage_warnings(
     days_out_bucket = str(spec.get("days_out_bucket") or "")
     payload_mode = str(spec.get("payload_mode") or "")
 
-    # Derive days_until_fight from the bucket string, e.g. "D-5" → 5
+    # Derive days_until_fight from the bucket string, e.g. "D-5" → 5.
+    # Only process buckets matching the expected "D-N" format.
+    if not re.match(r"^D-\d+$", days_out_bucket):
+        return []
     try:
-        days_int = int(days_out_bucket.split("-")[-1])
-    except (ValueError, AttributeError):
+        days_int = int(days_out_bucket[2:])
+    except ValueError:
         return []
 
     if days_int > 5:
