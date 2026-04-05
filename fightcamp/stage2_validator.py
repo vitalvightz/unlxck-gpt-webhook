@@ -7,6 +7,7 @@ from typing import Any
 from .phases import PHASE_HEADER_PATTERN
 from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
+from .stage2_late_fight_utils import resolve_late_fight_window
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -93,7 +94,6 @@ _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
 _WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
 _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
-_LATE_FIGHT_WINDOWS = {"d7_to_d5", "d4_to_d2", "d1", "d0"}
 _LATE_FIGHT_WEEK_STRENGTH_TERMS = (
     "strength",
     "power",
@@ -519,24 +519,10 @@ def _active_risk_labels(risk_context: dict[str, bool]) -> list[str]:
 
 
 def _late_fight_window(planning_brief: dict) -> str:
-    payload = planning_brief.get("days_out_payload") or {}
-    window = str(payload.get("late_fight_window", "")).strip().lower()
-    if window in _LATE_FIGHT_WINDOWS:
-        return window
-    athlete = _athlete_snapshot(planning_brief)
-    try:
-        days = int(athlete.get("days_until_fight"))
-    except (TypeError, ValueError):
-        return "camp"
-    if 5 <= days <= 7:
-        return "d7_to_d5"
-    if 2 <= days <= 4:
-        return "d4_to_d2"
-    if days == 1:
-        return "d1"
-    if days == 0:
-        return "d0"
-    return "camp"
+    return resolve_late_fight_window(
+        payload=planning_brief.get("days_out_payload") or {},
+        athlete=_athlete_snapshot(planning_brief),
+    )
 
 
 def _late_fight_block_cap(planning_brief: dict) -> int | None:
@@ -1253,7 +1239,6 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
     warnings: list[dict] = []
     plan_lines = _extract_plan_lines(final_plan_text)
     meaningful_lines = _meaningful_plan_lines(final_plan_text)
-    normalized_text = "\n".join(plan_lines).lower()
     block_cap = _late_fight_block_cap(planning_brief)
 
     if block_cap is not None and len(meaningful_lines) > block_cap:
@@ -1298,12 +1283,17 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                     matched_lines=conditioning_hits,
                 )
             )
-        if any(term in normalized_text for term in ("development week", "build week", "weakness build", "accumulation", "primary strength", "anchor")):
+        development_hits = _non_negated_phrase_hits(
+            plan_lines,
+            ("development week", "build week", "weakness build", "accumulation", "primary strength", "anchor"),
+        )
+        if development_hits:
             warnings.append(
                 _late_fight_warning(
                     "late_fight_week_leakage",
                     "D-7 to D-5 reads like a normal development week instead of a compressed late-fight week.",
                     late_fight_window=window,
+                    matched_lines=development_hits,
                 )
             )
         return warnings
