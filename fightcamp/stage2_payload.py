@@ -17,6 +17,7 @@ from .stage2_payload_late_fight import (
     _late_fight_rendering_rules,
     _uses_late_fight_stage2_payload,
 )
+from .input_parsing import _athlete_calendar_now
 from .normalization import normalize_lower_text
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
@@ -661,6 +662,7 @@ def _build_athlete_model(
         "rounds_format": rounds_format,
         "camp_length_weeks": camp_length_weeks,
         "days_until_fight": training_context.days_until_fight,
+        "athlete_timezone": training_context.athlete_timezone,
         "fatigue": training_context.fatigue,
         "age": training_context.age,
         "weight_cut_risk": training_context.weight_cut_risk,
@@ -688,6 +690,92 @@ def _build_athlete_model(
         ),
     }
     return athlete_model
+
+
+_CANONICAL_WEEKDAYS = {
+    "monday": "Monday",
+    "mon": "Monday",
+    "tuesday": "Tuesday",
+    "tue": "Tuesday",
+    "wednesday": "Wednesday",
+    "wed": "Wednesday",
+    "thursday": "Thursday",
+    "thu": "Thursday",
+    "friday": "Friday",
+    "fri": "Friday",
+    "saturday": "Saturday",
+    "sat": "Saturday",
+    "sunday": "Sunday",
+    "sun": "Sunday",
+}
+
+
+def _canonical_weekday(value: Any) -> str:
+    return _CANONICAL_WEEKDAYS.get(str(value or "").strip().lower(), "")
+
+
+def _late_fight_active_window_weekdays(days_until_fight: Any, current_local_weekday: str) -> list[str]:
+    canonical_day = _canonical_weekday(current_local_weekday)
+    try:
+        total_days = int(days_until_fight)
+    except (TypeError, ValueError):
+        total_days = -1
+    if not canonical_day or total_days < 0:
+        return []
+    ordered_days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+    start_index = ordered_days.index(canonical_day)
+    return [ordered_days[(start_index + offset) % 7] for offset in range(total_days + 1)]
+
+
+def _window_days_to_active_window(values: list[str], active_window_weekdays: list[str]) -> list[str]:
+    if not active_window_weekdays:
+        return list(values)
+    original_by_day: dict[str, str] = {}
+    for value in values:
+        canonical = _canonical_weekday(value)
+        if canonical and canonical not in original_by_day:
+            original_by_day[canonical] = str(value).strip()
+    return [original_by_day[day] for day in active_window_weekdays if day in original_by_day]
+
+
+def _enrich_late_fight_athlete_model(athlete_model: dict) -> dict:
+    enriched = dict(athlete_model)
+    days_until_fight = enriched.get("days_until_fight")
+    if not _uses_late_fight_stage2_payload(days_until_fight):
+        return enriched
+
+    current_local_weekday = _canonical_weekday(enriched.get("current_local_weekday"))
+    if not current_local_weekday:
+        current_local_weekday = _athlete_calendar_now(enriched.get("athlete_timezone")).strftime("%A")
+    active_window_weekdays = [
+        day for day in (_canonical_weekday(value) for value in enriched.get("active_window_weekdays", [])) if day
+    ]
+    if not active_window_weekdays:
+        active_window_weekdays = _late_fight_active_window_weekdays(days_until_fight, current_local_weekday)
+
+    enriched["current_local_weekday"] = current_local_weekday
+    enriched["active_window_weekdays"] = active_window_weekdays
+    enriched["training_days"] = _window_days_to_active_window(
+        _clean_list(enriched.get("training_days", [])),
+        active_window_weekdays,
+    )
+    enriched["hard_sparring_days"] = _window_days_to_active_window(
+        _clean_list(enriched.get("hard_sparring_days", [])),
+        active_window_weekdays,
+    )
+    enriched["technical_skill_days"] = _window_days_to_active_window(
+        _clean_list(enriched.get("technical_skill_days", [])),
+        active_window_weekdays,
+    )
+    return enriched
 
 
 def _priority_bucket(label: str, kind: str) -> dict:
@@ -3183,7 +3271,7 @@ def build_planning_brief(
     omission_ledger: dict[str, dict],
     rewrite_guidance: dict,
 ) -> dict:
-    athlete_model = dict(athlete_model)
+    athlete_model = _enrich_late_fight_athlete_model(dict(athlete_model))
     athlete_model["compressed_priorities"] = athlete_model.get("compressed_priorities") or _compress_short_camp_priorities(
         athlete_model
     )
@@ -3669,6 +3757,7 @@ def build_stage2_payload(
         camp_length_weeks=camp_len,
         short_notice=short_notice,
     )
+    athlete_model = _enrich_late_fight_athlete_model(athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
     omission_ledger = _build_omission_ledger(
@@ -3766,6 +3855,11 @@ STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 
 Input = PLANNING BRIEF + Stage 1 draft plan + athlete profile + restrictions + candidate pools.
 
+OVERRIDE PRECEDENCE
+If PAYLOAD MODE INSTRUCTIONS are present, they override any generic camp, week, phase, or taper language in this base prompt.
+Do not infer a normal weekly structure from the Stage 1 draft when the planning brief says the active window is session-only, day-only, or protocol-only.
+Apply weekly sequencing rules only when planning_brief.weekly_role_map.weeks contains at least one active week.
+
 SOURCE OF TRUTH
 1. PLANNING BRIEF = primary authority for athlete intent, phase strategy, priorities, and risks.
 2. Restrictions = hard constraints.
@@ -3779,7 +3873,8 @@ Do not modify a violating item into compliance. Replace it or drop it.
 
 RULE 2 - PLAN THE CAMP, DON'T JUST EDIT
 Build the best final plan from the PLANNING BRIEF.
-Use week_by_week_progression and weekly_role_map to sequence the camp.
+Use week_by_week_progression and weekly_role_map to sequence the camp only when the planning brief exposes active weeks.
+If the payload mode is pre_fight_day_payload, fight_day_protocol_payload, or late_fight_session_payload, sequence only the remaining active window and explicit session list.
 You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing if the result is more coherent and still consistent with the planning brief and restrictions.
 
 RULE 3 - SELECTION ORDER
@@ -3845,7 +3940,7 @@ Do not repeat Primary, Fallback, Drill, or menu-style labels across most session
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
 Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload the sparring dose on that day instead of replacing the day role.
 Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
-Keep every active week present and structurally complete, including late-camp weeks.
+Keep every active week present and structurally complete when the planning brief actually contains active weeks.
 If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
@@ -3936,10 +4031,10 @@ def build_stage2_handoff_text(
     mode_instructions = _handoff_mode_instructions(payload_mode)
 
     sections = [
-        STAGE2_FINALIZER_PROMPT.strip(),
     ]
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
+    sections.append(STAGE2_FINALIZER_PROMPT.strip())
     sections.append("PLANNING BRIEF\n" + _json_block(context_block))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
     cleaned_notes = (coach_notes or "").strip()

@@ -1,5 +1,7 @@
 """Focused tests for the late-fight Stage 2 payload split."""
 
+from datetime import datetime
+
 import pytest
 
 from fightcamp.stage2_payload import (
@@ -110,6 +112,7 @@ def _build_stage2(days):
         recent_exercises=[],
         phase_weeks={"GPP": 0, "SPP": 0, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": days or 7}},
         days_until_fight=days,
+        athlete_timezone="America/New_York",
         hard_sparring_days=["Tue", "Thu"],
         technical_skill_days=["Fri"],
     )
@@ -251,6 +254,39 @@ class TestPlanningBriefBranching:
         assert brief["weekly_role_map"]["weeks"] == []
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["neural_primer_day"]
 
+    @pytest.mark.parametrize(
+        ("current_day", "days_until_fight", "expected_window", "expected_training_days", "expected_hard_days"),
+        [
+            (datetime(2026, 4, 4, 9, 0, 0), 1, ["Saturday", "Sunday"], [], []),
+            (datetime(2026, 4, 2, 9, 0, 0), 3, ["Thursday", "Friday", "Saturday", "Sunday"], ["thursday", "friday"], ["thursday"]),
+            (datetime(2026, 3, 31, 9, 0, 0), 6, ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday", "Monday"], ["tuesday", "wednesday", "thursday", "friday", "monday"], ["tuesday", "thursday"]),
+        ],
+    )
+    def test_late_fight_brief_trims_to_remaining_window(
+        self,
+        monkeypatch,
+        current_day,
+        days_until_fight,
+        expected_window,
+        expected_training_days,
+        expected_hard_days,
+    ):
+        monkeypatch.setattr("fightcamp.stage2_payload._athlete_calendar_now", lambda _timezone=None: current_day)
+        brief = _build_brief_for(days_until_fight)
+        athlete_snapshot = brief["athlete_snapshot"]
+        assert athlete_snapshot["current_local_weekday"] == current_day.strftime("%A")
+        assert athlete_snapshot["active_window_weekdays"] == expected_window
+        assert athlete_snapshot["training_days"] == expected_training_days
+        assert athlete_snapshot["hard_sparring_days"] == expected_hard_days
+
+        plan_spec = brief["late_fight_plan_spec"]
+        assert plan_spec["active_window_weekdays"] == expected_window
+
+        weeks = brief["weekly_role_map"]["weeks"]
+        if weeks:
+            assert weeks[0]["declared_training_days"] == expected_training_days
+            assert weeks[0]["declared_hard_sparring_days"] == expected_hard_days
+
 
 class TestStage2PayloadBranching:
     def test_camp_payload_stays_on_normal_stage2_schema(self):
@@ -258,6 +294,17 @@ class TestStage2PayloadBranching:
         assert payload["generator_mode"] == "restriction_aware_candidate_generator"
         assert "payload_mode" not in payload
         assert "days_out_payload" not in payload
+
+    def test_late_fight_payload_trims_to_remaining_window(self, monkeypatch):
+        monkeypatch.setattr("fightcamp.stage2_payload._athlete_calendar_now", lambda _timezone=None: datetime(2026, 4, 2, 9, 0, 0))
+        payload = _build_stage2(3)
+        athlete_model = payload["athlete_model"]
+        assert athlete_model["current_local_weekday"] == "Thursday"
+        assert athlete_model["active_window_weekdays"] == ["Thursday", "Friday", "Saturday", "Sunday"]
+        assert athlete_model["training_days"] == ["Thu", "Fri"]
+        assert athlete_model["hard_sparring_days"] == ["Thu"]
+        assert athlete_model["technical_skill_days"] == ["Fri"]
+        assert payload["late_fight_plan_spec"]["active_window_weekdays"] == ["Thursday", "Friday", "Saturday", "Sunday"]
 
     def test_late_fight_payload_adds_mode_specific_fields(self):
         payload = _build_stage2(5)
@@ -276,12 +323,15 @@ class TestStage2PayloadBranching:
             "fight_week_freshness_day",
         ]
 
-    def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
+    def test_late_fight_payload_preserves_non_day_inputs_while_windowing_days(self, monkeypatch):
+        monkeypatch.setattr("fightcamp.stage2_payload._athlete_calendar_now", lambda _timezone=None: datetime(2026, 4, 4, 9, 0, 0))
         payload = _build_stage2(1)
         athlete_model = payload["athlete_model"]
-        assert athlete_model["hard_sparring_days"] == ["Tue", "Thu"]
-        assert athlete_model["training_days"] == ["Mon", "Tue", "Wed", "Thu", "Fri"]
-        assert athlete_model["technical_skill_days"] == ["Fri"]
+        assert athlete_model["current_local_weekday"] == "Saturday"
+        assert athlete_model["active_window_weekdays"] == ["Saturday", "Sunday"]
+        assert athlete_model["hard_sparring_days"] == []
+        assert athlete_model["training_days"] == []
+        assert athlete_model["technical_skill_days"] == []
         assert athlete_model["key_goals"] == ["power"]
 
     def test_d1_payload_still_uses_late_fight_mode_without_week_structure(self):
@@ -312,7 +362,7 @@ class TestHandoffText:
 
     def test_camp_handoff_has_no_payload_mode_section(self):
         text = self._build_handoff(10)
-        assert "PAYLOAD MODE INSTRUCTIONS" not in text
+        assert "PAYLOAD MODE INSTRUCTIONS\n" not in text
         assert "PLANNING BRIEF" in text
 
     @pytest.mark.parametrize(
@@ -330,6 +380,10 @@ class TestHandoffText:
         assert expected_heading in text
         assert "STAGE 1 DRAFT PLAN" in text
         assert "Draft plan text." in text
+
+    def test_late_fight_handoff_puts_mode_instructions_before_base_prompt(self):
+        text = self._build_handoff(1)
+        assert text.index("PAYLOAD MODE INSTRUCTIONS") < text.index("You are Stage 2 (planner/finalizer).")
 
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)

@@ -61,3 +61,15 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
     assert "Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'." in handoff
     assert "If fatigue is high or fight-week pressure is active, reduce optionality" in handoff
     assert "If injury management is active, lead with constraints, substitutions, or stop rules" in handoff
+
+
+def test_build_stage2_handoff_text_declares_payload_mode_precedence():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"payload_mode": "pre_fight_day_payload"},
+        plan_text="Draft plan text.",
+        planning_brief={"athlete_snapshot": {"sport": "boxing"}},
+    )
+
+    assert "OVERRIDE PRECEDENCE" in handoff
+    assert "If PAYLOAD MODE INSTRUCTIONS are present, they override any generic camp, week, phase, or taper language in this base prompt." in handoff
+    assert "Apply weekly sequencing rules only when planning_brief.weekly_role_map.weeks contains at least one active week." in handoff

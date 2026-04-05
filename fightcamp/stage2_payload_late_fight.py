@@ -58,6 +58,34 @@ def _ordered_weekdays(values: list[str]) -> list[str]:
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
 
 
+def _active_window_weekdays(athlete_model: dict) -> list[str]:
+    values = []
+    for value in _clean_list(athlete_model.get("active_window_weekdays", [])):
+        normalized = str(value).strip()
+        if normalized:
+            values.append(normalized)
+    return values
+
+
+def _windowed_weekdays(values: list[str], athlete_model: dict) -> list[str]:
+    active_window = _active_window_weekdays(athlete_model)
+    if not active_window:
+        return _ordered_weekdays(values)
+    canonical_to_original: dict[str, str] = {}
+    for value in _dedupe_preserve_order([str(item).strip() for item in values if str(item).strip()]):
+        canonical = str(value).strip().lower()
+        if canonical in _WEEKDAY_ORDER and canonical not in canonical_to_original:
+            canonical_to_original[canonical] = value
+    ordered: list[str] = []
+    for day in active_window:
+        lowered = str(day).strip().lower()
+        aliases = [key for key, index in _WEEKDAY_ORDER.items() if index == _WEEKDAY_ORDER.get(lowered)]
+        original = next((canonical_to_original[alias] for alias in aliases if alias in canonical_to_original), None)
+        if original:
+            ordered.append(original)
+    return ordered
+
+
 def _role_anchor(role_key: str) -> str:
     if role_key in {
         "primary_strength_day",
@@ -476,7 +504,7 @@ def _late_fight_role_entry(
 
 def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
     mode = _days_out_payload_mode(days_until_fight)
-    declared_hard_days = _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", [])))
+    declared_hard_days = _windowed_weekdays(_clean_list(athlete_model.get("hard_sparring_days", [])), athlete_model)
     if mode == "late_fight_week_payload":
         roles: list[dict[str, Any]] = []
         session_index = 1
@@ -665,9 +693,9 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
                 "stage_key": _late_fight_window(days_until_fight),
                 "phase_week_index": 1,
                 "phase_week_total": 1,
-                "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
-                "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
-                "declared_technical_skill_days": _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+                "declared_training_days": _windowed_weekdays(_clean_list(athlete_model.get("training_days", [])), athlete_model),
+                "declared_hard_sparring_days": _windowed_weekdays(_clean_list(athlete_model.get("hard_sparring_days", [])), athlete_model),
+                "declared_technical_skill_days": _windowed_weekdays(_clean_list(athlete_model.get("technical_skill_days", [])), athlete_model),
                 "hard_sparring_plan": [],
                 "effective_hard_sparring_days": [],
                 "coach_note_flags": [_late_fight_stage_label(days_until_fight)],
@@ -712,6 +740,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "days_out_bucket": payload_block["days_out_bucket"],
         "late_fight_window": payload_block["late_fight_window"],
         "summary": _late_fight_summary(days_until_fight),
+        "active_window_weekdays": _active_window_weekdays(athlete_model),
         "session_cap": len(roles),
         "session_roles": [role.get("role_key") for role in roles],
         "session_sequence": session_sequence,
