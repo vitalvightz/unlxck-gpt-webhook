@@ -375,8 +375,6 @@ def _build_week_advisory(
     week_label = _week_label(week)
     future_week = _is_future_week(week)
     days_label = str(target_entry.get("day") or "").strip()
-    all_downgraded_days = [str(entry.get("day") or "").strip() for entry in downgraded if str(entry.get("day") or "").strip()]
-    reported_days = all_downgraded_days or ([days_label] if days_label else [])
     reason_parts = list(pressure_reasons)
     if hard_day_count >= 2:
         reason_parts.append(f"this week already carries {hard_day_count} declared hard sparring days")
@@ -424,7 +422,7 @@ def _build_week_advisory(
         "action": action,
         "phase": phase,
         "week_label": week_label,
-        "days": reported_days,
+        "days": [days_label],
         "title": "Coach note",
         "reason": reason,
         "suggestion": suggestion,
