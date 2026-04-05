@@ -243,6 +243,7 @@ class PlanOutputs(BaseModel):
 class PlanAdvisory(BaseModel):
     kind: Literal["sparring_adjustment"]
     action: Literal["deload", "convert"]
+    risk_band: Literal["green", "amber", "red", "black"] | None = None
     phase: str
     week_label: str
     days: list[str] = Field(default_factory=list)

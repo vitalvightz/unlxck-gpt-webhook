@@ -103,6 +103,7 @@ export type PlanOutputs = {
 export type PlanAdvisory = {
   kind: "sparring_adjustment";
   action: "deload" | "convert";
+  risk_band?: "green" | "amber" | "red" | "black" | null;
   phase: string;
   week_label: string;
   days: string[];

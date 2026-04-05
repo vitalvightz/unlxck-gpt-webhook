@@ -118,8 +118,28 @@ def test_convert_advisory_for_worsening_instability_during_high_pressure_week():
     assert len(advisories) == 1
     advisory = advisories[0]
     assert advisory["action"] == "convert"
+    assert advisory["risk_band"] == "red"
     assert advisory["replacement"] == "Technical rounds with stance-stable pad or bag work."
     assert "worsening ankle instability" in advisory["reason"]
+
+
+def test_readiness_only_advisory_omits_risk_band_without_injuries():
+    advisories = build_plan_advisories(
+        planning_brief=_planning_brief(
+            phase="SPP",
+            stage_key="mid_camp_build",
+            days_until_fight=24,
+            fatigue="high",
+            readiness_flags=[],
+            injuries=[],
+            weight_cut_pct=0.0,
+            hard_sparring_days=["Tuesday", "Thursday"],
+        )
+    )
+
+    assert len(advisories) == 1
+    assert advisories[0]["action"] == "deload"
+    assert "risk_band" not in advisories[0]
 
 
 def test_sparring_injury_state_scores_are_capped():
