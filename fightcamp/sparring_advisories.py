@@ -648,6 +648,8 @@ def _build_week_advisory(
         "suggestion": suggestion,
         "disclaimer": _DISCLAIMER,
     }
+    if highest_injury and highest_injury.get("risk_band"):
+        advisory["risk_band"] = str(highest_injury.get("risk_band"))
     if action == "convert":
         advisory["replacement"] = _replacement_focus(
             athlete_snapshot=athlete_snapshot,

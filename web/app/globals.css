@@ -1907,6 +1907,62 @@ button.mobile-step-rail-item {
   background: linear-gradient(180deg, rgba(62, 29, 18, 0.92), rgba(27, 15, 11, 0.95));
 }
 
+.sparring-advisory-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.sparring-risk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.sparring-risk-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  background: currentColor;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+
+.sparring-advisory-card .sparring-risk-green {
+  border-color: rgba(125, 226, 168, 0.24);
+  background: rgba(21, 60, 37, 0.58);
+  color: #b9f4cf;
+}
+
+.sparring-advisory-card .sparring-risk-amber {
+  border-color: rgba(255, 211, 114, 0.24);
+  background: rgba(79, 54, 14, 0.58);
+  color: #ffe39b;
+}
+
+.sparring-advisory-card .sparring-risk-red {
+  border-color: rgba(255, 145, 122, 0.28);
+  background: rgba(89, 29, 24, 0.6);
+  color: #ffc0b0;
+}
+
+.sparring-advisory-card .sparring-risk-black {
+  border-color: rgba(214, 198, 255, 0.18);
+  background: rgba(28, 25, 36, 0.76);
+  color: #f3ecff;
+}
+
 .sparring-advisory-meta,
 .sparring-advisory-replacement,
 .sparring-advisory-suggestion {
@@ -4231,6 +4287,40 @@ html[data-theme="light"] .sparring-advisory-card {
 html[data-theme="light"] .sparring-advisory-convert {
   border-color: rgba(199, 92, 54, 0.18);
   background: linear-gradient(180deg, rgba(255, 240, 234, 0.98), rgba(255, 247, 241, 0.98));
+}
+
+html[data-theme="light"] .sparring-advisory-card .sparring-risk-chip {
+  border-color: rgba(88, 62, 58, 0.14);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .sparring-advisory-card .sparring-risk-dot {
+  box-shadow: 0 0 0 3px rgba(88, 62, 58, 0.08);
+}
+
+html[data-theme="light"] .sparring-advisory-card .sparring-risk-green {
+  border-color: rgba(37, 131, 82, 0.18);
+  background: rgba(236, 249, 242, 0.98);
+  color: #17623c;
+}
+
+html[data-theme="light"] .sparring-advisory-card .sparring-risk-amber {
+  border-color: rgba(173, 115, 23, 0.18);
+  background: rgba(255, 246, 229, 0.98);
+  color: #8a590f;
+}
+
+html[data-theme="light"] .sparring-advisory-card .sparring-risk-red {
+  border-color: rgba(199, 92, 54, 0.18);
+  background: rgba(255, 240, 234, 0.98);
+  color: #9d3c1d;
+}
+
+html[data-theme="light"] .sparring-advisory-card .sparring-risk-black {
+  border-color: rgba(97, 88, 122, 0.18);
+  background: rgba(242, 240, 249, 0.98);
+  color: #3f3558;
 }
 
 html[data-theme="light"] .stage2-retry-in-progress {

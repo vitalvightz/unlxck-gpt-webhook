@@ -92,9 +92,18 @@ function formatPhaseLabel(phase: string) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
+  const normalized = humanizeStatus(riskBand || "").trim();
+  if (!normalized) {
+    return "Unknown";
+  }
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
   const actionLabel = advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
   const daysLabel = advisory.days.join(", ") || "Declared hard sparring";
+  const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
 
   return (
     <section className={`support-panel sparring-advisory-card sparring-advisory-${advisory.action}`}>
@@ -103,7 +112,18 @@ function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
           <p className="kicker">{advisory.title}</p>
           <h3>{actionLabel}</h3>
         </div>
-        <span className="badge">{advisory.action}</span>
+        <div className="sparring-advisory-badges">
+          <span className="badge">{advisory.action}</span>
+          {riskBandLabel ? (
+            <span
+              className={`sparring-risk-chip sparring-risk-${advisory.risk_band}`}
+              aria-label={`Injury risk ${riskBandLabel}`}
+            >
+              <span className="sparring-risk-dot" aria-hidden="true" />
+              <span>Injury risk: {riskBandLabel}</span>
+            </span>
+          ) : null}
+        </div>
       </div>
       <p className="muted sparring-advisory-meta">
         {formatPhaseLabel(advisory.phase)} | {advisory.week_label} | {daysLabel}
