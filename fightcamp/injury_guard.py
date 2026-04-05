@@ -338,7 +338,8 @@ def _severity_synonym_pattern(synonym: str) -> re.Pattern[str]:
     if not parts:
         pattern = re.compile(r"$^")
     else:
-        pattern = re.compile(rf"(?<![a-z0-9]){'[\\s_-]+'.join(parts)}(?![a-z0-9])")
+        joined_parts = r"[\s_-]+".join(parts)
+        pattern = re.compile(rf"(?<![a-z0-9]){joined_parts}(?![a-z0-9])")
     _SEVERITY_SYNONYM_PATTERN_CACHE[synonym] = pattern
     return pattern
 
