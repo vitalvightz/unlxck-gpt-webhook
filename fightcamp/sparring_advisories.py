@@ -53,6 +53,29 @@ def _ordered_weekdays(values: Any) -> list[str]:
     return sorted(unique, key=lambda day: order.get(day, len(order)))
 
 
+def _is_past_weekday(day: str, plan_creation_weekday: str | None) -> bool:
+    """Return True if this weekday has already elapsed relative to the plan creation day."""
+    if not plan_creation_weekday:
+        return False
+    _order = {d.lower(): i for i, d in enumerate(_ORDERED_WEEKDAYS)}
+    creation_idx = _order.get(plan_creation_weekday.strip().lower())
+    day_idx = _order.get(day.strip().lower())
+    if creation_idx is None or day_idx is None:
+        return False
+    return day_idx < creation_idx
+
+
+def _days_list_phrase(days: list[str]) -> str:
+    """Return a natural-language phrase joining a list of weekday names."""
+    if not days:
+        return "all remaining sparring"
+    if len(days) == 1:
+        return days[0]
+    if len(days) == 2:
+        return f"{days[0]} and {days[1]}"
+    return ", ".join(days[:-1]) + f", and {days[-1]}"
+
+
 def _athlete_snapshot(planning_brief: dict[str, Any]) -> dict[str, Any]:
     snapshot = planning_brief.get("athlete_snapshot")
     if isinstance(snapshot, dict):
@@ -377,9 +400,19 @@ def _build_week_advisory(
     days_label = str(target_entry.get("day") or "").strip()
     all_downgraded_days = [str(entry.get("day") or "").strip() for entry in downgraded if str(entry.get("day") or "").strip()]
     reported_days = all_downgraded_days or ([days_label] if days_label else [])
+    plan_creation_weekday = athlete_snapshot.get("plan_creation_weekday")
+    all_downgraded = len(downgraded) == len(hard_days)
+    days_phrase = _days_list_phrase(reported_days) if (all_downgraded and len(reported_days) > 1) else days_label
+    target_is_past = _is_past_weekday(days_label, plan_creation_weekday)
+
     reason_parts = list(pressure_reasons)
     if hard_day_count >= 2:
-        reason_parts.append(f"this week already carries {hard_day_count} declared hard sparring days")
+        past_count = sum(1 for d in hard_days if _is_past_weekday(d, plan_creation_weekday))
+        remaining_count = hard_day_count - past_count
+        if plan_creation_weekday is not None and past_count >= 1 and remaining_count >= 1:
+            reason_parts.append("a hard sparring session earlier this week adds to the overall collision load")
+        elif remaining_count >= 2:
+            reason_parts.append(f"this week carries {remaining_count} hard sparring sessions")
     if highest_injury:
         injury_label = _injury_label(highest_injury) or str(highest_injury["raw"]).lower()
         reason_parts.append(f"the brief shows {injury_label}")
@@ -387,7 +420,7 @@ def _build_week_advisory(
         reason_parts.append(fatigue_reason)
     if cut_reason:
         reason_parts.append(cut_reason)
-    if effective_hard_day_count(plan) < hard_day_count:
+    if not all_downgraded and effective_hard_day_count(plan) < hard_day_count:
         reason_parts.append(f"{days_label} is the lower-priority hard sparring day this week")
     because = _join_reason_parts(reason_parts)
     future_state_label, future_state_verb = _future_state_label(
@@ -395,29 +428,59 @@ def _build_week_advisory(
         highest_injury=highest_injury,
         cut_pct=cut_pct,
     )
+
     if future_week:
+        if len(reported_days) > 1:
+            sparring_ref = f"multiple hard sparring sessions ({days_phrase})"
+            session_verb = "are still scheduled"
+        else:
+            sparring_ref = f"hard sparring on {days_phrase}"
+            session_verb = "is still set"
         reason = (
-            f"If the current readiness picture carries into {week_label}, {because} and hard sparring is still set for "
-            f"{days_label}, that collision cost is probably too high to leave untouched."
+            f"If the current readiness picture carries into {week_label}, {because} and "
+            f"{sparring_ref} {session_verb} — that collision exposure is probably too high to leave untouched."
+        )
+    elif all_downgraded and len(reported_days) > 1:
+        reason = (
+            f"{because.capitalize()}, so all remaining hard sparring ({days_phrase}) "
+            "is getting pulled back — the collision load is running too high for this window."
         )
     else:
+        sparring_verb = "was scheduled for" if target_is_past else "is set for"
         reason = (
-            f"{because.capitalize()} and hard sparring is set for {days_label}, "
+            f"{because.capitalize()} and hard sparring {sparring_verb} {days_phrase}, "
             "so the collision cost is running ahead of what you are likely to absorb well this week."
         )
 
     if action == "convert":
-        suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, convert hard sparring on {days_label} to technical rounds or controlled drilling."
-            if future_week
-            else f"Convert hard sparring on {days_label} in {week_label} to technical rounds or controlled drilling."
-        )
+        if future_week:
+            suggestion = (
+                f"If {future_state_label} {future_state_verb} still there by {week_label}, "
+                f"convert hard sparring on {days_phrase} to technical rounds or controlled drilling."
+            )
+        elif all_downgraded and len(reported_days) > 1:
+            suggestion = (
+                f"Shift all remaining sparring ({days_phrase}) to technical rounds or controlled drilling "
+                "— no hard contact."
+            )
+        else:
+            suggestion = f"Convert hard sparring on {days_phrase} to technical rounds or controlled drilling."
     else:
-        suggestion = (
-            f"If {future_state_label} {future_state_verb} still there by {week_label}, deload hard sparring on {days_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
-            if future_week
-            else f"Deload hard sparring on {days_label} in {week_label} by trimming rounds, lowering intensity, or reducing total collision exposure."
-        )
+        if future_week:
+            suggestion = (
+                f"If {future_state_label} {future_state_verb} still there by {week_label}, "
+                f"deload hard sparring on {days_phrase} by trimming rounds, lowering intensity, or reducing total collision exposure."
+            )
+        elif all_downgraded and len(reported_days) > 1:
+            suggestion = (
+                f"Deload remaining sparring ({days_phrase}) — trim rounds, lower intensity, "
+                "and reduce total collision exposure across sessions."
+            )
+        else:
+            suggestion = (
+                f"Deload hard sparring on {days_phrase} by trimming rounds, lowering intensity, "
+                "or reducing total collision exposure."
+            )
 
     advisory: dict[str, Any] = {
         "kind": "sparring_adjustment",

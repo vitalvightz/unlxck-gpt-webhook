@@ -391,29 +391,47 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     return plan
 
 
+_COUNTDOWN_COACH_NOTES: dict[int, str] = {
+    1: (
+        "Fight is tomorrow. If sparring happens at all, keep it controlled technical flow "
+        "only — no hard contact. Freshness matters more than any final prep hit."
+    ),
+    2: (
+        "Two days out. Pull everything back to rhythm and reads — no hard contact from "
+        "here. The work is done; protect what you've built."
+    ),
+    3: (
+        "Three days out. No hard sparring. Keep any pad or bag work sharp and technical "
+        "— stay crisp, not flat, and let the body stay ready to perform."
+    ),
+    4: (
+        "Four days out. Move all sparring to controlled, purposeful technical rounds. "
+        "Nothing you can gain from hard collision now is worth the cost."
+    ),
+    5: (
+        "Five days to fight. Move sparring to rhythm-only rounds "
+        "— bring the technical intent but leave the damage out."
+    ),
+    6: (
+        "Six days out. Pull the intensity back on sparring "
+        "— keep rounds lighter and stay focused on timing over damage."
+    ),
+}
+
+
 def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
-    """Generate a brief athlete-facing note explaining the taper-driven sparring change."""
+    """Generate a taper-driven coach note explaining the sparring change."""
     try:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return ""
-    if days <= 5:
+    if days in _COUNTDOWN_COACH_NOTES:
+        return _COUNTDOWN_COACH_NOTES[days]
+    if days == 7 and action == "deload":
         return (
-            f"Fight is {days} day{'s' if days != 1 else ''} away. "
-            "All sparring shifts to technical rhythm only — "
-            "no new collision stress this close to fight day."
+            "Seven days out. With multiple hard sparring sessions this week, one shifts to "
+            "reduced intensity to protect the cumulative load going into fight week."
         )
-    if days == 6:
-        return (
-            "6 days out. Hard sparring is deloaded — "
-            "keep rounds lighter and focus on timing over damage."
-        )
-    if days == 7:
-        if action == "deload":
-            return (
-                "7 days out. Capping hard sparring to one session — "
-                "extra declared days shift to reduced intensity."
-            )
     return ""
 
 
