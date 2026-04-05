@@ -85,7 +85,9 @@ def test_high_week_pressure_and_mild_injury_do_not_downgrade():
         ),
     )
 
-    assert all(entry["status"] == "hard_as_planned" for entry in plan)
+    # D-6 countdown override deloads all hard sparring days
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert plan[0]["coach_note"]
 
 
 def test_high_week_pressure_and_moderate_injury_deloads():
@@ -98,9 +100,10 @@ def test_high_week_pressure_and_moderate_injury_deloads():
         ),
     )
 
+    # D-6 countdown override deloads ALL days, not just one
     downgraded = [entry for entry in plan if entry["status"] != "hard_as_planned"]
-    assert len(downgraded) == 1
-    assert downgraded[0]["status"] == "deload_suggested"
+    assert len(downgraded) == 2
+    assert all(entry["status"] == "deload_suggested" for entry in downgraded)
 
 
 def test_instability_or_daily_symptoms_convert():
