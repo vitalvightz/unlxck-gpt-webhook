@@ -17,6 +17,7 @@ from .stage2_payload_late_fight import (
     _late_fight_rendering_rules,
     _uses_late_fight_stage2_payload,
 )
+from .input_parsing import _calendar_now
 from .normalization import normalize_lower_text
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
@@ -678,6 +679,7 @@ def _build_athlete_model(
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
         "short_notice": short_notice,
+        "plan_creation_weekday": _calendar_now().strftime("%A").lower(),
         "readiness_flags": _derive_readiness_flags(
             fatigue=training_context.fatigue,
             weight_cut_risk=training_context.weight_cut_risk,
