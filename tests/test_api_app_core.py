@@ -136,6 +136,36 @@ def test_job_response_falls_back_to_created_at_when_updated_at_is_missing():
     assert response.updated_at == created_at
 
 
+def test_is_stale_job_does_not_flag_new_running_job_without_heartbeat():
+    started_at = _now()
+
+    assert (
+        app_module._is_stale_job(
+            {
+                "status": "running",
+                "started_at": started_at,
+                "heartbeat_at": None,
+            },
+            stale_after_seconds=90,
+        )
+        is False
+    )
+
+
+def test_is_stale_job_uses_started_at_when_heartbeat_is_missing_for_old_running_job():
+    assert (
+        app_module._is_stale_job(
+            {
+                "status": "running",
+                "started_at": "2026-01-01T00:00:00+00:00",
+                "heartbeat_at": None,
+            },
+            stale_after_seconds=90,
+        )
+        is True
+    )
+
+
 def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
     monkeypatch.delenv("SUPABASE_URL", raising=False)

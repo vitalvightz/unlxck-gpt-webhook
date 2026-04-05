@@ -18,6 +18,32 @@ def test_plan_request_to_payload_uses_existing_parser_labels():
     assert "Sessions per Week" in labels
 
 
+def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": [],
+        },
+        fight_date="2026-04-18",
+        equipment_access=[],
+        training_availability=[],
+        hard_sparring_days=[],
+        technical_skill_days=[],
+        key_goals=[],
+        weak_areas=[],
+    ).to_payload()
+
+    fields = {field["label"]: field["value"] for field in payload["data"]["fields"]}
+
+    assert fields["Equipment Access"] == []
+    assert fields["Training Availability"] == []
+    assert fields["Hard Sparring Days"] == []
+    assert fields["Technical Skill Days"] == []
+    assert fields["What are your key performance goals?"] == []
+    assert fields["Where do you feel weakest right now?"] == []
+
+
 def test_plan_request_to_payload_includes_guided_injury_when_present():
     payload = PlanRequest(
         athlete={
