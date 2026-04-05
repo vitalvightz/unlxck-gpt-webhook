@@ -1106,17 +1106,18 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
     roles = week["session_roles"]
 
     assert [role["role_key"] for role in roles] == [
-        "neural_primer_day",
-        "alactic_sharpness_day",
-        "fight_week_freshness_day",
+        "late_fight_sharpness_exposure",
+        "late_fight_conditioning_touch",
+        "late_fight_freshness_reset",
     ]
     assert all("compressed_priority_label" not in role for role in roles)
     assert brief["late_fight_plan_spec"]["session_roles"] == [
-        "neural_primer_day",
-        "alactic_sharpness_day",
-        "fight_week_freshness_day",
+        "late_fight_sharpness_exposure",
+        "late_fight_conditioning_touch",
+        "late_fight_freshness_reset",
     ]
     assert brief["late_fight_plan_spec"]["session_cap"] == 3
+    assert brief["late_fight_plan_spec"]["block_cap"] == 5
     assert brief["late_fight_plan_spec"]["rendering_rules"]["framing"] == "compressed_week"
 
 
@@ -1207,14 +1208,15 @@ def test_fight_week_override_2_to_3_days_limits_to_micro_taper_roles():
     assert brief["weekly_role_map"]["weeks"] == []
     assert brief["week_by_week_progression"]["weeks"] == []
     assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
-        "alactic_sharpness_day",
-        "fight_week_freshness_day",
+        "late_fight_sharpness_touch",
+        "late_fight_freshness_reset",
     ]
     assert brief["late_fight_plan_spec"]["session_roles"] == [
-        "alactic_sharpness_day",
-        "fight_week_freshness_day",
+        "late_fight_sharpness_touch",
+        "late_fight_freshness_reset",
     ]
     assert brief["late_fight_plan_spec"]["session_cap"] == 2
+    assert brief["late_fight_plan_spec"]["block_cap"] == 5
 
 
 def test_phase_strategy_keeps_plain_spp_framing_for_true_multiweek_spp():

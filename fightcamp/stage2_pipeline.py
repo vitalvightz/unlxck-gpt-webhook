@@ -116,6 +116,24 @@ def _warning_detail_line(warning: dict) -> str:
         return "Trim extra weekly sessions so the final plan does not exceed the athlete's requested sessions per week."
     if warning.get("code") == "weekly_rhythm_broken":
         return "Restore the default boxer weekly rhythm with recovery immediately before the primary strength day."
+    if warning.get("code") == "late_fight_block_overage":
+        return "Trim late-fight extras so the output stays inside the block cap for the current band."
+    if warning.get("code") == "late_fight_strength_overage":
+        return "Keep only one meaningful non-sparring strength exposure in the late-fight week."
+    if warning.get("code") == "late_fight_conditioning_overage":
+        return "Keep only one meaningful non-sparring conditioning stressor in the late-fight week."
+    if warning.get("code") == "late_fight_week_leakage":
+        return "Rewrite the late-fight week so it reads compressed instead of like a normal build week."
+    if warning.get("code") == "late_fight_session_leakage":
+        return "Rewrite D-4 to D-2 as narrow sharpness/freshness maintenance with no build-week framing."
+    if warning.get("code") == "late_fight_session_overstack":
+        return "Flatten D-4 to D-2 so it does not stack multiple useful-looking sessions."
+    if warning.get("code") == "fight_eve_primer_leakage":
+        return "Rewrite D-1 as a true fight-eve primer with no glycolytic, anchor, or primary-strength leakage."
+    if warning.get("code") == "fight_eve_primer_overstack":
+        return "Trim D-1 to one tiny primer with one sharpness touch, one technical touch, and one reset."
+    if warning.get("code") == "fight_day_protocol_leakage":
+        return "Rewrite D-0 as activation, cueing, fuel, logistics, and recovery notes only."
     if warning.get("code") in {"gimmick_name", "overstyled_drill_name"}:
         return "Replace overstyled drill naming with plain coach-readable language."
     if warning.get("code") == "option_overload":

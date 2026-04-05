@@ -29,6 +29,7 @@ REPAIR RULES:
 17. If a week contains intentionally_unused_days entries, leave those days as light recovery or completely off. Do not add active training sessions to intentionally unused days.
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
 19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
+20. If days_until_fight is 7 or less, stay inside the exact late-fight band. Do not rebuild normal week completeness, extra session roles, anchor language, or conditioning-system build logic.
 20. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
 21. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
 22. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
@@ -64,8 +65,48 @@ def _clean_list(values: Any) -> list[str]:
     return [str(values).strip()]
 
 
+def _late_fight_window(planning_brief: dict) -> str:
+    payload = planning_brief.get("days_out_payload") or {}
+    window = str(payload.get("late_fight_window", "")).strip().lower()
+    if window in {"d7_to_d5", "d4_to_d2", "d1", "d0"}:
+        return window
+    athlete_model = planning_brief.get("athlete_model") or planning_brief.get("athlete_snapshot") or {}
+    try:
+        days = int(athlete_model.get("days_until_fight"))
+    except (TypeError, ValueError):
+        return "camp"
+    if 5 <= days <= 7:
+        return "d7_to_d5"
+    if 2 <= days <= 4:
+        return "d4_to_d2"
+    if days == 1:
+        return "d1"
+    if days == 0:
+        return "d0"
+    return "camp"
 
-def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
+
+def _late_fight_repair_notes(planning_brief: dict) -> str:
+    window = _late_fight_window(planning_brief)
+    if window == "camp":
+        return ""
+    band_label = {
+        "d7_to_d5": "D-7 to D-5 compressed late-fight week",
+        "d4_to_d2": "D-4 to D-2 session-by-session sharpness/freshness window",
+        "d1": "D-1 fight-eve primer window",
+        "d0": "D-0 fight-day protocol window",
+    }[window]
+    return (
+        "LATE-FIGHT BAND GUARDRAILS\n"
+        f"- Stay inside the {band_label}.\n"
+        "- Do not restore suppressed week completeness, extra session roles, anchor wording, or conditioning-system build logic.\n"
+        "- Keep the repaired output compressed and athlete-facing for this exact late-fight band."
+    )
+
+
+
+def _build_revision_priorities(planning_brief: dict, validator_report: dict) -> dict[str, list[dict]]:
+    late_fight_window = _late_fight_window(planning_brief)
     restriction_fixes: list[dict] = []
     for hit in validator_report.get("restricted_hits", []) or []:
         restriction_fixes.append(
@@ -187,9 +228,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 }
             )
         elif code == "missing_week_session_role":
+            action = "preserve_late_fight_compression" if late_fight_window != "camp" else "restore_missing_week_structure"
             quality_fixes.append(
                 {
-                    "action": "restore_missing_week_structure",
+                    "action": action,
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
@@ -197,9 +239,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 }
             )
         elif code == "late_camp_session_incomplete":
+            action = "preserve_late_fight_compression" if late_fight_window != "camp" else "complete_late_camp_week"
             quality_fixes.append(
                 {
-                    "action": "complete_late_camp_week",
+                    "action": action,
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_roles": _clean_list(warning.get("expected_roles", [])),
@@ -207,9 +250,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 }
             )
         elif code == "weekly_session_overage":
+            action = "trim_late_fight_stack" if late_fight_window != "camp" else "trim_extra_week_sessions_to_match_profile"
             quality_fixes.append(
                 {
-                    "action": "trim_extra_week_sessions_to_match_profile",
+                    "action": action,
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                     "expected_session_count": warning.get("expected_session_count"),
@@ -217,9 +261,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 }
             )
         elif code == "weekly_rhythm_broken":
+            action = "preserve_late_fight_compression" if late_fight_window != "camp" else "restore_default_boxer_weekly_rhythm"
             quality_fixes.append(
                 {
-                    "action": "restore_default_boxer_weekly_rhythm",
+                    "action": action,
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
                 }
@@ -286,6 +331,26 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "risk_context": _clean_list(warning.get("risk_context", [])),
                 }
             )
+        elif code in {
+            "late_fight_block_overage",
+            "late_fight_strength_overage",
+            "late_fight_conditioning_overage",
+            "late_fight_week_leakage",
+            "late_fight_session_leakage",
+            "late_fight_session_overstack",
+            "fight_eve_primer_leakage",
+            "fight_eve_primer_overstack",
+            "fight_day_protocol_leakage",
+        }:
+            quality_fixes.append(
+                {
+                    "action": "compress_late_fight_output",
+                    "late_fight_window": warning.get("late_fight_window") or late_fight_window,
+                    "issue_code": code,
+                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
+                    "block_cap": warning.get("block_cap"),
+                }
+            )
     return {
         "fix_first": restriction_fixes,
         "strip_out": formatting_fixes,
@@ -296,9 +361,10 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
 
 
 def build_stage2_repair_prompt(*, planning_brief: dict, failed_plan_text: str, validator_report: dict) -> str:
-    revision_priorities = _build_revision_priorities(validator_report)
+    revision_priorities = _build_revision_priorities(planning_brief, validator_report)
     sections = [
         REPAIR_PROMPT_TEMPLATE.strip(),
+        _late_fight_repair_notes(planning_brief),
         "REVISION PRIORITIES\n" + _json_block(revision_priorities),
         "VALIDATOR REPORT\n" + _json_block(validator_report),
         "PLANNING BRIEF\n" + _json_block(planning_brief),

@@ -13,6 +13,7 @@ from .stage2_payload_late_fight import (
     _days_out_payload_mode,
     _fight_week_override_payload,
     _handoff_mode_instructions,
+    _late_fight_candidate_pools,
     _late_fight_permissions,
     _late_fight_rendering_rules,
     _uses_late_fight_stage2_payload,
@@ -3205,6 +3206,7 @@ def build_planning_brief(
     if _uses_late_fight_stage2_payload(days_until_fight):
         fight_week_override = _fight_week_override_payload(days_until_fight)
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+        visible_candidate_pools = _late_fight_candidate_pools(days_until_fight, candidate_pools, athlete_model)
         late_fight_progression = _build_late_fight_week_by_week_progression(days_until_fight, athlete_model, phase_briefs)
         weekly_role_map = _build_late_fight_weekly_role_map(days_until_fight, athlete_model, fight_week_override)
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
@@ -3231,15 +3233,15 @@ def build_planning_brief(
             "sport_load_profile": sport_load_profile,
             "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
             "main_risks": _derive_main_risks(athlete_model, restrictions),
-            "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
-            "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools, late_fight_progression),
+            "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, visible_candidate_pools),
+            "phase_strategy": _build_phase_strategy(phase_briefs, visible_candidate_pools, late_fight_progression),
             "weekly_stress_map": weekly_stress_map,
             "week_by_week_progression": late_fight_progression,
             "fight_week_override": fight_week_override or {"active": False},
             "weekly_role_map": weekly_role_map,
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "restrictions": restrictions,
-            "candidate_pools": candidate_pools,
+            "candidate_pools": visible_candidate_pools,
             "omission_ledger": omission_ledger,
             "decision_rules": rewrite_guidance,
         }
@@ -3732,6 +3734,7 @@ def build_stage2_payload(
 
     if _uses_late_fight_stage2_payload(days_until_fight):
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+        visible_candidate_pools = _late_fight_candidate_pools(days_until_fight, candidate_pools, athlete_model)
         return {
             "schema_version": "stage2_payload.v1",
             "generator_mode": "restriction_aware_candidate_generator_late_fight",
@@ -3746,7 +3749,7 @@ def build_stage2_payload(
             "athlete_model": athlete_model,
             "restrictions": serialized_restrictions,
             "phase_briefs": phase_briefs,
-            "candidate_pools": candidate_pools,
+            "candidate_pools": visible_candidate_pools,
             "omission_ledger": omission_ledger,
             "rewrite_guidance": rewrite_guidance,
         }
@@ -3947,5 +3950,4 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
-
 
