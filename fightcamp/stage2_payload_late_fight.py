@@ -40,6 +40,16 @@ _WEEKDAY_ORDER = {
     "sun": 6,
 }
 
+_WEEKDAY_NAMES = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
+
 
 def _clean_list(values) -> list[str]:
     if values is None:
@@ -96,6 +106,118 @@ def _filter_past_weekdays(
     ]
 
 
+def _fight_weekday_from_context(
+    plan_creation_weekday: str | None,
+    days_until_fight: Any,
+) -> str | None:
+    """Return the real weekday name of the fight day.
+
+    Uses the plan creation weekday plus the number of days until the fight to
+    compute which day of the week the fight falls on.  Returns ``None`` when
+    either input is unavailable or invalid.
+    """
+    if not plan_creation_weekday:
+        return None
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return None
+    if days < 0:
+        return None
+    creation_index = _WEEKDAY_ORDER.get(plan_creation_weekday.strip().lower())
+    if creation_index is None:
+        return None
+    fight_index = (creation_index + days) % 7
+    return _WEEKDAY_NAMES[fight_index]
+
+
+def _countdown_weekday_map(
+    plan_creation_weekday: str | None,
+    days_until_fight: Any,
+) -> dict[str, str]:
+    """Map each countdown label (D-0, D-1, …) to its real weekday name.
+
+    The fight date is used as the anchor (D-0). Each prior countdown day is
+    projected backwards by the corresponding number of days.  Only countdown
+    days within the current late-fight window (0 ≤ n ≤ days_until_fight,
+    capped at 7) are included.
+
+    Returns an empty dict when the fight weekday cannot be determined.
+    """
+    fight_weekday = _fight_weekday_from_context(plan_creation_weekday, days_until_fight)
+    if fight_weekday is None:
+        return {}
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return {}
+    fight_index = _WEEKDAY_ORDER[fight_weekday]
+    countdown_map: dict[str, str] = {}
+    for offset in range(min(days, 7) + 1):
+        label = f"D-{offset}"
+        weekday_index = (fight_index - offset) % 7
+        countdown_map[label] = _WEEKDAY_NAMES[weekday_index]
+    return countdown_map
+
+
+def _nearest_available_day(
+    target_weekday: str,
+    available_days: list[str],
+) -> str | None:
+    """Return the available day closest to ``target_weekday``.
+
+    Searches forward then backward from the target position in the week.
+    Returns ``None`` when ``available_days`` is empty.
+    """
+    if not available_days:
+        return None
+    normalised = [d.strip().lower() for d in available_days if d.strip()]
+    target_index = _WEEKDAY_ORDER.get(target_weekday.strip().lower())
+    if target_index is None:
+        return normalised[0] if normalised else None
+    available_indices = {
+        _WEEKDAY_ORDER.get(d, 99): d
+        for d in normalised
+        if _WEEKDAY_ORDER.get(d) is not None
+    }
+    if not available_indices:
+        return normalised[0]
+    if target_index in available_indices:
+        return available_indices[target_index]
+    for delta in range(1, 7):
+        forward = (target_index + delta) % 7
+        if forward in available_indices:
+            return available_indices[forward]
+        backward = (target_index - delta) % 7
+        if backward in available_indices:
+            return available_indices[backward]
+    return list(available_indices.values())[0]
+
+
+def _resolve_countdown_weekday_with_availability(
+    countdown_map: dict[str, str],
+    available_days: list[str],
+) -> dict[str, str]:
+    """Adjust countdown-day weekdays so each falls on an available training day.
+
+    When a countdown day maps to a weekday that is not in ``available_days``,
+    it is moved to the nearest available weekday with minimal disruption.
+    Days are only adjusted; the countdown label (D-N) itself is preserved.
+    Returns the original map unchanged when ``available_days`` is empty.
+    """
+    if not available_days or not countdown_map:
+        return countdown_map
+    normalised_available = {d.strip().lower() for d in available_days if d.strip()}
+    resolved: dict[str, str] = {}
+    for label, weekday in countdown_map.items():
+        if weekday.strip().lower() in normalised_available:
+            resolved[label] = weekday
+        else:
+            nearest = _nearest_available_day(weekday, list(normalised_available))
+            resolved[label] = nearest if nearest is not None else weekday
+    return resolved
+
+
 def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
     fatigue = str(
         athlete_model.get("fatigue")
@@ -137,6 +259,8 @@ def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fi
         reasons.append("recent_hard_spar_spillover")
     if flags & conflicting_day_flags:
         reasons.append("conflicting_hard_dose_day")
+    if "short_notice" in flags:
+        reasons.append("short_notice_compression")
 
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(_days_out_payload_mode(days_until_fight))
     if max_blocks is not None and max_blocks < 2:
@@ -762,15 +886,16 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         )
         return roles
     if mode == "late_fight_transition_payload":
-        # D-6/D-5: light sharpness touch + recovery only, no hard sparring
+        # D-6/D-5: alactic sharpness touch + recovery only, no hard sparring
         roles: list[dict[str, Any]] = [
             _late_fight_role_entry(
                 session_index=1,
-                category="technical",
-                role_key="technical_rhythm_day",
+                category="conditioning",
+                role_key="alactic_sharpness_day",
                 preferred_pool="declared_technical_skill_days_or_conditioning_slots",
-                selection_rule="One brief technical rhythm touch only. If the athlete needs sharpness, keep it tiny and non-fatiguing.",
-                placement_rule="Keep this crisp and very low volume.",
+                preferred_system="alactic",
+                selection_rule="One short alactic sharpness touch only. Keep it tiny, crisp, and non-fatiguing.",
+                placement_rule="Keep this brief and very low volume. Do not turn it into density work.",
             ),
             _late_fight_role_entry(
                 session_index=2,
@@ -843,20 +968,38 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
 
 
 def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
+    plan_creation_weekday = athlete_model.get("plan_creation_weekday")
+    available_days = _clean_list(athlete_model.get("training_days", []))
+    countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
+    resolved_map = _resolve_countdown_weekday_with_availability(countdown_map, available_days)
+    roles = _late_fight_session_roles(days_until_fight, athlete_model)
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        days = None
     sequence: list[dict[str, Any]] = []
-    for role in _late_fight_session_roles(days_until_fight, athlete_model):
-        sequence.append(
-            {
-                "session_index": role.get("session_index"),
-                "category": role.get("category"),
-                "role_key": role.get("role_key"),
-                "preferred_pool": role.get("preferred_pool"),
-                "preferred_system": role.get("preferred_system"),
-                "selection_rule": role.get("selection_rule"),
-                "placement_rule": role.get("placement_rule"),
-                "anchor": role.get("anchor"),
-            }
-        )
+    for idx, role in enumerate(roles):
+        if days is not None:
+            countdown_offset = days - idx
+            countdown_label = f"D-{countdown_offset}" if countdown_offset >= 0 else None
+        else:
+            countdown_label = None
+        real_weekday = resolved_map.get(countdown_label) if countdown_label else None
+        entry: dict[str, Any] = {
+            "session_index": role.get("session_index"),
+            "category": role.get("category"),
+            "role_key": role.get("role_key"),
+            "preferred_pool": role.get("preferred_pool"),
+            "preferred_system": role.get("preferred_system"),
+            "selection_rule": role.get("selection_rule"),
+            "placement_rule": role.get("placement_rule"),
+            "anchor": role.get("anchor"),
+        }
+        if countdown_label:
+            entry["countdown_label"] = countdown_label
+        if real_weekday:
+            entry["real_weekday"] = real_weekday
+        sequence.append(entry)
     return sequence
 
 
@@ -933,6 +1076,9 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
     mode = _days_out_payload_mode(days_until_fight)
     plan_weekday = athlete_model.get("plan_creation_weekday")
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
+    available_days = _clean_list(athlete_model.get("training_days", []))
+    raw_countdown_map = _countdown_weekday_map(plan_weekday, days_until_fight)
+    resolved_countdown_map = _resolve_countdown_weekday_with_availability(raw_countdown_map, available_days)
     if mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload", "late_fight_transition_payload"}:
         weeks: list[dict[str, Any]] = []
     else:
@@ -976,6 +1122,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
                         "reasons": ["late_fight_stage2_payload: bypassed normal camp-style stage2 payload assumptions"],
                     }
                 ],
+                "countdown_weekday_map": resolved_countdown_map,
             }
         ]
     return {
@@ -988,6 +1135,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
         "payload_variant": "late_fight_stage2_payload",
         "payload_mode": mode,
         "fight_week_override": fight_week_override or {"active": False},
+        "countdown_weekday_map": resolved_countdown_map,
         "weeks": weeks,
     }
 
@@ -998,6 +1146,10 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
+    plan_creation_weekday = athlete_model.get("plan_creation_weekday")
+    available_days = _clean_list(athlete_model.get("training_days", []))
+    raw_countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
+    resolved_countdown_map = _resolve_countdown_weekday_with_availability(raw_countdown_map, available_days)
     spec: dict[str, Any] = {
         "payload_variant": "late_fight_stage2_payload",
         "payload_mode": mode,
@@ -1013,6 +1165,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "rendering_rules": payload_block["rendering_rules"],
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
+        "countdown_weekday_map": resolved_countdown_map,
     }
     if max_blocks is not None:
         spec["max_blocks_per_session"] = max_blocks
