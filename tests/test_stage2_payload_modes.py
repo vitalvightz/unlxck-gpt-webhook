@@ -189,7 +189,7 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["allow_anchor_wording"] is False
         assert permissions["allow_glycolytic_build"] is False
         assert "anchor" in [term.lower() for term in rules["forbidden_terms"]]
-        assert "primer" in [term.lower() for term in rules["preferred_terms"]]
+        assert "neural primer" in [term.lower() for term in rules["preferred_terms"]]
 
     def test_d0_restricts_output_to_protocol_language(self):
         permissions = _late_fight_permissions(0, _athlete(0))
@@ -198,6 +198,21 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["allow_normal_session_roles"] is False
         assert "activation" in [term.lower() for term in rules["preferred_terms"]]
         assert "warm-up" in [term.lower() for term in rules["preferred_terms"]]
+        assert "walk-through" in [term.lower() for term in rules["preferred_terms"]]
+
+    def test_d7_rendering_rules_prefer_sharpness_week_language(self):
+        rules = _late_fight_rendering_rules(7)
+
+        assert "sharpness week" in [term.lower() for term in rules["preferred_terms"]]
+        assert "power touch" in [term.lower() for term in rules["preferred_terms"]]
+        assert "primary strength" in [term.lower() for term in rules["forbidden_terms"]]
+
+    def test_d3_rendering_rules_prefer_low_noise_session_titles(self):
+        rules = _late_fight_rendering_rules(3)
+
+        assert "sharpness session" in [term.lower() for term in rules["preferred_terms"]]
+        assert "freshness session" in [term.lower() for term in rules["preferred_terms"]]
+        assert "strength block" in [term.lower() for term in rules["forbidden_terms"]]
 
     def test_transition_permissions_strip_week_logic_and_force_caps(self):
         permissions = _late_fight_permissions(5, _athlete(5))
@@ -274,6 +289,14 @@ class TestPlanningBriefBranching:
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == ["neural_primer_day"]
+
+    def test_d7_planning_brief_uses_sharpness_week_labels(self):
+        brief = _build_brief_for(7)
+
+        week = brief["week_by_week_progression"]["weeks"][0]
+        assert week["stage_label"] == "Sharpness Week"
+        assert "power touch" in week["stage_objective"].lower()
+        assert "freshness" in week["stage_objective"].lower()
 
 
 class TestStage2PayloadBranching:
@@ -358,9 +381,10 @@ class TestHandoffText:
     @pytest.mark.parametrize(
         "days, expected_heading",
         [
-            (5, "TRANSITION WINDOW"),
-            (3, "SESSION-BY-SESSION"),
-            (1, "PRE-FIGHT DAY"),
+            (7, "SHARPNESS WEEK"),
+            (5, "SHARPNESS & FRESHNESS WINDOW"),
+            (3, "SHARPNESS-FIRST SESSIONS"),
+            (1, "PRIMER DAY"),
             (0, "FIGHT DAY PROTOCOL"),
         ],
     )
@@ -374,3 +398,29 @@ class TestHandoffText:
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)
         assert "Do NOT render week headers" in text
+
+    def test_d7_handoff_uses_sharpness_week_heading_map(self):
+        text = self._build_handoff(7)
+
+        assert "Main Sharpness Day" in text
+        assert "Power Touch" in text
+        assert "Primary Strength" in text
+
+    def test_d3_handoff_replaces_camp_titles_with_late_fight_titles(self):
+        text = self._build_handoff(3)
+
+        assert "Sharpness Session" in text
+        assert "Freshness Session" in text
+        assert "Strength Block" in text
+
+    def test_d1_handoff_forbids_strength_and_block_language(self):
+        text = self._build_handoff(1)
+
+        assert "FORBIDDEN TERMS: strength, conditioning, anchor, development, stressor, fight-pace density, block" in text
+        assert "PREFERRED TERMS: neural primer, technical touch, sharpness, activation, reset, rhythm." in text
+
+    def test_d0_handoff_uses_fight_day_protocol_terms(self):
+        text = self._build_handoff(0)
+
+        assert "Walk-through reminders" in text
+        assert "Do NOT add any training session" in text
