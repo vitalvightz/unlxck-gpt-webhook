@@ -138,3 +138,36 @@ def test_guardrails_preserve_guided_display_location_without_note_leak():
     assert "Knee —" not in guardrails
     assert "Unspecified Location — Pain" not in guardrails
     assert "- avoid deep hip flexion" in guardrails
+
+
+def test_guardrails_explain_ui_severity_mapping_once():
+    guardrails = format_injury_guardrails(
+        "GPP",
+        "",
+        [],
+        parsed_entries=[
+            {
+                "injury_type": "impingement",
+                "canonical_location": "shoulder",
+                "laterality": "right",
+                "severity": "severe",
+                "display_location": "shoulder",
+                "original_phrase": "right shoulder",
+            },
+            {
+                "injury_type": "strain",
+                "canonical_location": "hamstring",
+                "laterality": "left",
+                "severity": "moderate",
+                "display_location": "hamstring",
+                "original_phrase": "left hamstring",
+            },
+        ],
+    )
+
+    note = (
+        "Severity uses UI Low/Moderate/High mapped to internal Mild/Moderate/Severe. "
+        "That injury severity label is separate from sparring risk colors like Green/Amber/Red/Black."
+    )
+    assert note in guardrails
+    assert guardrails.count(note) == 1

@@ -970,6 +970,10 @@ def format_injury_guardrails(
     lines: list[str] = []
     if entries:
         lines.append("**Injury Summary**")
+        lines.append(
+            "_Severity uses UI Low/Moderate/High mapped to internal Mild/Moderate/Severe. "
+            "That injury severity label is separate from sparring risk colors like Green/Amber/Red/Black._"
+        )
     guardrails: list[tuple[str | None, str | None, dict]] = []
     for entry in entries:
         itype = entry.get("injury_type")
