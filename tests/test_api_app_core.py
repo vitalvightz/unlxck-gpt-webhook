@@ -8,6 +8,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 import api.app as app_module
+import api.auth as auth_module
+import api.store as store_module
 from api.app import create_app
 from api_test_support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _planner, _now, finalized_result
 from conftest import RENDER_BACKEND_URL
@@ -154,19 +156,34 @@ def test_runtime_app_falls_back_to_health_endpoint_when_supabase_config_missing(
 
 
 @pytest.mark.parametrize(
-    ("env_name", "env_value"),
+    ("use_demo_mode", "env_value"),
     [
-        ("APP_CORS_ORIGINS", "://bad-origin"),
-        ("UNLXCK_STAGE2_TIMEOUT_SECONDS", "not-a-number"),
+        (True, "://bad-origin"),
+        (False, "http:///missing-host"),
     ],
 )
 def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invalid(
     monkeypatch: pytest.MonkeyPatch,
-    env_name: str,
+    use_demo_mode: bool,
     env_value: str,
 ):
-    monkeypatch.setenv("UNLXCK_DEMO_MODE", "1")
-    monkeypatch.setenv(env_name, env_value)
+    if use_demo_mode:
+        monkeypatch.setenv("UNLXCK_DEMO_MODE", "1")
+    else:
+        monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
+        monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+        monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+
+        def _fake_store_from_env(cls):
+            return FakeStore()
+
+        def _fake_auth_from_env(cls):
+            return FakeAuthService({})
+
+        monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(_fake_store_from_env))
+        monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(_fake_auth_from_env))
+
+    monkeypatch.setenv("APP_CORS_ORIGINS", env_value)
 
     reloaded = importlib.reload(app_module)
 
