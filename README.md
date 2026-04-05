@@ -198,6 +198,7 @@ SUPABASE_ANON_KEY=
 UNLXCK_ADMIN_EMAILS=ops@example.com
 APP_CORS_ORIGINS=http://127.0.0.1:3000,http://localhost:3000
 APP_CORS_ORIGIN_REGEX=
+APP_MAX_REQUEST_BODY_BYTES=1048576
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` is the preferred backend credential. `SUPABASE_ANON_KEY` is accepted as a fallback for auth token lookups, but it does not replace the service role key for production writes.
@@ -223,6 +224,9 @@ If you also need to allow Vercel preview deployments for direct API access, pref
 project-specific regex such as
 `APP_CORS_ORIGIN_REGEX=https://your-app(?:-git-[^.]+)?\.vercel\.app` instead of a wildcard for
 every `vercel.app` subdomain.
+
+Incoming request bodies are capped at `APP_MAX_REQUEST_BODY_BYTES` bytes, which defaults to
+`1048576` (1 MiB).
 
 ### Run The API
 
