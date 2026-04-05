@@ -61,3 +61,18 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
     assert "Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'." in handoff
     assert "If fatigue is high or fight-week pressure is active, reduce optionality" in handoff
     assert "If injury management is active, lead with constraints, substitutions, or stop rules" in handoff
+
+
+def test_build_stage2_handoff_text_puts_late_fight_instructions_first_and_limits_days():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={"payload_mode": "pre_fight_day_payload"},
+        plan_text="Draft plan text.",
+        planning_brief={
+            "athlete_snapshot": {"sport": "boxing", "active_window_weekdays": ["Thursday", "Friday"]},
+            "late_fight_plan_spec": {"active_window_weekdays": ["Thursday", "Friday"]},
+        },
+    )
+
+    assert handoff.index("PAYLOAD MODE INSTRUCTIONS") < handoff.index("You are Stage 2 (planner/finalizer).")
+    assert "ALLOWED DAYS ONLY: Thursday, Friday." in handoff
+    assert "Do not add earlier weekdays or a Monday-to-Sunday frame." in handoff
