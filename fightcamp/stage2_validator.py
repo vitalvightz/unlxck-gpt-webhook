@@ -1209,6 +1209,169 @@ def _late_fight_forbidden_matches(token: str, plan_lines: list[str], blocks: lis
     return [line for line in plan_lines if _line_matches_late_fight_token(line, token)]
 
 
+# ---------------------------------------------------------------------------
+# Late-fight dosage ceiling helpers (Patch B)
+# ---------------------------------------------------------------------------
+
+# Pattern to extract a leading integer or low–high range from text, e.g.:
+#   "4–6 bursts", "6–10 rounds", "3 bursts", "2x3"
+_DOSE_RANGE_PREFIX = re.compile(
+    r"\b(\d+)\s*[–\-x×]\s*(\d+)\b|\b(\d+)\b",
+    re.IGNORECASE,
+)
+
+# Patterns that signal an alactic burst / sharpness effort line
+_ALACTIC_BURST_SIGNALS = re.compile(
+    r"\b(burst|bursts?|alactic|sharpness|primer|neural|pop)\b",
+    re.IGNORECASE,
+)
+
+# Patterns that signal a technical or conditioning round line
+_TECHNICAL_ROUND_SIGNALS = re.compile(
+    r"\b(round|rounds?|technical|rhythm|shadowbox|flow round|walk.?through|drill round)\b",
+    re.IGNORECASE,
+)
+
+# Patterns that indicate a conditioning-style round structure (forbidden on D-1)
+_CONDITIONING_ROUND_STRUCTURE = re.compile(
+    r"(\d+\s*[–\-x×]\s*\d+|\d+)\s*(rounds?|rnd)\s*(of|@|x)?\s*(\d+\s*[–\-x×]\s*\d+)?\s*(min|sec|s\b)",
+    re.IGNORECASE,
+)
+
+
+def _extract_leading_count(text: str) -> int | None:
+    """Return the *upper* bound of the first numeric range (or single number) in *text*."""
+    m = _DOSE_RANGE_PREFIX.search(text)
+    if not m:
+        return None
+    if m.group(1) and m.group(2):
+        return int(m.group(2))
+    if m.group(3):
+        return int(m.group(3))
+    return None
+
+
+def _late_fight_dosage_ceilings(days_until_fight: int) -> dict[str, int]:
+    """Return per-day dosage ceilings: max_alactic_bursts, max_technical_rounds."""
+    table: dict[int, dict[str, int]] = {
+        5: {"max_alactic_bursts": 6, "max_technical_rounds": 4},
+        4: {"max_alactic_bursts": 5, "max_technical_rounds": 3},
+        3: {"max_alactic_bursts": 4, "max_technical_rounds": 3},
+        2: {"max_alactic_bursts": 4, "max_technical_rounds": 2},
+        1: {"max_alactic_bursts": 3, "max_technical_rounds": 2},
+        0: {"max_alactic_bursts": 4, "max_technical_rounds": 0},
+    }
+    return table.get(days_until_fight, {})
+
+
+def _count_dosage_in_blocks(
+    blocks: list[list[str]],
+) -> tuple[int, int]:
+    """Parse rendered plan blocks and return (max_alactic_count, max_technical_count) seen."""
+    max_alactic = 0
+    max_technical = 0
+    for block in blocks:
+        for line in _late_fight_block_body(block):
+            low = line.lower()
+            count = _extract_leading_count(low)
+            if count is None:
+                continue
+            if _ALACTIC_BURST_SIGNALS.search(low):
+                max_alactic = max(max_alactic, count)
+            elif _TECHNICAL_ROUND_SIGNALS.search(low):
+                max_technical = max(max_technical, count)
+    return max_alactic, max_technical
+
+
+def _has_conditioning_round_structure(blocks: list[list[str]]) -> list[str]:
+    """Return lines that contain a conditioning-style round structure (e.g. '6–10 rounds of 6–12 sec')."""
+    matches: list[str] = []
+    for block in blocks:
+        for line in _late_fight_block_body(block):
+            if _CONDITIONING_ROUND_STRUCTURE.search(line):
+                matches.append(line)
+    return matches
+
+
+def _late_fight_dosage_warnings(
+    spec: dict[str, Any],
+    blocks: list[list[str]],
+) -> list[dict]:
+    """Emit dosage-ceiling warnings for late-fight countdown days (days_until_fight <= 5)."""
+    days_out_bucket = str(spec.get("days_out_bucket") or "")
+    payload_mode = str(spec.get("payload_mode") or "")
+
+    # Derive days_until_fight from the bucket string, e.g. "D-5" → 5
+    try:
+        days_int = int(days_out_bucket.split("-")[-1])
+    except (ValueError, AttributeError):
+        return []
+
+    if days_int > 5:
+        return []
+
+    ceilings = _late_fight_dosage_ceilings(days_int)
+    if not ceilings:
+        return []
+
+    warnings: list[dict] = []
+    actual_alactic, actual_technical = _count_dosage_in_blocks(blocks)
+
+    max_alactic = ceilings.get("max_alactic_bursts")
+    if max_alactic is not None and actual_alactic > max_alactic:
+        warnings.append(
+            {
+                "code": "late_fight_alactic_dose_overage",
+                "message": (
+                    f"{days_out_bucket} contains {actual_alactic} alactic efforts, "
+                    f"exceeding the {max_alactic}-effort ceiling for this countdown day."
+                ),
+                "payload_mode": payload_mode,
+                "days_out_bucket": days_out_bucket,
+                "actual_alactic_count": actual_alactic,
+                "max_alactic_bursts": max_alactic,
+                "blocking": True,
+            }
+        )
+
+    max_technical = ceilings.get("max_technical_rounds")
+    if max_technical is not None and actual_technical > max_technical:
+        warnings.append(
+            {
+                "code": "late_fight_technical_round_overage",
+                "message": (
+                    f"{days_out_bucket} contains {actual_technical} technical rounds, "
+                    f"exceeding the {max_technical}-round ceiling for this countdown day."
+                ),
+                "payload_mode": payload_mode,
+                "days_out_bucket": days_out_bucket,
+                "actual_technical_count": actual_technical,
+                "max_technical_rounds": max_technical,
+                "blocking": True,
+            }
+        )
+
+    # D-1 specific: no conditioning-style round structures at all
+    if days_int == 1:
+        cond_lines = _has_conditioning_round_structure(blocks)
+        if cond_lines:
+            warnings.append(
+                {
+                    "code": "late_fight_conditioning_round_structure_forbidden",
+                    "message": (
+                        "D-1 plan contains conditioning-style round structures, "
+                        "which are forbidden on the day before fight."
+                    ),
+                    "payload_mode": payload_mode,
+                    "days_out_bucket": days_out_bucket,
+                    "matched_lines": cond_lines[:3],
+                    "blocking": True,
+                }
+            )
+
+    return warnings
+
+
 def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
     spec = _late_fight_plan_spec(planning_brief)
     payload_mode = str(spec.get("payload_mode") or "")
@@ -1320,6 +1483,8 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
                 "blocking": True,
             }
         )
+
+    warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 
     return warnings
 
