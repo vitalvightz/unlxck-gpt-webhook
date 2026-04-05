@@ -546,19 +546,6 @@ def format_strength_block(phase: str, fatigue: str, exercises: list[dict]) -> st
     return "\n".join(strength_output)
 
 
-def _empty_strength_result(phase: str, reason: str) -> dict:
-    """Return a minimal empty strength block used when the days-out policy
-    prohibits strength generation for this phase."""
-    return {
-        "block": "",
-        "exercises": [],
-        "why_log": [{"note": f"Strength block suppressed: {reason}", "phase": phase}],
-        "phase": phase,
-        "session_quality": {},
-        "day_out_suppressed": True,
-    }
-
-
 def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     phase = flags.get("phase", "GPP").upper()
     seed = flags.get("random_seed")
@@ -589,21 +576,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     target_exercises = exercise_counts.get("strength", 0)
     prev_exercises = flags.get("prev_exercises", [])
     recent_movements = set(flags.get("recent_exercises", []))
-
-    # ── Days-out policy enforcement ────────────────────────────────────
-    _days_out_policy = flags.get("days_out_policy")
-    _dop_perms = _days_out_policy.get("planner_permissions", {}) if isinstance(_days_out_policy, dict) else {}
-    # Strength generation gated by days-out planner permissions:
-    if _dop_perms.get("fight_day_protocol"):
-        # D-0 should never reach here (short-circuited upstream), but guard anyway.
-        return _empty_strength_result(phase, "fight_day_protocol")
-    if not _dop_perms.get("allow_strength_anchor", True) and not _dop_perms.get("allow_strength_primer_only", False):
-        return _empty_strength_result(phase, "strength_not_permitted")
-    _max_ex = _dop_perms.get("max_strength_exercises")
-    if isinstance(_max_ex, int) and _max_ex >= 0:
-        target_exercises = min(target_exercises, _max_ex)
-    if target_exercises <= 0:
-        return _empty_strength_result(phase, "zero_target_exercises")
     cornerstone_terms = {"squat", "deadlift", "bench", "pull-up", "pullup"}
     exercise_bank = get_exercise_bank()
     style_exercises = get_style_exercises()
@@ -640,13 +612,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "barbell",
         "trap_bar",
     }
-    # When days-out policy forbids development blocks, extend the ban list
-    # even if the nominal phase is not TAPER.
-    if not _dop_perms.get("allow_development_blocks", True):
-        taper_banned = taper_banned | {
-            "tempo", "triphasic", "work_capacity", "hypertrophy",
-            "high_volume", "accumulation",
-        }
     restriction_candidates = 0
     restriction_blocked = 0
     restriction_reason_counts: dict[str, int] = defaultdict(int)

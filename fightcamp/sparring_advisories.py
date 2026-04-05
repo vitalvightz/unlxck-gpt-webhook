@@ -449,26 +449,6 @@ def build_plan_advisories(*, planning_brief: dict[str, Any] | None) -> list[dict
     if not isinstance(planning_brief, dict):
         return []
 
-    # ── Days-out policy: inject explicit advisory when sparring is suppressed ─
-    _days_out_policy = planning_brief.get("days_out_policy")
-    if isinstance(_days_out_policy, dict):
-        _dop_perms = _days_out_policy.get("planner_permissions", {})
-        _smode = _dop_perms.get("sparring_dose_mode", "full")
-        if _smode == "suppress":
-            bucket = _days_out_policy.get("bucket", "")
-            return [{
-                "kind": "sparring_adjustment",
-                "action": "convert",
-                "phase": "TAPER",
-                "week_label": bucket,
-                "days": [],
-                "title": "Hard sparring not recommended",
-                "reason": f"Fight is imminent ({bucket}). Hard sparring input is ignored for planning structure.",
-                "suggestion": "Focus on activation, light technical rhythm, and mobility.",
-                "replacement": None,
-                "disclaimer": "Raw sparring day preferences are preserved in your profile but do not influence this plan.",
-            }]
-
     weekly_role_map = planning_brief.get("weekly_role_map")
     if not isinstance(weekly_role_map, dict):
         return []

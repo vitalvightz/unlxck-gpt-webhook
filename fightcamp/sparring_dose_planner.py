@@ -264,29 +264,10 @@ def _reason_codes(
 
 
 def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
-    # ── Days-out policy enforcement ────────────────────────────────────
-    # The policy is passed through athlete_snapshot as days_out_policy (set
-    # by TrainingContext.to_flags()).  When the policy says sparring is
-    # suppressed or advisory-only, hard sparring days are not treated as
-    # architecture owners.
-    _days_out_policy = athlete_snapshot.get("days_out_policy")
-    _dop_perms = _days_out_policy.get("planner_permissions", {}) if isinstance(_days_out_policy, dict) else {}
-    _sparring_mode = _dop_perms.get("sparring_dose_mode", "full")
-    if _sparring_mode == "suppress":
-        # D-1 / D-0: sparring input ignored for planning structure.
-        return []
-    _max_collision = _dop_perms.get("max_hard_sparring_collision_owners")
-
     hard_days = _ordered_weekdays(
         week.get("declared_hard_sparring_days")
         or athlete_snapshot.get("hard_sparring_days")
     )
-    if not hard_days:
-        return []
-
-    # Narrow collision owners if policy caps them.
-    if isinstance(_max_collision, int) and _max_collision >= 0:
-        hard_days = hard_days[:_max_collision]
     if not hard_days:
         return []
 

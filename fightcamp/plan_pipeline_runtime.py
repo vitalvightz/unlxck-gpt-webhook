@@ -12,7 +12,6 @@ from .conditioning import (
     get_style_conditioning_bank,
     prime_conditioning_banks,
 )
-from .days_out_policy import DaysOutContext, build_days_out_context
 from .input_parsing import PlanInput, is_short_notice_days
 from .mindset_module import classify_mental_block
 from .rehab_protocols import prime_rehab_bank
@@ -141,7 +140,6 @@ class PlanRuntimeContext:
     style_conditioning_bank: list[dict]
     injuries_only_text: str
     training_context: TrainingContext
-    days_out_context: DaysOutContext | None = None
     sanitize_labels: tuple[str, ...] = SANITIZE_LABELS
 
     def phase_active(self, phase: str) -> bool:
@@ -264,9 +262,6 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
     camp_len = max(1, phase_weeks["GPP"] + phase_weeks["SPP"] + phase_weeks["TAPER"])
     short_notice = is_short_notice_days(plan_input.days_until_fight)
 
-    # Build days-out policy context (deterministic, from shared JSON)
-    days_out_ctx = build_days_out_context(plan_input.days_until_fight)
-
     injuries_only_text = "; ".join(parsed_injury_phrases)
     raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
 
@@ -288,7 +283,7 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         weight_cut_pct=weight_cut_pct_val,
         fight_format=selection_format,
         status=plan_input.status.strip().lower(),
-        training_split=allocate_sessions(plan_input.training_frequency, days_out_context=days_out_ctx),
+        training_split=allocate_sessions(plan_input.training_frequency),
         key_goals=[
             GOAL_NORMALIZER.get(goal.strip(), goal.strip()).lower()
             for goal in plan_input.key_goals.split(",")
@@ -304,7 +299,6 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         days_until_fight=plan_input.days_until_fight,
         hard_sparring_days=plan_input.hard_sparring_days,
         technical_skill_days=plan_input.technical_skill_days,
-        days_out_context=days_out_ctx,
     )
 
     return PlanRuntimeContext(
@@ -331,5 +325,4 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         style_conditioning_bank=get_style_conditioning_bank(),
         injuries_only_text=injuries_only_text,
         training_context=training_context,
-        days_out_context=days_out_ctx,
     )

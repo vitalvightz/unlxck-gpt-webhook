@@ -4,7 +4,19 @@ import json
 import re
 from typing import Any
 
-from .days_out_policy import build_days_out_context, DaysOutContext
+from .stage2_payload_late_fight import (
+    _build_late_fight_plan_spec,
+    _build_late_fight_session_sequence,
+    _build_late_fight_week_by_week_progression,
+    _build_late_fight_weekly_role_map,
+    _days_out_payload_block,
+    _days_out_payload_mode,
+    _fight_week_override_payload,
+    _handoff_mode_instructions,
+    _late_fight_permissions,
+    _late_fight_rendering_rules,
+    _uses_late_fight_stage2_payload,
+)
 from .normalization import normalize_lower_text
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
@@ -2778,378 +2790,11 @@ def _apply_legacy_high_fatigue_compression(
     return kept_roles, updated_suppressed
 
 
-def _fight_week_override_band(days_until_fight: Any) -> str:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return "none"
-    if days < 0:
-        return "none"
-    if days <= 1:
-        return "final_day_protocol"
-    if days <= 3:
-        return "micro_taper_protocol"
-    if days <= 6:
-        return "mini_taper_protocol"
-    return "none"
-
-
-def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None:
-    band = _fight_week_override_band(days_until_fight)
-    if band == "none":
-        return None
-
-    base = {
-        "active": True,
-        "days_until_fight": days_until_fight,
-        "band": band,
-        "red_flags": ["do not chase fitness now"],
-    }
-
-    if band == "final_day_protocol":
-        return {
-            **base,
-            "plan_mode": "readiness_protocol_only",
-            "coach_note": "Fight is immediate. Do not run a normal training week or add fitness work.",
-            "allowed_session_roles": [],
-            "protocol": [
-                "No strength work, no conditioning blocks, and no volume accumulation.",
-                "Optional short neural primer only if movement quality is crisp and fatigue is low.",
-                "Use mobility, activation, breathing, and short shakeout only.",
-                "Include hydration, fuel, sleep, and weight-cut execution reminders.",
-                "Today should usually be warm-up guidance, activation, mental cues, and post-fight recovery/refuel notes only.",
-            ],
-        }
-
-    if band == "micro_taper_protocol":
-        return {
-            **base,
-            "plan_mode": "micro_taper_only",
-            "coach_note": "Use a micro-taper only. Do not render a normal weekly build.",
-            "allowed_session_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
-            "max_sessions": 2,
-            "protocol": [
-                "At most one short primer session plus one light mobility/recovery session.",
-                "No hard conditioning, no muscle-damaging lifts, and no new drills.",
-                "Keep intensity sharp and volume tiny to arrive fresh.",
-            ],
-        }
-
-    return {
-        **base,
-        "plan_mode": "mini_taper_only",
-        "coach_note": "Use a mini taper only. Do not render a full normal week.",
-        "allowed_session_roles": ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"],
-        "max_sessions": 3,
-        "protocol": [
-            "Reduce volume and keep only high-value sharpness exposures.",
-            "Preserve speed, timing, and rhythm with one to two key sessions.",
-            "Allow only very low-cost conditioning if truly needed.",
-        ],
-    }
-
-
-# ---------------------------------------------------------------------------
-# Days-out payload mode helpers
-# ---------------------------------------------------------------------------
-
-_PAYLOAD_MODE_MAP = {
-    0: "fight_day_protocol_payload",
-    1: "pre_fight_day_payload",
-    2: "late_fight_session_payload",
-    3: "late_fight_session_payload",
-    4: "late_fight_session_payload",
-    5: "late_fight_week_payload",
-    6: "late_fight_week_payload",
-    7: "late_fight_week_payload",
-}
-
-
-def _days_out_payload_mode(days_until_fight: Any) -> str:
-    """Return the explicit payload mode for the given days-until-fight value."""
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return "camp_payload"
-    if days < 0:
-        return "camp_payload"
-    return _PAYLOAD_MODE_MAP.get(days, "camp_payload")
-
-
-def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
-    """Return deterministic late-fight permissions based on days out.
-
-    These sit on top of existing fight_week_override and planner permissions
-    to provide a single, inspectable permission set for Stage 2 consumers.
-    """
-    mode = _days_out_payload_mode(days_until_fight)
-    if mode == "camp_payload":
-        return {
-            "mode": mode,
-            "allow_full_weekly_structure": True,
-            "allow_normal_session_roles": True,
-            "allow_anchor_wording": True,
-            "allow_development_language": True,
-            "allow_glycolytic_build": True,
-            "allow_broad_weakness_building": True,
-            "max_meaningful_strength_anchors": None,
-            "max_meaningful_conditioning_stressors": None,
-            "allow_hard_sparring_influence": True,
-            "allow_weekly_frequency_reasoning": True,
-            "allow_multi_session_stress": True,
-            "sparring_role": "full_collision_owner",
-        }
-
-    if mode == "late_fight_week_payload":
-        # D-7, D-6, D-5
-        return {
-            "mode": mode,
-            "allow_full_weekly_structure": False,
-            "allow_compressed_weekly_structure": True,
-            "allow_normal_session_roles": True,
-            "allow_anchor_wording": True,
-            "allow_development_language": False,
-            "allow_glycolytic_build": False,
-            "allow_broad_weakness_building": False,
-            "max_meaningful_strength_anchors": 1,
-            "max_meaningful_conditioning_stressors": 1,
-            "allow_hard_sparring_influence": True,
-            "allow_weekly_frequency_reasoning": True,
-            "allow_multi_session_stress": False,
-            "sparring_role": "collision_owner_narrow",
-            "forbid": [
-                "broad development language",
-                "multiple meaningful non-sparring stressors",
-            ],
-        }
-
-    if mode == "late_fight_session_payload":
-        # D-4, D-3, D-2
-        try:
-            days = int(days_until_fight)
-        except (TypeError, ValueError):
-            days = 3
-        sparring_role = "advisory_only" if days <= 2 else "narrowing_influence"
-        return {
-            "mode": mode,
-            "allow_full_weekly_structure": False,
-            "allow_compressed_weekly_structure": False,
-            "allow_session_list_only": True,
-            "allow_normal_session_roles": False,
-            "allow_anchor_wording": False,
-            "allow_development_language": False,
-            "allow_glycolytic_build": False,
-            "allow_broad_weakness_building": False,
-            "max_meaningful_strength_anchors": 0,
-            "max_meaningful_conditioning_stressors": 0,
-            "allow_hard_sparring_influence": days >= 3,
-            "allow_weekly_frequency_reasoning": False,
-            "allow_multi_session_stress": False,
-            "sparring_role": sparring_role,
-            "allow_alactic_sharpness": days >= 3,
-            "allow_activation_mobility": True,
-            "forbid": [
-                "normal camp-week framing",
-                "broad weekly architecture",
-                "developmental strength block",
-                "glycolytic build logic",
-                "broad weakness-building language",
-                "program block framing",
-                "phase-explanation dump",
-                "long rationale sections",
-            ],
-        }
-
-    if mode == "pre_fight_day_payload":
-        # D-1
-        return {
-            "mode": mode,
-            "allow_full_weekly_structure": False,
-            "allow_compressed_weekly_structure": False,
-            "allow_session_list_only": False,
-            "allow_primer_only": True,
-            "allow_normal_session_roles": False,
-            "allow_anchor_wording": False,
-            "allow_development_language": False,
-            "allow_glycolytic_build": False,
-            "allow_broad_weakness_building": False,
-            "max_meaningful_strength_anchors": 0,
-            "max_meaningful_conditioning_stressors": 0,
-            "allow_hard_sparring_influence": False,
-            "allow_weekly_frequency_reasoning": False,
-            "allow_multi_session_stress": False,
-            "sparring_role": "suppressed",
-            "allow": [
-                "neural primer",
-                "light technical touch",
-                "mobility / reset",
-                "pre-fight instructions",
-            ],
-            "forbid": [
-                "anchor wording",
-                "primary strength",
-                "full strength block",
-                "glycolytic insert",
-                "weekly architecture framing",
-                "hard sparring influence",
-                "conditioning-system allocation",
-                "fight-pace density",
-                "conditioning block",
-            ],
-        }
-
-    # fight_day_protocol_payload (D-0)
-    return {
-        "mode": mode,
-        "allow_full_weekly_structure": False,
-        "allow_compressed_weekly_structure": False,
-        "allow_session_list_only": False,
-        "allow_primer_only": False,
-        "allow_fight_day_protocol_only": True,
-        "allow_normal_session_roles": False,
-        "allow_anchor_wording": False,
-        "allow_development_language": False,
-        "allow_glycolytic_build": False,
-        "allow_broad_weakness_building": False,
-        "max_meaningful_strength_anchors": 0,
-        "max_meaningful_conditioning_stressors": 0,
-        "allow_hard_sparring_influence": False,
-        "allow_weekly_frequency_reasoning": False,
-        "allow_multi_session_stress": False,
-        "sparring_role": "suppressed",
-        "allow": [
-            "activation",
-            "warm-up",
-            "tactical cueing",
-            "fueling / hydration / logistics",
-            "post-fight recovery notes",
-        ],
-        "forbid": [
-            "all normal week logic",
-            "strength generation",
-            "conditioning generation",
-            "session-role generation",
-            "hard sparring relevance",
-            "weekly role map rendering as a real week",
-        ],
-    }
-
-
-def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
-    """Return rendering guidance for Stage 2 based on proximity to fight."""
-    mode = _days_out_payload_mode(days_until_fight)
-
-    if mode == "camp_payload":
-        return {"mode": mode, "rules": []}
-
-    if mode == "late_fight_week_payload":
-        return {
-            "mode": mode,
-            "framing": "compressed_week",
-            "rules": [
-                "Use concise compressed week framing.",
-                "No broad development language.",
-                "Cap meaningful non-sparring stressors at one.",
-                "Keep sparring collision logic active.",
-            ],
-        }
-
-    if mode == "late_fight_session_payload":
-        return {
-            "mode": mode,
-            "framing": "session_by_session",
-            "rules": [
-                "Render session-by-session, not as a program block.",
-                "No 'program block' framing.",
-                "No phase-explanation dump.",
-                "No long rationale sections.",
-                "Keep each session description tight and action-oriented.",
-            ],
-        }
-
-    if mode == "pre_fight_day_payload":
-        return {
-            "mode": mode,
-            "framing": "primer_only",
-            "rules": [
-                "Output primer-only content.",
-                "No anchor, primary strength, conditioning block, or fight-pace density language.",
-                "Prefer terms: primer, touch, sharpness, reset, rhythm.",
-                "Keep the entire output under 300 words.",
-            ],
-            "forbidden_terms": [
-                "anchor",
-                "primary strength",
-                "conditioning block",
-                "fight-pace density",
-            ],
-            "preferred_terms": [
-                "primer",
-                "touch",
-                "sharpness",
-                "reset",
-                "rhythm",
-            ],
-        }
-
-    # fight_day_protocol_payload
-    return {
-        "mode": mode,
-        "framing": "fight_day_protocol",
-        "rules": [
-            "No training language.",
-            "Output activation, warm-up, cue, fuel, and recovery content only.",
-            "Do not render a weekly role map or session architecture.",
-            "Keep the output minimal and fight-day focused.",
-        ],
-        "forbidden_terms": [
-            "anchor",
-            "primary strength",
-            "conditioning block",
-            "fight-pace density",
-            "weekly role map",
-            "session architecture",
-        ],
-        "preferred_terms": [
-            "activation",
-            "warm-up",
-            "cue",
-            "fuel",
-            "recover",
-        ],
-    }
-
-
-def _days_out_payload_block(days_until_fight: Any, athlete_model: dict) -> dict:
-    """Build the complete days-out payload section for the planning brief."""
-    mode = _days_out_payload_mode(days_until_fight)
-    permissions = _late_fight_permissions(days_until_fight, athlete_model)
-    rendering_rules = _late_fight_rendering_rules(days_until_fight)
-
-    # Pull bucket / allowed / forbidden session types from the shared days-out policy
-    days_out_ctx = build_days_out_context(
-        int(days_until_fight) if days_until_fight is not None else None
-    )
-    fight_week_override = _fight_week_override_payload(days_until_fight)
-
-    return {
-        "days_until_fight": days_until_fight,
-        "payload_mode": mode,
-        "days_out_bucket": days_out_ctx.bucket,
-        "fight_week_override": fight_week_override or {"active": False},
-        "late_fight_permissions": permissions,
-        "allowed_session_types": sorted(days_out_ctx.allowed_session_types),
-        "forbidden_session_types": sorted(days_out_ctx.forbidden_session_types),
-        "rendering_rules": rendering_rules,
-    }
-
-
 def _build_weekly_role_map(
     athlete_model: dict,
     week_by_week_progression: dict,
     limiter_profile: dict,
     fight_week_override: dict[str, Any] | None = None,
-    days_until_fight: Any = None,
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
@@ -3355,121 +3000,6 @@ def _build_weekly_role_map(
             }
         )
 
-    # ── Payload-mode-aware shaping ──────────────────────────────────
-    payload_mode = _days_out_payload_mode(days_until_fight)
-
-    if payload_mode == "fight_day_protocol_payload":
-        # D-0: no normal weekly roles at all
-        weeks = []
-
-    elif payload_mode == "pre_fight_day_payload":
-        # D-1: at most one tiny primer structure
-        if weeks:
-            week = dict(weeks[0])
-            roles = list(week.get("session_roles") or [])
-            primer_roles = [
-                r for r in roles
-                if r.get("category") == "recovery"
-                or "primer" in str(r.get("role_key", "")).lower()
-            ][:1]
-            suppressed = list(week.get("suppressed_roles") or [])
-            for r in roles:
-                if r not in primer_roles:
-                    suppressed.append({
-                        "category": r.get("category", "plan"),
-                        "role_key": r.get("role_key", "unknown"),
-                        "reasons": ["pre_fight_day_payload: non-primer roles suppressed"],
-                    })
-            week["session_roles"] = primer_roles
-            week["suppressed_roles"] = suppressed
-            week["coach_note_flags"] = _dedupe_clean_strings(
-                _clean_list(week.get("coach_note_flags", [])) + ["pre-fight day — primer only"]
-            )
-            week["intentional_compression"] = {
-                "active": True, "reason_codes": ["pre_fight_day_payload"],
-                "reason": "pre_fight_day_payload",
-                "summary": "D-1: primer-only session, all other roles suppressed.",
-            }
-            weeks = [week]
-
-    elif payload_mode == "late_fight_session_payload":
-        # D-4 to D-2: flat session list, no broad weekly architecture
-        if weeks:
-            week = dict(weeks[0])
-            roles = list(week.get("session_roles") or [])
-            suppressed = list(week.get("suppressed_roles") or [])
-            # Keep only recovery + conditioning (light) roles; suppress strength / development
-            kept: list[dict] = []
-            for r in roles:
-                cat = r.get("category", "")
-                if cat in ("recovery",) or "primer" in str(r.get("role_key", "")).lower():
-                    kept.append(r)
-                elif cat == "conditioning" and "alactic" in str(r.get("role_key", "")).lower():
-                    try:
-                        d = int(days_until_fight)
-                    except (TypeError, ValueError):
-                        d = 3
-                    if d >= 3:
-                        kept.append(r)
-                    else:
-                        suppressed.append({
-                            "category": cat, "role_key": r.get("role_key", "unknown"),
-                            "reasons": ["late_fight_session_payload: alactic suppressed at D-2"],
-                        })
-                else:
-                    suppressed.append({
-                        "category": cat, "role_key": r.get("role_key", "unknown"),
-                        "reasons": [f"late_fight_session_payload: {cat} role suppressed"],
-                    })
-            kept = kept[:2]  # cap at 2 sessions max
-            week["session_roles"] = kept
-            week["suppressed_roles"] = suppressed
-            week["coach_note_flags"] = _dedupe_clean_strings(
-                _clean_list(week.get("coach_note_flags", [])) + ["late fight session — session-list only"]
-            )
-            week["intentional_compression"] = {
-                "active": True, "reason_codes": ["late_fight_session_payload"],
-                "reason": "late_fight_session_payload",
-                "summary": "D-4 to D-2: flat session list, no camp-week framing.",
-            }
-            weeks = [week]
-
-    elif payload_mode == "late_fight_week_payload":
-        # D-7 to D-5: compressed weekly structure
-        if weeks:
-            week = dict(weeks[0])
-            roles = list(week.get("session_roles") or [])
-            suppressed = list(week.get("suppressed_roles") or [])
-            # Keep at most one strength anchor + one conditioning stressor + recovery
-            kept_strength: list[dict] = []
-            kept_conditioning: list[dict] = []
-            kept_other: list[dict] = []
-            for r in roles:
-                cat = r.get("category", "")
-                if cat == "strength" and len(kept_strength) < 1:
-                    kept_strength.append(r)
-                elif cat == "conditioning" and len(kept_conditioning) < 1:
-                    kept_conditioning.append(r)
-                elif cat == "recovery":
-                    kept_other.append(r)
-                else:
-                    suppressed.append({
-                        "category": cat, "role_key": r.get("role_key", "unknown"),
-                        "reasons": ["late_fight_week_payload: excess roles compressed out"],
-                    })
-            final_roles = kept_strength + kept_conditioning + kept_other
-            week["session_roles"] = final_roles
-            week["suppressed_roles"] = suppressed
-            week["coach_note_flags"] = _dedupe_clean_strings(
-                _clean_list(week.get("coach_note_flags", [])) + ["late fight week — compressed structure"]
-            )
-            week["intentional_compression"] = {
-                "active": True, "reason_codes": ["late_fight_week_payload"],
-                "reason": "late_fight_week_payload",
-                "summary": "D-7 to D-5: compressed week — max 1 strength anchor, 1 conditioning stressor.",
-            }
-            weeks = [week]
-
     # Legacy fight_week_override compatibility (acts as further filter if still active)
     if fight_week_override and fight_week_override.get("active"):
         band = str(fight_week_override.get("band") or "")
@@ -3515,7 +3045,6 @@ def _build_weekly_role_map(
             "Anchors inherit the weekly stress map so phase guardrails, safety, and sport-load rules keep priority.",
             "Weekly roles are an execution layer only and cannot overrule the planning hierarchy.",
         ],
-        "payload_mode": payload_mode,
         "fight_week_override": fight_week_override or {"active": False},
         "weeks": weeks,
     }
@@ -3672,21 +3201,60 @@ def build_planning_brief(
         weekly_stress_map,
     )
     days_until_fight = athlete_model.get("days_until_fight")
+
+    if _uses_late_fight_stage2_payload(days_until_fight):
+        fight_week_override = _fight_week_override_payload(days_until_fight)
+        days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+        late_fight_progression = _build_late_fight_week_by_week_progression(days_until_fight, athlete_model, phase_briefs)
+        weekly_role_map = _build_late_fight_weekly_role_map(days_until_fight, athlete_model, fight_week_override)
+        session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
+        return {
+            "schema_version": "planning_brief.v1",
+            "generator_mode": "deterministic_late_fight_planner_plus_ai_finalizer",
+            "payload_variant": "late_fight_stage2_payload",
+            "athlete_snapshot": athlete_model,
+            "days_out_payload": days_out_payload,
+            "late_fight_plan_spec": _build_late_fight_plan_spec(days_until_fight, athlete_model),
+            "late_fight_session_sequence": session_sequence,
+            "fight_demands": {
+                "sport": athlete_model.get("sport"),
+                "status": athlete_model.get("status"),
+                "rounds_format": athlete_model.get("rounds_format"),
+                "camp_length_weeks": athlete_model.get("camp_length_weeks"),
+                "days_until_fight": days_until_fight,
+                "short_notice": athlete_model.get("short_notice"),
+            },
+            "archetype_summary": _derive_athlete_archetype(athlete_model),
+            "main_limiter": _derive_main_limiter(athlete_model),
+            "compressed_priorities": athlete_model.get("compressed_priorities", {}),
+            "limiter_profile": limiter_profile,
+            "sport_load_profile": sport_load_profile,
+            "decision_hierarchy": PLANNING_DECISION_HIERARCHY,
+            "main_risks": _derive_main_risks(athlete_model, restrictions),
+            "global_priorities": _derive_global_priorities(athlete_model, phase_briefs, candidate_pools),
+            "phase_strategy": _build_phase_strategy(phase_briefs, candidate_pools, late_fight_progression),
+            "weekly_stress_map": weekly_stress_map,
+            "week_by_week_progression": late_fight_progression,
+            "fight_week_override": fight_week_override or {"active": False},
+            "weekly_role_map": weekly_role_map,
+            "rendering_rules": days_out_payload.get("rendering_rules", {}),
+            "restrictions": restrictions,
+            "candidate_pools": candidate_pools,
+            "omission_ledger": omission_ledger,
+            "decision_rules": rewrite_guidance,
+        }
+
     fight_week_override = _fight_week_override_payload(days_until_fight)
     weekly_role_map = _build_weekly_role_map(
         athlete_model,
         week_by_week_progression,
         limiter_profile,
         fight_week_override=fight_week_override,
-        days_until_fight=days_until_fight,
     )
-    days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
     return {
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
         "athlete_snapshot": athlete_model,
-        "days_out_policy": athlete_model.get("days_out_policy"),
-        "days_out_payload": days_out_payload,
         "fight_demands": {
             "sport": athlete_model.get("sport"),
             "status": athlete_model.get("status"),
@@ -3708,7 +3276,6 @@ def build_planning_brief(
         "week_by_week_progression": week_by_week_progression,
         "fight_week_override": fight_week_override or {"active": False},
         "weekly_role_map": weekly_role_map,
-        "rendering_rules": days_out_payload.get("rendering_rules", {}),
         "restrictions": restrictions,
         "candidate_pools": candidate_pools,
         "omission_ledger": omission_ledger,
@@ -4162,17 +3729,31 @@ def build_stage2_payload(
     }
 
     days_until_fight = athlete_model.get("days_until_fight")
-    payload_mode = _days_out_payload_mode(days_until_fight)
-    days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+
+    if _uses_late_fight_stage2_payload(days_until_fight):
+        days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+        return {
+            "schema_version": "stage2_payload.v1",
+            "generator_mode": "restriction_aware_candidate_generator_late_fight",
+            "payload_variant": "late_fight_stage2_payload",
+            "payload_mode": days_out_payload.get("payload_mode"),
+            "effective_stage2_mode": days_out_payload.get("payload_mode"),
+            "days_out_payload": days_out_payload,
+            "late_fight_plan_spec": _build_late_fight_plan_spec(days_until_fight, athlete_model),
+            "late_fight_session_sequence": _build_late_fight_session_sequence(days_until_fight, athlete_model),
+            "rendering_rules": days_out_payload.get("rendering_rules", {}),
+            "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
+            "athlete_model": athlete_model,
+            "restrictions": serialized_restrictions,
+            "phase_briefs": phase_briefs,
+            "candidate_pools": candidate_pools,
+            "omission_ledger": omission_ledger,
+            "rewrite_guidance": rewrite_guidance,
+        }
 
     return {
         "schema_version": "stage2_payload.v1",
         "generator_mode": "restriction_aware_candidate_generator",
-        "payload_mode": payload_mode,
-        "effective_stage2_mode": payload_mode,
-        "days_out_payload": days_out_payload,
-        "rendering_rules": days_out_payload.get("rendering_rules", {}),
-        "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
         "athlete_model": athlete_model,
         "restrictions": serialized_restrictions,
         "phase_briefs": phase_briefs,
@@ -4368,55 +3949,3 @@ def build_stage2_handoff_text(
     return "\n\n---\n\n".join(section for section in sections if section.strip())
 
 
-def _handoff_mode_instructions(payload_mode: str) -> str:
-    """Return payload-mode-specific hard instructions for the Stage 2 handoff."""
-    if payload_mode == "fight_day_protocol_payload":
-        return (
-            "HARD OVERRIDE — FIGHT DAY PROTOCOL\n"
-            "This is D-0. The athlete fights today.\n"
-            "Do NOT generate a training week, session-role structure, or weekly architecture.\n"
-            "Do NOT use strength, conditioning, session-role, anchor, or programming language.\n"
-            "Output ONLY:\n"
-            "- Activation / warm-up protocol\n"
-            "- Tactical cueing (style, stance, rhythm)\n"
-            "- Fueling / hydration / logistics\n"
-            "- Post-fight recovery notes\n"
-            "Keep it short, decisive, and fight-ready.\n"
-            "Do NOT restore any suppressed roles from the planning brief."
-        )
-    if payload_mode == "pre_fight_day_payload":
-        return (
-            "HARD OVERRIDE — PRE-FIGHT DAY (D-1)\n"
-            "This is the day before the fight. Do NOT build a normal training week.\n"
-            "Output ONLY:\n"
-            "- Neural primer (max 1 short session)\n"
-            "- Light technical touch if applicable\n"
-            "- Mobility / reset protocol\n"
-            "- Pre-fight instructions and preparation notes\n"
-            "FORBIDDEN TERMS: anchor, primary strength, conditioning block, fight-pace density, glycolytic.\n"
-            "PREFERRED TERMS: primer, touch, sharpness, reset, rhythm.\n"
-            "Do NOT use weekly architecture framing.\n"
-            "Do NOT restore suppressed session roles.\n"
-            "Do NOT generate hard sparring or conditioning-system allocation."
-        )
-    if payload_mode == "late_fight_session_payload":
-        return (
-            "LATE FIGHT MODE — SESSION-BY-SESSION (D-4 to D-2)\n"
-            "Do NOT frame this as a normal camp week.\n"
-            "Present the plan session-by-session, not as a program block.\n"
-            "Do NOT use broad development language, phase-explanation dumps, or long rationale sections.\n"
-            "Do NOT generate developmental strength blocks or glycolytic build logic.\n"
-            "Hard sparring influence narrows progressively (D-4/D-3 can still influence, D-2 advisory only).\n"
-            "Keep output concise. No weekly frequency reasoning.\n"
-            "No 'program block' framing. No phase-explanation dump."
-        )
-    if payload_mode == "late_fight_week_payload":
-        return (
-            "LATE FIGHT MODE — COMPRESSED WEEK (D-7 to D-5)\n"
-            "This is late fight week. Use compressed weekly framing.\n"
-            "Max 1 meaningful strength anchor. Max 1 meaningful conditioning stressor.\n"
-            "Allow hard sparring logic where declared.\n"
-            "Forbid broad development language and multiple non-sparring stressors.\n"
-            "Keep output concise. No broad development build."
-        )
-    return ""
