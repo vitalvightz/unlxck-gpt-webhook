@@ -51,6 +51,11 @@ _GENERATION_JOB_SCHEMA_SNIPPETS = (
     "column",
     "generation_jobs",
 )
+_GENERATION_JOB_CONFLICT_SNIPPETS = (
+    "23505",
+    "duplicate key value violates unique constraint",
+    "generation_jobs_athlete_client_request_key",
+)
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
@@ -201,6 +206,16 @@ class SupabaseAppStore:
         has_generation_job_context = "generation_jobs" in text
         has_schema_mismatch_signal = any(snippet in text for snippet in _GENERATION_JOB_SCHEMA_SNIPPETS)
         return has_generation_job_context and has_schema_mismatch_signal
+
+    def _is_generation_job_conflict_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        return any(snippet in text for snippet in _GENERATION_JOB_CONFLICT_SNIPPETS)
 
     def _raise_operation_http_error(
         self,
@@ -619,11 +634,18 @@ class SupabaseAppStore:
                 return rows[0]
         except _STORE_CLIENT_ERRORS as exc:
             last_error = exc
-            logger.exception(
-                "[store] create_or_get_generation_job:insert_exception athlete_id=%s client_request_id=%s",
-                athlete_id,
-                client_request_id,
-            )
+            if self._is_generation_job_conflict_error(exc):
+                logger.info(
+                    "[store] create_or_get_generation_job:insert_conflict athlete_id=%s client_request_id=%s",
+                    athlete_id,
+                    client_request_id,
+                )
+            else:
+                logger.exception(
+                    "[store] create_or_get_generation_job:insert_exception athlete_id=%s client_request_id=%s",
+                    athlete_id,
+                    client_request_id,
+                )
 
         try:
             existing = self._run_with_transient_retry(
@@ -704,16 +726,17 @@ class SupabaseAppStore:
                 return None
 
             current_status = str(job.get("status") or "")
+            current_attempt_count = int(job.get("attempt_count") or 0)
             now_iso = _utc_now_iso()
             now_dt = _parse_datetime(now_iso)
             heartbeat = _parse_datetime(job.get("heartbeat_at"))
+            started_at = _parse_datetime(job.get("started_at"))
+            last_progress_at = heartbeat or started_at
             is_stale_running = (
                 current_status == "running"
-                and (
-                    heartbeat is None
-                    or now_dt is None
-                    or (now_dt - heartbeat).total_seconds() >= stale_after_seconds
-                )
+                and now_dt is not None
+                and last_progress_at is not None
+                and (now_dt - last_progress_at).total_seconds() >= stale_after_seconds
             )
 
             if current_status not in {"queued", "running"}:
@@ -721,18 +744,36 @@ class SupabaseAppStore:
             if current_status == "running" and not is_stale_running:
                 return None
 
+            next_attempt_count = current_attempt_count + 1
+            next_started_at = job.get("started_at") or now_iso
             payload = {
                 "status": "running",
                 "heartbeat_at": now_iso,
-                "started_at": job.get("started_at") or now_iso,
+                "started_at": next_started_at,
                 "error": None,
-                "attempt_count": int(job.get("attempt_count") or 0) + 1,
+                "attempt_count": next_attempt_count,
             }
             self._run_with_transient_retry(
                 operation="claim_generation_job:update",
-                fn=lambda: self.client.table("generation_jobs").update(payload).eq("id", job_id).execute(),
+                fn=lambda: self.client.table("generation_jobs")
+                .update(payload)
+                .eq("id", job_id)
+                .eq("status", current_status)
+                .eq("attempt_count", current_attempt_count)
+                .execute(),
             )
-            return self.get_generation_job(job_id)
+            updated = self.get_generation_job(job_id)
+            if not updated:
+                return None
+            if str(updated.get("status") or "") != "running":
+                return None
+            if int(updated.get("attempt_count") or 0) != next_attempt_count:
+                return None
+            if str(updated.get("heartbeat_at") or "") != now_iso:
+                return None
+            if str(updated.get("started_at") or "") != str(next_started_at):
+                return None
+            return updated
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:

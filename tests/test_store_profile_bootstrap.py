@@ -8,6 +8,7 @@ import pytest
 from fastapi import HTTPException, status
 from postgrest.exceptions import APIError
 
+import api.store as store_module
 from api.auth import AuthenticatedUser
 from api.store import SupabaseAppStore
 
@@ -257,3 +258,100 @@ def test_create_or_get_generation_job_returns_schema_detail_when_generation_jobs
 
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert exc_info.value.detail == "generation job store is not ready; apply the latest Supabase schema and redeploy"
+
+
+def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict():
+    store = _make_store()
+    existing_job = {
+        "id": "job-1",
+        "athlete_id": "athlete-1",
+        "client_request_id": "client-1",
+        "status": "queued",
+        "attempt_count": 0,
+    }
+    duplicate_error = APIError(
+        {
+            "message": "duplicate key value violates unique constraint \"generation_jobs_athlete_client_request_key\"",
+            "code": "23505",
+            "hint": None,
+            "details": "Key (athlete_id, client_request_id)=(athlete-1, client-1) already exists.",
+        }
+    )
+    store._run_with_transient_retry = MagicMock(side_effect=[None, duplicate_error, existing_job])
+
+    result = store.create_or_get_generation_job(
+        athlete_id="athlete-1",
+        client_request_id="client-1",
+        source="self_serve",
+        request_payload={"fight_date": "2026-04-18"},
+    )
+
+    assert result == existing_job
+
+
+def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypatch):
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    queued_job = {
+        "id": "job-1",
+        "status": "queued",
+        "attempt_count": 0,
+        "heartbeat_at": None,
+        "started_at": None,
+    }
+    claimed_by_other_worker = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": "2026-04-05T12:00:01+00:00",
+        "started_at": "2026-04-05T12:00:01+00:00",
+    }
+    store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_by_other_worker])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    execute = (
+        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
+    )
+    execute.return_value = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result is None
+    store.client.table.return_value.update.assert_called_once()
+    store.client.table.return_value.update.return_value.eq.assert_called_once_with("id", "job-1")
+    store.client.table.return_value.update.return_value.eq.return_value.eq.assert_called_once_with(
+        "status", "queued"
+    )
+    store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.assert_called_once_with(
+        "attempt_count", 0
+    )
+
+
+def test_claim_generation_job_returns_updated_row_when_compare_and_swap_succeeds(monkeypatch):
+    fixed_now = "2026-04-05T12:00:00+00:00"
+    monkeypatch.setattr(store_module, "_utc_now_iso", lambda: fixed_now)
+    store = _make_store()
+    queued_job = {
+        "id": "job-1",
+        "status": "queued",
+        "attempt_count": 0,
+        "heartbeat_at": None,
+        "started_at": None,
+    }
+    claimed_job = {
+        "id": "job-1",
+        "status": "running",
+        "attempt_count": 1,
+        "heartbeat_at": fixed_now,
+        "started_at": fixed_now,
+    }
+    store.get_generation_job = MagicMock(side_effect=[queued_job, claimed_job])
+    store._run_with_transient_retry = lambda *, operation, fn, attempts=3, backoff_seconds=0.25: fn()
+    execute = (
+        store.client.table.return_value.update.return_value.eq.return_value.eq.return_value.eq.return_value.execute
+    )
+    execute.return_value = MagicMock()
+
+    result = store.claim_generation_job("job-1")
+
+    assert result == claimed_job

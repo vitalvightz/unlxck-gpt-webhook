@@ -30,7 +30,7 @@ def compute_weight_cut_pct(current_weight: object, target_weight: object) -> flo
     """
     current = parse_weight_value(current_weight)
     target = parse_weight_value(target_weight)
-    if current <= 0:
+    if current < 1.0:
         return 0.0
     return round(max(0.0, (current - target) / current * 100.0), 1)
 

@@ -96,6 +96,18 @@ def test_plan_request_coerces_fractional_height_values_for_saved_retries():
     assert req_from_string.athlete.height_cm == 182
 
 
+def test_plan_request_rejects_non_numeric_height_string():
+    with pytest.raises(ValidationError, match="height_cm"):
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+                "height_cm": "six feet",
+            },
+            fight_date="2026-04-18",
+        )
+
+
 def test_record_format_validation_rejects_invalid_values():
     try:
         PlanRequest(
