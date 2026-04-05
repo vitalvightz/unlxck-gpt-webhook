@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from typing import Any
 
 
@@ -211,8 +212,8 @@ def _late_fight_block_cap(days_until_fight: Any) -> int | None:
 def _copy_slot(slot: dict[str, Any]) -> dict[str, Any]:
     return {
         **slot,
-        "selected": dict(slot.get("selected") or {}) if isinstance(slot.get("selected"), dict) else slot.get("selected"),
-        "alternates": [dict(option or {}) for option in (slot.get("alternates") or [])],
+        "selected": deepcopy(slot.get("selected") or {}),
+        "alternates": deepcopy(list(slot.get("alternates") or [])),
     }
 
 

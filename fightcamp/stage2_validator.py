@@ -93,6 +93,7 @@ _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
 _WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
 _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
+_LATE_FIGHT_WINDOWS = {"d7_to_d5", "d4_to_d2", "d1", "d0"}
 _LATE_FIGHT_WEEK_STRENGTH_TERMS = (
     "strength",
     "power",
@@ -520,7 +521,7 @@ def _active_risk_labels(risk_context: dict[str, bool]) -> list[str]:
 def _late_fight_window(planning_brief: dict) -> str:
     payload = planning_brief.get("days_out_payload") or {}
     window = str(payload.get("late_fight_window", "")).strip().lower()
-    if window in {"d7_to_d5", "d4_to_d2", "d1", "d0"}:
+    if window in _LATE_FIGHT_WINDOWS:
         return window
     athlete = _athlete_snapshot(planning_brief)
     try:
@@ -540,8 +541,11 @@ def _late_fight_window(planning_brief: dict) -> str:
 
 def _late_fight_block_cap(planning_brief: dict) -> int | None:
     plan_spec = planning_brief.get("late_fight_plan_spec") or {}
-    block_cap = plan_spec.get("block_cap")
-    return int(block_cap) if isinstance(block_cap, int) else None
+    try:
+        block_cap = int(plan_spec.get("block_cap"))
+    except (TypeError, ValueError):
+        return None
+    return block_cap if block_cap > 0 else None
 
 
 def _meaningful_plan_lines(plan_text: str) -> list[str]:
