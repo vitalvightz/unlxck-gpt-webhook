@@ -1527,6 +1527,11 @@ select:focus-visible {
   font-weight: 600;
 }
 
+.checkbox-card-description {
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
 .checkbox-card-checked {
   border-color: rgba(181, 18, 43, 0.42);
   background: linear-gradient(180deg, rgba(181, 18, 43, 0.16), rgba(181, 18, 43, 0.08));
@@ -1881,6 +1886,15 @@ button.mobile-step-rail-item {
 .support-panel-alert {
   border-color: rgba(255, 141, 161, 0.22);
   background: linear-gradient(180deg, rgba(50, 20, 27, 0.92), rgba(24, 13, 17, 0.94));
+}
+
+.support-panel-success {
+  border-color: rgba(125, 226, 168, 0.24);
+  background: linear-gradient(180deg, rgba(18, 44, 30, 0.92), rgba(10, 23, 16, 0.95));
+}
+
+.support-panel-success .kicker {
+  color: var(--success-ink);
 }
 
 .sparring-advisory-card {

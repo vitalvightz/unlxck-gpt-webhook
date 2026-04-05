@@ -113,6 +113,20 @@ function hasValue(value: string | number | null | undefined): boolean {
   return !(value === null || value === undefined || value === "");
 }
 
+function hasGuidedInjuryContent(value: Partial<GuidedInjuryState> | null | undefined): boolean {
+  const details = normalizeGuidedInjuryState(value);
+  return Boolean(details.area || details.severity || details.trend || details.avoid || details.notes);
+}
+
+function hasGuidedInjuryDescriptorWithoutArea(value: Partial<GuidedInjuryState> | null | undefined): boolean {
+  const details = normalizeGuidedInjuryState(value);
+  return !details.area && Boolean(details.severity || details.trend);
+}
+
+function formatRestrictionSummary(value: string | null | undefined): string {
+  return value?.trim() ? value.trim() : "No restrictions reported.";
+}
+
 function formatJoinedLabels(values: string[], emptyLabel: string): string {
   return values.length ? values.join(", ") : emptyLabel;
 }
@@ -594,9 +608,10 @@ export function PlanIntakeForm() {
   const router = useRouter();
   const { me, replaceMe, session } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
-  const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
+  const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(true);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
   const [guidedInjury, setGuidedInjury] = useState<GuidedInjuryState>(EMPTY_GUIDED_INJURY);
+  const [noRestrictions, setNoRestrictions] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -622,6 +637,7 @@ export function PlanIntakeForm() {
         ? normalizeGuidedInjuryState(nextForm.guided_injury)
         : parseGuidedInjuryState(nextForm.injuries);
     const nextInjurySummary = buildGuidedInjurySummary(nextGuidedInjury);
+    const hasStoredRestrictions = Boolean(nextInjurySummary || nextForm.injuries?.trim() || hasGuidedInjuryContent(nextGuidedInjury));
 
     setOriginalInjuriesText(nextForm.injuries || "");
     setForm({
@@ -630,13 +646,13 @@ export function PlanIntakeForm() {
       guided_injury: nextGuidedInjury,
     });
     setGuidedInjury(nextGuidedInjury);
+    setNoRestrictions(!hasStoredRestrictions);
     const savedStep = Number(draft?.current_step ?? 0);
     setCurrentStep(Number.isFinite(savedStep) ? Math.min(Math.max(savedStep, 0), steps.length - 1) : 0);
     setHydrated(true);
   }, [hydrated, me]);
 
   useEffect(() => {
-    setIsMobileProgressOpen(false);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
@@ -656,11 +672,15 @@ export function PlanIntakeForm() {
     injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
   }, [hydrated, injuryMismatchContextKey]);
 
-  function buildFormSnapshot(currentForm: PlanRequest = form, currentGuidedInjury: GuidedInjuryState = guidedInjury): PlanRequest {
-    const normalizedGuidedInjury = normalizeGuidedInjuryState(currentGuidedInjury);
+  function buildFormSnapshot(
+    currentForm: PlanRequest = form,
+    currentGuidedInjury: GuidedInjuryState = guidedInjury,
+    currentNoRestrictions: boolean = noRestrictions,
+  ): PlanRequest {
+    const normalizedGuidedInjury = currentNoRestrictions ? EMPTY_GUIDED_INJURY : normalizeGuidedInjuryState(currentGuidedInjury);
     return syncDeviceFields({
       ...currentForm,
-      injuries: buildGuidedInjurySummary(normalizedGuidedInjury),
+      injuries: currentNoRestrictions ? "" : buildGuidedInjurySummary(normalizedGuidedInjury),
       guided_injury: normalizedGuidedInjury,
     });
   }
@@ -691,6 +711,7 @@ export function PlanIntakeForm() {
   }
 
   function updateGuidedInjury<K extends keyof GuidedInjuryState>(key: K, value: GuidedInjuryState[K]) {
+    setNoRestrictions(false);
     setGuidedInjury((current) => {
       const nextValue = coerceGuidedInjuryEditState({
         ...current,
@@ -703,6 +724,20 @@ export function PlanIntakeForm() {
       }));
       return nextValue;
     });
+  }
+
+  function handleNoRestrictionsChange(checked: boolean) {
+    setNoRestrictions(checked);
+    if (!checked) {
+      return;
+    }
+
+    setGuidedInjury(EMPTY_GUIDED_INJURY);
+    setForm((current) => ({
+      ...current,
+      injuries: "",
+      guided_injury: EMPTY_GUIDED_INJURY,
+    }));
   }
 
   function toggleFieldValue(
@@ -761,6 +796,10 @@ export function PlanIntakeForm() {
         setError(sparringCheck.hardError);
         return false;
       }
+    }
+    if (currentStep === 3 && hasGuidedInjuryDescriptorWithoutArea(nextForm.guided_injury)) {
+      setError("Add a pain area or body part before choosing severity or trend.");
+      return false;
     }
     if (currentStep === 3 && hasMeaningfulInjuryMismatch(originalInjuriesText, nextForm.injuries || "") && !injuryOverwriteAcknowledged) {
       setError("Acknowledge the injury note overwrite warning before continuing.");
@@ -904,7 +943,6 @@ export function PlanIntakeForm() {
     })) {
       return;
     }
-    setIsMobileProgressOpen(false);
     setCurrentStep(targetStep);
 
     if (!session?.access_token || !isValidRecordFormat(getNextForm().athlete.record ?? "")) {
@@ -1002,6 +1040,10 @@ export function PlanIntakeForm() {
   const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
+  const plannerRestrictionPreview = noRestrictions
+    ? "No restrictions reported."
+    : formatRestrictionSummary(buildGuidedInjurySummary(normalizeGuidedInjuryState(guidedInjury)));
+  const restrictionSummary = formatRestrictionSummary(form.injuries);
   const profileReviewItems = [
     { label: "Name", value: formatValue(form.athlete.full_name) },
     ...(hasValue(form.athlete.age) ? [{ label: "Age", value: formatValue(form.athlete.age) }] : []),
@@ -1041,7 +1083,7 @@ export function PlanIntakeForm() {
     },
   ];
   const constraintsReviewItems = [
-    { label: "Injuries / pain areas", value: formatValue(form.injuries) },
+    { label: "Injuries / pain areas", value: restrictionSummary },
     ...(weightCutStatus ? [{ label: "Weight-cut status", value: weightCutStatus }] : []),
     ...(highFatigueFlag ? [{ label: "Fatigue flag", value: highFatigueFlag }] : []),
     ...(equipmentLimitations ? [{ label: "Equipment limitations", value: equipmentLimitations }] : []),
@@ -1467,6 +1509,19 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
+                <label className={`checkbox-card ${noRestrictions ? "checkbox-card-checked" : ""}`.trim()}>
+                  <input
+                    type="checkbox"
+                    checked={noRestrictions}
+                    onChange={(event) => handleNoRestrictionsChange(event.target.checked)}
+                  />
+                  <span className="checkbox-card-copy">
+                    <span className="checkbox-card-title">No current injuries or restrictions</span>
+                    <span className="checkbox-card-description">Leave this checked when the athlete has nothing the planner needs to work around.</span>
+                  </span>
+                </label>
+                {!noRestrictions ? (
+                  <>
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="injuryArea">Pain area or body part</label>
@@ -1518,10 +1573,17 @@ export function PlanIntakeForm() {
                     placeholder="What happened, what irritates it, and anything the planner should work around"
                   />
                 </div>
+                  </>
+                ) : (
+                  <div className="support-panel support-panel-preview support-panel-success compact-gap">
+                    <p className="kicker">Restrictions step complete</p>
+                    <p className="muted">No restrictions are being sent to the planner. You can continue now or uncheck this later if something needs to be worked around.</p>
+                  </div>
+                )}
                 <div className="support-panel support-panel-preview compact-gap">
                   <p className="kicker">Planner note preview</p>
                   <p className="muted">
-                    {form.injuries?.trim() || "No injury or restriction note added yet."}
+                    {plannerRestrictionPreview}
                   </p>
                 </div>
                 {injuryMismatchExists ? (
@@ -1558,7 +1620,7 @@ export function PlanIntakeForm() {
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
               <div className="support-panel">
                 <p className="kicker">Safety</p>
-                <p className="muted">Start with body part, severity, trend, and what to avoid. Add free text only for the details that matter.</p>
+                <p className="muted">Start with body part, severity, trend, and what to avoid. Leave the no-restrictions toggle on when there is nothing to protect around.</p>
               </div>
             </aside>
           </div>
@@ -1742,7 +1804,7 @@ export function PlanIntakeForm() {
               </div>
               <div className="support-panel">
                 <p className="kicker">Restrictions</p>
-                <p className="muted">Injuries or restrictions: {formatValue(form.injuries)}</p>
+                <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
               </div>
             </aside>
           </div>
