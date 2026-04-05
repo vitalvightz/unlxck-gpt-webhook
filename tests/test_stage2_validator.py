@@ -93,23 +93,47 @@ def _planning_brief_fixture() -> dict:
 
 
 def _late_fight_planning_brief(days_out: str = "D-5") -> dict:
+    payload_mode = "pre_fight_day_payload"
+    session_cap = 1
+    max_active_roles = 1
+    forbidden_blocks = ["glycolytic", "hinge_transfer", "jumps", "contrast_work", "fight_pace_conditioning"]
+
+    if days_out == "D-7":
+        payload_mode = "late_fight_week_payload"
+        session_cap = 3
+        max_active_roles = 3
+        forbidden_blocks = ["standalone_glycolytic", "multiple_hard_sparring_exposures"]
+    elif days_out in {"D-6", "D-5"}:
+        payload_mode = "late_fight_transition_payload"
+        session_cap = 2
+        max_active_roles = 2
+        forbidden_blocks = ["hard_sparring", "standalone_glycolytic", "primary_strength_anchor"]
+    elif days_out in {"D-4", "D-3", "D-2"}:
+        payload_mode = "late_fight_session_payload"
+        session_cap = 2 if days_out in {"D-4", "D-3"} else 1
+        max_active_roles = session_cap
+        forbidden_blocks = (
+            ["hard_sparring", "standalone_glycolytic", "primary_strength_anchor"]
+            if days_out in {"D-4", "D-3"}
+            else ["conditioning", "hard_sparring", "primary_strength_anchor"]
+        )
+    elif days_out == "D-0":
+        payload_mode = "fight_day_protocol_payload"
+        forbidden_blocks = ["strength", "conditioning", "layered_rehab_stack"]
+
     return {
         "athlete_model": {"sport": "boxing", "days_until_fight": int(days_out.split("-")[-1])},
         "restrictions": [],
         "phase_strategy": {},
         "candidate_pools": {},
         "late_fight_plan_spec": {
-            "payload_mode": "late_fight_transition_payload" if days_out in {"D-6", "D-5"} else "pre_fight_day_payload",
+            "payload_mode": payload_mode,
             "days_out_bucket": days_out,
-            "session_cap": 2 if days_out in {"D-6", "D-5", "D-4", "D-3"} else 1,
-            "max_active_roles": 2 if days_out in {"D-6", "D-5", "D-4", "D-3"} else 1,
+            "session_cap": session_cap,
+            "max_active_roles": max_active_roles,
             "max_meaningful_stress_exposures": 1,
             "max_blocks_per_session": 4,
-            "forbidden_blocks": (
-                ["hard_sparring", "standalone_glycolytic", "primary_strength_anchor"]
-                if days_out in {"D-6", "D-5"}
-                else ["glycolytic", "hinge_transfer", "jumps", "contrast_work", "fight_pace_conditioning"]
-            ),
+            "forbidden_blocks": forbidden_blocks,
         },
     }
 
@@ -320,6 +344,24 @@ def test_validate_stage2_output_blocks_d1_forbidden_blocks_and_block_overage():
     warning_codes = {warning["code"] for warning in report["warnings"]}
     assert "late_fight_block_overage" in warning_codes
     assert "late_fight_forbidden_content" in warning_codes
+
+
+def test_validate_stage2_output_accepts_new_d3_sharpness_and_freshness_titles():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-3"),
+        final_plan_text="""
+        Monday - Sharpness Session
+        - Power Touch - 3 x 2 med-ball scoop toss
+        Tuesday - Freshness Session
+        - Mobility / reset - 12 min
+        - Breathing reset - 5 min
+        """,
+    )
+
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_active_role_overage" not in warning_codes
+    assert "late_fight_meaningful_stress_overage" not in warning_codes
+    assert "late_fight_forbidden_content" not in warning_codes
 
 def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
     base = _planning_brief_fixture()

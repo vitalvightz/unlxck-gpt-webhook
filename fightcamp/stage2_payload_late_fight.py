@@ -384,14 +384,14 @@ def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None
         return {
             **base,
             "plan_mode": "readiness_protocol_only",
-            "coach_note": "Fight is immediate. Do not run a normal training week or add fitness work.",
+            "coach_note": "Fight is immediate. Use fight-day protocol language only and keep everything execution-first.",
             "allowed_session_roles": [],
             "protocol": [
-                "No strength work, no conditioning blocks, and no volume accumulation.",
-                "Optional short neural primer only if movement quality is crisp and fatigue is low.",
-                "Use mobility, activation, breathing, and short shakeout only.",
+                "No training-plan structure, no extra workload, and no volume accumulation.",
+                "Use activation, breathing, a short shakeout, and warm-up guidance only.",
+                "Keep every cue short, sharp, and tied to rhythm, timing, or execution.",
                 "Include hydration, fuel, sleep, and weight-cut execution reminders.",
-                "Today should usually be warm-up guidance, activation, mental cues, and post-fight recovery/refuel notes only.",
+                "Today should read like fight-day protocol: activation, cues, fuel, walk-through, and post-fight recovery/refuel notes only.",
             ],
         }
 
@@ -399,26 +399,26 @@ def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None
         return {
             **base,
             "plan_mode": "micro_taper_only",
-            "coach_note": "Use a micro-taper only. Do not render a normal weekly build.",
+            "coach_note": "Use primer-only language. Do not render a normal weekly build.",
             "allowed_session_roles": ["alactic_sharpness_day", "fight_week_freshness_day"],
             "max_sessions": 2,
             "protocol": [
-                "At most one short primer session plus one light mobility/recovery session.",
-                "No hard conditioning, no muscle-damaging lifts, and no new drills.",
-                "Keep intensity sharp and volume tiny to arrive fresh.",
+                "At most one short primer plus one light mobility / reset session.",
+                "No hard conditioning, no soreness-heavy loading, and no new drills.",
+                "Keep the language on sharpness, rhythm, activation, and freshness.",
             ],
         }
 
     return {
         **base,
         "plan_mode": "mini_taper_only",
-        "coach_note": "Use a mini taper only. Do not render a full normal week.",
+        "coach_note": "Use a mini taper only. Keep the wording on sharpness, rhythm, and freshness rather than camp development.",
         "allowed_session_roles": ["neural_primer_day", "alactic_sharpness_day", "fight_week_freshness_day"],
         "max_sessions": 3,
         "protocol": [
-            "Reduce volume and keep only high-value sharpness exposures.",
+            "Reduce volume and keep only high-value sharpness touches.",
             "Preserve speed, timing, and rhythm with one to two key sessions.",
-            "Allow only very low-cost conditioning if truly needed.",
+            "If a conditioning element remains, frame it as rhythm or repeatability touch — not as a stress block.",
         ],
     }
 
@@ -686,11 +686,28 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "mode": mode,
             "framing": "compressed_week",
             "rules": [
-                "Use concise compressed week framing.",
-                "No broad development language.",
+                "Use concise sharpness-week framing.",
+                "Keep the language on power touch, neural touch, technical rhythm, freshness, and mobility / reset.",
+                "No broad development language or camp-block wording.",
                 "Cap meaningful non-sparring stressors at one.",
                 "Keep sparring collision logic active but capped to one hard session.",
                 "Keep each session at five blocks or less.",
+            ],
+            "preferred_terms": [
+                "sharpness week",
+                "power touch",
+                "neural touch",
+                "technical rhythm",
+                "freshness session",
+                "mobility / reset",
+            ],
+            "forbidden_terms": [
+                "primary strength",
+                "secondary strength",
+                "anchor day",
+                "conditioning block",
+                "development block",
+                "support strength",
             ],
         }
     if mode == "late_fight_transition_payload":
@@ -699,11 +716,26 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "session_by_session",
             "rules": [
                 "Render session-by-session, not as a weekly build.",
-                "No hard sparring — rhythm and technical touch only.",
-                "Max 2 sessions: one light sharpness touch + one recovery.",
-                "No strength anchors, no conditioning stressors.",
+                "No hard sparring — technical rhythm and sharpness touch only.",
+                "Max 2 sessions: one power touch or technical rhythm session + one freshness session.",
+                "No strength-anchor, conditioning-stressor, or support-strength wording.",
                 "No development language or program-block framing.",
                 "Keep each session at four blocks or less.",
+            ],
+            "preferred_terms": [
+                "sharpness",
+                "power touch",
+                "technical rhythm",
+                "recovery",
+                "freshness",
+                "mobility / reset",
+            ],
+            "forbidden_terms": [
+                "primary strength",
+                "anchor day",
+                "conditioning block",
+                "developmental work",
+                "volume build",
             ],
         }
     if mode == "late_fight_session_payload":
@@ -712,11 +744,28 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "session_by_session",
             "rules": [
                 "Render session-by-session, not as a program block.",
+                "Use sharpness session, technical touch, low-noise power, freshness session, primer, and reset language.",
                 "No 'program block' framing.",
                 "No phase-explanation dump.",
                 "No long rationale sections.",
                 "Keep each session description tight and action-oriented.",
                 "Respect the per-session four-block ceiling.",
+            ],
+            "preferred_terms": [
+                "sharpness session",
+                "technical touch",
+                "low-noise power",
+                "freshness session",
+                "rhythm day",
+                "primer",
+            ],
+            "forbidden_terms": [
+                "strength block",
+                "conditioning stressor",
+                "glycolytic session",
+                "support strength",
+                "secondary strength",
+                "weekly architecture",
             ],
         }
     if mode == "pre_fight_day_payload":
@@ -725,24 +774,28 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "primer_only",
             "rules": [
                 "Output primer-only content.",
-                "No anchor, primary strength, conditioning block, or fight-pace density language.",
-                "Prefer terms: primer, touch, sharpness, reset, rhythm.",
+                "No anchor, strength, conditioning, block, or fight-pace density language.",
+                "Prefer terms: neural primer, technical touch, sharpness, activation, reset, rhythm.",
                 "Keep the entire output under 300 words.",
                 "Keep the session at four blocks or less.",
             ],
             "forbidden_terms": [
                 "anchor",
                 "primary strength",
+                "strength",
                 "conditioning block",
+                "conditioning",
                 "fight-pace density",
+                "block",
                 "hinge-transfer",
                 "jumps",
                 "contrast",
             ],
             "preferred_terms": [
-                "primer",
-                "touch",
+                "neural primer",
+                "technical touch",
                 "sharpness",
+                "activation",
                 "reset",
                 "rhythm",
             ],
@@ -752,7 +805,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
         "framing": "fight_day_protocol",
         "rules": [
             "No training language.",
-            "Output activation, warm-up, cue, fuel, and recovery content only.",
+            "Output activation, warm-up, cue, fuel, walk-through, and recovery content only.",
             "Do not render a weekly role map or session architecture.",
             "Keep the output minimal and fight-day focused.",
             "If you present an activation sequence, keep it to three blocks or less.",
@@ -773,6 +826,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "warm-up",
             "cue",
             "fuel",
+            "walk-through",
             "recover",
         ],
     }
@@ -1006,30 +1060,30 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "late_fight_week_payload":
-        return "Late Fight Week"
+        return "Sharpness Week"
     if mode == "late_fight_transition_payload":
-        return "Late Fight Transition"
+        return "Sharpness & Freshness Window"
     if mode == "late_fight_session_payload":
-        return "Late Fight Sessions"
+        return "Sharpness Sessions"
     if mode == "pre_fight_day_payload":
-        return "Pre-Fight Day"
+        return "Primer Day"
     if mode == "fight_day_protocol_payload":
-        return "Fight Day"
+        return "Fight-Day Protocol"
     return "Camp"
 
 
 def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "late_fight_week_payload":
-        return "Use a compressed late-fight week. Keep only sharpness, one meaningful exposure, and freshness support."
+        return "Use a compressed sharpness week. Keep one main neural or power touch, one fight-rhythm touch at most, and the rest on freshness, mobility, and reset."
     if mode == "late_fight_transition_payload":
-        return "Transition window — light sharpness and recovery only. No hard sparring, no strength anchors."
+        return "Use a transition window built around technical rhythm, a small power touch, and freshness only. No hard sparring and no camp-style headings."
     if mode == "late_fight_session_payload":
-        return "Use a short late-fight session list. No normal camp-week architecture or development work."
+        return "Use a short sharpness-first session list. Think technical touch, low-noise power, freshness, and reset — not normal camp architecture."
     if mode == "pre_fight_day_payload":
-        return "Use primer-only guidance. No normal week framing and no conditioning build."
+        return "Use primer-only guidance. Keep it to neural primer, technical touch, activation, reset, and rhythm."
     if mode == "fight_day_protocol_payload":
-        return "Use fight-day protocol guidance only. No training-week language."
+        return "Use fight-day protocol guidance only. Activation, warm-up, cue, fuel, walk-through, and recover — no training-plan language."
     return "Use the normal camp-stage payload."
 
 
@@ -1178,68 +1232,75 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "HARD OVERRIDE — FIGHT DAY PROTOCOL\n"
             "This is D-0. The athlete fights today.\n"
             "Do NOT generate a training week, session-role structure, or weekly architecture.\n"
-            "Do NOT use strength, conditioning, session-role, anchor, or programming language.\n"
+            "Do NOT use training-plan language such as strength, conditioning, anchor, block, or programming terms.\n"
             "If you present an activation sequence, cap it at 3 blocks.\n"
             "Output ONLY:\n"
             "- Activation / warm-up protocol\n"
             "- Tactical cueing (style, stance, rhythm)\n"
             "- Fueling / hydration / logistics\n"
+            "- Walk-through reminders\n"
             "- Post-fight recovery notes\n"
             "Keep it short, decisive, and fight-ready.\n"
             "Do NOT restore any suppressed roles from the planning brief.\n"
-            "Do NOT add strength, conditioning, or a layered rehab stack."
+            "Do NOT add any training session, conditioning dose, or layered rehab stack."
         )
     if payload_mode == "pre_fight_day_payload":
         return (
-            "HARD OVERRIDE — PRE-FIGHT DAY (D-1)\n"
+            "HARD OVERRIDE — PRIMER DAY (D-1)\n"
             "This is the day before the fight. Do NOT build a normal training week.\n"
             "Cap the session at 4 blocks.\n"
             "Output ONLY:\n"
             "- Neural primer (max 1 short session)\n"
-            "- Light technical touch if applicable\n"
+            "- Technical touch if applicable\n"
+            "- Activation\n"
             "- Mobility / reset protocol\n"
             "- Pre-fight instructions and preparation notes\n"
-            "FORBIDDEN TERMS: anchor, primary strength, conditioning block, fight-pace density, glycolytic, hinge-transfer, jumps, contrast.\n"
-            "PREFERRED TERMS: primer, touch, sharpness, reset, rhythm.\n"
+            "FORBIDDEN TERMS: strength, conditioning, anchor, development, stressor, fight-pace density, block, glycolytic, hinge-transfer, jumps, contrast.\n"
+            "PREFERRED TERMS: neural primer, technical touch, sharpness, activation, reset, rhythm.\n"
             "Do NOT use weekly architecture framing.\n"
             "Do NOT restore suppressed session roles.\n"
             "Do NOT generate hard sparring or conditioning-system allocation."
         )
     if payload_mode == "late_fight_session_payload":
         return (
-            "LATE FIGHT MODE — SESSION-BY-SESSION (D-4 to D-2)\n"
+            "LATE FIGHT MODE — SHARPNESS-FIRST SESSIONS (D-4 to D-2)\n"
             "Do NOT frame this as a normal camp week.\n"
             "Present the plan session-by-session, not as a program block.\n"
             "Do NOT render week headers, Monday-to-Sunday structure, or a full weekly schedule.\n"
-            "Do NOT use broad development language, phase-explanation dumps, or long rationale sections.\n"
-            "Do NOT generate developmental strength blocks or glycolytic build logic.\n"
-            "D-4 may keep one short sharpness touch plus one recovery session.\n"
-            "D-3 defaults to freshness; only allow alactic sharpness if fatigue is not high, there is no heavy-spar spillover flag, and no conflicting hard-dose flag is active.\n"
-            "D-2 is one short neural touch only.\n"
+            "Do NOT use broad development language, weekly architecture language, phase-explanation dumps, or long rationale sections.\n"
+            "Do NOT generate strength blocks, conditioning stressors, support-strength language, or glycolytic build logic.\n"
+            "D-4 may keep one short sharpness session plus one freshness session.\n"
+            "D-3 defaults to freshness; only allow one low-noise power or sharpness touch if fatigue is not high, there is no heavy-spar spillover flag, and no conflicting hard-dose flag is active.\n"
+            "D-2 is one short neural primer or technical touch only.\n"
+            "Preferred headings: Sharpness Session, Technical Touch, Low-Noise Power, Freshness Session, Rhythm Day, Primer.\n"
+            "Avoid headings such as Strength Block, Conditioning Stressor, Glycolytic Session, Support Strength, Secondary Strength.\n"
             "Cap every session at 4 blocks.\n"
             "Keep output concise. No weekly frequency reasoning.\n"
             "No 'program block' framing. No phase-explanation dump. No hard sparring."
         )
     if payload_mode == "late_fight_week_payload":
         return (
-            "LATE FIGHT MODE — COMPRESSED WEEK (D-7)\n"
-            "This is late fight week. Use compressed weekly framing.\n"
+            "LATE FIGHT MODE — SHARPNESS WEEK (D-7)\n"
+            "This is the final compressed week. Use sharpness-first weekly framing.\n"
             "Cap meaningful stress exposures at 2 total and cap each session at 5 blocks.\n"
-            "Max 1 meaningful strength anchor. Max 1 meaningful conditioning stressor.\n"
-            "Cap hard sparring to 1 declared day; convert any extras to technical.\n"
+            "At most 1 main neural or power touch. At most 1 fight-rhythm touch.\n"
+            "Cap hard sparring to 1 declared day; convert any extras to technical rhythm.\n"
+            "Preferred headings: Main Sharpness Day, Power Touch, Neural Touch, Technical Rhythm, Freshness Session, Mobility / Reset.\n"
+            "Avoid headings such as Primary Strength, Secondary Strength, Anchor Day, Conditioning Block, Development Block, Support Strength.\n"
             "Forbid broad development language and multiple non-sparring stressors.\n"
-            "Keep output concise. No broad development build."
+            "Keep output concise, fresh, and low-noise."
         )
     if payload_mode == "late_fight_transition_payload":
         return (
-            "LATE FIGHT MODE — TRANSITION WINDOW (D-6 to D-5)\n"
+            "LATE FIGHT MODE — SHARPNESS & FRESHNESS WINDOW (D-6 to D-5)\n"
             "This is the transition taper window. Do NOT use normal camp-week framing.\n"
             "Do NOT generate hard sparring under any circumstances.\n"
             "All declared hard sparring days convert to technical rhythm only.\n"
-            "Max 2 sessions: one technical rhythm or tiny sharpness touch + one recovery session.\n"
+            "Max 2 sessions: one technical rhythm or power touch + one freshness session.\n"
             "Cap meaningful stress exposures at 1 and cap each session at 4 blocks.\n"
-            "No strength anchors. No conditioning stressors. No glycolytic work.\n"
-            "No development language or program-block framing.\n"
+            "No primary strength, no anchor day, no conditioning block, and no glycolytic work.\n"
+            "No development language, volume-build language, or program-block framing.\n"
+            "Preferred headings: Sharpness, Power Touch, Neural Touch, Technical Rhythm, Recovery / Freshness, Mobility / Reset.\n"
             "Present session-by-session, not as a weekly build.\n"
             "Keep output minimal and focused on freshness and fight readiness."
         )
