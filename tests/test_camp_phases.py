@@ -81,3 +81,77 @@ def test_calculate_phase_weeks_under_7_days_forces_taper_phase():
     assert phases["TAPER"] == 1
     assert phases["days"]["TAPER"] == 6
     assert sum(phases["days"].values()) == 6
+
+
+def test_calculate_phase_weeks_keeps_current_characterized_outputs_for_representative_cases():
+    cases = [
+        (
+            "boxing base 8 weeks",
+            dict(camp_length=8, sport="boxing"),
+            {"GPP": 3, "SPP": 3, "TAPER": 2, "days": {"GPP": 21, "SPP": 21, "TAPER": 14}},
+        ),
+        (
+            "boxing pro low fatigue 8 weeks",
+            dict(
+                camp_length=8,
+                sport="boxing",
+                status="professional",
+                fatigue="low",
+                mental_block=["generic"],
+            ),
+            {"GPP": 2, "SPP": 4, "TAPER": 2, "days": {"GPP": 14, "SPP": 28, "TAPER": 14}},
+        ),
+        (
+            "pressure fighter 8 weeks",
+            dict(camp_length=8, sport="boxing", style="pressure fighter"),
+            {"GPP": 3, "SPP": 4, "TAPER": 1, "days": {"GPP": 21, "SPP": 28, "TAPER": 7}},
+        ),
+        (
+            "grappler mma 8 weeks",
+            dict(camp_length=8, sport="mma", style="grappler"),
+            {"GPP": 4, "SPP": 3, "TAPER": 1, "days": {"GPP": 28, "SPP": 21, "TAPER": 7}},
+        ),
+        (
+            "22 day boundary",
+            dict(camp_length=6, sport="boxing", days_until_fight=22),
+            {"GPP": 1, "SPP": 1, "TAPER": 1, "days": {"GPP": 7, "SPP": 8, "TAPER": 7}},
+        ),
+        (
+            "21 day boundary",
+            dict(camp_length=6, sport="boxing", days_until_fight=21),
+            {"GPP": 0, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 14, "TAPER": 7}},
+        ),
+    ]
+
+    for _, kwargs, expected in cases:
+        assert calculate_phase_weeks(**kwargs) == expected
+
+
+def test_calculate_phase_weeks_preserves_basic_invariants_across_style_matrix():
+    cases = [
+        dict(camp_length=8, sport="boxing"),
+        dict(camp_length=8, sport="boxing", style="pressure fighter"),
+        dict(camp_length=8, sport="mma", style="grappler"),
+        dict(camp_length=6, sport="boxing", style="counter striker"),
+        dict(camp_length=6, sport="mma", style="wrestler"),
+        dict(camp_length=5, sport="boxing", status="professional", fatigue="low", mental_block=["generic"]),
+        dict(camp_length=6, sport="boxing", days_until_fight=22),
+        dict(camp_length=6, sport="boxing", days_until_fight=21),
+    ]
+
+    for kwargs in cases:
+        phases = calculate_phase_weeks(**kwargs)
+        normalized_weeks = max(
+            1,
+            min(
+                16,
+                round((kwargs["days_until_fight"] if isinstance(kwargs.get("days_until_fight"), int) and kwargs.get("days_until_fight") >= 0 else kwargs["camp_length"] * 7) / 7),
+            ),
+        )
+        total_days = kwargs["days_until_fight"] if isinstance(kwargs.get("days_until_fight"), int) and kwargs.get("days_until_fight") >= 0 else kwargs["camp_length"] * 7
+
+        assert phases["GPP"] >= 0
+        assert phases["SPP"] >= 0
+        assert phases["TAPER"] >= 0
+        assert phases["GPP"] + phases["SPP"] + phases["TAPER"] == normalized_weeks
+        assert sum(phases["days"].values()) == total_days
