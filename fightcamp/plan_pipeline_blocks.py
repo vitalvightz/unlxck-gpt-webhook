@@ -125,6 +125,7 @@ def _generate_conditioning_blocks(context: PlanRuntimeContext) -> tuple[dict[str
             },
             "sport": context.mapped_format,
         }
+        grouped_drills = grouped_drills or {}
         conditioning_reason_log[phase] = reasons
         conditioning_blocks[phase] = {
             "block": block_text,
@@ -235,7 +236,8 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
     return rehab_blocks, guardrails, support_notes, has_injuries, current_phase, recovery_block, nutrition_block
 
 
-def _names_from_grouped(grouped: dict[str, list[dict]]) -> list[str]:
+def _names_from_grouped(grouped: dict[str, list[dict]] | None) -> list[str]:
+    grouped = grouped or {}
     return [
         drill.get("name")
         for drills in grouped.values()

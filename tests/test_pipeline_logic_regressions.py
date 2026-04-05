@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from fightcamp.coach_review import run_coach_review
-from fightcamp.plan_pipeline_blocks import _build_phase_support_block
+from fightcamp.plan_pipeline_blocks import _build_phase_support_block, _generate_conditioning_blocks
 from fightcamp.plan_pipeline_rendering import _build_coach_notes, _sparring_adjustment_lines, _sparring_nutrition_lines
 
 
@@ -135,3 +135,39 @@ def test_sparring_adjustment_lines_fall_back_to_generic_text_when_days_unknown()
     joined = "\n".join(lines)
     assert "If hard sparring lands today" in joined
     assert "If no sparring is fixed this week" in joined
+
+
+def test_generate_conditioning_blocks_normalizes_none_grouped_drills(monkeypatch):
+    class _ConditioningTrainingStub:
+        training_frequency = 3
+        fatigue = "low"
+        injuries = []
+        fight_format = "boxing"
+
+        def to_flags(self):
+            return {
+                "training_frequency": 3,
+                "fatigue": "low",
+                "injuries": [],
+                "fight_format": "boxing",
+            }
+
+    class _ConditioningContextStub:
+        mapped_format = "boxing"
+        random_seed = 0
+        training_context = _ConditioningTrainingStub()
+        plan_input = SimpleNamespace(days_until_fight=18, weeks_out=3, restrictions=[])
+        selection_ignore_restrictions = False
+
+        def phase_active(self, phase: str) -> bool:
+            return phase == "SPP"
+
+    def _fake_generate_conditioning_block(_flags):
+        return ("SPP block", [], [], None, [], {})
+
+    monkeypatch.setattr("fightcamp.plan_pipeline_blocks.generate_conditioning_block", _fake_generate_conditioning_block)
+
+    conditioning_blocks, conditioning_reason_log = _generate_conditioning_blocks(_ConditioningContextStub())
+
+    assert conditioning_blocks["SPP"]["grouped_drills"] == {}
+    assert conditioning_reason_log["SPP"] == []
