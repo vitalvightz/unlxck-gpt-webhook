@@ -1,5 +1,4 @@
 from fightcamp.stage2_repair import build_stage2_repair_prompt
-from tests.stage2_test_helpers import late_fight_planning_brief
 
 
 def _planning_brief_fixture() -> dict:
@@ -316,45 +315,3 @@ def test_build_stage2_repair_prompt_surfaces_style_repairs():
     assert "replace_low_trust_filler_with_concrete_coaching" in prompt
     assert "rewrite_adjustment_as_clear_call_with_short_why" in prompt
     assert "replace_empty_safety_line_with_operational_guardrails" in prompt
-
-
-def test_build_stage2_repair_prompt_keeps_late_fight_repairs_compressed():
-    validator_report = {
-        "is_valid": True,
-        "errors": [],
-        "warnings": [
-            {
-                "code": "late_camp_session_incomplete",
-                "week_index": 1,
-                "phase": "TAPER",
-                "expected_roles": ["late_fight_sharpness_exposure", "late_fight_freshness_reset"],
-                "expected_role_days": [],
-            },
-            {
-                "code": "weekly_session_overage",
-                "week_index": 1,
-                "phase": "TAPER",
-                "expected_session_count": 3,
-                "actual_session_count": 5,
-            },
-            {
-                "code": "late_fight_session_leakage",
-                "late_fight_window": "d4_to_d2",
-                "matched_lines": ["Week 1", "Primary Strength"],
-            },
-        ],
-        "missing_required_elements": [],
-        "restricted_hits": [],
-    }
-    prompt = build_stage2_repair_prompt(
-        planning_brief=late_fight_planning_brief(3),
-        failed_plan_text="### Week 1\n#### Primary Strength\n- Trap Bar Deadlift - 4x3",
-        validator_report=validator_report,
-    )
-
-    assert "LATE-FIGHT BAND GUARDRAILS" in prompt
-    assert "preserve_late_fight_compression" in prompt
-    assert "trim_late_fight_stack" in prompt
-    assert "compress_late_fight_output" in prompt
-    assert "restore_missing_week_structure" not in prompt
-    assert "complete_late_camp_week" not in prompt
