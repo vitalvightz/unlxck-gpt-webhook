@@ -173,15 +173,8 @@ def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invali
         monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
         monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
         monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
-
-        def _fake_store_from_env(cls):
-            return FakeStore()
-
-        def _fake_auth_from_env(cls):
-            return FakeAuthService({})
-
-        monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(_fake_store_from_env))
-        monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(_fake_auth_from_env))
+        monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: FakeStore()))
+        monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
 
     monkeypatch.setenv("APP_CORS_ORIGINS", env_value)
 

@@ -1177,6 +1177,6 @@ try:
 except RuntimeError:
     logger.exception("[app] runtime_app_build_failed")
     app = _build_startup_failure_app("missing supabase configuration")
-except Exception:
+except ValueError:
     logger.exception("[app] runtime_app_build_failed")
     app = _build_startup_failure_app("application startup failed")
