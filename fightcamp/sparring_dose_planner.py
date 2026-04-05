@@ -173,29 +173,6 @@ def _main_collision_owner_day(week: dict[str, Any], hard_days: list[str]) -> str
     return ""
 
 
-def _countdown_sparring_override(days_until_fight: Any) -> str | None:
-    """Return a deterministic sparring override based on countdown alone.
-
-    Returns:
-        ``None``  – no countdown override (normal rules apply)
-        ``"convert_all"`` – convert every declared hard day to technical/rhythm
-        ``"deload_all"`` – deload every declared hard day
-        ``"cap_one"`` – keep at most one hard day, deload the rest
-    """
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return None
-    if days < 0 or days > 7:
-        return None
-    if days <= 5:
-        return "convert_all"
-    if days == 6:
-        return "deload_all"
-    # days == 7
-    return "cap_one"
-
-
 def _decide_action(
     *,
     hard_day_count: int,
@@ -203,21 +180,10 @@ def _decide_action(
     cut: str,
     week_press: str,
     injury: dict[str, Any],
-    days_until_fight: Any = None,
 ) -> str | None:
     if hard_day_count <= 0:
         return None
 
-    # --- Countdown-graduated override (deterministic, fires first) ---
-    countdown_override = _countdown_sparring_override(days_until_fight)
-    if countdown_override == "convert_all":
-        return "convert"
-    if countdown_override == "deload_all":
-        return "deload"
-    if countdown_override == "cap_one" and hard_day_count >= 2:
-        return "deload"
-
-    # --- Injury-based hard overrides ---
     if injury.get("instability"):
         return "convert"
     if injury.get("daily_symptoms"):
@@ -227,7 +193,6 @@ def _decide_action(
     if injury.get("worsening") and week_press == "high":
         return "convert"
 
-    # --- Readiness-based deload ---
     if fatigue == "high" and hard_day_count >= 2:
         return "deload"
     if cut == "high" and hard_day_count >= 2:
@@ -310,7 +275,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     cut = _cut_pressure(athlete_snapshot)
     week_press = _week_pressure(week, athlete_snapshot)
     injury = _injury_assessment(athlete_snapshot)
-    days_until_fight = athlete_snapshot.get("days_until_fight")
 
     action = _decide_action(
         hard_day_count=len(hard_days),
@@ -318,7 +282,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         cut=cut,
         week_press=week_press,
         injury=injury,
-        days_until_fight=days_until_fight,
     )
     if action is None:
         return [
@@ -332,7 +295,8 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             for day in hard_days
         ]
 
-    reason_codes_list = _reason_codes(
+    target_day = _pick_downgrade_target(hard_days, week=week)
+    reason_codes = _reason_codes(
         fatigue=fatigue,
         cut=cut,
         week_press=week_press,
@@ -341,43 +305,20 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     )
     target_status = "convert_to_technical_suggested" if action == "convert" else "deload_suggested"
     target_load = "technical" if action == "convert" else "reduced"
-    target_reason = ", ".join(reason_codes_list)
-
-    # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
-    countdown_override = _countdown_sparring_override(days_until_fight)
-    if countdown_override in {"convert_all", "deload_all"}:
-        countdown_codes = list(reason_codes_list)
-        if "fight_week_taper" not in countdown_codes:
-            countdown_codes.insert(0, "fight_week_taper")
-        countdown_reason = ", ".join(countdown_codes)
-        return [
-            {
-                "day": day,
-                "status": target_status,
-                "effective_load": target_load,
-                "reason_codes": list(countdown_codes),
-                "reason": countdown_reason,
-                "coach_note": _sparring_override_coach_note(days_until_fight, action),
-            }
-            for day in hard_days
-        ]
-
-    # --- Single-target downgrade (D-7 cap_one or readiness-based) ---
-    target_day = _pick_downgrade_target(hard_days, week=week)
+    target_reason = ", ".join(reason_codes)
 
     plan: list[dict[str, Any]] = []
     for day in hard_days:
         if day == target_day:
-            entry: dict[str, Any] = {
-                "day": day,
-                "status": target_status,
-                "effective_load": target_load,
-                "reason_codes": list(reason_codes_list),
-                "reason": target_reason,
-            }
-            if countdown_override == "cap_one":
-                entry["coach_note"] = _sparring_override_coach_note(days_until_fight, action)
-            plan.append(entry)
+            plan.append(
+                {
+                    "day": day,
+                    "status": target_status,
+                    "effective_load": target_load,
+                    "reason_codes": list(reason_codes),
+                    "reason": target_reason,
+                }
+            )
             continue
         plan.append(
             {
@@ -389,32 +330,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
         )
     return plan
-
-
-def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
-    """Generate a brief athlete-facing note explaining the taper-driven sparring change."""
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return ""
-    if days <= 5:
-        return (
-            f"Fight is {days} day{'s' if days != 1 else ''} away. "
-            "All sparring shifts to technical rhythm only — "
-            "no new collision stress this close to fight day."
-        )
-    if days == 6:
-        return (
-            "6 days out. Hard sparring is deloaded — "
-            "keep rounds lighter and focus on timing over damage."
-        )
-    if days == 7:
-        if action == "deload":
-            return (
-                "7 days out. Capping hard sparring to one session — "
-                "extra declared days shift to reduced intensity."
-            )
-    return ""
 
 
 def effective_hard_days(plan: list[dict[str, Any]]) -> list[str]:

@@ -137,8 +137,7 @@ class TestPayloadModeClassification:
             (10, "camp_payload"),
             (8, "camp_payload"),
             (7, "late_fight_week_payload"),
-            (6, "late_fight_transition_payload"),
-            (5, "late_fight_transition_payload"),
+            (5, "late_fight_week_payload"),
             (4, "late_fight_session_payload"),
             (2, "late_fight_session_payload"),
             (1, "pre_fight_day_payload"),
@@ -197,11 +196,14 @@ class TestLateFightPermissionsAndRendering:
 
 
 class TestLateFightRoleMap:
-    def test_d5_role_map_uses_transition_overlay(self):
+    def test_d5_role_map_uses_compressed_overlay(self):
         role_map = _build_late_fight_weekly_role_map(5, _athlete(5))
         assert role_map["model"] == "late_fight_role_overlay.v1"
-        assert role_map["payload_mode"] == "late_fight_transition_payload"
-        assert role_map["weeks"] == []
+        assert role_map["payload_mode"] == "late_fight_week_payload"
+        assert len(role_map["weeks"]) == 1
+        week = role_map["weeks"][0]
+        assert week["intentional_compression"]["active"] is True
+        assert any(role["role_key"] == "fight_week_freshness_day" for role in week["session_roles"])
 
     def test_d3_role_map_is_session_list(self):
         role_map = _build_late_fight_weekly_role_map(3, _athlete(3))
@@ -232,6 +234,7 @@ class TestPlanningBriefBranching:
         assert brief["week_by_week_progression"]["weeks"] == []
         assert brief["weekly_role_map"]["weeks"] == []
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
+            "alactic_sharpness_day",
             "fight_week_freshness_day",
         ]
 
@@ -260,8 +263,8 @@ class TestStage2PayloadBranching:
         payload = _build_stage2(5)
         assert payload["generator_mode"] == "restriction_aware_candidate_generator_late_fight"
         assert payload["payload_variant"] == "late_fight_stage2_payload"
-        assert payload["payload_mode"] == "late_fight_transition_payload"
-        assert payload["effective_stage2_mode"] == "late_fight_transition_payload"
+        assert payload["payload_mode"] == "late_fight_week_payload"
+        assert payload["effective_stage2_mode"] == "late_fight_week_payload"
         assert "late_fight_permissions" in payload
         assert "rendering_rules" in payload
 
@@ -269,6 +272,7 @@ class TestStage2PayloadBranching:
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
+            "alactic_sharpness_day",
             "fight_week_freshness_day",
         ]
 
@@ -314,7 +318,7 @@ class TestHandoffText:
     @pytest.mark.parametrize(
         "days, expected_heading",
         [
-            (5, "TRANSITION WINDOW"),
+            (5, "COMPRESSED WEEK"),
             (3, "SESSION-BY-SESSION"),
             (1, "PRE-FIGHT DAY"),
             (0, "FIGHT DAY PROTOCOL"),
