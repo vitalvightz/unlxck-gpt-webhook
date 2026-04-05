@@ -251,6 +251,16 @@ def test_normalize_severity_does_not_match_overlapping_substrings():
     assert "stable" not in hits
 
 
+def test_severity_synonym_pattern_multi_word_separators():
+    # Regression: _severity_synonym_pattern must not raise SyntaxError when
+    # building a pattern for multi-word synonyms (backslash in f-string fix).
+    pattern = injury_guard_module._severity_synonym_pattern("really tight")
+    assert pattern.search("really tight")
+    assert pattern.search("really_tight")
+    assert pattern.search("really-tight")
+    assert not pattern.search("areallyxtight")
+
+
 def test_compute_tags_hash_uses_normalized_tags():
     assert injury_guard_module._compute_tags_hash(["Muay Thai", "skill refinement", "muay_thai"]) == injury_guard_module._compute_tags_hash(
         ["muay_thai", "skill_refinement"]
