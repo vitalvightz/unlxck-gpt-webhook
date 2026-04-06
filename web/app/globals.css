@@ -4329,6 +4329,26 @@ html[data-theme="light"] .sparring-advisory-card .sparring-risk-dot {
   box-shadow: 0 0 0 3px rgba(88, 62, 58, 0.08);
 }
 
+/* Accordion light theme fixes */
+html[data-theme="light"] .accordion-item {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: linear-gradient(180deg, rgba(255, 251, 247, 0.98), rgba(255, 244, 237, 0.98));
+}
+
+html[data-theme="light"] .accordion-item-open {
+  border-color: rgba(163, 21, 45, 0.24);
+}
+
+html[data-theme="light"] .accordion-trigger:hover {
+  background: rgba(88, 62, 58, 0.04);
+}
+
+html[data-theme="light"] .accordion-item-open .accordion-chevron {
+  border-color: rgba(163, 21, 45, 0.32);
+  background: rgba(163, 21, 45, 0.12);
+  color: var(--brand-red);
+}
+
 html[data-theme="light"] .sparring-advisory-card .sparring-risk-green {
   border-color: rgba(37, 131, 82, 0.18);
   background: rgba(236, 249, 242, 0.98);
@@ -4382,6 +4402,73 @@ html[data-theme="light"] .loading-scan-rail {
 
 html[data-theme="light"] .loading-step-marker {
   background: rgba(88, 62, 58, 0.22);
+}
+
+/* Loading step states light theme fixes */
+html[data-theme="light"] .loading-step-current {
+  background: rgba(163, 21, 45, 0.06);
+  border-radius: 16px;
+}
+
+html[data-theme="light"] .loading-step-current .loading-step-marker {
+  border-color: rgba(163, 21, 45, 0.32);
+  background: rgba(163, 21, 45, 0.16);
+  color: var(--brand-red);
+  box-shadow: 0 0 12px rgba(163, 21, 45, 0.12);
+}
+
+html[data-theme="light"] .loading-step-complete .loading-step-marker {
+  border-color: rgba(163, 21, 45, 0.18);
+  background: rgba(163, 21, 45, 0.12);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .loading-step-error .loading-step-marker {
+  border-color: rgba(163, 21, 45, 0.24);
+  background: rgba(163, 21, 45, 0.16);
+  color: var(--brand-red);
+  box-shadow: 0 0 12px rgba(163, 21, 45, 0.12);
+}
+
+html[data-theme="light"] .loading-step-error .loading-step-label {
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .loading-step-error .loading-step-note {
+  color: var(--text-secondary);
+}
+
+/* Additional light theme fixes for hardcoded colors */
+html[data-theme="light"] .custom-select-trigger[aria-expanded="true"] .custom-select-chevron {
+  border-color: var(--brand-red);
+}
+
+html[data-theme="light"] .custom-select-option-selected {
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .step-pill-active .step-pill-index {
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .mobile-step-rail-item-active .mobile-step-rail-index {
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .plans-history-toggle-open .custom-select-chevron {
+  border-color: var(--brand-red);
+}
+
+html[data-theme="light"] .loading-phase-badge {
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .loading-primary-panel .loading-eyebrow {
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .loading-secondary-panel .loading-eyebrow {
+  color: var(--text-secondary);
 }
 
 html[data-theme="light"] .code-block,
