@@ -4,6 +4,7 @@ import type { Viewport } from "next";
 
 import { AppNav } from "@/components/app-nav";
 import { AuthProvider } from "@/components/auth-provider";
+import { GenerationStatusShell } from "@/components/generation-status-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,12 +31,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       </head>
       <body>
         <AuthProvider>
-          <div className="app-shell">
-            <AppNav />
-            <main className="app-main">
-              <div className="page">{children}</div>
-            </main>
-          </div>
+          <GenerationStatusShell>
+            <div className="app-shell">
+              <AppNav />
+              <main className="app-main">
+                <div className="page">{children}</div>
+              </main>
+            </div>
+          </GenerationStatusShell>
         </AuthProvider>
       </body>
     </html>
