@@ -8,6 +8,7 @@ import {
   AthleteCoachNotesCard,
   AthleteLatestIntakeCard,
   AthleteLatestIntakeStatus,
+  AthleteProfileCompact,
   AthleteProfileHero,
   AthleteScheduleCard,
   AthleteSnapshotCard,
@@ -113,16 +114,13 @@ export default function AdminAthletePage() {
           ) : null}
 
           <div className="athlete-profile-grid">
-            <AthleteSnapshotCard athlete={athlete} />
-            <AthleteLatestIntakeCard intake={athlete.latest_intake ?? null} />
+            <AthleteProfileCompact athlete={athlete} intake={athlete.latest_intake ?? null} />
             {!athlete.latest_intake && athlete.plan_count > 0 ? (
               <AthleteLatestIntakeStatus
                 planCount={athlete.plan_count}
                 latestPlanCreatedAt={athlete.latest_plan_created_at ?? null}
               />
             ) : null}
-            {athlete.latest_intake ? <AthleteScheduleCard intake={athlete.latest_intake} /> : null}
-            {athlete.latest_intake ? <AthleteCoachNotesCard intake={athlete.latest_intake} /> : null}
           </div>
         </section>
       )}

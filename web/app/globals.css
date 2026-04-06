@@ -3813,6 +3813,35 @@ button.mobile-step-rail-item {
   grid-column: 1 / -1;
 }
 
+.athlete-profile-compact {
+  display: grid;
+  gap: 20px;
+}
+
+.athlete-profile-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.athlete-profile-column {
+  display: grid;
+  gap: 0;
+}
+
+.athlete-profile-compact-section {
+  display: grid;
+  gap: 16px;
+}
+
+.athlete-profile-section-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 .danger-button {
   border-color: rgba(181, 18, 43, 0.26);
   color: #ffb7c0;
@@ -3827,7 +3856,8 @@ button.mobile-step-rail-item {
 @media (max-width: 900px) {
   .athlete-profile-grid,
   .athlete-profile-copy-grid,
-  .athlete-profile-hero-stats {
+  .athlete-profile-hero-stats,
+  .athlete-profile-columns {
     grid-template-columns: 1fr;
   }
 

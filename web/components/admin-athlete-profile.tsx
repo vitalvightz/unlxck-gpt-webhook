@@ -178,6 +178,22 @@ function buildCoachNotes(intake: PlanRequest): CopyItem[] {
   ].filter((item) => item.value.trim().length > 0);
 }
 
+function CompactDetailList({ items, title }: { items: DetailItem[]; title?: string }) {
+  return (
+    <div className="athlete-profile-compact-section">
+      {title && <h3 className="athlete-profile-section-title">{title}</h3>}
+      <div className="review-detail-list">
+        {items.map((item) => (
+          <div key={`${item.label}-${item.value}`} className="review-detail-row">
+            <p className="review-detail-label">{item.label}</p>
+            <p className={`review-detail-value${item.accent ? ` ${item.accent}` : ""}`}>{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DetailCard({ label, value, accent }: DetailItem) {
   return (
     <article className="plan-meta-item athlete-profile-detail-card">
@@ -213,6 +229,127 @@ export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord })
   );
 }
 
+export function AthleteProfileCompact({ athlete, intake }: { athlete: AdminAthleteRecord; intake: PlanRequest | null }) {
+  const profileDetails = buildSnapshotDetails(athlete).slice(0, 6); // Basic info: name, email, role, styles, stance, status
+  const athleteMetrics = buildSnapshotDetails(athlete).slice(6); // Record, timezone, locale, dates
+  const highlights = intake ? buildIntakeHighlights(intake) : [];
+  const groups = intake ? buildPillGroups(intake) : [];
+  const scheduleGroups = intake ? buildScheduleGroups(intake) : [];
+  const notes = intake ? buildCoachNotes(intake) : [];
+
+  return (
+    <div className="athlete-profile-compact">
+      {/* Profile Overview Section */}
+      <section className="plan-summary-card athlete-profile-section-card">
+        <div className="plan-summary-header">
+          <div>
+            <p className="kicker">Profile</p>
+            <h2 className="plan-summary-title">Athlete overview</h2>
+          </div>
+          <p className="muted">Core identity and fighting style</p>
+        </div>
+        <div className="athlete-profile-columns">
+          <div className="athlete-profile-column">
+            <CompactDetailList items={profileDetails} />
+          </div>
+          <div className="athlete-profile-column">
+            <CompactDetailList items={athleteMetrics} />
+          </div>
+        </div>
+      </section>
+
+      {/* Camp Setup Section */}
+      {intake ? (
+        <section className="plan-summary-card athlete-profile-section-card">
+          <div className="plan-summary-header">
+            <div>
+              <p className="kicker">Camp setup</p>
+              <h2 className="plan-summary-title">Fight context & metrics</h2>
+            </div>
+            <p className="muted">Key planning inputs for the latest camp</p>
+          </div>
+          <CompactDetailList items={highlights} />
+        </section>
+      ) : null}
+
+      {/* Training Preferences Section */}
+      {intake && groups.length ? (
+        <section className="plan-summary-card athlete-profile-section-card">
+          <div className="plan-summary-header">
+            <div>
+              <p className="kicker">Training</p>
+              <h2 className="plan-summary-title">Availability & preferences</h2>
+            </div>
+            <p className="muted">Equipment access, goals, and areas for improvement</p>
+          </div>
+          <div className="athlete-profile-pill-groups">
+            {groups.map((group) => (
+              <div key={group.label} className="athlete-profile-pill-group">
+                <p className="plan-meta-label">{group.label}</p>
+                <div className="athlete-profile-pills">
+                  {group.items.map((item) => (
+                    <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Schedule Section */}
+      {intake && scheduleGroups.length ? (
+        <section className="plan-summary-card athlete-profile-section-card">
+          <div className="plan-summary-header">
+            <div>
+              <p className="kicker">Schedule</p>
+              <h2 className="plan-summary-title">Weekly structure</h2>
+            </div>
+            <p className="muted">Hard sparring and technical skill days</p>
+          </div>
+          <div className="athlete-profile-pill-groups">
+            {scheduleGroups.map((group) => (
+              <div key={group.label} className="athlete-profile-pill-group">
+                <p className="plan-meta-label">{group.label}</p>
+                <div className="athlete-profile-pills">
+                  {group.items.map((item) => (
+                    <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {/* Constraints Section */}
+      {intake && notes.length ? (
+        <section className="plan-summary-card athlete-profile-section-card">
+          <div className="plan-summary-header">
+            <div>
+              <p className="kicker">Constraints</p>
+              <h2 className="plan-summary-title">Restrictions & preferences</h2>
+            </div>
+            <p className="muted">Injuries, training preferences, and notes</p>
+          </div>
+          <div className="athlete-profile-copy-grid">
+            {notes.map((item) => (
+              <article key={item.label} className="athlete-profile-copy-card">
+                <p className="plan-meta-label">{item.label}</p>
+                <p className="athlete-profile-copy-text">{item.value}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
 export function AthleteSnapshotCard({ athlete }: { athlete: AdminAthleteRecord }) {
   const details = buildSnapshotDetails(athlete);
 
@@ -225,11 +362,7 @@ export function AthleteSnapshotCard({ athlete }: { athlete: AdminAthleteRecord }
         </div>
         <p className="muted">Core profile data plus the latest intake used to generate a camp plan.</p>
       </div>
-      <div className="plan-meta-grid athlete-profile-grid-cards">
-        {details.map((item) => (
-          <DetailCard key={item.label} {...item} />
-        ))}
-      </div>
+      <CompactDetailList items={details} />
     </section>
   );
 }
@@ -253,11 +386,7 @@ export function AthleteLatestIntakeCard({ intake }: { intake: PlanRequest | null
       </div>
       {intake ? (
         <>
-          <div className="plan-meta-grid athlete-profile-grid-cards">
-            {highlights.map((item) => (
-              <DetailCard key={item.label} {...item} />
-            ))}
-          </div>
+          <CompactDetailList items={highlights} />
           {groups.length ? (
             <div className="athlete-profile-pill-groups">
               {groups.map((group) => (
