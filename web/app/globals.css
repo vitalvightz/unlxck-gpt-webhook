@@ -3441,6 +3441,54 @@ button.mobile-step-rail-item {
   animation: loading-scan-sweep 2s linear infinite;
 }
 
+.global-generation-status-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  color: #22c55e;
+  animation: check-pop 300ms ease-out;
+}
+
+@keyframes check-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.global-generation-status-completed {
+  border-top-color: rgba(34, 197, 94, 0.4);
+  background: linear-gradient(180deg, rgba(20, 40, 25, 0.98), rgba(15, 30, 20, 0.98));
+}
+
+.global-generation-status-completed:hover {
+  background: linear-gradient(180deg, rgba(25, 50, 30, 0.98), rgba(18, 35, 22, 0.98));
+}
+
+html[data-theme="light"] .global-generation-status-completed {
+  border-top-color: rgba(34, 197, 94, 0.4);
+  background: linear-gradient(180deg, rgba(240, 255, 245, 0.98), rgba(235, 252, 240, 0.98));
+}
+
+html[data-theme="light"] .global-generation-status-completed:hover {
+  background: linear-gradient(180deg, rgba(235, 252, 240, 0.98), rgba(230, 250, 235, 0.98));
+}
+
+html[data-theme="light"] .global-generation-status-check {
+  color: #16a34a;
+}
+
 /* Light theme support */
 html[data-theme="light"] .global-generation-status {
   background: linear-gradient(180deg, rgba(255, 251, 247, 0.98), rgba(250, 244, 238, 0.98));

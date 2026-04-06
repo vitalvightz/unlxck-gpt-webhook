@@ -10,6 +10,7 @@ interface GenerationStatusContextValue {
   phase: GlobalGenerationPhase;
   jobId: string | null;
   clientRequestId: string | null;
+  planId: string | null;
   isActive: boolean;
   statusMessage: string | null;
   refreshStatus: () => void;
@@ -50,7 +51,7 @@ function getPendingGeneration(): PendingGenerationState | null {
 function phaseFromStatus(status: GenerationJobStatus): GlobalGenerationPhase {
   if (status === "queued") return "queued";
   if (status === "running") return "running";
-  if (status === "completed" || status === "review_required") return "finalizing";
+  if (status === "completed" || status === "review_required") return "completed";
   if (status === "failed") return "failed";
   return null;
 }
@@ -63,6 +64,8 @@ function statusMessage(phase: GlobalGenerationPhase): string {
       return "Generating plan...";
     case "finalizing":
       return "Finalizing plan...";
+    case "completed":
+      return "Plan ready!";
     case "failed":
       return "Generation failed";
     default:
@@ -79,6 +82,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [phase, setPhase] = useState<GlobalGenerationPhase>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [clientRequestId, setClientRequestId] = useState<string | null>(null);
+  const [planId, setPlanId] = useState<string | null>(null);
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
 
   const checkStatus = useCallback(async () => {
@@ -102,14 +106,28 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setJobId(pending.jobId);
         setStatusMessageText(statusMessage(newPhase));
         
-        // Clear if completed or failed
+        // Track plan ID when completed
+        if (job.status === "completed" || job.status === "review_required") {
+          setPlanId(job.plan_id || job.latest_plan_id || null);
+        }
+        
+        // Clear completed/failed after showing briefly
         if (job.status === "completed" || job.status === "review_required" || job.status === "failed") {
-          // Keep showing "finalizing" briefly before clearing
           if (job.status === "completed" || job.status === "review_required") {
+            // Keep showing "completed" for 5 seconds before clearing
             setTimeout(() => {
               setPhase(null);
               setJobId(null);
               setClientRequestId(null);
+              setPlanId(null);
+            }, 5000);
+          } else {
+            // Failed - clear immediately after a shorter delay
+            setTimeout(() => {
+              setPhase(null);
+              setJobId(null);
+              setClientRequestId(null);
+              setPlanId(null);
             }, 3000);
           }
         }
@@ -151,7 +169,8 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     phase,
     jobId,
     clientRequestId,
-    isActive: phase !== null && phase !== "completed" && phase !== "failed",
+    planId,
+    isActive: phase !== null,
     statusMessage: statusMessageText,
     refreshStatus: checkStatus,
   };
