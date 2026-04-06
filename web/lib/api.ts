@@ -322,27 +322,31 @@ export function getPlan(token: string, planId: string): Promise<PlanDetail> {
 }
 
 export function renamePlan(token: string, planId: string, planName: string): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/plans/${planId}`, {
-    method: "PATCH",
-    token,
-    body: JSON.stringify({ plan_name: planName }),
-  });
+  return withTransientRetries(() =>
+    readJson<PlanDetail>(`/api/plans/${planId}`, {
+      method: "PATCH",
+      token,
+      body: JSON.stringify({ plan_name: planName }),
+    }),
+  );
 }
 
 export async function deletePlan(token: string, planId: string): Promise<void> {
-  const headers = new Headers();
-  headers.set("Authorization", `Bearer ${token}`);
+  return withTransientRetries(async () => {
+    const headers = new Headers();
+    headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${getApiBaseUrl()}/api/plans/${planId}`, {
-    method: "DELETE",
-    cache: "no-store",
-    headers,
+    const response = await fetch(`${getApiBaseUrl()}/api/plans/${planId}`, {
+      method: "DELETE",
+      cache: "no-store",
+      headers,
+    });
+
+    if (!response.ok) {
+      const message = (await response.text()).trim() || `Request failed: ${response.status}`;
+      throw new ApiError(message, response.status);
+    }
   });
-
-  if (!response.ok) {
-    const message = (await response.text()).trim() || `Request failed: ${response.status}`;
-    throw new ApiError(message, response.status);
-  }
 }
 
 export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> {
