@@ -239,113 +239,123 @@ export function AthleteProfileCompact({ athlete, intake }: { athlete: AdminAthle
 
   return (
     <div className="athlete-profile-compact">
-      {/* Profile Overview Section */}
-      <section className="plan-summary-card athlete-profile-section-card">
-        <div className="plan-summary-header">
-          <div>
-            <p className="kicker">Profile</p>
-            <h2 className="plan-summary-title">Athlete overview</h2>
-          </div>
-          <p className="muted">Core identity and fighting style</p>
-        </div>
-        <div className="athlete-profile-columns">
-          <div className="athlete-profile-column">
-            <CompactDetailList items={profileDetails} />
-          </div>
-          <div className="athlete-profile-column">
-            <CompactDetailList items={athleteMetrics} />
-          </div>
-        </div>
-      </section>
-
-      {/* Camp Setup Section */}
-      {intake ? (
+      {/* Three-column layout for better space utilization */}
+      <div className="athlete-profile-three-column-grid">
+        {/* Column 1: Profile Overview */}
         <section className="plan-summary-card athlete-profile-section-card">
           <div className="plan-summary-header">
             <div>
-              <p className="kicker">Camp setup</p>
-              <h2 className="plan-summary-title">Fight context & metrics</h2>
+              <p className="kicker">Profile</p>
+              <h2 className="plan-summary-title">Athlete overview</h2>
             </div>
-            <p className="muted">Key planning inputs for the latest camp</p>
+            <p className="muted">Core identity and fighting style</p>
           </div>
-          <CompactDetailList items={highlights} />
+          <div className="athlete-profile-columns">
+            <div className="athlete-profile-column">
+              <CompactDetailList items={profileDetails} />
+            </div>
+            <div className="athlete-profile-column">
+              <CompactDetailList items={athleteMetrics} />
+            </div>
+          </div>
         </section>
-      ) : null}
 
-      {/* Training Preferences Section */}
-      {intake && groups.length ? (
-        <section className="plan-summary-card athlete-profile-section-card">
-          <div className="plan-summary-header">
-            <div>
-              <p className="kicker">Training</p>
-              <h2 className="plan-summary-title">Availability & preferences</h2>
-            </div>
-            <p className="muted">Equipment access, goals, and areas for improvement</p>
-          </div>
-          <div className="athlete-profile-pill-groups">
-            {groups.map((group) => (
-              <div key={group.label} className="athlete-profile-pill-group">
-                <p className="plan-meta-label">{group.label}</p>
-                <div className="athlete-profile-pills">
-                  {group.items.map((item) => (
-                    <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
+        {/* Column 2: Camp Setup */}
+        {intake ? (
+          <section className="plan-summary-card athlete-profile-section-card">
+            <div className="plan-summary-header">
+              <div>
+                <p className="kicker">Camp setup</p>
+                <h2 className="plan-summary-title">Fight context & metrics</h2>
               </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* Schedule Section */}
-      {intake && scheduleGroups.length ? (
-        <section className="plan-summary-card athlete-profile-section-card">
-          <div className="plan-summary-header">
-            <div>
-              <p className="kicker">Schedule</p>
-              <h2 className="plan-summary-title">Weekly structure</h2>
+              <p className="muted">Key planning inputs for the latest camp</p>
             </div>
-            <p className="muted">Hard sparring and technical skill days</p>
-          </div>
-          <div className="athlete-profile-pill-groups">
-            {scheduleGroups.map((group) => (
-              <div key={group.label} className="athlete-profile-pill-group">
-                <p className="plan-meta-label">{group.label}</p>
-                <div className="athlete-profile-pills">
-                  {group.items.map((item) => (
-                    <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
+            <CompactDetailList items={highlights} />
+          </section>
+        ) : (
+          <div></div> // Empty placeholder to maintain grid
+        )}
+
+        {/* Column 3: Training Preferences */}
+        {intake && groups.length ? (
+          <section className="plan-summary-card athlete-profile-section-card">
+            <div className="plan-summary-header">
+              <div>
+                <p className="kicker">Training</p>
+                <h2 className="plan-summary-title">Availability & preferences</h2>
               </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* Constraints Section */}
-      {intake && notes.length ? (
-        <section className="plan-summary-card athlete-profile-section-card">
-          <div className="plan-summary-header">
-            <div>
-              <p className="kicker">Constraints</p>
-              <h2 className="plan-summary-title">Restrictions & preferences</h2>
+              <p className="muted">Equipment access, goals, and areas for improvement</p>
             </div>
-            <p className="muted">Injuries, training preferences, and notes</p>
-          </div>
-          <div className="athlete-profile-copy-grid">
-            {notes.map((item) => (
-              <article key={item.label} className="athlete-profile-copy-card">
-                <p className="plan-meta-label">{item.label}</p>
-                <p className="athlete-profile-copy-text">{item.value}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+            <div className="athlete-profile-pill-groups">
+              {groups.map((group) => (
+                <div key={group.label} className="athlete-profile-pill-group">
+                  <p className="plan-meta-label">{group.label}</p>
+                  <div className="athlete-profile-pills">
+                    {group.items.map((item) => (
+                      <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <div></div> // Empty placeholder to maintain grid
+        )}
+      </div>
+
+      {/* Bottom row for Schedule and Constraints */}
+      <div className="athlete-profile-bottom-row">
+        {/* Schedule Section */}
+        {intake && scheduleGroups.length ? (
+          <section className="plan-summary-card athlete-profile-section-card">
+            <div className="plan-summary-header">
+              <div>
+                <p className="kicker">Schedule</p>
+                <h2 className="plan-summary-title">Weekly structure</h2>
+              </div>
+              <p className="muted">Hard sparring and technical skill days</p>
+            </div>
+            <div className="athlete-profile-pill-groups">
+              {scheduleGroups.map((group) => (
+                <div key={group.label} className="athlete-profile-pill-group">
+                  <p className="plan-meta-label">{group.label}</p>
+                  <div className="athlete-profile-pills">
+                    {group.items.map((item) => (
+                      <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Constraints Section */}
+        {intake && notes.length ? (
+          <section className="plan-summary-card athlete-profile-section-card">
+            <div className="plan-summary-header">
+              <div>
+                <p className="kicker">Constraints</p>
+                <h2 className="plan-summary-title">Restrictions & preferences</h2>
+              </div>
+              <p className="muted">Injuries, training preferences, and notes</p>
+            </div>
+            <div className="athlete-profile-copy-grid">
+              {notes.map((item) => (
+                <article key={item.label} className="athlete-profile-copy-card">
+                  <p className="plan-meta-label">{item.label}</p>
+                  <p className="athlete-profile-copy-text">{item.value}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

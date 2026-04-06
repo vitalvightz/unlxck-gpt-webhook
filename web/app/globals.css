@@ -3818,6 +3818,20 @@ button.mobile-step-rail-item {
   gap: 20px;
 }
 
+.athlete-profile-three-column-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.athlete-profile-bottom-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
 .athlete-profile-columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3857,12 +3871,24 @@ button.mobile-step-rail-item {
   .athlete-profile-grid,
   .athlete-profile-copy-grid,
   .athlete-profile-hero-stats,
-  .athlete-profile-columns {
+  .athlete-profile-columns,
+  .athlete-profile-three-column-grid,
+  .athlete-profile-bottom-row {
     grid-template-columns: 1fr;
   }
 
   .athlete-profile-section-card {
     padding: 22px;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 901px) {
+  .athlete-profile-three-column-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .athlete-profile-three-column-grid > section:nth-child(1) {
+    grid-column: 1 / -1;
   }
 }
 
