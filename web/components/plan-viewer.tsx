@@ -648,7 +648,13 @@ export function PlanViewer({
       onPlanUpdated?.(updatedPlan);
       setPlanActionMessage("Plan renamed.");
     } catch (error) {
-      setPlanActionError(error instanceof Error ? error.message : "Unable to rename this plan.");
+      const errorMessage = error instanceof Error ? error.message : "Unable to rename this plan.";
+      // Provide more helpful error message for retryable failures
+      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
+        setPlanActionError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+      } else {
+        setPlanActionError(errorMessage);
+      }
     } finally {
       setPlanActionPending(null);
     }
@@ -673,7 +679,13 @@ export function PlanViewer({
       router.push(viewerRole === "admin" ? "/admin" : "/plans");
       router.refresh();
     } catch (error) {
-      setPlanActionError(error instanceof Error ? error.message : "Unable to delete this plan.");
+      const errorMessage = error instanceof Error ? error.message : "Unable to delete this plan.";
+      // Provide more helpful error message for retryable failures
+      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
+        setPlanActionError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+      } else {
+        setPlanActionError(errorMessage);
+      }
     } finally {
       setPlanActionPending(null);
     }

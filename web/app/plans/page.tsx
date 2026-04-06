@@ -88,7 +88,13 @@ function PlanCard({
       onPlanRenamed(updatedPlan);
       setMessage("Plan renamed.");
     } catch (renameError) {
-      setError(renameError instanceof Error ? renameError.message : "Unable to rename this plan.");
+      const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
+      // Provide more helpful error message for retryable failures
+      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
+        setError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setPendingAction(null);
     }
@@ -111,7 +117,13 @@ function PlanCard({
       await deletePlan(accessToken, plan.plan_id);
       onPlanDeleted(plan.plan_id);
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.");
+      const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
+      // Provide more helpful error message for retryable failures
+      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
+        setError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setPendingAction(null);
     }
