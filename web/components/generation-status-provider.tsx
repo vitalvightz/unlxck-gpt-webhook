@@ -25,11 +25,12 @@ interface PendingGenerationState {
 
 function getPendingGeneration(): PendingGenerationState | null {
   if (typeof window === "undefined") return null;
-  
-  const storageKeys = Object.keys(window.sessionStorage).filter(key => 
-    key.startsWith("generation_") || key.includes("pending_generation")
+
+  // Look for keys matching the pattern "unlxck:pending-generation:*"
+  const storageKeys = Object.keys(window.sessionStorage).filter((key) =>
+    key.startsWith("unlxck:pending-generation:")
   );
-  
+
   for (const key of storageKeys) {
     const raw = window.sessionStorage.getItem(key);
     if (raw) {
