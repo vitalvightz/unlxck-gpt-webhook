@@ -3848,61 +3848,33 @@ html[data-theme="light"] .global-generation-status-rail {
 
 .athlete-profile-panel {
   position: relative;
+  overflow: hidden;
+}
+
+.athlete-profile-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(181, 18, 43, 0.16), transparent 34%),
+    radial-gradient(circle at top right, rgba(80, 96, 255, 0.12), transparent 28%);
+  pointer-events: none;
+}
+
+.athlete-profile-hero,
+.athlete-profile-overview-card {
+  position: relative;
+  z-index: 1;
+}
+
+.athlete-profile-hero {
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.athlete-profile-hero-copy {
   display: grid;
-  gap: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  overflow: visible;
-}
-
-.athlete-profile-role-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.athlete-profile-sheet {
-  display: grid;
-  gap: 26px;
-  padding: clamp(18px, 2.6vw, 28px);
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  background: linear-gradient(180deg, rgba(18, 21, 26, 0.985), rgba(14, 16, 20, 0.99));
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-.athlete-profile-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px 24px;
-  align-items: end;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.athlete-profile-header-main,
-.athlete-profile-header-copy,
-.athlete-profile-header-side {
-  display: grid;
-}
-
-.athlete-profile-header-main {
-  gap: 16px;
-}
-
-.athlete-profile-header-copy {
-  gap: 8px;
+  gap: 10px;
 }
 
 .athlete-profile-title-row {
@@ -3912,76 +3884,99 @@ html[data-theme="light"] .global-generation-status-rail {
   gap: 16px;
 }
 
-.athlete-profile-meta-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: stretch;
+.athlete-profile-role-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(181, 18, 43, 0.18);
+  background: rgba(181, 18, 43, 0.1);
+  color: var(--text-primary);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.athlete-profile-meta-item {
+.athlete-profile-metric-strip {
   display: grid;
-  gap: 4px;
-  min-width: 132px;
-  padding-right: 14px;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 760px);
 }
 
-.athlete-profile-meta-item:last-child {
-  padding-right: 0;
-  border-right: 0;
+.athlete-profile-metric {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
 }
 
-.athlete-profile-meta-value {
+.athlete-profile-metric-accent {
+  border-color: rgba(181, 18, 43, 0.22);
+  background: linear-gradient(180deg, rgba(46, 17, 25, 0.9), rgba(23, 25, 33, 0.94));
+}
+
+.athlete-profile-metric-value,
+.athlete-profile-metric-copy {
   margin: 0;
   color: var(--text-primary);
-  font-size: 0.98rem;
-  font-weight: 600;
-  line-height: 1.35;
 }
 
-.athlete-profile-header-side {
-  gap: 10px;
-  justify-items: end;
-  align-content: start;
+.athlete-profile-metric-value {
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 700;
 }
 
-.athlete-profile-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
+.athlete-profile-metric-value-small {
+  font-size: 1rem;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
-.athlete-profile-support-note {
-  margin: 0;
-  max-width: 320px;
-  text-align: right;
-  font-size: 0.9rem;
-  line-height: 1.5;
+.athlete-profile-metric-copy {
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
-.athlete-profile-groups {
+.athlete-profile-overview-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 30px;
+}
+
+.athlete-profile-overview-header {
+  margin-bottom: 0;
+}
+
+.athlete-profile-overview-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px 30px;
+  gap: 14px 16px;
 }
 
-.athlete-profile-group {
+.athlete-profile-overview-section {
   display: grid;
   gap: 12px;
-  align-content: start;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.athlete-profile-group-wide {
+.athlete-profile-overview-section-wide {
   grid-column: 1 / -1;
 }
 
-.athlete-profile-group-heading {
+.athlete-profile-section-heading {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .athlete-profile-review-list {
@@ -3992,7 +3987,7 @@ html[data-theme="light"] .global-generation-status-rail {
   grid-template-columns: minmax(110px, 0.78fr) minmax(0, 1.22fr);
   gap: 12px;
   align-items: start;
-  padding: 11px 0;
+  padding: 10px 0;
 }
 
 .athlete-profile-review-row-multiline {
@@ -4011,15 +4006,10 @@ html[data-theme="light"] .global-generation-status-rail {
   font-weight: 600;
 }
 
-.athlete-profile-inline-list {
-  color: var(--text-primary);
-  line-height: 1.55;
-}
-
 .athlete-profile-inline-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .athlete-profile-empty-value {
@@ -4029,18 +4019,34 @@ html[data-theme="light"] .global-generation-status-rail {
 .athlete-profile-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 4px 10px;
+  min-height: 36px;
+  padding: 8px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(181, 18, 43, 0.24);
+  background: rgba(181, 18, 43, 0.12);
   color: var(--text-primary);
-  font-size: 0.78rem;
-  line-height: 1.2;
+  font-size: 0.92rem;
 }
 
 .athlete-profile-pill-compact {
-  min-height: 26px;
+  min-height: 28px;
+  padding: 5px 10px;
+  font-size: 0.82rem;
+}
+
+.athlete-profile-pill-alt {
+  border-color: rgba(111, 132, 255, 0.28);
+  background: rgba(111, 132, 255, 0.12);
+}
+
+.athlete-profile-pill-success {
+  border-color: rgba(42, 201, 143, 0.28);
+  background: rgba(42, 201, 143, 0.12);
+}
+
+.athlete-profile-pill-warning {
+  border-color: rgba(255, 184, 77, 0.28);
+  background: rgba(255, 184, 77, 0.12);
 }
 
 .empty-state-card {
@@ -4062,39 +4068,9 @@ html[data-theme="light"] .global-generation-status-rail {
 }
 
 @media (max-width: 900px) {
-  .athlete-profile-header,
-  .athlete-profile-groups {
+  .athlete-profile-metric-strip,
+  .athlete-profile-overview-grid {
     grid-template-columns: 1fr;
-  }
-
-  .athlete-profile-header-side {
-    justify-items: start;
-  }
-
-  .athlete-profile-actions {
-    justify-content: flex-start;
-  }
-
-  .athlete-profile-support-note {
-    max-width: none;
-    text-align: left;
-  }
-
-  .athlete-profile-group-wide {
-    grid-column: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .athlete-profile-sheet {
-    gap: 20px;
-    padding: 16px;
-    border-radius: 22px;
-  }
-
-  .athlete-profile-header {
-    gap: 16px;
-    padding-bottom: 16px;
   }
 
   .athlete-profile-title-row {
@@ -4102,22 +4078,65 @@ html[data-theme="light"] .global-generation-status-rail {
     align-items: flex-start;
   }
 
-  .athlete-profile-meta-strip {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px 14px;
+  .athlete-profile-overview-card {
+    padding: 20px;
+    border-radius: 26px;
   }
 
-  .athlete-profile-meta-item {
-    min-width: 0;
-    padding-right: 0;
-    border-right: 0;
+  .athlete-profile-overview-section {
+    padding: 14px 16px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  .athlete-profile-panel {
+    gap: 16px;
+  }
+
+  .athlete-profile-hero {
+    gap: 14px;
+  }
+
+  .athlete-profile-metric-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .athlete-profile-metric {
+    gap: 4px;
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  .athlete-profile-metric-value {
+    font-size: 1.2rem;
+  }
+
+  .athlete-profile-metric-value-small,
+  .athlete-profile-metric-copy {
+    font-size: 0.86rem;
+  }
+
+  .athlete-profile-overview-card {
+    gap: 14px;
+    padding: 16px;
+    border-radius: 24px;
+  }
+
+  .athlete-profile-overview-grid {
+    gap: 10px;
+  }
+
+  .athlete-profile-overview-section {
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 18px;
   }
 
   .athlete-profile-review-row {
     grid-template-columns: 1fr;
     gap: 6px;
-    padding: 10px 0;
+    padding: 9px 0;
   }
 
   .athlete-profile-review-row .review-detail-label {
@@ -4125,28 +4144,14 @@ html[data-theme="light"] .global-generation-status-rail {
     letter-spacing: 0.12em;
   }
 
-  .athlete-profile-actions {
-    width: 100%;
-    flex-direction: column;
-    align-items: stretch;
+  .athlete-profile-inline-pills {
+    gap: 6px;
   }
 
-  .athlete-profile-actions .ghost-button,
-  .athlete-profile-actions .primary-button {
-    width: 100%;
-  }
-
-  .athlete-profile-groups {
-    gap: 18px;
-  }
-
-  .athlete-profile-group {
-    gap: 10px;
-    padding-top: 14px;
-  }
-
-  .athlete-profile-pill {
-    font-size: 0.74rem;
+  .athlete-profile-pill-compact {
+    min-height: 24px;
+    padding: 4px 8px;
+    font-size: 0.76rem;
   }
 }
 
@@ -4866,34 +4871,25 @@ html[data-theme="light"] body::after {
 }
 
 html[data-theme="light"] .athlete-profile-role-badge {
-  border-color: rgba(98, 77, 69, 0.12);
-  background: rgba(98, 77, 69, 0.05);
-  color: rgba(68, 53, 47, 0.9);
+  border-color: rgba(146, 43, 45, 0.16);
+  background: rgba(146, 43, 45, 0.08);
+  color: #7c2a2c;
 }
 
-html[data-theme="light"] .athlete-profile-sheet {
+html[data-theme="light"] .athlete-profile-metric {
   border-color: rgba(98, 77, 69, 0.08);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(250, 245, 239, 0.985));
-  box-shadow: 0 18px 40px rgba(79, 60, 52, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 242, 234, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
-html[data-theme="light"] .athlete-profile-header,
-html[data-theme="light"] .athlete-profile-group,
-html[data-theme="light"] .athlete-profile-meta-item,
-html[data-theme="light"] .athlete-profile-review-row,
-html[data-theme="light"] .athlete-profile-actions .ghost-button {
+html[data-theme="light"] .athlete-profile-metric-accent {
+  border-color: rgba(146, 43, 45, 0.16);
+  background: linear-gradient(180deg, rgba(255, 246, 244, 0.98), rgba(249, 238, 233, 0.94));
+}
+
+html[data-theme="light"] .athlete-profile-overview-section {
   border-color: rgba(98, 77, 69, 0.08);
-}
-
-html[data-theme="light"] .athlete-profile-pill {
-  border-color: rgba(98, 77, 69, 0.1);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-html[data-theme="light"] .athlete-profile-support-note,
-html[data-theme="light"] .athlete-profile-inline-list,
-html[data-theme="light"] .athlete-profile-meta-value {
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 html[data-theme="light"] .eyebrow,
