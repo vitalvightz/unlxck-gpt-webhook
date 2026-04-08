@@ -451,7 +451,6 @@ class SupabaseAppStore:
             "fight_date": request.fight_date,
             "technical_style": request.athlete.technical_style,
             "intake": request.model_dump(mode="json"),
-            "updated_at": _utc_now_iso(),
         }
         try:
             logger.info(
