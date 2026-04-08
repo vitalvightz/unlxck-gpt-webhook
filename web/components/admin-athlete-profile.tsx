@@ -205,6 +205,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
   sections.push({
     kicker: "Camp",
     title: "Latest camp setup",
+    wide: true,
     items: [
       { label: "Fight date", value: formatDate(intake.fight_date, { dateStyle: "medium" }), emphasize: true },
       { label: "Rounds format", value: formatValue(intake.rounds_format), emphasize: true },
