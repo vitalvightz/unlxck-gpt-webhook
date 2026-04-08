@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -16,21 +18,18 @@ const FATIGUE_LEVEL_OPTIONS = [
   { value: "high", label: "High" },
 ];
 
-type DetailItem = {
+type OverviewItem = {
   label: string;
-  value: string;
-  accent?: string;
+  value: ReactNode;
+  multiline?: boolean;
+  emphasize?: boolean;
 };
 
-type PillGroup = {
-  label: string;
-  items: string[];
-  tone?: "default" | "alt" | "success" | "warning";
-};
-
-type CopyItem = {
-  label: string;
-  value: string;
+type OverviewSection = {
+  kicker: string;
+  title: string;
+  items: OverviewItem[];
+  wide?: boolean;
 };
 
 function getOptionLabel(options: { value: string; label: string }[], value: string): string {
@@ -39,10 +38,6 @@ function getOptionLabel(options: { value: string; label: string }[], value: stri
 
 function getOptionLabels(options: { value: string; label: string }[], values: string[] | undefined): string[] {
   return (values ?? []).map((value) => getOptionLabel(options, value)).filter(Boolean);
-}
-
-function formatList(values: string[], empty = "Not provided"): string {
-  return values.length ? values.join(", ") : empty;
 }
 
 function formatValue(value: string | number | null | undefined, empty = "Not provided"): string {
@@ -73,7 +68,11 @@ function formatMeasurement(value: number | null | undefined, unit: string): stri
   return value == null ? null : `${value} ${unit}`;
 }
 
-function toneClassName(tone: PillGroup["tone"]): string {
+function formatList(values: string[], empty = "Not provided"): string {
+  return values.length ? values.join(", ") : empty;
+}
+
+function toneClassName(tone?: "default" | "alt" | "success" | "warning"): string {
   switch (tone) {
     case "alt":
       return " athlete-profile-pill-alt";
@@ -86,279 +85,243 @@ function toneClassName(tone: PillGroup["tone"]): string {
   }
 }
 
-function buildSnapshotDetails(athlete: AdminAthleteRecord): DetailItem[] {
-  return [
+function InlinePills({
+  items,
+  tone = "default",
+  empty = "Not provided",
+}: {
+  items: string[];
+  tone?: "default" | "alt" | "success" | "warning";
+  empty?: string;
+}) {
+  if (!items.length) {
+    return <span className="athlete-profile-empty-value">{empty}</span>;
+  }
+
+  return (
+    <div className="athlete-profile-inline-pills">
+      {items.map((item) => (
+        <span key={item} className={`athlete-profile-pill athlete-profile-pill-compact${toneClassName(tone)}`}>
+          {item}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function AthleteProfileSection({ kicker, title, items, wide = false }: OverviewSection) {
+  return (
+    <section className={`athlete-profile-overview-section${wide ? " athlete-profile-overview-section-wide" : ""}`.trim()}>
+      <div className="athlete-profile-section-heading">
+        <p className="kicker">{kicker}</p>
+        <h3 className="review-card-title">{title}</h3>
+      </div>
+      <div className="review-detail-list athlete-profile-review-list">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className={`review-detail-row athlete-profile-review-row${item.multiline ? " athlete-profile-review-row-multiline" : ""}`.trim()}
+          >
+            <p className="review-detail-label">{item.label}</p>
+            <div className={`review-detail-value${item.emphasize ? " athlete-profile-review-value-emphasis" : ""}`.trim()}>
+              {item.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
+  const intake = athlete.latest_intake ?? null;
+
+  const accountItems: OverviewItem[] = [
     { label: "Full name", value: formatValue(athlete.full_name) },
     { label: "Email", value: formatValue(athlete.email) },
     { label: "Role", value: athlete.role === "admin" ? "Admin" : "Athlete" },
-    { label: "Technical style", value: formatList(getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style)) },
-    { label: "Tactical style", value: formatList(getOptionLabels(TACTICAL_STYLE_OPTIONS, athlete.tactical_style)) },
-    { label: "Stance", value: formatValue(getOptionLabel(STANCE_OPTIONS, athlete.stance || "")) },
-    {
-      label: "Professional status",
-      value: formatValue(getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, athlete.professional_status || "")),
-    },
-    { label: "Record", value: formatValue(athlete.record) },
     { label: "Timezone", value: formatValue(athlete.athlete_timezone) },
     { label: "Locale", value: formatValue(athlete.athlete_locale) },
     { label: "Member since", value: formatDate(athlete.created_at, { dateStyle: "medium" }) },
     { label: "Last updated", value: formatDate(athlete.updated_at, { dateStyle: "medium" }) },
   ];
-}
 
-function buildIntakeHighlights(intake: PlanRequest): DetailItem[] {
-  return [
-    { label: "Fight date", value: formatDate(intake.fight_date, { dateStyle: "medium" }), accent: "athlete-profile-detail-emphasis" },
-    { label: "Rounds format", value: formatValue(intake.rounds_format), accent: "athlete-profile-detail-emphasis" },
-    { label: "Planned sessions / week", value: formatValue(intake.weekly_training_frequency), accent: "athlete-profile-detail-emphasis" },
-    {
-      label: "Fatigue",
-      value: formatValue(getOptionLabel(FATIGUE_LEVEL_OPTIONS, intake.fatigue_level || "")),
-      accent: "athlete-profile-detail-emphasis",
-    },
-    ...(formatOptionalValue(intake.athlete.age) ? [{ label: "Age", value: formatValue(intake.athlete.age), accent: "athlete-profile-detail-emphasis" }] : []),
-    ...(formatMeasurement(intake.athlete.height_cm, "cm")
-      ? [{ label: "Height", value: formatMeasurement(intake.athlete.height_cm, "cm") as string, accent: "athlete-profile-detail-emphasis" }]
+  const profileItems: OverviewItem[] = [
+    ...(formatOptionalValue(intake?.athlete.age) ? [{ label: "Age", value: formatValue(intake?.athlete.age) }] : []),
+    ...(formatMeasurement(intake?.athlete.height_cm, "cm")
+      ? [{ label: "Height", value: formatMeasurement(intake?.athlete.height_cm, "cm") as string }]
       : []),
-    ...(formatMeasurement(intake.athlete.weight_kg, "kg")
-      ? [{ label: "Weight", value: formatMeasurement(intake.athlete.weight_kg, "kg") as string, accent: "athlete-profile-detail-emphasis" }]
+    ...(formatMeasurement(intake?.athlete.weight_kg, "kg")
+      ? [{ label: "Current weight", value: formatMeasurement(intake?.athlete.weight_kg, "kg") as string }]
       : []),
-    ...(formatMeasurement(intake.athlete.target_weight_kg, "kg")
-      ? [{ label: "Target weight", value: formatMeasurement(intake.athlete.target_weight_kg, "kg") as string, accent: "athlete-profile-detail-emphasis" }]
+    ...(formatMeasurement(intake?.athlete.target_weight_kg, "kg")
+      ? [{ label: "Target weight", value: formatMeasurement(intake?.athlete.target_weight_kg, "kg") as string }]
       : []),
+    { label: "Stance", value: formatValue(getOptionLabel(STANCE_OPTIONS, athlete.stance || "")) },
+    {
+      label: "Technical style",
+      value: <InlinePills items={getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style)} />,
+    },
+    {
+      label: "Tactical style",
+      value: <InlinePills items={getOptionLabels(TACTICAL_STYLE_OPTIONS, athlete.tactical_style)} tone="alt" />,
+    },
+    {
+      label: "Professional status",
+      value: formatValue(getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, athlete.professional_status || "")),
+    },
+    { label: "Record", value: formatValue(athlete.record) },
   ];
-}
 
-function buildPillGroups(intake: PlanRequest): PillGroup[] {
-  const groups: PillGroup[] = [
-    {
-      label: "Training availability",
-      items: getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.training_availability),
-    },
-    {
-      label: "Equipment access",
-      items: getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, intake.equipment_access),
-      tone: "alt",
-    },
-    {
-      label: "Key goals",
-      items: getOptionLabels(KEY_GOAL_OPTIONS, intake.key_goals),
-      tone: "success",
-    },
-    {
-      label: "Weak areas",
-      items: getOptionLabels(WEAK_AREA_OPTIONS, intake.weak_areas),
-      tone: "warning",
-    },
+  const sections: OverviewSection[] = [
+    { kicker: "Account", title: "Athlete account", items: accountItems },
+    { kicker: "Profile", title: "Competition profile", items: profileItems },
   ];
-  return groups.filter((group) => group.items.length > 0);
-}
 
-function buildScheduleGroups(intake: PlanRequest): PillGroup[] {
-  const groups: PillGroup[] = [
-    {
-      label: "Hard sparring days",
-      items: getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.hard_sparring_days),
-    },
-    {
-      label: "Technical / lighter skill days",
-      items: getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.technical_skill_days),
-      tone: "alt",
-    },
-  ];
-  return groups.filter((group) => group.items.length > 0);
-}
+  if (!intake) {
+    sections.push({
+      kicker: "Latest intake",
+      title: "Plan setup not available yet",
+      wide: true,
+      items: [
+        {
+          label: "Status",
+          value:
+            athlete.plan_count > 0
+              ? `This athlete has ${athlete.plan_count} saved ${athlete.plan_count === 1 ? "plan" : "plans"}, but the latest intake payload was not returned for this record.`
+              : "No completed intake has been saved yet for this athlete.",
+          multiline: true,
+        },
+        {
+          label: "Latest plan activity",
+          value: athlete.latest_plan_created_at ? formatDate(athlete.latest_plan_created_at, { dateStyle: "medium" }) : "Not available",
+        },
+      ],
+    });
 
-function buildCoachNotes(intake: PlanRequest): CopyItem[] {
-  return [
-    { label: "Injuries / restrictions", value: intake.injuries ?? "" },
-    { label: "Training preference", value: intake.training_preference ?? "" },
-    { label: "Mindset challenges", value: intake.mindset_challenges ?? "" },
-    { label: "Extra notes", value: intake.notes ?? "" },
-  ].filter((item) => item.value.trim().length > 0);
-}
+    return sections;
+  }
 
-function DetailCard({ label, value, accent }: DetailItem) {
-  return (
-    <article className="plan-meta-item athlete-profile-detail-card">
-      <p className="plan-meta-label">{label}</p>
-      <p className={`plan-meta-value${accent ? ` ${accent}` : ""}`}>{value}</p>
-    </article>
-  );
+  sections.push({
+    kicker: "Camp",
+    title: "Latest camp setup",
+    items: [
+      { label: "Fight date", value: formatDate(intake.fight_date, { dateStyle: "medium" }), emphasize: true },
+      { label: "Rounds format", value: formatValue(intake.rounds_format), emphasize: true },
+      {
+        label: "Planned sessions / week",
+        value: formatValue(intake.weekly_training_frequency),
+        emphasize: true,
+      },
+      {
+        label: "Fatigue",
+        value: formatValue(getOptionLabel(FATIGUE_LEVEL_OPTIONS, intake.fatigue_level || "")),
+        emphasize: true,
+      },
+    ],
+  });
+
+  sections.push({
+    kicker: "Training",
+    title: "Availability and equipment",
+    wide: true,
+    items: [
+      {
+        label: "Training availability",
+        value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.training_availability)} />,
+      },
+      {
+        label: "Hard sparring days",
+        value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.hard_sparring_days)} tone="warning" />,
+      },
+      {
+        label: "Technical / lighter skill days",
+        value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.technical_skill_days)} tone="alt" />,
+      },
+      {
+        label: "Equipment access",
+        value: <InlinePills items={getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, intake.equipment_access)} tone="success" />,
+      },
+    ],
+  });
+
+  sections.push({
+    kicker: "Goals and notes",
+    title: "Planner context",
+    wide: true,
+    items: [
+      {
+        label: "Key goals",
+        value: <InlinePills items={getOptionLabels(KEY_GOAL_OPTIONS, intake.key_goals)} tone="success" />,
+      },
+      {
+        label: "Weak areas",
+        value: <InlinePills items={getOptionLabels(WEAK_AREA_OPTIONS, intake.weak_areas)} tone="warning" />,
+      },
+      { label: "Injuries / restrictions", value: formatValue(intake.injuries), multiline: true },
+      { label: "Training preference", value: formatValue(intake.training_preference), multiline: true },
+      { label: "Mindset challenges", value: formatValue(intake.mindset_challenges), multiline: true },
+      { label: "Extra notes", value: formatValue(intake.notes), multiline: true },
+    ],
+  });
+
+  return sections;
 }
 
 export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord }) {
   return (
     <div className="section-heading athlete-profile-hero">
-      <div>
-        <p className="kicker">Athlete Profile</p>
-        <h1>{athlete.full_name || athlete.email}</h1>
+      <div className="athlete-profile-hero-copy">
+        <div className="athlete-profile-title-row">
+          <div>
+            <p className="kicker">Athlete Profile</p>
+            <h1>{athlete.full_name || athlete.email}</h1>
+          </div>
+          <span className="athlete-profile-role-badge">{athlete.role === "admin" ? "Admin view" : "Athlete"}</span>
+        </div>
         <p className="muted">{athlete.email}</p>
       </div>
-      <div className="athlete-profile-hero-stats">
-        <div className="status-card athlete-profile-stat-card">
-          <p className="status-label">Saved plans</p>
-          <h2 className="plan-summary-title">{athlete.plan_count}</h2>
-          <p className="muted">Total plans generated for this athlete.</p>
-        </div>
-        <div className="status-card athlete-profile-stat-card athlete-profile-stat-card-accent">
-          <p className="status-label">Latest activity</p>
-          <h2 className="plan-summary-title athlete-profile-date-title">
+
+      <div className="athlete-profile-metric-strip">
+        <article className="athlete-profile-metric">
+          <p className="plan-meta-label">Saved plans</p>
+          <p className="athlete-profile-metric-value">{athlete.plan_count}</p>
+        </article>
+        <article className="athlete-profile-metric athlete-profile-metric-accent">
+          <p className="plan-meta-label">Latest activity</p>
+          <p className="athlete-profile-metric-value athlete-profile-metric-value-small">
             {formatDate(athlete.latest_plan_created_at || athlete.updated_at, { dateStyle: "medium" })}
-          </h2>
-          <p className="muted">Most recent saved plan or profile update.</p>
-        </div>
+          </p>
+        </article>
+        <article className="athlete-profile-metric">
+          <p className="plan-meta-label">Primary styles</p>
+          <p className="athlete-profile-metric-copy">
+            {formatList(getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style), "No style saved")}
+          </p>
+        </article>
       </div>
     </div>
   );
 }
 
-export function AthleteSnapshotCard({ athlete }: { athlete: AdminAthleteRecord }) {
-  const details = buildSnapshotDetails(athlete);
+export function AthleteProfileOverviewCard({ athlete }: { athlete: AdminAthleteRecord }) {
+  const sections = buildOverviewSections(athlete);
 
   return (
-    <section className="plan-summary-card athlete-profile-section-card athlete-profile-section-card-wide">
-      <div className="plan-summary-header">
+    <section className="plan-summary-card athlete-profile-overview-card">
+      <div className="plan-summary-header athlete-profile-overview-header">
         <div>
-          <p className="kicker">Snapshot</p>
-          <h2 className="plan-summary-title">What this athlete actually entered</h2>
-        </div>
-        <p className="muted">Core profile data plus the latest intake used to generate a camp plan.</p>
-      </div>
-      <div className="plan-meta-grid athlete-profile-grid-cards">
-        {details.map((item) => (
-          <DetailCard key={item.label} {...item} />
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function AthleteLatestIntakeCard({ intake }: { intake: PlanRequest | null }) {
-  const highlights = intake ? buildIntakeHighlights(intake) : [];
-  const groups = intake ? buildPillGroups(intake) : [];
-
-  return (
-    <section className="plan-summary-card athlete-profile-section-card athlete-profile-section-card-wide">
-      <div className="plan-summary-header">
-        <div>
-          <p className="kicker">Latest plan intake</p>
-          <h2 className="plan-summary-title">Camp setup at a glance</h2>
+          <p className="kicker">Overview</p>
+          <h2 className="plan-summary-title">Captured athlete profile</h2>
         </div>
         <p className="muted">
-          {intake
-            ? "These are the planning inputs that shaped the athlete's most recent generated plan."
-            : "No completed intake has been saved yet for this athlete."}
+          The athlete account, latest saved intake, and planner context are grouped into one faster reading surface.
         </p>
       </div>
-      {intake ? (
-        <>
-          <div className="plan-meta-grid athlete-profile-grid-cards">
-            {highlights.map((item) => (
-              <DetailCard key={item.label} {...item} />
-            ))}
-          </div>
-          {groups.length ? (
-            <div className="athlete-profile-pill-groups">
-              {groups.map((group) => (
-                <div key={group.label} className="athlete-profile-pill-group">
-                  <p className="plan-meta-label">{group.label}</p>
-                  <div className="athlete-profile-pills">
-                    {group.items.map((item) => (
-                      <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </>
-      ) : (
-        <div className="empty-state-card">
-          <p className="muted">Once the athlete completes onboarding and generates a plan, their intake details will appear here.</p>
-        </div>
-      )}
-    </section>
-  );
-}
 
-export function AthleteLatestIntakeStatus({
-  planCount,
-  latestPlanCreatedAt,
-}: {
-  planCount: number;
-  latestPlanCreatedAt?: string | null;
-}) {
-  if (!planCount) {
-    return null;
-  }
-
-  return (
-    <div className="empty-state-card athlete-profile-inline-note">
-      <p className="plan-meta-label">Latest saved plan detected</p>
-      <p className="muted">
-        This athlete has {planCount} saved {planCount === 1 ? "plan" : "plans"}
-        {latestPlanCreatedAt ? `, with the most recent created ${formatDate(latestPlanCreatedAt, { dateStyle: "medium" })}` : ""}.
-        {" "}The intake payload was not returned for this record, so the latest intake summary cannot be shown yet.
-      </p>
-    </div>
-  );
-}
-
-export function AthleteScheduleCard({ intake }: { intake: PlanRequest }) {
-  const groups = buildScheduleGroups(intake);
-  if (!groups.length) {
-    return null;
-  }
-
-  return (
-    <section className="plan-summary-card athlete-profile-section-card">
-      <div className="plan-summary-header">
-        <div>
-          <p className="kicker">Scheduling</p>
-          <h2 className="plan-summary-title">Weekly structure</h2>
-        </div>
-      </div>
-      <div className="athlete-profile-pill-groups">
-        {groups.map((group) => (
-          <div key={group.label} className="athlete-profile-pill-group">
-            <p className="plan-meta-label">{group.label}</p>
-            <div className="athlete-profile-pills">
-              {group.items.map((item) => (
-                <span key={item} className={`athlete-profile-pill${toneClassName(group.tone)}`}>
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-export function AthleteCoachNotesCard({ intake }: { intake: PlanRequest }) {
-  const notes = buildCoachNotes(intake);
-  if (!notes.length) {
-    return null;
-  }
-
-  return (
-    <section className="plan-summary-card athlete-profile-section-card">
-      <div className="plan-summary-header">
-        <div>
-          <p className="kicker">Coach notes</p>
-          <h2 className="plan-summary-title">Constraints and preferences</h2>
-        </div>
-      </div>
-      <div className="athlete-profile-copy-grid">
-        {notes.map((item) => (
-          <article key={item.label} className="athlete-profile-copy-card">
-            <p className="plan-meta-label">{item.label}</p>
-            <p className="athlete-profile-copy-text">{item.value}</p>
-          </article>
+      <div className="athlete-profile-overview-grid">
+        {sections.map((section) => (
+          <AthleteProfileSection key={section.title} {...section} />
         ))}
       </div>
     </section>

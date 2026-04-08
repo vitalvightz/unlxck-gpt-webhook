@@ -5,12 +5,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import {
-  AthleteCoachNotesCard,
-  AthleteLatestIntakeCard,
-  AthleteLatestIntakeStatus,
   AthleteProfileHero,
-  AthleteScheduleCard,
-  AthleteSnapshotCard,
+  AthleteProfileOverviewCard,
 } from "@/components/admin-athlete-profile";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -112,18 +108,7 @@ export default function AdminAthletePage() {
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
           ) : null}
 
-          <div className="athlete-profile-grid">
-            <AthleteSnapshotCard athlete={athlete} />
-            <AthleteLatestIntakeCard intake={athlete.latest_intake ?? null} />
-            {!athlete.latest_intake && athlete.plan_count > 0 ? (
-              <AthleteLatestIntakeStatus
-                planCount={athlete.plan_count}
-                latestPlanCreatedAt={athlete.latest_plan_created_at ?? null}
-              />
-            ) : null}
-            {athlete.latest_intake ? <AthleteScheduleCard intake={athlete.latest_intake} /> : null}
-            {athlete.latest_intake ? <AthleteCoachNotesCard intake={athlete.latest_intake} /> : null}
-          </div>
+          <AthleteProfileOverviewCard athlete={athlete} />
         </section>
       )}
     </RequireAuth>
