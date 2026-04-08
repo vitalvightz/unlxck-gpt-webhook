@@ -312,8 +312,8 @@ export default function NutritionPage() {
         <div className="section-heading">
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Nutrition &amp; Weight</p>
-            <h1>Weight setup, monitoring, and readiness</h1>
-            <p className="muted">Onboarding owns the athlete basics. Nutrition stays focused on weigh-in context, fatigue, preferences, and monitoring.</p>
+            <h1>Nutrition and weight</h1>
+            <p className="muted">This page keeps your weight setup, preferences, and tracking in one place.</p>
           </div>
           <div className="status-card athlete-motion-slot athlete-motion-status">
             <p className="status-label">Athlete</p>
@@ -332,8 +332,8 @@ export default function NutritionPage() {
             <div className="nutrition-main-column">
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
-                  <p className="kicker">Summary</p>
-                  <h2 className="form-section-title">Derived status</h2>
+                  <p className="kicker">Overview</p>
+                  <h2 className="form-section-title">Status</h2>
                 </div>
                 <StatusRows workspace={workspace} />
                 <p className="muted">
@@ -346,8 +346,8 @@ export default function NutritionPage() {
 
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
-                  <p className="kicker">Inherited</p>
-                  <h2 className="form-section-title">Onboarding-owned athlete data</h2>
+                  <p className="kicker">Basics</p>
+                  <h2 className="form-section-title">Athlete details</h2>
                 </div>
                 <div className="review-detail-list nutrition-review-list">
                   {[
@@ -363,21 +363,21 @@ export default function NutritionPage() {
                     </div>
                   ))}
                 </div>
-                <p className="muted">Sex, age, height, current weight, and target weight are edited in onboarding so athletes only enter them once.</p>
+                <p className="muted">These details come from onboarding so you only have to enter them once.</p>
                 {coreMissingFields.length ? (
                   <p className="muted">
                     Still missing in onboarding: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
                   </p>
                 ) : null}
                 <div className="plan-summary-actions">
-                  <Link href="/onboarding" className="ghost-button">Edit core fields in onboarding</Link>
+                  <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
                 </div>
               </article>
 
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
-                  <p className="kicker">Fight weight setup</p>
-                  <h2 className="form-section-title">Weigh-in context and timing</h2>
+                  <p className="kicker">Weight</p>
+                  <h2 className="form-section-title">Fight setup</h2>
                 </div>
                 <div className="form-grid">
                   <div className="field">
@@ -451,8 +451,8 @@ export default function NutritionPage() {
 
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
-                  <p className="kicker">Training pattern</p>
-                  <h2 className="form-section-title">Schedule and fatigue</h2>
+                  <p className="kicker">Training</p>
+                  <h2 className="form-section-title">Schedule</h2>
                 </div>
                 <div className="form-grid">
                   <div className="field">
@@ -574,8 +574,8 @@ export default function NutritionPage() {
 
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
-                  <p className="kicker">Nutrition defaults</p>
-                  <h2 className="form-section-title">Preferences and adherence</h2>
+                  <p className="kicker">Preferences</p>
+                  <h2 className="form-section-title">Nutrition preferences</h2>
                 </div>
                 <div className="form-grid">
                   <div className="field">
@@ -652,7 +652,7 @@ export default function NutritionPage() {
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
                   <p className="kicker">Monitoring</p>
-                  <h2 className="form-section-title">Daily bodyweight log</h2>
+                  <h2 className="form-section-title">Bodyweight log</h2>
                 </div>
                 <div className="nutrition-log-list">
                   {form.nutrition_monitoring.daily_bodyweight_log.map((entry, index) => (
@@ -692,12 +692,12 @@ export default function NutritionPage() {
 
             <aside className="nutrition-side-column">
               <article className="support-panel">
-                <p className="kicker">Readiness flags</p>
+                <p className="kicker">Flags</p>
                 <p className="muted">{workspace.derived.readiness_flags.length ? workspace.derived.readiness_flags.join(", ") : "No active readiness flags."}</p>
               </article>
               <article className="support-panel">
-                <p className="kicker">Planner link</p>
-                <p className="muted">Onboarding owns sex, age, height, current weight, and target weight. This page adds weigh-in context, fatigue, preferences, and monitoring without turning into a second intake wizard.</p>
+                <p className="kicker">Shared info</p>
+                <p className="muted">Your core athlete details stay shared with onboarding, while this page handles nutrition-specific setup and tracking.</p>
               </article>
             </aside>
           </div>
