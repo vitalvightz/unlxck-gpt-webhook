@@ -141,7 +141,6 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
     { label: "Email", value: formatValue(athlete.email) },
     { label: "Role", value: athlete.role === "admin" ? "Admin" : "Athlete" },
     { label: "Timezone", value: formatValue(athlete.athlete_timezone) },
-    { label: "Locale", value: formatValue(athlete.athlete_locale) },
     { label: "Member since", value: formatDate(athlete.created_at, { dateStyle: "medium" }) },
     { label: "Last updated", value: formatDate(athlete.updated_at, { dateStyle: "medium" }) },
   ];

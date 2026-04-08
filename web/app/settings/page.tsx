@@ -7,7 +7,6 @@ import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
 import { updateMe } from "@/lib/api";
 import {
-  detectDeviceLocale,
   detectDeviceTimeZone,
   getOptionLabel,
   isValidRecordFormat,
@@ -132,7 +131,6 @@ export default function SettingsPage() {
         const updatedMe = await updateMe(session.access_token, {
           full_name: fullName,
           athlete_timezone: detectDeviceTimeZone() || me?.profile.athlete_timezone || "",
-          athlete_locale: detectDeviceLocale() || me?.profile.athlete_locale || "",
           technical_style: technicalStyle ? [technicalStyle] : [],
           tactical_style: tacticalStyle ? [tacticalStyle] : [],
           stance,

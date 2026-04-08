@@ -1,6 +1,6 @@
 import type { MeResponse, PlanRequest } from "@/lib/types";
 
-import { detectDeviceLocale, detectDeviceTimeZone } from "@/lib/intake-options";
+import { detectDeviceTimeZone } from "@/lib/intake-options";
 
 export function emptyPlanRequest(fullName = ""): PlanRequest {
   return {
@@ -16,7 +16,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
       professional_status: "",
       record: "",
       athlete_timezone: detectDeviceTimeZone(),
-      athlete_locale: detectDeviceLocale(),
+      athlete_locale: "",
     },
     fight_date: "",
     rounds_format: "3 x 3",
@@ -60,8 +60,6 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
       record: draft.athlete?.record ?? me.profile.record ?? "",
       athlete_timezone:
         draft.athlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
-      athlete_locale:
-        draft.athlete?.athlete_locale ?? me.profile.athlete_locale ?? fallback.athlete.athlete_locale,
     },
   };
 }

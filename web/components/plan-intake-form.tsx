@@ -9,7 +9,6 @@ import { useAppSession } from "@/components/auth-provider";
 import { CustomSelect } from "@/components/custom-select";
 import { updateMe } from "@/lib/api";
 import {
-  detectDeviceLocale,
   detectDeviceTimeZone,
   EQUIPMENT_ACCESS_OPTIONS,
   GUIDED_INJURY_SEVERITY_OPTIONS,
@@ -592,13 +591,11 @@ function ReviewDetailList({ items }: { items: Array<{ label: string; value: stri
 
 function syncDeviceFields(current: PlanRequest): PlanRequest {
   const detectedTimeZone = detectDeviceTimeZone();
-  const detectedLocale = detectDeviceLocale();
   return {
     ...current,
     athlete: {
       ...current.athlete,
       athlete_timezone: detectedTimeZone || current.athlete.athlete_timezone || "",
-      athlete_locale: detectedLocale || current.athlete.athlete_locale || "",
     },
   };
 }
@@ -875,7 +872,6 @@ export function PlanIntakeForm() {
       professional_status: nextForm.athlete.professional_status,
       record: nextForm.athlete.record,
       athlete_timezone: nextForm.athlete.athlete_timezone,
-      athlete_locale: nextForm.athlete.athlete_locale,
       onboarding_draft: {
         ...nextForm,
         current_step: step,
