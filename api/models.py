@@ -58,6 +58,7 @@ def _validate_record(value: str) -> str:
 
 class AthleteProfileInput(BaseModel):
     full_name: str
+    sex: SexValue | None = None
     age: int | None = None
     weight_kg: float | None = None
     target_weight_kg: float | None = None
@@ -467,6 +468,7 @@ class PlanRequest(BaseModel):
         athlete = self.athlete
         fields = [
             _field("Full name", athlete.full_name),
+            _field("Sex", athlete.sex),
             _field("Age", athlete.age),
             _field("Weight (kg)", athlete.weight_kg),
             _field("Target Weight (kg)", athlete.target_weight_kg),

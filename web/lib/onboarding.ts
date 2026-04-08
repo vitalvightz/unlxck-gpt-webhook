@@ -6,6 +6,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
   return {
     athlete: {
       full_name: fullName,
+      sex: null,
       age: null,
       weight_kg: null,
       target_weight_kg: null,
@@ -52,6 +53,7 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
       ...fallback.athlete,
       ...draft.athlete,
       full_name: draft.athlete?.full_name || me.profile.full_name,
+      sex: draft.athlete?.sex ?? me.profile.nutrition_profile?.sex ?? fallback.athlete.sex,
       age: draft.athlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
       height_cm: draft.athlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
       technical_style: draft.athlete?.technical_style ?? me.profile.technical_style ?? [],

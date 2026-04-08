@@ -52,6 +52,10 @@ import {
 import type { PlanRequest } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
+const SEX_OPTIONS: IntakeOption[] = [
+  { label: "Male", value: "male" },
+  { label: "Female", value: "female" },
+];
 const ROUND_COUNT_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
   label: String(index + 1),
   value: String(index + 1),
@@ -1039,8 +1043,12 @@ export function PlanIntakeForm() {
     ? "No restrictions reported."
     : formatRestrictionSummary(buildGuidedInjurySummary(normalizeGuidedInjuryState(guidedInjury)));
   const restrictionSummary = formatRestrictionSummary(form.injuries);
+  const sexLabel = form.athlete.sex
+    ? SEX_OPTIONS.find((option) => option.value === form.athlete.sex)?.label ?? formatValue(form.athlete.sex)
+    : "Not provided";
   const profileReviewItems = [
     { label: "Name", value: formatValue(form.athlete.full_name) },
+    ...(hasValue(form.athlete.sex) ? [{ label: "Sex", value: sexLabel }] : []),
     ...(hasValue(form.athlete.age) ? [{ label: "Age", value: formatValue(form.athlete.age) }] : []),
     ...(hasValue(form.athlete.height_cm) ? [{ label: "Height", value: `${form.athlete.height_cm} cm` }] : []),
     ...(hasValue(form.athlete.weight_kg) ? [{ label: "Current weight", value: `${form.athlete.weight_kg} kg` }] : []),
@@ -1141,6 +1149,17 @@ export function PlanIntakeForm() {
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
                     <input id="fullName" value={form.athlete.full_name} onChange={(event) => updateAthlete("full_name", event.target.value)} required />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="sex">Sex</label>
+                    <CustomSelect
+                      id="sex"
+                      value={form.athlete.sex ?? ""}
+                      options={SEX_OPTIONS}
+                      placeholder="Select sex"
+                      includeEmptyOption
+                      onChange={(value) => updateAthlete("sex", (value || null) as PlanRequest["athlete"]["sex"])}
+                    />
                   </div>
                   <div className="field">
                     <label htmlFor="age">Age</label>

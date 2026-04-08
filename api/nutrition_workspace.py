@@ -240,6 +240,26 @@ def _profile_defaults(profile: ProfileRecord | AdminAthleteRecord) -> NutritionP
         return NutritionProfileInput()
 
 
+def _build_nutrition_profile(
+    *,
+    profile: ProfileRecord | AdminAthleteRecord,
+    raw_payload: dict[str, Any],
+) -> NutritionProfileInput:
+    defaults = _profile_defaults(profile)
+    raw_athlete = _coerce_dict(raw_payload.get("athlete"))
+    athlete_sex = _coerce_optional_str(raw_athlete.get("sex"))
+    athlete_age = _coerce_optional_int(raw_athlete.get("age"))
+    athlete_height_cm = _coerce_optional_int(raw_athlete.get("height_cm"))
+    return NutritionProfileInput.model_validate(
+        {
+            **defaults.model_dump(mode="json"),
+            "sex": athlete_sex or defaults.sex,
+            "age": athlete_age if athlete_age is not None else defaults.age,
+            "height_cm": athlete_height_cm if athlete_height_cm is not None else defaults.height_cm,
+        }
+    )
+
+
 def _build_shared_camp_context(
     raw_payload: dict[str, Any],
     monitoring: NutritionMonitoringInput,
@@ -248,12 +268,14 @@ def _build_shared_camp_context(
     raw_athlete = _coerce_dict(raw_payload.get("athlete"))
     explicit_source = _coerce_optional_str(raw_shared.get("current_weight_source"))
     explicit_recorded_at = _coerce_optional_str(raw_shared.get("current_weight_recorded_at"))
-    current_weight_kg = _coerce_optional_float(raw_shared.get("current_weight_kg"))
+    athlete_current_weight_kg = _coerce_optional_float(raw_athlete.get("weight_kg"))
+    athlete_target_weight_kg = _coerce_optional_float(raw_athlete.get("target_weight_kg"))
+    current_weight_kg = athlete_current_weight_kg
     if current_weight_kg is None:
-        current_weight_kg = _coerce_optional_float(raw_athlete.get("weight_kg"))
-    target_weight_kg = _coerce_optional_float(raw_shared.get("target_weight_kg"))
+        current_weight_kg = _coerce_optional_float(raw_shared.get("current_weight_kg"))
+    target_weight_kg = athlete_target_weight_kg
     if target_weight_kg is None:
-        target_weight_kg = _coerce_optional_float(raw_athlete.get("target_weight_kg"))
+        target_weight_kg = _coerce_optional_float(raw_shared.get("target_weight_kg"))
 
     shared = NutritionSharedCampContext.model_validate(
         {
@@ -464,7 +486,7 @@ def _foundation_status(
 ) -> str:
     if missing_required_fields:
         return "incomplete"
-    if readiness.sleep_quality and readiness.appetite_status and monitoring.daily_bodyweight_log:
+    if readiness.sleep_quality and monitoring.daily_bodyweight_log:
         return "complete"
     return "sufficient"
 
@@ -496,7 +518,7 @@ def build_nutrition_workspace(
 
     monitoring = _build_monitoring(raw_payload)
     shared_camp_context = _build_shared_camp_context(raw_payload, monitoring)
-    nutrition_profile = _profile_defaults(profile)
+    nutrition_profile = _build_nutrition_profile(profile=profile, raw_payload=raw_payload)
     s_and_c_preferences = _build_s_and_c_preferences(raw_payload)
     readiness = _build_readiness(raw_payload)
     coach_controls = _build_coach_controls(raw_payload)
@@ -588,14 +610,20 @@ def merge_workspace_into_payload(
     raw_athlete = _coerce_dict(merged.get("athlete"))
     shared = workspace.shared_camp_context
     s_and_c_preferences = workspace.s_and_c_preferences
+    athlete_sex = _coerce_optional_str(raw_athlete.get("sex"))
+    athlete_age = _coerce_optional_int(raw_athlete.get("age"))
+    athlete_weight_kg = _coerce_optional_float(raw_athlete.get("weight_kg"))
+    athlete_target_weight_kg = _coerce_optional_float(raw_athlete.get("target_weight_kg"))
+    athlete_height_cm = _coerce_optional_int(raw_athlete.get("height_cm"))
 
     athlete_payload = {
         **raw_athlete,
         "full_name": _coerce_optional_str(raw_athlete.get("full_name")) or profile.full_name,
-        "age": workspace.nutrition_profile.age,
-        "weight_kg": shared.current_weight_kg,
-        "target_weight_kg": shared.target_weight_kg,
-        "height_cm": workspace.nutrition_profile.height_cm,
+        "sex": athlete_sex or workspace.nutrition_profile.sex,
+        "age": athlete_age if athlete_age is not None else workspace.nutrition_profile.age,
+        "weight_kg": athlete_weight_kg if athlete_weight_kg is not None else shared.current_weight_kg,
+        "target_weight_kg": athlete_target_weight_kg if athlete_target_weight_kg is not None else shared.target_weight_kg,
+        "height_cm": athlete_height_cm if athlete_height_cm is not None else workspace.nutrition_profile.height_cm,
         "technical_style": raw_athlete.get("technical_style") or list(profile.technical_style),
         "tactical_style": raw_athlete.get("tactical_style") or list(profile.tactical_style),
         "stance": _coerce_optional_str(raw_athlete.get("stance")) or profile.stance,
@@ -609,6 +637,12 @@ def merge_workspace_into_payload(
         day: session_type
         for day, session_type in workspace.shared_camp_context.session_types_by_day.items()
         if day and session_type
+    }
+    shared_payload = {
+        **shared.model_dump(mode="json"),
+        "current_weight_kg": athlete_payload.get("weight_kg"),
+        "target_weight_kg": athlete_payload.get("target_weight_kg"),
+        "session_types_by_day": session_types_by_day,
     }
 
     merged.update(
@@ -630,10 +664,7 @@ def merge_workspace_into_payload(
             "mindset_challenges": s_and_c_preferences.mindset_challenges,
             "notes": s_and_c_preferences.notes,
             "random_seed": s_and_c_preferences.random_seed,
-            "shared_camp_context": {
-                **shared.model_dump(mode="json"),
-                "session_types_by_day": session_types_by_day,
-            },
+            "shared_camp_context": shared_payload,
             "s_and_c_preferences": s_and_c_preferences.model_dump(mode="json"),
             "nutrition_readiness": workspace.nutrition_readiness.model_dump(mode="json"),
             "nutrition_monitoring": workspace.nutrition_monitoring.model_dump(mode="json"),
