@@ -13,7 +13,7 @@ The application reads athlete data from a JSON file and generates a complete tra
 python -m fightcamp.main
 ```
 
-### Runtime Output Contract
+## Runtime Output Contract
 
 `generate_plan()` returns:
 
