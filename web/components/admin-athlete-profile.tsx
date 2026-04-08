@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import Link from "next/link";
+
 import {
   EQUIPMENT_ACCESS_OPTIONS,
   KEY_GOAL_OPTIONS,
@@ -10,7 +12,7 @@ import {
   TRAINING_AVAILABILITY_OPTIONS,
   WEAK_AREA_OPTIONS,
 } from "@/lib/intake-options";
-import type { AdminAthleteRecord, PlanRequest } from "@/lib/types";
+import type { AdminAthleteRecord } from "@/lib/types";
 
 const FATIGUE_LEVEL_OPTIONS = [
   { value: "low", label: "Low" },
@@ -18,17 +20,17 @@ const FATIGUE_LEVEL_OPTIONS = [
   { value: "high", label: "High" },
 ];
 
-type OverviewItem = {
+type ReviewItem = {
   label: string;
   value: ReactNode;
   multiline?: boolean;
   emphasize?: boolean;
 };
 
-type OverviewSection = {
+type ReviewSection = {
   kicker: string;
   title: string;
-  items: OverviewItem[];
+  items: ReviewItem[];
   wide?: boolean;
 };
 
@@ -72,28 +74,7 @@ function formatList(values: string[], empty = "Not provided"): string {
   return values.length ? values.join(", ") : empty;
 }
 
-function toneClassName(tone?: "default" | "alt" | "success" | "warning"): string {
-  switch (tone) {
-    case "alt":
-      return " athlete-profile-pill-alt";
-    case "success":
-      return " athlete-profile-pill-success";
-    case "warning":
-      return " athlete-profile-pill-warning";
-    default:
-      return "";
-  }
-}
-
-function InlinePills({
-  items,
-  tone = "default",
-  empty = "Not provided",
-}: {
-  items: string[];
-  tone?: "default" | "alt" | "success" | "warning";
-  empty?: string;
-}) {
+function InlinePills({ items, empty = "Not provided" }: { items: string[]; empty?: string }) {
   if (!items.length) {
     return <span className="athlete-profile-empty-value">{empty}</span>;
   }
@@ -101,7 +82,7 @@ function InlinePills({
   return (
     <div className="athlete-profile-inline-pills">
       {items.map((item) => (
-        <span key={item} className={`athlete-profile-pill athlete-profile-pill-compact${toneClassName(tone)}`}>
+        <span key={item} className="athlete-profile-pill athlete-profile-pill-compact">
           {item}
         </span>
       ))}
@@ -109,13 +90,18 @@ function InlinePills({
   );
 }
 
-function AthleteProfileSection({ kicker, title, items, wide = false }: OverviewSection) {
+function InlineList({ items, empty = "Not provided" }: { items: string[]; empty?: string }) {
+  return <span className="athlete-profile-inline-list">{items.length ? items.join(", ") : empty}</span>;
+}
+
+function AthleteProfileSection({ kicker, title, items, wide = false }: ReviewSection) {
   return (
-    <section className={`athlete-profile-overview-section${wide ? " athlete-profile-overview-section-wide" : ""}`.trim()}>
-      <div className="athlete-profile-section-heading">
+    <section className={`athlete-profile-group${wide ? " athlete-profile-group-wide" : ""}`.trim()}>
+      <div className="athlete-profile-group-heading">
         <p className="kicker">{kicker}</p>
-        <h3 className="review-card-title">{title}</h3>
+        <h2 className="form-section-title">{title}</h2>
       </div>
+
       <div className="review-detail-list athlete-profile-review-list">
         {items.map((item) => (
           <div
@@ -133,48 +119,55 @@ function AthleteProfileSection({ kicker, title, items, wide = false }: OverviewS
   );
 }
 
-function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
+function buildReviewSections(athlete: AdminAthleteRecord): ReviewSection[] {
   const intake = athlete.latest_intake ?? null;
 
-  const accountItems: OverviewItem[] = [
-    { label: "Full name", value: formatValue(athlete.full_name) },
-    { label: "Email", value: formatValue(athlete.email) },
-    { label: "Role", value: athlete.role === "admin" ? "Admin" : "Athlete" },
-    { label: "Timezone", value: formatValue(athlete.athlete_timezone) },
-    { label: "Member since", value: formatDate(athlete.created_at, { dateStyle: "medium" }) },
-    { label: "Last updated", value: formatDate(athlete.updated_at, { dateStyle: "medium" }) },
-  ];
-
-  const profileItems: OverviewItem[] = [
-    ...(formatOptionalValue(intake?.athlete.age) ? [{ label: "Age", value: formatValue(intake?.athlete.age) }] : []),
-    ...(formatMeasurement(intake?.athlete.height_cm, "cm")
-      ? [{ label: "Height", value: formatMeasurement(intake?.athlete.height_cm, "cm") as string }]
-      : []),
-    ...(formatMeasurement(intake?.athlete.weight_kg, "kg")
-      ? [{ label: "Current weight", value: formatMeasurement(intake?.athlete.weight_kg, "kg") as string }]
-      : []),
-    ...(formatMeasurement(intake?.athlete.target_weight_kg, "kg")
-      ? [{ label: "Target weight", value: formatMeasurement(intake?.athlete.target_weight_kg, "kg") as string }]
-      : []),
-    { label: "Stance", value: formatValue(getOptionLabel(STANCE_OPTIONS, athlete.stance || "")) },
+  const sections: ReviewSection[] = [
     {
-      label: "Technical style",
-      value: <InlinePills items={getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style)} />,
+      kicker: "Account",
+      title: "Athlete account",
+      items: [
+        { label: "Full name", value: formatValue(athlete.full_name) },
+        { label: "Email", value: formatValue(athlete.email) },
+        { label: "Role", value: athlete.role === "admin" ? "Admin" : "Athlete" },
+        { label: "Timezone", value: formatValue(athlete.athlete_timezone) },
+        { label: "Locale", value: formatValue(athlete.athlete_locale) },
+        { label: "Member since", value: formatDate(athlete.created_at, { dateStyle: "medium" }) },
+        { label: "Last updated", value: formatDate(athlete.updated_at, { dateStyle: "medium" }) },
+      ],
     },
     {
-      label: "Tactical style",
-      value: <InlinePills items={getOptionLabels(TACTICAL_STYLE_OPTIONS, athlete.tactical_style)} tone="alt" />,
+      kicker: "Profile",
+      title: "Competition profile",
+      items: [
+        ...(formatOptionalValue(intake?.athlete.age) ? [{ label: "Age", value: formatValue(intake?.athlete.age) }] : []),
+        ...(formatMeasurement(intake?.athlete.height_cm, "cm")
+          ? [{ label: "Height", value: formatMeasurement(intake?.athlete.height_cm, "cm") as string }]
+          : []),
+        ...(formatMeasurement(intake?.athlete.weight_kg, "kg")
+          ? [{ label: "Current weight", value: formatMeasurement(intake?.athlete.weight_kg, "kg") as string }]
+          : []),
+        ...(formatMeasurement(intake?.athlete.target_weight_kg, "kg")
+          ? [{ label: "Target weight", value: formatMeasurement(intake?.athlete.target_weight_kg, "kg") as string }]
+          : []),
+        { label: "Stance", value: formatValue(getOptionLabel(STANCE_OPTIONS, athlete.stance || "")) },
+        {
+          label: "Technical style",
+          value: <InlinePills items={getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style)} />,
+          multiline: true,
+        },
+        {
+          label: "Tactical style",
+          value: <InlinePills items={getOptionLabels(TACTICAL_STYLE_OPTIONS, athlete.tactical_style)} />,
+          multiline: true,
+        },
+        {
+          label: "Professional status",
+          value: formatValue(getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, athlete.professional_status || "")),
+        },
+        { label: "Record", value: formatValue(athlete.record) },
+      ],
     },
-    {
-      label: "Professional status",
-      value: formatValue(getOptionLabel(PROFESSIONAL_STATUS_OPTIONS, athlete.professional_status || "")),
-    },
-    { label: "Record", value: formatValue(athlete.record) },
-  ];
-
-  const sections: OverviewSection[] = [
-    { kicker: "Account", title: "Athlete account", items: accountItems },
-    { kicker: "Profile", title: "Competition profile", items: profileItems },
   ];
 
   if (!intake) {
@@ -207,11 +200,7 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
     items: [
       { label: "Fight date", value: formatDate(intake.fight_date, { dateStyle: "medium" }), emphasize: true },
       { label: "Rounds format", value: formatValue(intake.rounds_format), emphasize: true },
-      {
-        label: "Planned sessions / week",
-        value: formatValue(intake.weekly_training_frequency),
-        emphasize: true,
-      },
+      { label: "Planned sessions / week", value: formatValue(intake.weekly_training_frequency), emphasize: true },
       {
         label: "Fatigue",
         value: formatValue(getOptionLabel(FATIGUE_LEVEL_OPTIONS, intake.fatigue_level || "")),
@@ -222,40 +211,43 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
 
   sections.push({
     kicker: "Training",
-    title: "Availability and equipment",
+    title: "Training and availability",
     wide: true,
     items: [
       {
         label: "Training availability",
-        value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.training_availability)} />,
+        value: <InlineList items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.training_availability)} />,
       },
       {
         label: "Hard sparring days",
-        value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.hard_sparring_days)} tone="warning" />,
+        value: <InlineList items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.hard_sparring_days)} />,
       },
       {
         label: "Technical / lighter skill days",
-        value: <InlinePills items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.technical_skill_days)} tone="alt" />,
+        value: <InlineList items={getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, intake.technical_skill_days)} />,
       },
       {
         label: "Equipment access",
-        value: <InlinePills items={getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, intake.equipment_access)} tone="success" />,
+        value: <InlineList items={getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, intake.equipment_access)} />,
+        multiline: true,
       },
     ],
   });
 
   sections.push({
-    kicker: "Goals and notes",
+    kicker: "Planner context",
     title: "Planner context",
     wide: true,
     items: [
       {
         label: "Key goals",
-        value: <InlinePills items={getOptionLabels(KEY_GOAL_OPTIONS, intake.key_goals)} tone="success" />,
+        value: <InlinePills items={getOptionLabels(KEY_GOAL_OPTIONS, intake.key_goals)} />,
+        multiline: true,
       },
       {
         label: "Weak areas",
-        value: <InlinePills items={getOptionLabels(WEAK_AREA_OPTIONS, intake.weak_areas)} tone="warning" />,
+        value: <InlinePills items={getOptionLabels(WEAK_AREA_OPTIONS, intake.weak_areas)} />,
+        multiline: true,
       },
       { label: "Injuries / restrictions", value: formatValue(intake.injuries), multiline: true },
       { label: "Training preference", value: formatValue(intake.training_preference), multiline: true },
@@ -267,58 +259,65 @@ function buildOverviewSections(athlete: AdminAthleteRecord): OverviewSection[] {
   return sections;
 }
 
-export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord }) {
+export function AthleteProfileSheet({
+  athlete,
+  onGenerate,
+  isGenerating,
+  statusMessage,
+}: {
+  athlete: AdminAthleteRecord;
+  onGenerate: () => void | Promise<void>;
+  isGenerating: boolean;
+  statusMessage?: string | null;
+}) {
+  const canGenerate = Boolean(athlete.latest_intake);
+  const supportMessage =
+    statusMessage || (!canGenerate ? "Generate is available after this athlete has at least one saved intake." : null);
+  const sections = buildReviewSections(athlete);
+
   return (
-    <div className="section-heading athlete-profile-hero">
-      <div className="athlete-profile-hero-copy">
-        <div className="athlete-profile-title-row">
-          <div>
-            <p className="kicker">Athlete Profile</p>
-            <h1>{athlete.full_name || athlete.email}</h1>
+    <section className="plan-summary-card athlete-profile-sheet">
+      <header className="athlete-profile-header">
+        <div className="athlete-profile-header-main">
+          <div className="athlete-profile-header-copy">
+            <div className="athlete-profile-title-row">
+              <div>
+                <p className="kicker">Athlete Profile</p>
+                <h1>{athlete.full_name || athlete.email}</h1>
+              </div>
+              <span className="athlete-profile-role-badge">{athlete.role === "admin" ? "Admin view" : "Athlete"}</span>
+            </div>
+            <p className="muted">{athlete.email}</p>
           </div>
-          <span className="athlete-profile-role-badge">{athlete.role === "admin" ? "Admin view" : "Athlete"}</span>
+
+          <div className="athlete-profile-meta-strip">
+            <div className="athlete-profile-meta-item">
+              <p className="review-detail-label">Saved plans</p>
+              <p className="athlete-profile-meta-value">{athlete.plan_count}</p>
+            </div>
+            <div className="athlete-profile-meta-item">
+              <p className="review-detail-label">Latest activity</p>
+              <p className="athlete-profile-meta-value">
+                {formatDate(athlete.latest_plan_created_at || athlete.updated_at, { dateStyle: "medium" })}
+              </p>
+            </div>
+          </div>
         </div>
-        <p className="muted">{athlete.email}</p>
-      </div>
 
-      <div className="athlete-profile-metric-strip">
-        <article className="athlete-profile-metric">
-          <p className="plan-meta-label">Saved plans</p>
-          <p className="athlete-profile-metric-value">{athlete.plan_count}</p>
-        </article>
-        <article className="athlete-profile-metric athlete-profile-metric-accent">
-          <p className="plan-meta-label">Latest activity</p>
-          <p className="athlete-profile-metric-value athlete-profile-metric-value-small">
-            {formatDate(athlete.latest_plan_created_at || athlete.updated_at, { dateStyle: "medium" })}
-          </p>
-        </article>
-        <article className="athlete-profile-metric">
-          <p className="plan-meta-label">Primary styles</p>
-          <p className="athlete-profile-metric-copy">
-            {formatList(getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style), "No style saved")}
-          </p>
-        </article>
-      </div>
-    </div>
-  );
-}
-
-export function AthleteProfileOverviewCard({ athlete }: { athlete: AdminAthleteRecord }) {
-  const sections = buildOverviewSections(athlete);
-
-  return (
-    <section className="plan-summary-card athlete-profile-overview-card">
-      <div className="plan-summary-header athlete-profile-overview-header">
-        <div>
-          <p className="kicker">Overview</p>
-          <h2 className="plan-summary-title">Captured athlete profile</h2>
+        <div className="athlete-profile-header-side">
+          <div className="athlete-profile-actions">
+            <Link href="/admin" className="ghost-button">
+              Back to admin
+            </Link>
+            <button type="button" className="primary-button" onClick={onGenerate} disabled={!canGenerate || isGenerating}>
+              {isGenerating ? "Generating..." : "Generate new plan"}
+            </button>
+          </div>
+          {supportMessage ? <p className="athlete-profile-support-note muted">{supportMessage}</p> : null}
         </div>
-        <p className="muted">
-          The athlete account, latest saved intake, and planner context are grouped into one faster reading surface.
-        </p>
-      </div>
+      </header>
 
-      <div className="athlete-profile-overview-grid">
+      <div className="athlete-profile-groups">
         {sections.map((section) => (
           <AthleteProfileSection key={section.title} {...section} />
         ))}

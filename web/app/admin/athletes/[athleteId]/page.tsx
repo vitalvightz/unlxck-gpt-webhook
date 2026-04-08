@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 
-import {
-  AthleteProfileHero,
-  AthleteProfileOverviewCard,
-} from "@/components/admin-athlete-profile";
+import { AthleteProfileSheet } from "@/components/admin-athlete-profile";
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { generateAdminAthletePlanFromLatestIntake, getAdminAthlete } from "@/lib/api";
@@ -88,27 +85,12 @@ export default function AdminAthletePage() {
         </section>
       ) : (
         <section className="panel athlete-profile-panel">
-          <AthleteProfileHero athlete={athlete} />
-
-          <div className="plan-summary-actions">
-            <Link href="/admin" className="ghost-button">
-              Back to admin
-            </Link>
-            <button
-              type="button"
-              className="primary-button"
-              onClick={handleGenerateNewPlan}
-              disabled={!athlete.latest_intake || controller.isGenerating}
-            >
-              {controller.isGenerating ? "Generating..." : "Generate new plan"}
-            </button>
-          </div>
-          {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
-          {!athlete.latest_intake ? (
-            <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
-          ) : null}
-
-          <AthleteProfileOverviewCard athlete={athlete} />
+          <AthleteProfileSheet
+            athlete={athlete}
+            onGenerate={handleGenerateNewPlan}
+            isGenerating={controller.isGenerating}
+            statusMessage={controller.statusMessage}
+          />
         </section>
       )}
     </RequireAuth>
