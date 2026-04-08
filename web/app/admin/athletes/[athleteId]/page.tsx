@@ -96,7 +96,7 @@ export default function AdminAthletePage() {
             </Link>
             <button
               type="button"
-              className="primary-button"
+              className="cta"
               onClick={handleGenerateNewPlan}
               disabled={!athlete.latest_intake || controller.isGenerating}
             >
