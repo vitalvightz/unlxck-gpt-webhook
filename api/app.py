@@ -35,6 +35,8 @@ from .models import (
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
     MeResponse,
+    NutritionWorkspaceState,
+    NutritionWorkspaceUpdateRequest,
     PlanDetail,
     PlanRenameRequest,
     PlanOutputs,
@@ -43,6 +45,7 @@ from .models import (
     ProfileRecord,
     ProfileUpdateRequest,
 )
+from .nutrition_workspace import build_nutrition_workspace, merge_workspace_into_payload
 from .stage2_automation import (
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
@@ -153,6 +156,64 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
         latest_plan=latest_plan,
         plan_count=len(plans),
     )
+
+
+def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
+    training_days = set(workspace.shared_camp_context.training_availability)
+    hard_days = set(workspace.shared_camp_context.hard_sparring_days)
+    technical_days = set(workspace.shared_camp_context.technical_skill_days)
+
+    for day, session_type in workspace.shared_camp_context.session_types_by_day.items():
+        if session_type == "hard_spar" and day not in hard_days:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"session_types_by_day.{day} must also be included in hard_sparring_days",
+            )
+        if session_type == "technical" and day not in technical_days:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"session_types_by_day.{day} must also be included in technical_skill_days",
+            )
+        if session_type != "off" and day not in training_days:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"session_types_by_day.{day} must also be included in training_availability",
+            )
+
+
+def _validate_schedule_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
+    shared = workspace.shared_camp_context
+    training_days = list(shared.training_availability)
+    if shared.weekly_training_frequency and len(training_days) and shared.weekly_training_frequency > len(training_days):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="weekly_training_frequency cannot exceed selected training_availability days",
+        )
+
+    invalid_hard_days = [day for day in shared.hard_sparring_days if day not in training_days]
+    if invalid_hard_days:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"hard_sparring_days must be included in training_availability: {', '.join(invalid_hard_days)}",
+        )
+
+    invalid_technical_days = [day for day in shared.technical_skill_days if day not in training_days]
+    if invalid_technical_days:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"technical_skill_days must be included in training_availability: {', '.join(invalid_technical_days)}",
+        )
+
+    overlap = sorted(set(shared.hard_sparring_days).intersection(shared.technical_skill_days))
+    if overlap:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"A day cannot be both hard_sparring and technical_skill: {', '.join(overlap)}",
+        )
+
+
+def _restricted_coach_controls(workspace: NutritionWorkspaceState) -> dict[str, Any]:
+    return workspace.nutrition_coach_controls.model_dump(mode="json")
 
 
 def _cors_origins() -> list[str]:
@@ -332,6 +393,7 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         appearance_mode=str(row.get("appearance_mode") or "dark"),
         onboarding_draft=row.get("onboarding_draft"),
         avatar_url=row.get("avatar_url") or None,
+        nutrition_profile=row.get("nutrition_profile") or {},
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
     )
@@ -415,6 +477,7 @@ def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None
         appearance_mode=str(row.get("appearance_mode") or "dark"),
         onboarding_draft=onboarding_draft if isinstance(onboarding_draft, dict) else None,
         latest_intake=latest_intake.get("intake") if isinstance(latest_intake, dict) else None,
+        nutrition_profile=row.get("nutrition_profile") or {},
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
         plan_count=int(row.get("plan_count") or 0),
@@ -713,6 +776,69 @@ def create_app(
     ) -> MeResponse:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
         return _build_me_response(updated, store)
+
+    @app.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
+    def get_nutrition_current(
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        latest_intake = store.get_latest_intake(profile.athlete_id)
+        return build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
+
+    @app.put("/api/nutrition/current", response_model=NutritionWorkspaceState)
+    def update_nutrition_current(
+        update: NutritionWorkspaceUpdateRequest,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        _validate_schedule_consistency(update)
+        _validate_session_type_consistency(update)
+
+        latest_intake = store.get_latest_intake(profile.athlete_id)
+        current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
+        update_payload = update.model_dump(mode="json")
+        update_payload["nutrition_coach_controls"] = _restricted_coach_controls(current_workspace)
+        normalized_update = NutritionWorkspaceUpdateRequest.model_validate(update_payload)
+
+        merged_payload = merge_workspace_into_payload(
+            base_payload=(
+                profile.onboarding_draft
+                if current_workspace.source == "draft" and isinstance(profile.onboarding_draft, dict)
+                else latest_intake.get("intake")
+                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
+                else {}
+            ),
+            workspace=normalized_update,
+            profile=profile,
+        )
+
+        if current_workspace.source == "intake" and current_workspace.intake_id:
+            updated_profile = _map_profile_row(
+                store.update_profile(
+                    profile.athlete_id,
+                    ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
+                )
+            )
+            store.update_intake(
+                current_workspace.intake_id,
+                intake=merged_payload,
+                fight_date=normalized_update.shared_camp_context.fight_date or None,
+                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
+            )
+            refreshed_intake = store.get_latest_intake(profile.athlete_id)
+            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+
+        updated_profile = _map_profile_row(
+            store.update_profile(
+                profile.athlete_id,
+                ProfileUpdateRequest(
+                    nutrition_profile=normalized_update.nutrition_profile,
+                    onboarding_draft=merged_payload,
+                ),
+            )
+        )
+        refreshed_intake = store.get_latest_intake(profile.athlete_id)
+        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
     async def _heartbeat_generation_job(job_id: str, store: AppStore, stop_event: asyncio.Event) -> None:
         while not stop_event.is_set():
@@ -1182,6 +1308,77 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         latest_intake = store.get_latest_intake(athlete_id)
         return _map_admin_athlete(row, latest_intake=latest_intake)
+
+    @app.get("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
+    def get_admin_athlete_nutrition_current(
+        athlete_id: str,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+        latest_intake = store.get_latest_intake(athlete_id)
+        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
+        return build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
+
+    @app.put("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
+    def update_admin_athlete_nutrition_current(
+        athlete_id: str,
+        update: NutritionWorkspaceUpdateRequest,
+        _: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> NutritionWorkspaceState:
+        row = store.get_admin_athlete(athlete_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
+
+        _validate_schedule_consistency(update)
+        _validate_session_type_consistency(update)
+
+        latest_intake = store.get_latest_intake(athlete_id)
+        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
+        current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
+
+        merged_payload = merge_workspace_into_payload(
+            base_payload=(
+                athlete.onboarding_draft
+                if current_workspace.source == "draft" and isinstance(athlete.onboarding_draft, dict)
+                else latest_intake.get("intake")
+                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
+                else {}
+            ),
+            workspace=update,
+            profile=athlete,
+        )
+
+        if current_workspace.source == "intake" and current_workspace.intake_id:
+            updated_profile = _map_profile_row(
+                store.update_profile(
+                    athlete_id,
+                    ProfileUpdateRequest(nutrition_profile=update.nutrition_profile),
+                )
+            )
+            store.update_intake(
+                current_workspace.intake_id,
+                intake=merged_payload,
+                fight_date=update.shared_camp_context.fight_date or None,
+                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
+            )
+            refreshed_intake = store.get_latest_intake(athlete_id)
+            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
+
+        updated_profile = _map_profile_row(
+            store.update_profile(
+                athlete_id,
+                ProfileUpdateRequest(
+                    nutrition_profile=update.nutrition_profile,
+                    onboarding_draft=merged_payload,
+                ),
+            )
+        )
+        refreshed_intake = store.get_latest_intake(athlete_id)
+        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
     @app.post("/api/admin/athletes/{athlete_id}/plans/generate-from-latest-intake", response_model=GenerationJobResponse, status_code=202)
     async def generate_admin_athlete_plan_from_latest_intake(

@@ -5398,3 +5398,61 @@ html[data-theme="light"] .appearance-mode-state {
   border-color: rgba(146, 43, 45, 0.12);
   color: var(--brand-red);
 }
+
+.nutrition-page-grid,
+.nutrition-admin-split {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+}
+
+.nutrition-main-column,
+.nutrition-side-column,
+.nutrition-admin-controls {
+  display: grid;
+  gap: 1rem;
+}
+
+.nutrition-section {
+  display: grid;
+  gap: 1rem;
+}
+
+.nutrition-review-list {
+  margin-top: 0.25rem;
+}
+
+.nutrition-inline-actions {
+  margin-top: 0.75rem;
+}
+
+.nutrition-daytype-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.nutrition-log-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.nutrition-log-row {
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-muted);
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.nutrition-log-row:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+@media (max-width: 1024px) {
+  .nutrition-page-grid,
+  .nutrition-admin-split {
+    grid-template-columns: 1fr;
+  }
+}

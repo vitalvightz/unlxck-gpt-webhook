@@ -4,6 +4,8 @@ import type {
   ManualStage2SubmissionRequest,
   GenerationJobResponse,
   MeResponse,
+  NutritionWorkspaceState,
+  NutritionWorkspaceUpdateRequest,
   PlanDetail,
   PlanRequest,
   PlanSummary,
@@ -291,6 +293,21 @@ export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<
   });
 }
 
+export function getNutritionCurrent(token: string): Promise<NutritionWorkspaceState> {
+  return readJson<NutritionWorkspaceState>("/api/nutrition/current", { token });
+}
+
+export function updateNutritionCurrent(
+  token: string,
+  payload: NutritionWorkspaceUpdateRequest,
+): Promise<NutritionWorkspaceState> {
+  return readJson<NutritionWorkspaceState>("/api/nutrition/current", {
+    method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  });
+}
+
 export function createGenerationJob(
   token: string,
   payload: PlanRequest,
@@ -355,6 +372,25 @@ export function listAdminAthletes(token: string): Promise<AdminAthleteRecord[]> 
 
 export function getAdminAthlete(token: string, athleteId: string): Promise<AdminAthleteRecord> {
   return readJson<AdminAthleteRecord>(`/api/admin/athletes/${athleteId}`, { token });
+}
+
+export function getAdminAthleteNutritionCurrent(
+  token: string,
+  athleteId: string,
+): Promise<NutritionWorkspaceState> {
+  return readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, { token });
+}
+
+export function updateAdminAthleteNutritionCurrent(
+  token: string,
+  athleteId: string,
+  payload: NutritionWorkspaceUpdateRequest,
+): Promise<NutritionWorkspaceState> {
+  return readJson<NutritionWorkspaceState>(`/api/admin/athletes/${athleteId}/nutrition/current`, {
+    method: "PUT",
+    token,
+    body: JSON.stringify(payload),
+  });
 }
 
 export function generateAdminAthletePlanFromLatestIntake(

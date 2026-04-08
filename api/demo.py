@@ -66,6 +66,7 @@ class DemoStore:
                 "athlete_locale": "",
                 "appearance_mode": "dark",
                 "onboarding_draft": None,
+                "nutrition_profile": {},
                 "created_at": _now(),
                 "updated_at": _now(),
             }
@@ -96,9 +97,30 @@ class DemoStore:
                 "technical_style": request.athlete.technical_style,
                 "intake": request.model_dump(mode="json"),
                 "created_at": _now(),
+                "updated_at": _now(),
             }
             self.intakes.setdefault(athlete_id, []).append(intake)
             return dict(intake)
+
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict[str, Any],
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict[str, Any]:
+        with self._lock:
+            for athlete_intakes in self.intakes.values():
+                for row in athlete_intakes:
+                    if row["id"] != intake_id:
+                        continue
+                    row["intake"] = intake
+                    row["fight_date"] = fight_date
+                    row["technical_style"] = technical_style
+                    row["updated_at"] = _now()
+                    return dict(row)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
 
     def create_plan(
         self,

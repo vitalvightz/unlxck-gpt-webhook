@@ -37,7 +37,7 @@ import {
   parseGuidedInjuryState,
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
-import { emptyPlanRequest, hydratePlanRequest } from "@/lib/onboarding";
+import { emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
 import { getPerformanceFocusCap } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
 import {
@@ -829,8 +829,8 @@ export function PlanIntakeForm() {
     setError("Planned sessions per week must be at least 1.");
       return false;
     }
-    if (nextForm.weekly_training_frequency > 7) {
-    setError("Planned sessions per week cannot exceed 7.");
+    if (nextForm.weekly_training_frequency > 6) {
+    setError("Planned sessions per week cannot exceed 6.");
       return false;
     }
     const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
@@ -873,8 +873,7 @@ export function PlanIntakeForm() {
       record: nextForm.athlete.record,
       athlete_timezone: nextForm.athlete.athlete_timezone,
       onboarding_draft: {
-        ...nextForm,
-        current_step: step,
+        ...mergePlanRequestDraft(me?.profile.onboarding_draft as Record<string, unknown> | null | undefined, nextForm, step),
       },
     });
     replaceMe(updatedMe);
@@ -1297,14 +1296,14 @@ export function PlanIntakeForm() {
                       id="sessionsPerWeek"
                       type="number"
                       min="1"
-                      max="7"
+                      max="6"
                       disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
                       value={form.weekly_training_frequency ?? ""}
                       onChange={(event) => {
                         const nextValue = numberOrNull(event.target.value);
                         updateField(
                           "weekly_training_frequency",
-                          nextValue === null ? null : Math.min(Math.max(nextValue, 1), 7),
+                          nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
                         );
                       }}
                     />
@@ -1801,6 +1800,15 @@ export function PlanIntakeForm() {
               <div className="support-panel">
                 <p className="kicker">Restrictions</p>
                 <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
+              </div>
+              <div className="support-panel">
+                <p className="kicker">Nutrition foundation</p>
+                <p className="muted">Weight setup, bodyweight logging, and readiness fields now live in the dedicated nutrition workspace.</p>
+                <div className="plan-summary-actions">
+                  <Link href="/nutrition" className="ghost-button">
+                    Open nutrition workspace
+                  </Link>
+                </div>
               </div>
             </aside>
           </div>

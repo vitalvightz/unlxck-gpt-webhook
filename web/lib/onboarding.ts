@@ -52,6 +52,8 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
       ...fallback.athlete,
       ...draft.athlete,
       full_name: draft.athlete?.full_name || me.profile.full_name,
+      age: draft.athlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
+      height_cm: draft.athlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
       technical_style: draft.athlete?.technical_style ?? me.profile.technical_style ?? [],
       tactical_style: draft.athlete?.tactical_style ?? me.profile.tactical_style ?? [],
       stance: draft.athlete?.stance ?? me.profile.stance ?? "",
@@ -61,6 +63,18 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
       athlete_timezone:
         draft.athlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
     },
+  };
+}
+
+export function mergePlanRequestDraft(
+  existingDraft: Record<string, unknown> | null | undefined,
+  nextPlanRequest: PlanRequest,
+  currentStep: number,
+): Record<string, unknown> {
+  return {
+    ...(existingDraft ?? {}),
+    ...nextPlanRequest,
+    current_step: currentStep,
   };
 }
 

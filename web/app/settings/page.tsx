@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
@@ -457,6 +458,19 @@ export default function SettingsPage() {
                     <p className="plan-meta-value">{detectedTimeZone}</p>
                   </article>
                 ) : null}
+              </div>
+            </div>
+
+            <div className="support-panel">
+              <div className="form-section-header">
+                <p className="kicker">Nutrition</p>
+                <h2 className="form-section-title">Weight and readiness</h2>
+              </div>
+              <p className="muted">Stable physiology, fight-weight setup, and bodyweight monitoring now live in the dedicated nutrition workspace.</p>
+              <div className="plan-summary-actions">
+                <Link href="/nutrition" className="ghost-button">
+                  Open nutrition workspace
+                </Link>
               </div>
             </div>
           </aside>

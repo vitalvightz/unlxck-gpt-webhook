@@ -69,6 +69,15 @@ class AppStore(Protocol):
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict[str, Any],
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict[str, Any]: ...
+
     def create_plan(
         self,
         *,
@@ -311,6 +320,7 @@ class SupabaseAppStore:
             "appearance_mode": existing.get("appearance_mode") or "dark",
             "onboarding_draft": existing.get("onboarding_draft"),
             "avatar_url": existing.get("avatar_url"),
+            "nutrition_profile": existing.get("nutrition_profile") or {},
         }
 
     def _upsert_profile_with_retry(
@@ -441,6 +451,7 @@ class SupabaseAppStore:
             "fight_date": request.fight_date,
             "technical_style": request.athlete.technical_style,
             "intake": request.model_dump(mode="json"),
+            "updated_at": _utc_now_iso(),
         }
         try:
             logger.info(
@@ -475,6 +486,37 @@ class SupabaseAppStore:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="create_intake failed",
             ) from exc
+
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict[str, Any],
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict[str, Any]:
+        payload = {
+            "intake": intake,
+            "fight_date": fight_date,
+            "technical_style": technical_style,
+            "updated_at": _utc_now_iso(),
+        }
+        try:
+            logger.info("[store] update_intake:start intake_id=%s", intake_id)
+            self.client.table("athlete_intakes").update(payload).eq("id", intake_id).execute()
+            updated = self._select_first(self.client.table("athlete_intakes").select("*").eq("id", intake_id))
+            if not updated:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
+            logger.info("[store] update_intake:success intake_id=%s", intake_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_intake intake_id={intake_id}",
+                detail="failed to update intake",
+                exc=exc,
+            )
 
     def create_plan(
         self,

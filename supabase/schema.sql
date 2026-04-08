@@ -47,6 +47,7 @@ create table if not exists public.profiles (
   appearance_mode text not null default 'dark',
   avatar_url text,
   onboarding_draft jsonb,
+  nutrition_profile jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
@@ -57,7 +58,8 @@ create table if not exists public.athlete_intakes (
   fight_date date,
   technical_style text[] not null default '{}',
   intake jsonb not null,
-  created_at timestamptz not null default timezone('utc', now())
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
 );
 
 create table if not exists public.plans (
@@ -128,6 +130,8 @@ alter table public.generation_jobs add column if not exists completed_at timesta
 alter table public.generation_jobs add column if not exists updated_at timestamptz not null default timezone('utc', now());
 alter table public.profiles add column if not exists appearance_mode text not null default 'dark';
 alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists nutrition_profile jsonb not null default '{}'::jsonb;
+alter table public.athlete_intakes add column if not exists updated_at timestamptz not null default timezone('utc', now());
 
 create index if not exists profiles_email_idx on public.profiles (email);
 create index if not exists athlete_intakes_athlete_id_created_at_idx on public.athlete_intakes (athlete_id, created_at desc);
@@ -148,6 +152,12 @@ before update on public.generation_jobs
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists athlete_intakes_set_updated_at on public.athlete_intakes;
+create trigger athlete_intakes_set_updated_at
+before update on public.athlete_intakes
+for each row
+execute function public.set_updated_at();
+
 create or replace view public.admin_athlete_rollups as
 select
   p.id,
@@ -161,7 +171,9 @@ select
   p.record_summary,
   p.athlete_timezone,
   p.athlete_locale,
+  p.appearance_mode,
   p.onboarding_draft,
+  p.nutrition_profile,
   p.created_at,
   p.updated_at,
   count(pl.id)::int as plan_count,
@@ -180,7 +192,9 @@ group by
   p.record_summary,
   p.athlete_timezone,
   p.athlete_locale,
+  p.appearance_mode,
   p.onboarding_draft,
+  p.nutrition_profile,
   p.created_at,
   p.updated_at;
 
@@ -205,6 +219,11 @@ for select using (athlete_id = auth.uid() or public.is_admin());
 drop policy if exists "intakes_self_or_admin_insert" on public.athlete_intakes;
 create policy "intakes_self_or_admin_insert" on public.athlete_intakes
 for insert with check (athlete_id = auth.uid() or public.is_admin());
+
+drop policy if exists "intakes_self_or_admin_update" on public.athlete_intakes;
+create policy "intakes_self_or_admin_update" on public.athlete_intakes
+for update using (athlete_id = auth.uid() or public.is_admin())
+with check (athlete_id = auth.uid() or public.is_admin());
 
 drop policy if exists "plans_self_or_admin_select" on public.plans;
 create policy "plans_self_or_admin_select" on public.plans
