@@ -194,6 +194,16 @@ def _nearest_available_day(
     return list(available_indices.values())[0]
 
 
+def _countdown_offset(label: str) -> int | None:
+    normalized = str(label or "").strip().upper()
+    if not normalized.startswith("D-"):
+        return None
+    try:
+        return int(normalized[2:])
+    except ValueError:
+        return None
+
+
 def _resolve_countdown_weekday_with_availability(
     countdown_map: dict[str, str],
     available_days: list[str],
@@ -207,13 +217,33 @@ def _resolve_countdown_weekday_with_availability(
     """
     if not available_days or not countdown_map:
         return countdown_map
-    normalised_available = {d.strip().lower() for d in available_days if d.strip()}
+    normalised_available = [d.strip().lower() for d in available_days if d.strip()]
+    countdown_offsets = {
+        label: _countdown_offset(label)
+        for label in countdown_map
+    }
     resolved: dict[str, str] = {}
     for label, weekday in countdown_map.items():
-        if weekday.strip().lower() in normalised_available:
+        normalized_weekday = weekday.strip().lower()
+        if normalized_weekday in normalised_available:
             resolved[label] = weekday
         else:
-            nearest = _nearest_available_day(weekday, list(normalised_available))
+            current_offset = countdown_offsets.get(label)
+            if current_offset is None:
+                allowed_available = list(normalised_available)
+            else:
+                allowed_weekdays = {
+                    str(mapped_weekday or "").strip().lower()
+                    for mapped_label, mapped_weekday in countdown_map.items()
+                    if (countdown_offsets.get(mapped_label) or 0) >= current_offset
+                }
+                allowed_available = [
+                    day for day in normalised_available
+                    if day in allowed_weekdays
+                ]
+            # Keep remaps inside the active late-fight window and avoid moving
+            # a countdown day to a later weekday outside its slice.
+            nearest = _nearest_available_day(weekday, allowed_available)
             resolved[label] = nearest if nearest is not None else weekday
     return resolved
 

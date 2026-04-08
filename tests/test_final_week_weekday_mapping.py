@@ -209,12 +209,13 @@ class TestResolveCountdownWeekdayWithAvailability:
         assert result["D-3"] == "wednesday"
 
     def test_unavailable_day_is_moved_to_nearest(self):
-        # D-2 falls on saturday (unavailable), should move to friday or monday
+        # D-1 falls on saturday (unavailable) and must stay inside the
+        # current countdown window.
         countdown_map = {"D-0": "sunday", "D-1": "saturday", "D-2": "friday"}
         available = ["monday", "tuesday", "wednesday", "thursday", "friday"]
         result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        # D-1 = saturday → unavailable → nearest is friday (backward) or monday (forward)
-        assert result["D-1"] in {"friday", "monday"}
+        # D-1 = saturday -> unavailable -> collapse back to friday.
+        assert result["D-1"] == "friday"
         assert result["D-2"] == "friday"
 
     def test_empty_available_days_returns_original_map(self):
@@ -226,12 +227,12 @@ class TestResolveCountdownWeekdayWithAvailability:
         result = _resolve_countdown_weekday_with_availability({}, ["monday", "friday"])
         assert result == {}
 
-    def test_all_days_unavailable_returns_nearest_available_day(self):
+    def test_all_days_unavailable_keeps_real_countdown_weekdays(self):
         countdown_map = {"D-0": "saturday", "D-1": "friday"}
         available = ["wednesday"]
         result = _resolve_countdown_weekday_with_availability(countdown_map, available)
-        assert result["D-0"] == "wednesday"
-        assert result["D-1"] == "wednesday"
+        assert result["D-0"] == "saturday"
+        assert result["D-1"] == "friday"
 
 
 # ---------------------------------------------------------------------------
