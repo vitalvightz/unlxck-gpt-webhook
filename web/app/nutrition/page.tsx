@@ -96,6 +96,10 @@ function formatSex(value: NutritionProfileInput["sex"] | null | undefined): stri
   return "Missing in onboarding";
 }
 
+function formatRestrictionsSummary(value: string | null | undefined): string {
+  return value?.trim() ? value.trim() : "No restrictions reported in onboarding.";
+}
+
 function defaultNutritionProfile(existing?: NutritionProfileInput): NutritionProfileInput {
   return {
     sex: existing?.sex ?? null,
@@ -402,6 +406,28 @@ export default function NutritionPage() {
 
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
+                  <p className="kicker">Basics</p>
+                  <h2 className="form-section-title">Restrictions</h2>
+                </div>
+                <div className="review-detail-list nutrition-review-list">
+                  {[
+                    ["Injuries / restrictions", formatRestrictionsSummary(workspace.shared_camp_context.injuries)],
+                    ["Restriction level", humanizeEnumValue(workspace.shared_camp_context.training_restriction_level, "Not set")],
+                  ].map(([label, value]) => (
+                    <div key={label} className="review-detail-row">
+                      <p className="review-detail-label">{label}</p>
+                      <p className="review-detail-value">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="muted">Restrictions stay managed in onboarding so your planner and nutrition workspace stay aligned.</p>
+                <div className="plan-summary-actions nutrition-card-actions">
+                  <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
+                </div>
+              </article>
+
+              <article className="step-card nutrition-section">
+                <div className="form-section-header">
                   <p className="kicker">Weight</p>
                   <h2 className="form-section-title">Fight setup</h2>
                 </div>
@@ -556,13 +582,6 @@ export default function NutritionPage() {
                       </label>
                     ))}
                   </div>
-                </div>
-                <div className="field">
-                  <label>Injuries / restrictions</label>
-                  <textarea
-                    value={form.shared_camp_context.injuries ?? ""}
-                    onChange={(event) => setSharedField("injuries", event.target.value)}
-                  />
                 </div>
               </article>
 
