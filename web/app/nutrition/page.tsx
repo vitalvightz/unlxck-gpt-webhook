@@ -331,8 +331,8 @@ export default function NutritionPage() {
 
   return (
     <RequireAuth>
-      <section className="panel">
-        <div className="section-heading">
+      <section className="panel nutrition-panel">
+        <div className="section-heading nutrition-heading">
           <div className="athlete-motion-slot athlete-motion-header">
             <p className="kicker">Nutrition &amp; Weight</p>
             <h1>Nutrition and weight</h1>
@@ -392,7 +392,7 @@ export default function NutritionPage() {
                     Still missing in onboarding: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
                   </p>
                 ) : null}
-                <div className="plan-summary-actions">
+                <div className="plan-summary-actions nutrition-card-actions">
                   <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
                 </div>
               </article>
