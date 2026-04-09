@@ -1318,6 +1318,17 @@ select:focus-visible {
   margin: 0;
 }
 
+.field input[type="date"],
+.field input[type="time"],
+.field input[type="datetime-local"] {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  inline-size: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
 .field .custom-select-trigger {
   display: flex;
   align-items: center;
