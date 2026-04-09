@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -42,6 +43,12 @@ _TRANSIENT_POSTGREST_SNIPPETS = (
     "502",
     "503",
     "504",
+)
+_PROFILE_SCHEMA_COLUMN_SNIPPETS = (
+    "could not find the",
+    "column",
+    "profiles",
+    "schema cache",
 )
 _GENERATION_JOB_SCHEMA_SNIPPETS = (
     "schema cache",
@@ -153,6 +160,7 @@ def _parse_datetime(value: Any) -> datetime | None:
 class SupabaseAppStore:
     client: Client
     admin_emails: set[str]
+    unsupported_profile_columns: set[str] | None = None
 
     @classmethod
     def from_env(cls) -> "SupabaseAppStore":
@@ -331,6 +339,15 @@ class SupabaseAppStore:
         attempts: int = 3,
         backoff_seconds: float = 0.25,
     ) -> None:
+        if self.unsupported_profile_columns is None:
+            self.unsupported_profile_columns = set()
+        if self.unsupported_profile_columns:
+            payload = {
+                key: value
+                for key, value in payload.items()
+                if key not in self.unsupported_profile_columns
+            }
+
         for attempt in range(1, attempts + 1):
             try:
                 self._log_profile_event(operation="upsert_attempt", user=user, attempt=attempt)
@@ -338,6 +355,18 @@ class SupabaseAppStore:
                 self._log_profile_event(operation="upsert_success", user=user, attempt=attempt)
                 return
             except _STORE_CLIENT_ERRORS as exc:
+                missing_column = self._extract_missing_profiles_column(exc)
+                if missing_column and missing_column in payload:
+                    self.unsupported_profile_columns.add(missing_column)
+                    payload = {key: value for key, value in payload.items() if key != missing_column}
+                    self._log_profile_event(
+                        operation="upsert_schema_column_skipped",
+                        user=user,
+                        attempt=attempt,
+                        column=missing_column,
+                    )
+                    continue
+
                 transient = self._is_transient_profile_error(exc)
                 logger.warning(
                     "[store] profile:upsert_failure user_id=%s email=%s attempt=%s transient=%s error_type=%s error=%s",
@@ -351,6 +380,28 @@ class SupabaseAppStore:
                 if not transient or attempt >= attempts:
                     raise
                 time.sleep(backoff_seconds * attempt)
+
+    def _extract_missing_profiles_column(self, exc: Exception) -> str | None:
+        if not isinstance(exc, PostgrestAPIError):
+            return None
+
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        )
+        normalized = text.lower()
+        if not all(snippet in normalized for snippet in _PROFILE_SCHEMA_COLUMN_SNIPPETS):
+            return None
+
+        match = re.search(r"'([a-zA-Z0-9_]+)'", text)
+        if not match:
+            return None
+
+        column = match.group(1).lower()
+        if column in {"public", "profiles"}:
+            return None
+        return column
 
     def _require_profile(self, athlete_id: str) -> dict[str, Any]:
         profile = self._get_profile_by_id(athlete_id)

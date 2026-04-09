@@ -180,6 +180,53 @@ def test_ensure_profile_falls_back_to_read_after_transient_upsert_failure():
     assert result == recovered_profile
 
 
+def test_ensure_profile_retries_without_unknown_profiles_column_when_schema_is_behind():
+    store = _make_store(admin_emails=set())
+    user = _user("schema-gap@example.com")
+    expected_profile = {
+        "id": user.user_id,
+        "email": user.email,
+        "role": "athlete",
+        "full_name": user.full_name,
+    }
+    _configure_profile_reads(store, None, expected_profile)
+
+    upsert_execute = store.client.table.return_value.upsert.return_value.execute
+    upsert_execute.side_effect = [
+        APIError(
+            {
+                "message": "Could not find the 'nutrition_profile' column of 'profiles' in the schema cache",
+                "code": "PGRST204",
+                "hint": None,
+                "details": None,
+            }
+        ),
+        MagicMock(),
+    ]
+
+    result = store.ensure_profile(user)
+
+    assert result["id"] == user.user_id
+    first_payload = store.client.table.return_value.upsert.call_args_list[0][0][0]
+    second_payload = store.client.table.return_value.upsert.call_args_list[1][0][0]
+    assert "nutrition_profile" in first_payload
+    assert "nutrition_profile" not in second_payload
+
+
+def test_extract_missing_profiles_column_ignores_non_column_errors():
+    store = _make_store()
+    error = APIError(
+        {
+            "message": "duplicate key value violates unique constraint",
+            "code": "23505",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    assert store._extract_missing_profiles_column(error) is None
+
+
 def test_create_or_get_generation_job_returns_503_when_store_is_transiently_unavailable():
     store = _make_store()
     store._run_with_transient_retry = MagicMock(side_effect=httpx.ConnectError("Server disconnected"))
