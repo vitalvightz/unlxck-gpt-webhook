@@ -164,6 +164,15 @@ def _rolling_7_day_average(entries: list[NutritionBodyweightLogEntry]) -> float 
     return round(average, 1)
 
 
+def _merge_unique_days(*day_lists: list[str]) -> list[str]:
+    merged: list[str] = []
+    for day_list in day_lists:
+        for day in day_list:
+            if day and day not in merged:
+                merged.append(day)
+    return merged
+
+
 def _derive_restriction_level(
     explicit_level: str | None,
     guided_injury: GuidedInjuryInput | None,
@@ -192,16 +201,53 @@ def _derive_session_types(
         for day, session_type in explicit_value.items()
         if str(day or "").strip() and str(session_type or "").strip()
     }
-    if cleaned:
-        return cleaned
 
     derived: dict[str, str] = {}
+    training_days = {day.strip().lower() for day in training_availability if str(day).strip()}
+    hard_days = {day.strip().lower() for day in hard_sparring_days if str(day).strip()}
+    technical_days = {day.strip().lower() for day in technical_skill_days if str(day).strip()}
+    for day, session_type in cleaned.items():
+        if day in training_days:
+            derived[day] = session_type
     for day in training_availability:
-        if day in hard_sparring_days:
-            derived[day] = "hard_spar"
-        elif day in technical_skill_days:
-            derived[day] = "technical"
+        normalized_day = str(day or "").strip().lower()
+        if normalized_day in hard_days:
+            derived[normalized_day] = "hard_spar"
+        elif normalized_day in technical_days:
+            derived[normalized_day] = "technical"
     return derived
+
+
+def normalize_nutrition_update_request(
+    *,
+    update: NutritionWorkspaceUpdateRequest,
+    existing_shared_camp_context: NutritionSharedCampContext | None = None,
+) -> NutritionWorkspaceUpdateRequest:
+    payload = update.model_dump(mode="json")
+    shared_payload = _coerce_dict(payload.get("shared_camp_context"))
+    existing_training_availability = (
+        list(existing_shared_camp_context.training_availability) if existing_shared_camp_context else []
+    )
+    existing_session_types = (
+        dict(existing_shared_camp_context.session_types_by_day) if existing_shared_camp_context else {}
+    )
+    hard_sparring_days = _clean_list(shared_payload.get("hard_sparring_days"))
+    technical_skill_days = _clean_list(shared_payload.get("technical_skill_days"))
+    training_availability = _merge_unique_days(
+        _clean_list(shared_payload.get("training_availability")),
+        existing_training_availability,
+        hard_sparring_days,
+        technical_skill_days,
+    )
+    shared_payload["training_availability"] = training_availability
+    shared_payload["session_types_by_day"] = _derive_session_types(
+        explicit_value=shared_payload.get("session_types_by_day") or existing_session_types,
+        training_availability=training_availability,
+        hard_sparring_days=hard_sparring_days,
+        technical_skill_days=technical_skill_days,
+    )
+    payload["shared_camp_context"] = shared_payload
+    return NutritionWorkspaceUpdateRequest.model_validate(payload)
 
 
 def _has_active_workspace_data(payload: dict[str, Any] | None) -> bool:
@@ -316,6 +362,11 @@ def _build_shared_camp_context(
         }
     )
 
+    shared.training_availability = _merge_unique_days(
+        shared.training_availability,
+        shared.hard_sparring_days,
+        shared.technical_skill_days,
+    )
     shared.session_types_by_day = _derive_session_types(
         explicit_value=raw_shared.get("session_types_by_day") or {},
         training_availability=shared.training_availability,
@@ -469,8 +520,6 @@ def _missing_required_fields(
         missing.append("fight_date")
     if shared_camp_context.weigh_in_type is None:
         missing.append("weigh_in_type")
-    if not shared_camp_context.training_availability:
-        missing.append("training_availability")
     if shared_camp_context.weekly_training_frequency is None:
         missing.append("weekly_training_frequency")
     if shared_camp_context.fatigue_level is None:
@@ -615,6 +664,13 @@ def merge_workspace_into_payload(
     athlete_weight_kg = _coerce_optional_float(raw_athlete.get("weight_kg"))
     athlete_target_weight_kg = _coerce_optional_float(raw_athlete.get("target_weight_kg"))
     athlete_height_cm = _coerce_optional_int(raw_athlete.get("height_cm"))
+    base_shared = _coerce_dict(merged.get("shared_camp_context"))
+    training_availability = _merge_unique_days(
+        list(shared.training_availability),
+        _clean_list(base_shared.get("training_availability") or merged.get("training_availability")),
+        list(shared.hard_sparring_days),
+        list(shared.technical_skill_days),
+    )
 
     athlete_payload = {
         **raw_athlete,
@@ -635,13 +691,19 @@ def merge_workspace_into_payload(
 
     session_types_by_day = {
         day: session_type
-        for day, session_type in workspace.shared_camp_context.session_types_by_day.items()
+        for day, session_type in _derive_session_types(
+            explicit_value=base_shared.get("session_types_by_day") or workspace.shared_camp_context.session_types_by_day,
+            training_availability=training_availability,
+            hard_sparring_days=shared.hard_sparring_days,
+            technical_skill_days=shared.technical_skill_days,
+        ).items()
         if day and session_type
     }
     shared_payload = {
         **shared.model_dump(mode="json"),
         "current_weight_kg": athlete_payload.get("weight_kg"),
         "target_weight_kg": athlete_payload.get("target_weight_kg"),
+        "training_availability": training_availability,
         "session_types_by_day": session_types_by_day,
     }
 
@@ -653,7 +715,7 @@ def merge_workspace_into_payload(
             "weekly_training_frequency": shared.weekly_training_frequency,
             "fatigue_level": shared.fatigue_level,
             "equipment_access": list(s_and_c_preferences.equipment_access),
-            "training_availability": list(shared.training_availability),
+            "training_availability": training_availability,
             "hard_sparring_days": list(shared.hard_sparring_days),
             "technical_skill_days": list(shared.technical_skill_days),
             "injuries": shared.injuries,

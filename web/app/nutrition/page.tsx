@@ -5,14 +5,15 @@ import { useEffect, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { CustomSelect } from "@/components/custom-select";
 import { getNutritionCurrent, updateNutritionCurrent } from "@/lib/api";
 import { TRAINING_AVAILABILITY_OPTIONS, toggleListValue } from "@/lib/intake-options";
+import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import type {
   NutritionBodyweightLogEntry,
   NutritionProfileInput,
   NutritionWorkspaceState,
   NutritionWorkspaceUpdateRequest,
-  SessionDayType,
 } from "@/lib/types";
 
 const ACTIVITY_OPTIONS = [
@@ -20,36 +21,29 @@ const ACTIVITY_OPTIONS = [
   { value: "mixed", label: "Mixed" },
   { value: "active_job", label: "Active job" },
 ];
+const CAFFEINE_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
 const WEIGH_IN_OPTIONS = [
   { value: "same_day", label: "Same day" },
   { value: "day_before", label: "Day before" },
   { value: "informal", label: "Informal / none" },
 ];
 const FATIGUE_OPTIONS = [
-  { value: "", label: "Select" },
   { value: "low", label: "Low" },
   { value: "moderate", label: "Moderate" },
   { value: "high", label: "High" },
 ];
 const SLEEP_OPTIONS = [
-  { value: "", label: "Select" },
   { value: "good", label: "Good" },
   { value: "mixed", label: "Mixed" },
   { value: "poor", label: "Poor" },
 ];
 const WEIGHT_SOURCE_OPTIONS = [
-  { value: "", label: "Select" },
   { value: "manual", label: "Manual entry" },
-  { value: "latest_bodyweight_log", label: "Latest bodyweight log" },
-  { value: "imported", label: "Imported data" },
-];
-const DAY_TYPE_OPTIONS: Array<{ value: SessionDayType; label: string }> = [
-  { value: "hard_spar", label: "Hard spar" },
-  { value: "technical", label: "Technical" },
-  { value: "strength", label: "Strength" },
-  { value: "conditioning", label: "Conditioning" },
-  { value: "recovery", label: "Recovery" },
-  { value: "off", label: "Off" },
+  { value: "latest_bodyweight_log", label: "Latest weigh-in log" },
+  { value: "imported", label: "Saved athlete profile" },
 ];
 const CORE_FIELD_LABELS: Record<string, string> = {
   sex: "Sex",
@@ -244,23 +238,31 @@ export default function NutritionPage() {
     }));
   }
 
-  function toggleDayList(key: "training_availability" | "hard_sparring_days" | "technical_skill_days", day: string) {
-    setForm((current) => ({
-      ...current,
-      shared_camp_context: {
-        ...current.shared_camp_context,
-        [key]: toggleListValue(current.shared_camp_context[key], day),
-      },
-    }));
+  function toggleDayList(key: "hard_sparring_days" | "technical_skill_days", day: string) {
+    setForm((current) => {
+      const nextDays = toggleListValue(current.shared_camp_context[key], day);
+      const shouldAddTrainingDay =
+        !current.shared_camp_context[key].includes(day)
+        && !current.shared_camp_context.training_availability.includes(day);
+      return {
+        ...current,
+        shared_camp_context: {
+          ...current.shared_camp_context,
+          [key]: nextDays,
+          training_availability: shouldAddTrainingDay
+            ? [...current.shared_camp_context.training_availability, day]
+            : current.shared_camp_context.training_availability,
+        },
+      };
+    });
   }
 
-  function setDayType(day: string, value: string) {
-    setForm((current) => {
-      const next = { ...current.shared_camp_context.session_types_by_day };
-      if (!value) delete next[day];
-      else next[day] = value as SessionDayType;
-      return { ...current, shared_camp_context: { ...current.shared_camp_context, session_types_by_day: next } };
-    });
+  function updateRoundsField(key: "roundCount" | "roundDuration", value: string) {
+    const parsed = parseRoundsFormat(form.shared_camp_context.rounds_format);
+    const nextRounds = key === "roundCount"
+      ? buildRoundsFormat(value, parsed.roundDuration)
+      : buildRoundsFormat(parsed.roundCount, value);
+    setSharedField("rounds_format", nextRounds);
   }
 
   function setLog(index: number, key: keyof NutritionBodyweightLogEntry, value: unknown) {
@@ -328,6 +330,7 @@ export default function NutritionPage() {
         Object.prototype.hasOwnProperty.call(CORE_FIELD_LABELS, field),
       )
     : [];
+  const parsedRounds = parseRoundsFormat(form.shared_camp_context.rounds_format);
 
   return (
     <RequireAuth>
@@ -413,15 +416,14 @@ export default function NutritionPage() {
                   </div>
                   <div className="field">
                     <label>Weigh-in type</label>
-                    <select
+                    <CustomSelect
+                      id="weighInType"
                       value={form.shared_camp_context.weigh_in_type ?? ""}
-                      onChange={(event) => setSharedField("weigh_in_type", event.target.value || null)}
-                    >
-                      <option value="">Select</option>
-                      {WEIGH_IN_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
+                      options={WEIGH_IN_OPTIONS}
+                      placeholder="Select weigh-in type"
+                      includeEmptyOption
+                      onChange={(value) => setSharedField("weigh_in_type", value || null)}
+                    />
                   </div>
                   <div className="field">
                     <label>Weigh-in time</label>
@@ -433,15 +435,15 @@ export default function NutritionPage() {
                   </div>
                   <div className="field">
                     <label>Current weight source</label>
-                    <select
+                    <CustomSelect
+                      id="currentWeightSource"
                       value={form.shared_camp_context.current_weight_source ?? ""}
-                      onChange={(event) => handleWeightSourceChange(event.target.value)}
-                    >
-                      {WEIGHT_SOURCE_OPTIONS.map((option) => (
-                        <option key={option.value || "empty"} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                    <p className="muted">Use this to describe where the onboarding current-weight number came from.</p>
+                      options={WEIGHT_SOURCE_OPTIONS}
+                      placeholder="Select weight source"
+                      includeEmptyOption
+                      onChange={handleWeightSourceChange}
+                    />
+                    <p className="muted">Choose where the saved current-weight number came from so the source feels clear to coaches and athletes.</p>
                   </div>
                   <div className="field">
                     <label>Weight recorded at</label>
@@ -452,10 +454,25 @@ export default function NutritionPage() {
                     />
                   </div>
                   <div className="field">
-                    <label>Rounds format</label>
-                    <input
-                      value={form.shared_camp_context.rounds_format ?? ""}
-                      onChange={(event) => setSharedField("rounds_format", event.target.value)}
+                    <label>Round count</label>
+                    <CustomSelect
+                      id="roundCount"
+                      value={parsedRounds.roundCount}
+                      options={ROUND_COUNT_OPTIONS}
+                      placeholder="Select rounds"
+                      includeEmptyOption
+                      onChange={(value) => updateRoundsField("roundCount", value)}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Minutes per round</label>
+                    <CustomSelect
+                      id="roundDuration"
+                      value={parsedRounds.roundDuration}
+                      options={ROUND_DURATION_OPTIONS}
+                      placeholder="Select minutes"
+                      includeEmptyOption
+                      onChange={(value) => updateRoundsField("roundDuration", value)}
                     />
                   </div>
                 </div>
@@ -479,45 +496,25 @@ export default function NutritionPage() {
                   </div>
                   <div className="field">
                     <label>Fatigue level</label>
-                    <select
+                    <CustomSelect
+                      id="fatigueLevel"
                       value={form.shared_camp_context.fatigue_level ?? ""}
-                      onChange={(event) => setSharedField("fatigue_level", event.target.value || null)}
-                    >
-                      {FATIGUE_OPTIONS.map((option) => (
-                        <option key={option.value || "empty"} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
+                      options={FATIGUE_OPTIONS}
+                      placeholder="Select fatigue level"
+                      includeEmptyOption
+                      onChange={(value) => setSharedField("fatigue_level", value || null)}
+                    />
                   </div>
                   <div className="field">
                     <label>Sleep quality</label>
-                    <select
+                    <CustomSelect
+                      id="sleepQuality"
                       value={form.nutrition_readiness.sleep_quality ?? ""}
-                      onChange={(event) => setSleepQuality(event.target.value || null)}
-                    >
-                      {SLEEP_OPTIONS.map((option) => (
-                        <option key={option.value || "empty"} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Training availability</label>
-                  <div className="checkbox-grid">
-                    {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={`checkbox-card ${form.shared_camp_context.training_availability.includes(option.value) ? "checkbox-card-checked" : ""}`.trim()}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.shared_camp_context.training_availability.includes(option.value)}
-                          onChange={() => toggleDayList("training_availability", option.value)}
-                        />
-                        <span className="checkbox-card-copy">
-                          <span className="checkbox-card-title">{option.label}</span>
-                        </span>
-                      </label>
-                    ))}
+                      options={SLEEP_OPTIONS}
+                      placeholder="Select sleep quality"
+                      includeEmptyOption
+                      onChange={(value) => setSleepQuality(value || null)}
+                    />
                   </div>
                 </div>
                 <div className="field">
@@ -560,21 +557,6 @@ export default function NutritionPage() {
                     ))}
                   </div>
                 </div>
-                {form.shared_camp_context.training_availability.length ? (
-                  <div className="nutrition-daytype-grid">
-                    {form.shared_camp_context.training_availability.map((day) => (
-                      <div key={day} className="field">
-                        <label>{TRAINING_AVAILABILITY_OPTIONS.find((option) => option.value === day)?.label ?? day} day type</label>
-                        <select value={form.shared_camp_context.session_types_by_day[day] ?? ""} onChange={(event) => setDayType(day, event.target.value)}>
-                          <option value="">Optional label</option>
-                          {DAY_TYPE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
                 <div className="field">
                   <label>Injuries / restrictions</label>
                   <textarea
@@ -592,15 +574,14 @@ export default function NutritionPage() {
                 <div className="form-grid">
                   <div className="field">
                     <label>Daily activity</label>
-                    <select
+                    <CustomSelect
+                      id="dailyActivity"
                       value={form.nutrition_profile.daily_activity_level ?? ""}
-                      onChange={(event) => setProfileField("daily_activity_level", event.target.value || null)}
-                    >
-                      <option value="">Select</option>
-                      {ACTIVITY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
+                      options={ACTIVITY_OPTIONS}
+                      placeholder="Select daily activity"
+                      includeEmptyOption
+                      onChange={(value) => setProfileField("daily_activity_level", value || null)}
+                    />
                   </div>
                   <div className="field">
                     <label>Dietary restrictions</label>
@@ -628,14 +609,14 @@ export default function NutritionPage() {
                   </div>
                   <div className="field">
                     <label>Caffeine use</label>
-                    <select
+                    <CustomSelect
+                      id="caffeineUse"
                       value={form.nutrition_profile.caffeine_use == null ? "" : form.nutrition_profile.caffeine_use ? "yes" : "no"}
-                      onChange={(event) => setProfileField("caffeine_use", event.target.value ? event.target.value === "yes" : null)}
-                    >
-                      <option value="">Select</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
+                      options={CAFFEINE_OPTIONS}
+                      placeholder="Select response"
+                      includeEmptyOption
+                      onChange={(value) => setProfileField("caffeine_use", value ? value === "yes" : null)}
+                    />
                   </div>
                   <div className="field">
                     <label>Supplements</label>

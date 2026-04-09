@@ -38,6 +38,7 @@ import {
   type GuidedInjuryState,
 } from "@/lib/guided-injury";
 import { emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
+import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
 import { getPerformanceFocusCap } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
 import {
@@ -55,16 +56,6 @@ const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performa
 const SEX_OPTIONS: IntakeOption[] = [
   { label: "Male", value: "male" },
   { label: "Female", value: "female" },
-];
-const ROUND_COUNT_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
-  label: String(index + 1),
-  value: String(index + 1),
-}));
-const ROUND_DURATION_OPTIONS = [
-  { label: "1 minute", value: "1" },
-  { label: "2 minutes", value: "2" },
-  { label: "3 minutes", value: "3" },
-  { label: "5 minutes", value: "5" },
 ];
 const FATIGUE_LEVEL_OPTIONS = [
   { label: "Low", value: "low" },
@@ -132,25 +123,6 @@ function formatRestrictionSummary(value: string | null | undefined): string {
 
 function formatJoinedLabels(values: string[], emptyLabel: string): string {
   return values.length ? values.join(", ") : emptyLabel;
-}
-
-function parseRoundsFormat(value: string | null | undefined): { roundCount: string; roundDuration: string } {
-  const raw = (value ?? "").trim();
-  const match = raw.match(/(\d+)\s*x\s*(\d+)/i) ?? raw.match(/(\d+)\s*[xX]\s*(\d+)/);
-  if (!match) {
-    return { roundCount: "", roundDuration: "" };
-  }
-  return {
-    roundCount: match[1] ?? "",
-    roundDuration: match[2] ?? "",
-  };
-}
-
-function buildRoundsFormat(roundCount: string, roundDuration: string): string {
-  if (!roundCount || !roundDuration) {
-    return "";
-  }
-  return `${roundCount} x ${roundDuration}`;
 }
 
 function formatWeightCutStatus(currentWeight: number | null | undefined, targetWeight: number | null | undefined): string | null {

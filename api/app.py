@@ -45,7 +45,11 @@ from .models import (
     ProfileRecord,
     ProfileUpdateRequest,
 )
-from .nutrition_workspace import build_nutrition_workspace, merge_workspace_into_payload
+from .nutrition_workspace import (
+    build_nutrition_workspace,
+    merge_workspace_into_payload,
+    normalize_nutrition_update_request,
+)
 from .stage2_automation import (
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
@@ -791,14 +795,16 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> NutritionWorkspaceState:
-        _validate_schedule_consistency(update)
-        _validate_session_type_consistency(update)
-
         latest_intake = store.get_latest_intake(profile.athlete_id)
         current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
         update_payload = update.model_dump(mode="json")
         update_payload["nutrition_coach_controls"] = _restricted_coach_controls(current_workspace)
-        normalized_update = NutritionWorkspaceUpdateRequest.model_validate(update_payload)
+        normalized_update = normalize_nutrition_update_request(
+            update=NutritionWorkspaceUpdateRequest.model_validate(update_payload),
+            existing_shared_camp_context=current_workspace.shared_camp_context,
+        )
+        _validate_schedule_consistency(normalized_update)
+        _validate_session_type_consistency(normalized_update)
 
         merged_payload = merge_workspace_into_payload(
             base_payload=(
@@ -1333,12 +1339,15 @@ def create_app(
         if not row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
 
-        _validate_schedule_consistency(update)
-        _validate_session_type_consistency(update)
-
         latest_intake = store.get_latest_intake(athlete_id)
         athlete = _map_admin_athlete(row, latest_intake=latest_intake)
         current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
+        normalized_update = normalize_nutrition_update_request(
+            update=update,
+            existing_shared_camp_context=current_workspace.shared_camp_context,
+        )
+        _validate_schedule_consistency(normalized_update)
+        _validate_session_type_consistency(normalized_update)
 
         merged_payload = merge_workspace_into_payload(
             base_payload=(
@@ -1348,7 +1357,7 @@ def create_app(
                 if current_workspace.source == "intake" and isinstance(latest_intake, dict)
                 else {}
             ),
-            workspace=update,
+            workspace=normalized_update,
             profile=athlete,
         )
 
@@ -1356,13 +1365,13 @@ def create_app(
             updated_profile = _map_profile_row(
                 store.update_profile(
                     athlete_id,
-                    ProfileUpdateRequest(nutrition_profile=update.nutrition_profile),
+                    ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
                 )
             )
             store.update_intake(
                 current_workspace.intake_id,
                 intake=merged_payload,
-                fight_date=update.shared_camp_context.fight_date or None,
+                fight_date=normalized_update.shared_camp_context.fight_date or None,
                 technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
             )
             refreshed_intake = store.get_latest_intake(athlete_id)
@@ -1372,7 +1381,7 @@ def create_app(
             store.update_profile(
                 athlete_id,
                 ProfileUpdateRequest(
-                    nutrition_profile=update.nutrition_profile,
+                    nutrition_profile=normalized_update.nutrition_profile,
                     onboarding_draft=merged_payload,
                 ),
             )

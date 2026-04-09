@@ -25,6 +25,7 @@ SessionDayType = Literal["hard_spar", "technical", "strength", "conditioning", "
 
 GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
 _RECORD_PATTERN = re.compile(r"^\d+-\d+(?:-\d+)?$")
+_ROUNDS_FORMAT_PATTERN = re.compile(r"^(\d+)\s*[xX]\s*(\d+)$")
 # Keep this alias map aligned with web/lib/intake-options.ts so the API accepts
 # legacy mild/severe inputs while normalizing to the frontend low/moderate/high vocabulary.
 _GUIDED_INJURY_SEVERITY_ALIASES = {
@@ -54,6 +55,16 @@ def _validate_record(value: str) -> str:
     if normalized and not _RECORD_PATTERN.fullmatch(normalized):
         raise ValueError("record must use x-x or x-x-x format")
     return normalized
+
+
+def _validate_rounds_format(value: str) -> str:
+    normalized = str(value or "").strip()
+    if not normalized:
+        return ""
+    match = _ROUNDS_FORMAT_PATTERN.fullmatch(normalized)
+    if not match:
+        raise ValueError("rounds_format must use numeric rounds x minutes format like 3 x 3")
+    return f"{int(match[1])} x {int(match[2])}"
 
 
 class AthleteProfileInput(BaseModel):
@@ -304,6 +315,11 @@ class NutritionSharedCampContext(BaseModel):
             return _clean_list(value)
         return _clean_list([value])
 
+    @field_validator("rounds_format")
+    @classmethod
+    def validate_rounds_format(cls, value: str) -> str:
+        return _validate_rounds_format(value)
+
     @field_validator("target_weight_range_kg", mode="before")
     @classmethod
     def validate_target_weight_range(cls, value: Any) -> Any:
@@ -463,6 +479,11 @@ class PlanRequest(BaseModel):
         if isinstance(value, (int, float)):
             return max(1, min(int(round(float(value))), 6))
         return value
+
+    @field_validator("rounds_format")
+    @classmethod
+    def validate_rounds_format(cls, value: str) -> str:
+        return _validate_rounds_format(value)
 
     def to_payload(self) -> dict[str, Any]:
         athlete = self.athlete
