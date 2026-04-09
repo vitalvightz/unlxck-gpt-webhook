@@ -46,14 +46,6 @@ const WEIGH_IN_OPTIONS = [
 const FATIGUE_OPTIONS = ["", "Low", "Moderate", "High"];
 const SLEEP_OPTIONS = ["", "Good", "Mixed", "Poor"];
 const WEIGHT_SOURCE_OPTIONS = ["", "manual", "latest_bodyweight_log", "imported"];
-const DAY_TYPE_OPTIONS: Array<{ value: SessionDayType; label: string }> = [
-  { value: "hard_spar", label: "Hard spar" },
-  { value: "technical", label: "Technical" },
-  { value: "strength", label: "Strength" },
-  { value: "conditioning", label: "Conditioning" },
-  { value: "recovery", label: "Recovery" },
-  { value: "off", label: "Off" },
-];
 const CORE_FIELD_LABELS: Record<string, string> = {
   sex: "Sex",
   age: "Age",
@@ -61,6 +53,51 @@ const CORE_FIELD_LABELS: Record<string, string> = {
   current_weight_kg: "Current weight",
   target_weight_kg: "Target weight",
 };
+
+function sortTrainingDays(values: string[]): string[] {
+  const uniqueValues = new Set(values);
+  return TRAINING_AVAILABILITY_OPTIONS
+    .map((option) => option.value)
+    .filter((value) => uniqueValues.has(value));
+}
+
+function buildAutoSessionTypes(
+  hardSparringDays: string[],
+  technicalSkillDays: string[],
+): Record<string, SessionDayType> {
+  const nextSessionTypes: Record<string, SessionDayType> = {};
+
+  for (const day of hardSparringDays) {
+    nextSessionTypes[day] = "hard_spar";
+  }
+
+  for (const day of technicalSkillDays) {
+    if (!nextSessionTypes[day]) {
+      nextSessionTypes[day] = "technical";
+    }
+  }
+
+  return nextSessionTypes;
+}
+
+function withAutoTrainingSelections(
+  request: NutritionWorkspaceUpdateRequest,
+): NutritionWorkspaceUpdateRequest {
+  const hardSparringDays = sortTrainingDays(request.shared_camp_context.hard_sparring_days);
+  const technicalSkillDays = sortTrainingDays(request.shared_camp_context.technical_skill_days);
+  const trainingAvailability = sortTrainingDays([...hardSparringDays, ...technicalSkillDays]);
+
+  return {
+    ...request,
+    shared_camp_context: {
+      ...request.shared_camp_context,
+      hard_sparring_days: hardSparringDays,
+      technical_skill_days: technicalSkillDays,
+      training_availability: trainingAvailability,
+      session_types_by_day: buildAutoSessionTypes(hardSparringDays, technicalSkillDays),
+    },
+  };
+}
 
 function formatNumber(value: number | null | undefined, unit?: string): string {
   if (value == null) {
@@ -73,6 +110,17 @@ function formatSex(value: NutritionProfileInput["sex"] | null | undefined): stri
   if (value === "male") return "Male";
   if (value === "female") return "Female";
   return "Missing in onboarding";
+}
+
+function formatRestrictionsSummary(value: string | null | undefined): string {
+  return value?.trim() ? value.trim() : "No restrictions reported in onboarding.";
+}
+
+function formatEnumLabel(value: string | null | undefined, fallback: string): string {
+  if (!value?.trim()) return fallback;
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
@@ -108,7 +156,7 @@ export function NutritionWorkspaceScreen() {
       .then((nextWorkspace) => {
         if (!active) return;
         setWorkspace(nextWorkspace);
-        setForm(toUpdateRequest(nextWorkspace));
+        setForm(withAutoTrainingSelections(toUpdateRequest(nextWorkspace)));
       })
       .catch((loadError) => {
         if (!active) return;
@@ -137,22 +185,25 @@ export function NutritionWorkspaceScreen() {
     }));
   }
 
-  function toggleDayList(key: "training_availability" | "hard_sparring_days" | "technical_skill_days", day: string) {
-    setForm((current) => ({
-      ...current,
-      shared_camp_context: {
-        ...current.shared_camp_context,
-        [key]: toggleListValue(current.shared_camp_context[key], day),
-      },
-    }));
-  }
-
-  function setDayType(day: string, value: string) {
+  function toggleDayList(key: "hard_sparring_days" | "technical_skill_days", day: string) {
     setForm((current) => {
-      const next = { ...current.shared_camp_context.session_types_by_day };
-      if (!value) delete next[day];
-      else next[day] = value as SessionDayType;
-      return { ...current, shared_camp_context: { ...current.shared_camp_context, session_types_by_day: next } };
+      const nextSpecificDays = sortTrainingDays(toggleListValue(current.shared_camp_context[key], day));
+      const hardSparringDays =
+        key === "hard_sparring_days" ? nextSpecificDays : sortTrainingDays(current.shared_camp_context.hard_sparring_days);
+      const technicalSkillDays =
+        key === "technical_skill_days" ? nextSpecificDays : sortTrainingDays(current.shared_camp_context.technical_skill_days);
+      const trainingAvailability = sortTrainingDays([...hardSparringDays, ...technicalSkillDays]);
+
+      return {
+        ...current,
+        shared_camp_context: {
+          ...current.shared_camp_context,
+          hard_sparring_days: hardSparringDays,
+          technical_skill_days: technicalSkillDays,
+          training_availability: trainingAvailability,
+          session_types_by_day: buildAutoSessionTypes(hardSparringDays, technicalSkillDays),
+        },
+      };
     });
   }
 
@@ -167,9 +218,12 @@ export function NutritionWorkspaceScreen() {
     setMessage(null);
     startTransition(async () => {
       try {
-        const nextWorkspace = await updateNutritionCurrent(session.access_token, form);
+        const nextWorkspace = await updateNutritionCurrent(
+          session.access_token,
+          withAutoTrainingSelections(form),
+        );
         setWorkspace(nextWorkspace);
-        setForm(toUpdateRequest(nextWorkspace));
+        setForm(withAutoTrainingSelections(toUpdateRequest(nextWorkspace)));
         await refreshMe();
         setMessage("Nutrition workspace saved.");
       } catch (saveError) {
@@ -197,7 +251,7 @@ export function NutritionWorkspaceScreen() {
         <NutritionWorkspaceHeader
           athleteName={athleteName}
           title="Nutrition workspace"
-          description="Keep camp setup, readiness, restrictions, and food preferences here. The dedicated bodyweight log now lives on its own fight-lab screen."
+          description="Keep camp setup, readiness, and nutrition parameters here. Restrictions stay anchored to onboarding, and the dedicated bodyweight log now lives on its own fight-lab screen."
         />
         <NutritionSubnav />
 
@@ -245,6 +299,28 @@ export function NutritionWorkspaceScreen() {
                     Still missing in onboarding: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
                   </p>
                 ) : null}
+                <div className="plan-summary-actions">
+                  <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
+                </div>
+              </article>
+
+              <article className="step-card nutrition-section">
+                <div className="form-section-header">
+                  <p className="kicker">Basics</p>
+                  <h2 className="form-section-title">Restrictions</h2>
+                </div>
+                <div className="review-detail-list nutrition-review-list">
+                  {[
+                    ["Injuries / restrictions", formatRestrictionsSummary(workspace.shared_camp_context.injuries)],
+                    ["Restriction level", formatEnumLabel(workspace.shared_camp_context.training_restriction_level, "Not set")],
+                  ].map(([label, value]) => (
+                    <div key={label} className="review-detail-row">
+                      <p className="review-detail-label">{label}</p>
+                      <p className="review-detail-value">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="muted">Restrictions live in onboarding so your nutrition workspace stays aligned with the core athlete profile.</p>
                 <div className="plan-summary-actions">
                   <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
                 </div>
@@ -355,7 +431,7 @@ export function NutritionWorkspaceScreen() {
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
                   <p className="kicker">Readiness</p>
-                  <h2 className="form-section-title">Schedule and restrictions</h2>
+                  <h2 className="form-section-title">Schedule and readiness</h2>
                 </div>
                 <div className="form-grid">
                   <div className="field">
@@ -389,26 +465,6 @@ export function NutritionWorkspaceScreen() {
                         <option key={value || "empty"} value={value}>{value || "Select"}</option>
                       ))}
                     </select>
-                  </div>
-                </div>
-                <div className="field">
-                  <label>Training availability</label>
-                  <div className="checkbox-grid">
-                    {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={`checkbox-card ${form.shared_camp_context.training_availability.includes(option.value) ? "checkbox-card-checked" : ""}`.trim()}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.shared_camp_context.training_availability.includes(option.value)}
-                          onChange={() => toggleDayList("training_availability", option.value)}
-                        />
-                        <span className="checkbox-card-copy">
-                          <span className="checkbox-card-title">{option.label}</span>
-                        </span>
-                      </label>
-                    ))}
                   </div>
                 </div>
                 <div className="field">
@@ -451,34 +507,13 @@ export function NutritionWorkspaceScreen() {
                     ))}
                   </div>
                 </div>
-                {form.shared_camp_context.training_availability.length ? (
-                  <div className="nutrition-daytype-grid">
-                    {form.shared_camp_context.training_availability.map((day) => (
-                      <div key={day} className="field">
-                        <label>{TRAINING_AVAILABILITY_OPTIONS.find((option) => option.value === day)?.label ?? day} day type</label>
-                        <select value={form.shared_camp_context.session_types_by_day[day] ?? ""} onChange={(event) => setDayType(day, event.target.value)}>
-                          <option value="">Optional label</option>
-                          {DAY_TYPE_OPTIONS.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                <div className="field">
-                  <label>Injuries / restrictions</label>
-                  <textarea
-                    value={form.shared_camp_context.injuries ?? ""}
-                    onChange={(event) => setSharedField("injuries", event.target.value)}
-                  />
-                </div>
+                <p className="muted">Training availability and day type are now inferred from the hard sparring and technical/lighter selections above.</p>
               </article>
 
               <article className="step-card nutrition-section">
                 <div className="form-section-header">
-                  <p className="kicker">Preferences</p>
-                  <h2 className="form-section-title">Nutrition preferences</h2>
+                  <p className="kicker">Nutrition</p>
+                  <h2 className="form-section-title">Nutrition parameters</h2>
                 </div>
                 <div className="form-grid">
                   <div className="field">
@@ -498,13 +533,6 @@ export function NutritionWorkspaceScreen() {
                     <input
                       value={toCsv(form.nutrition_profile.dietary_restrictions)}
                       onChange={(event) => setProfileField("dietary_restrictions", toList(event.target.value))}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Food preferences</label>
-                    <input
-                      value={toCsv(form.nutrition_profile.food_preferences)}
-                      onChange={(event) => setProfileField("food_preferences", toList(event.target.value))}
                     />
                   </div>
                   <div className="field">
@@ -535,21 +563,8 @@ export function NutritionWorkspaceScreen() {
                       onChange={(event) => setProfileField("supplement_use", toList(event.target.value))}
                     />
                   </div>
-                  <div className="field">
-                    <label>Foods avoided pre-session</label>
-                    <input
-                      value={toCsv(form.nutrition_profile.foods_avoided_pre_session)}
-                      onChange={(event) => setProfileField("foods_avoided_pre_session", toList(event.target.value))}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Foods avoided fight week</label>
-                    <input
-                      value={toCsv(form.nutrition_profile.foods_avoided_fight_week)}
-                      onChange={(event) => setProfileField("foods_avoided_fight_week", toList(event.target.value))}
-                    />
-                  </div>
                 </div>
+                <p className="muted">This workspace supports macro and micro planning inputs, not meal-by-meal food choices. We can add athlete food-level controls later if needed.</p>
               </article>
             </div>
 
