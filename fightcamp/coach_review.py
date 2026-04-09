@@ -321,7 +321,7 @@ def run_coach_review(
         if not cond:
             updated_conditioning[phase_key] = cond
             continue
-        grouped_drills = cond.get("grouped_drills") or {}
+        grouped_drills = cond.get("grouped_drills", {})
         used_names = {
             d.get("name")
             for drills in grouped_drills.values()

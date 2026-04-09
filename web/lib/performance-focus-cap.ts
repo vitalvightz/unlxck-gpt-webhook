@@ -13,6 +13,14 @@ export type PerformanceFocusCap = {
   reason: string;
 };
 
+export type PerformanceFocusValidation = {
+  cap: PerformanceFocusCap | null;
+  totalSelections: number;
+  excessSelections: number;
+  isOverCap: boolean;
+  errorMessage: string | null;
+};
+
 const PERFORMANCE_FOCUS_CAP_WINDOWS: PerformanceFocusCapWindow[] = [
   {
     maxDaysUntilFight: 7,
@@ -122,5 +130,33 @@ export function getPerformanceFocusCap(
     maxSelections: window.maxSelections,
     windowLabel: window.windowLabel,
     reason: window.reason,
+  };
+}
+
+function buildPerformanceFocusCapErrorMessage(maxSelections: number, excessSelections: number): string {
+  const selectionLabel = excessSelections === 1 ? "selection" : "selections";
+  return `This camp allows ${maxSelections} total focus picks. Remove ${excessSelections} goal or weak-area ${selectionLabel} before generating.`;
+}
+
+export function validatePerformanceFocusSelections(
+  fightDate: string | null | undefined,
+  selections: {
+    keyGoals: string[];
+    weakAreas: string[];
+  },
+  options?: { now?: Date; timeZone?: string | null },
+): PerformanceFocusValidation {
+  const cap = getPerformanceFocusCap(fightDate, options);
+  const totalSelections = selections.keyGoals.length + selections.weakAreas.length;
+  const excessSelections = cap ? Math.max(totalSelections - cap.maxSelections, 0) : 0;
+
+  return {
+    cap,
+    totalSelections,
+    excessSelections,
+    isOverCap: excessSelections > 0,
+    errorMessage: cap && excessSelections > 0
+      ? buildPerformanceFocusCapErrorMessage(cap.maxSelections, excessSelections)
+      : null,
   };
 }

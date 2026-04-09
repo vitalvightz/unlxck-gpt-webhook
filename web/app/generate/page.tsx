@@ -8,6 +8,7 @@ import { useAppSession } from "@/components/auth-provider";
 import { createGenerationJob } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
 import { hydratePlanRequest } from "@/lib/onboarding";
+import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
 
 const STORAGE_KEY = "unlxck:pending-generation:self";
@@ -17,6 +18,18 @@ export default function GeneratePage() {
   const { me, session } = useAppSession();
   const autoStartRef = useRef(false);
   const payload = me ? hydratePlanRequest(me) : null;
+  const performanceFocusValidation = payload
+    ? validatePerformanceFocusSelections(
+      payload.fight_date,
+      {
+        keyGoals: payload.key_goals,
+        weakAreas: payload.weak_areas,
+      },
+      {
+        timeZone: payload.athlete.athlete_timezone,
+      },
+    )
+    : null;
 
   const controller = useGenerationController({
     token: session?.access_token ?? null,
@@ -49,10 +62,14 @@ export default function GeneratePage() {
       router.replace("/onboarding");
       return;
     }
+    if (performanceFocusValidation?.isOverCap) {
+      router.replace("/onboarding?issue=focus-cap&step=performance");
+      return;
+    }
 
     autoStartRef.current = true;
     void controller.startGeneration();
-  }, [controller, payload, router, session?.access_token]);
+  }, [controller, payload, performanceFocusValidation?.isOverCap, router, session?.access_token]);
 
   return (
     <RequireAuth>

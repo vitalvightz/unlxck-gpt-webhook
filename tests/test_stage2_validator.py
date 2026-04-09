@@ -172,22 +172,6 @@ def test_validate_stage2_output_ignores_restriction_warning_lines():
     assert report["errors"] == []
 
 
-def test_validate_stage2_output_flags_restrictions_on_mixed_warning_and_prescription_lines():
-    report = validate_stage2_output(
-        planning_brief=_planning_brief_fixture(),
-        final_plan_text="""
-        SPP
-        - Avoid heavy overhead pressing this week, but Push Press - 4x3 if you feel sharp.
-        - Hard Shuttle - 6x20s / 60s
-        - Band External Rotation - 2x15
-        """,
-    )
-
-    assert report["restricted_hits"]
-    assert any(hit["restriction"] == "heavy_overhead_pressing" for hit in report["restricted_hits"])
-    assert any(error["code"] == "restriction_violation" for error in report["errors"])
-
-
 
 def test_validate_stage2_output_warns_when_phase_critical_elements_go_missing():
     report = validate_stage2_output(

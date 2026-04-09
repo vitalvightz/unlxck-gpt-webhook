@@ -1574,6 +1574,102 @@ select:focus-visible {
   color: var(--danger-ink);
 }
 
+.password-strength {
+  display: grid;
+  gap: 8px;
+}
+
+.password-strength-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.password-strength-title {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.password-strength-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.password-strength-chip-empty {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.password-strength-chip-red {
+  color: #ffb2c0;
+  background: rgba(181, 18, 43, 0.16);
+}
+
+.password-strength-chip-amber {
+  color: #f8d58d;
+  background: rgba(173, 115, 23, 0.16);
+}
+
+.password-strength-chip-green {
+  color: #a7ebbf;
+  background: rgba(37, 131, 82, 0.16);
+}
+
+.password-strength-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.password-strength-segment {
+  min-height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.password-strength-segment-red {
+  background: linear-gradient(90deg, rgba(181, 18, 43, 0.88), rgba(255, 109, 136, 0.82));
+}
+
+.password-strength-segment-amber {
+  background: linear-gradient(90deg, rgba(173, 115, 23, 0.92), rgba(244, 188, 92, 0.84));
+}
+
+.password-strength-segment-green {
+  background: linear-gradient(90deg, rgba(37, 131, 82, 0.92), rgba(125, 226, 168, 0.88));
+}
+
+.password-strength-message {
+  margin: 0;
+  font-size: 13px;
+}
+
+.password-strength-message-empty {
+  color: var(--text-secondary);
+}
+
+.password-strength-message-red {
+  color: var(--danger-ink);
+}
+
+.password-strength-message-amber {
+  color: #d7b777;
+}
+
+.password-strength-message-green {
+  color: var(--success-ink);
+}
+
 .inline-cta {
   margin-top: 0;
 }
@@ -4646,6 +4742,33 @@ html[data-theme="light"] .error-banner,
 html[data-theme="light"] .issue-badge-error {
   border-color: rgba(163, 21, 45, 0.16);
   color: var(--danger-ink);
+}
+
+html[data-theme="light"] .password-strength-chip {
+  border-color: rgba(88, 62, 58, 0.12);
+}
+
+html[data-theme="light"] .password-strength-chip-empty {
+  background: rgba(88, 62, 58, 0.05);
+}
+
+html[data-theme="light"] .password-strength-chip-red {
+  color: #8d1630;
+  background: rgba(163, 21, 45, 0.1);
+}
+
+html[data-theme="light"] .password-strength-chip-amber {
+  color: #8b5d11;
+  background: rgba(173, 115, 23, 0.12);
+}
+
+html[data-theme="light"] .password-strength-chip-green {
+  color: #206749;
+  background: rgba(37, 131, 82, 0.12);
+}
+
+html[data-theme="light"] .password-strength-segment {
+  background: rgba(88, 62, 58, 0.08);
 }
 
 html[data-theme="light"] .support-panel-alert,

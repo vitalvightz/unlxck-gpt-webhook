@@ -8,24 +8,10 @@ from pydantic import BaseModel, Field, field_validator
 UserRole = Literal["athlete", "admin"]
 GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
 AppearanceMode = Literal["dark", "light"]
-SexValue = Literal["male", "female"]
-DailyActivityLevel = Literal["low", "mixed", "active_job"]
-WeighInType = Literal["same_day", "day_before", "informal"]
-PhaseOverride = Literal["GPP", "SPP", "TAPER"]
-FatigueLevel = Literal["low", "moderate", "high"]
-WeightSource = Literal["manual", "latest_bodyweight_log", "imported"]
-TrainingRestrictionLevel = Literal["none", "minor", "moderate", "major"]
-SleepQuality = Literal["good", "mixed", "poor"]
-AppetiteStatus = Literal["normal", "low", "high"]
-FoundationStatus = Literal["incomplete", "sufficient", "complete"]
-NutritionWorkspaceSource = Literal["default", "draft", "intake"]
-FightWeekOverrideBand = Literal["none", "final_day_protocol", "micro_taper_protocol", "mini_taper_protocol"]
-SessionDayType = Literal["hard_spar", "technical", "strength", "conditioning", "recovery", "off"]
 
 
 GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
 _RECORD_PATTERN = re.compile(r"^\d+-\d+(?:-\d+)?$")
-_ROUNDS_FORMAT_PATTERN = re.compile(r"^(\d+)\s*[xX]\s*(\d+)$")
 # Keep this alias map aligned with web/lib/intake-options.ts so the API accepts
 # legacy mild/severe inputs while normalizing to the frontend low/moderate/high vocabulary.
 _GUIDED_INJURY_SEVERITY_ALIASES = {
@@ -57,19 +43,8 @@ def _validate_record(value: str) -> str:
     return normalized
 
 
-def _validate_rounds_format(value: str) -> str:
-    normalized = str(value or "").strip()
-    if not normalized:
-        return ""
-    match = _ROUNDS_FORMAT_PATTERN.fullmatch(normalized)
-    if not match:
-        raise ValueError("rounds_format must use numeric rounds x minutes format like 3 x 3")
-    return f"{int(match[1])} x {int(match[2])}"
-
-
 class AthleteProfileInput(BaseModel):
     full_name: str
-    sex: SexValue | None = None
     age: int | None = None
     weight_kg: float | None = None
     target_weight_kg: float | None = None
@@ -122,328 +97,6 @@ class GuidedInjuryInput(BaseModel):
         return mapped
 
 
-class NutritionProfileInput(BaseModel):
-    sex: SexValue | None = None
-    age: int | None = None
-    height_cm: int | None = None
-    daily_activity_level: DailyActivityLevel | None = None
-    dietary_restrictions: list[str] = Field(default_factory=list)
-    food_preferences: list[str] = Field(default_factory=list)
-    meals_per_day_preference: int | None = None
-    foods_avoided_pre_session: list[str] = Field(default_factory=list)
-    foods_avoided_fight_week: list[str] = Field(default_factory=list)
-    supplement_use: list[str] = Field(default_factory=list)
-    caffeine_use: bool | None = None
-
-    @field_validator(
-        "dietary_restrictions",
-        "food_preferences",
-        "foods_avoided_pre_session",
-        "foods_avoided_fight_week",
-        "supplement_use",
-        mode="before",
-    )
-    @classmethod
-    def clean_list_fields(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        if isinstance(value, str):
-            return _clean_list([part.strip() for part in value.split(",")])
-        if isinstance(value, list):
-            return _clean_list(value)
-        return _clean_list([value])
-
-    @field_validator("height_cm", mode="before")
-    @classmethod
-    def coerce_height_cm_value(cls, value: Any) -> Any:
-        return AthleteProfileInput.coerce_height_cm(value)
-
-    @field_validator("age", "meals_per_day_preference", mode="before")
-    @classmethod
-    def coerce_int_fields(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                return int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("value must be numeric") from None
-        if isinstance(value, (int, float)):
-            return int(round(float(value)))
-        return value
-
-
-class NutritionBodyweightLogEntry(BaseModel):
-    date: str
-    weight_kg: float
-    time: str | None = None
-    is_fasted: bool | None = None
-    notes: str | None = None
-
-    @field_validator("date")
-    @classmethod
-    def validate_date(cls, value: str) -> str:
-        normalized = str(value or "").strip()
-        if not normalized:
-            raise ValueError("date is required")
-        return normalized
-
-    @field_validator("weight_kg", mode="before")
-    @classmethod
-    def coerce_weight(cls, value: Any) -> Any:
-        if value is None:
-            raise ValueError("weight_kg is required")
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                raise ValueError("weight_kg is required")
-            try:
-                return float(normalized)
-            except ValueError:
-                raise ValueError("weight_kg must be numeric") from None
-        return value
-
-
-class NutritionReadinessInput(BaseModel):
-    sleep_quality: SleepQuality | None = None
-    appetite_status: AppetiteStatus | None = None
-
-
-class NutritionMonitoringInput(BaseModel):
-    daily_bodyweight_log: list[NutritionBodyweightLogEntry] = Field(default_factory=list)
-
-
-class NutritionCoachControlsInput(BaseModel):
-    coach_override_enabled: bool = False
-    athlete_override_enabled: bool = False
-    do_not_reduce_below_calories: int | None = None
-    protein_floor_g_per_kg: float | None = None
-    fight_week_manual_mode: bool = False
-    water_cut_locked_to_manual: bool = False
-
-    @field_validator("do_not_reduce_below_calories", mode="before")
-    @classmethod
-    def coerce_optional_int(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                return int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("value must be numeric") from None
-        if isinstance(value, (int, float)):
-            return int(round(float(value)))
-        return value
-
-    @field_validator("protein_floor_g_per_kg", mode="before")
-    @classmethod
-    def coerce_optional_float(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                return float(normalized)
-            except ValueError:
-                raise ValueError("value must be numeric") from None
-        return value
-
-
-class NutritionSandCPreferences(BaseModel):
-    equipment_access: list[str] = Field(default_factory=list)
-    key_goals: list[str] = Field(default_factory=list)
-    weak_areas: list[str] = Field(default_factory=list)
-    training_preference: str = ""
-    mindset_challenges: str = ""
-    notes: str = ""
-    random_seed: int | None = None
-
-    @field_validator("equipment_access", "key_goals", "weak_areas", mode="before")
-    @classmethod
-    def clean_array_fields(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        if isinstance(value, str):
-            return _clean_list([part.strip() for part in value.split(",")])
-        if isinstance(value, list):
-            return _clean_list(value)
-        return _clean_list([value])
-
-
-class NutritionSharedCampContext(BaseModel):
-    fight_date: str = ""
-    rounds_format: str = ""
-    weigh_in_type: WeighInType | None = None
-    weigh_in_time: str | None = None
-    current_weight_kg: float | None = None
-    current_weight_recorded_at: str | None = None
-    current_weight_source: WeightSource | None = None
-    target_weight_kg: float | None = None
-    target_weight_range_kg: list[float] | None = None
-    phase_override: PhaseOverride | None = None
-    fatigue_level: FatigueLevel | None = None
-    weekly_training_frequency: int | None = None
-    training_availability: list[str] = Field(default_factory=list)
-    hard_sparring_days: list[str] = Field(default_factory=list)
-    technical_skill_days: list[str] = Field(default_factory=list)
-    session_types_by_day: dict[str, SessionDayType] = Field(default_factory=dict)
-    injuries: str = ""
-    guided_injury: GuidedInjuryInput | None = None
-    training_restriction_level: TrainingRestrictionLevel | None = None
-
-    @field_validator(
-        "training_availability",
-        "hard_sparring_days",
-        "technical_skill_days",
-        mode="before",
-    )
-    @classmethod
-    def clean_day_arrays(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        if isinstance(value, str):
-            return _clean_list([part.strip() for part in value.split(",")])
-        if isinstance(value, list):
-            return _clean_list(value)
-        return _clean_list([value])
-
-    @field_validator("rounds_format")
-    @classmethod
-    def validate_rounds_format(cls, value: str) -> str:
-        return _validate_rounds_format(value)
-
-    @field_validator("target_weight_range_kg", mode="before")
-    @classmethod
-    def validate_target_weight_range(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            stripped = value.strip()
-            if not stripped:
-                return None
-            parts = [part.strip() for part in stripped.split(",") if part.strip()]
-        elif isinstance(value, list):
-            parts = value
-        else:
-            raise ValueError("target_weight_range_kg must be a two-value array")
-
-        if len(parts) != 2:
-            raise ValueError("target_weight_range_kg must contain [lower, upper]")
-
-        try:
-            lower = float(parts[0])
-            upper = float(parts[1])
-        except (TypeError, ValueError):
-            raise ValueError("target_weight_range_kg values must be numeric") from None
-        if lower <= 0 or upper <= 0:
-            raise ValueError("target_weight_range_kg values must be positive")
-        if lower > upper:
-            raise ValueError("target_weight_range_kg lower bound must be <= upper bound")
-        return [lower, upper]
-
-    @field_validator("current_weight_kg", "target_weight_kg", mode="before")
-    @classmethod
-    def coerce_optional_weight(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                return float(normalized)
-            except ValueError:
-                raise ValueError("weight value must be numeric") from None
-        return value
-
-    @field_validator("weekly_training_frequency", mode="before")
-    @classmethod
-    def coerce_frequency(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                value = int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("weekly_training_frequency must be numeric") from None
-        if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), 6))
-        return value
-
-    @field_validator("session_types_by_day", mode="before")
-    @classmethod
-    def clean_session_types_by_day(cls, value: Any) -> dict[str, SessionDayType]:
-        if value is None:
-            return {}
-        if not isinstance(value, dict):
-            raise ValueError("session_types_by_day must be an object")
-        cleaned: dict[str, SessionDayType] = {}
-        for key, entry in value.items():
-            day = str(key or "").strip().lower()
-            normalized_entry = str(entry or "").strip().lower()
-            if day and normalized_entry:
-                cleaned[day] = normalized_entry  # type: ignore[assignment]
-        return cleaned
-
-
-class NutritionDerivedState(BaseModel):
-    days_until_fight: int | None = None
-    weight_cut_pct: float = 0.0
-    weight_cut_risk: bool = False
-    aggressive_weight_cut: bool = False
-    high_pressure_weight_cut: bool = False
-    short_notice: bool = False
-    fight_week: bool = False
-    readiness_flags: list[str] = Field(default_factory=list)
-    fight_week_override_band: FightWeekOverrideBand = "none"
-    current_phase_effective: str | None = None
-    rolling_7_day_average_weight: float | None = None
-    foundation_status: FoundationStatus = "incomplete"
-    missing_required_fields: list[str] = Field(default_factory=list)
-
-
-class NutritionWorkspaceState(BaseModel):
-    athlete_id: str
-    source: NutritionWorkspaceSource = "default"
-    intake_id: str | None = None
-    nutrition_profile: NutritionProfileInput = Field(default_factory=NutritionProfileInput)
-    shared_camp_context: NutritionSharedCampContext = Field(default_factory=NutritionSharedCampContext)
-    s_and_c_preferences: NutritionSandCPreferences = Field(default_factory=NutritionSandCPreferences)
-    nutrition_readiness: NutritionReadinessInput = Field(default_factory=NutritionReadinessInput)
-    nutrition_monitoring: NutritionMonitoringInput = Field(default_factory=NutritionMonitoringInput)
-    nutrition_coach_controls: NutritionCoachControlsInput = Field(default_factory=NutritionCoachControlsInput)
-    derived: NutritionDerivedState = Field(default_factory=NutritionDerivedState)
-
-
-class NutritionWorkspaceUpdateRequest(BaseModel):
-    nutrition_profile: NutritionProfileInput = Field(default_factory=NutritionProfileInput)
-    shared_camp_context: NutritionSharedCampContext = Field(default_factory=NutritionSharedCampContext)
-    s_and_c_preferences: NutritionSandCPreferences = Field(default_factory=NutritionSandCPreferences)
-    nutrition_readiness: NutritionReadinessInput = Field(default_factory=NutritionReadinessInput)
-    nutrition_monitoring: NutritionMonitoringInput = Field(default_factory=NutritionMonitoringInput)
-    nutrition_coach_controls: NutritionCoachControlsInput = Field(default_factory=NutritionCoachControlsInput)
-
-    @field_validator("shared_camp_context")
-    @classmethod
-    def validate_weight_context(cls, value: NutritionSharedCampContext) -> NutritionSharedCampContext:
-        if value.current_weight_kg is not None and value.current_weight_source is None:
-            raise ValueError("current_weight_source is required when current_weight_kg is set")
-        if value.current_weight_source == "manual" and not str(value.current_weight_recorded_at or "").strip():
-            raise ValueError("current_weight_recorded_at is required when current_weight_source is manual")
-        return value
-
-
 class PlanRequest(BaseModel):
     athlete: AthleteProfileInput
     fight_date: str
@@ -463,33 +116,10 @@ class PlanRequest(BaseModel):
     notes: str = ""
     random_seed: int | None = None
 
-    @field_validator("weekly_training_frequency", mode="before")
-    @classmethod
-    def validate_weekly_training_frequency(cls, value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, str):
-            normalized = value.strip()
-            if not normalized:
-                return None
-            try:
-                value = int(round(float(normalized)))
-            except ValueError:
-                raise ValueError("weekly_training_frequency must be numeric") from None
-        if isinstance(value, (int, float)):
-            return max(1, min(int(round(float(value))), 6))
-        return value
-
-    @field_validator("rounds_format")
-    @classmethod
-    def validate_rounds_format(cls, value: str) -> str:
-        return _validate_rounds_format(value)
-
     def to_payload(self) -> dict[str, Any]:
         athlete = self.athlete
         fields = [
             _field("Full name", athlete.full_name),
-            _field("Sex", athlete.sex),
             _field("Age", athlete.age),
             _field("Weight (kg)", athlete.weight_kg),
             _field("Target Weight (kg)", athlete.target_weight_kg),
@@ -541,7 +171,6 @@ class ProfileUpdateRequest(BaseModel):
     appearance_mode: AppearanceMode | None = None
     onboarding_draft: dict[str, Any] | None = None
     avatar_url: str | None = None
-    nutrition_profile: NutritionProfileInput | None = None
 
     @field_validator("record")
     @classmethod
@@ -590,7 +219,6 @@ class ProfileRecord(BaseModel):
     appearance_mode: AppearanceMode = "dark"
     onboarding_draft: dict[str, Any] | None = None
     avatar_url: str | None = None
-    nutrition_profile: NutritionProfileInput = Field(default_factory=NutritionProfileInput)
     created_at: str
     updated_at: str
 
@@ -682,7 +310,6 @@ class AdminAthleteRecord(BaseModel):
     appearance_mode: AppearanceMode = "dark"
     onboarding_draft: dict[str, Any] | None = None
     latest_intake: dict[str, Any] | None = None
-    nutrition_profile: NutritionProfileInput = Field(default_factory=NutritionProfileInput)
     created_at: str
     updated_at: str
     plan_count: int = 0

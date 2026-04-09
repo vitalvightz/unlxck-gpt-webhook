@@ -17,6 +17,7 @@ import {
   updateAdminAthleteNutritionCurrent,
 } from "@/lib/api";
 import { useGenerationController } from "@/lib/generation-controller";
+import { validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import type { AdminAthleteRecord, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
 
 function humanizeEnumValue(value: string | null | undefined, fallback: string): string {
@@ -49,6 +50,21 @@ export default function AdminAthletePage() {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isSavingControls, setIsSavingControls] = useState(false);
+  const latestIntakeFocusValidation = athlete?.latest_intake
+    ? validatePerformanceFocusSelections(
+      athlete.latest_intake.fight_date,
+      {
+        keyGoals: athlete.latest_intake.key_goals ?? [],
+        weakAreas: athlete.latest_intake.weak_areas ?? [],
+      },
+      {
+        timeZone: athlete.latest_intake.athlete.athlete_timezone,
+      },
+    )
+    : null;
+  const latestIntakeFocusError = latestIntakeFocusValidation?.isOverCap
+    ? `Latest saved intake is over the focus cap. ${latestIntakeFocusValidation.errorMessage}`
+    : null;
 
   const controller = useGenerationController({
     token: session?.access_token ?? null,
@@ -97,6 +113,10 @@ export default function AdminAthletePage() {
 
   async function handleGenerateNewPlan() {
     if (!athlete?.latest_intake || !athleteId || controller.isGenerating) {
+      return;
+    }
+    if (latestIntakeFocusError) {
+      setError(latestIntakeFocusError);
       return;
     }
     setError(null);
@@ -155,12 +175,13 @@ export default function AdminAthletePage() {
               type="button"
               className="cta"
               onClick={handleGenerateNewPlan}
-              disabled={!athlete.latest_intake || controller.isGenerating}
+              disabled={!athlete.latest_intake || controller.isGenerating || Boolean(latestIntakeFocusError)}
             >
               {controller.isGenerating ? "Generating..." : "Generate new plan"}
             </button>
           </div>
           {controller.statusMessage ? <p className="muted">{controller.statusMessage}</p> : null}
+          {latestIntakeFocusError ? <p className="error-text">{latestIntakeFocusError}</p> : null}
           {!athlete.latest_intake ? (
             <p className="muted">Generate is available after this athlete has at least one saved intake.</p>
           ) : null}

@@ -6,8 +6,6 @@ import re
 from collections import defaultdict
 from .training_context import (
     normalize_equipment_list,
-    normalize_training_days,
-    resolve_training_frequency,
     allocate_sessions,
     calculate_exercise_numbers,
 )
@@ -569,10 +567,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     else:
         style_list = []
     goals = flags.get("key_goals", [])
-    training_days = normalize_training_days(flags.get("training_days", []))
-    training_frequency = resolve_training_frequency(
-        flags.get("training_frequency", flags.get("days_available")),
-        training_days,
+    training_days = flags.get("training_days", [])
+    training_frequency = flags.get(
+        "training_frequency", flags.get("days_available", len(training_days))
     )
     num_strength_sessions = allocate_sessions(training_frequency, phase).get("strength", 2)
     exercise_counts = calculate_exercise_numbers(training_frequency, phase)
@@ -760,6 +757,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             near_equal_score_band=NEAR_EQUAL_SCORE_BAND,
         )
     ]
+    days_count = len(training_days) if isinstance(training_days, list) else training_days
+    if not isinstance(days_count, int):
+        days_count = 3
     # Target exercise count determined by phase multipliers
 
     if len(weighted_exercises) < target_exercises:

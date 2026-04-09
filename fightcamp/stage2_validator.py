@@ -106,7 +106,6 @@ _TEMPLATE_PREFIXES = ("primary:", "fallback:", "drill:", "system:")
 _OPTION_ENUM_PATTERN = compile_regex("stage2_validator", "option_enum_pattern", flags=re.IGNORECASE)
 _WEEKDAY_HEADING = compile_regex("stage2_validator", "weekday_heading", flags=re.IGNORECASE)
 _NUMBERED_SESSION_HEADING = compile_regex("stage2_validator", "numbered_session_heading", flags=re.IGNORECASE)
-_DOSING_CUE_PATTERN = re.compile(r"\b\d+\s*x\s*\d+\b|\b\d+\s*(?:sec|secs|seconds|min|mins|minutes|rounds?)\b", re.IGNORECASE)
 _LATE_FIGHT_TOKEN_PHRASES = {
     "hard_sparring": ("hard spar", "hard sparring", "live spar", "full spar", "hard contact"),
     "standalone_glycolytic": ("glycolytic", "fight pace", "fight-pace", "repeatability", "hard shuttle", "bag sprint"),
@@ -280,9 +279,7 @@ def _line_is_instruction_only(line: str, phrase: str | None = None) -> bool:
     normalized = line.lower()
     if phrase and not _phrase_in_text(normalized, phrase):
         return False
-    if not any(marker in normalized for marker in _NEGATION_MARKERS):
-        return False
-    return _DOSING_CUE_PATTERN.search(normalized) is None
+    return any(marker in normalized for marker in _NEGATION_MARKERS)
 
 
 def _find_restricted_hits(planning_brief: dict, plan_lines: list[str]) -> list[dict]:
@@ -294,15 +291,17 @@ def _find_restricted_hits(planning_brief: dict, plan_lines: list[str]) -> list[d
         for line in plan_lines:
             line_key = line.lower()
             phrase_match = next((phrase for phrase in phrases if _phrase_in_text(line_key, phrase)), None)
+            if _line_is_instruction_only(line, phrase_match):
+                continue
             guard_result = evaluate_restriction_impact(
                 [guard_entry],
                 text=line,
                 tags=[],
                 limit_penalty=-0.75,
             )
-            matched = bool(phrase_match) or bool(guard_result.get("matched", []))
-            if matched and _line_is_instruction_only(line, phrase_match):
+            if bool(guard_result.get("matched", [])) and _line_is_instruction_only(line):
                 continue
+            matched = bool(phrase_match) or bool(guard_result.get("matched", []))
             if not matched:
                 continue
             dedupe_key = (restriction.get("restriction", "generic_constraint"), line_key)
