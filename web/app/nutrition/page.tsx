@@ -25,10 +25,24 @@ const WEIGH_IN_OPTIONS = [
   { value: "day_before", label: "Day before" },
   { value: "informal", label: "Informal / none" },
 ];
-const PHASE_OPTIONS = ["", "GPP", "SPP", "TAPER"];
-const FATIGUE_OPTIONS = ["", "low", "moderate", "high"];
-const SLEEP_OPTIONS = ["", "good", "mixed", "poor"];
-const WEIGHT_SOURCE_OPTIONS = ["", "manual", "latest_bodyweight_log", "imported"];
+const FATIGUE_OPTIONS = [
+  { value: "", label: "Select" },
+  { value: "low", label: "Low" },
+  { value: "moderate", label: "Moderate" },
+  { value: "high", label: "High" },
+];
+const SLEEP_OPTIONS = [
+  { value: "", label: "Select" },
+  { value: "good", label: "Good" },
+  { value: "mixed", label: "Mixed" },
+  { value: "poor", label: "Poor" },
+];
+const WEIGHT_SOURCE_OPTIONS = [
+  { value: "", label: "Select" },
+  { value: "manual", label: "Manual entry" },
+  { value: "latest_bodyweight_log", label: "Latest bodyweight log" },
+  { value: "imported", label: "Imported data" },
+];
 const DAY_TYPE_OPTIONS: Array<{ value: SessionDayType; label: string }> = [
   { value: "hard_spar", label: "Hard spar" },
   { value: "technical", label: "Technical" },
@@ -63,6 +77,16 @@ function localDateTimeValue(): string {
   const now = new Date();
   const adjusted = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
   return adjusted.toISOString().slice(0, 16);
+}
+
+function humanizeEnumValue(value: string | null | undefined, fallback: string): string {
+  if (!value?.trim()) {
+    return fallback;
+  }
+  return value
+    .trim()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function formatNumber(value: number | null | undefined, unit?: string): string {
@@ -166,7 +190,6 @@ function StatusRows({ workspace }: { workspace: NutritionWorkspaceState }) {
         ["Days until fight", derived.days_until_fight != null ? String(derived.days_until_fight) : "Not set"],
         ["Current phase", derived.current_phase_effective || "Not derived yet"],
         ["Cut size", `${derived.weight_cut_pct.toFixed(1)}%`],
-        ["Fight week override", derived.fight_week_override_band.replaceAll("_", " ")],
       ].map(([label, value]) => (
         <div key={label} className="review-detail-row">
           <p className="review-detail-label">{label}</p>
@@ -337,7 +360,7 @@ export default function NutritionPage() {
                 </div>
                 <StatusRows workspace={workspace} />
                 <p className="muted">
-                  Foundation status: <strong>{workspace.derived.foundation_status}</strong>
+                  Foundation status: <strong>{humanizeEnumValue(workspace.derived.foundation_status, "Unknown")}</strong>
                   {workspace.derived.missing_required_fields.length
                     ? ` - Missing: ${workspace.derived.missing_required_fields.join(", ")}`
                     : ""}
@@ -414,8 +437,8 @@ export default function NutritionPage() {
                       value={form.shared_camp_context.current_weight_source ?? ""}
                       onChange={(event) => handleWeightSourceChange(event.target.value)}
                     >
-                      {WEIGHT_SOURCE_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                      {WEIGHT_SOURCE_OPTIONS.map((option) => (
+                        <option key={option.value || "empty"} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                     <p className="muted">Use this to describe where the onboarding current-weight number came from.</p>
@@ -434,17 +457,6 @@ export default function NutritionPage() {
                       value={form.shared_camp_context.rounds_format ?? ""}
                       onChange={(event) => setSharedField("rounds_format", event.target.value)}
                     />
-                  </div>
-                  <div className="field">
-                    <label>Phase override</label>
-                    <select
-                      value={form.shared_camp_context.phase_override ?? ""}
-                      onChange={(event) => setSharedField("phase_override", event.target.value || null)}
-                    >
-                      {PHASE_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Auto"}</option>
-                      ))}
-                    </select>
                   </div>
                 </div>
               </article>
@@ -471,8 +483,8 @@ export default function NutritionPage() {
                       value={form.shared_camp_context.fatigue_level ?? ""}
                       onChange={(event) => setSharedField("fatigue_level", event.target.value || null)}
                     >
-                      {FATIGUE_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                      {FATIGUE_OPTIONS.map((option) => (
+                        <option key={option.value || "empty"} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </div>
@@ -482,8 +494,8 @@ export default function NutritionPage() {
                       value={form.nutrition_readiness.sleep_quality ?? ""}
                       onChange={(event) => setSleepQuality(event.target.value || null)}
                     >
-                      {SLEEP_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                      {SLEEP_OPTIONS.map((option) => (
+                        <option key={option.value || "empty"} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </div>
@@ -693,7 +705,11 @@ export default function NutritionPage() {
             <aside className="nutrition-side-column">
               <article className="support-panel">
                 <p className="kicker">Flags</p>
-                <p className="muted">{workspace.derived.readiness_flags.length ? workspace.derived.readiness_flags.join(", ") : "No active readiness flags."}</p>
+                <p className="muted">
+                  {workspace.derived.readiness_flags.length
+                    ? workspace.derived.readiness_flags.map((flag) => humanizeEnumValue(flag, flag)).join(", ")
+                    : "No active readiness flags."}
+                </p>
               </article>
               <article className="support-panel">
                 <p className="kicker">Shared info</p>
