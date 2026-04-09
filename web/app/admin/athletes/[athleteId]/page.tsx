@@ -19,6 +19,16 @@ import {
 import { useGenerationController } from "@/lib/generation-controller";
 import type { AdminAthleteRecord, NutritionWorkspaceState, NutritionWorkspaceUpdateRequest } from "@/lib/types";
 
+function humanizeEnumValue(value: string | null | undefined, fallback: string): string {
+  if (!value?.trim()) {
+    return fallback;
+  }
+  return value
+    .trim()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
 function toNutritionUpdateRequest(workspace: NutritionWorkspaceState): NutritionWorkspaceUpdateRequest {
   return {
     nutrition_profile: workspace.nutrition_profile,
@@ -166,12 +176,16 @@ export default function AdminAthletePage() {
                 </div>
                 <div className="review-detail-list nutrition-review-list">
                   {[
-                    ["Foundation", nutrition.derived.foundation_status],
+                    ["Foundation", humanizeEnumValue(nutrition.derived.foundation_status, "Unknown")],
                     ["Days until fight", nutrition.derived.days_until_fight != null ? String(nutrition.derived.days_until_fight) : "Not set"],
                     ["Current phase", nutrition.derived.current_phase_effective || "Not derived yet"],
                     ["Weight cut", `${nutrition.derived.weight_cut_pct.toFixed(1)}%`],
-                    ["Fight-week override", nutrition.derived.fight_week_override_band.replaceAll("_", " ")],
-                    ["Readiness flags", nutrition.derived.readiness_flags.join(", ") || "baseline"],
+                    [
+                      "Readiness flags",
+                      nutrition.derived.readiness_flags.length
+                        ? nutrition.derived.readiness_flags.map((flag) => humanizeEnumValue(flag, flag)).join(", ")
+                        : "Baseline",
+                    ],
                   ].map(([label, value]) => (
                     <div key={label} className="review-detail-row">
                       <p className="review-detail-label">{label}</p>
