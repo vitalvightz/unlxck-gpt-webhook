@@ -69,15 +69,6 @@ class AppStore(Protocol):
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
-    def update_intake(
-        self,
-        intake_id: str,
-        *,
-        intake: dict[str, Any],
-        fight_date: str | None,
-        technical_style: list[str],
-    ) -> dict[str, Any]: ...
-
     def create_plan(
         self,
         *,
@@ -320,7 +311,6 @@ class SupabaseAppStore:
             "appearance_mode": existing.get("appearance_mode") or "dark",
             "onboarding_draft": existing.get("onboarding_draft"),
             "avatar_url": existing.get("avatar_url"),
-            "nutrition_profile": existing.get("nutrition_profile") or {},
         }
 
     def _upsert_profile_with_retry(
@@ -485,37 +475,6 @@ class SupabaseAppStore:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="create_intake failed",
             ) from exc
-
-    def update_intake(
-        self,
-        intake_id: str,
-        *,
-        intake: dict[str, Any],
-        fight_date: str | None,
-        technical_style: list[str],
-    ) -> dict[str, Any]:
-        payload = {
-            "intake": intake,
-            "fight_date": fight_date,
-            "technical_style": technical_style,
-            "updated_at": _utc_now_iso(),
-        }
-        try:
-            logger.info("[store] update_intake:start intake_id=%s", intake_id)
-            self.client.table("athlete_intakes").update(payload).eq("id", intake_id).execute()
-            updated = self._select_first(self.client.table("athlete_intakes").select("*").eq("id", intake_id))
-            if not updated:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
-            logger.info("[store] update_intake:success intake_id=%s", intake_id)
-            return updated
-        except HTTPException:
-            raise
-        except _STORE_CLIENT_ERRORS as exc:
-            self._raise_operation_http_error(
-                operation=f"update_intake intake_id={intake_id}",
-                detail="failed to update intake",
-                exc=exc,
-            )
 
     def create_plan(
         self,
@@ -967,29 +926,9 @@ class SupabaseAppStore:
         return getattr(response, "data", None) or []
 
     def get_admin_athlete(self, athlete_id: str) -> dict[str, Any] | None:
-        try:
-            return self._run_with_transient_retry(
-                operation="get_admin_athlete:select",
-                fn=lambda: self._select_first(
-                    self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
-                ),
-            )
-        except _STORE_CLIENT_ERRORS as exc:
-            if self._is_transient_store_error(exc):
-                logger.warning(
-                    "[store] get_admin_athlete:transient_failure athlete_id=%s error_type=%s",
-                    athlete_id,
-                    type(exc).__name__,
-                )
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="admin athlete service temporarily unavailable",
-                ) from exc
-            logger.exception("[store] get_admin_athlete:exception athlete_id=%s", athlete_id)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="failed to load admin athlete",
-            ) from exc
+        return self._select_first(
+            self.client.table("admin_athlete_rollups").select("*").eq("id", athlete_id)
+        )
 
     def clear_onboarding_draft(self, athlete_id: str) -> None:
         try:

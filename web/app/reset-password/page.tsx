@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 export default function ResetPasswordPage() {
@@ -13,6 +15,8 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isReady, setIsReady] = useState(false);
+  const passwordStrength = evaluatePasswordStrength(password);
+  const passwordsMatch = password === confirmPassword;
 
   useEffect(() => {
     // Supabase detects the recovery token from the URL hash and fires an
@@ -48,7 +52,12 @@ export default function ResetPasswordPage() {
     setMessage(null);
     setError(null);
 
-    if (password !== confirmPassword) {
+    if (!passwordStrength.isAcceptable) {
+      setError(passwordStrength.feedback);
+      return;
+    }
+
+    if (!passwordsMatch) {
       setError("Passwords do not match.");
       return;
     }
@@ -69,7 +78,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      setMessage("Password updated successfully. Redirecting to your account…");
+      setMessage("Password updated successfully. Redirecting to your account...");
       setTimeout(() => router.push("/plans"), 2000);
     });
   }
@@ -86,7 +95,7 @@ export default function ResetPasswordPage() {
           <p className="kicker">Tips</p>
           <ul className="auth-flow">
             <li>Use at least 8 characters.</li>
-            <li>Mix letters, numbers, and symbols.</li>
+            <li>Longer uncommon phrases are stronger than predictable patterns.</li>
             <li>Avoid reusing a previous password.</li>
           </ul>
         </div>
@@ -105,7 +114,7 @@ export default function ResetPasswordPage() {
         {error ? <div className="error-banner">{error}</div> : null}
 
         {!isReady && !message && !error ? (
-          <p className="muted">Verifying your reset link…</p>
+          <p className="muted">Verifying your reset link...</p>
         ) : null}
 
         <form onSubmit={handleSubmit} className="auth-form-grid">
@@ -113,30 +122,40 @@ export default function ResetPasswordPage() {
             <label htmlFor="password">New password</label>
             <input
               id="password"
+              name="newPassword"
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required
               minLength={8}
               disabled={!isReady}
             />
+            <PasswordStrengthMeter strength={passwordStrength} />
           </div>
           <div className="field">
             <label htmlFor="confirmPassword">Confirm new password</label>
             <input
               id="confirmPassword"
+              name="confirmPassword"
               type="password"
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               required
               minLength={8}
               disabled={!isReady}
             />
+            {confirmPassword && !passwordsMatch ? <p className="error-text">Passwords do not match.</p> : null}
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="cta" disabled={isPending || !isReady}>
-              {isPending ? "Updating…" : "Update password"}
+            <button
+              type="submit"
+              className="cta"
+              disabled={isPending || !isReady || !passwordStrength.isAcceptable || !passwordsMatch}
+            >
+              {isPending ? "Updating..." : "Update password"}
             </button>
           </div>
         </form>

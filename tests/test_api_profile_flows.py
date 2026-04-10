@@ -111,6 +111,50 @@ def test_admin_generate_from_latest_intake_requires_existing_intake():
     assert response.json()["detail"] == "latest intake not found for athlete"
 
 
+def test_self_serve_generation_rejects_focus_picks_above_cap():
+    client, _, _ = _build_client()
+    request = _build_request(
+        {
+            "fight_date": "2099-08-20",
+            "key_goals": ["power", "conditioning", "fight_sharpness", "volume"],
+            "weak_areas": ["defense", "gas_tank", "timing", "footwork"],
+        }
+    )
+
+    response = client.post(
+        "/api/plans/generate",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=request.model_dump(mode="json"),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "This camp allows 7 total focus picks. Remove 1 goal or weak-area selection before generating."
+
+
+def test_admin_generation_from_latest_intake_rejects_focus_picks_above_cap():
+    client, store, _ = _build_client()
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert me_response.status_code == 200
+    store.create_intake(
+        "athlete-1",
+        _build_request(
+            {
+                "fight_date": "2099-08-20",
+                "key_goals": ["power", "conditioning", "fight_sharpness", "volume"],
+                "weak_areas": ["defense", "gas_tank", "timing", "footwork"],
+            }
+        ),
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "This camp allows 7 total focus picks. Remove 1 goal or weak-area selection before generating."
+
+
 def test_auth_is_required_for_draft_save():
     client, _, _ = _build_client()
 

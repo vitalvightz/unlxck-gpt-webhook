@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
 function inferDemoRole(email: string): "athlete" | "admin" {
@@ -21,6 +23,8 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const passwordStrength = evaluatePasswordStrength(password, { fullName, email });
+  const isSignupPasswordBlocked = mode === "signup" && !passwordStrength.isAcceptable;
 
   useEffect(() => {
     if (!isReady) {
@@ -35,6 +39,11 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     event.preventDefault();
     setMessage(null);
     setError(null);
+
+    if (mode === "signup" && !passwordStrength.isAcceptable) {
+      setError(passwordStrength.feedback);
+      return;
+    }
 
     startTransition(async () => {
       if (demoMode) {
@@ -115,7 +124,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
         {demoMode ? (
           <div className="support-panel">
             <p className="kicker">Demo mode</p>
-            <p className="muted">Use any email and password for athlete access, or <code>@unlxck.test</code> for admin.</p>
+            <p className="muted">Use any email for demo access, or <code>@unlxck.test</code> for admin. Signup still follows the password-strength rule.</p>
           </div>
         ) : null}
       </div>
@@ -136,20 +145,45 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           {mode === "signup" ? (
             <div className="field">
               <label htmlFor="fullName">Full name</label>
-              <input id="fullName" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+              <input
+                id="fullName"
+                name="name"
+                autoComplete="name"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+              />
             </div>
           ) : null}
           <div className="field">
             <label htmlFor="email">Email</label>
-            <input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input id="password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={8} />
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              minLength={8}
+            />
+            {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
           </div>
 
           <div className="form-actions">
-            <button type="submit" className="cta" disabled={isPending}>
+            <button type="submit" className="cta" disabled={isPending || isSignupPasswordBlocked}>
               {isPending ? "Working..." : mode === "signup" ? "Create account" : "Log in"}
             </button>
             <Link href={mode === "signup" ? "/login" : "/signup"} className="ghost-button">

@@ -45,37 +45,6 @@ def normalize_equipment_list(raw):
         if key:
             normalized.append(key)
     return normalized
-
-
-def normalize_training_days(raw):
-    """Return a normalized list of training day labels."""
-    if isinstance(raw, (list, tuple, set)):
-        parts = raw
-    elif isinstance(raw, str):
-        parts = re.split(r"\s*(?:,|/|\+| and )\s*", raw)
-    else:
-        return []
-
-    normalized: list[str] = []
-    for part in parts:
-        label = str(part).strip()
-        if label:
-            normalized.append(label)
-    return normalized
-
-
-def resolve_training_frequency(raw_frequency, training_days, *, default: int = 3) -> int:
-    """Coerce training frequency to a bounded integer, falling back to declared days."""
-    normalized_days = normalize_training_days(training_days)
-    for candidate in (raw_frequency, len(normalized_days)):
-        if isinstance(candidate, bool) or candidate in {None, ""}:
-            continue
-        try:
-            frequency = int(candidate)
-        except (TypeError, ValueError):
-            continue
-        return max(1, min(frequency, 6))
-    return max(1, min(default, 6))
     
 # ✅ Correct constant definition (not a function)
 known_equipment = [

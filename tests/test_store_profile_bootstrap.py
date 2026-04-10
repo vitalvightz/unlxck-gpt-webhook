@@ -207,17 +207,6 @@ def test_get_generation_job_returns_503_when_lookup_is_transiently_unavailable()
     assert exc_info.value.detail == "generation job service temporarily unavailable"
 
 
-def test_get_admin_athlete_returns_503_when_lookup_is_transiently_unavailable():
-    store = _make_store()
-    store._run_with_transient_retry = MagicMock(side_effect=httpx.ReadTimeout("timed out"))
-
-    with pytest.raises(HTTPException) as exc_info:
-        store.get_admin_athlete("athlete-1")
-
-    assert exc_info.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    assert exc_info.value.detail == "admin athlete service temporarily unavailable"
-
-
 def test_transient_store_error_detects_postgrest_gateway_failures():
     store = _make_store()
     error = APIError(

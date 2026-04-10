@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getPerformanceFocusCap } from "./performance-focus-cap.ts";
+import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "./performance-focus-cap.ts";
 
 test("returns null when fight date is missing or invalid", () => {
   assert.equal(getPerformanceFocusCap(""), null);
@@ -83,4 +83,42 @@ test("falls back to the local calendar when the saved time zone is invalid", () 
     })?.maxSelections,
     3,
   );
+});
+
+test("flags over-cap performance selections with a generation-safe message", () => {
+  const result = validatePerformanceFocusSelections(
+    "2026-04-07",
+    {
+      keyGoals: ["power", "conditioning"],
+      weakAreas: ["defense", "gas_tank"],
+    },
+    {
+      now: new Date("2026-04-02T08:00:00Z"),
+      timeZone: "UTC",
+    },
+  );
+
+  assert.equal(result.isOverCap, true);
+  assert.equal(result.excessSelections, 1);
+  assert.equal(
+    result.errorMessage,
+    "This camp allows 3 total focus picks. Remove 1 goal or weak-area selection before generating.",
+  );
+});
+
+test("does not flag selections when the total stays within the current cap", () => {
+  const result = validatePerformanceFocusSelections(
+    "2026-08-20",
+    {
+      keyGoals: ["power", "conditioning", "fight_sharpness", "volume"],
+      weakAreas: ["defense", "gas_tank", "timing"],
+    },
+    {
+      now: new Date("2026-04-02T08:00:00Z"),
+      timeZone: "UTC",
+    },
+  );
+
+  assert.equal(result.isOverCap, false);
+  assert.equal(result.errorMessage, null);
 });

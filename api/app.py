@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import time
 import uuid
 from collections import deque
@@ -35,8 +34,6 @@ from .models import (
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
     MeResponse,
-    NutritionWorkspaceState,
-    NutritionWorkspaceUpdateRequest,
     PlanDetail,
     PlanRenameRequest,
     PlanOutputs,
@@ -44,11 +41,6 @@ from .models import (
     PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
-)
-from .nutrition_workspace import (
-    build_nutrition_workspace,
-    merge_workspace_into_payload,
-    normalize_nutrition_update_request,
 )
 from .stage2_automation import (
     Stage2AutomationError,
@@ -62,7 +54,6 @@ Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
-DEFAULT_MAX_REQUEST_BODY_BYTES = 1_048_576
 
 
 class SlidingWindowRateLimiter:
@@ -162,64 +153,6 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     )
 
 
-def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
-    training_days = set(workspace.shared_camp_context.training_availability)
-    hard_days = set(workspace.shared_camp_context.hard_sparring_days)
-    technical_days = set(workspace.shared_camp_context.technical_skill_days)
-
-    for day, session_type in workspace.shared_camp_context.session_types_by_day.items():
-        if session_type == "hard_spar" and day not in hard_days:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"session_types_by_day.{day} must also be included in hard_sparring_days",
-            )
-        if session_type == "technical" and day not in technical_days:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"session_types_by_day.{day} must also be included in technical_skill_days",
-            )
-        if session_type != "off" and day not in training_days:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"session_types_by_day.{day} must also be included in training_availability",
-            )
-
-
-def _validate_schedule_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
-    shared = workspace.shared_camp_context
-    training_days = list(shared.training_availability)
-    if shared.weekly_training_frequency and len(training_days) and shared.weekly_training_frequency > len(training_days):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="weekly_training_frequency cannot exceed selected training_availability days",
-        )
-
-    invalid_hard_days = [day for day in shared.hard_sparring_days if day not in training_days]
-    if invalid_hard_days:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"hard_sparring_days must be included in training_availability: {', '.join(invalid_hard_days)}",
-        )
-
-    invalid_technical_days = [day for day in shared.technical_skill_days if day not in training_days]
-    if invalid_technical_days:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"technical_skill_days must be included in training_availability: {', '.join(invalid_technical_days)}",
-        )
-
-    overlap = sorted(set(shared.hard_sparring_days).intersection(shared.technical_skill_days))
-    if overlap:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"A day cannot be both hard_sparring and technical_skill: {', '.join(overlap)}",
-        )
-
-
-def _restricted_coach_controls(workspace: NutritionWorkspaceState) -> dict[str, Any]:
-    return workspace.nutrition_coach_controls.model_dump(mode="json")
-
-
 def _cors_origins() -> list[str]:
     value = os.getenv(
         "APP_CORS_ORIGINS",
@@ -248,83 +181,7 @@ def _normalize_origin(origin: str) -> str:
 
 def _cors_origin_regex() -> str | None:
     value = os.getenv("APP_CORS_ORIGIN_REGEX", "").strip()
-    if not value:
-        return None
-    try:
-        re.compile(value)
-    except re.error as exc:
-        raise ValueError(f"APP_CORS_ORIGIN_REGEX is not a valid regular expression: {exc}") from exc
-
-    normalized = value.lstrip("^")
-    if not normalized.startswith(("https://", "http://")):
-        raise ValueError("APP_CORS_ORIGIN_REGEX must begin with http:// or https://")
-    if ".*" in value:
-        raise ValueError(
-            "APP_CORS_ORIGIN_REGEX must avoid broad wildcard tokens like '.*'; use a host-bounded pattern instead"
-        )
-    return value
-
-
-def _max_request_body_bytes() -> int:
-    raw_value = os.getenv("APP_MAX_REQUEST_BODY_BYTES", str(DEFAULT_MAX_REQUEST_BODY_BYTES)).strip()
-    try:
-        return max(1, int(raw_value))
-    except ValueError:
-        logger.warning(
-            "[request-limit] invalid APP_MAX_REQUEST_BODY_BYTES=%r; falling back to %d",
-            raw_value,
-            DEFAULT_MAX_REQUEST_BODY_BYTES,
-        )
-        return DEFAULT_MAX_REQUEST_BODY_BYTES
-
-
-def _enforce_request_body_limit(request: Request, *, max_body_bytes: int) -> None:
-    content_length = request.headers.get("content-length", "").strip()
-    if content_length:
-        with suppress(ValueError):
-            if int(content_length) > max_body_bytes:
-                raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail="Request body too large",
-                )
-
-    original_receive = request._receive
-    received_bytes = 0
-
-    async def limited_receive() -> dict[str, Any]:
-        nonlocal received_bytes
-        message = await original_receive()
-        if message["type"] == "http.request":
-            received_bytes += len(message.get("body", b""))
-            if received_bytes > max_body_bytes:
-                raise HTTPException(
-                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                    detail="Request body too large",
-                )
-        return message
-
-    request._receive = limited_receive
-
-
-def _log_admin_plan_mutation(
-    *,
-    action: str,
-    actor: ProfileRecord,
-    plan_id: str,
-    original_plan: dict[str, Any],
-    updated_plan: dict[str, Any],
-) -> None:
-    logger.info(
-        "[audit] admin_plan_mutation action=%s actor_id=%s actor_email=%s plan_id=%s target_athlete_id=%s previous_status=%s next_status=%s next_stage2_status=%s",
-        action,
-        actor.athlete_id,
-        actor.email,
-        plan_id,
-        str(original_plan.get("athlete_id") or ""),
-        str(original_plan.get("status") or ""),
-        str(updated_plan.get("status") or ""),
-        str(updated_plan.get("stage2_status") or ""),
-    )
+    return value or None
 
 
 def _plan_generate_rate_limit_requests() -> int:
@@ -397,7 +254,6 @@ def _map_profile_row(row: dict[str, Any]) -> ProfileRecord:
         appearance_mode=str(row.get("appearance_mode") or "dark"),
         onboarding_draft=row.get("onboarding_draft"),
         avatar_url=row.get("avatar_url") or None,
-        nutrition_profile=row.get("nutrition_profile") or {},
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
     )
@@ -481,7 +337,6 @@ def _map_admin_athlete(row: dict[str, Any], latest_intake: dict[str, Any] | None
         appearance_mode=str(row.get("appearance_mode") or "dark"),
         onboarding_draft=onboarding_draft if isinstance(onboarding_draft, dict) else None,
         latest_intake=latest_intake.get("intake") if isinstance(latest_intake, dict) else None,
-        nutrition_profile=row.get("nutrition_profile") or {},
         created_at=str(row.get("created_at") or ""),
         updated_at=str(row.get("updated_at") or ""),
         plan_count=int(row.get("plan_count") or 0),
@@ -593,7 +448,6 @@ def create_app(
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
     app.state.active_generation_tasks = set()
-    app.state.max_request_body_bytes = _max_request_body_bytes()
     rate_limit_requests = _plan_generate_rate_limit_requests()
     app.state.plan_generate_rate_limiter = (
         SlidingWindowRateLimiter(
@@ -629,7 +483,6 @@ def create_app(
         )
 
         try:
-            _enforce_request_body_limit(request, max_body_bytes=request.app.state.max_request_body_bytes)
             response = await call_next(request)
             duration_ms = round((time.perf_counter() - started) * 1000, 2)
             response.headers["X-Request-ID"] = request_id
@@ -780,71 +633,6 @@ def create_app(
     ) -> MeResponse:
         updated = _map_profile_row(store.update_profile(profile.athlete_id, update))
         return _build_me_response(updated, store)
-
-    @app.get("/api/nutrition/current", response_model=NutritionWorkspaceState)
-    def get_nutrition_current(
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        latest_intake = store.get_latest_intake(profile.athlete_id)
-        return build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
-
-    @app.put("/api/nutrition/current", response_model=NutritionWorkspaceState)
-    def update_nutrition_current(
-        update: NutritionWorkspaceUpdateRequest,
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        latest_intake = store.get_latest_intake(profile.athlete_id)
-        current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
-        update_payload = update.model_dump(mode="json")
-        update_payload["nutrition_coach_controls"] = _restricted_coach_controls(current_workspace)
-        normalized_update = normalize_nutrition_update_request(
-            update=NutritionWorkspaceUpdateRequest.model_validate(update_payload),
-            existing_shared_camp_context=current_workspace.shared_camp_context,
-        )
-        _validate_schedule_consistency(normalized_update)
-        _validate_session_type_consistency(normalized_update)
-
-        merged_payload = merge_workspace_into_payload(
-            base_payload=(
-                profile.onboarding_draft
-                if current_workspace.source == "draft" and isinstance(profile.onboarding_draft, dict)
-                else latest_intake.get("intake")
-                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
-                else {}
-            ),
-            workspace=normalized_update,
-            profile=profile,
-        )
-
-        if current_workspace.source == "intake" and current_workspace.intake_id:
-            updated_profile = _map_profile_row(
-                store.update_profile(
-                    profile.athlete_id,
-                    ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
-                )
-            )
-            store.update_intake(
-                current_workspace.intake_id,
-                intake=merged_payload,
-                fight_date=normalized_update.shared_camp_context.fight_date or None,
-                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
-            )
-            refreshed_intake = store.get_latest_intake(profile.athlete_id)
-            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
-
-        updated_profile = _map_profile_row(
-            store.update_profile(
-                profile.athlete_id,
-                ProfileUpdateRequest(
-                    nutrition_profile=normalized_update.nutrition_profile,
-                    onboarding_draft=merged_payload,
-                ),
-            )
-        )
-        refreshed_intake = store.get_latest_intake(profile.athlete_id)
-        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
     async def _heartbeat_generation_job(job_id: str, store: AppStore, stop_event: asyncio.Event) -> None:
         while not stop_event.is_set():
@@ -1228,7 +1016,7 @@ def create_app(
     def submit_manual_stage2(
         plan_id: str,
         submission: ManualStage2SubmissionRequest,
-        admin: ProfileRecord = Depends(require_admin),
+        _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
@@ -1239,19 +1027,12 @@ def create_app(
             plan_id,
             _manual_stage2_result(plan_row, submission.final_plan_text),
         )
-        _log_admin_plan_mutation(
-            action="manual-stage2",
-            actor=admin,
-            plan_id=plan_id,
-            original_plan=plan_row,
-            updated_plan=updated,
-        )
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/approve", response_model=PlanDetail)
     def approve_review_required_plan(
         plan_id: str,
-        admin: ProfileRecord = Depends(require_admin),
+        _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
@@ -1262,19 +1043,12 @@ def create_app(
             plan_id,
             _admin_approved_result(plan_row),
         )
-        _log_admin_plan_mutation(
-            action="approve",
-            actor=admin,
-            plan_id=plan_id,
-            original_plan=plan_row,
-            updated_plan=updated,
-        )
         return _map_plan_detail(updated, include_admin=True)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(
         plan_id: str,
-        admin: ProfileRecord = Depends(require_admin),
+        _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
@@ -1284,13 +1058,6 @@ def create_app(
         updated = store.update_plan_stage2(
             plan_id,
             _admin_rejected_result(plan_row),
-        )
-        _log_admin_plan_mutation(
-            action="reject",
-            actor=admin,
-            plan_id=plan_id,
-            original_plan=plan_row,
-            updated_plan=updated,
         )
         return _map_plan_detail(updated, include_admin=True)
 
@@ -1314,80 +1081,6 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
         latest_intake = store.get_latest_intake(athlete_id)
         return _map_admin_athlete(row, latest_intake=latest_intake)
-
-    @app.get("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
-    def get_admin_athlete_nutrition_current(
-        athlete_id: str,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        row = store.get_admin_athlete(athlete_id)
-        if not row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-        latest_intake = store.get_latest_intake(athlete_id)
-        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
-        return build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
-
-    @app.put("/api/admin/athletes/{athlete_id}/nutrition/current", response_model=NutritionWorkspaceState)
-    def update_admin_athlete_nutrition_current(
-        athlete_id: str,
-        update: NutritionWorkspaceUpdateRequest,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> NutritionWorkspaceState:
-        row = store.get_admin_athlete(athlete_id)
-        if not row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="athlete not found")
-
-        latest_intake = store.get_latest_intake(athlete_id)
-        athlete = _map_admin_athlete(row, latest_intake=latest_intake)
-        current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
-        normalized_update = normalize_nutrition_update_request(
-            update=update,
-            existing_shared_camp_context=current_workspace.shared_camp_context,
-        )
-        _validate_schedule_consistency(normalized_update)
-        _validate_session_type_consistency(normalized_update)
-
-        merged_payload = merge_workspace_into_payload(
-            base_payload=(
-                athlete.onboarding_draft
-                if current_workspace.source == "draft" and isinstance(athlete.onboarding_draft, dict)
-                else latest_intake.get("intake")
-                if current_workspace.source == "intake" and isinstance(latest_intake, dict)
-                else {}
-            ),
-            workspace=normalized_update,
-            profile=athlete,
-        )
-
-        if current_workspace.source == "intake" and current_workspace.intake_id:
-            updated_profile = _map_profile_row(
-                store.update_profile(
-                    athlete_id,
-                    ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
-                )
-            )
-            store.update_intake(
-                current_workspace.intake_id,
-                intake=merged_payload,
-                fight_date=normalized_update.shared_camp_context.fight_date or None,
-                technical_style=list(merged_payload.get("athlete", {}).get("technical_style") or updated_profile.technical_style),
-            )
-            refreshed_intake = store.get_latest_intake(athlete_id)
-            return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
-
-        updated_profile = _map_profile_row(
-            store.update_profile(
-                athlete_id,
-                ProfileUpdateRequest(
-                    nutrition_profile=normalized_update.nutrition_profile,
-                    onboarding_draft=merged_payload,
-                ),
-            )
-        )
-        refreshed_intake = store.get_latest_intake(athlete_id)
-        return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
     @app.post("/api/admin/athletes/{athlete_id}/plans/generate-from-latest-intake", response_model=GenerationJobResponse, status_code=202)
     async def generate_admin_athlete_plan_from_latest_intake(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from api.models import NutritionSharedCampContext, PlanRequest
+from api.models import PlanRequest
 from api_test_support import _build_request
 
 
@@ -190,47 +190,3 @@ def test_record_format_validation_rejects_partial_format():
             assert "x-x or x-x-x" in str(exc)
         else:
             raise AssertionError(f"record '{bad}' should be rejected")
-
-
-@pytest.mark.parametrize("value", ["3 x 3", "5 x 5", "10 x 2", "3x3", "5x5"])
-def test_plan_request_rounds_format_accepts_numeric_formats(value: str):
-    req = PlanRequest(
-        athlete={
-            "full_name": "Ari Mensah",
-            "technical_style": ["boxing"],
-        },
-        fight_date="2026-04-18",
-        rounds_format=value,
-    )
-
-    expected = {
-        "3 x 3": "3 x 3",
-        "5 x 5": "5 x 5",
-        "10 x 2": "10 x 2",
-        "3x3": "3 x 3",
-        "5x5": "5 x 5",
-    }[value]
-    assert req.rounds_format == expected
-
-
-@pytest.mark.parametrize("value", ["three x three", "3 rounds", "abc", "3-3"])
-def test_plan_request_rounds_format_rejects_word_based_and_malformed_values(value: str):
-    with pytest.raises(ValidationError, match="rounds_format must use numeric rounds x minutes format"):
-        PlanRequest(
-            athlete={
-                "full_name": "Ari Mensah",
-                "technical_style": ["boxing"],
-            },
-            fight_date="2026-04-18",
-            rounds_format=value,
-        )
-
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [("3 x 3", "3 x 3"), ("5x5", "5 x 5")],
-)
-def test_nutrition_shared_camp_context_rounds_format_accepts_legacy_and_canonical_values(value: str, expected: str):
-    shared = NutritionSharedCampContext(rounds_format=value)
-
-    assert shared.rounds_format == expected

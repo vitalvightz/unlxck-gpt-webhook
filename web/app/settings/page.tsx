@@ -330,7 +330,13 @@ export default function SettingsPage() {
               <div className="form-grid">
                 <div className="field">
                   <label htmlFor="settingsFullName">Full name</label>
-                  <input id="settingsFullName" value={fullName} onChange={(event) => setFullName(event.target.value)} />
+                    <input
+                      id="settingsFullName"
+                      name="name"
+                      autoComplete="name"
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                    />
                 </div>
                 <div className="field">
                   <label>Account email</label>

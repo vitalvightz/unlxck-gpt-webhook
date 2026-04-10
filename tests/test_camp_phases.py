@@ -1,4 +1,4 @@
-from fightcamp.camp_phases import calculate_phase_weeks
+from fightcamp.camp_phases import _effective_phase_block_count, calculate_phase_weeks
 from fightcamp.phases import PHASE_VALUES, PhaseEnum
 
 
@@ -83,6 +83,44 @@ def test_calculate_phase_weeks_under_7_days_forces_taper_phase():
     assert sum(phases["days"].values()) == 6
 
 
+def test_calculate_phase_weeks_uses_compressed_spp_and_taper_at_8_days():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=8)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] >= 1
+    assert phases["TAPER"] >= 1
+    assert not (phases["SPP"] == 1 and phases["TAPER"] == 0)
+    assert sum(phases["days"].values()) == 8
+
+
+def test_calculate_phase_weeks_uses_compressed_spp_and_taper_at_10_days():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=10)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] >= 1
+    assert phases["TAPER"] >= 1
+    assert not (phases["SPP"] == 1 and phases["TAPER"] == 0)
+    assert sum(phases["days"].values()) == 10
+
+
+def test_calculate_phase_weeks_uses_compressed_spp_and_taper_at_13_days():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=13)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] >= 1
+    assert phases["TAPER"] >= 1
+    assert sum(phases["days"].values()) == 13
+
+
+def test_calculate_phase_weeks_keeps_14_days_on_normal_short_notice_logic():
+    phases = calculate_phase_weeks(6, "boxing", days_until_fight=14)
+
+    assert phases["GPP"] == 0
+    assert phases["SPP"] == 1
+    assert phases["TAPER"] == 1
+    assert sum(phases["days"].values()) == 14
+
+
 def test_calculate_phase_weeks_keeps_current_characterized_outputs_for_representative_cases():
     cases = [
         (
@@ -141,14 +179,8 @@ def test_calculate_phase_weeks_preserves_basic_invariants_across_style_matrix():
 
     for kwargs in cases:
         phases = calculate_phase_weeks(**kwargs)
-        normalized_weeks = max(
-            1,
-            min(
-                16,
-                round((kwargs["days_until_fight"] if isinstance(kwargs.get("days_until_fight"), int) and kwargs.get("days_until_fight") >= 0 else kwargs["camp_length"] * 7) / 7),
-            ),
-        )
         total_days = kwargs["days_until_fight"] if isinstance(kwargs.get("days_until_fight"), int) and kwargs.get("days_until_fight") >= 0 else kwargs["camp_length"] * 7
+        normalized_weeks = _effective_phase_block_count(total_days)
 
         assert phases["GPP"] >= 0
         assert phases["SPP"] >= 0

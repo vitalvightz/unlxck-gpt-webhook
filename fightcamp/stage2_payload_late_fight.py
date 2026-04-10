@@ -12,6 +12,12 @@ _PAYLOAD_MODE_MAP = {
     5: "late_fight_transition_payload",
     6: "late_fight_transition_payload",
     7: "late_fight_week_payload",
+    8: "pre_fight_compressed_payload",
+    9: "pre_fight_compressed_payload",
+    10: "pre_fight_compressed_payload",
+    11: "pre_fight_compressed_payload",
+    12: "pre_fight_compressed_payload",
+    13: "pre_fight_compressed_payload",
 }
 
 _MAX_BLOCKS_PER_SESSION = {
@@ -20,6 +26,7 @@ _MAX_BLOCKS_PER_SESSION = {
     "late_fight_session_payload": 4,
     "late_fight_transition_payload": 4,
     "late_fight_week_payload": 5,
+    "pre_fight_compressed_payload": 5,
     "camp_payload": None,
 }
 
@@ -75,6 +82,31 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 def _ordered_weekdays(values: list[str]) -> list[str]:
     cleaned = _dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
+
+
+def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return None
+    if 8 <= days <= 13:
+        return 2
+    if days == 7:
+        return 1
+    if 0 <= days <= 6:
+        return 0
+    return None
+
+
+def _select_spaced_hard_days(declared_hard_days: list[str], cap: int | None) -> list[str]:
+    ordered_days = _ordered_weekdays(declared_hard_days)
+    if cap is None or len(ordered_days) <= cap:
+        return ordered_days
+    if cap == 1:
+        return ordered_days[:1]
+    if cap == 2:
+        return [ordered_days[0], ordered_days[-1]]
+    return ordered_days[:cap]
 
 
 def _filter_past_weekdays(
@@ -261,6 +293,20 @@ def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:
     return {flag.strip().lower() for flag in _clean_list(athlete_model.get("readiness_flags", [])) if flag.strip()}
 
 
+def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
+    fatigue = _normalized_fatigue(athlete_model)
+    flags = _readiness_flags(athlete_model)
+    if len(active_hard_spar_days) >= 2:
+        return True
+    if fatigue == "high":
+        return True
+    if "aggressive_weight_cut" in flags:
+        return True
+    if "injury_management" in flags and fatigue in {"moderate", "high"}:
+        return True
+    return False
+
+
 def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fight: Any) -> list[str]:
     try:
         days = int(days_until_fight)
@@ -316,6 +362,8 @@ def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | 
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return None
+    if 8 <= days <= 13:
+        return 3
     if days == 7:
         return 2
     if 1 <= days <= 6:
@@ -330,6 +378,8 @@ def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return None
+    if 8 <= days <= 13:
+        return 4
     if days == 7:
         return 3
     if 3 <= days <= 6:
@@ -346,6 +396,8 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return []
+    if 8 <= days <= 13:
+        return ["multiple_hard_sparring_exposures", "standalone_glycolytic", "primary_strength_anchor"]
     if days == 7:
         return ["standalone_glycolytic", "multiple_hard_sparring_exposures"]
     if days in {6, 5}:
@@ -472,13 +524,15 @@ def _days_out_bucket(days_until_fight: Any) -> str:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return "CAMP"
-    if days < 0 or days > 7:
+    if days < 0 or days > 13:
         return "CAMP"
     return f"D-{days}"
 
 
 def _late_fight_window(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "pre_fight_compressed_payload":
+        return "d13_to_d8"
     if mode == "late_fight_week_payload":
         return "d7"
     if mode == "late_fight_transition_payload":
@@ -494,6 +548,11 @@ def _late_fight_window(days_until_fight: Any) -> str:
 
 def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], list[str]]:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "pre_fight_compressed_payload":
+        return (
+            ["sparring", "technical", "strength", "sharpness", "recovery"],
+            ["multiple_primary_strength_anchors", "multiple_standalone_glycolytic_stressors", "broad_development_week"],
+        )
     if mode == "late_fight_week_payload":
         return ["strength", "sharpness", "recovery", "technical", "sparring"], ["broad_development_week"]
     if mode == "late_fight_transition_payload":
@@ -533,6 +592,32 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "allow_weekly_frequency_reasoning": True,
             "allow_multi_session_stress": True,
             "sparring_role": "full_collision_owner",
+        }
+    if mode == "pre_fight_compressed_payload":
+        return {
+            "mode": mode,
+            "allow_full_weekly_structure": False,
+            "allow_compressed_weekly_structure": True,
+            "allow_normal_session_roles": True,
+            "allow_anchor_wording": False,
+            "allow_development_language": False,
+            "allow_glycolytic_build": False,
+            "allow_broad_weakness_building": False,
+            "max_meaningful_strength_anchors": 1,
+            "max_meaningful_conditioning_stressors": 1,
+            "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
+            "max_active_roles": _late_fight_max_active_roles(days_until_fight),
+            "allow_hard_sparring_influence": True,
+            "allow_weekly_frequency_reasoning": True,
+            "allow_multi_session_stress": False,
+            "sparring_role": "collision_owner_narrow",
+            "forbid": [
+                "more than 2 hard sparring exposures",
+                "multiple standalone glycolytic stressors",
+                "multiple primary strength anchors",
+                "glycolytic stressor between hard sparring collisions",
+                "broad development week framing",
+            ],
         }
     if mode == "late_fight_week_payload":
         return {
@@ -711,6 +796,32 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "camp_payload":
         return {"mode": mode, "rules": []}
+    if mode == "pre_fight_compressed_payload":
+        return {
+            "mode": mode,
+            "framing": "compressed_week",
+            "rules": [
+                "Frame this as a compressed pre-fight week rather than a normal camp week.",
+                "Keep the language on technical rhythm, sharpness, one meaningful strength touch, and freshness.",
+                "No broad development week framing or conditioning-build language.",
+                "Do not stack standalone glycolytic density beside multiple hard sparring days.",
+                "Cap total meaningful stress exposures at 3 and keep each session at five blocks or less.",
+            ],
+            "preferred_terms": [
+                "compressed week",
+                "technical rhythm",
+                "sharpness",
+                "strength touch",
+                "freshness session",
+                "mobility / reset",
+            ],
+            "forbidden_terms": [
+                "development block",
+                "conditioning build",
+                "secondary anchor",
+                "extra density push",
+            ],
+        }
     if mode == "late_fight_week_payload":
         return {
             "mode": mode,
@@ -918,11 +1029,78 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         plan_weekday,
         days_until_fight,
     )
+    if mode == "pre_fight_compressed_payload":
+        active_hard_days = _select_spaced_hard_days(
+            declared_hard_days,
+            _declared_hard_spar_cap(days_until_fight),
+        )
+        roles: list[dict[str, Any]] = []
+        session_index = 1
+
+        for _ in active_hard_days:
+            roles.append(
+                _late_fight_role_entry(
+                    session_index=session_index,
+                    category="conditioning",
+                    role_key="hard_sparring_day",
+                    preferred_pool="declared_hard_sparring_days",
+                    selection_rule="Cap hard sparring to the two highest-value declared collision days and convert any extras to technical rhythm only.",
+                    placement_rule="Keep collision exposures recoverable inside the compressed week and do not let overflow hard days survive as sparring roles.",
+                )
+            )
+            session_index += 1
+
+        strength_selection_rule = "Use one meaningful strength or power touch only."
+        strength_placement_rule = "Keep this away from the main collision load and do not let it become a second anchor."
+        if len(active_hard_days) >= 2:
+            strength_selection_rule = "Use one smaller strength or power touch only when two hard sparring exposures already own the week."
+            strength_placement_rule = "Keep this clearly smaller than a full neural anchor and away from the heavier collision day."
+        roles.append(
+            _late_fight_role_entry(
+                session_index=session_index,
+                category="strength",
+                role_key="strength_touch_day",
+                preferred_pool="strength_slots",
+                selection_rule=strength_selection_rule,
+                placement_rule=strength_placement_rule,
+            )
+        )
+        session_index += 1
+
+        if not _suppress_standalone_glycolytic(active_hard_days, athlete_model):
+            roles.append(
+                _late_fight_role_entry(
+                    session_index=session_index,
+                    category="conditioning",
+                    role_key="light_fight_pace_touch_day",
+                    preferred_pool="conditioning_slots",
+                    preferred_system="glycolytic",
+                    selection_rule="Allow at most one light fight-rhythm touch only when sparring does not already own the week.",
+                    placement_rule="Keep this light, never describe it as a conditioning build, and never place it between two hard sparring collisions.",
+                )
+            )
+            session_index += 1
+
+        roles.append(
+            _late_fight_role_entry(
+                session_index=session_index,
+                category="recovery",
+                role_key="fight_week_freshness_day",
+                preferred_pool="rehab_slots_or_recovery_only",
+                selection_rule="Require one freshness, mobility, and reset session in this compressed pre-fight week.",
+                placement_rule="Keep this as the lowest-load day and preserve readiness over extra development.",
+            )
+        )
+        return roles
     if mode == "late_fight_week_payload":
+        active_hard_days = _select_spaced_hard_days(
+            declared_hard_days,
+            _declared_hard_spar_cap(days_until_fight),
+        )
         roles: list[dict[str, Any]] = []
         session_index = 1
         # Cap to at most 1 hard sparring slot even with multiple declared days
-        if declared_hard_days:
+        if active_hard_days:
             roles.append(
                 _late_fight_role_entry(
                     session_index=session_index,
@@ -945,7 +1123,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
             )
         )
         session_index += 1
-        if not declared_hard_days:
+        if not active_hard_days:
             roles.append(
                 _late_fight_role_entry(
                     session_index=session_index,
@@ -1089,6 +1267,8 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "pre_fight_compressed_payload":
+        return "Compressed Pre-Fight Week"
     if mode == "late_fight_week_payload":
         return "Sharpness Week"
     if mode == "late_fight_transition_payload":
@@ -1104,6 +1284,12 @@ def _late_fight_stage_label(days_until_fight: Any) -> str:
 
 def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "pre_fight_compressed_payload":
+        return (
+            "Use a compressed pre-fight week. Keep no more than two hard sparring exposures, one meaningful "
+            "strength touch, an optional light fight-rhythm touch only when sparring does not already own the "
+            "week, and one freshness / mobility reset day."
+        )
     if mode == "late_fight_week_payload":
         return "Use a compressed sharpness week. Keep one main neural or power touch, one fight-rhythm touch at most, and the rest on freshness, mobility, and reset."
     if mode == "late_fight_transition_payload":
@@ -1212,7 +1398,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
     return {
         "model": "late_fight_role_overlay.v1",
         "source_of_truth": [
-            "Late-fight Stage 2 payload bypasses the normal camp-week payload path for 7 days and less.",
+            "Late-fight Stage 2 payload bypasses the normal camp-week payload path for 13 days and less.",
             "Use the late-fight role map as a compressed execution guide, not as a normal weekly build.",
             "Keep the output aligned to the time window first, then the athlete profile.",
         ],
@@ -1290,6 +1476,22 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Do NOT use weekly architecture framing.\n"
             "Do NOT restore suppressed session roles.\n"
             "Do NOT generate hard sparring or conditioning-system allocation."
+        )
+    if payload_mode == "pre_fight_compressed_payload":
+        return (
+            "LATE FIGHT MODE — COMPRESSED PRE-FIGHT WEEK (D-13 to D-8)\n"
+            "This is a compressed pre-fight week, not a normal SPP build.\n"
+            "Use compressed weekly framing only and cap each session at 5 blocks.\n"
+            "Keep no more than 2 hard sparring exposures.\n"
+            "Keep one meaningful strength or power touch at most.\n"
+            "Allow at most one light fight-rhythm touch, and suppress it entirely when sparring already owns the week.\n"
+            "Always keep one freshness, mobility, or reset session.\n"
+            "Do NOT frame this as a broad development week, conditioning build, or density push.\n"
+            "Do NOT rebuild a normal SPP week in Stage 2.\n"
+            "Do NOT place a standalone glycolytic stressor between two hard sparring collisions.\n"
+            "Preferred headings: Compressed Week, Technical Rhythm, Sharpness, Strength Touch, Freshness Session, Mobility / Reset.\n"
+            "Avoid headings such as Development Block, Conditioning Build, Secondary Anchor, Extra Density Push.\n"
+            "Preserve freshness over extra development."
         )
     if payload_mode == "late_fight_session_payload":
         return (

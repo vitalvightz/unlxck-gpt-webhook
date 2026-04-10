@@ -39,7 +39,7 @@ import {
 } from "@/lib/guided-injury";
 import { emptyPlanRequest, hydratePlanRequest, mergePlanRequestDraft } from "@/lib/onboarding";
 import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATION_OPTIONS } from "@/lib/rounds-format";
-import { getPerformanceFocusCap } from "@/lib/performance-focus-cap";
+import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
 import {
   getAvailabilityConsistency,
@@ -58,6 +58,7 @@ import {
 import type { PlanRequest } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
+const PERFORMANCE_STEP_INDEX = 4;
 const SEX_OPTIONS: IntakeOption[] = [
   { label: "Male", value: "male" },
   { label: "Female", value: "female" },
@@ -525,6 +526,7 @@ export function PlanIntakeForm() {
   const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
   const [acknowledgedHardSparringWarningKey, setAcknowledgedHardSparringWarningKey] = useState<string | null>(null);
   const injuryMismatchContextKeyRef = useRef("");
+  const issueRedirectConsumedRef = useRef(false);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
   // ── Days-out policy: compute field visibility/disablement ───────────
@@ -564,6 +566,16 @@ export function PlanIntakeForm() {
   }, [currentStep]);
 
   const injuryMismatchContextKey = getInjuryMismatchContextKey(originalInjuriesText, form.injuries || "");
+  const performanceFocusValidation = validatePerformanceFocusSelections(
+    form.fight_date,
+    {
+      keyGoals: form.key_goals,
+      weakAreas: form.weak_areas,
+    },
+    {
+      timeZone: form.athlete.athlete_timezone,
+    },
+  );
 
   useEffect(() => {
     if (!hydrated) {
@@ -577,6 +589,27 @@ export function PlanIntakeForm() {
 
     injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
   }, [hydrated, injuryMismatchContextKey]);
+
+  useEffect(() => {
+    if (!hydrated || issueRedirectConsumedRef.current) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("issue") !== "focus-cap") {
+      return;
+    }
+
+    issueRedirectConsumedRef.current = true;
+    setMessage(null);
+    setError(
+      performanceFocusValidation.errorMessage
+        ?? "This saved intake is over the current focus cap. Remove some goal or weak-area selections before generating.",
+    );
+    setCurrentStep(PERFORMANCE_STEP_INDEX);
+    setIsMobileProgressOpen(true);
+    router.replace("/onboarding", { scroll: false });
+  }, [hydrated, performanceFocusValidation.errorMessage, router]);
 
   function buildFormSnapshot(
     currentForm: PlanRequest = form,
@@ -816,6 +849,22 @@ export function PlanIntakeForm() {
       setError("Choose both round count and round duration before generating your plan.");
       return false;
     }
+    const focusValidation = validatePerformanceFocusSelections(
+      nextForm.fight_date,
+      {
+        keyGoals: nextForm.key_goals,
+        weakAreas: nextForm.weak_areas,
+      },
+      {
+        timeZone: nextForm.athlete.athlete_timezone,
+      },
+    );
+    if (focusValidation.isOverCap) {
+      setCurrentStep(PERFORMANCE_STEP_INDEX);
+      setIsMobileProgressOpen(true);
+      setError(focusValidation.errorMessage);
+      return false;
+    }
     return true;
   }
 
@@ -951,10 +1000,10 @@ export function PlanIntakeForm() {
   const performanceFocusCap = getPerformanceFocusCap(form.fight_date, {
     timeZone: form.athlete.athlete_timezone,
   });
-  const selectedPerformanceFocusCount = form.key_goals.length + form.weak_areas.length;
+  const selectedPerformanceFocusCount = performanceFocusValidation.totalSelections;
   const performanceFocusCapValue = performanceFocusCap?.maxSelections ?? null;
   const performanceFocusCapReached = performanceFocusCapValue !== null && selectedPerformanceFocusCount >= performanceFocusCapValue;
-  const performanceFocusCapExceeded = performanceFocusCapValue !== null && selectedPerformanceFocusCount > performanceFocusCapValue;
+  const performanceFocusCapExceeded = performanceFocusValidation.isOverCap;
   const remainingPerformanceFocusSelections = performanceFocusCapValue === null
     ? null
     : Math.max(performanceFocusCapValue - selectedPerformanceFocusCount, 0);
@@ -1119,7 +1168,14 @@ export function PlanIntakeForm() {
                 <div className="form-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
-                    <input id="fullName" value={form.athlete.full_name} onChange={(event) => updateAthlete("full_name", event.target.value)} required />
+                    <input
+                      id="fullName"
+                      name="name"
+                      autoComplete="name"
+                      value={form.athlete.full_name}
+                      onChange={(event) => updateAthlete("full_name", event.target.value)}
+                      required
+                    />
                   </div>
                   <div className="field">
                     <label htmlFor="sex">Sex</label>
