@@ -29,6 +29,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
     technical_skill_days: [],
     injuries: "",
     guided_injury: null,
+    guided_injuries: [],
     key_goals: [],
     weak_areas: [],
     training_preference: "",

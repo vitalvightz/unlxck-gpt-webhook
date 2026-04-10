@@ -151,13 +151,25 @@ select:focus-visible {
 .app-sidebar {
   position: sticky;
   top: 0;
+  flex-basis: var(--sidebar-width);
+  flex-shrink: 0;
   width: var(--sidebar-width);
   height: 100vh;
   padding: 20px;
   border-right: 1px solid rgba(255, 255, 255, 0.04);
   background: linear-gradient(180deg, rgba(14, 16, 19, 0.97), rgba(10, 10, 12, 0.94));
   backdrop-filter: blur(20px);
+  overflow: hidden;
   z-index: 40;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    flex-basis var(--transition-base),
+    width var(--transition-base),
+    padding var(--transition-base),
+    border-color var(--transition-base),
+    opacity var(--transition-base),
+    transform var(--transition-base);
 }
 
 .sidebar-shell {
@@ -165,6 +177,31 @@ select:focus-visible {
   flex-direction: column;
   gap: 20px;
   height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 173, 183, 0.42) transparent;
+}
+
+.sidebar-shell::-webkit-scrollbar {
+  width: 10px;
+}
+
+.sidebar-shell::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-shell::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(167, 173, 183, 0.34);
+  background-clip: padding-box;
+}
+
+.sidebar-shell:hover::-webkit-scrollbar-thumb {
+  background: rgba(167, 173, 183, 0.5);
+  background-clip: padding-box;
 }
 
 .sidebar-brand {
@@ -182,7 +219,7 @@ select:focus-visible {
 }
 
 .sidebar-drawer-close {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
@@ -2703,8 +2740,42 @@ button.mobile-step-rail-item {
 }
 
 .mobile-nav-toggle,
+.desktop-nav-toggle,
 .nav-scrim {
   display: none;
+}
+
+@media (min-width: 961px) {
+  .desktop-nav-toggle {
+    display: inline-flex;
+    position: fixed;
+    top: 24px;
+    left: 24px;
+    z-index: 70;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default);
+    background: rgba(12, 13, 15, 0.96);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(16px);
+  }
+
+  html[data-desktop-nav-collapsed="true"] .app-sidebar {
+    flex-basis: 0;
+    width: 0;
+    padding: 0;
+    border-right-color: transparent;
+    opacity: 0;
+    transform: translateX(-24px);
+    pointer-events: none;
+  }
+
+  html[data-desktop-nav-collapsed="true"] .global-generation-status {
+    left: 0;
+  }
 }
 
 @media (max-width: 1200px) {
@@ -2785,13 +2856,10 @@ button.mobile-step-rail-item {
 
   .sidebar-shell {
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 4px;
-  }
-
-  .sidebar-drawer-close {
-    display: inline-flex;
+    overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+    padding-right: 6px;
   }
 
   .app-main {
@@ -2821,7 +2889,8 @@ button.mobile-step-rail-item {
 @media (prefers-reduced-motion: reduce) {
   .nav-scrim,
   .app-sidebar,
-  .mobile-nav-toggle {
+  .mobile-nav-toggle,
+  .desktop-nav-toggle {
     transition: none;
   }
 }
@@ -4400,9 +4469,113 @@ html[data-theme="light"] .global-generation-status-rail {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.injury-card-stack {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.injury-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(18, 21, 26, 0.82), rgba(12, 14, 18, 0.72));
+}
+
+.injury-card-active {
+  border-color: rgba(181, 18, 43, 0.26);
+  box-shadow: 0 0 0 1px rgba(181, 18, 43, 0.08), 0 16px 34px rgba(7, 9, 12, 0.24);
+}
+
+.injury-card-header {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.injury-card-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.injury-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.injury-card-summary {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.injury-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.injury-card-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(181, 18, 43, 0.18);
+  background: rgba(181, 18, 43, 0.08);
+  color: #ffd6dc;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.injury-card-form {
+  display: grid;
+  gap: 16px;
+}
+
+.injury-card-add-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+html[data-theme="light"] .injury-card {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 242, 235, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+html[data-theme="light"] .injury-card-active {
+  border-color: rgba(146, 43, 45, 0.18);
+  box-shadow: 0 14px 30px rgba(146, 43, 45, 0.08), 0 0 0 1px rgba(146, 43, 45, 0.06);
+}
+
+html[data-theme="light"] .injury-card-state {
+  border-color: rgba(146, 43, 45, 0.14);
+  background: rgba(146, 43, 45, 0.08);
+  color: var(--brand-red);
+}
+
 @media (max-width: 640px) {
   .injury-overwrite-diff {
     grid-template-columns: 1fr;
+  }
+
+  .injury-card-header {
+    flex-direction: column;
+  }
+
+  .injury-card-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -5031,7 +5204,8 @@ html[data-theme="light"] .empty-state-card {
   background: rgba(255, 255, 255, 0.38);
 }
 
-html[data-theme="light"] .mobile-nav-toggle {
+html[data-theme="light"] .mobile-nav-toggle,
+html[data-theme="light"] .desktop-nav-toggle {
   background: rgba(255, 251, 247, 0.94);
   border-color: var(--border-default);
   box-shadow: 0 12px 26px rgba(88, 56, 48, 0.12);
@@ -5636,10 +5810,25 @@ html[data-theme="light"] .empty-state-card {
   background: rgba(255, 255, 255, 0.5);
 }
 
-html[data-theme="light"] .mobile-nav-toggle {
+html[data-theme="light"] .mobile-nav-toggle,
+html[data-theme="light"] .desktop-nav-toggle {
   background: rgba(250, 245, 239, 0.96);
   border-color: var(--border-default);
   box-shadow: 0 12px 26px rgba(79, 60, 52, 0.12);
+}
+
+html[data-theme="light"] .sidebar-shell {
+  scrollbar-color: rgba(98, 77, 69, 0.38) transparent;
+}
+
+html[data-theme="light"] .sidebar-shell::-webkit-scrollbar-thumb {
+  background: rgba(98, 77, 69, 0.26);
+  background-clip: padding-box;
+}
+
+html[data-theme="light"] .sidebar-shell:hover::-webkit-scrollbar-thumb {
+  background: rgba(98, 77, 69, 0.38);
+  background-clip: padding-box;
 }
 
 html[data-theme="light"] .sidebar-drawer-close {

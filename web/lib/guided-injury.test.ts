@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildGuidedInjuryFields,
+  buildGuidedInjurySummaries,
   coerceGuidedInjuryEditState,
   getInjuryMismatchContextKey,
   hasMeaningfulInjuryMismatch,
+  hydrateGuidedInjuryStates,
   normalizeGuidedInjuryState,
   parseGuidedInjuryState,
 } from "./guided-injury.ts";
@@ -123,6 +126,131 @@ test("normalizes severe severity alias to high", () => {
   );
 });
 
+test("buildGuidedInjurySummaries joins multiple injury cards in order", () => {
+  assert.equal(
+    buildGuidedInjurySummaries([
+      {
+        area: "Left shoulder",
+        severity: "moderate",
+        trend: "improving",
+        avoid: "heavy overhead pressing",
+        notes: "",
+      },
+      {
+        area: "Right heel",
+        severity: "low",
+        trend: "stable",
+        avoid: "roadwork",
+        notes: "flairs up after long runs",
+      },
+    ]),
+    "Left shoulder (moderate, improving). Avoid: heavy overhead pressing. Right heel (low, stable). Avoid: roadwork. Notes: flairs up after long runs",
+  );
+});
+
+test("hydrateGuidedInjuryStates prefers guided_injuries over legacy injury fields", () => {
+  assert.deepStrictEqual(
+    hydrateGuidedInjuryStates({
+      injuries: "legacy shoulder note",
+      guided_injury: {
+        area: "Legacy shoulder",
+        severity: "moderate",
+      },
+      guided_injuries: [
+        {
+          area: "Left shoulder",
+          severity: "moderate",
+          trend: "improving",
+        },
+        {
+          area: "Right heel",
+          notes: "tight after skipping rope",
+        },
+      ],
+    }),
+    [
+      {
+        area: "Left shoulder",
+        severity: "moderate",
+        trend: "improving",
+        avoid: "",
+        notes: "",
+      },
+      {
+        area: "Right heel",
+        severity: "",
+        trend: "",
+        avoid: "",
+        notes: "tight after skipping rope",
+      },
+    ],
+  );
+});
+
+test("hydrateGuidedInjuryStates falls back to parsing legacy injuries text", () => {
+  assert.deepStrictEqual(
+    hydrateGuidedInjuryStates({
+      injuries: "Left shoulder (moderate, improving). Avoid: heavy overhead pressing. Notes: surgery history.",
+    }),
+    [
+      {
+        area: "Left shoulder",
+        severity: "moderate",
+        trend: "improving",
+        avoid: "heavy overhead pressing",
+        notes: "surgery history",
+      },
+    ],
+  );
+});
+
+test("buildGuidedInjuryFields mirrors the first card into legacy guided_injury", () => {
+  assert.deepStrictEqual(
+    buildGuidedInjuryFields([
+      {
+        area: "Left shoulder",
+        severity: "moderate",
+        trend: "improving",
+        avoid: "heavy overhead pressing",
+        notes: "",
+      },
+      {
+        area: "Right heel",
+        severity: "",
+        trend: "",
+        avoid: "",
+        notes: "tight after roadwork",
+      },
+    ]),
+    {
+      injuries: "Left shoulder (moderate, improving). Avoid: heavy overhead pressing. Right heel. Notes: tight after roadwork",
+      guided_injury: {
+        area: "Left shoulder",
+        severity: "moderate",
+        trend: "improving",
+        avoid: "heavy overhead pressing",
+        notes: "",
+      },
+      guided_injuries: [
+        {
+          area: "Left shoulder",
+          severity: "moderate",
+          trend: "improving",
+          avoid: "heavy overhead pressing",
+          notes: "",
+        },
+        {
+          area: "Right heel",
+          severity: "",
+          trend: "",
+          avoid: "",
+          notes: "tight after roadwork",
+        },
+      ],
+    },
+  );
+});
+
 // ─── hasMeaningfulInjuryMismatch ─────────────────────────────────────────────
 
 test("hasMeaningfulInjuryMismatch: identical strings do not mismatch", () => {
@@ -153,8 +281,8 @@ test("hasMeaningfulInjuryMismatch: empty original does not mismatch", () => {
   assert.equal(hasMeaningfulInjuryMismatch("", "Right shoulder. Avoid: deep squats."), false);
 });
 
-test("hasMeaningfulInjuryMismatch: empty generated does not mismatch", () => {
-  assert.equal(hasMeaningfulInjuryMismatch("Right shoulder.", ""), false);
+test("hasMeaningfulInjuryMismatch: empty generated mismatches when original note exists", () => {
+  assert.equal(hasMeaningfulInjuryMismatch("Right shoulder.", ""), true);
 });
 
 test("hasMeaningfulInjuryMismatch: dropped surgery history triggers mismatch", () => {

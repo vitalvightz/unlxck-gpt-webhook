@@ -45,10 +45,11 @@ export function AppNav() {
   const router = useRouter();
   const { isReady, session, me, signOut } = useAppSession();
   const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
+  const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
+  const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
-  const isMobileDrawerOpen = mobileNavState === "opening" || mobileNavState === "open";
 
   function clearCloseTimeout() {
     if (closeTimeoutRef.current === null) {
@@ -68,12 +69,13 @@ export function AppNav() {
     setMobileNavState((current) => (current === "closed" || current === "closing" ? current : "closing"));
   }
 
-  function toggleMobileDrawer() {
-    if (isMobileDrawerOpen) {
+  function handleSidebarClose() {
+    if (window.matchMedia(MOBILE_NAV_MEDIA_QUERY).matches) {
       closeMobileDrawer();
       return;
     }
-    openMobileDrawer();
+
+    setDesktopNavCollapsed(true);
   }
 
   useEffect(() => {
@@ -111,6 +113,23 @@ export function AppNav() {
       clearCloseTimeout();
     };
   }, []);
+
+  useEffect(() => {
+    const { documentElement } = document;
+
+    if (desktopNavCollapsed) {
+      documentElement.dataset.desktopNavCollapsed = "true";
+      desktopNavToggleRef.current?.focus();
+      return () => {
+        delete documentElement.dataset.desktopNavCollapsed;
+      };
+    }
+
+    delete documentElement.dataset.desktopNavCollapsed;
+    return () => {
+      delete documentElement.dataset.desktopNavCollapsed;
+    };
+  }, [desktopNavCollapsed]);
 
   useEffect(() => {
     if (!isMobileDrawerVisible) {
@@ -196,17 +215,32 @@ export function AppNav() {
 
   return (
     <>
-      <button
-        type="button"
-        className="mobile-nav-toggle"
-        aria-label={isMobileDrawerOpen ? "Close navigation" : "Open navigation"}
-        aria-expanded={isMobileDrawerOpen}
-        aria-controls="app-sidebar"
-        onClick={toggleMobileDrawer}
-      >
-        <span>{isMobileDrawerOpen ? "Close" : "Menu"}</span>
-        {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
-      </button>
+      {!isMobileDrawerVisible ? (
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label="Open navigation"
+          aria-expanded={false}
+          aria-controls="app-sidebar"
+          onClick={openMobileDrawer}
+        >
+          <span>Menu</span>
+          {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
+        </button>
+      ) : null}
+      {desktopNavCollapsed ? (
+        <button
+          ref={desktopNavToggleRef}
+          type="button"
+          className="desktop-nav-toggle"
+          aria-label="Open navigation"
+          aria-expanded={false}
+          aria-controls="app-sidebar"
+          onClick={() => setDesktopNavCollapsed(false)}
+        >
+          <span>Menu</span>
+        </button>
+      ) : null}
       {isMobileDrawerVisible ? (
         <button
           type="button"
@@ -231,7 +265,7 @@ export function AppNav() {
                 type="button"
                 className="sidebar-drawer-close"
                 aria-label="Close navigation"
-                onClick={closeMobileDrawer}
+                onClick={handleSidebarClose}
               >
                 Close
               </button>

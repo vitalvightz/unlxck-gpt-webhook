@@ -2,6 +2,16 @@ import { normalizeGuidedInjurySeverity } from "./intake-options.ts";
 import type { GuidedInjuryInput } from "./types";
 
 export type GuidedInjuryState = Required<GuidedInjuryInput>;
+export type GuidedInjuryHydrationSource = {
+  injuries?: string | null | undefined;
+  guided_injury?: Partial<GuidedInjuryState> | null | undefined;
+  guided_injuries?: Array<Partial<GuidedInjuryState> | null | undefined> | null | undefined;
+};
+export type GuidedInjuryFields = {
+  injuries: string;
+  guided_injury: GuidedInjuryState | null;
+  guided_injuries: GuidedInjuryState[];
+};
 
 function normalizeSeverityToken(token: string): "low" | "moderate" | "high" | "" {
   return normalizeGuidedInjurySeverity(token);
@@ -42,6 +52,24 @@ export function normalizeGuidedInjuryState(
     avoid: draft.avoid.trim(),
     notes: draft.notes.trim(),
   };
+}
+
+export function normalizeGuidedInjuryStates(
+  values: Array<Partial<GuidedInjuryState> | null | undefined> | null | undefined,
+): GuidedInjuryState[] {
+  return (values ?? []).map((value) => normalizeGuidedInjuryState(value));
+}
+
+export function hasGuidedInjuryContent(value: Partial<GuidedInjuryState> | null | undefined): boolean {
+  const details = normalizeGuidedInjuryState(value);
+  return Boolean(details.area || details.severity || details.trend || details.avoid || details.notes);
+}
+
+export function hasGuidedInjuryDescriptorWithoutArea(
+  value: Partial<GuidedInjuryState> | null | undefined,
+): boolean {
+  const details = normalizeGuidedInjuryState(value);
+  return !details.area && Boolean(details.severity || details.trend);
 }
 
 function normalizeGuidedText(value: string): string {
@@ -227,6 +255,54 @@ export function buildGuidedInjurySummary(value: GuidedInjuryState): string {
   return parts.join(". ").trim();
 }
 
+export function buildGuidedInjurySummaries(
+  values: Array<Partial<GuidedInjuryState> | null | undefined> | null | undefined,
+): string {
+  return normalizeGuidedInjuryStates(values)
+    .filter((value) => hasGuidedInjuryContent(value))
+    .map((value) => buildGuidedInjurySummary(value))
+    .filter(Boolean)
+    .join(". ")
+    .trim();
+}
+
+export function hydrateGuidedInjuryStates(source: GuidedInjuryHydrationSource): GuidedInjuryState[] {
+  const nextGuidedInjuries = normalizeGuidedInjuryStates(source.guided_injuries).filter((value) =>
+    hasGuidedInjuryContent(value),
+  );
+  if (nextGuidedInjuries.length) {
+    return nextGuidedInjuries;
+  }
+
+  if (source.guided_injury && hasGuidedInjuryContent(source.guided_injury)) {
+    return [normalizeGuidedInjuryState(source.guided_injury)];
+  }
+
+  const parsedLegacyInjury = parseGuidedInjuryState(source.injuries);
+  return hasGuidedInjuryContent(parsedLegacyInjury) ? [parsedLegacyInjury] : [];
+}
+
+export function buildGuidedInjuryFields(
+  values: Array<Partial<GuidedInjuryState> | null | undefined> | null | undefined,
+  options: { noRestrictions?: boolean } = {},
+): GuidedInjuryFields {
+  const { noRestrictions = false } = options;
+  if (noRestrictions) {
+    return {
+      injuries: "",
+      guided_injury: null,
+      guided_injuries: [],
+    };
+  }
+
+  const guidedInjuries = normalizeGuidedInjuryStates(values).filter((value) => hasGuidedInjuryContent(value));
+  return {
+    injuries: buildGuidedInjurySummaries(guidedInjuries),
+    guided_injury: guidedInjuries[0] ?? null,
+    guided_injuries: guidedInjuries,
+  };
+}
+
 /** Removes structured section label prefixes (e.g. "Avoid:", "Notes:") and
  * also strips a bare leading "avoid" verb as used in free-text notes (e.g.
  * "avoid deep squats") so that both formulations compare as equivalent. */
@@ -262,8 +338,15 @@ export function getInjuryMismatchContextKey(original: string, generated: string)
   const originalClauses = toNormalizedInjuryClauses(original);
   const generatedClauses = toNormalizedInjuryClauses(generated);
 
-  if (!originalClauses.length || !generatedClauses.length) {
+  if (!originalClauses.length) {
     return "";
+  }
+
+  if (!generatedClauses.length) {
+    return JSON.stringify({
+      original: originalClauses,
+      generated: [],
+    });
   }
 
   for (const clause of originalClauses) {

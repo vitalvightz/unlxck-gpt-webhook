@@ -65,6 +65,33 @@ def test_plan_request_to_payload_includes_guided_injury_when_present():
     assert payload["guided_injury"]["avoid"] == "deep hip flexion"
 
 
+def test_plan_request_to_payload_includes_guided_injuries_and_mirrors_first_card():
+    payload = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+        },
+        fight_date="2026-04-18",
+        injuries="hip flexor (moderate, improving). Avoid: deep hip flexion. Right heel. Notes: roadwork flare-up.",
+        guided_injuries=[
+            {
+                "area": "hip flexor",
+                "severity": "moderate",
+                "trend": "improving",
+                "avoid": "deep hip flexion",
+            },
+            {
+                "area": "right heel",
+                "notes": "roadwork flare-up",
+            },
+        ],
+    ).to_payload()
+
+    assert payload["guided_injury"]["area"] == "hip flexor"
+    assert payload["guided_injuries"][0]["area"] == "hip flexor"
+    assert payload["guided_injuries"][1]["area"] == "right heel"
+
+
 @pytest.mark.parametrize(
     ("guided_severity", "expected_severity"),
     [("low", "low"), ("mild", "low"), ("moderate", "moderate"), ("severe", "high"), ("high", "high")],

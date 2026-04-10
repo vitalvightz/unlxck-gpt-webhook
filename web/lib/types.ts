@@ -155,6 +155,7 @@ export type PlanRequest = {
   technical_skill_days: string[];
   injuries?: string;
   guided_injury?: GuidedInjuryInput | null;
+  guided_injuries?: GuidedInjuryInput[] | null;
   key_goals: string[];
   weak_areas: string[];
   training_preference?: string;
