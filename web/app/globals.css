@@ -2841,7 +2841,7 @@ button.mobile-step-rail-item {
     height: 100dvh;
     padding-top: calc(20px + var(--safe-area-top));
     padding-right: calc(20px + var(--safe-area-right));
-    padding-bottom: calc(20px + var(--safe-area-bottom));
+    padding-bottom: calc(36px + var(--safe-area-bottom));
     padding-left: calc(20px + var(--safe-area-left));
     z-index: 60;
     border-right: 1px solid var(--border-default);
