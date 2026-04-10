@@ -1174,15 +1174,7 @@ export function PlanIntakeForm() {
         </div>
 
         {daysOutCtx.uiHints.fight_proximity_banner ? (
-          <div className="fight-proximity-banner" role="status" style={{
-            background: "var(--color-warning-bg, #fff3cd)",
-            color: "var(--color-warning-text, #856404)",
-            padding: "0.75rem 1rem",
-            borderRadius: "0.5rem",
-            marginBottom: "1rem",
-            fontWeight: 500,
-            fontSize: "0.9rem",
-          }}>
+          <div className="fight-proximity-banner" role="status">
             {daysOutCtx.uiHints.fight_proximity_banner}
           </div>
         ) : null}
