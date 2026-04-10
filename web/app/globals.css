@@ -2877,15 +2877,23 @@ button.mobile-step-rail-item {
   .sidebar-shell {
     min-height: 0;
     overflow: hidden;
-    justify-content: space-between;
+  }
+
+  /* logged-in: footer always at bottom */
+  .sidebar-footer {
+    margin-top: auto;
+  }
+
+  /* logged-out: user card always at bottom */
+  .sidebar-shell > .sidebar-user-card {
+    margin-top: auto;
   }
 
   .sidebar-nav {
     flex: 0 0 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    max-height: 55vh;
-    max-height: 55dvh;
+    max-height: 52dvh;
     scrollbar-width: none;
   }
 
