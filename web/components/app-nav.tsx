@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type TransitionEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
+
+type MobileNavState = "closed" | "opening" | "open" | "closing";
+
+const MOBILE_NAV_CLOSE_MS = 240;
+const MOBILE_NAV_MEDIA_QUERY = "(max-width: 960px)";
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -39,15 +44,140 @@ export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { isReady, session, me, signOut } = useAppSession();
-  const [isOpen, setIsOpen] = useState(false);
+  const [mobileNavState, setMobileNavState] = useState<MobileNavState>("closed");
+  const closeTimeoutRef = useRef<number | null>(null);
+
+  const isMobileDrawerVisible = mobileNavState !== "closed";
+  const isMobileDrawerOpen = mobileNavState === "opening" || mobileNavState === "open";
+
+  function clearCloseTimeout() {
+    if (closeTimeoutRef.current === null) {
+      return;
+    }
+    window.clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = null;
+  }
+
+  function openMobileDrawer() {
+    clearCloseTimeout();
+    setMobileNavState((current) => (current === "open" || current === "opening" ? current : "opening"));
+  }
+
+  function closeMobileDrawer() {
+    clearCloseTimeout();
+    setMobileNavState((current) => (current === "closed" || current === "closing" ? current : "closing"));
+  }
+
+  function toggleMobileDrawer() {
+    if (isMobileDrawerOpen) {
+      closeMobileDrawer();
+      return;
+    }
+    openMobileDrawer();
+  }
 
   useEffect(() => {
-    setIsOpen(false);
+    if (mobileNavState !== "opening") {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setMobileNavState((current) => (current === "opening" ? "open" : current));
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [mobileNavState]);
+
+  useEffect(() => {
+    if (mobileNavState !== "closing") {
+      return;
+    }
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setMobileNavState((current) => (current === "closing" ? "closed" : current));
+      closeTimeoutRef.current = null;
+    }, reducedMotion ? 0 : MOBILE_NAV_CLOSE_MS);
+
+    return () => {
+      clearCloseTimeout();
+    };
+  }, [mobileNavState]);
+
+  useEffect(() => {
+    return () => {
+      clearCloseTimeout();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMobileDrawerVisible) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(MOBILE_NAV_MEDIA_QUERY);
+    const syncScrollLock = () => {
+      const shouldLock = mediaQuery.matches && isMobileDrawerVisible;
+      if (shouldLock) {
+        document.documentElement.dataset.mobileNavLock = "true";
+        document.body.dataset.mobileNavLock = "true";
+        return;
+      }
+
+      delete document.documentElement.dataset.mobileNavLock;
+      delete document.body.dataset.mobileNavLock;
+    };
+
+    syncScrollLock();
+    mediaQuery.addEventListener("change", syncScrollLock);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncScrollLock);
+      delete document.documentElement.dataset.mobileNavLock;
+      delete document.body.dataset.mobileNavLock;
+    };
+  }, [isMobileDrawerVisible]);
+
+  useEffect(() => {
+    if (!isMobileDrawerVisible) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeMobileDrawer();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobileDrawerVisible]);
+
+  useEffect(() => {
+    if (!isMobileDrawerVisible) {
+      return;
+    }
+
+    closeMobileDrawer();
   }, [pathname, session]);
 
   async function handleSignOut() {
+    closeMobileDrawer();
     await signOut();
     router.push("/");
+  }
+
+  function handleSidebarTransitionEnd(event: TransitionEvent<HTMLElement>) {
+    if (event.target !== event.currentTarget || mobileNavState !== "closing") {
+      return;
+    }
+
+    clearCloseTimeout();
+    setMobileNavState("closed");
   }
 
   const signedInLinks = [
@@ -69,22 +199,44 @@ export function AppNav() {
       <button
         type="button"
         className="mobile-nav-toggle"
-        aria-label={isOpen ? "Close navigation" : "Open navigation"}
-        aria-expanded={isOpen}
+        aria-label={isMobileDrawerOpen ? "Close navigation" : "Open navigation"}
+        aria-expanded={isMobileDrawerOpen}
         aria-controls="app-sidebar"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={toggleMobileDrawer}
       >
-        <span>{isOpen ? "Close" : "Menu"}</span>
+        <span>{isMobileDrawerOpen ? "Close" : "Menu"}</span>
         {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
       </button>
-      {isOpen ? (
-        <button type="button" className="nav-scrim" aria-label="Close navigation" onClick={() => setIsOpen(false)} />
+      {isMobileDrawerVisible ? (
+        <button
+          type="button"
+          className="nav-scrim"
+          data-mobile-nav-state={mobileNavState}
+          aria-label="Close navigation"
+          onClick={closeMobileDrawer}
+        />
       ) : null}
-      <aside id="app-sidebar" className={`app-sidebar ${isOpen ? "app-sidebar-open" : ""}`}>
+      <aside
+        id="app-sidebar"
+        className="app-sidebar"
+        data-mobile-nav-state={mobileNavState}
+        data-mobile-nav-visible={isMobileDrawerVisible}
+        onTransitionEnd={handleSidebarTransitionEnd}
+      >
         <div className="sidebar-shell">
           <div className="sidebar-brand">
-            <p className="eyebrow">UNLXCK</p>
-            <Link href="/" className="brand">
+            <div className="sidebar-brand-header">
+              <p className="eyebrow">UNLXCK</p>
+              <button
+                type="button"
+                className="sidebar-drawer-close"
+                aria-label="Close navigation"
+                onClick={closeMobileDrawer}
+              >
+                Close
+              </button>
+            </div>
+            <Link href="/" className="brand" onClick={closeMobileDrawer}>
               Fight Camp
             </Link>
             <p className="sidebar-tagline">Athlete control room.</p>
@@ -104,13 +256,21 @@ export function AppNav() {
             <>
               <div className="sidebar-auth">
                 <p className="sidebar-section-label">Access</p>
-                <Link href="/signup" className={isActive(pathname, "/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}>
+                <Link
+                  href="/signup"
+                  className={isActive(pathname, "/signup") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                  onClick={closeMobileDrawer}
+                >
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Create account</span>
                     <span className="sidebar-link-meta">Start athlete setup</span>
                   </div>
                 </Link>
-                <Link href="/login" className={isActive(pathname, "/login") ? "sidebar-link sidebar-link-active" : "sidebar-link"}>
+                <Link
+                  href="/login"
+                  className={isActive(pathname, "/login") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
+                  onClick={closeMobileDrawer}
+                >
                   <div className="sidebar-link-copy">
                     <span className="sidebar-link-title">Log in</span>
                     <span className="sidebar-link-meta">Resume your camp</span>
@@ -133,6 +293,7 @@ export function AppNav() {
                     key={link.href}
                     className={isActive(pathname, link.href) ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                     href={link.href}
+                    onClick={closeMobileDrawer}
                   >
                     <div className="sidebar-link-copy">
                       <span className="sidebar-link-title">{link.label}</span>
@@ -147,6 +308,7 @@ export function AppNav() {
                     <Link
                       className={isActive(pathname, "/admin") ? "sidebar-link sidebar-link-active" : "sidebar-link"}
                       href="/admin"
+                      onClick={closeMobileDrawer}
                     >
                       <div className="sidebar-link-copy">
                         <span className="sidebar-link-title">Admin panel</span>
