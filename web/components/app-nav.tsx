@@ -41,11 +41,44 @@ export function AppNav() {
   const { isReady, session, me, signOut } = useAppSession();
   const [isOpen, setIsOpen] = useState(false);
 
+  function handleCloseNav() {
+    setIsOpen(false);
+  }
+
+  function handleToggleNav() {
+    setIsOpen((current) => !current);
+  }
+
   useEffect(() => {
     setIsOpen(false);
   }, [pathname, session]);
 
+  useEffect(() => {
+    document.body.classList.toggle("app-mobile-nav-open", isOpen);
+    return () => {
+      document.body.classList.remove("app-mobile-nav-open");
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
   async function handleSignOut() {
+    handleCloseNav();
     await signOut();
     router.push("/");
   }
@@ -72,18 +105,33 @@ export function AppNav() {
         aria-label={isOpen ? "Close navigation" : "Open navigation"}
         aria-expanded={isOpen}
         aria-controls="app-sidebar"
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={handleToggleNav}
       >
         <span>{isOpen ? "Close" : "Menu"}</span>
         {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
       </button>
-      {isOpen ? (
-        <button type="button" className="nav-scrim" aria-label="Close navigation" onClick={() => setIsOpen(false)} />
-      ) : null}
-      <aside id="app-sidebar" className={`app-sidebar ${isOpen ? "app-sidebar-open" : ""}`}>
+      <button
+        type="button"
+        className="nav-scrim"
+        data-state={isOpen ? "open" : "closed"}
+        aria-label="Close navigation"
+        aria-hidden={!isOpen}
+        tabIndex={-1}
+        onClick={handleCloseNav}
+      />
+      <aside
+        id="app-sidebar"
+        className={`app-sidebar ${isOpen ? "app-sidebar-open" : ""}`}
+        data-state={isOpen ? "open" : "closed"}
+      >
         <div className="sidebar-shell">
           <div className="sidebar-brand">
-            <p className="eyebrow">UNLXCK</p>
+            <div className="sidebar-brand-topline">
+              <p className="eyebrow">UNLXCK</p>
+              <button type="button" className="sidebar-close-button" onClick={handleCloseNav} aria-label="Close navigation">
+                Close
+              </button>
+            </div>
             <Link href="/" className="brand">
               Fight Camp
             </Link>
