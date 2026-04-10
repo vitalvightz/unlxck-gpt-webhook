@@ -178,7 +178,13 @@ select:focus-visible {
   gap: 20px;
   height: 100%;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar-shell::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebar-brand {
