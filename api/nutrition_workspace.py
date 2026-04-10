@@ -207,8 +207,13 @@ def _derive_session_types(
     hard_days = {day.strip().lower() for day in hard_sparring_days if str(day).strip()}
     technical_days = {day.strip().lower() for day in technical_skill_days if str(day).strip()}
     for day, session_type in cleaned.items():
-        if day in training_days:
-            derived[day] = session_type
+        if day not in training_days:
+            continue
+        if session_type == "hard_spar" and day not in hard_days:
+            continue
+        if session_type == "technical" and day not in technical_days:
+            continue
+        derived[day] = session_type
     for day in training_availability:
         normalized_day = str(day or "").strip().lower()
         if normalized_day in hard_days:
