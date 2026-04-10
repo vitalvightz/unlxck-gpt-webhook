@@ -147,7 +147,7 @@ def _build_product_brief(
 def test_rule_contract_taper_does_not_keep_unnecessary_density():
     brief = _build_product_brief(
         athlete_overrides={
-            "days_until_fight": 9,
+            "days_until_fight": 14,
             "short_notice": True,
             "readiness_flags": ["fight_week"],
         },
@@ -175,7 +175,7 @@ def test_rule_contract_taper_does_not_keep_unnecessary_density():
 def test_rule_contract_zero_strength_means_zero_strength_roles():
     brief = _build_product_brief(
         athlete_overrides={
-            "days_until_fight": 8,
+            "days_until_fight": 14,
             "short_notice": True,
             "readiness_flags": ["fight_week"],
         },
@@ -202,7 +202,7 @@ def test_rule_contract_zero_strength_means_zero_strength_roles():
 def test_rule_contract_tissue_protection_suppresses_sharpness_roles():
     brief = _build_product_brief(
         athlete_overrides={
-            "days_until_fight": 11,
+            "days_until_fight": 14,
             "training_preference": "conservative",
             "weaknesses": ["stiffness"],
             "injuries": ["shoulder strain"],

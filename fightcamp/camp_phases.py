@@ -11,6 +11,13 @@ def _phase_ratios(gpp: float, spp: float, taper: float) -> dict[str, float]:
     return {GPP: gpp, SPP: spp, TAPER: taper}
 
 
+def _effective_phase_block_count(total_days: int) -> int:
+    base = max(1, min(16, round(total_days / 7)))
+    if 8 <= total_days <= 13:
+        return 2
+    return base
+
+
 BASE_PHASE_RATIOS = {
     1: {
         "boxing": _phase_ratios(0.00, 0.60, 0.40),
@@ -185,7 +192,7 @@ def calculate_phase_weeks(
 ) -> dict:
     """Return weeks per phase for a fight camp."""
     total_days = days_until_fight if isinstance(days_until_fight, int) and days_until_fight >= 0 else camp_length * 7
-    camp_length = max(1, min(16, round(total_days / 7)))
+    camp_length = _effective_phase_block_count(total_days)
     closest = min(BASE_PHASE_RATIOS.keys(), key=lambda value: abs((value * 7) - total_days))
     ratios = BASE_PHASE_RATIOS[closest][sport].copy()
 
@@ -310,6 +317,23 @@ def calculate_phase_weeks(
             weeks[GPP] -= 1
             weeks[TAPER] = 1
         _rebalance(weeks)
+
+    compressed_pre_fight = isinstance(days_until_fight, int) and 8 <= days_until_fight <= 13
+    if compressed_pre_fight:
+        weeks[GPP] = 0
+        weeks[SPP] = max(1, weeks[SPP])
+        weeks[TAPER] = max(1, weeks[TAPER])
+
+        total_weeks = weeks[GPP] + weeks[SPP] + weeks[TAPER]
+        if total_weeks < camp_length:
+            weeks[SPP] += camp_length - total_weeks
+        elif total_weeks > camp_length:
+            excess = total_weeks - camp_length
+            taper_cut = min(max(0, weeks[TAPER] - 1), excess)
+            weeks[TAPER] -= taper_cut
+            excess -= taper_cut
+            if excess > 0:
+                weeks[SPP] -= min(max(0, weeks[SPP] - 1), excess)
 
     days = {
         phase: max(0, round(total_days * (weeks[phase] / camp_length)))

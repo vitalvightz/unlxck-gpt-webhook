@@ -139,8 +139,10 @@ class TestPayloadModeClassification:
         [
             (None, "camp_payload"),
             (-2, "camp_payload"),
-            (10, "camp_payload"),
-            (8, "camp_payload"),
+            (14, "camp_payload"),
+            (13, "pre_fight_compressed_payload"),
+            (10, "pre_fight_compressed_payload"),
+            (8, "pre_fight_compressed_payload"),
             (7, "late_fight_week_payload"),
             (6, "late_fight_transition_payload"),
             (5, "late_fight_transition_payload"),
@@ -154,17 +156,27 @@ class TestPayloadModeClassification:
         assert _days_out_payload_mode(days) == expected
 
     def test_string_input_still_works(self):
+        assert _days_out_payload_mode("8") == "pre_fight_compressed_payload"
         assert _days_out_payload_mode("3") == "late_fight_session_payload"
         assert _days_out_payload_mode("0") == "fight_day_protocol_payload"
 
 
 class TestDaysOutPayloadBlock:
     def test_camp_block_uses_camp_bucket(self):
-        block = _days_out_payload_block(10, _athlete(10))
+        block = _days_out_payload_block(14, _athlete(14))
         assert block["payload_mode"] == "camp_payload"
         assert block["payload_variant"] == "normal_stage2_payload"
         assert block["days_out_bucket"] == "CAMP"
         assert block["fight_week_override"] == {"active": False}
+
+    def test_pre_fight_compressed_block_has_bridge_window_metadata(self):
+        block = _days_out_payload_block(10, _athlete(10))
+        assert block["payload_mode"] == "pre_fight_compressed_payload"
+        assert block["payload_variant"] == "late_fight_stage2_payload"
+        assert block["days_out_bucket"] == "D-10"
+        assert block["late_fight_window"] == "d13_to_d8"
+        assert "rendering_rules" in block
+        assert "late_fight_permissions" in block
 
     def test_late_fight_block_has_mode_specific_metadata(self):
         block = _days_out_payload_block(3, _athlete(3))
@@ -178,11 +190,27 @@ class TestDaysOutPayloadBlock:
 
 class TestLateFightPermissionsAndRendering:
     def test_camp_permissions_remain_unrestricted(self):
-        permissions = _late_fight_permissions(10, _athlete(10))
-        rules = _late_fight_rendering_rules(10)
+        permissions = _late_fight_permissions(14, _athlete(14))
+        rules = _late_fight_rendering_rules(14)
         assert permissions["allow_full_weekly_structure"] is True
         assert permissions["allow_development_language"] is True
         assert rules == {"mode": "camp_payload", "rules": []}
+
+    def test_pre_fight_compressed_permissions_cap_bridge_window_stress(self):
+        permissions = _late_fight_permissions(10, _athlete(10))
+        rules = _late_fight_rendering_rules(10)
+
+        assert permissions["allow_full_weekly_structure"] is False
+        assert permissions["allow_compressed_weekly_structure"] is True
+        assert permissions["allow_normal_session_roles"] is True
+        assert permissions["allow_development_language"] is False
+        assert permissions["allow_glycolytic_build"] is False
+        assert permissions["max_meaningful_strength_anchors"] == 1
+        assert permissions["max_meaningful_conditioning_stressors"] == 1
+        assert permissions["max_meaningful_stress_exposures"] == 3
+        assert permissions["max_active_roles"] == 4
+        assert "compressed week" in [term.lower() for term in rules["preferred_terms"]]
+        assert "conditioning build" in [term.lower() for term in rules["forbidden_terms"]]
 
     def test_d1_forbids_anchor_and_glycolytic_language(self):
         permissions = _late_fight_permissions(1, _athlete(1))
@@ -260,15 +288,28 @@ class TestLateFightRoleMap:
 
 
 class TestPlanningBriefBranching:
+    def test_d10_stage_label_returns_compressed_pre_fight_week(self):
+        assert _late_fight_stage_label(10) == "Compressed Pre-Fight Week"
+
     def test_d7_stage_label_returns_sharpness_week(self):
         assert _late_fight_stage_label(7) == "Sharpness Week"
 
     def test_camp_uses_normal_planning_brief(self):
-        brief = _build_brief_for(10)
+        brief = _build_brief_for(14)
         assert brief["generator_mode"] == "deterministic_planner_plus_ai_finalizer"
         assert "days_out_payload" not in brief
         assert "payload_variant" not in brief
         assert brief["weekly_role_map"]["model"] == "session_role_overlay.v1"
+
+    def test_pre_fight_window_uses_dedicated_planning_brief(self):
+        brief = _build_brief_for(10)
+
+        assert brief["generator_mode"] == "deterministic_late_fight_planner_plus_ai_finalizer"
+        assert brief["payload_variant"] == "late_fight_stage2_payload"
+        assert brief["days_out_payload"]["payload_mode"] == "pre_fight_compressed_payload"
+        assert brief["weekly_role_map"]["payload_mode"] == "pre_fight_compressed_payload"
+        assert brief["rendering_rules"]["mode"] == "pre_fight_compressed_payload"
+        assert brief["week_by_week_progression"]["weeks"][0]["stage_label"] == "Compressed Pre-Fight Week"
 
     def test_late_fight_uses_dedicated_planning_brief(self):
         brief = _build_brief_for(3)
@@ -308,10 +349,19 @@ class TestPlanningBriefBranching:
 
 class TestStage2PayloadBranching:
     def test_camp_payload_stays_on_normal_stage2_schema(self):
-        payload = _build_stage2(10)
+        payload = _build_stage2(14)
         assert payload["generator_mode"] == "restriction_aware_candidate_generator"
         assert "payload_mode" not in payload
         assert "days_out_payload" not in payload
+
+    def test_pre_fight_payload_adds_mode_specific_fields(self):
+        payload = _build_stage2(10)
+        assert payload["generator_mode"] == "restriction_aware_candidate_generator_late_fight"
+        assert payload["payload_variant"] == "late_fight_stage2_payload"
+        assert payload["payload_mode"] == "pre_fight_compressed_payload"
+        assert payload["effective_stage2_mode"] == "pre_fight_compressed_payload"
+        assert "late_fight_permissions" in payload
+        assert "rendering_rules" in payload
 
     def test_late_fight_payload_adds_mode_specific_fields(self):
         payload = _build_stage2(5)
@@ -381,13 +431,14 @@ class TestHandoffText:
         )
 
     def test_camp_handoff_has_no_payload_mode_section(self):
-        text = self._build_handoff(10)
+        text = self._build_handoff(14)
         assert "PAYLOAD MODE INSTRUCTIONS" not in text
         assert "PLANNING BRIEF" in text
 
     @pytest.mark.parametrize(
         "days, expected_heading",
         [
+            (10, "COMPRESSED PRE-FIGHT WEEK"),
             (7, "SHARPNESS WEEK"),
             (5, "SHARPNESS & FRESHNESS WINDOW"),
             (3, "SHARPNESS-FIRST SESSIONS"),
@@ -401,6 +452,12 @@ class TestHandoffText:
         assert expected_heading in text
         assert "STAGE 1 DRAFT PLAN" in text
         assert "Draft plan text." in text
+
+    def test_d10_handoff_blocks_normal_spp_rebuild_language(self):
+        text = self._build_handoff(10)
+
+        assert "Do NOT rebuild a normal SPP week in Stage 2." in text
+        assert "Keep no more than 2 hard sparring exposures." in text
 
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)
