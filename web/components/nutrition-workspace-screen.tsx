@@ -573,7 +573,7 @@ export function NutritionWorkspaceScreen() {
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        <div className="form-actions athlete-motion-slot athlete-motion-rail">
+        <div className="nutrition-sticky-save">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending || !workspace}>
             {isPending ? "Saving..." : "Save nutrition workspace"}
           </button>
