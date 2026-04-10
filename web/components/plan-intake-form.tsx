@@ -42,12 +42,6 @@ import { buildRoundsFormat, parseRoundsFormat, ROUND_COUNT_OPTIONS, ROUND_DURATI
 import { getPerformanceFocusCap, validatePerformanceFocusSelections } from "@/lib/performance-focus-cap";
 import { canSelectWizardStep } from "@/lib/step-navigation";
 import {
-  getAvailabilityConsistency,
-  getHardSparringLoadWarning,
-  getHardSparringWarningContextKey,
-  getSparringConsistency,
-} from "@/lib/training-schedule";
-import {
   buildDaysOutContext,
   computeDaysUntilFight,
   shouldHideField,
@@ -59,7 +53,6 @@ import {
 import type { PlanRequest } from "@/lib/types";
 
 const steps = ["Profile", "Fight Context", "Training", "Restrictions", "Performance", "Review"] as const;
-const TRAINING_STEP_INDEX = 2;
 const PERFORMANCE_STEP_INDEX = 4;
 const SEX_OPTIONS: IntakeOption[] = [
   { label: "Male", value: "male" },
@@ -75,6 +68,16 @@ const INJURY_TREND_OPTIONS = [
   { label: "Improving", value: "improving" },
   { label: "Getting worse", value: "worsening" },
 ];
+
+type AvailabilityConsistency = {
+  hardError: string | null;
+  softWarning: string | null;
+};
+
+type SparringConsistency = {
+  hardError: string | null;
+  softWarning: string | null;
+};
 
 type DraftMetadata = {
   current_step?: number;
@@ -170,6 +173,75 @@ function formatEquipmentLimitations(selectedEquipment: string[]): string | null 
     return "Limited conditioning tool options";
   }
   return "No major equipment limitation flagged";
+}
+
+function getAvailabilityConsistency(
+  trainingAvailability: string[],
+  weeklyTrainingFrequency: number | null | undefined,
+): AvailabilityConsistency {
+  const availableDays = trainingAvailability.length;
+  const sessionsPerWeek = weeklyTrainingFrequency ?? 0;
+  const unusedDays = Math.max(availableDays - sessionsPerWeek, 0);
+
+  if (!availableDays || !sessionsPerWeek) {
+    return { hardError: null, softWarning: null };
+  }
+
+  if (sessionsPerWeek > availableDays) {
+    return {
+      hardError: `You selected ${availableDays} available day${availableDays === 1 ? "" : "s"} but planned ${sessionsPerWeek} weekly session${sessionsPerWeek === 1 ? "" : "s"}.`,
+      softWarning: null,
+    };
+  }
+
+  if (unusedDays >= 3 && sessionsPerWeek <= 3) {
+    return {
+      hardError: null,
+      softWarning: `You have ${availableDays} days available but only ${sessionsPerWeek} planned weekly session${sessionsPerWeek === 1 ? "" : "s"}. That's fine if some days are optional.`,
+      };
+  }
+
+  return { hardError: null, softWarning: null };
+}
+
+function getSparringConsistency(
+  trainingAvailability: string[],
+  hardSparringDays: string[],
+  technicalSkillDays: string[],
+): SparringConsistency {
+  const available = new Set(trainingAvailability);
+  const invalidHard = hardSparringDays.filter((day) => !available.has(day));
+  if (invalidHard.length) {
+    return {
+      hardError: `Hard sparring days must also be selected as available days: ${invalidHard.join(", ")}.`,
+      softWarning: null,
+    };
+  }
+
+  const invalidTechnical = technicalSkillDays.filter((day) => !available.has(day));
+  if (invalidTechnical.length) {
+    return {
+      hardError: `Technical / lighter skill days must also be selected as available days: ${invalidTechnical.join(", ")}.`,
+      softWarning: null,
+    };
+  }
+
+  const overlap = hardSparringDays.filter((day) => technicalSkillDays.includes(day));
+  if (overlap.length) {
+    return {
+      hardError: `A day cannot be both hard sparring and technical / lighter skill: ${overlap.join(", ")}.`,
+      softWarning: null,
+    };
+  }
+
+  if (!hardSparringDays.length && technicalSkillDays.length) {
+    return {
+      hardError: null,
+      softWarning: "Technical / lighter skill days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
+    };
+  }
+
+  return { hardError: null, softWarning: null };
 }
 
 function formatSparringCollisionRisk({
@@ -520,9 +592,7 @@ export function PlanIntakeForm() {
   const [isPending, startTransition] = useTransition();
   const [originalInjuriesText, setOriginalInjuriesText] = useState<string>("");
   const [injuryOverwriteAcknowledged, setInjuryOverwriteAcknowledged] = useState(false);
-  const [hardSparringWarningAcknowledged, setHardSparringWarningAcknowledged] = useState(false);
   const injuryMismatchContextKeyRef = useRef("");
-  const hardSparringWarningContextKeyRef = useRef("");
   const issueRedirectConsumedRef = useRef(false);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
@@ -563,14 +633,6 @@ export function PlanIntakeForm() {
   }, [currentStep]);
 
   const injuryMismatchContextKey = getInjuryMismatchContextKey(originalInjuriesText, form.injuries || "");
-  const hardSparringWarningContextKey = getHardSparringWarningContextKey(
-    form.hard_sparring_days,
-    form.weekly_training_frequency,
-  );
-  const hardSparringWarning = getHardSparringLoadWarning(
-    form.hard_sparring_days,
-    form.weekly_training_frequency,
-  );
   const performanceFocusValidation = validatePerformanceFocusSelections(
     form.fight_date,
     {
@@ -594,19 +656,6 @@ export function PlanIntakeForm() {
 
     injuryMismatchContextKeyRef.current = injuryMismatchContextKey;
   }, [hydrated, injuryMismatchContextKey]);
-
-  useEffect(() => {
-    if (!hydrated) {
-      hardSparringWarningContextKeyRef.current = hardSparringWarningContextKey;
-      return;
-    }
-
-    if (hardSparringWarningContextKeyRef.current !== hardSparringWarningContextKey) {
-      setHardSparringWarningAcknowledged(false);
-    }
-
-    hardSparringWarningContextKeyRef.current = hardSparringWarningContextKey;
-  }, [hardSparringWarningContextKey, hydrated]);
 
   useEffect(() => {
     if (!hydrated || issueRedirectConsumedRef.current) {
@@ -723,48 +772,7 @@ export function PlanIntakeForm() {
     });
   }
 
-  function hasUnacknowledgedHardSparringWarning(nextForm: PlanRequest): boolean {
-    return (
-      getHardSparringLoadWarning(
-        nextForm.hard_sparring_days,
-        nextForm.weekly_training_frequency,
-      ).requiresConfirmation && !hardSparringWarningAcknowledged
-    );
-  }
-
-  function redirectToTrainingStepForHardSparringWarning(messageText: string) {
-    setCurrentStep(TRAINING_STEP_INDEX);
-    setIsMobileProgressOpen(true);
-    setError(messageText);
-  }
-
-  function ensureHardSparringWarningResolved(
-    nextForm: PlanRequest,
-    action: "continue" | "jump" | "generate",
-  ): boolean {
-    if (!hasUnacknowledgedHardSparringWarning(nextForm)) {
-      return true;
-    }
-
-    if (currentStep > TRAINING_STEP_INDEX || action === "generate") {
-      redirectToTrainingStepForHardSparringWarning(
-        action === "generate"
-          ? "Review and acknowledge the hard sparring warning in the Training step before generating."
-          : "Review and acknowledge the hard sparring warning in the Training step before continuing.",
-      );
-      return false;
-    }
-
-    setError("Acknowledge the hard sparring warning before continuing.");
-    return false;
-  }
-
-  function validateCurrentStep(
-    nextForm: PlanRequest,
-    options: { allowUnconfirmedHardSparringLoad?: boolean } = {},
-  ): boolean {
-    const { allowUnconfirmedHardSparringLoad = false } = options;
-
+  function validateCurrentStep(nextForm: PlanRequest): boolean {
     if (currentStep === 0 && !isValidRecordFormat(nextForm.athlete.record ?? "")) {
       setError("Record must use x-x or x-x-x format, like 5-1 or 12-2-1.");
       return false;
@@ -792,9 +800,6 @@ export function PlanIntakeForm() {
       );
       if (sparringCheck.hardError) {
         setError(sparringCheck.hardError);
-        return false;
-      }
-      if (!allowUnconfirmedHardSparringLoad && !ensureHardSparringWarningResolved(nextForm, "continue")) {
         return false;
       }
     }
@@ -859,9 +864,6 @@ export function PlanIntakeForm() {
       setError(sparringCheck.hardError);
       return false;
     }
-    if (!ensureHardSparringWarningResolved(nextForm, "generate")) {
-      return false;
-    }
     const focusValidation = validatePerformanceFocusSelections(
       nextForm.fight_date,
       {
@@ -907,7 +909,7 @@ export function PlanIntakeForm() {
     setError(null);
     startTransition(async () => {
       const nextForm = buildFormSnapshot();
-      if (!validateCurrentStep(nextForm, { allowUnconfirmedHardSparringLoad: true })) {
+      if (!validateCurrentStep(nextForm)) {
         return;
       }
       if (!session?.access_token) {
@@ -930,9 +932,6 @@ export function PlanIntakeForm() {
     startTransition(async () => {
       const nextForm = buildFormSnapshot();
       if (!validateCurrentStep(nextForm)) {
-        return;
-      }
-      if (currentStep > TRAINING_STEP_INDEX && !ensureHardSparringWarningResolved(nextForm, "continue")) {
         return;
       }
       setCurrentStep(nextStep);
@@ -962,9 +961,6 @@ export function PlanIntakeForm() {
       lastSelectableStep: steps.length - 1,
       validateCurrentStep: () => validateCurrentStep(getNextForm()),
     })) {
-      return;
-    }
-    if (targetStep > currentStep && currentStep > TRAINING_STEP_INDEX && !ensureHardSparringWarningResolved(getNextForm(), "jump")) {
       return;
     }
     setCurrentStep(targetStep);
@@ -1006,7 +1002,6 @@ export function PlanIntakeForm() {
   const parsedRounds = parseRoundsFormat(form.rounds_format);
   const injuryMismatchExists = Boolean(injuryMismatchContextKey);
   const injuryGateLocked = injuryMismatchExists && !injuryOverwriteAcknowledged;
-  const hardSparringWarningLocked = hardSparringWarning.requiresConfirmation && !hardSparringWarningAcknowledged;
   const availabilityConsistency = getAvailabilityConsistency(
     form.training_availability,
     form.weekly_training_frequency,
@@ -1106,9 +1101,6 @@ export function PlanIntakeForm() {
       : sparringConsistency.softWarning
         ? [{ label: "Sparring schedule note", value: sparringConsistency.softWarning }]
         : []),
-    ...(hardSparringWarning.warning
-      ? [{ label: hardSparringWarningLocked ? "Sparring load warning" : "Sparring load note", value: hardSparringWarning.warning }]
-      : []),
     {
       label: "Session preference",
       value: hasTrainingPreference ? trainingPreferenceText : "No session preference provided.",
@@ -1543,26 +1535,6 @@ export function PlanIntakeForm() {
                   </p>
                 </div>
               ) : null}
-              {hardSparringWarning.warning ? (
-                <div className={`support-panel ${hardSparringWarningLocked ? "support-panel-alert" : ""}`.trim()}>
-                  <p className="kicker">Are you sure?</p>
-                  <p className={hardSparringWarningLocked ? "error-text" : "muted"}>
-                    {hardSparringWarning.warning}
-                  </p>
-                  <label className={`checkbox-card ${hardSparringWarningAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
-                    <input
-                      type="checkbox"
-                      checked={hardSparringWarningAcknowledged}
-                      onChange={(event) => setHardSparringWarningAcknowledged(event.target.checked)}
-                    />
-                    <span className="checkbox-card-copy">
-                      <span className="checkbox-card-title">
-                        I understand this is a heavy hard-sparring load for the week. Keep these hard sparring days as entered.
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              ) : null}
               <div className="support-panel">
                 <p className="kicker">Preference</p>
                 <p className="muted">This field is for training feel only, not injuries or general notes.</p>
@@ -1870,8 +1842,6 @@ export function PlanIntakeForm() {
                   <li>Planned sessions per week must be at least 1.</li>
                   {availabilityConsistency.hardError ? <li>{availabilityConsistency.hardError}</li> : null}
                   {sparringConsistency.hardError ? <li>{sparringConsistency.hardError}</li> : null}
-                  {hardSparringWarning.warning ? <li>{hardSparringWarning.warning}</li> : null}
-                  {hardSparringWarningLocked ? <li>Return to the Training step and confirm this sparring load before generating.</li> : null}
                 </ul>
               </div>
               <div className="support-panel">
