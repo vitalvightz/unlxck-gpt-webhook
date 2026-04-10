@@ -2838,6 +2838,7 @@ button.mobile-step-rail-item {
     width: min(82vw, 296px);
     max-width: calc(100vw - var(--safe-area-left) - 28px);
     height: 100vh;
+    height: 100dvh;
     padding-top: calc(20px + var(--safe-area-top));
     padding-right: calc(20px + var(--safe-area-right));
     padding-bottom: calc(20px + var(--safe-area-bottom));
@@ -2876,13 +2877,16 @@ button.mobile-step-rail-item {
   .sidebar-shell {
     min-height: 0;
     overflow: hidden;
+    justify-content: space-between;
   }
 
   .sidebar-nav {
-    overflow-y: scroll;
+    flex: 0 0 auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    scrollbar-gutter: stable;
-    padding-right: 6px;
+    max-height: 55vh;
+    max-height: 55dvh;
+    scrollbar-width: none;
   }
 
   .app-main {
