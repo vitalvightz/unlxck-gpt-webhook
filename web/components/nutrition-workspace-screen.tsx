@@ -25,7 +25,7 @@ import {
   toNumber,
   toUpdateRequest,
 } from "@/lib/nutrition-workspace";
-import { TRAINING_AVAILABILITY_OPTIONS, toggleListValue } from "@/lib/intake-options";
+import { TRAINING_AVAILABILITY_OPTIONS } from "@/lib/intake-options";
 import type {
   NutritionProfileInput,
   NutritionWorkspaceState,
@@ -46,6 +46,12 @@ const WEIGH_IN_OPTIONS = [
 const FATIGUE_OPTIONS = ["", "Low", "Moderate", "High"];
 const SLEEP_OPTIONS = ["", "Good", "Mixed", "Poor"];
 const WEIGHT_SOURCE_OPTIONS = ["", "manual", "latest_bodyweight_log", "imported"];
+const DAY_TYPE_OPTIONS: Array<{ value: Extract<SessionDayType, "hard_spar" | "technical" | "conditioning" | "recovery">; label: string }> = [
+  { value: "hard_spar", label: "Hard sparring" },
+  { value: "technical", label: "Light technical" },
+  { value: "conditioning", label: "Conditioning" },
+  { value: "recovery", label: "Recovery" },
+];
 const CORE_FIELD_LABELS: Record<string, string> = {
   sex: "Sex",
   age: "Age",
@@ -61,31 +67,41 @@ function sortTrainingDays(values: string[]): string[] {
     .filter((value) => uniqueValues.has(value));
 }
 
-function buildAutoSessionTypes(
-  hardSparringDays: string[],
-  technicalSkillDays: string[],
-): Record<string, SessionDayType> {
+function isSupportedNutritionDayType(value: string | null | undefined): value is Extract<SessionDayType, "hard_spar" | "technical" | "conditioning" | "recovery"> {
+  return value === "hard_spar" || value === "technical" || value === "conditioning" || value === "recovery";
+}
+
+function normalizeTrainingSelections(
+  request: NutritionWorkspaceUpdateRequest,
+): NutritionWorkspaceUpdateRequest {
   const nextSessionTypes: Record<string, SessionDayType> = {};
 
-  for (const day of hardSparringDays) {
-    nextSessionTypes[day] = "hard_spar";
-  }
-
-  for (const day of technicalSkillDays) {
-    if (!nextSessionTypes[day]) {
+  for (const day of TRAINING_AVAILABILITY_OPTIONS.map((option) => option.value)) {
+    const explicitDayType = request.shared_camp_context.session_types_by_day[day];
+    if (isSupportedNutritionDayType(explicitDayType)) {
+      nextSessionTypes[day] = explicitDayType;
+      continue;
+    }
+    if (request.shared_camp_context.hard_sparring_days.includes(day)) {
+      nextSessionTypes[day] = "hard_spar";
+      continue;
+    }
+    if (request.shared_camp_context.technical_skill_days.includes(day)) {
       nextSessionTypes[day] = "technical";
     }
   }
 
-  return nextSessionTypes;
-}
-
-function withAutoTrainingSelections(
-  request: NutritionWorkspaceUpdateRequest,
-): NutritionWorkspaceUpdateRequest {
-  const hardSparringDays = sortTrainingDays(request.shared_camp_context.hard_sparring_days);
-  const technicalSkillDays = sortTrainingDays(request.shared_camp_context.technical_skill_days);
-  const trainingAvailability = sortTrainingDays([...hardSparringDays, ...technicalSkillDays]);
+  const trainingAvailability = sortTrainingDays(Object.keys(nextSessionTypes));
+  const hardSparringDays = sortTrainingDays(
+    Object.entries(nextSessionTypes)
+      .filter(([, value]) => value === "hard_spar")
+      .map(([day]) => day),
+  );
+  const technicalSkillDays = sortTrainingDays(
+    Object.entries(nextSessionTypes)
+      .filter(([, value]) => value === "technical")
+      .map(([day]) => day),
+  );
 
   return {
     ...request,
@@ -94,7 +110,7 @@ function withAutoTrainingSelections(
       hard_sparring_days: hardSparringDays,
       technical_skill_days: technicalSkillDays,
       training_availability: trainingAvailability,
-      session_types_by_day: buildAutoSessionTypes(hardSparringDays, technicalSkillDays),
+      session_types_by_day: nextSessionTypes,
     },
   };
 }
@@ -156,7 +172,7 @@ export function NutritionWorkspaceScreen() {
       .then((nextWorkspace) => {
         if (!active) return;
         setWorkspace(nextWorkspace);
-        setForm(withAutoTrainingSelections(toUpdateRequest(nextWorkspace)));
+        setForm(normalizeTrainingSelections(toUpdateRequest(nextWorkspace)));
       })
       .catch((loadError) => {
         if (!active) return;
@@ -185,25 +201,21 @@ export function NutritionWorkspaceScreen() {
     }));
   }
 
-  function toggleDayList(key: "hard_sparring_days" | "technical_skill_days", day: string) {
+  function setDayType(day: string, value: string) {
     setForm((current) => {
-      const nextSpecificDays = sortTrainingDays(toggleListValue(current.shared_camp_context[key], day));
-      const hardSparringDays =
-        key === "hard_sparring_days" ? nextSpecificDays : sortTrainingDays(current.shared_camp_context.hard_sparring_days);
-      const technicalSkillDays =
-        key === "technical_skill_days" ? nextSpecificDays : sortTrainingDays(current.shared_camp_context.technical_skill_days);
-      const trainingAvailability = sortTrainingDays([...hardSparringDays, ...technicalSkillDays]);
-
-      return {
+      const nextSessionTypes = { ...current.shared_camp_context.session_types_by_day };
+      if (!value) {
+        delete nextSessionTypes[day];
+      } else if (isSupportedNutritionDayType(value)) {
+        nextSessionTypes[day] = value;
+      }
+      return normalizeTrainingSelections({
         ...current,
         shared_camp_context: {
           ...current.shared_camp_context,
-          hard_sparring_days: hardSparringDays,
-          technical_skill_days: technicalSkillDays,
-          training_availability: trainingAvailability,
-          session_types_by_day: buildAutoSessionTypes(hardSparringDays, technicalSkillDays),
+          session_types_by_day: nextSessionTypes,
         },
-      };
+      });
     });
   }
 
@@ -220,10 +232,10 @@ export function NutritionWorkspaceScreen() {
       try {
         const nextWorkspace = await updateNutritionCurrent(
           session.access_token,
-          withAutoTrainingSelections(form),
+          normalizeTrainingSelections(form),
         );
         setWorkspace(nextWorkspace);
-        setForm(withAutoTrainingSelections(toUpdateRequest(nextWorkspace)));
+        setForm(normalizeTrainingSelections(toUpdateRequest(nextWorkspace)));
         await refreshMe();
         setMessage("Nutrition workspace saved.");
       } catch (saveError) {
@@ -467,47 +479,23 @@ export function NutritionWorkspaceScreen() {
                     </select>
                   </div>
                 </div>
-                <div className="field">
-                  <label>Hard sparring days</label>
-                  <div className="checkbox-grid">
-                    {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={`checkbox-card ${form.shared_camp_context.hard_sparring_days.includes(option.value) ? "checkbox-card-checked" : ""}`.trim()}
+                <div className="nutrition-daytype-grid">
+                  {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
+                    <div key={option.value} className="field">
+                      <label>{option.label} day type</label>
+                      <select
+                        value={form.shared_camp_context.session_types_by_day[option.value] ?? ""}
+                        onChange={(event) => setDayType(option.value, event.target.value)}
                       >
-                        <input
-                          type="checkbox"
-                          checked={form.shared_camp_context.hard_sparring_days.includes(option.value)}
-                          onChange={() => toggleDayList("hard_sparring_days", option.value)}
-                        />
-                        <span className="checkbox-card-copy">
-                          <span className="checkbox-card-title">{option.label}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
+                        <option value="">Off / not scheduled</option>
+                        {DAY_TYPE_OPTIONS.map((dayTypeOption) => (
+                          <option key={dayTypeOption.value} value={dayTypeOption.value}>{dayTypeOption.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
                 </div>
-                <div className="field">
-                  <label>Technical / lighter skill days</label>
-                  <div className="checkbox-grid">
-                    {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
-                      <label
-                        key={option.value}
-                        className={`checkbox-card ${form.shared_camp_context.technical_skill_days.includes(option.value) ? "checkbox-card-checked" : ""}`.trim()}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.shared_camp_context.technical_skill_days.includes(option.value)}
-                          onChange={() => toggleDayList("technical_skill_days", option.value)}
-                        />
-                        <span className="checkbox-card-copy">
-                          <span className="checkbox-card-title">{option.label}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <p className="muted">Training availability and day type are now inferred from the hard sparring and technical/lighter selections above.</p>
+                <p className="muted">Pick the day type directly for each weekday. Hard sparring and light technical still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
               </article>
 
               <article className="step-card nutrition-section">
