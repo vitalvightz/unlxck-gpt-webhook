@@ -179,12 +179,29 @@ select:focus-visible {
   height: 100%;
   min-height: 0;
   overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 173, 183, 0.42) transparent;
 }
 
 .sidebar-shell::-webkit-scrollbar {
-  display: none;
+  width: 10px;
+}
+
+.sidebar-shell::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-shell::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(167, 173, 183, 0.34);
+  background-clip: padding-box;
+}
+
+.sidebar-shell:hover::-webkit-scrollbar-thumb {
+  background: rgba(167, 173, 183, 0.5);
+  background-clip: padding-box;
 }
 
 .sidebar-brand {
