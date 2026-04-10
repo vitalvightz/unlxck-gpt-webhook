@@ -60,6 +60,7 @@ class FakeStore:
             "athlete_locale": "",
             "appearance_mode": "dark",
             "onboarding_draft": None,
+            "nutrition_profile": {},
             "created_at": _now(),
             "updated_at": _now(),
         }
@@ -90,6 +91,25 @@ class FakeStore:
         }
         self.intakes.setdefault(athlete_id, []).append(intake)
         return intake
+
+    def update_intake(
+        self,
+        intake_id: str,
+        *,
+        intake: dict,
+        fight_date: str | None,
+        technical_style: list[str],
+    ) -> dict:
+        for athlete_intakes in self.intakes.values():
+            for row in athlete_intakes:
+                if row["id"] != intake_id:
+                    continue
+                row["intake"] = intake
+                row["fight_date"] = fight_date
+                row["technical_style"] = technical_style
+                row["updated_at"] = _now()
+                return row
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="intake not found")
 
     def create_plan(self, *, athlete_id: str, intake_id: str, request: PlanRequest, result: dict) -> dict:
         profile = self.profiles[athlete_id]
