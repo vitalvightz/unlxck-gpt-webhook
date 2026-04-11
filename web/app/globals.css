@@ -970,6 +970,18 @@ select:focus-visible {
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
 }
 
+.overview-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+  align-items: start;
+}
+
+.overview-detail-column {
+  display: grid;
+  align-content: start;
+}
+
 .overview-detail-list .review-detail-row {
   padding-block: 14px;
   border-top-color: rgba(255, 255, 255, 0.04);
@@ -1496,6 +1508,13 @@ select:focus-visible {
 .custom-select-option-selected.custom-select-option-active,
 .custom-select-option-selected:hover {
   background: linear-gradient(180deg, rgba(181, 18, 43, 0.24), rgba(181, 18, 43, 0.12));
+}
+
+.custom-select-option-label {
+  flex: 1;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .custom-select-menu[data-state="opening"] {
@@ -2736,7 +2755,8 @@ button.mobile-step-rail-item {
   padding-inline: 14px;
 }
 
-.plan-history-feedback {
+.plan-history-feedback,
+.plans-history-feedback {
   grid-column: 1 / -1;
   display: grid;
   gap: 12px;
@@ -2913,6 +2933,10 @@ button.mobile-step-rail-item {
 
   .overview-command-grid,
   .overview-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-detail-grid {
     grid-template-columns: 1fr;
   }
 
