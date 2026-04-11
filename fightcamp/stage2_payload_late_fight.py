@@ -902,21 +902,25 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     if mode == "pre_fight_compressed_payload":
         return {
             "mode": mode,
-            "framing": "compressed_week",
+            "framing": "countdown_insert_or_unified_countdown",
             "rules": [
-                "Frame this as a compressed pre-fight week rather than a normal camp week.",
-                "Present sessions countdown-first (D-N first, weekday second), even when using compressed week wording.",
+                "Frame this as either a countdown insert or one unified countdown schedule, never as a fake Monday-Sunday week.",
+                "Present sessions countdown-first (D-N first, weekday second).",
+                "If this does not fully prescribe every active day, label exactly: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.",
+                "Never mix two schedule realities in one output (no 'sessions only' statement plus separate boxing-day listing).",
                 "Keep the language on technical rhythm, sharpness, one meaningful strength touch, and freshness.",
                 "No broad development week framing or conditioning-build language.",
                 "Do not stack standalone glycolytic density beside multiple hard sparring days.",
                 "Cap total meaningful stress exposures at 3 and keep each session at five blocks or less.",
+                "Never label D-0 as training. D-0 is fight-day protocol only.",
             ],
             "preferred_terms": [
-                "compressed week",
+                "countdown insert",
+                "countdown schedule",
                 "technical rhythm",
                 "sharpness",
                 "strength touch",
-                "freshness session",
+                "freshness",
                 "mobility / reset",
             ],
             "forbidden_terms": [
@@ -924,6 +928,10 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
                 "conditioning build",
                 "secondary anchor",
                 "extra density push",
+                "monday-sunday schedule",
+                "d-0 freshness session",
+                "d-0 strength touch",
+                "d-0 conditioning",
             ],
         }
     if mode == "late_fight_week_payload":
@@ -964,10 +972,13 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
                 "Render session-by-session, not as a weekly build.",
                 "Lead each item with its countdown label (D-N) and then weekday.",
                 "No hard sparring — technical rhythm and sharpness touch only.",
-                "Max 2 sessions: one power touch or technical rhythm session + one freshness session.",
+                "When this is an insert, cap coach-prescribed insert work to 2 sessions: one power touch or technical rhythm session + one freshness session.",
+                "If this does not fully prescribe every active day, label exactly: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.",
+                "Never mix insert-only wording with separate full-week boxing listings in the same output.",
                 "No strength-anchor, conditioning-stressor, or support-strength wording.",
                 "No development language or program-block framing.",
                 "Keep each session at four blocks or less.",
+                "Never label D-0 as training. D-0 is fight-day protocol only.",
             ],
             "preferred_terms": [
                 "sharpness",
@@ -992,12 +1003,15 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Render session-by-session, not as a program block.",
                 "Lead each session with countdown-first framing (D-N, then weekday).",
+                "If this does not fully prescribe every active day, label exactly: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.",
+                "Never mix insert-only wording with separate full-week boxing listings in the same output.",
                 "Use sharpness session, technical touch, low-noise power, freshness session, primer, and reset language.",
                 "No 'program block' framing.",
                 "No phase-explanation dump.",
                 "No long rationale sections.",
                 "Keep each session description tight and action-oriented.",
                 "Respect the per-session four-block ceiling.",
+                "Never label D-0 as training. D-0 is fight-day protocol only.",
             ],
             "preferred_terms": [
                 "sharpness session",
@@ -1435,17 +1449,17 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
-        return "Compressed Pre-Fight Week"
+        return "Countdown Insert Window (D-13 to D-8)"
     if mode == "late_fight_week_payload":
-        return "Sharpness Week"
+        return "Countdown Sharpness Window (D-7)"
     if mode == "late_fight_transition_payload":
-        return "Sharpness & Freshness Window"
+        return "Countdown Insert Window (D-6 to D-5)"
     if mode == "late_fight_session_payload":
-        return "Sharpness Sessions"
+        return "Countdown Insert Sessions (D-4 to D-2)"
     if mode == "pre_fight_day_payload":
-        return "Primer Day"
+        return "Countdown Primer (D-1)"
     if mode == "fight_day_protocol_payload":
-        return "Fight-Day Protocol"
+        return "Fight-Day Protocol (D-0)"
     return "Camp"
 
 
@@ -1453,20 +1467,20 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
         return (
-            "Use a compressed pre-fight week. Keep no more than two hard sparring exposures, one meaningful "
-            "strength touch, an optional light fight-rhythm touch only when sparring does not already own the "
-            "week, and one freshness / mobility reset day."
+            "Use countdown-first late-fight guidance. If you are not prescribing every active day, present this as "
+            "a coach-prescribed S&C / rehab insert around the gym boxing schedule; otherwise present one unified "
+            "countdown schedule."
         )
     if mode == "late_fight_week_payload":
-        return "Use a compressed sharpness week. Keep one main neural or power touch, one fight-rhythm touch at most, and the rest on freshness, mobility, and reset."
+        return "Use countdown-first D-7 sharpness guidance without Monday-Sunday framing. Keep scope explicit (insert-only vs one unified countdown schedule) and avoid mixed schedule realities."
     if mode == "late_fight_transition_payload":
-        return "Use a transition window built around technical rhythm, a small power touch, and freshness only. No hard sparring and no camp-style headings."
+        return "Use a D-6 to D-5 countdown insert focused on technical rhythm, small power touch, and freshness. No hard sparring, no camp-style headings, and no conflicting full-week claims."
     if mode == "late_fight_session_payload":
-        return "Use a short sharpness-first session list. Think technical touch, low-noise power, freshness, and reset — not normal camp architecture."
+        return "Use a short D-4 to D-2 countdown insert list (technical touch, low-noise power, freshness, reset), not a fake full-week planner."
     if mode == "pre_fight_day_payload":
-        return "Use primer-only guidance. Keep it to neural primer, technical touch, activation, reset, and rhythm."
+        return "Use D-1 primer-only guidance: neural primer, technical touch, activation, reset, and rhythm."
     if mode == "fight_day_protocol_payload":
-        return "Use fight-day protocol guidance only. Activation, warm-up, cue, fuel, walk-through, and recover — no training-plan language."
+        return "Use D-0 fight-day protocol only: activation, warm-up, cue, fuel, walk-through, and recover. No training-session language."
     return "Use the normal camp-stage payload."
 
 
@@ -1613,12 +1627,12 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
     countdown_contract = (
         "D-13 TO D-0 OUTPUT CONTRACT\n"
         "For any athlete with 13 days or fewer until fight, use one coherent countdown truth.\n"
-        "Use one unified section title: Countdown schedule.\n"
-        "Lead each active day with countdown-first labeling (D-N first, weekday second), and keep the full remaining window visible from current D-N through D-0.\n"
+        "Lead each active day with countdown-first labeling (D-N first, weekday second), and avoid fake Monday-Sunday framing.\n"
+        "If output does NOT fully prescribe every active day, label it exactly as: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
+        "When output fully prescribes all active days, use one unified section title: Countdown schedule.\n"
         "Do not frame late windows as a normal Monday-Sunday week without countdown labels.\n"
         "Never label D-0 as a training session. D-0 is fight-day protocol only (or omitted when no fight-day protocol is provided).\n"
-        "Never claim 'two sessions only' unless the visible schedule truly has only two active days.\n"
-        "If output is coach-prescribed S&C / rehab only (not full boxing week), label it exactly as: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
+        "Never claim 'two sessions only' while also listing separate boxing-day sessions in the same output.\n"
         "If output includes boxing plus S&C, treat all listed active days as one real integrated schedule and do not split into conflicting schedule realities.\n"
         "For declared hard-spar days: keep the declared day fixed. If countdown rules downgrade it, keep it on that same day as technical touch / controlled rounds / rhythm timing.\n"
         "Do not drop declared hard-spar days and do not move them.\n"
@@ -1662,9 +1676,9 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         )
     if payload_mode == "pre_fight_compressed_payload":
         return (
-            "LATE FIGHT MODE — COMPRESSED PRE-FIGHT WEEK (D-13 to D-8)\n"
-            "This is a compressed pre-fight week, not a normal SPP build.\n"
-            "Use compressed weekly framing only and cap each session at 5 blocks.\n"
+            "LATE FIGHT MODE — COUNTDOWN PRE-FIGHT WINDOW (D-13 to D-8)\n"
+            "This is a countdown window, not a normal SPP build.\n"
+            "Use countdown framing and cap each session at 5 blocks.\n"
             "Keep no more than 2 hard sparring exposures.\n"
             "Keep one meaningful strength or power touch at most.\n"
             "Allow at most one light fight-rhythm touch, and suppress it entirely when sparring already owns the week.\n"
@@ -1672,7 +1686,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Do NOT frame this as a broad development week, conditioning build, or density push.\n"
             "Do NOT rebuild a normal SPP week in Stage 2.\n"
             "Do NOT place a standalone glycolytic stressor between two hard sparring collisions.\n"
-            "Preferred headings: Compressed Week, Technical Rhythm, Sharpness, Strength Touch, Freshness Session, Mobility / Reset.\n"
+            "Preferred headings: Countdown Insert, Countdown Schedule, Technical Rhythm, Sharpness, Strength Touch, Freshness, Mobility / Reset.\n"
             "Avoid headings such as Development Block, Conditioning Build, Secondary Anchor, Extra Density Push.\n"
             "Preserve freshness over extra development.\n\n"
             + countdown_contract
@@ -1714,7 +1728,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "This is the transition taper window. Do NOT use normal camp-week framing.\n"
             "Do NOT generate hard sparring under any circumstances.\n"
             "All declared hard sparring days convert to technical rhythm only.\n"
-            "Max 2 sessions: one technical rhythm or power touch + one freshness session.\n"
+            "If this is an insert, max 2 coach-prescribed insert sessions: one technical rhythm or power touch + one freshness session.\n"
             "Cap meaningful stress exposures at 1 and cap each session at 4 blocks.\n"
             "No primary strength, no anchor day, no conditioning block, and no glycolytic work.\n"
             "No development language, volume-build language, or program-block framing.\n"
