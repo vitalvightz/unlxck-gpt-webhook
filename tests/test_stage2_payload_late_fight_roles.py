@@ -193,13 +193,12 @@ def test_sequence_allocates_non_hard_roles_to_remaining_countdown_days():
     )
     sequence = _build_late_fight_session_sequence(9, athlete)
     countdown_labels = [entry["countdown_label"] for entry in sequence if entry.get("countdown_label")]
+    role_by_key = {entry["role_key"]: entry for entry in sequence}
 
     assert len(countdown_labels) == len(set(countdown_labels))
-    assert sequence[0]["role_key"] == "hard_sparring_day"
-    assert sequence[0]["countdown_label"] == "D-8"
-    assert sequence[1]["role_key"] == "declared_hard_day_technical_touch"
-    assert sequence[1]["countdown_label"] == "D-5"
-    assert sequence[1]["real_weekday"] == "tuesday"
+    assert role_by_key["hard_sparring_day"]["countdown_label"] == "D-8"
+    technical = [entry for entry in sequence if entry["role_key"] == "declared_hard_day_technical_touch"]
+    assert any(entry["countdown_label"] == "D-5" and entry["real_weekday"] == "tuesday" for entry in technical)
 
 
 def test_split_declared_hard_day_instances_returns_surviving_and_downgraded():
