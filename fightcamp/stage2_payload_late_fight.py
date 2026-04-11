@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from typing import Any
 
 
@@ -348,6 +349,143 @@ def _countdown_offset(label: str) -> int | None:
         return int(normalized[2:])
     except ValueError:
         return None
+
+
+def _late_window_role_cost(role_key: str) -> str:
+    high_roles = {
+        "hard_sparring_day",
+        "light_fight_pace_touch_day",
+        "strength_touch_day",
+        "neural_primer_day",
+        "alactic_sharpness_day",
+        "alactic_speed_day",
+        "primary_strength_day",
+        "neural_plus_strength_day",
+    }
+    medium_roles = {
+        "declared_hard_day_technical_touch",
+        "technical_touch_day",
+        "controlled_boxing_touch_day",
+        "declared_hard_day_deload",
+    }
+    low_roles = {
+        "fight_week_freshness_day",
+        "recovery_reset_day",
+        "tissue_recovery_day",
+        "mobility_reset_day",
+        "breathing_reset_day",
+    }
+    if role_key in high_roles:
+        return "high"
+    if role_key in medium_roles:
+        return "medium"
+    if role_key in low_roles:
+        return "low"
+    if "freshness" in role_key or "recovery" in role_key or "mobility" in role_key or "breathing" in role_key:
+        return "low"
+    if "technical" in role_key:
+        return "medium"
+    return "medium"
+
+
+def _allocate_late_window_countdown_slots(
+    *,
+    all_labels: list[str],
+    locked_labels_by_role_index: dict[int, str],
+    unlocked_roles: list[tuple[int, dict[str, Any]]],
+) -> dict[int, str]:
+    free_labels = [label for label in all_labels if label not in set(locked_labels_by_role_index.values())]
+    if not unlocked_roles or not free_labels:
+        return {}
+    role_indices = [index for index, _ in unlocked_roles]
+    role_map = {index: role for index, role in unlocked_roles}
+    role_costs = {index: _late_window_role_cost(str(role.get("role_key") or "")) for index, role in unlocked_roles}
+    label_offset = {label: (_countdown_offset(label) or -1) for label in all_labels}
+    k = min(len(unlocked_roles), len(free_labels))
+    candidate_labels = free_labels
+
+    def _is_freshness_role(role_key: str) -> bool:
+        role_key = role_key.lower()
+        return "freshness" in role_key or "recovery" in role_key or "mobility" in role_key
+
+    def _assignment_score(assignment: dict[int, str]) -> tuple:
+        assigned_all = dict(locked_labels_by_role_index)
+        assigned_all.update(assignment)
+        active_offsets = sorted(
+            [label_offset[label] for label in assigned_all.values() if label in label_offset],
+            reverse=True,
+        )
+        gaps = [active_offsets[idx] - active_offsets[idx + 1] for idx in range(len(active_offsets) - 1)]
+        min_gap = min(gaps) if gaps else 99
+        consecutive_pairs = sum(1 for gap in gaps if gap == 1)
+        three_day_clusters = sum(
+            1 for idx in range(len(active_offsets) - 2)
+            if active_offsets[idx] - active_offsets[idx + 1] == 1 and active_offsets[idx + 1] - active_offsets[idx + 2] == 1
+        )
+        high_high_consecutive = 0
+        high_to_medium_or_high = 0
+        cost_by_offset: dict[int, str] = {}
+        for role_index, label in assigned_all.items():
+            offset = label_offset.get(label)
+            if offset is None:
+                continue
+            cost = role_costs.get(role_index, "medium")
+            cost_by_offset[offset] = cost
+        for idx in range(len(active_offsets) - 1):
+            current_offset = active_offsets[idx]
+            next_offset = active_offsets[idx + 1]
+            if current_offset - next_offset != 1:
+                continue
+            current_cost = cost_by_offset.get(current_offset, "medium")
+            next_cost = cost_by_offset.get(next_offset, "medium")
+            if current_cost == "high" and next_cost == "high":
+                high_high_consecutive += 1
+            if current_cost == "high" and next_cost in {"high", "medium"}:
+                high_to_medium_or_high += 1
+        high_earlier_bonus = sum(
+            label_offset.get(label, 0)
+            for role_index, label in assignment.items()
+            if role_costs.get(role_index) == "high"
+        )
+        freshness_gap_bonus = 0
+        freshness_offsets = [
+            label_offset.get(label, -1)
+            for role_index, label in assignment.items()
+            if _is_freshness_role(str(role_map.get(role_index, {}).get("role_key") or ""))
+        ]
+        for freshness_offset in freshness_offsets:
+            if freshness_offset < 0:
+                continue
+            prior = [offset for offset in active_offsets if offset > freshness_offset]
+            after = [offset for offset in active_offsets if offset < freshness_offset]
+            gap_before = (min(prior) - freshness_offset) if prior else None
+            gap_after = (freshness_offset - max(after)) if after else None
+            if gap_before is not None and gap_after is not None and (gap_before >= 2 or gap_after >= 2):
+                freshness_gap_bonus += 3
+            if freshness_offset <= 2 and gap_before is not None and gap_before >= 2:
+                freshness_gap_bonus += 2
+        deterministic_earliest = tuple(sorted((label_offset.get(label, -1) for label in assignment.values()), reverse=True))
+        return (
+            min_gap,
+            -consecutive_pairs,
+            -three_day_clusters,
+            -high_high_consecutive,
+            -high_to_medium_or_high,
+            high_earlier_bonus,
+            freshness_gap_bonus,
+            deterministic_earliest,
+        )
+
+    best_score = None
+    best_assignment: dict[int, str] = {}
+    for labels in itertools.combinations(candidate_labels, k):
+        for perm in itertools.permutations(labels, k):
+            assignment = {role_indices[pos]: perm[pos] for pos in range(k)}
+            score = _assignment_score(assignment)
+            if best_score is None or score > best_score:
+                best_score = score
+                best_assignment = assignment
+    return best_assignment
 
 
 def _resolve_countdown_weekday_with_availability(
@@ -1439,33 +1577,30 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
         days = int(days_until_fight)
     except (TypeError, ValueError):
         days = None
-    available_countdown_labels: list[str] = []
-    reserved_countdown_labels: set[str] = set()
+    all_labels: list[str] = []
+    locked_labels_by_role_index: dict[int, str] = {}
     if days is not None and days >= 0:
         all_labels = [f"D-{offset}" for offset in range(days, -1, -1)]
-        reserved_countdown_labels = {
-            str(role.get("countdown_label"))
-            for role in roles
-            if str(role.get("countdown_label") or "").startswith("D-")
-        }
-        available_countdown_labels = [label for label in all_labels if label not in reserved_countdown_labels]
+        for index, role in enumerate(roles):
+            label = str(role.get("countdown_label") or "")
+            if role.get("declared_day_locked") and label.startswith("D-"):
+                locked_labels_by_role_index[index] = label
+    unlocked_roles = [(index, role) for index, role in enumerate(roles) if index not in locked_labels_by_role_index]
+    unlocked_assignment = _allocate_late_window_countdown_slots(
+        all_labels=all_labels,
+        locked_labels_by_role_index=locked_labels_by_role_index,
+        unlocked_roles=unlocked_roles,
+    ) if all_labels else {}
+    fallback_labels = [label for label in all_labels if label not in set(locked_labels_by_role_index.values()) and label not in set(unlocked_assignment.values())]
     sequence: list[dict[str, Any]] = []
-    for role in roles:
-        if days is not None:
-            role_countdown_label = role.get("countdown_label")
-            if role_countdown_label and str(role_countdown_label).startswith("D-"):
-                candidate_label = str(role_countdown_label)
-                if candidate_label in reserved_countdown_labels:
-                    countdown_label = candidate_label
-                    reserved_countdown_labels.discard(candidate_label)
-                elif available_countdown_labels:
-                    countdown_label = available_countdown_labels.pop(0)
-                else:
-                    countdown_label = candidate_label
-            else:
-                countdown_label = available_countdown_labels.pop(0) if available_countdown_labels else None
-        else:
-            countdown_label = None
+    for index, role in enumerate(roles):
+        countdown_label = None
+        if index in locked_labels_by_role_index:
+            countdown_label = locked_labels_by_role_index[index]
+        elif index in unlocked_assignment:
+            countdown_label = unlocked_assignment[index]
+        elif fallback_labels:
+            countdown_label = fallback_labels.pop(0)
         locked_day = str(role.get("locked_day") or "").strip().lower()
         if role.get("declared_day_locked") and locked_day:
             real_weekday = locked_day
@@ -1496,6 +1631,9 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
         if role.get("downgraded_from_hard_sparring"):
             entry["downgraded_from_hard_sparring"] = True
         sequence.append(entry)
+    sequence.sort(key=lambda entry: _countdown_offset(str(entry.get("countdown_label") or "")) or -1, reverse=True)
+    for idx, entry in enumerate(sequence, start=1):
+        entry["session_index"] = idx
     return sequence
 
 
