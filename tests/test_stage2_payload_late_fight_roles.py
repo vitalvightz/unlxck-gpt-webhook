@@ -206,6 +206,44 @@ def test_placement_locked_roles_keep_their_label():
     assert hard["placement_basis"] == "locked"
 
 
+def test_placement_preserves_semantic_role_metadata_from_budget_layer():
+    roles = [
+        {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "highest_glycolytic_day",
+            "countdown_label": "D-8",
+            "declared_day_locked": True,
+            "scheduled_day_hint": "saturday",
+            "locked_day": "saturday",
+            "day_assignment_reason": "Declared hard day survives",
+            "countdown_offset": 8,
+            "downgraded_from_hard_sparring": True,
+            "governance": {"late_fight_payload": True},
+            "coach_notes": ["keep it technical"],
+        }
+    ]
+    sequence = place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=9,
+        countdown_weekday_map={"D-8": "saturday"},
+    )
+    assert len(sequence) == 1
+    entry = sequence[0]
+    assert entry["declared_day_locked"] is True
+    assert entry["scheduled_day_hint"] == "saturday"
+    assert entry["locked_day"] == "saturday"
+    assert entry["day_assignment_reason"] == "Declared hard day survives"
+    assert entry["countdown_offset"] == 8
+    assert entry["downgraded_from_hard_sparring"] is True
+    assert entry["governance"] == {"late_fight_payload": True}
+    assert entry["coach_notes"] == ["keep it technical"]
+
+
 def test_placement_labels_are_unique():
     """No two roles in the sequence may share a countdown label."""
     for days in (13, 10, 8, 7, 5, 4, 3, 2):
