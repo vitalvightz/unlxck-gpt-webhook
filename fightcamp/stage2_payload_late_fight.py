@@ -1379,71 +1379,35 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
 
 
 def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
+    """
+    Build the ordered session sequence for the late-fight window.
+
+    Delegates placement to the dedicated placement engine (Layer 3).  The
+    budget layer (_late_fight_session_roles) already decided *what* roles exist
+    and *how many*.  This function's only job is to coordinate the inputs and
+    call the engine which decides *where* each role goes.
+    """
+    from fightcamp.late_fight_placement import place_roles_in_countdown
+
     plan_creation_weekday = athlete_model.get("plan_creation_weekday")
     available_days = _clean_list(athlete_model.get("training_days", []))
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
     resolved_map = _resolve_countdown_weekday_with_availability(countdown_map, available_days)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
+
     try:
         days = int(days_until_fight)
     except (TypeError, ValueError):
-        days = None
-    available_countdown_labels: list[str] = []
-    reserved_countdown_labels: set[str] = set()
-    if days is not None and days >= 0:
-        all_labels = [f"D-{offset}" for offset in range(days, -1, -1)]
-        reserved_countdown_labels = {
-            str(role.get("countdown_label"))
-            for role in roles
-            if str(role.get("countdown_label") or "").startswith("D-")
-        }
-        available_countdown_labels = [label for label in all_labels if label not in reserved_countdown_labels]
-    sequence: list[dict[str, Any]] = []
-    for role in roles:
-        if days is not None:
-            role_countdown_label = role.get("countdown_label")
-            if role_countdown_label and str(role_countdown_label).startswith("D-"):
-                candidate_label = str(role_countdown_label)
-                if candidate_label in reserved_countdown_labels:
-                    countdown_label = candidate_label
-                    reserved_countdown_labels.discard(candidate_label)
-                elif available_countdown_labels:
-                    countdown_label = available_countdown_labels.pop(0)
-                else:
-                    countdown_label = candidate_label
-            else:
-                countdown_label = available_countdown_labels.pop(0) if available_countdown_labels else None
-        else:
-            countdown_label = None
-        locked_day = str(role.get("locked_day") or "").strip().lower()
-        if role.get("role_key") == "hard_sparring_day" and locked_day:
-            real_weekday = locked_day
-        else:
-            real_weekday = resolved_map.get(countdown_label) if countdown_label else None
-        entry: dict[str, Any] = {
-            "session_index": role.get("session_index"),
-            "category": role.get("category"),
-            "role_key": role.get("role_key"),
-            "preferred_pool": role.get("preferred_pool"),
-            "preferred_system": role.get("preferred_system"),
-            "selection_rule": role.get("selection_rule"),
-            "placement_rule": role.get("placement_rule"),
-            "anchor": role.get("anchor"),
-        }
-        if countdown_label:
-            entry["countdown_label"] = countdown_label
-        if real_weekday:
-            entry["real_weekday"] = real_weekday
-        if role.get("declared_day_locked"):
-            entry["declared_day_locked"] = True
-        if role.get("scheduled_day_hint"):
-            entry["scheduled_day_hint"] = role.get("scheduled_day_hint")
-        if role.get("locked_day"):
-            entry["locked_day"] = role.get("locked_day")
-        if role.get("day_assignment_reason"):
-            entry["day_assignment_reason"] = role.get("day_assignment_reason")
-        sequence.append(entry)
-    return sequence
+        return []
+
+    if days < 0:
+        return []
+
+    return place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=days,
+        countdown_weekday_map=resolved_map,
+    )
 
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
