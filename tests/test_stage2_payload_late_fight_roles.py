@@ -1,4 +1,8 @@
-from fightcamp.stage2_payload_late_fight import _late_fight_session_roles, _select_spaced_hard_days
+from fightcamp.stage2_payload_late_fight import (
+    _active_declared_hard_days_for_window,
+    _late_fight_session_roles,
+    _select_spaced_hard_days,
+)
 
 
 _MINIMAL_ATHLETE = {
@@ -25,6 +29,31 @@ def _athlete(days_until_fight, **overrides):
     athlete.update(overrides)
     return athlete
 
+
+
+
+def test_active_declared_hard_days_for_window_locks_to_declared_future_dates():
+    active = _active_declared_hard_days_for_window(
+        declared_hard_days=["tuesday", "thursday", "saturday"],
+        plan_creation_weekday="friday",
+        days_until_fight=9,
+    )
+
+    assert active == ["saturday"]
+
+
+def test_pre_fight_compressed_never_invents_non_declared_hard_day():
+    roles = _late_fight_session_roles(
+        9,
+        _athlete(
+            9,
+            plan_creation_weekday="friday",
+            hard_sparring_days=["tuesday", "thursday", "saturday"],
+            training_days=["friday", "saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"],
+        ),
+    )
+
+    assert [role["role_key"] for role in roles].count("hard_sparring_day") == 1
 
 def test_select_spaced_hard_days_keeps_first_and_last_when_capped_to_two():
     assert _select_spaced_hard_days(["monday", "thursday", "saturday"], 2) == ["monday", "saturday"]
