@@ -6,8 +6,9 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
-import { BodyMap, type BodyMapSide } from "@/components/body-map";
+import { BodyAreaMap } from "@/components/body-area-map";
 import { CustomSelect } from "@/components/custom-select";
+import { findBodyAreaRegion, type BodyAreaMapSide } from "@/lib/body-area-regions";
 import { updateMe } from "@/lib/api";
 import {
   detectDeviceTimeZone,
@@ -513,7 +514,7 @@ export function PlanIntakeForm() {
   const [guidedInjuries, setGuidedInjuries] = useState<GuidedInjuryState[]>([]);
   const [activeGuidedInjuryIndex, setActiveGuidedInjuryIndex] = useState<number | null>(null);
   const [noRestrictions, setNoRestrictions] = useState(true);
-  const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
+  const [bodyMapSide, setBodyMapSide] = useState<BodyAreaMapSide>("front");
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -523,6 +524,8 @@ export function PlanIntakeForm() {
   const [acknowledgedHardSparringWarningKey, setAcknowledgedHardSparringWarningKey] = useState<string | null>(null);
   const injuryMismatchContextKeyRef = useRef("");
   const issueRedirectConsumedRef = useRef(false);
+  const injuryAreaInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const pendingInjuryAreaFocusIndexRef = useRef<number | null>(null);
   const recordHasError = !isValidRecordFormat(form.athlete.record ?? "");
 
   // ── Days-out policy: compute field visibility/disablement ───────────
@@ -562,6 +565,22 @@ export function PlanIntakeForm() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reducedMotion ? "instant" : "smooth" });
   }, [currentStep]);
+
+  useEffect(() => {
+    const pendingIndex = pendingInjuryAreaFocusIndexRef.current;
+    if (pendingIndex === null) {
+      return;
+    }
+
+    const node = injuryAreaInputRefs.current[pendingIndex];
+    if (!node) {
+      return;
+    }
+
+    node.focus();
+    node.select();
+    pendingInjuryAreaFocusIndexRef.current = null;
+  }, [activeGuidedInjuryIndex, guidedInjuries]);
 
   const injuryMismatchContextKey = getInjuryMismatchContextKey(originalInjuriesText, form.injuries || "");
   const performanceFocusValidation = validatePerformanceFocusSelections(
@@ -691,23 +710,54 @@ export function PlanIntakeForm() {
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
   }
 
-  function handleBodyMapZoneSelect(label: string) {
-    const existingIndex = guidedInjuries.findIndex((injury) => injury.area.toLowerCase() === label.toLowerCase());
-    if (existingIndex >= 0) {
-      setActiveGuidedInjuryIndex(existingIndex);
+  function requestInjuryAreaInputFocus(index: number) {
+    pendingInjuryAreaFocusIndexRef.current = index;
+  }
+
+  function handleBodyAreaSelect(label: string) {
+    if (activeGuidedInjuryIndex !== null) {
+      updateGuidedInjury(activeGuidedInjuryIndex, "area", label);
       return;
     }
 
-    const emptyIndex = guidedInjuries.findIndex((injury) => !injury.area.trim());
-    if (emptyIndex >= 0) {
-      updateGuidedInjury(emptyIndex, "area", label);
-      setActiveGuidedInjuryIndex(emptyIndex);
+    if (guidedInjuries.length) {
+      updateGuidedInjury(0, "area", label);
+      setActiveGuidedInjuryIndex(0);
       return;
     }
 
-    const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label }];
+    const nextGuidedInjuries = [{ ...EMPTY_GUIDED_INJURY, area: label }];
     syncGuidedInjuryFields(nextGuidedInjuries, false);
-    setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
+    setActiveGuidedInjuryIndex(0);
+  }
+
+  function handleClearBodyArea() {
+    if (activeGuidedInjuryIndex !== null) {
+      updateGuidedInjury(activeGuidedInjuryIndex, "area", "");
+      return;
+    }
+
+    if (guidedInjuries.length) {
+      updateGuidedInjury(0, "area", "");
+      setActiveGuidedInjuryIndex(0);
+    }
+  }
+
+  function handleFocusManualBodyArea() {
+    if (activeGuidedInjuryIndex !== null) {
+      requestInjuryAreaInputFocus(activeGuidedInjuryIndex);
+      return;
+    }
+
+    if (guidedInjuries.length) {
+      setActiveGuidedInjuryIndex(0);
+      requestInjuryAreaInputFocus(0);
+      return;
+    }
+
+    syncGuidedInjuryFields([{ ...EMPTY_GUIDED_INJURY }], false);
+    setActiveGuidedInjuryIndex(0);
+    requestInjuryAreaInputFocus(0);
   }
 
   function handleRemoveGuidedInjury(index: number) {
@@ -1104,11 +1154,28 @@ export function PlanIntakeForm() {
   const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
+  const activeGuidedInjury =
+    activeGuidedInjuryIndex === null ? null : guidedInjuries[activeGuidedInjuryIndex] ?? null;
+  const bodyAreaMapUsedAreas = guidedInjuries
+    .filter((_, index) => index !== activeGuidedInjuryIndex)
+    .map((injury) => injury.area)
+    .filter(Boolean);
+  const bodyAreaMapTargetLabel = activeGuidedInjuryIndex === null
+    ? "a new injury card"
+    : `Injury ${String(activeGuidedInjuryIndex + 1).padStart(2, "0")}`;
   const plannerRestrictionPreview = formatRestrictionSummary(form.injuries);
   const restrictionSummary = formatRestrictionSummary(form.injuries);
   const sexLabel = form.athlete.sex
     ? SEX_OPTIONS.find((option) => option.value === form.athlete.sex)?.label ?? formatValue(form.athlete.sex)
     : "Not provided";
+
+  useEffect(() => {
+    const matchedRegion = activeGuidedInjury?.area ? findBodyAreaRegion(activeGuidedInjury.area) : null;
+    if (matchedRegion) {
+      setBodyMapSide(matchedRegion.side);
+    }
+  }, [activeGuidedInjury?.area, activeGuidedInjuryIndex]);
+
   const profileReviewItems = [
     { label: "Name", value: formatValue(form.athlete.full_name) },
     ...(hasValue(form.athlete.sex) ? [{ label: "Sex", value: sexLabel }] : []),
@@ -1626,11 +1693,15 @@ export function PlanIntakeForm() {
                   <>
                     <div className="injury-body-map-layout">
                       <div className="injury-body-map-col">
-                        <BodyMap
+                        <BodyAreaMap
                           side={bodyMapSide}
-                          usedAreas={guidedInjuries.map((injury) => injury.area)}
-                          onZoneSelect={handleBodyMapZoneSelect}
+                          selectedArea={activeGuidedInjury?.area ?? ""}
+                          usedAreas={bodyAreaMapUsedAreas}
+                          targetLabel={bodyAreaMapTargetLabel}
                           onSideChange={setBodyMapSide}
+                          onSelectArea={handleBodyAreaSelect}
+                          onClearArea={handleClearBodyArea}
+                          onTypeManually={handleFocusManualBodyArea}
                         />
                       </div>
                       <div className="injury-cards-col">
@@ -1644,15 +1715,11 @@ export function PlanIntakeForm() {
                               <section key={`guided-injury-${index}`} className={`injury-card ${isActive ? "injury-card-active" : ""}`.trim()}>
                                 <div
                                   className="injury-card-header injury-card-header-interactive"
-                                  onClick={() => (isActive ? setActiveGuidedInjuryIndex(null) : handleEditGuidedInjury(index))}
+                                  onClick={() => handleEditGuidedInjury(index)}
                                   onKeyDown={(event) => {
                                     if (event.key === "Enter" || event.key === " ") {
                                       event.preventDefault();
-                                      if (isActive) {
-                                        setActiveGuidedInjuryIndex(null);
-                                      } else {
-                                        handleEditGuidedInjury(index);
-                                      }
+                                      handleEditGuidedInjury(index);
                                     }
                                   }}
                                   role="button"
@@ -1697,6 +1764,9 @@ export function PlanIntakeForm() {
                                       <label htmlFor={`injuryArea-${index}`}>Injury or pain area</label>
                                       <input
                                         id={`injuryArea-${index}`}
+                                        ref={(node) => {
+                                          injuryAreaInputRefs.current[index] = node;
+                                        }}
                                         value={injury.area ?? ""}
                                         onChange={(event) => updateGuidedInjury(index, "area", event.target.value)}
                                         placeholder="Left shoulder"
