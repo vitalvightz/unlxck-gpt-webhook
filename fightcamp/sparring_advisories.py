@@ -42,6 +42,38 @@ _RISK_BAND_THRESHOLDS = [
 ]
 _RISK_BAND_RANK = {"black": 3, "red": 2, "amber": 1, "green": 0}
 
+# Severity tier token sets — soreness/stiffness are LOW, not moderate
+_HIGH_SEVERITY_TOKENS = {"tear", "rupture", "severe", "sharp", "cannot", "can't", "\u2019t"}
+_MODERATE_SEVERITY_TOKENS = {
+    "strain", "sprain", "pain", "tendon", "tendonitis", "tendinopathy", "impingement",
+}
+_SEVERITY_BASE_SCORE = {"high": 8, "moderate": 4, "low": 1}
+
+# Trajectory token sets
+_WORSENING_TOKENS = {"worsen", "worsening", "worse", "flared", "aggravated", "regressing"}
+_IMPROVING_TOKENS = {"improving", "better", "settling", "resolved", "resolving"}
+_STABLE_TOKENS = {"stable", "managed", "manageable", "maintenance"}
+
+
+def _severity_tier(lowered: str, instability: bool, daily_symptoms: bool) -> str:
+    """Classify structural severity: high / moderate / low."""
+    if any(token in lowered for token in _HIGH_SEVERITY_TOKENS):
+        return "high"
+    if any(token in lowered for token in _MODERATE_SEVERITY_TOKENS):
+        return "moderate"
+    return "low"
+
+
+def _trajectory(lowered: str, worsening: bool, improving: bool, stable: bool) -> str:
+    """Return exclusive trajectory; worsening wins when mixed."""
+    if worsening:
+        return "worsening"
+    if improving:
+        return "improving"
+    if stable:
+        return "stable"
+    return "unknown"
+
 
 def _collision_context(region: str) -> str:
     if region in _LOWER_LIMB_REGIONS:
@@ -249,30 +281,29 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
         region = str(parsed.get("canonical_location") or "unspecified").strip().lower()
         injury_type = str(parsed.get("injury_type") or "unspecified").strip().lower()
         laterality = str(parsed.get("laterality") or parsed.get("side") or "").strip().lower()
-        worsening = any(token in lowered for token in ("worsen", "worsening", "worse", "flared", "aggravated", "regressing"))
-        improving = any(token in lowered for token in ("improving", "better", "settling", "resolved", "resolving"))
-        stable = any(token in lowered for token in ("stable", "managed", "manageable", "maintenance"))
+
+        # -- Trajectory (exclusive: worsening wins) --
+        worsening = any(token in lowered for token in _WORSENING_TOKENS)
+        improving = any(token in lowered for token in _IMPROVING_TOKENS)
+        stable = any(token in lowered for token in _STABLE_TOKENS)
+        traj = _trajectory(lowered, worsening, improving, stable)
+
+        # -- Override flags --
         instability = any(token in lowered for token in ("instability", "giving way", "buckled", "locking", "locked"))
         daily_symptoms = any(token in lowered for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
+        oflags = _override_flags(lowered, instability, daily_symptoms)
+
+        # -- Legacy state_score (old algorithm, kept for backward compat) --
         severe = instability or daily_symptoms or any(
-            token in lowered for token in ("sharp", "severe", "tear", "rupture", "cannot", "can't", "can’t")
+            token in lowered for token in ("sharp", "severe", "tear", "rupture", "cannot", "can't")
         )
         moderate = severe or any(
             token in lowered
             for token in (
-                "strain",
-                "sprain",
-                "pain",
-                "tendon",
-                "tendonitis",
-                "tendinopathy",
-                "impingement",
-                "soreness",
-                "stiffness",
-                "irritation",
+                "strain", "sprain", "pain", "tendon", "tendonitis",
+                "tendinopathy", "impingement", "soreness", "stiffness", "irritation",
             )
         )
-
         state_score = 0
         if moderate:
             state_score = 2
@@ -292,17 +323,28 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
             state_score += 1
         state_score = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, state_score))
 
+        # -- Severity tier and collision context (new system) --
+        tier = _severity_tier(lowered, instability, daily_symptoms)
         ctx = _collision_context(region)
-        oflags = _override_flags(lowered, instability, daily_symptoms)
-        rbs = _compute_risk_band_score(
-            state_score=state_score,
-            worsening=worsening,
-            improving=improving,
-            stable=stable,
-            instability=instability,
-            daily_symptoms=daily_symptoms,
-            high_collision_region=region in _HIGH_COLLISION_REGIONS,
-        )
+
+        # -- risk_band_score (new system, used for band classification) --
+        base = _SEVERITY_BASE_SCORE[tier]
+        if tier == "low" and region in _HIGH_COLLISION_REGIONS:
+            base += 2  # lifts mild high-collision injuries to amber territory
+        if traj == "worsening":
+            base += 2
+        elif traj == "improving":
+            base -= 1
+        # Override floor: instability/daily_symptoms force minimum red (6).
+        # When worsening is ALSO present, the floor is 7 (active deterioration
+        # on top of an already-flagged injury).
+        if instability or daily_symptoms:
+            if worsening:
+                base = max(base, 7)
+            else:
+                base = max(base, 6)
+
+        rbs = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, base))
         band = _band_from_score(rbs)
 
         entries.append(
@@ -312,6 +354,8 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
                 "injury_type": injury_type,
                 "laterality": laterality,
                 "state_score": state_score,
+                "severity_tier": tier,
+                "trajectory": traj,
                 "worsening": worsening,
                 "improving": improving,
                 "stable": stable,
@@ -326,6 +370,8 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
             }
         )
     return entries
+
+
 
 
 def _injury_risk(entries: list[dict[str, Any]]) -> int:

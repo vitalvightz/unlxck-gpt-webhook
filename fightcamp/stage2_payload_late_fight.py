@@ -1435,20 +1435,20 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
         return (
-            "Use countdown-first late-fight guidance. If you are not prescribing every active day, present this as "
-            "a coach-prescribed S&C / rehab insert around the gym boxing schedule; otherwise present one unified "
-            "countdown schedule."
+            "Use a compressed pre-fight week. Keep no more than two hard sparring exposures, one meaningful "
+            "strength touch, an optional light fight-rhythm touch only when sparring does not already own the "
+            "week, and one freshness / mobility reset day."
         )
     if mode == "late_fight_week_payload":
-        return "Use countdown-first D-7 sharpness guidance without Monday-Sunday framing. Keep scope explicit (insert-only vs one unified countdown schedule) and avoid mixed schedule realities."
+        return "Use a compressed sharpness week. Keep one main neural or power touch, one fight-rhythm touch at most, and the rest on freshness, mobility, and reset."
     if mode == "late_fight_transition_payload":
-        return "Use a D-6 to D-5 countdown insert focused on technical rhythm, small power touch, and freshness. No hard sparring, no camp-style headings, and no conflicting full-week claims."
+        return "Use a transition window built around technical rhythm, a small power touch, and freshness only. No hard sparring and no camp-style headings."
     if mode == "late_fight_session_payload":
-        return "Use a short D-4 to D-2 countdown insert list (technical touch, low-noise power, freshness, reset), not a fake full-week planner."
+        return "Use a short sharpness-first session list. Think technical touch, low-noise power, freshness, and reset — not normal camp architecture."
     if mode == "pre_fight_day_payload":
-        return "Use D-1 primer-only guidance: neural primer, technical touch, activation, reset, and rhythm."
+        return "Use primer-only guidance. Keep it to neural primer, technical touch, activation, reset, and rhythm."
     if mode == "fight_day_protocol_payload":
-        return "Use D-0 fight-day protocol only: activation, warm-up, cue, fuel, walk-through, and recover. No training-session language."
+        return "Use fight-day protocol guidance only. Activation, warm-up, cue, fuel, walk-through, and recover — no training-plan language."
     return "Use the normal camp-stage payload."
 
 
@@ -1644,7 +1644,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         )
     if payload_mode == "pre_fight_compressed_payload":
         return (
-            "LATE FIGHT MODE — COUNTDOWN PRE-FIGHT WINDOW (D-13 to D-8)\n"
+            "LATE FIGHT MODE — COMPRESSED PRE-FIGHT WEEK (D-13 to D-8)\n"
             "This is a countdown window, not a normal SPP build.\n"
             "Use countdown framing and cap each session at 5 blocks.\n"
             "Keep no more than 2 hard sparring exposures.\n"
