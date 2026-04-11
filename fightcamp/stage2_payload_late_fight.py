@@ -915,8 +915,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
                 "Never label D-0 as training. D-0 is fight-day protocol only.",
             ],
             "preferred_terms": [
-                "countdown insert",
-                "countdown schedule",
+                "compressed week",
                 "technical rhythm",
                 "sharpness",
                 "strength touch",
@@ -1413,13 +1412,18 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
-        return "Countdown Insert Window (D-13 to D-8)"
+        return "Compressed Pre-Fight Week"
     if mode == "late_fight_week_payload":
-        return "Countdown Sharpness Window (D-7)"
+        return "Sharpness Week"
     if mode == "late_fight_transition_payload":
-        return "Countdown Insert Window (D-6 to D-5)"
+        return "Sharpness & Freshness Window"
     if mode == "late_fight_session_payload":
-        return "Countdown Insert Sessions (D-4 to D-2)"
+        return "Sharpness Sessions"
+    if mode == "pre_fight_day_payload":
+        return "Primer Day"
+    if mode == "fight_day_protocol_payload":
+        return "Fight-Day Protocol"
+    return "Camp"
     if mode == "pre_fight_day_payload":
         return "Countdown Primer (D-1)"
     if mode == "fight_day_protocol_payload":
@@ -1650,7 +1654,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Do NOT frame this as a broad development week, conditioning build, or density push.\n"
             "Do NOT rebuild a normal SPP week in Stage 2.\n"
             "Do NOT place a standalone glycolytic stressor between two hard sparring collisions.\n"
-            "Preferred headings: Countdown Insert, Countdown Schedule, Technical Rhythm, Sharpness, Strength Touch, Freshness, Mobility / Reset.\n"
+            "Preferred headings: Compressed Week, Technical Rhythm, Sharpness, Strength Touch, Freshness Session, Mobility / Reset.\n"
             "Avoid headings such as Development Block, Conditioning Build, Secondary Anchor, Extra Density Push.\n"
             "Preserve freshness over extra development.\n\n"
             + countdown_contract

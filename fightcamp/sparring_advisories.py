@@ -28,8 +28,87 @@ _HIGH_COLLISION_REGIONS = {
     "neck",
 }
 _LOWER_LIMB_REGIONS = {"ankle", "knee", "shin", "hip", "foot", "achilles", "groin"}
+_UPPER_BODY_COLLISION_REGIONS = {"shoulder", "neck"}
 _DISCLAIMER = "Treat this as a flag, not an automatic change to your saved plan."
 _SPARRING_INJURY_STATE_SCORE_CAP = 10
+
+# Risk band thresholds (risk_band_score → band)
+# green: 0–2, amber: 3–5, red: 6–8, black: 9–10
+_RISK_BAND_THRESHOLDS = [
+    (9, "black"),
+    (6, "red"),
+    (3, "amber"),
+    (0, "green"),
+]
+_RISK_BAND_RANK = {"black": 3, "red": 2, "amber": 1, "green": 0}
+
+
+def _collision_context(region: str) -> str:
+    if region in _LOWER_LIMB_REGIONS:
+        return "lower_limb"
+    if region in _UPPER_BODY_COLLISION_REGIONS:
+        return "upper_body_collision"
+    return "low_collision"
+
+
+def _override_flags(lowered: str, instability: bool, daily_symptoms: bool) -> list[str]:
+    flags: list[str] = []
+    if instability:
+        flags.append("instability")
+    if daily_symptoms:
+        flags.append("daily_symptoms")
+    if any(token in lowered for token in ("rest pain",)):
+        flags.append("rest_pain")
+    if any(token in lowered for token in ("cannot ", "can't ", "can't ")):
+        flags.append("cannot_load")
+    if any(token in lowered for token in ("giving way", "buckled", "locking", "locked")):
+        flags.append("giving_way")
+    return flags
+
+
+def _compute_risk_band_score(
+    *,
+    state_score: int,
+    worsening: bool,
+    improving: bool,
+    stable: bool,
+    instability: bool,
+    daily_symptoms: bool,
+    high_collision_region: bool,
+) -> int:
+    """Derive a 0–10 risk band score from injury state attributes.
+
+    Scoring intent:
+      severe + worsening → 9–10  (black)
+      severe + not worsening → 6–8  (red)
+      instability / daily symptoms → minimum 6  (red)
+      moderate + worsening → 6–8  (red)
+      moderate otherwise → 3–5  (amber)
+      mild + high collision region → 3  (amber)
+      mild + low collision → 0–2  (green)
+    """
+    score = state_score  # base from state detection
+
+    # Override: instability and daily_symptoms force minimum red territory
+    if instability or daily_symptoms:
+        score = max(score, 6)
+
+    # Worsening pushes up by 1 inside any band
+    if worsening:
+        score = min(10, score + 1)
+
+    # Improving pulls down by 1 unless already forced to red+
+    if improving and not (instability or daily_symptoms):
+        score = max(0, score - 1)
+
+    return min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, score))
+
+
+def _band_from_score(score: int) -> str:
+    for threshold, band in _RISK_BAND_THRESHOLDS:
+        if score >= threshold:
+            return band
+    return "green"
 
 
 def _clean_list(values: Any) -> list[str]:
@@ -213,6 +292,19 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
             state_score += 1
         state_score = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, state_score))
 
+        ctx = _collision_context(region)
+        oflags = _override_flags(lowered, instability, daily_symptoms)
+        rbs = _compute_risk_band_score(
+            state_score=state_score,
+            worsening=worsening,
+            improving=improving,
+            stable=stable,
+            instability=instability,
+            daily_symptoms=daily_symptoms,
+            high_collision_region=region in _HIGH_COLLISION_REGIONS,
+        )
+        band = _band_from_score(rbs)
+
         entries.append(
             {
                 "raw": raw_text,
@@ -227,6 +319,10 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
                 "daily_symptoms": daily_symptoms,
                 "high_collision_region": region in _HIGH_COLLISION_REGIONS,
                 "lower_limb": region in _LOWER_LIMB_REGIONS,
+                "collision_context": ctx,
+                "override_flags": oflags,
+                "risk_band_score": rbs,
+                "risk_band": band,
             }
         )
     return entries
@@ -235,13 +331,24 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
 def _injury_risk(entries: list[dict[str, Any]]) -> int:
     if not entries:
         return 0
-    return min(10, max(int(entry.get("state_score", 0)) for entry in entries) + (1 if len(entries) > 1 else 0))
+    best = _highest_risk_entry(entries)
+    if best is None:
+        return 0
+    base = int(best.get("risk_band_score", best.get("state_score", 0)))
+    bonus = 1 if len(entries) > 1 else 0
+    return min(10, base + bonus)
 
 
 def _highest_risk_entry(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not entries:
         return None
-    return max(entries, key=lambda entry: int(entry.get("state_score", 0)))
+    return max(
+        entries,
+        key=lambda e: (
+            _RISK_BAND_RANK.get(str(e.get("risk_band", "green")), 0),
+            int(e.get("risk_band_score", e.get("state_score", 0))),
+        ),
+    )
 
 
 def _replacement_focus(*, athlete_snapshot: dict[str, Any], injuries: list[dict[str, Any]], phase: str) -> str:
@@ -430,8 +537,8 @@ def _build_week_advisory(
         "suggestion": suggestion,
         "disclaimer": _DISCLAIMER,
     }
-    if highest_injury and highest_injury.get("risk_band"):
-        advisory["risk_band"] = str(highest_injury.get("risk_band"))
+    if highest_injury:
+        advisory["risk_band"] = str(highest_injury.get("risk_band", "green"))
     if action == "convert":
         advisory["replacement"] = _replacement_focus(
             athlete_snapshot=athlete_snapshot,
