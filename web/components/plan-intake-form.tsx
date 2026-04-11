@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
+import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
 import { updateMe } from "@/lib/api";
 import {
@@ -512,6 +513,7 @@ export function PlanIntakeForm() {
   const [guidedInjuries, setGuidedInjuries] = useState<GuidedInjuryState[]>([]);
   const [activeGuidedInjuryIndex, setActiveGuidedInjuryIndex] = useState<number | null>(null);
   const [noRestrictions, setNoRestrictions] = useState(true);
+  const [bodyMapSide, setBodyMapSide] = useState<BodyMapSide>("front");
   const [hydrated, setHydrated] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -685,6 +687,25 @@ export function PlanIntakeForm() {
 
   function handleAddGuidedInjury() {
     const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY }];
+    syncGuidedInjuryFields(nextGuidedInjuries, false);
+    setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
+  }
+
+  function handleBodyMapZoneSelect(label: string) {
+    const existingIndex = guidedInjuries.findIndex((injury) => injury.area.toLowerCase() === label.toLowerCase());
+    if (existingIndex >= 0) {
+      setActiveGuidedInjuryIndex(existingIndex);
+      return;
+    }
+
+    const emptyIndex = guidedInjuries.findIndex((injury) => !injury.area.trim());
+    if (emptyIndex >= 0) {
+      updateGuidedInjury(emptyIndex, "area", label);
+      setActiveGuidedInjuryIndex(emptyIndex);
+      return;
+    }
+
+    const nextGuidedInjuries = [...guidedInjuries, { ...EMPTY_GUIDED_INJURY, area: label }];
     syncGuidedInjuryFields(nextGuidedInjuries, false);
     setActiveGuidedInjuryIndex(nextGuidedInjuries.length - 1);
   }
@@ -1083,8 +1104,6 @@ export function PlanIntakeForm() {
   const highFatigueFlag = (form.fatigue_level || "moderate") === "high" ? "High fatigue already reported" : null;
   const hasExtraPerformanceNotes = Boolean(mindsetChallengesText || notesText);
   const hasTrainingPreference = Boolean(trainingPreferenceText);
-  const activeGuidedInjury =
-    activeGuidedInjuryIndex === null ? null : guidedInjuries[activeGuidedInjuryIndex] ?? null;
   const plannerRestrictionPreview = formatRestrictionSummary(form.injuries);
   const restrictionSummary = formatRestrictionSummary(form.injuries);
   const sexLabel = form.athlete.sex
@@ -1605,108 +1624,151 @@ export function PlanIntakeForm() {
                 </label>
                 {!noRestrictions ? (
                   <>
-                    <div className="support-panel support-panel-preview compact-gap">
-                      <p className="kicker">How this works</p>
-                      <p className="muted">
-                        Add each injury or restriction as its own card. Keep one issue per card, then use <strong>Add injury</strong> for the next one.
-                      </p>
-                    </div>
+                    <div className="injury-body-map-layout">
+                      <div className="injury-body-map-col">
+                        <BodyMap
+                          side={bodyMapSide}
+                          usedAreas={guidedInjuries.map((injury) => injury.area)}
+                          onZoneSelect={handleBodyMapZoneSelect}
+                          onSideChange={setBodyMapSide}
+                        />
+                      </div>
+                      <div className="injury-cards-col">
+                        <div className="injury-card-stack">
+                          {guidedInjuries.map((injury, index) => {
+                            const isActive = activeGuidedInjuryIndex === index;
+                            const injuryLabel = injury.area.trim() || `Injury ${index + 1}`;
+                            const injurySummary = buildGuidedInjurySummary(injury) || "No injury details added yet.";
 
-                    <div className="injury-card-stack">
-                      {guidedInjuries.map((injury, index) => {
-                        const isActive = activeGuidedInjuryIndex === index;
-                        const injuryLabel = injury.area.trim() || `Injury ${index + 1}`;
-                        const injurySummary = buildGuidedInjurySummary(injury) || "No injury details added yet.";
-
-                        return (
-                          <section key={`guided-injury-${index}`} className={`injury-card ${isActive ? "injury-card-active" : ""}`.trim()}>
-                            <div className="injury-card-header">
-                              <div className="injury-card-copy">
-                                <p className="kicker">Injury {String(index + 1).padStart(2, "0")}</p>
-                                <h3 className="injury-card-title">{injuryLabel}</h3>
-                                <p className="injury-card-summary">{injurySummary}</p>
-                              </div>
-                              <div className="injury-card-actions">
-                                {!isActive ? (
-                                  <button type="button" className="ghost-button" onClick={() => handleEditGuidedInjury(index)}>
-                                    Edit
-                                  </button>
-                                ) : (
-                                  <span className="injury-card-state">Editing</span>
-                                )}
-                                <button
-                                  type="button"
-                                  className="ghost-button danger-button"
-                                  onClick={() => handleRemoveGuidedInjury(index)}
+                            return (
+                              <section key={`guided-injury-${index}`} className={`injury-card ${isActive ? "injury-card-active" : ""}`.trim()}>
+                                <div
+                                  className="injury-card-header injury-card-header-interactive"
+                                  onClick={() => (isActive ? setActiveGuidedInjuryIndex(null) : handleEditGuidedInjury(index))}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                      event.preventDefault();
+                                      if (isActive) {
+                                        setActiveGuidedInjuryIndex(null);
+                                      } else {
+                                        handleEditGuidedInjury(index);
+                                      }
+                                    }
+                                  }}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-expanded={isActive}
                                 >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                            {isActive ? (
-                              <div className="injury-card-form">
-                                <div className="form-grid">
-                                  <div className="field">
-                                    <label htmlFor={`injuryArea-${index}`}>Injury or pain area</label>
-                                    <input
-                                      id={`injuryArea-${index}`}
-                                      value={activeGuidedInjury?.area ?? ""}
-                                      onChange={(event) => updateGuidedInjury(index, "area", event.target.value)}
-                                      placeholder="Left shoulder"
-                                    />
+                                  <div className="injury-card-num">{String(index + 1).padStart(2, "0")}</div>
+                                  <div className="injury-card-copy">
+                                    <h3 className="injury-card-title">{injuryLabel}</h3>
+                                    {!isActive ? <p className="injury-card-summary">{injurySummary}</p> : null}
                                   </div>
-                                  <div className="field">
-                                    <label htmlFor={`injurySeverity-${index}`}>Current severity</label>
-                                    <CustomSelect
-                                      id={`injurySeverity-${index}`}
-                                      value={activeGuidedInjury?.severity ?? ""}
-                                      options={GUIDED_INJURY_SEVERITY_OPTIONS}
-                                      placeholder="Select severity"
-                                      includeEmptyOption
-                                      onChange={(value) => updateGuidedInjury(index, "severity", value)}
-                                    />
+                                  <div className="injury-card-badges">
+                                    {injury.severity ? (
+                                      <span className={`injury-severity-badge injury-severity-badge-${injury.severity}`}>
+                                        {injury.severity.charAt(0).toUpperCase() + injury.severity.slice(1)}
+                                      </span>
+                                    ) : null}
+                                    {injury.trend ? (
+                                      <span className={`injury-trend-badge injury-trend-badge-${injury.trend}`}>
+                                        {injury.trend === "improving" ? "\u2197" : injury.trend === "worsening" ? "\u2198" : "\u2192"}{" "}
+                                        {injury.trend.charAt(0).toUpperCase() + injury.trend.slice(1)}
+                                      </span>
+                                    ) : null}
                                   </div>
-                                  <div className="field">
-                                    <label htmlFor={`injuryTrend-${index}`}>Current trend</label>
-                                    <CustomSelect
-                                      id={`injuryTrend-${index}`}
-                                      value={activeGuidedInjury?.trend ?? ""}
-                                      options={INJURY_TREND_OPTIONS}
-                                      placeholder="Select trend"
-                                      includeEmptyOption
-                                      onChange={(value) => updateGuidedInjury(index, "trend", value)}
-                                    />
-                                  </div>
-                                  <div className="field">
-                                    <label htmlFor={`injuryAvoid-${index}`}>Movements to avoid</label>
-                                    <input
-                                      id={`injuryAvoid-${index}`}
-                                      value={activeGuidedInjury?.avoid ?? ""}
-                                      onChange={(event) => updateGuidedInjury(index, "avoid", event.target.value)}
-                                      placeholder="Heavy overhead pressing, hard sprinting, deep knee flexion"
-                                    />
-                                  </div>
+                                  <button
+                                    type="button"
+                                    className="injury-card-remove-btn"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      handleRemoveGuidedInjury(index);
+                                    }}
+                                    aria-label={`Remove ${injuryLabel}`}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                                      <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                                    </svg>
+                                  </button>
                                 </div>
-                                <div className="field">
-                                  <label htmlFor={`injuryNotes-${index}`}>Extra details</label>
-                                  <textarea
-                                    id={`injuryNotes-${index}`}
-                                    value={activeGuidedInjury?.notes ?? ""}
-                                    onChange={(event) => updateGuidedInjury(index, "notes", event.target.value)}
-                                    placeholder="What happened, what irritates it, and anything the planner should work around for this issue"
-                                  />
-                                </div>
-                              </div>
-                            ) : null}
-                          </section>
-                        );
-                      })}
-                    </div>
+                                {isActive ? (
+                                  <div className="injury-card-form">
+                                    <div className="field">
+                                      <label htmlFor={`injuryArea-${index}`}>Injury or pain area</label>
+                                      <input
+                                        id={`injuryArea-${index}`}
+                                        value={injury.area ?? ""}
+                                        onChange={(event) => updateGuidedInjury(index, "area", event.target.value)}
+                                        placeholder="Left shoulder"
+                                      />
+                                    </div>
+                                    <div className="form-grid">
+                                      <div className="field">
+                                        <label>Current severity</label>
+                                        <div className="injury-severity-chips">
+                                          {GUIDED_INJURY_SEVERITY_OPTIONS.map((option) => (
+                                            <button
+                                              key={option.value}
+                                              type="button"
+                                              className={`injury-severity-chip ${injury.severity === option.value ? `injury-severity-chip-${option.value}` : ""}`.trim()}
+                                              onClick={() => updateGuidedInjury(index, "severity", injury.severity === option.value ? "" : option.value)}
+                                            >
+                                              {option.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div className="field">
+                                        <label>Current trend</label>
+                                        <div className="injury-trend-chips">
+                                          {INJURY_TREND_OPTIONS.map((option) => {
+                                            const arrow = option.value === "improving" ? "\u2197" : option.value === "worsening" ? "\u2198" : "\u2192";
 
-                    <div className="injury-card-add-row">
-                      <button type="button" className="ghost-button" onClick={handleAddGuidedInjury}>
-                        Add injury
-                      </button>
+                                            return (
+                                              <button
+                                                key={option.value}
+                                                type="button"
+                                                className={`injury-trend-chip ${injury.trend === option.value ? `injury-trend-chip-${option.value}` : ""}`.trim()}
+                                                onClick={() => updateGuidedInjury(index, "trend", injury.trend === option.value ? "" : option.value)}
+                                              >
+                                                {arrow} {option.label}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="field">
+                                      <label htmlFor={`injuryAvoid-${index}`}>Movements to avoid</label>
+                                      <input
+                                        id={`injuryAvoid-${index}`}
+                                        value={injury.avoid ?? ""}
+                                        onChange={(event) => updateGuidedInjury(index, "avoid", event.target.value)}
+                                        placeholder="Heavy overhead pressing, hard sprinting, deep knee flexion"
+                                      />
+                                    </div>
+                                    <div className="field">
+                                      <label htmlFor={`injuryNotes-${index}`}>Extra details</label>
+                                      <textarea
+                                        id={`injuryNotes-${index}`}
+                                        value={injury.notes ?? ""}
+                                        onChange={(event) => updateGuidedInjury(index, "notes", event.target.value)}
+                                        placeholder="What happened, what irritates it, and anything the planner should work around for this issue"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </section>
+                            );
+                          })}
+                        </div>
+
+                        <div className="injury-card-add-row">
+                          <button type="button" className="injury-card-add-btn" onClick={handleAddGuidedInjury}>
+                            <span aria-hidden="true">+</span> Add another injury
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </>
                 ) : (

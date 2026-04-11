@@ -4614,6 +4614,457 @@ html[data-theme="light"] .injury-card-state {
   }
 }
 
+.injury-body-map-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.injury-body-map-col {
+  position: sticky;
+  top: 1rem;
+}
+
+.injury-cards-col {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.body-map-panel {
+  padding: 16px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: center;
+}
+
+.body-map-title {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.body-map-svg-wrap {
+  position: relative;
+  width: 160px;
+  margin: 0 auto;
+}
+
+.body-map-svg-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.body-map-silhouette {
+  opacity: 0.18;
+  fill: none;
+  stroke: var(--text-secondary);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.body-map-zone {
+  fill: rgba(128, 128, 128, 0.06);
+  stroke: rgba(128, 128, 128, 0.15);
+  stroke-width: 0.8;
+  cursor: pointer;
+  transition: fill 0.15s, stroke 0.15s;
+}
+
+.body-map-zone:hover,
+.body-map-zone-hover {
+  fill: rgba(181, 18, 43, 0.12);
+  stroke: rgba(181, 18, 43, 0.3);
+}
+
+.body-map-zone-used {
+  fill: rgba(181, 18, 43, 0.25);
+  stroke: rgba(181, 18, 43, 0.5);
+  stroke-width: 1.5;
+}
+
+.body-map-zone-dot {
+  fill: var(--brand-red);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.body-map-side-toggle {
+  display: flex;
+  margin: 10px auto 0;
+  width: fit-content;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.body-map-side-btn {
+  padding: 6px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  transition: background 0.12s, color 0.12s;
+}
+
+.body-map-side-btn-active {
+  background: var(--brand-red-soft);
+  color: var(--brand-red);
+}
+
+.body-map-side-btn:hover:not(.body-map-side-btn-active) {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.body-map-hint {
+  margin: 8px 0 0;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  min-height: 1.4em;
+}
+
+.injury-card-header-interactive {
+  cursor: pointer;
+  border-radius: 14px;
+}
+
+.injury-card-header-interactive:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px var(--border-active), 0 0 0 4px rgba(181, 18, 43, 0.12);
+}
+
+.injury-card-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.injury-card-active .injury-card-num {
+  background: var(--brand-red-soft);
+  color: var(--brand-red);
+  border-color: rgba(181, 18, 43, 0.2);
+}
+
+.injury-card-badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.injury-severity-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.injury-severity-badge-low {
+  background: rgba(99, 153, 34, 0.14);
+  color: #7ab832;
+}
+
+.injury-severity-badge-moderate {
+  background: rgba(239, 159, 39, 0.14);
+  color: #d4920e;
+}
+
+.injury-severity-badge-high {
+  background: rgba(181, 18, 43, 0.14);
+  color: #e0344d;
+}
+
+.injury-trend-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+}
+
+.injury-trend-badge-improving {
+  background: rgba(29, 158, 117, 0.14);
+  color: #3dbf8f;
+}
+
+.injury-trend-badge-worsening {
+  background: rgba(181, 18, 43, 0.14);
+  color: #e0344d;
+}
+
+.injury-card-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  transition: color 0.1s, background 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.injury-card-remove-btn:hover {
+  color: var(--brand-red);
+  background: var(--brand-red-soft);
+}
+
+.injury-severity-chips,
+.injury-trend-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.injury-severity-chip,
+.injury-trend-chip {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+  color: var(--text-secondary);
+  flex: 1;
+  text-align: center;
+}
+
+.injury-severity-chip:hover,
+.injury-trend-chip:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.injury-severity-chip-low {
+  border-color: rgba(99, 153, 34, 0.4);
+  background: rgba(99, 153, 34, 0.12);
+  color: #7ab832;
+}
+
+.injury-severity-chip-moderate {
+  border-color: rgba(239, 159, 39, 0.4);
+  background: rgba(239, 159, 39, 0.12);
+  color: #d4920e;
+}
+
+.injury-severity-chip-high {
+  border-color: rgba(181, 18, 43, 0.4);
+  background: rgba(181, 18, 43, 0.12);
+  color: #e0344d;
+}
+
+.injury-trend-chip-stable {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.injury-trend-chip-improving {
+  border-color: rgba(29, 158, 117, 0.4);
+  background: rgba(29, 158, 117, 0.12);
+  color: #3dbf8f;
+}
+
+.injury-trend-chip-worsening {
+  border-color: rgba(181, 18, 43, 0.4);
+  background: rgba(181, 18, 43, 0.12);
+  color: #e0344d;
+}
+
+.injury-card-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  width: 100%;
+}
+
+.injury-card-add-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+html[data-theme="light"] .body-map-panel {
+  border-color: rgba(98, 77, 69, 0.08);
+  background: rgba(248, 242, 235, 0.5);
+}
+
+html[data-theme="light"] .body-map-zone {
+  fill: rgba(128, 128, 128, 0.06);
+  stroke: rgba(128, 128, 128, 0.2);
+}
+
+html[data-theme="light"] .body-map-zone:hover,
+html[data-theme="light"] .body-map-zone-hover {
+  fill: rgba(146, 43, 45, 0.1);
+  stroke: rgba(146, 43, 45, 0.3);
+}
+
+html[data-theme="light"] .body-map-zone-used {
+  fill: rgba(146, 43, 45, 0.18);
+  stroke: rgba(146, 43, 45, 0.5);
+}
+
+html[data-theme="light"] .body-map-zone-dot {
+  fill: var(--brand-red);
+}
+
+html[data-theme="light"] .body-map-side-toggle {
+  border-color: rgba(98, 77, 69, 0.1);
+}
+
+html[data-theme="light"] .body-map-side-btn {
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .body-map-side-btn-active {
+  background: rgba(146, 43, 45, 0.08);
+  color: var(--brand-red);
+}
+
+html[data-theme="light"] .injury-card-num {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(98, 77, 69, 0.08);
+}
+
+html[data-theme="light"] .injury-card-active .injury-card-num {
+  background: rgba(146, 43, 45, 0.08);
+  color: var(--brand-red);
+  border-color: rgba(146, 43, 45, 0.14);
+}
+
+html[data-theme="light"] .injury-severity-badge-low {
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+html[data-theme="light"] .injury-severity-badge-moderate {
+  background: #faeeda;
+  color: #854f0b;
+}
+
+html[data-theme="light"] .injury-severity-badge-high {
+  background: #fcebeb;
+  color: #a32d2d;
+}
+
+html[data-theme="light"] .injury-trend-badge-improving {
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+html[data-theme="light"] .injury-trend-badge-worsening {
+  background: #fcebeb;
+  color: #a32d2d;
+}
+
+html[data-theme="light"] .injury-severity-chip,
+html[data-theme="light"] .injury-trend-chip {
+  border-color: rgba(98, 77, 69, 0.1);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .injury-severity-chip-low {
+  border-color: rgba(59, 109, 17, 0.25);
+  background: #eaf3de;
+  color: #3b6d11;
+}
+
+html[data-theme="light"] .injury-severity-chip-moderate {
+  border-color: rgba(133, 79, 11, 0.25);
+  background: #faeeda;
+  color: #854f0b;
+}
+
+html[data-theme="light"] .injury-severity-chip-high {
+  border-color: rgba(163, 45, 45, 0.25);
+  background: #fcebeb;
+  color: #a32d2d;
+}
+
+html[data-theme="light"] .injury-trend-chip-stable {
+  border-color: rgba(98, 77, 69, 0.15);
+  background: rgba(0, 0, 0, 0.03);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .injury-trend-chip-improving {
+  border-color: rgba(15, 110, 86, 0.25);
+  background: #e1f5ee;
+  color: #0f6e56;
+}
+
+html[data-theme="light"] .injury-trend-chip-worsening {
+  border-color: rgba(163, 45, 45, 0.25);
+  background: #fcebeb;
+  color: #a32d2d;
+}
+
+html[data-theme="light"] .injury-card-add-btn {
+  border-color: rgba(98, 77, 69, 0.12);
+}
+
+html[data-theme="light"] .injury-card-add-btn:hover {
+  border-color: rgba(98, 77, 69, 0.2);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme="light"] .injury-card-remove-btn:hover {
+  color: var(--brand-red);
+  background: rgba(146, 43, 45, 0.08);
+}
+
+@media (max-width: 640px) {
+  .injury-body-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .injury-body-map-col {
+    position: static;
+  }
+
+  .body-map-svg-wrap {
+    width: 140px;
+  }
+
+  .injury-severity-chips,
+  .injury-trend-chips {
+    flex-wrap: wrap;
+  }
+}
+
 .appearance-mode-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
