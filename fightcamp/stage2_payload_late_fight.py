@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 from typing import Any
 
 
@@ -173,17 +172,6 @@ def _classify_declared_hard_days_for_late_window(
     return classified
 
 
-def _split_declared_hard_day_instances(
-    classified_days: list[dict[str, Any]],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    surviving_hard = [
-        day for day in classified_days
-        if day.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
-    ]
-    downgraded = [day for day in classified_days if day.get("status") == "downgrade"]
-    return surviving_hard, downgraded
-
-
 def _protected_collision_owner_day(athlete_model: dict[str, Any]) -> str | None:
     for key in ("primary_collision_owner_day", "main_fight_pace_day", "collision_owner_day", "planned_collision_owner_day"):
         day = str(athlete_model.get(key) or "").strip().lower()
@@ -349,146 +337,6 @@ def _countdown_offset(label: str) -> int | None:
         return int(normalized[2:])
     except ValueError:
         return None
-
-
-def _late_window_role_cost(role_key: str) -> str:
-    high_roles = {
-        "hard_sparring_day",
-        "light_fight_pace_touch_day",
-        "strength_touch_day",
-        "neural_primer_day",
-        "alactic_sharpness_day",
-        "alactic_speed_day",
-        "primary_strength_day",
-        "neural_plus_strength_day",
-    }
-    medium_roles = {
-        "declared_hard_day_technical_touch",
-        "technical_touch_day",
-        "controlled_boxing_touch_day",
-        "declared_hard_day_deload",
-    }
-    low_roles = {
-        "fight_week_freshness_day",
-        "recovery_reset_day",
-        "tissue_recovery_day",
-        "mobility_reset_day",
-        "breathing_reset_day",
-    }
-    if role_key in high_roles:
-        return "high"
-    if role_key in medium_roles:
-        return "medium"
-    if role_key in low_roles:
-        return "low"
-    if "freshness" in role_key or "recovery" in role_key or "mobility" in role_key or "breathing" in role_key:
-        return "low"
-    if "technical" in role_key:
-        return "medium"
-    return "medium"
-
-
-def _allocate_late_window_countdown_slots(
-    *,
-    all_labels: list[str],
-    locked_labels_by_role_index: dict[int, str],
-    role_cost_by_role_index: dict[int, str],
-    unlocked_roles: list[tuple[int, dict[str, Any]]],
-) -> dict[int, str]:
-    free_labels = [label for label in all_labels if label not in set(locked_labels_by_role_index.values())]
-    if not unlocked_roles or not free_labels:
-        return {}
-    role_indices = [index for index, _ in unlocked_roles]
-    role_map = {index: role for index, role in unlocked_roles}
-    role_costs = dict(role_cost_by_role_index)
-    label_offset = {label: (_countdown_offset(label) or -1) for label in all_labels}
-    k = min(len(unlocked_roles), len(free_labels))
-    candidate_labels = free_labels
-
-    cost_weight = {"high": 3, "medium": 2, "low": 1}
-
-    def _is_freshness_role(role_key: str) -> bool:
-        role_key = role_key.lower()
-        return "freshness" in role_key or "recovery" in role_key or "mobility" in role_key
-
-    def _assignment_score(assignment: dict[int, str]) -> tuple:
-        assigned_all = dict(locked_labels_by_role_index)
-        assigned_all.update(assignment)
-        active_offsets = sorted(
-            [label_offset[label] for label in assigned_all.values() if label in label_offset],
-            reverse=True,
-        )
-        gaps = [active_offsets[idx] - active_offsets[idx + 1] for idx in range(len(active_offsets) - 1)]
-        min_gap = min(gaps) if gaps else 99
-        consecutive_pairs = sum(1 for gap in gaps if gap == 1)
-        three_day_clusters = sum(
-            1 for idx in range(len(active_offsets) - 2)
-            if active_offsets[idx] - active_offsets[idx + 1] == 1 and active_offsets[idx + 1] - active_offsets[idx + 2] == 1
-        )
-        high_high_consecutive = 0
-        high_to_medium_or_high = 0
-        cost_by_offset: dict[int, str] = {}
-        for role_index, label in assigned_all.items():
-            offset = label_offset.get(label)
-            if offset is None:
-                continue
-            cost = role_costs.get(role_index, "medium")
-            cost_by_offset[offset] = cost
-        for idx in range(len(active_offsets) - 1):
-            current_offset = active_offsets[idx]
-            next_offset = active_offsets[idx + 1]
-            if current_offset - next_offset != 1:
-                continue
-            current_cost = cost_by_offset.get(current_offset, "medium")
-            next_cost = cost_by_offset.get(next_offset, "medium")
-            if current_cost == "high" and next_cost == "high":
-                high_high_consecutive += 1
-            if current_cost == "high" and next_cost in {"high", "medium"}:
-                high_to_medium_or_high += 1
-        high_earlier_bonus = sum(
-            label_offset.get(label, 0)
-            * cost_weight.get(role_costs.get(role_index, "medium"), 2)
-            for role_index, label in assigned_all.items()
-        )
-        freshness_gap_bonus = 0
-        freshness_offsets = []
-        for role_index, label in assigned_all.items():
-            role_key = str(role_map.get(role_index, {}).get("role_key") or "")
-            if _is_freshness_role(role_key):
-                freshness_offsets.append(label_offset.get(label, -1))
-        for freshness_offset in freshness_offsets:
-            if freshness_offset < 0:
-                continue
-            prior = [offset for offset in active_offsets if offset > freshness_offset]
-            after = [offset for offset in active_offsets if offset < freshness_offset]
-            gap_before = (min(prior) - freshness_offset) if prior else None
-            gap_after = (freshness_offset - max(after)) if after else None
-            if gap_before is not None and gap_after is not None and (gap_before >= 2 or gap_after >= 2):
-                freshness_gap_bonus += 3
-            if freshness_offset <= 2 and gap_before is not None and gap_before >= 2:
-                freshness_gap_bonus += 2
-        heavy_consecutive_penalty = (high_high_consecutive * 3) + (high_to_medium_or_high * 2)
-        deterministic_earliest = tuple(sorted((label_offset.get(label, -1) for label in assignment.values()), reverse=True))
-        return (
-            min_gap,
-            -consecutive_pairs,
-            -heavy_consecutive_penalty,
-            -three_day_clusters,
-            high_earlier_bonus,
-            freshness_gap_bonus,
-            deterministic_earliest,
-        )
-
-    best_score = None
-    best_assignment: dict[int, str] = {}
-    for labels in itertools.combinations(candidate_labels, k):
-        for perm in itertools.permutations(labels, k):
-            assignment = {role_indices[pos]: perm[pos] for pos in range(k)}
-            score = _assignment_score(assignment)
-            if best_score is None or score > best_score:
-                best_score = score
-                best_assignment = assignment
-    return best_assignment
 
 
 def _resolve_countdown_weekday_with_availability(
@@ -1280,41 +1128,6 @@ def _late_fight_role_entry(
     return entry
 
 
-def _declared_hard_day_technical_touch_role(
-    session_index: int,
-    downgraded_day: dict[str, Any],
-) -> dict[str, Any]:
-    role = _late_fight_role_entry(
-        session_index=session_index,
-        category="technical",
-        role_key="declared_hard_day_technical_touch",
-        preferred_pool="declared_hard_sparring_days",
-        selection_rule=(
-            "Preserve the athlete's declared boxing rhythm on this day, but downgrade it from hard sparring "
-            "to a controlled technical touch because countdown rules no longer allow a true hard collision exposure."
-        ),
-        placement_rule=(
-            "Keep this on the same declared day as a low-noise boxing session. "
-            "Do not remap it and do not escalate it back toward hard sparring."
-        ),
-    )
-    role.update(
-        {
-            "scheduled_day_hint": downgraded_day.get("weekday"),
-            "locked_day": downgraded_day.get("weekday"),
-            "countdown_label": downgraded_day.get("countdown_label"),
-            "countdown_offset": downgraded_day.get("offset"),
-            "declared_day_locked": True,
-            "day_assignment_reason": (
-                "Declared hard sparring day is too close to the fight to remain hard, so it is preserved as a "
-                "technical/deload boxing touch on the same day."
-            ),
-            "downgraded_from_hard_sparring": True,
-        }
-    )
-    return role
-
-
 def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
     mode = _days_out_payload_mode(days_until_fight)
     plan_weekday = athlete_model.get("plan_creation_weekday")
@@ -1328,10 +1141,11 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         days_until_fight=days_until_fight,
         declared_weekdays=declared_hard_days,
     )
-    hard_allowed_instances, downgraded_declared_instances = _split_declared_hard_day_instances(
-        declared_countdown_hard_days
-    )
     protected_day = _protected_collision_owner_day(athlete_model)
+    hard_allowed_instances = [
+        day for day in declared_countdown_hard_days
+        if day.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+    ]
     active_hard_instances = _select_capped_declared_hard_day_instances(
         hard_allowed_instances,
         _declared_hard_spar_cap(days_until_fight),
@@ -1363,9 +1177,6 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 }
             )
             roles.append(role)
-            session_index += 1
-        for downgraded_day in downgraded_declared_instances:
-            roles.append(_declared_hard_day_technical_touch_role(session_index, downgraded_day))
             session_index += 1
 
         strength_selection_rule = "Use one meaningful strength or power touch only."
@@ -1436,9 +1247,6 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
             )
             roles.append(role)
             session_index += 1
-        for downgraded_day in downgraded_declared_instances:
-            roles.append(_declared_hard_day_technical_touch_role(session_index, downgraded_day))
-            session_index += 1
         roles.append(
             _late_fight_role_entry(
                 session_index=session_index,
@@ -1476,14 +1284,9 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         return roles
     if mode == "late_fight_transition_payload":
         # D-6/D-5: alactic sharpness touch + recovery only, no hard sparring
-        roles: list[dict[str, Any]] = []
-        session_index = 1
-        for downgraded_day in downgraded_declared_instances:
-            roles.append(_declared_hard_day_technical_touch_role(session_index, downgraded_day))
-            session_index += 1
-        roles.extend([
+        roles: list[dict[str, Any]] = [
             _late_fight_role_entry(
-                session_index=session_index,
+                session_index=1,
                 category="conditioning",
                 role_key="alactic_sharpness_day",
                 preferred_pool="declared_technical_skill_days_or_conditioning_slots",
@@ -1492,14 +1295,14 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 placement_rule="Keep this brief and very low volume. Do not turn it into density work.",
             ),
             _late_fight_role_entry(
-                session_index=session_index + 1,
+                session_index=2,
                 category="recovery",
                 role_key="fight_week_freshness_day",
                 preferred_pool="rehab_slots_or_recovery_only",
                 selection_rule="Mobility, breathing, and tissue recovery only.",
                 placement_rule="Lowest-load session. Prioritise readiness over any training stimulus.",
             ),
-        ])
+        ]
         if declared_hard_days:
             for role in roles:
                 role.setdefault("coach_notes", [])
@@ -1514,7 +1317,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         except (TypeError, ValueError):
             days = 3
         if days == 2:
-            short_roles = [
+            return [
                 _late_fight_role_entry(
                     session_index=1,
                     category="strength",
@@ -1524,11 +1327,6 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                     placement_rule="Keep it crisp, low-volume, and fully non-fatiguing.",
                 )
             ]
-            for downgraded_day in downgraded_declared_instances:
-                short_roles.append(_declared_hard_day_technical_touch_role(len(short_roles) + 1, downgraded_day))
-            return short_roles
-        for downgraded_day in downgraded_declared_instances:
-            roles.append(_declared_hard_day_technical_touch_role(len(roles) + 1, downgraded_day))
         if days >= 4 or _allow_late_fight_alactic_sharpness(athlete_model, days_until_fight):
             roles.append(
                 _late_fight_role_entry(
@@ -1553,7 +1351,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         )
         return roles
     if mode == "pre_fight_day_payload":
-        roles = [
+        return [
             _late_fight_role_entry(
                 session_index=1,
                 category="strength",
@@ -1563,10 +1361,6 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 placement_rule="Keep it short, clean, and immediately supportive of tomorrow's performance.",
             )
         ]
-        d1_downgraded = [day for day in downgraded_declared_instances if int(day.get("offset", -1)) == 1]
-        if d1_downgraded:
-            roles.append(_declared_hard_day_technical_touch_role(2, d1_downgraded[0]))
-        return roles
     return []
 
 
@@ -1580,57 +1374,35 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
         days = int(days_until_fight)
     except (TypeError, ValueError):
         days = None
-    all_labels: list[str] = []
-    locked_labels_by_role_index: dict[int, str] = {}
-    role_cost_by_role_index = {
-        index: _late_window_role_cost(str(role.get("role_key") or ""))
-        for index, role in enumerate(roles)
-    }
+    available_countdown_labels: list[str] = []
+    reserved_countdown_labels: set[str] = set()
     if days is not None and days >= 0:
         all_labels = [f"D-{offset}" for offset in range(days, -1, -1)]
-        for index, role in enumerate(roles):
-            label = str(role.get("countdown_label") or "")
-            if role.get("declared_day_locked") and label.startswith("D-"):
-                locked_labels_by_role_index[index] = label
-    unlocked_roles = [(index, role) for index, role in enumerate(roles) if index not in locked_labels_by_role_index]
-    unlocked_assignment = _allocate_late_window_countdown_slots(
-        all_labels=all_labels,
-        locked_labels_by_role_index=locked_labels_by_role_index,
-        role_cost_by_role_index=role_cost_by_role_index,
-        unlocked_roles=unlocked_roles,
-    ) if all_labels else {}
-    fallback_labels = [
-        label for label in all_labels
-        if label not in set(locked_labels_by_role_index.values()) and label not in set(unlocked_assignment.values())
-    ]
-    fallback_role_order = sorted(
-        [index for index, _ in unlocked_roles if index not in unlocked_assignment],
-        key=lambda idx: (
-            -{"high": 3, "medium": 2, "low": 1}.get(role_cost_by_role_index.get(idx, "medium"), 2),
-            idx,
-        ),
-    )
-    fallback_labels_sorted = sorted(
-        fallback_labels,
-        key=lambda label: _countdown_offset(label) or -1,
-        reverse=True,
-    )
-    fallback_assignment = {
-        role_index: fallback_labels_sorted[pos]
-        for pos, role_index in enumerate(fallback_role_order)
-        if pos < len(fallback_labels_sorted)
-    }
+        reserved_countdown_labels = {
+            str(role.get("countdown_label"))
+            for role in roles
+            if str(role.get("countdown_label") or "").startswith("D-")
+        }
+        available_countdown_labels = [label for label in all_labels if label not in reserved_countdown_labels]
     sequence: list[dict[str, Any]] = []
-    for index, role in enumerate(roles):
-        countdown_label = None
-        if index in locked_labels_by_role_index:
-            countdown_label = locked_labels_by_role_index[index]
-        elif index in unlocked_assignment:
-            countdown_label = unlocked_assignment[index]
-        elif index in fallback_assignment:
-            countdown_label = fallback_assignment[index]
+    for role in roles:
+        if days is not None:
+            role_countdown_label = role.get("countdown_label")
+            if role_countdown_label and str(role_countdown_label).startswith("D-"):
+                candidate_label = str(role_countdown_label)
+                if candidate_label in reserved_countdown_labels:
+                    countdown_label = candidate_label
+                    reserved_countdown_labels.discard(candidate_label)
+                elif available_countdown_labels:
+                    countdown_label = available_countdown_labels.pop(0)
+                else:
+                    countdown_label = candidate_label
+            else:
+                countdown_label = available_countdown_labels.pop(0) if available_countdown_labels else None
+        else:
+            countdown_label = None
         locked_day = str(role.get("locked_day") or "").strip().lower()
-        if role.get("declared_day_locked") and locked_day:
+        if role.get("role_key") == "hard_sparring_day" and locked_day:
             real_weekday = locked_day
         else:
             real_weekday = resolved_map.get(countdown_label) if countdown_label else None
@@ -1656,12 +1428,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
             entry["locked_day"] = role.get("locked_day")
         if role.get("day_assignment_reason"):
             entry["day_assignment_reason"] = role.get("day_assignment_reason")
-        if role.get("downgraded_from_hard_sparring"):
-            entry["downgraded_from_hard_sparring"] = True
         sequence.append(entry)
-    sequence.sort(key=lambda entry: _countdown_offset(str(entry.get("countdown_label") or "")) or -1, reverse=True)
-    for idx, entry in enumerate(sequence, start=1):
-        entry["session_index"] = idx
     return sequence
 
 
