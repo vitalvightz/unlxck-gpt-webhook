@@ -240,6 +240,17 @@ class TestResolveCountdownWeekdayWithAvailability:
 # ---------------------------------------------------------------------------
 
 class TestSessionSequenceWeekdayAnnotation:
+    def test_d13_pre_fight_window_spreads_unlocked_sessions(self):
+        athlete = _athlete(
+            13,
+            plan_creation_weekday="monday",
+            hard_sparring_days=[],
+            training_days=["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        )
+        sequence = _build_late_fight_session_sequence(13, athlete)
+        labels = [entry.get("countdown_label") for entry in sequence if entry.get("countdown_label")]
+        assert labels[:3] == ["D-13", "D-11", "D-9"]
+
     def test_d5_sequence_includes_countdown_label(self):
         athlete = _athlete(5, plan_creation_weekday="monday")
         sequence = _build_late_fight_session_sequence(5, athlete)

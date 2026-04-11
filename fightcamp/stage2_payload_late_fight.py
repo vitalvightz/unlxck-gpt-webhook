@@ -339,6 +339,43 @@ def _countdown_offset(label: str) -> int | None:
         return None
 
 
+def _candidate_countdown_labels(days: int, mode: str) -> list[str]:
+    if days < 0:
+        return []
+    if mode == "pre_fight_compressed_payload":
+        lower_bound = 8
+    elif mode == "late_fight_week_payload":
+        lower_bound = 7
+    elif mode == "late_fight_transition_payload":
+        lower_bound = 5
+    elif mode == "late_fight_session_payload":
+        lower_bound = 2
+    elif mode == "pre_fight_day_payload":
+        lower_bound = 1
+    elif mode == "fight_day_protocol_payload":
+        lower_bound = 0
+    else:
+        lower_bound = 0
+    start = max(days, lower_bound)
+    return [f"D-{offset}" for offset in range(start, lower_bound - 1, -1)]
+
+
+def _spaced_countdown_priority(labels: list[str]) -> list[str]:
+    """Prefer non-consecutive countdown labels when the window allows."""
+    if not labels:
+        return []
+    ordered = sorted(
+        [label for label in labels if _countdown_offset(label) is not None],
+        key=lambda value: int(_countdown_offset(value) or 0),
+        reverse=True,
+    )
+    if len(ordered) <= 2:
+        return ordered
+    even_indices = ordered[::2]
+    odd_indices = ordered[1::2]
+    return even_indices + odd_indices
+
+
 def _resolve_countdown_weekday_with_availability(
     countdown_map: dict[str, str],
     available_days: list[str],
@@ -1384,6 +1421,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
     resolved_map = _resolve_countdown_weekday_with_availability(countdown_map, available_days)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
+    mode = _days_out_payload_mode(days_until_fight)
     try:
         days = int(days_until_fight)
     except (TypeError, ValueError):
@@ -1391,13 +1429,15 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     available_countdown_labels: list[str] = []
     reserved_countdown_labels: set[str] = set()
     if days is not None and days >= 0:
-        all_labels = [f"D-{offset}" for offset in range(days, -1, -1)]
+        all_labels = _candidate_countdown_labels(days, mode)
         reserved_countdown_labels = {
             str(role.get("countdown_label"))
             for role in roles
             if str(role.get("countdown_label") or "").startswith("D-")
         }
-        available_countdown_labels = [label for label in all_labels if label not in reserved_countdown_labels]
+        available_countdown_labels = _spaced_countdown_priority(
+            [label for label in all_labels if label not in reserved_countdown_labels]
+        )
     sequence: list[dict[str, Any]] = []
     for role in roles:
         if days is not None:
