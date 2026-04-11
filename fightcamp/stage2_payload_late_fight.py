@@ -109,6 +109,55 @@ def _select_spaced_hard_days(declared_hard_days: list[str], cap: int | None) -> 
     return ordered_days[:cap]
 
 
+def _active_declared_hard_days_for_window(
+    *,
+    declared_hard_days: list[str],
+    plan_creation_weekday: str | None,
+    days_until_fight: Any,
+) -> list[str]:
+    """Return declared hard days that are still countdown-eligible as hard.
+
+    Hard sparring may only survive on declared weekdays and only when their
+    mapped countdown position still allows hard exposure.
+    """
+    ordered_declared = _ordered_weekdays(declared_hard_days)
+    if not ordered_declared:
+        return []
+
+    cap = _declared_hard_spar_cap(days_until_fight)
+    if cap == 0:
+        return []
+
+    try:
+        total_days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return _select_spaced_hard_days(ordered_declared, cap)
+
+    creation_index = _WEEKDAY_ORDER.get(str(plan_creation_weekday or "").strip().lower())
+    if creation_index is None:
+        return _select_spaced_hard_days(ordered_declared, cap)
+
+    candidates: list[tuple[int, int, str]] = []
+    for weekday in ordered_declared:
+        weekday_index = _WEEKDAY_ORDER.get(weekday.strip().lower())
+        if weekday_index is None:
+            continue
+        offset_from_creation = (weekday_index - creation_index) % 7
+        countdown = total_days - offset_from_creation
+        if countdown < 0:
+            continue
+        if countdown < 7:
+            continue
+        candidates.append((offset_from_creation, countdown, weekday))
+
+    if not candidates:
+        return []
+
+    candidates.sort(key=lambda item: (item[0], item[2].lower()))
+    eligible_days = [weekday for _, _, weekday in candidates]
+    return _select_spaced_hard_days(eligible_days, cap)
+
+
 def _filter_past_weekdays(
     weekdays: list[str],
     plan_creation_weekday: str | None,
@@ -1030,9 +1079,10 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         days_until_fight,
     )
     if mode == "pre_fight_compressed_payload":
-        active_hard_days = _select_spaced_hard_days(
-            declared_hard_days,
-            _declared_hard_spar_cap(days_until_fight),
+        active_hard_days = _active_declared_hard_days_for_window(
+            declared_hard_days=declared_hard_days,
+            plan_creation_weekday=plan_weekday,
+            days_until_fight=days_until_fight,
         )
         roles: list[dict[str, Any]] = []
         session_index = 1
@@ -1093,9 +1143,10 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         )
         return roles
     if mode == "late_fight_week_payload":
-        active_hard_days = _select_spaced_hard_days(
-            declared_hard_days,
-            _declared_hard_spar_cap(days_until_fight),
+        active_hard_days = _active_declared_hard_days_for_window(
+            declared_hard_days=declared_hard_days,
+            plan_creation_weekday=plan_weekday,
+            days_until_fight=days_until_fight,
         )
         roles: list[dict[str, Any]] = []
         session_index = 1
