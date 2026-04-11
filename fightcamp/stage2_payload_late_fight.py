@@ -172,6 +172,17 @@ def _classify_declared_hard_days_for_late_window(
     return classified
 
 
+def _split_declared_hard_day_instances(
+    classified_days: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    surviving_hard = [
+        day for day in classified_days
+        if day.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+    ]
+    downgraded = [day for day in classified_days if day.get("status") == "downgrade"]
+    return surviving_hard, downgraded
+
+
 def _protected_collision_owner_day(athlete_model: dict[str, Any]) -> str | None:
     for key in ("primary_collision_owner_day", "main_fight_pace_day", "collision_owner_day", "planned_collision_owner_day"):
         day = str(athlete_model.get(key) or "").strip().lower()
@@ -1128,6 +1139,41 @@ def _late_fight_role_entry(
     return entry
 
 
+def _declared_hard_day_technical_touch_role(
+    session_index: int,
+    downgraded_day: dict[str, Any],
+) -> dict[str, Any]:
+    role = _late_fight_role_entry(
+        session_index=session_index,
+        category="technical",
+        role_key="declared_hard_day_technical_touch",
+        preferred_pool="declared_hard_sparring_days",
+        selection_rule=(
+            "Preserve the athlete's declared boxing rhythm on this day, but downgrade it from hard sparring "
+            "to a controlled technical touch because countdown rules no longer allow a true hard collision exposure."
+        ),
+        placement_rule=(
+            "Keep this on the same declared day as a low-noise boxing session. "
+            "Do not remap it and do not escalate it back toward hard sparring."
+        ),
+    )
+    role.update(
+        {
+            "scheduled_day_hint": downgraded_day.get("weekday"),
+            "locked_day": downgraded_day.get("weekday"),
+            "countdown_label": downgraded_day.get("countdown_label"),
+            "countdown_offset": downgraded_day.get("offset"),
+            "declared_day_locked": True,
+            "day_assignment_reason": (
+                "Declared hard sparring day is too close to the fight to remain hard, so it is preserved as a "
+                "technical/deload boxing touch on the same day."
+            ),
+            "downgraded_from_hard_sparring": True,
+        }
+    )
+    return role
+
+
 def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
     mode = _days_out_payload_mode(days_until_fight)
     plan_weekday = athlete_model.get("plan_creation_weekday")
@@ -1141,11 +1187,10 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         days_until_fight=days_until_fight,
         declared_weekdays=declared_hard_days,
     )
+    hard_allowed_instances, downgraded_declared_instances = _split_declared_hard_day_instances(
+        declared_countdown_hard_days
+    )
     protected_day = _protected_collision_owner_day(athlete_model)
-    hard_allowed_instances = [
-        day for day in declared_countdown_hard_days
-        if day.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
-    ]
     active_hard_instances = _select_capped_declared_hard_day_instances(
         hard_allowed_instances,
         _declared_hard_spar_cap(days_until_fight),
@@ -1177,6 +1222,9 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 }
             )
             roles.append(role)
+            session_index += 1
+        for downgraded_day in downgraded_declared_instances:
+            roles.append(_declared_hard_day_technical_touch_role(session_index, downgraded_day))
             session_index += 1
 
         strength_selection_rule = "Use one meaningful strength or power touch only."
@@ -1247,6 +1295,13 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
             )
             roles.append(role)
             session_index += 1
+        downgraded_week_days = [
+            day for day in declared_countdown_hard_days
+            if day not in active_hard_instances and day.get("status") == "downgrade"
+        ]
+        for downgraded_day in downgraded_week_days:
+            roles.append(_declared_hard_day_technical_touch_role(session_index, downgraded_day))
+            session_index += 1
         roles.append(
             _late_fight_role_entry(
                 session_index=session_index,
@@ -1284,9 +1339,14 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         return roles
     if mode == "late_fight_transition_payload":
         # D-6/D-5: alactic sharpness touch + recovery only, no hard sparring
-        roles: list[dict[str, Any]] = [
+        roles: list[dict[str, Any]] = []
+        session_index = 1
+        for downgraded_day in downgraded_declared_instances:
+            roles.append(_declared_hard_day_technical_touch_role(session_index, downgraded_day))
+            session_index += 1
+        roles.extend([
             _late_fight_role_entry(
-                session_index=1,
+                session_index=session_index,
                 category="conditioning",
                 role_key="alactic_sharpness_day",
                 preferred_pool="declared_technical_skill_days_or_conditioning_slots",
@@ -1295,14 +1355,14 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 placement_rule="Keep this brief and very low volume. Do not turn it into density work.",
             ),
             _late_fight_role_entry(
-                session_index=2,
+                session_index=session_index + 1,
                 category="recovery",
                 role_key="fight_week_freshness_day",
                 preferred_pool="rehab_slots_or_recovery_only",
                 selection_rule="Mobility, breathing, and tissue recovery only.",
                 placement_rule="Lowest-load session. Prioritise readiness over any training stimulus.",
             ),
-        ]
+        ])
         if declared_hard_days:
             for role in roles:
                 role.setdefault("coach_notes", [])
@@ -1317,7 +1377,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         except (TypeError, ValueError):
             days = 3
         if days == 2:
-            return [
+            short_roles = [
                 _late_fight_role_entry(
                     session_index=1,
                     category="strength",
@@ -1327,6 +1387,11 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                     placement_rule="Keep it crisp, low-volume, and fully non-fatiguing.",
                 )
             ]
+            for downgraded_day in downgraded_declared_instances:
+                short_roles.append(_declared_hard_day_technical_touch_role(len(short_roles) + 1, downgraded_day))
+            return short_roles
+        for downgraded_day in downgraded_declared_instances:
+            roles.append(_declared_hard_day_technical_touch_role(len(roles) + 1, downgraded_day))
         if days >= 4 or _allow_late_fight_alactic_sharpness(athlete_model, days_until_fight):
             roles.append(
                 _late_fight_role_entry(
@@ -1351,7 +1416,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         )
         return roles
     if mode == "pre_fight_day_payload":
-        return [
+        roles = [
             _late_fight_role_entry(
                 session_index=1,
                 category="strength",
@@ -1361,6 +1426,10 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 placement_rule="Keep it short, clean, and immediately supportive of tomorrow's performance.",
             )
         ]
+        d1_downgraded = [day for day in downgraded_declared_instances if int(day.get("offset", -1)) == 1]
+        if d1_downgraded:
+            roles.append(_declared_hard_day_technical_touch_role(2, d1_downgraded[0]))
+        return roles
     return []
 
 
@@ -1402,7 +1471,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
         else:
             countdown_label = None
         locked_day = str(role.get("locked_day") or "").strip().lower()
-        if role.get("role_key") == "hard_sparring_day" and locked_day:
+        if role.get("declared_day_locked") and locked_day:
             real_weekday = locked_day
         else:
             real_weekday = resolved_map.get(countdown_label) if countdown_label else None
@@ -1428,6 +1497,8 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
             entry["locked_day"] = role.get("locked_day")
         if role.get("day_assignment_reason"):
             entry["day_assignment_reason"] = role.get("day_assignment_reason")
+        if role.get("downgraded_from_hard_sparring"):
+            entry["downgraded_from_hard_sparring"] = True
         sequence.append(entry)
     return sequence
 
