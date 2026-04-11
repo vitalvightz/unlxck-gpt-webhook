@@ -147,7 +147,7 @@ export default function SettingsPage() {
     });
   }
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_AVATAR_FILE_BYTES) {
@@ -160,7 +160,7 @@ export default function SettingsPage() {
       const dataUrl = e.target?.result;
       if (typeof dataUrl === "string") {
         setAvatarUrl(dataUrl);
-        setShowUrlInput(false);
+        setUrlInputValue("");
         setError(null);
       }
     };
