@@ -98,6 +98,111 @@ def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
     return None
 
 
+def _future_declared_weekdays_with_countdown(
+    plan_creation_weekday: str | None,
+    days_until_fight: Any,
+    declared_weekdays: list[str],
+) -> list[dict[str, Any]]:
+    """Resolve declared weekdays into real upcoming countdown instances."""
+    ordered_declared = _ordered_weekdays(declared_weekdays)
+    if not plan_creation_weekday:
+        try:
+            days = int(days_until_fight)
+        except (TypeError, ValueError):
+            return []
+        return [
+            {"weekday": weekday, "countdown_label": None, "offset": days}
+            for weekday in ordered_declared
+        ]
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return []
+    if days <= 0:
+        return []
+    creation_index = _WEEKDAY_ORDER.get(plan_creation_weekday.strip().lower())
+    if creation_index is None:
+        return []
+    declared_set = set(ordered_declared)
+    if not declared_set:
+        return []
+    future: list[dict[str, Any]] = []
+    seen_weekdays: set[str] = set()
+    for day_offset in range(0, days + 1):
+        weekday = _WEEKDAY_NAMES[(creation_index + day_offset) % 7]
+        if weekday not in declared_set or weekday in seen_weekdays:
+            continue
+        seen_weekdays.add(weekday)
+        countdown_offset = days - day_offset
+        future.append(
+            {
+                "weekday": weekday,
+                "countdown_label": f"D-{countdown_offset}",
+                "offset": countdown_offset,
+            }
+        )
+    return future
+
+
+def _hard_spar_status_for_countdown_offset(offset: int) -> str:
+    if 8 <= offset <= 13:
+        return "hard_allowed"
+    if offset == 7:
+        return "hard_allowed_but_final_window"
+    if 0 <= offset <= 6:
+        return "downgrade"
+    return "downgrade"
+
+
+def _classify_declared_hard_days_for_late_window(
+    plan_creation_weekday: str | None,
+    days_until_fight: Any,
+    declared_weekdays: list[str],
+) -> list[dict[str, Any]]:
+    classified: list[dict[str, Any]] = []
+    for entry in _future_declared_weekdays_with_countdown(
+        plan_creation_weekday=plan_creation_weekday,
+        days_until_fight=days_until_fight,
+        declared_weekdays=declared_weekdays,
+    ):
+        classified.append(
+            {
+                **entry,
+                "status": _hard_spar_status_for_countdown_offset(int(entry.get("offset", -1))),
+            }
+        )
+    return classified
+
+
+def _protected_collision_owner_day(athlete_model: dict[str, Any]) -> str | None:
+    for key in ("primary_collision_owner_day", "main_fight_pace_day", "collision_owner_day", "planned_collision_owner_day"):
+        day = str(athlete_model.get(key) or "").strip().lower()
+        if day in _WEEKDAY_ORDER:
+            return day
+    return None
+
+
+def _select_capped_declared_hard_day_instances(
+    hard_allowed_days: list[dict[str, Any]],
+    cap: int | None,
+    protected_day: str | None = None,
+) -> list[dict[str, Any]]:
+    ordered = sorted(hard_allowed_days, key=lambda entry: int(entry.get("offset", -1)), reverse=True)
+    if cap is None or len(ordered) <= cap:
+        return ordered
+    if cap <= 0:
+        return []
+    if cap == 1:
+        if protected_day:
+            protected = next((entry for entry in ordered if entry.get("weekday") == protected_day), None)
+            if protected is not None:
+                return [protected]
+        return ordered[:1]
+    if cap == 2:
+        return [ordered[0], ordered[-1]]
+    return ordered[:cap]
+
+
 def _select_spaced_hard_days(declared_hard_days: list[str], cap: int | None) -> list[str]:
     ordered_days = _ordered_weekdays(declared_hard_days)
     if cap is None or len(ordered_days) <= cap:
@@ -802,6 +907,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "compressed_week",
             "rules": [
                 "Frame this as a compressed pre-fight week rather than a normal camp week.",
+                "Present sessions countdown-first (D-N first, weekday second), even when using compressed week wording.",
                 "Keep the language on technical rhythm, sharpness, one meaningful strength touch, and freshness.",
                 "No broad development week framing or conditioning-build language.",
                 "Do not stack standalone glycolytic density beside multiple hard sparring days.",
@@ -828,6 +934,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "compressed_week",
             "rules": [
                 "Use concise sharpness-week framing.",
+                "Anchor all sessions by countdown position first (D-N), not by a synthetic Monday-Sunday skeleton.",
                 "Keep the language on power touch, neural touch, technical rhythm, freshness, and mobility / reset.",
                 "No broad development language or camp-block wording.",
                 "Cap meaningful non-sparring stressors at one.",
@@ -857,6 +964,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "session_by_session",
             "rules": [
                 "Render session-by-session, not as a weekly build.",
+                "Lead each item with its countdown label (D-N) and then weekday.",
                 "No hard sparring — technical rhythm and sharpness touch only.",
                 "Max 2 sessions: one power touch or technical rhythm session + one freshness session.",
                 "No strength-anchor, conditioning-stressor, or support-strength wording.",
@@ -885,6 +993,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "framing": "session_by_session",
             "rules": [
                 "Render session-by-session, not as a program block.",
+                "Lead each session with countdown-first framing (D-N, then weekday).",
                 "Use sharpness session, technical touch, low-noise power, freshness session, primer, and reset language.",
                 "No 'program block' framing.",
                 "No phase-explanation dump.",
@@ -1029,25 +1138,47 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         plan_weekday,
         days_until_fight,
     )
+    declared_countdown_hard_days = _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday=plan_weekday,
+        days_until_fight=days_until_fight,
+        declared_weekdays=declared_hard_days,
+    )
+    protected_day = _protected_collision_owner_day(athlete_model)
+    hard_allowed_instances = [
+        day for day in declared_countdown_hard_days
+        if day.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+    ]
+    active_hard_instances = _select_capped_declared_hard_day_instances(
+        hard_allowed_instances,
+        _declared_hard_spar_cap(days_until_fight),
+        protected_day=protected_day,
+    )
+    active_hard_days = [str(entry.get("weekday")) for entry in active_hard_instances]
+
     if mode == "pre_fight_compressed_payload":
-        active_hard_days = _select_spaced_hard_days(
-            declared_hard_days,
-            _declared_hard_spar_cap(days_until_fight),
-        )
         roles: list[dict[str, Any]] = []
         session_index = 1
 
-        for _ in active_hard_days:
-            roles.append(
-                _late_fight_role_entry(
-                    session_index=session_index,
-                    category="conditioning",
-                    role_key="hard_sparring_day",
-                    preferred_pool="declared_hard_sparring_days",
-                    selection_rule="Cap hard sparring to the two highest-value declared collision days and convert any extras to technical rhythm only.",
-                    placement_rule="Keep collision exposures recoverable inside the compressed week and do not let overflow hard days survive as sparring roles.",
-                )
+        for hard_day in active_hard_instances:
+            role = _late_fight_role_entry(
+                session_index=session_index,
+                category="conditioning",
+                role_key="hard_sparring_day",
+                preferred_pool="declared_hard_sparring_days",
+                selection_rule="Resolve future declared hard sparring days by countdown first, then cap surviving hard-allowed exposures.",
+                placement_rule="Never remap hard sparring to a non-declared day; keep surviving declared days fixed.",
             )
+            role.update(
+                {
+                    "scheduled_day_hint": hard_day.get("weekday"),
+                    "locked_day": hard_day.get("weekday"),
+                    "countdown_label": hard_day.get("countdown_label"),
+                    "countdown_offset": hard_day.get("offset"),
+                    "day_assignment_reason": "Declared hard sparring day survives countdown and cap rules.",
+                    "declared_day_locked": True,
+                }
+            )
+            roles.append(role)
             session_index += 1
 
         strength_selection_rule = "Use one meaningful strength or power touch only."
@@ -1093,24 +1224,30 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         )
         return roles
     if mode == "late_fight_week_payload":
-        active_hard_days = _select_spaced_hard_days(
-            declared_hard_days,
-            _declared_hard_spar_cap(days_until_fight),
-        )
         roles: list[dict[str, Any]] = []
         session_index = 1
         # Cap to at most 1 hard sparring slot even with multiple declared days
-        if active_hard_days:
-            roles.append(
-                _late_fight_role_entry(
-                    session_index=session_index,
-                    category="conditioning",
-                    role_key="hard_sparring_day",
-                    preferred_pool="declared_hard_sparring_days",
-                    selection_rule="Keep exactly one declared hard sparring day. All others convert to technical or deload.",
-                    placement_rule="Treat the declared hard sparring day as fixed and compress everything around it.",
-                )
+        if active_hard_instances:
+            surviving = active_hard_instances[0]
+            role = _late_fight_role_entry(
+                session_index=session_index,
+                category="conditioning",
+                role_key="hard_sparring_day",
+                preferred_pool="declared_hard_sparring_days",
+                selection_rule="Keep exactly one declared hard sparring day when countdown allows hard sparring.",
+                placement_rule="Treat the declared hard sparring day as fixed and compress everything around it.",
             )
+            role.update(
+                {
+                    "scheduled_day_hint": surviving.get("weekday"),
+                    "locked_day": surviving.get("weekday"),
+                    "countdown_label": surviving.get("countdown_label"),
+                    "countdown_offset": surviving.get("offset"),
+                    "day_assignment_reason": "Declared hard sparring day survives countdown and cap rules.",
+                    "declared_day_locked": True,
+                }
+            )
+            roles.append(role)
             session_index += 1
         roles.append(
             _late_fight_role_entry(
@@ -1242,11 +1379,19 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     sequence: list[dict[str, Any]] = []
     for idx, role in enumerate(roles):
         if days is not None:
-            countdown_offset = days - idx
-            countdown_label = f"D-{countdown_offset}" if countdown_offset >= 0 else None
+            role_countdown_label = role.get("countdown_label")
+            if role_countdown_label:
+                countdown_label = str(role_countdown_label)
+            else:
+                countdown_offset = days - idx
+                countdown_label = f"D-{countdown_offset}" if countdown_offset >= 0 else None
         else:
             countdown_label = None
-        real_weekday = resolved_map.get(countdown_label) if countdown_label else None
+        locked_day = str(role.get("locked_day") or "").strip().lower()
+        if role.get("role_key") == "hard_sparring_day" and locked_day:
+            real_weekday = locked_day
+        else:
+            real_weekday = resolved_map.get(countdown_label) if countdown_label else None
         entry: dict[str, Any] = {
             "session_index": role.get("session_index"),
             "category": role.get("category"),
@@ -1261,6 +1406,14 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
             entry["countdown_label"] = countdown_label
         if real_weekday:
             entry["real_weekday"] = real_weekday
+        if role.get("declared_day_locked"):
+            entry["declared_day_locked"] = True
+        if role.get("scheduled_day_hint"):
+            entry["scheduled_day_hint"] = role.get("scheduled_day_hint")
+        if role.get("locked_day"):
+            entry["locked_day"] = role.get("locked_day")
+        if role.get("day_assignment_reason"):
+            entry["day_assignment_reason"] = role.get("day_assignment_reason")
         sequence.append(entry)
     return sequence
 

@@ -1,4 +1,8 @@
-from fightcamp.stage2_payload_late_fight import _late_fight_session_roles, _select_spaced_hard_days
+from fightcamp.stage2_payload_late_fight import (
+    _classify_declared_hard_days_for_late_window,
+    _late_fight_session_roles,
+    _select_spaced_hard_days,
+)
 
 
 _MINIMAL_ATHLETE = {
@@ -71,3 +75,73 @@ def test_d7_role_list_remains_unchanged():
     ]
 
     assert role_keys == ["hard_sparring_day", "neural_primer_day", "fight_week_freshness_day"]
+
+
+def test_d9_midweek_submission_uses_only_surviving_declared_hard_day():
+    athlete = _athlete(
+        9,
+        plan_creation_weekday="friday",
+        hard_sparring_days=["tuesday", "thursday", "saturday"],
+    )
+    roles = _late_fight_session_roles(9, athlete)
+    hard_roles = [role for role in roles if role["role_key"] == "hard_sparring_day"]
+
+    assert len(hard_roles) == 1
+    assert hard_roles[0]["locked_day"] == "saturday"
+    assert hard_roles[0]["countdown_label"] == "D-8"
+    assert all(role["locked_day"] != "friday" for role in hard_roles)
+
+    classified = _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday="friday",
+        days_until_fight=9,
+        declared_weekdays=["tuesday", "thursday", "saturday"],
+    )
+    assert [(entry["weekday"], entry["status"]) for entry in classified] == [
+        ("saturday", "hard_allowed"),
+        ("tuesday", "downgrade"),
+        ("thursday", "downgrade"),
+    ]
+
+
+def test_d11_spacing_prefers_first_and_last_surviving_declared_days():
+    athlete = _athlete(
+        11,
+        plan_creation_weekday="monday",
+        hard_sparring_days=["tuesday", "thursday", "saturday"],
+    )
+    hard_roles = [role for role in _late_fight_session_roles(11, athlete) if role["role_key"] == "hard_sparring_day"]
+
+    assert [role["locked_day"] for role in hard_roles] == ["tuesday", "thursday"]
+    assert {role["locked_day"] for role in hard_roles}.issubset({"tuesday", "thursday", "saturday"})
+    assert abs(hard_roles[0]["countdown_offset"] - hard_roles[1]["countdown_offset"]) > 1
+
+
+def test_d7_caps_to_one_hard_day_and_keeps_declared_lock():
+    athlete = _athlete(
+        7,
+        plan_creation_weekday="monday",
+        hard_sparring_days=["monday", "thursday", "saturday"],
+    )
+    hard_roles = [role for role in _late_fight_session_roles(7, athlete) if role["role_key"] == "hard_sparring_day"]
+
+    assert len(hard_roles) == 1
+    assert hard_roles[0]["locked_day"] in {"monday", "thursday", "saturday"}
+    assert hard_roles[0]["declared_day_locked"] is True
+
+
+def test_d6_and_below_have_no_true_hard_sparring_roles():
+    athlete = _athlete(
+        6,
+        plan_creation_weekday="monday",
+        hard_sparring_days=["tuesday", "thursday", "saturday"],
+    )
+    roles = _late_fight_session_roles(6, athlete)
+
+    assert all(role["role_key"] != "hard_sparring_day" for role in roles)
+    classified = _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday="monday",
+        days_until_fight=6,
+        declared_weekdays=["tuesday", "thursday", "saturday"],
+    )
+    assert classified
+    assert all(entry["status"] == "downgrade" for entry in classified)
