@@ -2,6 +2,7 @@ from fightcamp.stage2_payload_late_fight import (
     _build_late_fight_session_sequence,
     _classify_declared_hard_days_for_late_window,
     _late_fight_session_roles,
+    _split_declared_hard_day_instances,
     _select_spaced_hard_days,
 )
 
@@ -72,10 +73,16 @@ def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_
 def test_d7_role_list_remains_unchanged():
     role_keys = [
         role["role_key"]
-        for role in _late_fight_session_roles(7, _athlete(7, hard_sparring_days=["monday", "thursday"]))
+        for role in _late_fight_session_roles(
+            7,
+            _athlete(7, plan_creation_weekday="monday", hard_sparring_days=["monday", "thursday"]),
+        )
     ]
 
-    assert role_keys == ["hard_sparring_day", "neural_primer_day", "fight_week_freshness_day"]
+    assert role_keys[0] == "hard_sparring_day"
+    assert role_keys[-1] == "fight_week_freshness_day"
+    assert "declared_hard_day_technical_touch" in role_keys
+    assert "neural_primer_day" in role_keys
 
 
 def test_d9_midweek_submission_uses_only_surviving_declared_hard_day():
@@ -87,10 +94,17 @@ def test_d9_midweek_submission_uses_only_surviving_declared_hard_day():
     roles = _late_fight_session_roles(9, athlete)
     hard_roles = [role for role in roles if role["role_key"] == "hard_sparring_day"]
 
+    downgraded = [role for role in roles if role["role_key"] == "declared_hard_day_technical_touch"]
+
     assert len(hard_roles) == 1
     assert hard_roles[0]["locked_day"] == "saturday"
     assert hard_roles[0]["countdown_label"] == "D-8"
     assert all(role["locked_day"] != "friday" for role in hard_roles)
+    assert [(role["locked_day"], role["countdown_label"]) for role in downgraded] == [
+        ("tuesday", "D-5"),
+        ("thursday", "D-3"),
+        ("saturday", "D-1"),
+    ]
 
     classified = _classify_declared_hard_days_for_late_window(
         plan_creation_weekday="friday",
@@ -142,6 +156,9 @@ def test_d7_caps_to_one_hard_day_and_keeps_declared_lock():
     assert len(hard_roles) == 1
     assert hard_roles[0]["locked_day"] in {"monday", "thursday", "saturday"}
     assert hard_roles[0]["declared_day_locked"] is True
+    downgraded = [role for role in _late_fight_session_roles(7, athlete) if role["role_key"] == "declared_hard_day_technical_touch"]
+    assert downgraded
+    assert all(role["declared_day_locked"] is True for role in downgraded)
 
 
 def test_d6_and_below_have_no_true_hard_sparring_roles():
@@ -160,6 +177,12 @@ def test_d6_and_below_have_no_true_hard_sparring_roles():
     )
     assert classified
     assert all(entry["status"] == "downgrade" for entry in classified)
+    downgraded_roles = [role for role in roles if role["role_key"] == "declared_hard_day_technical_touch"]
+    assert [(role["locked_day"], role["countdown_label"]) for role in downgraded_roles] == [
+        ("tuesday", "D-5"),
+        ("thursday", "D-3"),
+        ("saturday", "D-1"),
+    ]
 
 
 def test_sequence_allocates_non_hard_roles_to_remaining_countdown_days():
@@ -174,4 +197,72 @@ def test_sequence_allocates_non_hard_roles_to_remaining_countdown_days():
     assert len(countdown_labels) == len(set(countdown_labels))
     assert sequence[0]["role_key"] == "hard_sparring_day"
     assert sequence[0]["countdown_label"] == "D-8"
-    assert sequence[1]["countdown_label"] == "D-9"
+    assert sequence[1]["role_key"] == "declared_hard_day_technical_touch"
+    assert sequence[1]["countdown_label"] == "D-5"
+    assert sequence[1]["real_weekday"] == "tuesday"
+
+
+def test_split_declared_hard_day_instances_returns_surviving_and_downgraded():
+    classified = _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday="friday",
+        days_until_fight=9,
+        declared_weekdays=["tuesday", "thursday", "saturday"],
+    )
+
+    surviving, downgraded = _split_declared_hard_day_instances(classified)
+
+    assert [(entry["weekday"], entry["countdown_label"]) for entry in surviving] == [("saturday", "D-8")]
+    assert [(entry["weekday"], entry["countdown_label"]) for entry in downgraded] == [
+        ("tuesday", "D-5"),
+        ("thursday", "D-3"),
+        ("saturday", "D-1"),
+    ]
+
+
+def test_d8_saturday_generation_preserves_downgraded_declared_days_and_avoids_two_role_collapse():
+    athlete = _athlete(
+        8,
+        plan_creation_weekday="saturday",
+        hard_sparring_days=["monday", "wednesday", "friday"],
+        readiness_flags=["injury_management"],
+        fatigue="moderate",
+        fatigue_level="moderate",
+    )
+
+    roles = _late_fight_session_roles(8, athlete)
+    hard_roles = [role for role in roles if role["role_key"] == "hard_sparring_day"]
+    downgraded_roles = [role for role in roles if role["role_key"] == "declared_hard_day_technical_touch"]
+
+    assert not hard_roles
+    assert [(role["locked_day"], role["countdown_label"]) for role in downgraded_roles] == [
+        ("monday", "D-6"),
+        ("wednesday", "D-4"),
+        ("friday", "D-2"),
+    ]
+    assert all(role["declared_day_locked"] is True for role in downgraded_roles)
+    assert len(roles) > 2
+
+
+def test_d6_to_d0_keeps_d0_protocol_and_preserves_downgraded_declared_touches_when_applicable():
+    transition_roles = _late_fight_session_roles(
+        6,
+        _athlete(6, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday", "saturday"]),
+    )
+    session_roles = _late_fight_session_roles(
+        4,
+        _athlete(4, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "wednesday", "friday"]),
+    )
+    day_before_roles = _late_fight_session_roles(
+        1,
+        _athlete(1, plan_creation_weekday="friday", hard_sparring_days=["friday"]),
+    )
+    fight_day_roles = _late_fight_session_roles(
+        0,
+        _athlete(0, plan_creation_weekday="friday", hard_sparring_days=["saturday"]),
+    )
+
+    assert all(role["role_key"] != "hard_sparring_day" for role in transition_roles + session_roles + day_before_roles)
+    assert any(role["role_key"] == "declared_hard_day_technical_touch" for role in transition_roles)
+    assert any(role["role_key"] == "declared_hard_day_technical_touch" for role in session_roles)
+    assert any(role["role_key"] == "declared_hard_day_technical_touch" for role in day_before_roles)
+    assert fight_day_roles == []
