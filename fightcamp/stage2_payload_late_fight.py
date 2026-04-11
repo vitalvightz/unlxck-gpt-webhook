@@ -1610,6 +1610,20 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
 
 
 def _handoff_mode_instructions(payload_mode: str) -> str:
+    countdown_contract = (
+        "D-13 TO D-0 OUTPUT CONTRACT\n"
+        "For any athlete with 13 days or fewer until fight, use one coherent countdown truth.\n"
+        "Use one unified section title: Countdown schedule.\n"
+        "Lead each active day with countdown-first labeling (D-N first, weekday second), and keep the full remaining window visible from current D-N through D-0.\n"
+        "Do not frame late windows as a normal Monday-Sunday week without countdown labels.\n"
+        "Never label D-0 as a training session. D-0 is fight-day protocol only (or omitted when no fight-day protocol is provided).\n"
+        "Never claim 'two sessions only' unless the visible schedule truly has only two active days.\n"
+        "If output is coach-prescribed S&C / rehab only (not full boxing week), label it exactly as: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
+        "If output includes boxing plus S&C, treat all listed active days as one real integrated schedule and do not split into conflicting schedule realities.\n"
+        "For declared hard-spar days: keep the declared day fixed. If countdown rules downgrade it, keep it on that same day as technical touch / controlled rounds / rhythm timing.\n"
+        "Do not drop declared hard-spar days and do not move them.\n"
+        "Use one hard-spar doctrine only inside a single output. No contradictions."
+    )
     if payload_mode == "fight_day_protocol_payload":
         return (
             "HARD OVERRIDE — FIGHT DAY PROTOCOL\n"
@@ -1625,7 +1639,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "- Post-fight recovery notes\n"
             "Keep it short, decisive, and fight-ready.\n"
             "Do NOT restore any suppressed roles from the planning brief.\n"
-            "Do NOT add any training session, conditioning dose, or layered rehab stack."
+            "Do NOT add any training session, conditioning dose, or layered rehab stack.\n\n"
+            + countdown_contract
         )
     if payload_mode == "pre_fight_day_payload":
         return (
@@ -1642,7 +1657,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "PREFERRED TERMS: neural primer, technical touch, sharpness, activation, reset, rhythm.\n"
             "Do NOT use weekly architecture framing.\n"
             "Do NOT restore suppressed session roles.\n"
-            "Do NOT generate hard sparring or conditioning-system allocation."
+            "Do NOT generate hard sparring or conditioning-system allocation.\n\n"
+            + countdown_contract
         )
     if payload_mode == "pre_fight_compressed_payload":
         return (
@@ -1658,7 +1674,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Do NOT place a standalone glycolytic stressor between two hard sparring collisions.\n"
             "Preferred headings: Compressed Week, Technical Rhythm, Sharpness, Strength Touch, Freshness Session, Mobility / Reset.\n"
             "Avoid headings such as Development Block, Conditioning Build, Secondary Anchor, Extra Density Push.\n"
-            "Preserve freshness over extra development."
+            "Preserve freshness over extra development.\n\n"
+            + countdown_contract
         )
     if payload_mode == "late_fight_session_payload":
         return (
@@ -1675,7 +1692,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Avoid headings such as Strength Block, Conditioning Stressor, Glycolytic Session, Support Strength, Secondary Strength.\n"
             "Cap every session at 4 blocks.\n"
             "Keep output concise. No weekly frequency reasoning.\n"
-            "No 'program block' framing. No phase-explanation dump. No hard sparring."
+            "No 'program block' framing. No phase-explanation dump. No hard sparring.\n\n"
+            + countdown_contract
         )
     if payload_mode == "late_fight_week_payload":
         return (
@@ -1687,7 +1705,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Preferred headings: Main Sharpness Day, Power Touch, Neural Touch, Technical Rhythm, Freshness Session, Mobility / Reset.\n"
             "Avoid headings such as Primary Strength, Secondary Strength, Anchor Day, Conditioning Block, Development Block, Support Strength.\n"
             "Forbid broad development language and multiple non-sparring stressors.\n"
-            "Keep output concise, fresh, and low-noise."
+            "Keep output concise, fresh, and low-noise.\n\n"
+            + countdown_contract
         )
     if payload_mode == "late_fight_transition_payload":
         return (
@@ -1701,6 +1720,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "No development language, volume-build language, or program-block framing.\n"
             "Preferred headings: Sharpness, Power Touch, Neural Touch, Technical Rhythm, Recovery / Freshness, Mobility / Reset.\n"
             "Present session-by-session, not as a weekly build.\n"
-            "Keep output minimal and focused on freshness and fight readiness."
+            "Keep output minimal and focused on freshness and fight readiness.\n"
+            "If this is an S&C insert rather than the full boxing week, title it explicitly as an insert for the countdown window.\n\n"
+            + countdown_contract
         )
     return ""
