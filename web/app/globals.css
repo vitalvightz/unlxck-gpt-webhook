@@ -178,9 +178,13 @@ select:focus-visible {
   gap: 20px;
   height: 100%;
   min-height: 0;
+<<<<<<< HEAD
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+=======
+  overflow: hidden;
+>>>>>>> fab4798dbe61eda519fec64d6f945019f5624131
 }
 
 .sidebar-shell::-webkit-scrollbar {
@@ -358,6 +362,14 @@ select:focus-visible {
 .sidebar-nav {
   flex: 1;
   align-content: start;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  min-height: 0;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .sidebar-link {
@@ -484,8 +496,8 @@ select:focus-visible {
 }
 
 .sidebar-footer {
+  flex-shrink: 0;
   gap: 8px;
-  margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
@@ -601,7 +613,9 @@ select:focus-visible {
 .sidebar-user-actions {
   display: flex;
   gap: 12px;
-  margin-top: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-user-actions .ghost-button {
@@ -2049,6 +2063,34 @@ button.mobile-step-rail-item {
   background: linear-gradient(180deg, rgba(50, 20, 27, 0.92), rgba(24, 13, 17, 0.94));
 }
 
+.fight-proximity-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 215, 130, 0.22);
+  background: linear-gradient(180deg, rgba(52, 37, 12, 0.92), rgba(24, 18, 9, 0.94));
+  color: #f5d78a;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.nutrition-sticky-save {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 14px 20px;
+  margin: 0 -28px -40px;
+  background: linear-gradient(0deg, rgba(10, 10, 12, 0.97) 70%, transparent);
+  backdrop-filter: blur(8px);
+}
+
 .support-panel-success {
   border-color: rgba(125, 226, 168, 0.24);
   background: linear-gradient(180deg, rgba(18, 44, 30, 0.92), rgba(10, 23, 16, 0.95));
@@ -2802,9 +2844,10 @@ button.mobile-step-rail-item {
     width: min(82vw, 296px);
     max-width: calc(100vw - var(--safe-area-left) - 28px);
     height: 100vh;
+    height: 100dvh;
     padding-top: calc(20px + var(--safe-area-top));
     padding-right: calc(20px + var(--safe-area-right));
-    padding-bottom: calc(20px + var(--safe-area-bottom));
+    padding-bottom: calc(36px + var(--safe-area-bottom));
     padding-left: calc(20px + var(--safe-area-left));
     z-index: 60;
     border-right: 1px solid var(--border-default);
@@ -2839,10 +2882,25 @@ button.mobile-step-rail-item {
 
   .sidebar-shell {
     min-height: 0;
-    overflow-y: scroll;
+    overflow: hidden;
+  }
+
+  /* logged-in: footer always at bottom */
+  .sidebar-footer {
+    margin-top: auto;
+  }
+
+  /* logged-out: user card always at bottom */
+  .sidebar-shell > .sidebar-user-card {
+    margin-top: auto;
+  }
+
+  .sidebar-nav {
+    flex: 0 0 auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    scrollbar-gutter: stable;
-    padding-right: 6px;
+    max-height: 52dvh;
+    scrollbar-width: none;
   }
 
   .app-main {
@@ -5013,6 +5071,16 @@ html[data-theme="light"] .stage2-retry-failed {
 html[data-theme="light"] .sparring-advisory-card {
   border-color: rgba(173, 115, 23, 0.18);
   background: linear-gradient(180deg, rgba(255, 246, 229, 0.98), rgba(255, 250, 241, 0.98));
+}
+
+html[data-theme="light"] .fight-proximity-banner {
+  border-color: rgba(173, 115, 23, 0.22);
+  background: linear-gradient(180deg, rgba(255, 248, 225, 0.98), rgba(255, 252, 238, 0.98));
+  color: #7a5a00;
+}
+
+html[data-theme="light"] .nutrition-sticky-save {
+  background: linear-gradient(0deg, rgba(240, 238, 232, 0.97) 70%, transparent);
 }
 
 html[data-theme="light"] .sparring-advisory-convert {
