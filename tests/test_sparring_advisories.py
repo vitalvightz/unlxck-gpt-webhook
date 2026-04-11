@@ -295,6 +295,12 @@ class TestSeverityTierClassification:
     def test_cannot_is_high(self):
         assert _entry("cannot punch")["severity_tier"] == "high"
 
+    def test_curly_apostrophe_cant_is_high(self):
+        assert _entry("can’t rotate shoulder")["severity_tier"] == "high"
+
+    def test_curly_apostrophe_non_cant_is_not_high(self):
+        assert _entry("it’s a mild shoulder soreness")["severity_tier"] == "low"
+
     def test_strain_is_moderate(self):
         assert _entry("hamstring strain")["severity_tier"] == "moderate"
 

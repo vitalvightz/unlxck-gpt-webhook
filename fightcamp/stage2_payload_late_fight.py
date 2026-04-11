@@ -1424,11 +1424,6 @@ def _late_fight_stage_label(days_until_fight: Any) -> str:
     if mode == "fight_day_protocol_payload":
         return "Fight-Day Protocol"
     return "Camp"
-    if mode == "pre_fight_day_payload":
-        return "Countdown Primer (D-1)"
-    if mode == "fight_day_protocol_payload":
-        return "Fight-Day Protocol (D-0)"
-    return "Camp"
 
 
 def _late_fight_summary(days_until_fight: Any) -> str:

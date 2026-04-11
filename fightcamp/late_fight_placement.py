@@ -45,12 +45,30 @@ _ANCHOR_COST: dict[str, str] = {
 }
 
 _COST_RANK: dict[str, int] = {"high": 0, "medium": 1, "low": 2}
+_PRESERVED_ROLE_METADATA_KEYS: tuple[str, ...] = (
+    "declared_day_locked",
+    "scheduled_day_hint",
+    "locked_day",
+    "day_assignment_reason",
+    "countdown_offset",
+    "downgraded_from_hard_sparring",
+    "governance",
+    "coach_notes",
+)
 
 
 def role_cost(role: dict[str, Any]) -> str:
     """Return 'high', 'medium', or 'low' for a role dict."""
     anchor = str(role.get("anchor") or "").strip()
     return _ANCHOR_COST.get(anchor, "medium")
+
+
+def _is_preservable_metadata(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -245,10 +263,11 @@ def place_roles_in_countdown(
         }
         if weekday:
             entry["real_weekday"] = weekday
-        # Preserve lock metadata from the budget layer
-        for key in ("declared_day_locked", "scheduled_day_hint", "locked_day", "day_assignment_reason"):
-            if role.get(key):
-                entry[key] = role[key]
+        # Preserve meaningful role semantics from the budget layer.
+        for key in _PRESERVED_ROLE_METADATA_KEYS:
+            value = role.get(key)
+            if _is_preservable_metadata(value):
+                entry[key] = value
 
         result.append(entry)
 
