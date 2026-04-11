@@ -272,288 +272,306 @@ export function NutritionWorkspaceScreen() {
         ) : (
           <div className="nutrition-page-grid">
             <div className="nutrition-main-column">
-              <article className="step-card nutrition-section">
-                <div className="form-section-header">
-                  <p className="kicker">Overview</p>
-                  <h2 className="form-section-title">Status</h2>
-                </div>
-                <StatusRows workspace={workspace} />
-                <p className="muted">
-                  Foundation status: <strong>{workspace.derived.foundation_status}</strong>
-                  {workspace.derived.missing_required_fields.length
-                    ? ` - Missing: ${workspace.derived.missing_required_fields.join(", ")}`
-                    : ""}
-                </p>
-              </article>
 
-              <article className="step-card nutrition-section">
-                <div className="form-section-header">
-                  <p className="kicker">Basics</p>
-                  <h2 className="form-section-title">Athlete details</h2>
-                </div>
-                <div className="review-detail-list nutrition-review-list">
-                  {[
-                    ["Sex", formatSex(workspace.nutrition_profile.sex)],
-                    ["Age", formatNumber(workspace.nutrition_profile.age)],
-                    ["Height", formatNumber(workspace.nutrition_profile.height_cm, "cm")],
-                    ["Current weight", formatNumber(workspace.shared_camp_context.current_weight_kg, "kg")],
-                    ["Target weight", formatNumber(workspace.shared_camp_context.target_weight_kg, "kg")],
-                  ].map(([label, value]) => (
-                    <div key={label} className="review-detail-row">
-                      <p className="review-detail-label">{label}</p>
-                      <p className="review-detail-value">{value}</p>
-                    </div>
-                  ))}
-                </div>
-                <p className="muted">These details come from onboarding so you only have to enter them once.</p>
-                {coreMissingFields.length ? (
+              {/* ── Group 1: Athlete foundation ───────────────────── */}
+              <div className="nutrition-group">
+                <p className="nutrition-group-label">Athlete foundation</p>
+                <article className="step-card nutrition-section">
+                  <div className="form-section-header">
+                    <p className="kicker">Overview</p>
+                    <h2 className="form-section-title">Status</h2>
+                  </div>
+                  <StatusRows workspace={workspace} />
                   <p className="muted">
-                    Still missing in onboarding: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
+                    Foundation status: <strong>{workspace.derived.foundation_status}</strong>
+                    {workspace.derived.missing_required_fields.length
+                      ? ` - Missing: ${workspace.derived.missing_required_fields.join(", ")}`
+                      : ""}
                   </p>
-                ) : null}
-                <div className="plan-summary-actions">
-                  <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
-                </div>
-              </article>
+                </article>
 
-              <article className="step-card nutrition-section">
-                <div className="form-section-header">
-                  <p className="kicker">Basics</p>
-                  <h2 className="form-section-title">Restrictions</h2>
-                </div>
-                <div className="review-detail-list nutrition-review-list">
-                  {[
-                    ["Injuries / restrictions", formatRestrictionsSummary(workspace.shared_camp_context.injuries)],
-                    ["Restriction level", formatEnumLabel(workspace.shared_camp_context.training_restriction_level, "Not set")],
-                  ].map(([label, value]) => (
-                    <div key={label} className="review-detail-row">
-                      <p className="review-detail-label">{label}</p>
-                      <p className="review-detail-value">{value}</p>
+                <article className="step-card nutrition-section">
+                  <div className="form-section-header">
+                    <p className="kicker">Basics</p>
+                    <h2 className="form-section-title">Athlete details</h2>
+                  </div>
+                  <div className="review-detail-list nutrition-review-list">
+                    {[
+                      ["Sex", formatSex(workspace.nutrition_profile.sex)],
+                      ["Age", formatNumber(workspace.nutrition_profile.age)],
+                      ["Height", formatNumber(workspace.nutrition_profile.height_cm, "cm")],
+                      ["Current weight", formatNumber(workspace.shared_camp_context.current_weight_kg, "kg")],
+                      ["Target weight", formatNumber(workspace.shared_camp_context.target_weight_kg, "kg")],
+                    ].map(([label, value]) => (
+                      <div key={label} className="review-detail-row">
+                        <p className="review-detail-label">{label}</p>
+                        <p className="review-detail-value">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="muted">These details come from onboarding so you only have to enter them once.</p>
+                  {coreMissingFields.length ? (
+                    <p className="muted">
+                      Still missing in onboarding: {coreMissingFields.map((field) => CORE_FIELD_LABELS[field]).join(", ")}.
+                    </p>
+                  ) : null}
+                  <div className="plan-summary-actions">
+                    <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
+                  </div>
+                </article>
+
+                <article className="step-card nutrition-section">
+                  <div className="form-section-header">
+                    <p className="kicker">Basics</p>
+                    <h2 className="form-section-title">Restrictions</h2>
+                  </div>
+                  <div className="review-detail-list nutrition-review-list">
+                    {[
+                      ["Injuries / restrictions", formatRestrictionsSummary(workspace.shared_camp_context.injuries)],
+                      ["Restriction level", formatEnumLabel(workspace.shared_camp_context.training_restriction_level, "Not set")],
+                    ].map(([label, value]) => (
+                      <div key={label} className="review-detail-row">
+                        <p className="review-detail-label">{label}</p>
+                        <p className="review-detail-value">{value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="muted">Restrictions live in onboarding so your nutrition workspace stays aligned with the core athlete profile.</p>
+                  <div className="plan-summary-actions">
+                    <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
+                  </div>
+                </article>
+              </div>
+
+              {/* ── Group 2: Bodyweight ───────────────────────────── */}
+              <div className="nutrition-group">
+                <p className="nutrition-group-label">Bodyweight</p>
+                <article className={`step-card nutrition-section ${styles.previewCard}`}>
+                  <div className={styles.previewHeader}>
+                    <div className={styles.previewHeaderCopy}>
+                      <p className="kicker">Bodyweight</p>
+                      <h2 className="form-section-title">Preview</h2>
+                      <p className="muted">Latest readout lives here. Full logging, trend review, and history edits now happen in the dedicated bodyweight lab.</p>
                     </div>
-                  ))}
-                </div>
-                <p className="muted">Restrictions live in onboarding so your nutrition workspace stays aligned with the core athlete profile.</p>
-                <div className="plan-summary-actions">
-                  <Link href="/onboarding" className="ghost-button">Edit in onboarding</Link>
-                </div>
-              </article>
+                    <Link href="/nutrition/bodyweight-log" className="cta">Open bodyweight log</Link>
+                  </div>
 
-              <article className={`step-card nutrition-section ${styles.previewCard}`}>
-                <div className={styles.previewHeader}>
-                  <div className={styles.previewHeaderCopy}>
-                    <p className="kicker">Bodyweight</p>
-                    <h2 className="form-section-title">Preview</h2>
-                    <p className="muted">Latest readout lives here. Full logging, trend review, and history edits now happen in the dedicated bodyweight lab.</p>
+                  <div className={styles.previewGrid}>
+                    <div className={styles.previewMetric}>
+                      <p className={styles.previewMetricLabel}>Latest logged weight</p>
+                      <p className={styles.previewMetricValue}>{formatWeight(latestEntry?.weight_kg)}</p>
+                    </div>
+                    <div className={styles.previewMetric}>
+                      <p className={styles.previewMetricLabel}>Target gap</p>
+                      <p className={styles.previewMetricValue}>{formatTargetGapLabel(targetGap)}</p>
+                    </div>
+                    <div className={styles.previewMetric}>
+                      <p className={styles.previewMetricLabel}>7-day average</p>
+                      <p className={styles.previewMetricValue}>{formatWeight(rollingAverage)}</p>
+                    </div>
+                    <div className={styles.previewMetric}>
+                      <p className={styles.previewMetricLabel}>Last entry</p>
+                      <p className={styles.previewMetricValue}>{formatBodyweightDate(latestEntry?.date ?? null)}</p>
+                    </div>
                   </div>
-                  <Link href="/nutrition/bodyweight-log" className="cta">Open bodyweight log</Link>
-                </div>
 
-                <div className={styles.previewGrid}>
-                  <div className={styles.previewMetric}>
-                    <p className={styles.previewMetricLabel}>Latest logged weight</p>
-                    <p className={styles.previewMetricValue}>{formatWeight(latestEntry?.weight_kg)}</p>
+                  <div className={styles.previewFooter}>
+                    <p className="muted">
+                      {latestEntry
+                        ? "Use the dedicated log for fast entry, trend review, and deliberate inline edits."
+                        : "No weigh-ins logged yet. Start with the dedicated log to establish your trend line."}
+                    </p>
                   </div>
-                  <div className={styles.previewMetric}>
-                    <p className={styles.previewMetricLabel}>Target gap</p>
-                    <p className={styles.previewMetricValue}>{formatTargetGapLabel(targetGap)}</p>
-                  </div>
-                  <div className={styles.previewMetric}>
-                    <p className={styles.previewMetricLabel}>7-day average</p>
-                    <p className={styles.previewMetricValue}>{formatWeight(rollingAverage)}</p>
-                  </div>
-                  <div className={styles.previewMetric}>
-                    <p className={styles.previewMetricLabel}>Last entry</p>
-                    <p className={styles.previewMetricValue}>{formatBodyweightDate(latestEntry?.date ?? null)}</p>
-                  </div>
-                </div>
+                </article>
+              </div>
 
-                <div className={styles.previewFooter}>
-                  <p className="muted">
-                    {latestEntry
-                      ? "Use the dedicated log for fast entry, trend review, and deliberate inline edits."
-                      : "No weigh-ins logged yet. Start with the dedicated log to establish your trend line."}
-                  </p>
-                </div>
-              </article>
-
-              <article className="step-card nutrition-section">
-                <div className="form-section-header">
-                  <p className="kicker">Weight</p>
-                  <h2 className="form-section-title">Fight setup</h2>
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Fight date</label>
-                    <input
-                      type="date"
-                      value={form.shared_camp_context.fight_date ?? ""}
-                      onChange={(event) => setSharedField("fight_date", event.target.value)}
-                    />
+              {/* ── Group 3: Fight setup ──────────────────────────── */}
+              <div className="nutrition-group">
+                <p className="nutrition-group-label">Fight setup</p>
+                <article className="step-card nutrition-section">
+                  <div className="form-section-header">
+                    <p className="kicker">Weight</p>
+                    <h2 className="form-section-title">Fight setup</h2>
                   </div>
-                  <div className="field">
-                    <label>Weigh-in type</label>
-                    <select
-                      value={form.shared_camp_context.weigh_in_type ?? ""}
-                      onChange={(event) => setSharedField("weigh_in_type", event.target.value || null)}
-                    >
-                      <option value="">Select</option>
-                      {WEIGH_IN_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Weigh-in time</label>
-                    <input
-                      type="time"
-                      value={form.shared_camp_context.weigh_in_time ?? ""}
-                      onChange={(event) => setSharedField("weigh_in_time", event.target.value)}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Current weight source</label>
-                    <select
-                      value={form.shared_camp_context.current_weight_source ?? ""}
-                      onChange={(event) => handleWeightSourceChange(event.target.value)}
-                    >
-                      {WEIGHT_SOURCE_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Select"}</option>
-                      ))}
-                    </select>
-                    <p className="muted">This stays tied to onboarding/current weight data and still respects latest-log matching behavior.</p>
-                  </div>
-                  <div className="field">
-                    <label>Weight recorded at</label>
-                    <input
-                      type="datetime-local"
-                      value={form.shared_camp_context.current_weight_recorded_at ?? ""}
-                      onChange={(event) => setSharedField("current_weight_recorded_at", event.target.value)}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Rounds format</label>
-                    <input
-                      value={form.shared_camp_context.rounds_format ?? ""}
-                      onChange={(event) => setSharedField("rounds_format", event.target.value)}
-                    />
-                  </div>
-                </div>
-              </article>
-
-              <article className="step-card nutrition-section">
-                <div className="form-section-header">
-                  <p className="kicker">Readiness</p>
-                  <h2 className="form-section-title">Schedule and readiness</h2>
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Sessions per week</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="6"
-                      value={form.shared_camp_context.weekly_training_frequency ?? ""}
-                      onChange={(event) => setSharedField("weekly_training_frequency", toNumber(event.target.value))}
-                    />
-                  </div>
-                  <div className="field">
-                    <label>Fatigue level</label>
-                    <select
-                      value={form.shared_camp_context.fatigue_level ?? ""}
-                      onChange={(event) => setSharedField("fatigue_level", event.target.value || null)}
-                    >
-                      {FATIGUE_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Select"}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="field">
-                    <label>Sleep quality</label>
-                    <select
-                      value={form.nutrition_readiness.sleep_quality ?? ""}
-                      onChange={(event) => setSleepQuality(event.target.value || null)}
-                    >
-                      {SLEEP_OPTIONS.map((value) => (
-                        <option key={value || "empty"} value={value}>{value || "Select"}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="nutrition-daytype-grid">
-                  {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
-                    <div key={option.value} className="field">
-                      <label>{option.label} day type</label>
+                  <div className="form-grid">
+                    <div className="field">
+                      <label>Fight date</label>
+                      <input
+                        type="date"
+                        value={form.shared_camp_context.fight_date ?? ""}
+                        onChange={(event) => setSharedField("fight_date", event.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Weigh-in type</label>
                       <select
-                        value={form.shared_camp_context.session_types_by_day[option.value] ?? ""}
-                        onChange={(event) => setDayType(option.value, event.target.value)}
+                        value={form.shared_camp_context.weigh_in_type ?? ""}
+                        onChange={(event) => setSharedField("weigh_in_type", event.target.value || null)}
                       >
-                        <option value="">Off / not scheduled</option>
-                        {DAY_TYPE_OPTIONS.map((dayTypeOption) => (
-                          <option key={dayTypeOption.value} value={dayTypeOption.value}>{dayTypeOption.label}</option>
+                        <option value="">Select</option>
+                        {WEIGH_IN_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
                       </select>
                     </div>
-                  ))}
-                </div>
-                <p className="muted">Pick the day type directly for each weekday. Hard sparring and light technical still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
-              </article>
+                    <div className="field">
+                      <label>Weigh-in time</label>
+                      <input
+                        type="time"
+                        value={form.shared_camp_context.weigh_in_time ?? ""}
+                        onChange={(event) => setSharedField("weigh_in_time", event.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Current weight source</label>
+                      <select
+                        value={form.shared_camp_context.current_weight_source ?? ""}
+                        onChange={(event) => handleWeightSourceChange(event.target.value)}
+                      >
+                        {WEIGHT_SOURCE_OPTIONS.map((value) => (
+                          <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                        ))}
+                      </select>
+                      <p className="muted">This stays tied to onboarding/current weight data and still respects latest-log matching behavior.</p>
+                    </div>
+                    <div className="field">
+                      <label>Weight recorded at</label>
+                      <input
+                        type="datetime-local"
+                        value={form.shared_camp_context.current_weight_recorded_at ?? ""}
+                        onChange={(event) => setSharedField("current_weight_recorded_at", event.target.value)}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Rounds format</label>
+                      <input
+                        value={form.shared_camp_context.rounds_format ?? ""}
+                        onChange={(event) => setSharedField("rounds_format", event.target.value)}
+                      />
+                    </div>
+                  </div>
+                </article>
+              </div>
 
-              <article className="step-card nutrition-section">
-                <div className="form-section-header">
-                  <p className="kicker">Nutrition</p>
-                  <h2 className="form-section-title">Nutrition parameters</h2>
-                </div>
-                <div className="form-grid">
-                  <div className="field">
-                    <label>Daily activity</label>
-                    <select
-                      value={form.nutrition_profile.daily_activity_level ?? ""}
-                      onChange={(event) => setProfileField("daily_activity_level", event.target.value || null)}
-                    >
-                      <option value="">Select</option>
-                      {ACTIVITY_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
+              {/* ── Group 4: Readiness & nutrition ───────────────── */}
+              <div className="nutrition-group">
+                <p className="nutrition-group-label">Readiness &amp; nutrition</p>
+                <article className="step-card nutrition-section">
+                  <div className="form-section-header">
+                    <p className="kicker">Readiness</p>
+                    <h2 className="form-section-title">Schedule and readiness</h2>
                   </div>
-                  <div className="field">
-                    <label>Dietary restrictions</label>
-                    <input
-                      value={toCsv(form.nutrition_profile.dietary_restrictions)}
-                      onChange={(event) => setProfileField("dietary_restrictions", toList(event.target.value))}
-                    />
+                  <div className="form-grid">
+                    <div className="field">
+                      <label>Sessions per week</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="6"
+                        value={form.shared_camp_context.weekly_training_frequency ?? ""}
+                        onChange={(event) => setSharedField("weekly_training_frequency", toNumber(event.target.value))}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Fatigue level</label>
+                      <select
+                        value={form.shared_camp_context.fatigue_level ?? ""}
+                        onChange={(event) => setSharedField("fatigue_level", event.target.value || null)}
+                      >
+                        {FATIGUE_OPTIONS.map((value) => (
+                          <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Sleep quality</label>
+                      <select
+                        value={form.nutrition_readiness.sleep_quality ?? ""}
+                        onChange={(event) => setSleepQuality(event.target.value || null)}
+                      >
+                        {SLEEP_OPTIONS.map((value) => (
+                          <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div className="field">
-                    <label>Meals per day</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="8"
-                      value={form.nutrition_profile.meals_per_day_preference ?? ""}
-                      onChange={(event) => setProfileField("meals_per_day_preference", toNumber(event.target.value))}
-                    />
+                  <div className="nutrition-daytype-grid">
+                    {TRAINING_AVAILABILITY_OPTIONS.map((option) => (
+                      <div key={option.value} className="field">
+                        <label>{option.label} day type</label>
+                        <select
+                          value={form.shared_camp_context.session_types_by_day[option.value] ?? ""}
+                          onChange={(event) => setDayType(option.value, event.target.value)}
+                        >
+                          <option value="">Off / not scheduled</option>
+                          {DAY_TYPE_OPTIONS.map((dayTypeOption) => (
+                            <option key={dayTypeOption.value} value={dayTypeOption.value}>{dayTypeOption.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
                   </div>
-                  <div className="field">
-                    <label>Caffeine use</label>
-                    <select
-                      value={form.nutrition_profile.caffeine_use == null ? "" : form.nutrition_profile.caffeine_use ? "yes" : "no"}
-                      onChange={(event) => setProfileField("caffeine_use", event.target.value ? event.target.value === "yes" : null)}
-                    >
-                      <option value="">Select</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
+                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and light technical still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
+                </article>
+
+                <article className="step-card nutrition-section">
+                  <div className="form-section-header">
+                    <p className="kicker">Nutrition</p>
+                    <h2 className="form-section-title">Nutrition parameters</h2>
                   </div>
-                  <div className="field">
-                    <label>Supplements</label>
-                    <input
-                      value={toCsv(form.nutrition_profile.supplement_use)}
-                      onChange={(event) => setProfileField("supplement_use", toList(event.target.value))}
-                    />
+                  <div className="form-grid">
+                    <div className="field">
+                      <label>Daily activity</label>
+                      <select
+                        value={form.nutrition_profile.daily_activity_level ?? ""}
+                        onChange={(event) => setProfileField("daily_activity_level", event.target.value || null)}
+                      >
+                        <option value="">Select</option>
+                        {ACTIVITY_OPTIONS.map((option) => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Dietary restrictions</label>
+                      <input
+                        value={toCsv(form.nutrition_profile.dietary_restrictions)}
+                        onChange={(event) => setProfileField("dietary_restrictions", toList(event.target.value))}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Meals per day</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="8"
+                        value={form.nutrition_profile.meals_per_day_preference ?? ""}
+                        onChange={(event) => setProfileField("meals_per_day_preference", toNumber(event.target.value))}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Caffeine use</label>
+                      <select
+                        value={form.nutrition_profile.caffeine_use == null ? "" : form.nutrition_profile.caffeine_use ? "yes" : "no"}
+                        onChange={(event) => setProfileField("caffeine_use", event.target.value ? event.target.value === "yes" : null)}
+                      >
+                        <option value="">Select</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Supplements</label>
+                      <input
+                        value={toCsv(form.nutrition_profile.supplement_use)}
+                        onChange={(event) => setProfileField("supplement_use", toList(event.target.value))}
+                      />
+                    </div>
                   </div>
-                </div>
-                <p className="muted">This workspace supports macro and micro planning inputs, not meal-by-meal food choices. We can add athlete food-level controls later if needed.</p>
-              </article>
+                  <p className="muted">This workspace supports macro and micro planning inputs, not meal-by-meal food choices. We can add athlete food-level controls later if needed.</p>
+                </article>
+              </div>
+
             </div>
 
             <aside className="nutrition-side-column">
