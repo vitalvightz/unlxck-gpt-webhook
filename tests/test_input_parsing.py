@@ -13,7 +13,7 @@ def _payload(fields: list[dict]) -> dict:
     return {"data": {"fields": fields}}
 
 
-def test_training_frequency_fallback():
+def test_invalid_training_frequency_raises_value_error():
     data = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},
@@ -21,9 +21,8 @@ def test_training_frequency_fallback():
             {"label": "Training Availability", "value": "Mon, Wed"},
         ]
     )
-    parsed = PlanInput.from_payload(data)
-    assert parsed.training_frequency == 2
-    assert parsed.training_days == ["Mon", "Wed"]
+    with pytest.raises(ValueError, match="invalid Weekly Training Frequency"):
+        PlanInput.from_payload(data)
 
 
 def test_missing_fight_date_sets_na():
@@ -62,8 +61,9 @@ def test_past_fight_date_handling_is_explicit():
     assert parsed.weeks_out == "N/A"
 
 
-def test_same_day_fight_date_remains_fight_week_active():
-    today = datetime.now().strftime("%Y-%m-%d")
+def test_same_day_fight_date_remains_fight_week_active(monkeypatch):
+    today = "2026-03-14"
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
     data = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},
@@ -304,18 +304,40 @@ def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guide
     assert parsed.parsed_injuries[0]["severity"] == expected_severity
 
 
-def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_only_values(monkeypatch):
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 23, 30))
+def test_missing_frequency_is_intentionally_inferred_and_marked_system_inferred():
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Training Availability", "value": "Mon, Thu, Sat"},
+            ]
+        )
+    )
+    assert parsed.training_frequency == 3
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "system_inferred"
 
-    fight_date = input_parsing.parse_fight_date("2026-03-14")
 
-    assert fight_date is not None
-    assert input_parsing._compute_days_until_fight("2026-03-14", fight_date) == 1
+def test_user_supplied_frequency_is_marked_user_supplied():
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Weekly Training Frequency", "value": "4"},
+                {"label": "Training Availability", "value": "Mon, Thu, Sat"},
+            ]
+        )
+    )
+    assert parsed.training_frequency == 4
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "user_supplied"
 
 
-def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
+def test_malformed_fight_date_raises_value_error():
+    with pytest.raises(ValueError, match="invalid fight date format"):
+        PlanInput.from_payload(
+            _payload([{"label": "When is your next fight?", "value": "03-14-2026"}])
+        )
+
+
+def test_date_only_fight_date_with_missing_timezone_uses_platform_default_timezone(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
 
     parsed = PlanInput.from_payload(
         _payload(
@@ -326,13 +348,13 @@ def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
         )
     )
 
-    assert parsed.days_until_fight == 1
+    assert parsed.days_until_fight == 0
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "defaulted_missing"
 
 
 def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 14, 0, 30))
 
     parsed = PlanInput.from_payload(
         _payload(
@@ -349,11 +371,11 @@ def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
     assert parsed.athlete_locale == "en-US"
     assert parsed.days_until_fight == 1
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "user_supplied"
 
 
-def test_invalid_athlete_timezone_falls_back_to_local_calendar(monkeypatch):
+def test_invalid_athlete_timezone_falls_back_to_platform_default(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
 
     parsed = PlanInput.from_payload(
         _payload(
@@ -366,15 +388,56 @@ def test_invalid_athlete_timezone_falls_back_to_local_calendar(monkeypatch):
     )
 
     assert parsed.athlete_timezone == "Mars/Olympus"
-    assert parsed.days_until_fight == 1
+    assert parsed.days_until_fight == 0
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "defaulted_missing"
 
 
-def test_compute_days_until_fight_keeps_utc_reference_for_timestamped_values(monkeypatch):
+def test_timestamped_and_date_only_countdown_use_consistent_date_model(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 12, 0))
+
+    date_only = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": "2026-03-15"},
+                {"label": "Athlete Time Zone", "value": "UTC"},
+            ]
+        )
+    )
+    timestamped = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": "2026-03-15T00:00:00Z"},
+                {"label": "Athlete Time Zone", "value": "UTC"},
+            ]
+        )
+    )
+
+    assert date_only.days_until_fight == 2
+    assert timestamped.days_until_fight == 2
+
+
+def test_countdown_no_longer_depends_on_patched_calendar_now(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 23, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 10, 0))
+    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(1999, 1, 1, 0, 0))
 
-    fight_date = input_parsing.parse_fight_date("2026-03-15T00:00:00Z")
+    parsed = PlanInput.from_payload(
+        _payload([{"label": "When is your next fight?", "value": "2026-03-14"}])
+    )
 
-    assert fight_date is not None
-    assert input_parsing._compute_days_until_fight("2026-03-15T00:00:00Z", fight_date) == 1
+    assert parsed.days_until_fight == 1
+
+
+def test_countdown_stable_across_timezone_edge_cases(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 7, 30))
+
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": "2026-03-14"},
+                {"label": "Athlete Time Zone", "value": "UTC-08:00"},
+            ]
+        )
+    )
+
+    assert parsed.days_until_fight == 1
