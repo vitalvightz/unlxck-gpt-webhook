@@ -3847,8 +3847,9 @@ Do not repeat Primary, Fallback, Drill, or menu-style labels across most session
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
 Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload the sparring dose on that day instead of replacing the day role.
 Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
-Keep every active week present and structurally complete, including late-camp weeks.
+Keep every active week present and structurally complete in full-schedule outputs. For insert outputs, keep only the app-owned session list and do not expand into a full visible week.
 If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
+Use placement logic for day assignment only; do not let it change insert voice, session ownership, or visible session count.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
@@ -3949,4 +3950,3 @@ def build_stage2_handoff_text(
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
-
