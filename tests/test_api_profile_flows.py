@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
 from support import FakeStore, _build_client, _build_request
@@ -42,7 +44,7 @@ def test_admin_athlete_profile_includes_latest_intake_details():
                 "athlete_timezone": "Europe/London",
                 "athlete_locale": "en-GB",
             },
-            "fight_date": "2026-04-18",
+            "fight_date": (date.today() + timedelta(days=42)).isoformat(),
             "rounds_format": "3 x 3",
             "weekly_training_frequency": 5,
             "fatigue_level": "moderate",
