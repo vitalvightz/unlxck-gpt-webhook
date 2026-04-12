@@ -1,3 +1,4 @@
+import { useId } from "react";
 import styles from "@/components/nutrition-pages.module.css";
 import {
   type BodyweightRange,
@@ -41,6 +42,8 @@ export function NutritionBodyweightChart({
   targetWeightKg,
   onRangeChange,
 }: NutritionBodyweightChartProps) {
+  const uid = useId().replace(/:/g, "");
+  const gradientId = `bw-area-${uid}`;
   const filteredDescending = filterBodyweightEntriesByRange(entries, range);
   const filteredAscending = [...filteredDescending].reverse();
 
@@ -160,7 +163,7 @@ export function NutritionBodyweightChart({
           aria-label={`Bodyweight trend chart for ${range}`}
         >
           <defs>
-            <linearGradient id="bodyweight-area-fill" x1="0" x2="0" y1="0" y2="1">
+            <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor="#b5122b" stopOpacity="0.38" />
               <stop offset="100%" stopColor="#b5122b" stopOpacity="0" />
             </linearGradient>
@@ -179,9 +182,9 @@ export function NutritionBodyweightChart({
               />
               <text
                 x={width - paddingRight}
-                y={targetY - 8}
+                y={targetY - 14}
                 fill="rgba(255,255,255,0.52)"
-                fontSize="12"
+                fontSize="22"
                 fontFamily="var(--font-mono)"
                 textAnchor="end"
                 letterSpacing="0.14em"
@@ -195,7 +198,7 @@ export function NutritionBodyweightChart({
             x={paddingLeft}
             y={paddingTop + 12}
             fill="rgba(255,255,255,0.42)"
-            fontSize="12"
+            fontSize="22"
             fontFamily="var(--font-mono)"
             letterSpacing="0.14em"
           >
@@ -205,14 +208,14 @@ export function NutritionBodyweightChart({
             x={paddingLeft}
             y={chartBottom - 8}
             fill="rgba(255,255,255,0.42)"
-            fontSize="12"
+            fontSize="22"
             fontFamily="var(--font-mono)"
             letterSpacing="0.14em"
           >
             {lowestWeight.toFixed(1)} KG
           </text>
 
-          <path d={areaPath} fill="url(#bodyweight-area-fill)" />
+          <path d={areaPath} fill={`url(#${gradientId})`} />
           <path
             d={linePath}
             fill="none"
@@ -235,7 +238,7 @@ export function NutritionBodyweightChart({
                 x={paddingLeft}
                 y={height - 8}
                 fill="rgba(255,255,255,0.42)"
-                fontSize="12"
+                fontSize="22"
                 fontFamily="var(--font-mono)"
                 letterSpacing="0.12em"
               >
@@ -245,7 +248,7 @@ export function NutritionBodyweightChart({
                 x={width - paddingRight}
                 y={height - 8}
                 fill="rgba(255,255,255,0.42)"
-                fontSize="12"
+                fontSize="22"
                 fontFamily="var(--font-mono)"
                 textAnchor="end"
                 letterSpacing="0.12em"
@@ -258,7 +261,7 @@ export function NutritionBodyweightChart({
               x={width / 2}
               y={height - 8}
               fill="rgba(255,255,255,0.42)"
-              fontSize="12"
+              fontSize="22"
               fontFamily="var(--font-mono)"
               textAnchor="middle"
               letterSpacing="0.12em"
