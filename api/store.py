@@ -5,7 +5,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Protocol
 
 import httpx
@@ -122,6 +122,8 @@ class AppStore(Protocol):
     ) -> dict[str, Any]: ...
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
+
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
@@ -815,6 +817,74 @@ class SupabaseAppStore:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to load generation job",
+            ) from exc
+
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
+        try:
+            cutoff_iso = (
+                datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
+            ).isoformat()
+            queued_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_queued",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "queued")
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            stale_heartbeat_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_running_stale_heartbeat",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "running")
+                .lte("heartbeat_at", cutoff_iso)
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            stale_without_heartbeat_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_running_stale_started",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "running")
+                .is_("heartbeat_at", "null")
+                .lte("started_at", cutoff_iso)
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+
+            merged_rows: dict[str, dict[str, Any]] = {}
+            for response in (queued_response, stale_heartbeat_response, stale_without_heartbeat_response):
+                for row in response.data or []:
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("id") or "")
+                    if not row_id:
+                        continue
+                    merged_rows[row_id] = dict(row)
+            return sorted(merged_rows.values(), key=lambda row: str(row.get("created_at") or ""))[:limit]
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] list_claimable_generation_jobs:transient_failure error_type=%s",
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] list_claimable_generation_jobs:schema_mismatch")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] list_claimable_generation_jobs:exception")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to list generation jobs",
             ) from exc
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
