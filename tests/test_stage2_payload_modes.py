@@ -404,6 +404,32 @@ class TestStage2PayloadBranching:
         assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
         assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
 
+    @pytest.mark.parametrize(
+        "days,expected_visible",
+        [
+            (13, 3),
+            (11, 3),
+            (9, 3),
+            (7, 2),
+            (5, 2),
+            (3, 2),
+            (1, 1),
+        ],
+    )
+    def test_late_fight_visible_session_count_varies_by_countdown_and_context(self, days, expected_visible):
+        athlete = _athlete(
+            days,
+            hard_sparring_days=["thursday"],
+            fatigue="moderate",
+            fatigue_level="moderate",
+            readiness_flags=["injury_management", "weight_cut_active"],
+            weekly_training_frequency=5,
+            weight_cut_risk=True,
+            weight_cut_pct=2.0,
+        )
+        spec = _build_late_fight_plan_spec(days, athlete)
+        assert spec["visible_session_cap"] == expected_visible
+
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
         athlete_model = payload["athlete_model"]
