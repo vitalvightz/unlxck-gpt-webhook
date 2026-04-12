@@ -1408,7 +1408,7 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
     downgraded_days: list[str] = []
 
     if days <= 6:
-        downgraded_days = _ordered_weekdays(declared_hard_days)
+        downgraded_days = [day.lower() for day in declared_hard_days]
     else:
         classified = _classify_declared_hard_days_for_late_window(
             plan_creation_weekday=plan_weekday,
@@ -1425,7 +1425,7 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
             protected_day=_protected_collision_owner_day(athlete_model),
         )
         surviving_set = {str(entry.get("weekday") or "").strip().lower() for entry in surviving_instances}
-        downgraded_days = [day for day in _ordered_weekdays(declared_hard_days) if day not in surviving_set]
+        downgraded_days = [day.lower() for day in declared_hard_days if day.lower() not in surviving_set]
 
     surviving_days = _dedupe_preserve_order(
         [
