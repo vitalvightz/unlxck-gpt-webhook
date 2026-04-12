@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .normalization import _clean_list
 
 import json
 from typing import Any
@@ -55,17 +56,6 @@ Return only the revised athlete-facing final plan."""
 
 def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
-
-
-
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
 
 
 

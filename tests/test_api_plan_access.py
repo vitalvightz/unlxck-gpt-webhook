@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from api.auth import AuthenticatedUser
 from api.models import PlanRenameRequest
-from api_test_support import advisory_planning_brief, _build_client, _build_request, _start_generation, finalized_result, stage1_result
+from support import advisory_planning_brief, _build_client, _build_request, _start_generation, finalized_result, stage1_result
 
 
 def test_athlete_cannot_read_another_athlete_plan():

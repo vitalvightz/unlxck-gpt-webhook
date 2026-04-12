@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import copy
 import json
@@ -17,6 +17,7 @@ from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
+from .normalization import normalize_text_for_matching as _normalize_text, _phrase_in_text
 INJURY_MATCH_ALLOWLIST: list[str] = [
     "pressure fighter",
     "pressure cooker",
@@ -591,21 +592,6 @@ def expand_injury_tags(tags: Iterable[str], *, item: dict | None = None) -> set[
     return expanded
 
 
-def _normalize_text(text: str) -> str:
-    """
-    Normalize text for matching by:
-    - Converting to lowercase
-    - Replacing hyphens and underscores with spaces
-    - Removing all punctuation/parentheses
-    - Collapsing whitespace
-    
-    This is used for word-boundary based matching.
-    """
-    cleaned = text.lower().replace("-", " ").replace("_", " ")
-    cleaned = re.sub(r"[^\w\s]", " ", cleaned)
-    return " ".join(cleaned.split())
-
-
 def normalize_for_substring_match(text: str) -> str:
     """
     Normalize text for substring matching by:
@@ -633,16 +619,6 @@ def _module_for_item(item: dict) -> str:
     if item.get("system"):
         return "conditioning"
     return "strength"
-
-
-def _phrase_in_text(text: str, phrase: str) -> bool:
-    normalized_phrase = _normalize_text(phrase)
-    phrase_tokens = normalized_phrase.split()
-    if not phrase_tokens:
-        return False
-    escaped = r"\s+".join(re.escape(token) for token in phrase_tokens)
-    pattern = rf"\b{escaped}\b"
-    return re.search(pattern, text) is not None
 
 
 def _infer_mechanism_tags_from_name(name: str) -> set[str]:

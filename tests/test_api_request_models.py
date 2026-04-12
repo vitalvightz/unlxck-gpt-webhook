@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from api.models import PlanRequest
-from api_test_support import _build_request
+from support import _build_request
 
 
 def test_plan_request_to_payload_uses_existing_parser_labels():

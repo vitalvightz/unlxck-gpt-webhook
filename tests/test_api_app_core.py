@@ -11,7 +11,7 @@ import api.app as app_module
 import api.auth as auth_module
 import api.store as store_module
 from api.app import create_app
-from api_test_support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _planner, _now, finalized_result
+from support import FakeAuthService, FakeStage2Automator, FakeStore, _build_client, _planner, _now, finalized_result
 from conftest import RENDER_BACKEND_URL
 
 

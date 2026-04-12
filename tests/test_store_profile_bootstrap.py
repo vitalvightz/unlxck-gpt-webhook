@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 from postgrest.exceptions import APIError
 
 import api.store as store_module
-from api_test_support import _build_request
+from support import _build_request
 from api.auth import AuthenticatedUser
 from api.store import SupabaseAppStore
 

@@ -4,6 +4,7 @@ import re
 from typing import TypedDict
 
 from .injury_synonyms import parse_injury_phrase
+from .normalization import _normalize_text
 
 
 # Minimum number of keyword matches required to confidently identify a canonical restriction
@@ -124,11 +125,6 @@ def _extract_laterality(text: str) -> str | None:
     if not match:
         return None
     return match.group(1).lower()
-
-
-def _normalize_text(text: str) -> str:
-    """Normalize text for matching."""
-    return text.lower().strip()
 
 
 def _normalize_phrase_for_exact_match(text: str) -> str:

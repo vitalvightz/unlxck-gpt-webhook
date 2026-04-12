@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
+from .normalization import _clean_list
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -26,16 +27,6 @@ _HIGH_RISK_INJURY_TOKENS = {
     "dislocation",
     "subluxation",
 }
-
-
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
 
 
 def _ordered_weekdays(values: Any) -> list[str]:
