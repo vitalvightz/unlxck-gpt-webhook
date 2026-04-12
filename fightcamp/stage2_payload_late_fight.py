@@ -443,13 +443,13 @@ def _weight_cut_is_extreme(athlete_model: dict[str, Any], flags: set[str]) -> bo
 
 
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
-    fatigue = _normalized_fatigue(athlete_model)
-    flags = _readiness_flags(athlete_model)
-    extreme_cut = _weight_cut_is_extreme(athlete_model, flags)
     if len(active_hard_spar_days) >= 2:
         return True
+    fatigue = _normalized_fatigue(athlete_model)
     if fatigue == "high":
         return True
+    flags = _readiness_flags(athlete_model)
+    extreme_cut = _weight_cut_is_extreme(athlete_model, flags)
     if extreme_cut:
         return True
     if "injury_management" in flags and fatigue == "moderate":
@@ -457,6 +457,7 @@ def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_mo
         if sessions_per_week <= 3:
             return True
     return False
+
 
 
 def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fight: Any) -> list[str]:
