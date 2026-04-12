@@ -7,7 +7,7 @@ from typing import Any
 from .phases import PHASE_HEADER_PATTERN
 from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
-from .normalization import _clean_list, _phrase_in_text
+from .normalization import _clean_list, _phrase_in_text, _dedupe_preserve_order
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
