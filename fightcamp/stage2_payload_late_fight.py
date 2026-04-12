@@ -1642,7 +1642,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "COUNTDOWN CONTRACT\n"
         "One coherent countdown truth. Lead every active day D-N first, weekday second — use resolved countdown_display_label when present.\n"
         "Placement governs day assignment only — it never expands the visible session list.\n"
-        "Ownership split: gym/coach owns boxing load; app owns S&C and rehab inserts.\n"
+        "State the ownership split: gym/coach owns boxing load; app owns S&C and rehab inserts.\n"
         "Render only app-owned roles as athlete-facing sessions; boxing schedule is context.\n"
         "Partial prescription: label exactly — Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
         "Full prescription: label — Countdown schedule.\n"
