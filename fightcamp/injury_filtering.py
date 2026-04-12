@@ -6,11 +6,9 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Iterable, TYPE_CHECKING
+from typing import Iterable
 
-if TYPE_CHECKING:
-    from .injury_guard import Decision
-
+from .injury_models import Decision
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .bank_schema import validate_training_item

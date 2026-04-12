@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections import OrderedDict
 import hashlib
 import json
@@ -9,6 +8,7 @@ import os
 import re
 from typing import Callable, Iterable
 
+from .injury_models import Decision
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
 from .injury_formatting import parse_injury_entry
@@ -416,16 +416,6 @@ def _cache_injury_decision(cache_key: tuple[str, ...], payload: dict[str, object
     _INJURY_DECISION_CACHE.move_to_end(cache_key)
     while len(_INJURY_DECISION_CACHE) > _INJURY_DECISION_CACHE_MAX_SIZE:
         _INJURY_DECISION_CACHE.popitem(last=False)
-
-
-@dataclass(frozen=True)
-class Decision:
-    action: str
-    risk_score: float
-    threshold: float
-    matched_tags: list[str]
-    mods: list[str]
-    reason: dict
 
 
 def _normalize_injury_list(injuries: Iterable[str | dict] | str | dict | None) -> list[str | dict]:
