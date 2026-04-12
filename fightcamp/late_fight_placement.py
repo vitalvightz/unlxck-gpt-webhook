@@ -104,50 +104,194 @@ def _min_gap(candidate: int, assigned: list[int]) -> int:
 # Slot-selection strategies
 # ---------------------------------------------------------------------------
 
-def _pick_earlier(slots: list[str], assigned: list[int]) -> str | None:
-    """
-    Pick the earliest available slot (highest D-offset) with decent spacing.
+_ROLE_TARGET_QUANTILE: dict[str, float] = {
+    "strength_touch_day": 0.78,
+    "neural_primer_day": 0.85,
+    "hard_sparring_day": 0.80,
+    "light_fight_pace_touch_day": 0.48,
+    "alactic_sharpness_day": 0.42,
+    "fight_week_freshness_day": 0.12,
+}
 
-    Preference order:
-      1. earliest slot with gap >= 2  (non-consecutive)
-      2. earliest slot with gap >= 1  (not same day)
-      3. earliest slot regardless     (fallback)
+_MEANINGFUL_STRESS_ROLE_KEYS: set[str] = {
+    "hard_sparring_day",
+    "strength_touch_day",
+    "neural_primer_day",
+    "light_fight_pace_touch_day",
+    "alactic_sharpness_day",
+}
+
+
+def _normalize_flag_set(values: Any) -> set[str]:
+    if isinstance(values, (list, tuple, set)):
+        return {str(v).strip().lower() for v in values if str(v).strip()}
+    return set()
+
+
+def _readiness_severity(context: dict[str, Any]) -> int:
+    fatigue = str(context.get("fatigue") or "").strip().lower()
+    flags = _normalize_flag_set(context.get("readiness_flags"))
+    fatigue_score = 2 if fatigue == "high" else (1 if fatigue == "moderate" else 0)
+    injury_flag = any(tok in flag for flag in flags for tok in ("injury", "pain", "flare", "acute"))
+    return min(3, fatigue_score + (1 if injury_flag else 0))
+
+
+def _role_target_quantile(role: dict[str, Any], cost: str) -> float:
+    role_key = str(role.get("role_key") or "").strip().lower()
+    if role_key in _ROLE_TARGET_QUANTILE:
+        return _ROLE_TARGET_QUANTILE[role_key]
+    return {
+        "high": 0.70,
+        "medium": 0.55,
+        "low": 0.25,
+    }.get(cost, 0.55)
+
+
+def _target_offset_for_role(
+    slots: list[str],
+    role: dict[str, Any],
+    cost: str,
+    assigned_offsets: list[int],
+    context: dict[str, Any],
+) -> int:
+    """Return a taper-aware target offset for the exact role and context."""
+    offsets = sorted((countdown_offset(lbl) or 0) for lbl in slots)
+    if not offsets:
+        return 0
+
+    # High-cost first anchor can still use the earliest slot when useful.
+    if cost == "high" and not assigned_offsets:
+        return offsets[-1]
+
+    role_key = str(role.get("role_key") or "").strip().lower()
+    if role.get("downgraded_from_hard_sparring"):
+        declared_off = role.get("countdown_offset")
+        if isinstance(declared_off, int) and declared_off in offsets:
+            return declared_off
+    if role_key in {"technical_touch_day", "light_fight_pace_touch_day"}:
+        declared_tech = {int(v) for v in context.get("declared_technical_offsets", []) if isinstance(v, int)}
+        matching = [off for off in offsets if off in declared_tech]
+        if matching:
+            return max(matching)
+
+    quantile_index = _role_target_quantile(role, cost)
+    idx = round((len(offsets) - 1) * float(quantile_index))
+    return offsets[max(0, min(idx, len(offsets) - 1))]
+
+
+def _collision_penalty(off: int, declared_hard: set[int]) -> int:
+    if not declared_hard:
+        return 0
+    penalty = 0
+    if off in declared_hard:
+        penalty += 4
+    if (off - 1) in declared_hard:
+        penalty += 2
+    if (off + 1) in declared_hard:
+        penalty += 2
+    if (off - 1) in declared_hard and (off + 1) in declared_hard:
+        penalty += 3
+    return penalty
+
+
+def _pick_slot(
+    slots: list[str],
+    assigned_offsets: list[int],
+    assigned_stress_offsets: list[int],
+    *,
+    role: dict[str, Any],
+    cost: str,
+    context: dict[str, Any],
+) -> str | None:
+    """
+    Pick the best slot using taper-aware target proximity plus spacing quality.
+
+    This avoids blanket early-slot bias while still preserving taper intent:
+      • high   tends earlier
+      • medium tends central/early
+      • low    tends later
+
+    Same-day (D-N) placement is allowed, but only when it wins this score.
     """
     if not slots:
         return None
 
-    # Sort earliest-first: highest D-number first
-    ordered = sorted(slots, key=lambda lbl: -(countdown_offset(lbl) or 0))
+    if role.get("downgraded_from_hard_sparring"):
+        declared_off = role.get("countdown_offset")
+        if isinstance(declared_off, int):
+            declared_label = f"D-{declared_off}"
+            if declared_label in slots:
+                return declared_label
 
-    for min_gap in (2, 1, 0):
-        for lbl in ordered:
-            off = countdown_offset(lbl) or 0
-            if _min_gap(off, assigned) >= min_gap:
-                return lbl
+    target = _target_offset_for_role(slots, role, cost, assigned_offsets, context)
+    role_key = str(role.get("role_key") or "").strip().lower()
+    today_offset = int(context.get("today_offset") or 0)
+    declared_hard = {int(v) for v in context.get("declared_hard_spar_offsets", []) if isinstance(v, int)}
+    readiness = _readiness_severity(context)
+    is_meaningful_stress = role_key in _MEANINGFUL_STRESS_ROLE_KEYS
 
-    return ordered[0]
+    best_key: tuple[int, int, int, int, int, int, int] | None = None
+    best_label: str | None = None
 
-
-def _pick_later(slots: list[str], assigned: list[int]) -> str | None:
-    """
-    Pick the latest available slot (lowest D-offset, closest to fight) with
-    at least 1-day spacing.  Falls back to the closest slot when spacing
-    cannot be satisfied.
-    """
-    if not slots:
-        return None
-
-    # Sort latest-first: lowest D-number first (closest to fight)
-    ordered = sorted(slots, key=lambda lbl: countdown_offset(lbl) or 0)
-
-    # Try gap >= 1
-    for lbl in ordered:
+    slot_offsets = [(lbl, countdown_offset(lbl) or 0) for lbl in slots]
+    for lbl in slots:
         off = countdown_offset(lbl) or 0
-        if _min_gap(off, assigned) >= 1:
-            return lbl
+        gap = _min_gap(off, assigned_offsets)
 
-    # No gap possible — take closest to fight
-    return ordered[0]
+        # Hard preference: avoid consecutive active days whenever possible.
+        spacing_penalty = 0 if gap >= 2 else (1 if gap == 1 else 3)
+        if role_key == "fight_week_freshness_day":
+            spacing_penalty = 0 if gap >= 1 else 2
+        if readiness >= 2 and gap < 2:
+            spacing_penalty += readiness
+
+        stress_penalty = 0
+        if is_meaningful_stress and assigned_stress_offsets:
+            stress_gap = _min_gap(off, assigned_stress_offsets)
+            stress_penalty = 0 if stress_gap >= 2 else (2 if stress_gap == 1 else 4)
+
+        collision_penalty = _collision_penalty(off, declared_hard)
+
+        same_day_penalty = 0
+        if today_offset and off == today_offset and cost in {"medium", "low"}:
+            non_today_structural = [
+                (
+                    (0 if _min_gap(o, assigned_offsets) >= 2 else (1 if _min_gap(o, assigned_offsets) == 1 else 3))
+                    + _collision_penalty(o, declared_hard)
+                )
+                for _, o in slot_offsets
+                if o != today_offset
+            ]
+            if non_today_structural:
+                current_structural = spacing_penalty + collision_penalty
+                if min(non_today_structural) <= current_structural:
+                    same_day_penalty = 1 + readiness
+
+        readiness_penalty = readiness if (readiness > 0 and cost in {"medium", "low"} and gap < 3) else 0
+        target_distance = abs(off - target)
+
+        # Cost-direction tie-breaker preserves shape without forcing extremes.
+        if cost == "high":
+            direction_penalty = -off
+        elif cost == "low":
+            direction_penalty = off
+        else:
+            direction_penalty = abs(off - target)
+
+        key = (
+            spacing_penalty,
+            stress_penalty,
+            collision_penalty,
+            same_day_penalty,
+            readiness_penalty,
+            target_distance,
+            direction_penalty,
+        )
+        if best_key is None or key < best_key:
+            best_key = key
+            best_label = lbl
+
+    return best_label
 
 
 # ---------------------------------------------------------------------------
@@ -159,6 +303,7 @@ def place_roles_in_countdown(
     roles: list[dict[str, Any]],
     days_until_fight: int,
     countdown_weekday_map: dict[str, str],
+    placement_context: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Assign each role to a countdown label using cost-aware, spacing-maximising
@@ -197,11 +342,18 @@ def place_roles_in_countdown(
     available: list[str] = [lbl for lbl in all_labels if lbl not in locked_labels]
 
     # ── 3. Seed assigned offsets from locked roles ───────────────────────────
-    assigned: list[int] = [
+    assigned_offsets: list[int] = [
         countdown_offset(str(r.get("countdown_label") or ""))
         for r in locked
         if countdown_offset(str(r.get("countdown_label") or "")) is not None
     ]
+    assigned_stress_offsets: list[int] = [
+        off for r in locked
+        if str(r.get("role_key") or "").strip().lower() in _MEANINGFUL_STRESS_ROLE_KEYS
+        for off in [countdown_offset(str(r.get("countdown_label") or ""))]
+        if off is not None
+    ]
+    context = dict(placement_context or {})
 
     # ── 4. Split unlocked by cost bucket ────────────────────────────────────
     #      Sort high/medium by cost rank so high comes before medium
@@ -215,30 +367,47 @@ def place_roles_in_countdown(
     pool = list(available)  # mutable working pool
 
     # ── 5. Place high / medium cost roles ────────────────────────────────────
-    #      Prefer earlier slots (higher D-offset) with spacing
     for role in high_medium:
         if not pool:
             break
-        lbl = _pick_earlier(pool, assigned)
+        cost = role_cost(role)
+        lbl = _pick_slot(
+            pool,
+            assigned_offsets,
+            assigned_stress_offsets,
+            role=role,
+            cost=cost,
+            context=context,
+        )
         if lbl:
             unlocked_pairs.append((role, lbl))
             pool.remove(lbl)
             off = countdown_offset(lbl)
             if off is not None:
-                assigned.append(off)
+                assigned_offsets.append(off)
+                if str(role.get("role_key") or "").strip().lower() in _MEANINGFUL_STRESS_ROLE_KEYS:
+                    assigned_stress_offsets.append(off)
 
     # ── 6. Place low cost roles ──────────────────────────────────────────────
-    #      Prefer later slots (lower D-offset, closer to fight) with spacing
     for role in low_cost:
         if not pool:
             break
-        lbl = _pick_later(pool, assigned)
+        lbl = _pick_slot(
+            pool,
+            assigned_offsets,
+            assigned_stress_offsets,
+            role=role,
+            cost="low",
+            context=context,
+        )
         if lbl:
             unlocked_pairs.append((role, lbl))
             pool.remove(lbl)
             off = countdown_offset(lbl)
             if off is not None:
-                assigned.append(off)
+                assigned_offsets.append(off)
+                if str(role.get("role_key") or "").strip().lower() in _MEANINGFUL_STRESS_ROLE_KEYS:
+                    assigned_stress_offsets.append(off)
 
     # ── 7. Combine and sort: earliest-first (highest D-offset first) ─────────
     locked_pairs: list[tuple[dict[str, Any], str]] = [
