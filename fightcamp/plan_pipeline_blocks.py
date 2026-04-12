@@ -164,14 +164,12 @@ def _build_phase_support_block(context: PlanRuntimeContext, builder) -> str:
 
 def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[str, str], dict[str, str], str, bool, str, str, str]:
     rehab_blocks = {phase: "" for phase in PHASES}
-    seen_rehab_drills: set[str] = set()
 
     if context.phase_active("GPP"):
-        rehab_blocks["GPP"], seen_rehab_drills = generate_rehab_protocols(
+        rehab_blocks["GPP"], _ = generate_rehab_protocols(
             injury_string=context.injuries_only_text,
             exercise_data=context.exercise_bank,
             current_phase="GPP",
-            seen_drills=seen_rehab_drills,
         )
         if rehab_blocks["GPP"].strip().startswith("**Red Flag Detected**"):
             rehab_blocks["SPP"] = rehab_blocks["GPP"]
@@ -180,11 +178,10 @@ def _generate_rehab_support_bundle(context: PlanRuntimeContext) -> tuple[dict[st
     if not rehab_blocks["GPP"].strip().startswith("**Red Flag Detected**"):
         for phase in ("SPP", "TAPER"):
             if context.phase_active(phase):
-                rehab_blocks[phase], seen_rehab_drills = generate_rehab_protocols(
+                rehab_blocks[phase], _ = generate_rehab_protocols(
                     injury_string=context.injuries_only_text,
                     exercise_data=context.exercise_bank,
                     current_phase=phase,
-                    seen_drills=seen_rehab_drills,
                 )
 
     guardrails = {
@@ -351,5 +348,4 @@ def generate_plan_blocks(
         coach_review_notes=coach_review_notes,
         current_phase=current_phase,
     )
-
 
