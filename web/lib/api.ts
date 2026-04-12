@@ -17,7 +17,9 @@ const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 
 function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    return EXPLICIT_API_BASE_URL ?? "";
+    // Keep browser requests same-origin so Next.js rewrites can proxy /api calls.
+    // This avoids direct cross-origin calls that can fail due to CORS/SSL mismatches.
+    return "";
   }
 
   if (EXPLICIT_API_BASE_URL) {
