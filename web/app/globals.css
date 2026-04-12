@@ -2871,7 +2871,8 @@ button.mobile-step-rail-item {
     display: inline-flex;
     position: fixed;
     top: calc(var(--mobile-nav-offset-top) + var(--safe-area-top));
-    left: calc(var(--mobile-nav-offset-side) + var(--safe-area-left));
+    right: calc(var(--mobile-nav-offset-side) + var(--safe-area-right));
+    left: auto;
     z-index: 70;
     align-items: center;
     gap: 10px;
