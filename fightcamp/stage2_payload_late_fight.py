@@ -1373,6 +1373,86 @@ def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> 
     ]
 
 
+def _title_case_days(days: list[str]) -> list[str]:
+    return [str(day).strip().title() for day in days if str(day).strip()]
+
+
+def _join_day_list(days: list[str]) -> str:
+    cleaned = [day for day in days if day]
+    if not cleaned:
+        return ""
+    if len(cleaned) == 1:
+        return cleaned[0]
+    if len(cleaned) == 2:
+        return f"{cleaned[0]} and {cleaned[1]}"
+    return ", ".join(cleaned[:-1]) + f", and {cleaned[-1]}"
+
+
+def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any] | None:
+    """Return structured surviving/downgraded hard-sparring context plus one concise line."""
+    plan_weekday = athlete_model.get("plan_creation_weekday")
+    declared_hard_days = _filter_past_weekdays(
+        _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+        plan_weekday,
+        days_until_fight,
+    )
+    if not declared_hard_days:
+        return None
+
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return None
+
+    surviving_instances: list[dict[str, Any]] = []
+    downgraded_days: list[str] = []
+
+    if days <= 6:
+        downgraded_days = [day.lower() for day in declared_hard_days]
+    else:
+        classified = _classify_declared_hard_days_for_late_window(
+            plan_creation_weekday=plan_weekday,
+            days_until_fight=days,
+            declared_weekdays=declared_hard_days,
+        )
+        hard_allowed = [
+            entry for entry in classified
+            if entry.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+        ]
+        surviving_instances = _select_capped_declared_hard_day_instances(
+            hard_allowed,
+            _declared_hard_spar_cap(days),
+            protected_day=_protected_collision_owner_day(athlete_model),
+        )
+        surviving_set = {str(entry.get("weekday") or "").strip().lower() for entry in surviving_instances}
+        downgraded_days = [day.lower() for day in declared_hard_days if day.lower() not in surviving_set]
+
+    surviving_days = _dedupe_preserve_order(
+        [
+            str(entry.get("weekday") or "").strip().lower()
+            for entry in surviving_instances
+            if str(entry.get("weekday") or "").strip()
+        ]
+    )
+    surviving_display = _join_day_list(_title_case_days(surviving_days))
+    downgraded_display = _join_day_list(_title_case_days(downgraded_days))
+
+    downgraded_verb = "are" if len(downgraded_days) != 1 else "is"
+
+    if surviving_display and downgraded_display:
+        line = f"Hard sparring this window: {surviving_display}. {downgraded_display} {downgraded_verb} technical rhythm only."
+    elif surviving_display:
+        line = f"Hard sparring this window: {surviving_display}."
+    else:
+        line = f"Hard sparring this window: none. {downgraded_display} {downgraded_verb} technical rhythm only."
+
+    return {
+        "surviving_hard_spar_days": surviving_days,
+        "downgraded_declared_spar_days": downgraded_days,
+        "hard_sparring_context_line": line,
+    }
+
+
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
@@ -1551,6 +1631,9 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     }
     if max_blocks is not None:
         spec["max_blocks_per_session"] = max_blocks
+    hard_sparring_context = _hard_sparring_window_context(days_until_fight, athlete_model)
+    if hard_sparring_context:
+        spec.update(hard_sparring_context)
     return spec
 
 
@@ -1564,6 +1647,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
         "Declared hard-spar days are fixed. Downgrade the dose; never move or drop the day.\n"
+        "If late_fight_plan_spec.surviving_hard_spar_days / downgraded_declared_spar_days are present, add one short deterministic sentence using those exact days (hard days first, downgraded days second).\n"
         "One hard-spar doctrine per output. No split schedule realities."
     )
     if payload_mode == "fight_day_protocol_payload":
