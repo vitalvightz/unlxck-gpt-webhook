@@ -183,7 +183,8 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
 
 
 async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
-    return generate_plan_sync(data, generate_pdf=generate_pdf)
+    import asyncio
+    return await asyncio.to_thread(generate_plan_sync, data, generate_pdf=generate_pdf)
 
 
 def main():
