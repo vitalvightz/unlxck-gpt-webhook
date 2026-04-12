@@ -17,7 +17,7 @@ const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 
 function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    return "";
+    return EXPLICIT_API_BASE_URL ?? "";
   }
 
   if (EXPLICIT_API_BASE_URL) {
