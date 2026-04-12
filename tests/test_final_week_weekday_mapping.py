@@ -145,12 +145,11 @@ class TestCountdownWeekdayMap:
         assert result["D-2"] == "saturday"
         assert result["D-3"] == "friday"
 
-    def test_extends_to_full_late_fight_window(self):
-        # Late-fight placement now needs the full D-13..D-0 map, not just one week.
+    def test_capped_at_seven_days(self):
+        # Even if days_until_fight > 7, only 8 labels are included (D-0 .. D-7)
         result = _countdown_weekday_map("monday", 10)
-        assert len(result) == 11
-        assert "D-10" in result
-        assert result["D-10"] == "monday"
+        assert len(result) == 8
+        assert set(result.keys()) == {"D-0", "D-1", "D-2", "D-3", "D-4", "D-5", "D-6", "D-7"}
 
 
 # ---------------------------------------------------------------------------

@@ -117,7 +117,7 @@ _LATE_FIGHT_TOKEN_PHRASES = {
     "contrast_work": ("contrast", "contrast pair", "complex pair"),
     "fight_pace_conditioning": ("fight pace conditioning", "fight-pace conditioning", "fight pace", "fight-pace", "repeatability"),
     "strength": ("strength", "deadlift", "squat", "press", "loaded carry", "trap bar"),
-   "sharpness_touch": ("alactic", "sharpness", "primer", "neural primer", "power touch", "neural touch", "low-noise power"),
+    "sharpness_touch": ("alactic", "sharpness", "primer", "neural primer", "power touch", "neural touch", "technical touch", "low-noise power"),
     "recovery": ("recovery", "freshness", "mobility", "breathing", "reset"),
     "technical": ("technical", "rhythm", "shadowboxing", "flow rounds", "drill"),
     "layered_rehab_stack": ("rehab stack",),

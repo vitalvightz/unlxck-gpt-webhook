@@ -1751,8 +1751,6 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
         if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
             return "Use the highest-priority compliant strength slot first."
         return "Use a remaining compliant strength slot with lower interference cost than the main strength day."
-    if category == "technical":
-        return "Prefer technical rhythm touches that stay low-cost, non-fatiguing, and timing-led."
     if category == "conditioning":
         if system == "aerobic":
             return "Prefer compliant aerobic or low-damage conditioning slots first."
@@ -2284,7 +2282,6 @@ def _compressed_priority_for_role(role: dict, athlete_model: dict) -> tuple[str,
         "controlled_repeatability_day",
         "fight_pace_repeatability_day",
         "light_fight_pace_touch_day",
-        "technical_touch_day",
     } and label_by_kind.get("technical_sharpness"):
         return label_by_kind["technical_sharpness"], "primary_target"
 
