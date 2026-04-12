@@ -260,16 +260,18 @@ def _pick_slot(
         spacing_penalty, stress_penalty, collision_penalty, readiness_penalty, target_distance = _base_score_components(off)
 
         same_day_penalty = 0
+    # Pre-calculate base scores for all candidate slots to avoid redundant computation
+    base_scores = {o: _base_score_components(o) for _, o in slot_offsets}
+
+    for lbl, off in slot_offsets:
+        spacing_penalty, stress_penalty, collision_penalty, readiness_penalty, target_distance = base_scores[off]
+
+        same_day_penalty = 0
         if today_offset and off == today_offset and cost in {"medium", "low"}:
-            non_today_base = [
-                _base_score_components(o)
-                for _, o in slot_offsets
-                if o != today_offset
-            ]
-            if non_today_base:
-                current_base = _base_score_components(off)
-                if min(non_today_base) <= current_base:
-                    same_day_penalty = 1 + readiness
+            # Check if any other slot is at least as good as the today slot
+            other_scores = [score for o, score in base_scores.items() if o != today_offset]
+            if other_scores and min(other_scores) <= base_scores[off]:
+                same_day_penalty = 1 + readiness
 
         # Cost-direction tie-breaker preserves shape without forcing extremes.
         if cost == "high":
