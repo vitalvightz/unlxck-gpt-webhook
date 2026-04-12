@@ -70,7 +70,14 @@ PLAN_RUNTIME_REQUIRED_COLUMNS = (
     "stage2_status",
     "stage2_attempt_count",
     "parsing_metadata",
-}
+)
+_PLAN_RUNTIME_REQUIRED_COLUMNS_SET = set(PLAN_RUNTIME_REQUIRED_COLUMNS)
+_PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
+    "schema cache",
+    "column",
+    "does not exist",
+    "could not find",
+)
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
