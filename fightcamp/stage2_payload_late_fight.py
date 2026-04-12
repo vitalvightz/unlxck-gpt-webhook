@@ -411,16 +411,45 @@ def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:
     return {flag.strip().lower() for flag in _clean_list(athlete_model.get("readiness_flags", [])) if flag.strip()}
 
 
+def _planned_sessions_per_week(athlete_model: dict[str, Any]) -> int:
+    for key in ("weekly_training_frequency", "training_frequency", "weekly_sessions", "planned_sessions_per_week"):
+        value = athlete_model.get(key)
+        if value is None:
+            continue
+        try:
+            return max(0, int(value))
+        except (TypeError, ValueError):
+            continue
+    return len(_clean_list(athlete_model.get("training_days", [])))
+
+
+def _weight_cut_is_extreme(athlete_model: dict[str, Any], flags: set[str]) -> bool:
+    if "aggressive_weight_cut" in flags or "extreme_weight_cut" in flags:
+        return True
+    risk = bool(athlete_model.get("weight_cut_risk"))
+    try:
+        pct = float(athlete_model.get("weight_cut_pct") or 0.0)
+    except (TypeError, ValueError):
+        pct = 0.0
+    return risk and pct >= 5.0
+
+
 def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_model: dict[str, Any]) -> bool:
     fatigue = _normalized_fatigue(athlete_model)
     flags = _readiness_flags(athlete_model)
+    sessions_per_week = _planned_sessions_per_week(athlete_model)
+    extreme_cut = _weight_cut_is_extreme(athlete_model, flags)
     if len(active_hard_spar_days) >= 2:
         return True
     if fatigue == "high":
         return True
-    if "aggressive_weight_cut" in flags:
+    if extreme_cut:
         return True
-    if "injury_management" in flags and fatigue in {"moderate", "high"}:
+    if "injury_management" in flags and fatigue == "high":
+        return True
+    if "injury_management" in flags and fatigue == "moderate" and sessions_per_week <= 3:
+        return True
+    if "injury_management" in flags and fatigue == "moderate" and extreme_cut:
         return True
     return False
 

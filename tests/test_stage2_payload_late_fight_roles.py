@@ -1,4 +1,5 @@
 from fightcamp.stage2_payload_late_fight import (
+    _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
     _classify_declared_hard_days_for_late_window,
     _late_fight_session_roles,
@@ -67,6 +68,50 @@ def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_
     assert role_keys.count("strength_touch_day") == 1
     assert role_keys.count("light_fight_pace_touch_day") == 1
     assert role_keys.count("fight_week_freshness_day") == 1
+
+
+def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for_moderate_manageable_context():
+    athlete = _athlete(
+        9,
+        plan_creation_weekday="friday",
+        hard_sparring_days=["tuesday", "thursday", "saturday"],
+        fatigue="moderate",
+        fatigue_level="moderate",
+        readiness_flags=["injury_management", "weight_cut_active"],
+        weekly_training_frequency=5,
+        weight_cut_risk=True,
+        weight_cut_pct=2.2,
+    )
+
+    role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
+    assert role_keys.count("hard_sparring_day") == 1
+    assert "light_fight_pace_touch_day" in role_keys
+
+    spec = _build_late_fight_plan_spec(9, athlete)
+    assert spec["visible_session_cap"] == 3
+    assert set(spec["visible_session_roles"]) == {
+        "strength_touch_day",
+        "light_fight_pace_touch_day",
+        "fight_week_freshness_day",
+    }
+
+
+def test_pre_fight_compressed_allows_two_visible_sessions_when_context_truly_requires_suppression():
+    athlete = _athlete(
+        9,
+        hard_sparring_days=["thursday"],
+        fatigue="high",
+        fatigue_level="high",
+        readiness_flags=["injury_management", "aggressive_weight_cut"],
+        weekly_training_frequency=3,
+        weight_cut_risk=True,
+        weight_cut_pct=6.0,
+    )
+
+    role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
+    assert "light_fight_pace_touch_day" not in role_keys
+    spec = _build_late_fight_plan_spec(9, athlete)
+    assert spec["visible_session_cap"] == 2
 
 
 def test_d7_role_list_remains_unchanged():
