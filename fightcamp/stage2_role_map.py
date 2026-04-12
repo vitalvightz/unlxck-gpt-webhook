@@ -1068,7 +1068,7 @@ def _apply_high_fatigue_week_compression(
 
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))))
-    sessions_per_week = int(athlete_model.get("training_frequency", len(training_days)))
+    sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
     weekly_cap = min(sessions_per_week, len(training_days))
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
     spar_count = len(locked_spar_days)
