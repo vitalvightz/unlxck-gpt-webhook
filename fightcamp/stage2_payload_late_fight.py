@@ -1648,7 +1648,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
         "Declared hard-spar days are fixed. Downgrade the dose; never move or drop the day.\n"
-        "If late_fight_plan_spec.surviving_hard_spar_days / downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
+        "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
         "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities."
     )
