@@ -1,4 +1,7 @@
-﻿from fightcamp.stage2_payload import (
+﻿from datetime import datetime
+
+import fightcamp.stage2_planning_brief as stage2_planning_brief_module
+from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
     _compute_readiness_compression,
     _compression_floor_value,
@@ -85,6 +88,54 @@ def test_competitive_maturity_buckets_amateur_by_total_bouts():
 def test_competitive_maturity_returns_unknown_without_valid_status_or_record():
     assert _derive_competitive_maturity("", "19-2")["competitive_maturity"] == "unknown_competitive_maturity"
     assert _derive_competitive_maturity("amateur", "bad")["competitive_maturity"] == "unknown_competitive_maturity"
+
+
+def test_stage2_payload_plan_creation_weekday_uses_athlete_local_day(monkeypatch):
+    monkeypatch.setattr(stage2_planning_brief_module, "_utc_now", lambda: datetime(2026, 3, 15, 0, 30))
+    training_context = TrainingContext(
+        fatigue="low",
+        training_frequency=4,
+        days_available=4,
+        training_days=["Mon", "Tue", "Thu", "Sat"],
+        injuries=[],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=["gas_tank"],
+        equipment=["heavy_bag"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        training_split={},
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=30,
+        athlete_timezone="America/Los_Angeles",
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_len=5,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={},
+        conditioning_blocks={},
+        rehab_blocks={},
+    )
+
+    athlete_model = payload["athlete_model"]
+    assert athlete_model["plan_creation_weekday"] == "saturday"
+    assert athlete_model["plan_creation_weekday_basis"] == "athlete_local_weekday"
 
 def _build_taper_payload_and_brief() -> tuple[dict, dict]:
     training_context = TrainingContext(

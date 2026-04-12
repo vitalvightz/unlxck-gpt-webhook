@@ -66,6 +66,7 @@ _PLAN_OPTIONAL_SCHEMA_COLUMNS = {
     "stage2_validator_report",
     "stage2_status",
     "stage2_attempt_count",
+    "parsing_metadata",
 }
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
@@ -530,6 +531,7 @@ class SupabaseAppStore:
             "stage2_validator_report": result.get("stage2_validator_report", {}),
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
+            "parsing_metadata": result.get("parsing_metadata", {}),
         }
 
         def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:

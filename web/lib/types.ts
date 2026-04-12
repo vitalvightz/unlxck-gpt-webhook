@@ -245,6 +245,7 @@ export type AdminPlanOutputs = {
   why_log: Record<string, unknown>;
   planning_brief?: Record<string, unknown> | null;
   stage2_payload?: Record<string, unknown> | null;
+  parsing_metadata: Record<string, unknown>;
   stage2_handoff_text: string;
   draft_plan_text: string;
   final_plan_text: string;
