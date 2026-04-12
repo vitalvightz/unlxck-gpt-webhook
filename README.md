@@ -154,7 +154,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 **Backend (Render)**
 
 - Start command: `uvicorn api.app:app --host 0.0.0.0 --port $PORT --workers 2`
-- The bank JSON files are loaded into memory on first request and cached for the process lifetime
+- The bank JSON files are loaded into memory on first request and cached for each worker process lifetime (with `--workers 2`, both workers will warm independently).
 - Keep the instance warm with a cron job hitting `/health` every 14 minutes or use Render Standard tier
 
 **Frontend (Vercel)**

@@ -79,15 +79,14 @@ STYLE_MAP = {
 TimingRecorder = Callable[[str, float], None]
 
 # Module-level flag that tracks whether plan banks have been fully loaded at
-# least once.  Guards the fast warm path in prime_plan_banks() so that
-# subsequent requests skip the three individual prime-function calls entirely.
+# least once in this Python process. Guards the fast warm path in
+# prime_plan_banks() so subsequent requests skip the three prime-function calls.
 #
-# Thread-safety note: No lock is used here intentionally.  The underlying bank
-# loaders (e.g. `if _exercise_bank_cache is None: …`) follow the same
-# unsynchronised pattern throughout this codebase, which targets a
-# single-process async deployment (uvicorn single-worker).  In the rare
-# multi-threaded edge-case two threads may both execute the cold path once;
-# that is harmless because the loaders are idempotent.
+# Concurrency/deployment note: this is intentionally process-local and
+# unsynchronised. In multi-worker deployments (for example uvicorn --workers 2),
+# each worker warms its own in-memory caches on first use. In a rare concurrent
+# cold-start race, two threads in the same process could both run the cold path;
+# this is acceptable because the bank loaders are idempotent.
 _BANKS_WARM: bool = False
 
 
