@@ -209,7 +209,6 @@ function StepPills({
     <div className="step-progress" aria-label="Onboarding progress">
       {steps.map((label, index) => {
         const statusClass = index < currentStep ? "step-pill-complete" : index === currentStep ? "step-pill-active" : "";
-        const isJumpable = index < steps.length - 1;
         const statusText = index < currentStep ? "Complete" : index === currentStep ? "Current" : "Upcoming";
         const pillContent = (
           <>
@@ -220,14 +219,6 @@ function StepPills({
             </div>
           </>
         );
-
-        if (!isJumpable) {
-          return (
-            <div key={label} className={`step-pill ${statusClass}`.trim()}>
-              {pillContent}
-            </div>
-          );
-        }
 
         return (
           <button
@@ -353,7 +344,6 @@ function MobileStepRail({
     <div className="mobile-step-rail" data-state="open">
       <div ref={railRef} className="mobile-step-rail-scroll" aria-label="Onboarding steps">
         {steps.map((label, index) => {
-          const isJumpable = index < steps.length - 1;
           const statusClass = index < currentStep ? "mobile-step-rail-item-complete" : index === currentStep ? "mobile-step-rail-item-active" : "";
           const pillContent = (
             <>
@@ -361,22 +351,6 @@ function MobileStepRail({
               <span className="mobile-step-rail-label">{label}</span>
             </>
           );
-
-          if (!isJumpable) {
-            return (
-              <div
-                key={label}
-                ref={(node) => {
-                  itemRefs.current[index] = node;
-                }}
-                className={`mobile-step-rail-item ${statusClass}`.trim()}
-                aria-current={index === currentStep ? "step" : undefined}
-                aria-label={`${label}, step ${index + 1}, ${index === currentStep ? "current" : "upcoming"}`}
-              >
-                {pillContent}
-              </div>
-            );
-          }
 
           return (
             <button
@@ -484,6 +458,35 @@ function ReviewDetailList({ items }: { items: Array<{ label: string; value: stri
       ))}
     </div>
   );
+}
+
+function getReviewStepBlockingError(
+  nextForm: PlanRequest,
+  options: {
+    injuryMismatchExists: boolean;
+    injuryOverwriteAcknowledged: boolean;
+    hardSparringWarningLocked: boolean;
+  },
+): string | null {
+  if (!isValidRecordFormat(nextForm.athlete.record ?? "")) return "Record must use x-x or x-x-x format, like 5-1 or 12-2-1.";
+  if (!nextForm.athlete.technical_style.length) return "Select a technical style before continuing to review.";
+  if (!nextForm.fight_date) return "Choose your fight date before continuing to review.";
+  if (!nextForm.training_availability.length) return "Pick at least one training availability option before continuing to review.";
+  if (!nextForm.weekly_training_frequency || nextForm.weekly_training_frequency < 1) return "Planned sessions per week must be at least 1.";
+  if (nextForm.weekly_training_frequency > 6) return "Planned sessions per week cannot exceed 6.";
+  const parsedRounds = parseRoundsFormat(nextForm.rounds_format);
+  if (!parsedRounds.roundCount || !parsedRounds.roundDuration) return "Choose both round count and round duration before continuing to review.";
+  if (options.injuryMismatchExists && !options.injuryOverwriteAcknowledged) {
+    return "Acknowledge the injury note overwrite warning before continuing to review.";
+  }
+  if (options.hardSparringWarningLocked) return "Acknowledge the hard sparring warning in the Training step before continuing to review.";
+  const focusValidation = validatePerformanceFocusSelections(
+    nextForm.fight_date,
+    { keyGoals: nextForm.key_goals, weakAreas: nextForm.weak_areas },
+    { timeZone: nextForm.athlete.athlete_timezone },
+  );
+  if (focusValidation.isOverCap) return focusValidation.errorMessage;
+  return null;
 }
 
 function syncDeviceFields(current: PlanRequest): PlanRequest {
@@ -864,6 +867,17 @@ export function PlanIntakeForm() {
       setError("Acknowledge the injury note overwrite warning before continuing.");
       return false;
     }
+    if (currentStep === PERFORMANCE_STEP_INDEX) {
+      const focusValidation = validatePerformanceFocusSelections(
+        nextForm.fight_date,
+        { keyGoals: nextForm.key_goals, weakAreas: nextForm.weak_areas },
+        { timeZone: nextForm.athlete.athlete_timezone },
+      );
+      if (focusValidation.isOverCap) {
+        setError(focusValidation.errorMessage);
+        return false;
+      }
+    }
     return applyTrainingGate(nextForm, action, targetStep);
   }
 
@@ -991,10 +1005,27 @@ export function PlanIntakeForm() {
       nextForm ??= buildFormSnapshot();
       return nextForm;
     }
+    if (targetStep === steps.length - 1 && targetStep > currentStep) {
+      const reviewError = getReviewStepBlockingError(getNextForm(), {
+        injuryMismatchExists,
+        injuryOverwriteAcknowledged,
+        hardSparringWarningLocked,
+      });
+      if (reviewError) {
+        setError(reviewError);
+        if (performanceFocusValidation.isOverCap) {
+          setCurrentStep(PERFORMANCE_STEP_INDEX);
+        } else if (hardSparringWarningLocked) {
+          setCurrentStep(2);
+        }
+        setIsMobileProgressOpen(true);
+        return;
+      }
+    }
     if (!canSelectWizardStep({
       currentStep,
       targetStep,
-      lastSelectableStep: steps.length - 1,
+      lastSelectableStep: steps.length,
       validateCurrentStep: () => validateCurrentStep(getNextForm(), "step_select", targetStep),
     })) {
       return;
@@ -1739,7 +1770,7 @@ export function PlanIntakeForm() {
                                       </div>
                                     </div>
                                     <div className="field">
-                                      <label htmlFor={`injuryAvoid-${index}`}>Movements to avoid</label>
+                                      <label htmlFor={`injuryAvoid-${index}`}>Movements to avoid (optional)</label>
                                       <input
                                         id={`injuryAvoid-${index}`}
                                         value={injury.avoid ?? ""}

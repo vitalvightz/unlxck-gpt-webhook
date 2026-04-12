@@ -77,3 +77,15 @@ test("rejects review-step and out-of-range pill targets", () => {
     false,
   );
 });
+
+test("allows selecting review step when caller expands the selectable boundary", () => {
+  assert.equal(
+    canSelectWizardStep({
+      currentStep: 2,
+      targetStep: 5,
+      lastSelectableStep: 6,
+      validateCurrentStep: () => true,
+    }),
+    true,
+  );
+});
