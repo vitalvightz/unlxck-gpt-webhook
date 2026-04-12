@@ -49,6 +49,7 @@ from .nutrition_workspace import (
     merge_workspace_into_payload,
     normalize_nutrition_update_request,
 )
+from .performance_focus import validate_performance_focus_selections
 from .stage2_automation import (
     Stage2AutomationError,
     Stage2AutomationUnavailableError,
@@ -1048,6 +1049,17 @@ def create_app(
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         rate_limiter: SlidingWindowRateLimiter | None = Depends(get_plan_generate_rate_limiter),
     ) -> GenerationJobResponse:
+        focus_validation = validate_performance_focus_selections(
+            request_body.fight_date,
+            key_goals=request_body.key_goals,
+            weak_areas=request_body.weak_areas,
+            time_zone=request_body.athlete.athlete_timezone,
+        )
+        if focus_validation.is_over_cap:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=focus_validation.error_message or "Too many focus selections for this camp.",
+            )
         if rate_limiter is not None:
             retry_after = rate_limiter.check(profile.athlete_id)
             if retry_after is not None:
@@ -1334,6 +1346,17 @@ def create_app(
                 detail="latest intake not found for athlete",
             )
         request_body = PlanRequest.model_validate(latest_intake["intake"])
+        focus_validation = validate_performance_focus_selections(
+            request_body.fight_date,
+            key_goals=request_body.key_goals,
+            weak_areas=request_body.weak_areas,
+            time_zone=request_body.athlete.athlete_timezone,
+        )
+        if focus_validation.is_over_cap:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=focus_validation.error_message or "Too many focus selections for this camp.",
+            )
         client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,

@@ -624,6 +624,7 @@ def test_non_surviving_declared_hard_days_do_not_repel_neighbor_slots():
     strength = next(entry for entry in sequence if entry["role_key"] == "strength_touch_day")
     assert strength["countdown_label"] == "D-10"
 
+
 def test_role_cost_classifies_correctly():
     """role_cost() must return correct bucket for known anchor types."""
     assert role_cost({"anchor": "highest_neural_day"}) == "high"

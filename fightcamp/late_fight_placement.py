@@ -255,11 +255,6 @@ def _pick_slot(
         target_distance = abs(off - target)
         return spacing_penalty, stress_penalty, collision_penalty, readiness_penalty, target_distance
 
-    for lbl in slots:
-        off = countdown_offset(lbl) or 0
-        spacing_penalty, stress_penalty, collision_penalty, readiness_penalty, target_distance = _base_score_components(off)
-
-        same_day_penalty = 0
     # Pre-calculate base scores for all candidate slots to avoid redundant computation
     base_scores = {o: _base_score_components(o) for _, o in slot_offsets}
 
@@ -268,7 +263,6 @@ def _pick_slot(
 
         same_day_penalty = 0
         if today_offset and off == today_offset and cost in {"medium", "low"}:
-            # Check if any other slot is at least as good as the today slot
             other_scores = [score for o, score in base_scores.items() if o != today_offset]
             if other_scores and min(other_scores) <= base_scores[off]:
                 same_day_penalty = 1 + readiness
