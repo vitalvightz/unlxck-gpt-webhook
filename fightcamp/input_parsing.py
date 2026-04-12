@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import re
+from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
@@ -124,6 +125,10 @@ _UTC_OFFSET_PATTERN = re.compile(
     r"^(?:UTC|GMT)?\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?$",
     re.IGNORECASE,
 )
+_EXPLICIT_TZ_SUFFIX_PATTERN = re.compile(r"(?:Z|[+-]\d{2}(?::?\d{2})?)$")
+_PLATFORM_DEFAULT_TIMEZONE = timezone.utc
+
+ProvenanceSource = Literal["user_supplied", "system_inferred", "defaulted_missing"]
 
 
 def _field_matches_label(field_label: str, target_label: str) -> bool:
@@ -237,11 +242,23 @@ def _resolve_timezone(value: str | None) -> timezone | ZoneInfo | None:
     return timezone(offset)
 
 
-def _athlete_calendar_now(athlete_timezone: str | None = None) -> datetime:
-    tzinfo = _resolve_timezone(athlete_timezone)
-    if tzinfo is None:
-        return _calendar_now()
-    return _utc_now().replace(tzinfo=timezone.utc).astimezone(tzinfo).replace(tzinfo=None)
+def _business_timezone(athlete_timezone: str | None = None) -> timezone | ZoneInfo:
+    resolved = _resolve_timezone(athlete_timezone)
+    if resolved is not None:
+        return resolved
+    return _PLATFORM_DEFAULT_TIMEZONE
+
+
+def _athlete_calendar_now(
+    athlete_timezone: str | None = None, *, now_utc: datetime | None = None
+) -> datetime:
+    tzinfo = _business_timezone(athlete_timezone)
+    reference_utc = now_utc or _utc_now()
+    if reference_utc.tzinfo is None:
+        reference_utc = reference_utc.replace(tzinfo=timezone.utc)
+    else:
+        reference_utc = reference_utc.astimezone(timezone.utc)
+    return reference_utc.astimezone(tzinfo).replace(tzinfo=None)
 
 
 def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
@@ -389,17 +406,35 @@ def _compute_days_until_fight(
     fight_date: datetime,
     *,
     athlete_timezone: str | None = None,
-    now: datetime | None = None,
+    now_utc: datetime | None = None,
 ) -> int | None:
-    if _DATE_ONLY_PATTERN.match((raw_value or "").strip()):
-        reference = now or _athlete_calendar_now(athlete_timezone)
-        raw_days = (fight_date.date() - reference.date()).days
-    else:
-        reference = now or _utc_now()
-        if reference.tzinfo:
-            reference = reference.astimezone(timezone.utc).replace(tzinfo=None)
-        raw_days = int((fight_date - reference).total_seconds() // 86400)
+    business_tz = _business_timezone(athlete_timezone)
+    reference = _athlete_calendar_now(athlete_timezone, now_utc=now_utc)
+    fight_local_date = _fight_local_date(raw_value, fight_date, business_tz)
+    raw_days = (fight_local_date - reference.date()).days
     return normalize_days_until_fight(raw_days)
+
+
+def _has_explicit_timezone(raw_value: str) -> bool:
+    return bool(_EXPLICIT_TZ_SUFFIX_PATTERN.search((raw_value or "").strip()))
+
+
+def _fight_local_date(
+    raw_value: str,
+    fight_date: datetime,
+    business_timezone: timezone | ZoneInfo,
+) -> datetime.date:
+    raw = (raw_value or "").strip()
+    if _DATE_ONLY_PATTERN.match(raw):
+        return fight_date.date()
+    if _has_explicit_timezone(raw):
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if parsed.tzinfo is not None:
+                return parsed.astimezone(business_timezone).date()
+        except ValueError:
+            pass
+    return fight_date.date()
 
 
 @dataclass(frozen=True)
@@ -439,11 +474,24 @@ class PlanInput:
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
+    parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
 
     @classmethod
     def from_payload(cls, data: dict) -> "PlanInput":
+        def _metadata(source: ProvenanceSource, reason: str | None = None) -> dict[str, str]:
+            metadata = {"source": source}
+            if reason:
+                metadata["reason"] = reason
+            return metadata
+
         fields = _extract_fields(data)
         values = _get_plan_field_values(fields)
+
+        raw_available_days = values["available_days"]
+        raw_frequency = values["frequency_raw"]
+        raw_athlete_timezone = values["athlete_timezone"].strip()
+
+        # Normalization step (safe, non-planning transforms only).
         next_fight_date = get_date_value("When is your next fight?", fields)
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
@@ -454,21 +502,60 @@ class PlanInput:
         else:
             parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
 
-        training_days = [d.strip() for d in values["available_days"].split(",") if d.strip()]
+        training_days = [d.strip() for d in raw_available_days.split(",") if d.strip()]
         hard_sparring_days = [
             d.strip() for d in values["hard_sparring_days_raw"].split(",") if d.strip()
         ]
         technical_skill_days = [
             d.strip() for d in values["technical_skill_days_raw"].split(",") if d.strip()
         ]
-        try:
-            training_frequency = int(values["frequency_raw"])
-        except (TypeError, ValueError):
+
+        # Validation step (planning-critical contract).
+        if next_fight_date:
+            fight_date = parse_fight_date(next_fight_date)
+            if fight_date is None:
+                raise ValueError(f"invalid fight date format: {next_fight_date}")
+        else:
+            fight_date = None
+
+        if raw_frequency.strip():
+            try:
+                training_frequency = int(raw_frequency)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"invalid Weekly Training Frequency: expected integer, got {raw_frequency!r}"
+                ) from exc
+            if training_frequency < 1:
+                raise ValueError(
+                    f"invalid Weekly Training Frequency: expected integer >= 1, got {training_frequency}"
+                )
+            training_frequency_metadata = _metadata("user_supplied")
+        else:
+            # Explicit inference step.
             training_frequency = len(training_days)
+            training_frequency_metadata = _metadata(
+                "system_inferred",
+                "weekly_training_frequency_missing_inferred_from_training_availability",
+            )
+
+        available_days_metadata = (
+            _metadata("user_supplied")
+            if raw_available_days.strip()
+            else _metadata("defaulted_missing", "training_availability_missing")
+        )
+
+        if not raw_athlete_timezone:
+            athlete_timezone_metadata = _metadata("defaulted_missing", "athlete_timezone_missing")
+        elif _resolve_timezone(raw_athlete_timezone) is None:
+            athlete_timezone_metadata = _metadata(
+                "defaulted_missing",
+                "invalid_athlete_timezone_fallback_to_platform_default",
+            )
+        else:
+            athlete_timezone_metadata = _metadata("user_supplied")
 
         weeks_out: int | str = "N/A"
         days_until_fight = None
-        fight_date = parse_fight_date(next_fight_date) if next_fight_date else None
         if fight_date:
             days_until_fight = _compute_days_until_fight(
                 next_fight_date,
@@ -490,6 +577,11 @@ class PlanInput:
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,
+            parsing_metadata={
+                "training_frequency": training_frequency_metadata,
+                "available_days": available_days_metadata,
+                "athlete_timezone": athlete_timezone_metadata,
+            },
         )
 
     @property
