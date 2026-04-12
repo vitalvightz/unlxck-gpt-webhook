@@ -7,7 +7,6 @@ import os
 import time
 import uuid
 from collections import deque
-from contextlib import suppress
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from threading import Lock
@@ -21,7 +20,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
-from fightcamp.main import generate_plan_sync
 from fightcamp.plan_pipeline import prime_plan_banks
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
@@ -51,9 +49,13 @@ from .nutrition_workspace import (
     normalize_nutrition_update_request,
 )
 from .performance_focus import validate_performance_focus_selections
+from .generation_runtime import (
+    default_planner as runtime_default_planner,
+    is_stale_job as runtime_is_stale_job,
+    run_stage1_planner,
+    schedule_generation_job_if_needed,
+)
 from .stage2_automation import (
-    Stage2AutomationError,
-    Stage2AutomationUnavailableError,
     Stage2Automator,
     build_default_stage2_automator,
 )
@@ -97,19 +99,6 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _parse_datetime(value: Any) -> datetime | None:
-    if not value:
-        return None
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, str):
-        try:
-            return datetime.fromisoformat(value.replace("Z", "+00:00"))
-        except ValueError:
-            return None
-    return None
-
-
 def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> GenerationJobResponse:
     plan_id = str(job.get("plan_id")) if job.get("plan_id") else None
     updated_at = job.get("updated_at") or job.get("created_at") or _utc_now_iso()
@@ -129,25 +118,7 @@ def _job_response(job: dict[str, Any], *, latest_plan_id: str | None = None) -> 
 
 
 def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool:
-    if str(job.get("status") or "") != "running":
-        return False
-    last_progress_at = _parse_datetime(job.get("heartbeat_at")) or _parse_datetime(job.get("started_at"))
-    if last_progress_at is None:
-        return False
-    return (datetime.now(timezone.utc) - last_progress_at).total_seconds() >= stale_after_seconds
-
-
-def _deserialize_plan_request(value: Any) -> PlanRequest:
-    if isinstance(value, PlanRequest):
-        return value
-    if isinstance(value, dict):
-        return PlanRequest.model_validate(value)
-    if isinstance(value, str):
-        return PlanRequest.model_validate(json.loads(value))
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="generation job payload is invalid",
-    )
+    return runtime_is_stale_job(job, stale_after_seconds=stale_after_seconds)
 
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
@@ -302,7 +273,7 @@ def _plan_generate_rate_limit_window_seconds() -> float:
 
 
 def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
-    return generate_plan_sync(payload)
+    return runtime_default_planner(payload)
 
 
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
@@ -314,7 +285,7 @@ def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
 
 
 async def _run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
-    return await asyncio.to_thread(planner_fn, payload)
+    return await run_stage1_planner(planner_fn, payload)
 
 
 def _decode_structured_text(value: Any) -> dict[str, Any] | None:
@@ -534,6 +505,7 @@ def create_app(
     planner: Planner = _default_planner,
     stage2_automator: Stage2Automator | None = None,
     mode_label: str = "supabase-authenticated",
+    enable_in_process_generation: bool = True,
 ) -> FastAPI:
     configure_logging()
 
@@ -553,6 +525,7 @@ def create_app(
     app.state.planner = planner
     app.state.stage2_automator = stage2_automator or build_default_stage2_automator()
     app.state.mode_label = mode_label
+    app.state.enable_in_process_generation = enable_in_process_generation
     app.state.active_generation_tasks = set()
     rate_limit_requests = _plan_generate_rate_limit_requests()
     app.state.plan_generate_rate_limiter = (
@@ -663,6 +636,9 @@ def create_app(
 
     def get_active_generation_tasks(request: Request) -> set[str]:
         return request.app.state.active_generation_tasks
+
+    def get_enable_in_process_generation(request: Request) -> bool:
+        return bool(request.app.state.enable_in_process_generation)
 
     def get_plan_generate_rate_limiter(request: Request) -> SlidingWindowRateLimiter | None:
         return request.app.state.plan_generate_rate_limiter
@@ -802,251 +778,6 @@ def create_app(
         refreshed_intake = store.get_latest_intake(profile.athlete_id)
         return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
-    async def _heartbeat_generation_job(job_id: str, store: AppStore, stop_event: asyncio.Event) -> None:
-        while not stop_event.is_set():
-            try:
-                await asyncio.wait_for(stop_event.wait(), timeout=15)
-                return
-            except asyncio.TimeoutError:
-                try:
-                    await asyncio.to_thread(
-                        store.update_generation_job,
-                        job_id,
-                        heartbeat_at=_utc_now_iso(),
-                    )
-                except Exception:
-                    logger.exception("[jobs] generation:heartbeat_failed job_id=%s", job_id)
-
-    async def _run_generation_job(
-        *,
-        job_id: str,
-        store: AppStore,
-        planner_fn: Planner,
-        stage2: Stage2Automator,
-        active_tasks: set[str],
-    ) -> None:
-        t_start = time.perf_counter()
-        stop_event = asyncio.Event()
-        heartbeat_task = asyncio.create_task(_heartbeat_generation_job(job_id, store, stop_event))
-        athlete_id = "unknown"
-        try:
-            job = await asyncio.to_thread(store.get_generation_job, job_id)
-            if not job:
-                logger.warning("[jobs] generation:job_missing job_id=%s", job_id)
-                return
-
-            athlete_id = str(job["athlete_id"])
-            request_body = _deserialize_plan_request(job.get("request_payload") or {})
-            logger.info("[jobs] generation:start athlete_id=%s job_id=%s", athlete_id, job_id)
-
-            try:
-                await asyncio.to_thread(
-                    store.update_profile,
-                    athlete_id,
-                    ProfileUpdateRequest(
-                        full_name=request_body.athlete.full_name,
-                        technical_style=request_body.athlete.technical_style,
-                        tactical_style=request_body.athlete.tactical_style,
-                        stance=request_body.athlete.stance,
-                        professional_status=request_body.athlete.professional_status,
-                        record=request_body.athlete.record,
-                        athlete_timezone=request_body.athlete.athlete_timezone,
-                        athlete_locale=request_body.athlete.athlete_locale,
-                        onboarding_draft=request_body.model_dump(mode="json"),
-                    ),
-                )
-            except Exception:
-                logger.exception("[jobs] generation:update_profile_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-
-            intake_id = str(job.get("intake_id") or "")
-            if not intake_id:
-                intake = await asyncio.to_thread(store.create_intake, athlete_id, request_body)
-                intake_id = str(intake["id"])
-                job = await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    intake_id=intake_id,
-                    heartbeat_at=_utc_now_iso(),
-                )
-
-            stage1_result = job.get("stage1_result")
-            if not isinstance(stage1_result, dict):
-                stage1_result = await _run_stage1_planner(planner_fn, request_body.to_payload())
-                if stage1_result.get("status") == "invalid_input":
-                    raise HTTPException(
-                        status_code=422,
-                        detail={
-                            "message": stage1_result.get("error", "invalid planning input"),
-                            "missing_fields": stage1_result.get("missing_fields", []),
-                        },
-                    )
-                job = await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    stage1_result=stage1_result,
-                    heartbeat_at=_utc_now_iso(),
-                )
-
-            final_result = job.get("final_result")
-            if not isinstance(final_result, dict):
-                finalized_result = await stage2.finalize(stage1_result=stage1_result)
-                final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
-                job = await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    final_result=final_result,
-                    heartbeat_at=_utc_now_iso(),
-                )
-
-            plan_id = str(job.get("plan_id") or "") or None
-            plan_row: dict[str, Any] | None = None
-            if plan_id:
-                plan_row = await asyncio.to_thread(store.get_plan, plan_id)
-            if not plan_row and intake_id:
-                latest_plan = await asyncio.to_thread(store.get_latest_plan, athlete_id)
-                if latest_plan and str(latest_plan.get("intake_id") or "") == intake_id:
-                    plan_row = latest_plan
-                    plan_id = str(latest_plan.get("id") or "")
-            if not plan_row:
-                plan_row = await asyncio.to_thread(
-                    store.create_plan,
-                    athlete_id=athlete_id,
-                    intake_id=intake_id,
-                    request=request_body,
-                    result=final_result,
-                )
-                plan_id = str(plan_row.get("id") or "") or None
-
-            try:
-                await asyncio.to_thread(store.clear_onboarding_draft, athlete_id)
-            except Exception:
-                logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-
-            final_status = "completed" if str(plan_row.get("status") or "ready") == "ready" else str(plan_row.get("status") or "failed")
-            await asyncio.to_thread(
-                store.update_generation_job,
-                job_id,
-                status=final_status,
-                error=None,
-                plan_id=plan_id,
-                completed_at=_utc_now_iso(),
-                heartbeat_at=_utc_now_iso(),
-            )
-            logger.info(
-                "[jobs] generation:complete athlete_id=%s job_id=%s plan_id=%s status=%s duration_ms=%s",
-                athlete_id,
-                job_id,
-                plan_id,
-                final_status,
-                round((time.perf_counter() - t_start) * 1000, 2),
-            )
-        except Stage2AutomationUnavailableError as exc:
-            logger.warning("[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, exc)
-            with suppress(Exception):
-                await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    status="failed",
-                    error=str(exc),
-                    completed_at=_utc_now_iso(),
-                    heartbeat_at=_utc_now_iso(),
-                )
-        except Stage2AutomationError as exc:
-            logger.exception("[jobs] generation:stage2_failed athlete_id=%s job_id=%s", athlete_id, job_id)
-            with suppress(Exception):
-                await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    status="failed",
-                    error=str(exc),
-                    completed_at=_utc_now_iso(),
-                    heartbeat_at=_utc_now_iso(),
-                )
-        except HTTPException as exc:
-            detail = exc.detail if isinstance(exc.detail, str) else json.dumps(exc.detail)
-            logger.warning("[jobs] generation:http_error athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, detail)
-            with suppress(Exception):
-                await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    status="failed",
-                    error=detail,
-                    completed_at=_utc_now_iso(),
-                    heartbeat_at=_utc_now_iso(),
-                )
-        except Exception:
-            logger.exception("[jobs] generation:unhandled_exception athlete_id=%s job_id=%s", athlete_id, job_id)
-            with suppress(Exception):
-                await asyncio.to_thread(
-                    store.update_generation_job,
-                    job_id,
-                    status="failed",
-                    error="Plan generation failed unexpectedly. Check server logs with the request ID.",
-                    completed_at=_utc_now_iso(),
-                    heartbeat_at=_utc_now_iso(),
-                )
-        finally:
-            stop_event.set()
-            heartbeat_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await heartbeat_task
-            active_tasks.discard(job_id)
-
-    async def _schedule_generation_job_if_needed(
-        *,
-        job: dict[str, Any],
-        background_tasks: BackgroundTasks,
-        store: AppStore,
-        planner_fn: Planner,
-        stage2: Stage2Automator,
-        active_tasks: set[str],
-    ) -> dict[str, Any]:
-        job_id = str(job["id"])
-        if job_id in active_tasks:
-            return job
-
-        current_status = str(job.get("status") or "queued")
-        if current_status not in {"queued", "running"}:
-            return job
-        if current_status == "running" and not _is_stale_job(job):
-            return job
-
-        try:
-            claimed = await asyncio.to_thread(store.claim_generation_job, job_id)
-        except HTTPException as exc:
-            if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-                logger.warning(
-                    "[jobs] generation:schedule_claim_deferred job_id=%s detail=%s",
-                    job_id,
-                    exc.detail,
-                )
-                return job
-            raise
-        if not claimed:
-            try:
-                refreshed = await asyncio.to_thread(store.get_generation_job, job_id)
-            except HTTPException as exc:
-                if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-                    logger.warning(
-                        "[jobs] generation:schedule_refresh_deferred job_id=%s detail=%s",
-                        job_id,
-                        exc.detail,
-                    )
-                    return job
-                raise
-            return refreshed or job
-
-        active_tasks.add(job_id)
-        background_tasks.add_task(
-            _run_generation_job,
-            job_id=job_id,
-            store=store,
-            planner_fn=planner_fn,
-            stage2=stage2,
-            active_tasks=active_tasks,
-        )
-        return claimed
-
     @app.post("/api/plans/generate", response_model=GenerationJobResponse, status_code=202)
     async def generate_current_user_plan(
         request: Request,
@@ -1057,6 +788,7 @@ def create_app(
         planner_fn: Planner = Depends(get_planner),
         stage2: Stage2Automator = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
         rate_limiter: SlidingWindowRateLimiter | None = Depends(get_plan_generate_rate_limiter),
     ) -> GenerationJobResponse:
         focus_validation = validate_performance_focus_selections(
@@ -1088,13 +820,15 @@ def create_app(
             source="self_serve",
             request_payload=request_body.model_dump(mode="json"),
         )
-        job = await _schedule_generation_job_if_needed(
+        job = await schedule_generation_job_if_needed(
             job=job,
             background_tasks=background_tasks,
             store=store,
             planner_fn=planner_fn,
             stage2=stage2,
             active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            is_stale_job=_is_stale_job,
         )
         return _job_response(job)
 
@@ -1107,19 +841,22 @@ def create_app(
         planner_fn: Planner = Depends(get_planner),
         stage2: Stage2Automator = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
         job = await asyncio.to_thread(store.get_generation_job, job_id)
         if not job:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="generation job not found")
         if profile.role != "admin" and str(job["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        job = await _schedule_generation_job_if_needed(
+        job = await schedule_generation_job_if_needed(
             job=job,
             background_tasks=background_tasks,
             store=store,
             planner_fn=planner_fn,
             stage2=stage2,
             active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            is_stale_job=_is_stale_job,
         )
         return _job_response(job)
 
@@ -1345,6 +1082,7 @@ def create_app(
         planner_fn: Planner = Depends(get_planner),
         stage2: Stage2Automator = Depends(get_stage2_automator),
         active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
         row = store.get_admin_athlete(athlete_id)
         if not row:
@@ -1386,13 +1124,15 @@ def create_app(
             source="admin_latest_intake",
             request_payload=request_body.model_dump(mode="json"),
         )
-        job = await _schedule_generation_job_if_needed(
+        job = await schedule_generation_job_if_needed(
             job=job,
             background_tasks=background_tasks,
             store=store,
             planner_fn=planner_fn,
             stage2=stage2,
             active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            is_stale_job=_is_stale_job,
         )
         return _job_response(job)
 
@@ -1400,11 +1140,13 @@ def create_app(
 
 
 def _build_runtime_app() -> FastAPI:
+    enable_in_process_generation = os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
     logger.info(
-        "[app] build_runtime_app:start demo_mode=%s has_supabase_url=%s has_service_role_key=%s",
+        "[app] build_runtime_app:start demo_mode=%s has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
         os.getenv("UNLXCK_DEMO_MODE"),
         bool(os.getenv("SUPABASE_URL")),
         bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
+        enable_in_process_generation,
     )
     if os.getenv("UNLXCK_DEMO_MODE") == "1":
         logger.info("[app] build_runtime_app:using_demo_mode")
@@ -1414,6 +1156,7 @@ def _build_runtime_app() -> FastAPI:
             store=store,
             auth_service=DemoAuthService(),
             mode_label="demo",
+            enable_in_process_generation=enable_in_process_generation,
         )
     logger.info("[app] build_runtime_app:using_supabase_mode")
     store = SupabaseAppStore.from_env()
@@ -1422,6 +1165,7 @@ def _build_runtime_app() -> FastAPI:
         store=store,
         auth_service=SupabaseAuthService.from_env(),
         mode_label="supabase-authenticated",
+        enable_in_process_generation=enable_in_process_generation,
     )
 
 
