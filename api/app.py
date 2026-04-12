@@ -224,10 +224,6 @@ def _validate_schedule_consistency(workspace: NutritionWorkspaceUpdateRequest) -
         )
 
 
-def _restricted_coach_controls(workspace: NutritionWorkspaceState) -> dict[str, Any]:
-    return workspace.nutrition_coach_controls.model_dump(mode="json")
-
-
 def _update_profile_with_nutrition_fallback(
     *,
     store: AppStore,
@@ -237,11 +233,17 @@ def _update_profile_with_nutrition_fallback(
     try:
         return _map_profile_row(store.update_profile(athlete_id, update))
     except HTTPException as exc:
-        if exc.detail != "failed to update profile" or update.nutrition_profile is None:
+        should_retry_without_profile = (
+            update.nutrition_profile is not None
+            and exc.status_code >= status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+        if not should_retry_without_profile:
             raise
         logger.warning(
-            "[nutrition] retrying profile update without nutrition_profile athlete_id=%s",
+            "[nutrition] retrying profile update without nutrition_profile athlete_id=%s status=%s detail=%s",
             athlete_id,
+            exc.status_code,
+            exc.detail,
         )
         fallback_update = update.model_copy(update={"nutrition_profile": None})
         return _map_profile_row(store.update_profile(athlete_id, fallback_update))
@@ -746,10 +748,9 @@ def create_app(
     ) -> NutritionWorkspaceState:
         latest_intake = store.get_latest_intake(profile.athlete_id)
         current_workspace = build_nutrition_workspace(profile=profile, latest_intake_row=latest_intake)
-        update_payload = update.model_dump(mode="json")
-        update_payload["nutrition_coach_controls"] = _restricted_coach_controls(current_workspace)
+        update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
         normalized_update = normalize_nutrition_update_request(
-            update=NutritionWorkspaceUpdateRequest.model_validate(update_payload),
+            update=update,
             existing_shared_camp_context=current_workspace.shared_camp_context,
         )
         _validate_schedule_consistency(normalized_update)
@@ -1279,6 +1280,7 @@ def create_app(
         latest_intake = store.get_latest_intake(athlete_id)
         athlete = _map_admin_athlete(row, latest_intake=latest_intake)
         current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
+        update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
         normalized_update = normalize_nutrition_update_request(
             update=update,
             existing_shared_camp_context=current_workspace.shared_camp_context,
@@ -1299,11 +1301,10 @@ def create_app(
         )
 
         if current_workspace.source == "intake" and current_workspace.intake_id:
-            updated_profile = _map_profile_row(
-                store.update_profile(
-                    athlete_id,
-                    ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
-                )
+            updated_profile = _update_profile_with_nutrition_fallback(
+                store=store,
+                athlete_id=athlete_id,
+                update=ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
             )
             store.update_intake(
                 current_workspace.intake_id,
@@ -1314,14 +1315,13 @@ def create_app(
             refreshed_intake = store.get_latest_intake(athlete_id)
             return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
-        updated_profile = _map_profile_row(
-            store.update_profile(
-                athlete_id,
-                ProfileUpdateRequest(
-                    nutrition_profile=normalized_update.nutrition_profile,
-                    onboarding_draft=merged_payload,
-                ),
-            )
+        updated_profile = _update_profile_with_nutrition_fallback(
+            store=store,
+            athlete_id=athlete_id,
+            update=ProfileUpdateRequest(
+                nutrition_profile=normalized_update.nutrition_profile,
+                onboarding_draft=merged_payload,
+            ),
         )
         refreshed_intake = store.get_latest_intake(athlete_id)
         return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)

@@ -105,3 +105,46 @@ def test_nutrition_workspace_update_retries_profile_update_without_nutrition_pro
     assert len(update_calls) == 2
     assert "nutrition_profile" in update_calls[0]
     assert "nutrition_profile" not in update_calls[1]
+
+
+def test_nutrition_workspace_update_retries_profile_update_without_nutrition_profile_for_any_5xx_detail():
+    client, store, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    store.create_intake("athlete-1", _build_request({}))
+
+    original_update_profile = store.update_profile
+    update_calls: list[dict] = []
+
+    def flaky_update_profile(athlete_id, update):
+        payload = update.model_dump(mode="json", exclude_none=True)
+        update_calls.append(payload)
+        if payload.get("nutrition_profile") is not None:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="database write failed")
+        return original_update_profile(athlete_id, update)
+
+    store.update_profile = flaky_update_profile  # type: ignore[assignment]
+
+    workspace = _get_current_workspace(client)
+    update = {
+        "nutrition_profile": workspace["nutrition_profile"],
+        "shared_camp_context": workspace["shared_camp_context"],
+        "s_and_c_preferences": workspace["s_and_c_preferences"],
+        "nutrition_readiness": workspace["nutrition_readiness"],
+        "nutrition_monitoring": {
+            "daily_bodyweight_log": [
+                {"date": "2026-04-12", "weight_kg": 71.9, "time": "07:05", "is_fasted": True, "notes": "am"},
+            ],
+        },
+        "nutrition_coach_controls": workspace["nutrition_coach_controls"],
+    }
+
+    response = client.put(
+        "/api/nutrition/current",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=update,
+    )
+
+    assert response.status_code == 200
+    assert len(update_calls) == 2
+    assert "nutrition_profile" in update_calls[0]
+    assert "nutrition_profile" not in update_calls[1]
