@@ -561,9 +561,7 @@ def generate_rehab_protocols(
     deliberate risk-management decision rather than a template copy-paste.
 
     Function classification is used as *guidance* only — the same function may
-    appear more than once if the injury profile genuinely requires it.  Hard
-    deduplication is limited to preventing the exact same drill key from
-    appearing verbatim across phases (via ``seen_drills``).
+    appear more than once if the injury profile genuinely requires it.
 
     Parameters
     ----------
@@ -574,8 +572,8 @@ def generate_rehab_protocols(
     current_phase:
         Phase name (``GPP``/``SPP``/``TAPER``).
     seen_drills:
-        Set used to track drills already listed in earlier phases.  Prevents
-        the same drill from appearing verbatim across phases.
+        Legacy return/state parameter retained for compatibility with existing
+        callers. Drill selection no longer deduplicates across phases.
     day_type:
         Optional session type context (``'sparring'``, ``'strength'``,
         ``'aerobic'``, ``'recovery'``).  Affects volume ceiling and "Why today"
@@ -589,7 +587,6 @@ def generate_rehab_protocols(
     injury_phrases = split_injury_text(injury_string)
 
     parsed_entries = []
-    parsed_types = []
     for phrase in injury_phrases:
         itype, loc = parse_injury_phrase(phrase)
         if not itype:
@@ -598,7 +595,6 @@ def generate_rehab_protocols(
                 itype = "unspecified"
             else:
                 continue
-        parsed_types.append(itype)
         parsed_entries.append((itype, loc))
 
     # Prioritize specific injuries over unspecified duplicates
@@ -675,16 +671,10 @@ def generate_rehab_protocols(
                     if parsed:
                         for phase_label, text in parsed:
                             if phase_label == current_phase.upper():
-                                key = name if not text else f"{name} – {text}"
-                                if key not in seen_drills:
-                                    drills.append((name, text))
-                                    seen_drills.add(key)
+                                drills.append((name, text))
                                 break
                     else:
-                        key = name if not notes else f"{name} – {notes}"
-                        if key not in seen_drills:
-                            drills.append((name, notes))
-                            seen_drills.add(key)
+                        drills.append((name, notes))
 
             # Apply volume ceiling.  Function classification is recorded as
             # a tag but does NOT hard-block same-function drills — the model
@@ -1052,5 +1042,4 @@ def format_injury_guardrails(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines).strip()
-
 
