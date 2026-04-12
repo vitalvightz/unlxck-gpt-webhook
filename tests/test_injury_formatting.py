@@ -138,3 +138,11 @@ def test_guardrails_preserve_guided_display_location_without_note_leak():
     assert "Knee —" not in guardrails
     assert "Unspecified Location — Pain" not in guardrails
     assert "- avoid deep hip flexion" in guardrails
+
+
+def test_upper_limb_guardrails_include_compact_safer_replacements():
+    guardrails = format_injury_guardrails("SPP", "right shoulder impingement", [])
+    assert "**Safer Replacements (Upper-Body Deload)**" in guardrails
+    replacement_lines = [line for line in guardrails.splitlines() if line.startswith("- ") and "(" in line and ")" in line]
+    assert len(replacement_lines) >= 15
+    assert any("(bodyweight)" in line for line in replacement_lines)
