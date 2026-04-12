@@ -205,6 +205,11 @@ class FakeStore:
         job = self.generation_jobs.get(job_id)
         return dict(job) if job else None
 
+    def list_claimable_generation_jobs(self, *, limit: int = 20) -> list[dict]:
+        rows = [dict(job) for job in self.generation_jobs.values() if job.get("status") in {"queued", "running"}]
+        rows.sort(key=lambda row: str(row.get("created_at") or ""))
+        return rows[:limit]
+
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict | None:
         job = self.generation_jobs.get(job_id)
         if not job:

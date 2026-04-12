@@ -123,6 +123,8 @@ class AppStore(Protocol):
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
 
+    def list_claimable_generation_jobs(self, *, limit: int = 20) -> list[dict[str, Any]]: ...
+
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
@@ -815,6 +817,41 @@ class SupabaseAppStore:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="failed to load generation job",
+            ) from exc
+
+    def list_claimable_generation_jobs(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        try:
+            response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .in_("status", ["queued", "running"])
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            rows = response.data or []
+            return [dict(row) for row in rows if isinstance(row, dict)]
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] list_claimable_generation_jobs:transient_failure error_type=%s",
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] list_claimable_generation_jobs:schema_mismatch")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] list_claimable_generation_jobs:exception")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to list generation jobs",
             ) from exc
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
