@@ -55,6 +55,7 @@ def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> d
         "stage2_payload": None,
         "planning_brief": None,
         "stage2_handoff_text": "",
+        "parsing_metadata": {},
     }
 
 
@@ -153,6 +154,11 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
         blocks=blocks,
         rendered=rendered,
     )
+    if isinstance(stage2_payload, dict):
+        stage2_payload = {
+            **stage2_payload,
+            "input_parsing_metadata": plan_input.parsing_metadata,
+        }
     _record_timing("stage2_outputs", timer_start)
 
     # PDF generation is optional and off by default.
@@ -179,6 +185,7 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
         "stage2_payload": stage2_payload,
         "planning_brief": planning_brief,
         "stage2_handoff_text": stage2_handoff_text,
+        "parsing_metadata": plan_input.parsing_metadata,
     }
 
 

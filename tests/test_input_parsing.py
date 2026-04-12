@@ -387,7 +387,7 @@ def test_invalid_athlete_timezone_falls_back_to_platform_default(monkeypatch):
         )
     )
 
-    assert parsed.athlete_timezone == "Mars/Olympus"
+    assert parsed.athlete_timezone == "UTC"
     assert parsed.days_until_fight == 0
     assert parsed.weeks_out == 1
     assert parsed.parsing_metadata["athlete_timezone"]["source"] == "defaulted_missing"
@@ -417,9 +417,8 @@ def test_timestamped_and_date_only_countdown_use_consistent_date_model(monkeypat
     assert timestamped.days_until_fight == 2
 
 
-def test_countdown_no_longer_depends_on_patched_calendar_now(monkeypatch):
+def test_countdown_depends_only_on_utc_now(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 23, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(1999, 1, 1, 0, 0))
 
     parsed = PlanInput.from_payload(
         _payload([{"label": "When is your next fight?", "value": "2026-03-14"}])
