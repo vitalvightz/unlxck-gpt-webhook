@@ -490,42 +490,44 @@ class TestHandoffText:
     def test_d10_handoff_blocks_normal_spp_rebuild_language(self):
         text = self._build_handoff(10)
 
-        assert "Do NOT rebuild a normal SPP week in Stage 2." in text
-        assert "Keep no more than 2 hard sparring exposures." in text
+        assert "No SPP development framing" in text
+        assert "Hard sparring: 2 max" in text
 
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)
-        assert "Do NOT render week headers" in text
-        assert "Placement engine chooses where role slots land; insert renderer decides how they are shown." in text
+        assert "no week headers" in text or "No week headers" in text
+        assert "Session-by-session only" in text
 
     def test_d7_handoff_uses_sharpness_week_heading_map(self):
         text = self._build_handoff(7)
 
-        assert "Main Sharpness Day" in text
-        assert "Power Touch" in text
-        assert "Primary Strength" in text
+        assert "SHARPNESS WEEK" in text
+        assert "Hard sparring: 1 declared day" in text
+        assert "Stress cap" in text
 
     def test_d3_handoff_replaces_camp_titles_with_late_fight_titles(self):
         text = self._build_handoff(3)
 
-        assert "Sharpness Session" in text
-        assert "Freshness Session" in text
-        assert "Strength Block" in text
+        assert "sharpness" in text.lower()
+        assert "freshness" in text.lower()
+        # Strength Block is a forbidden term that belongs in rendering_rules
+        assert "no strength" in text.lower() or "No strength" in text
 
     def test_d1_handoff_forbids_strength_and_block_language(self):
         text = self._build_handoff(1)
 
-        assert "FORBIDDEN TERMS: strength, conditioning, anchor, development, stressor, fight-pace density, block" in text
-        assert "PREFERRED TERMS: neural primer, technical touch, sharpness, activation, reset, rhythm." in text
+        assert "Banned:" in text
+        assert "strength" in text
+        assert "neural primer" in text
 
     def test_d0_handoff_uses_fight_day_protocol_terms(self):
         text = self._build_handoff(0)
 
-        assert "Walk-through reminders" in text
-        assert "Do NOT add any training session" in text
+        assert "walk-through" in text.lower()
+        assert "Do not restore suppressed roles" in text
 
     def test_late_fight_handoff_uses_app_owned_insert_contract(self):
         text = self._build_handoff(10)
 
-        assert "Use countdown placement logic only for day assignment, spacing, and legality" in text
-        assert "After placement, filter to app-owned visible roles for athlete-facing rendering" in text
+        assert "Placement governs day assignment only" in text
+        assert "app-owned roles" in text

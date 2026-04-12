@@ -317,7 +317,7 @@ def test_generate_plan_returns_stage2_payload():
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (planner/finalizer)." in handoff_text
     assert "PLANNING BRIEF" in handoff_text
-    assert "SOURCE OF TRUTH" in handoff_text
+    assert "AUTHORITY ORDER" in handoff_text
     assert "ATHLETE PROFILE" in handoff_text
     assert "STAGE 1 DRAFT PLAN" in handoff_text
 
