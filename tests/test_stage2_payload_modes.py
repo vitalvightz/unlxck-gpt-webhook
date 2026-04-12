@@ -404,6 +404,18 @@ class TestStage2PayloadBranching:
         assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
         assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
 
+    def test_d5_plan_spec_adds_structured_hard_sparring_context(self):
+        spec = _build_late_fight_plan_spec(
+            5,
+            _athlete(5, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday"]),
+        )
+        assert "hard_sparring_context_line" in spec
+        assert spec["surviving_hard_spar_days"] == []
+        assert spec["downgraded_declared_spar_days"] == ["tuesday", "thursday"]
+        assert spec["hard_sparring_context_line"] == (
+            "Hard sparring this window: none. Tuesday and Thursday are technical rhythm only."
+        )
+
     @pytest.mark.parametrize(
         "days,expected_visible",
         [
@@ -531,3 +543,5 @@ class TestHandoffText:
 
         assert "Placement governs day assignment only" in text
         assert "app-owned roles" in text
+        assert "surviving_hard_spar_days" in text
+        assert "downgraded_declared_spar_days" in text
