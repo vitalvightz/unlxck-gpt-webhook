@@ -80,16 +80,9 @@ def clean_list(values: Any) -> list[str]:
     s = str(values).strip()
     return [s] if s else []
 
-
 def dedupe_preserve_order(values: list[str]) -> list[str]:
     """Remove duplicates while preserving insertion order."""
-    seen: set[str] = set()
-    result: list[str] = []
-    for v in values:
-        if v not in seen:
-            seen.add(v)
-            result.append(v)
-    return result
+    return list(dict.fromkeys(values))
 
 
 # ── Private aliases (backwards-compat for in-package callers) ────────────────
