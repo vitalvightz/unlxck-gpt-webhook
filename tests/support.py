@@ -132,6 +132,7 @@ class FakeStore:
             "why_log": result.get("why_log", {}),
             "planning_brief": result.get("planning_brief"),
             "stage2_payload": result.get("stage2_payload"),
+            "parsing_metadata": result.get("parsing_metadata", {}),
             "stage2_handoff_text": result.get("stage2_handoff_text", ""),
             "stage2_retry_text": result.get("stage2_retry_text", ""),
             "stage2_validator_report": result.get("stage2_validator_report", {}),

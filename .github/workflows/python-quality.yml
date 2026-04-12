@@ -22,14 +22,20 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
-      - name: Install Ruff
-        run: python -m pip install --upgrade pip ruff
+      - name: Install lint dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
 
       - name: Run Ruff
         run: ruff check api fightcamp tests tools
 
-  test:
+  test-full-suite:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -42,32 +48,48 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
 
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install \
-            pytest \
-            structlog \
-            supabase \
-            gotrue \
-            openai \
-            rapidfuzz \
-            pydantic \
-            fastapi \
-            httpx
+          pip install -r requirements-dev.txt
+          pip check
 
-      - name: Run tests
+      - name: Run full pytest suite
+        run: pytest tests/ -q
+
+  test-runtime-surfaces:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install runtime + test dependencies
         run: |
-          pytest tests/ -q \
-            --ignore=tests/test_api_admin_flows.py \
-            --ignore=tests/test_api_app_core.py \
-            --ignore=tests/test_api_generation_flows.py \
-            --ignore=tests/test_api_nutrition_workspace_flows.py \
-            --ignore=tests/test_api_plan_access.py \
-            --ignore=tests/test_api_profile_flows.py \
-            --ignore=tests/test_api_request_models.py \
-            --ignore=tests/test_auth_service.py \
-            --ignore=tests/test_store_profile_bootstrap.py \
-            --ignore=tests/test_supabase_schema.py \
-            --ignore=tests/test_web_deployment_config.py
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip check
+
+      - name: Run API/worker/store-focused tests
+        run: |
+          pytest -q \
+            tests/test_api_*.py \
+            tests/test_auth_service.py \
+            tests/test_store_profile_bootstrap.py \
+            tests/test_supabase_schema.py
