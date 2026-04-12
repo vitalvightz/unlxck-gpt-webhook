@@ -906,6 +906,8 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Frame this as either a countdown insert or one unified countdown schedule, never as a fake Monday-Sunday week.",
                 "Present sessions countdown-first (D-N first, weekday second).",
+                "Use placement only for countdown day assignment; keep insert rendering minimal and coach-like.",
+                "After placement, render only app-owned visible roles as sessions; mention boxing schedule as context only.",
                 "If this does not fully prescribe every active day, label exactly: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.",
                 "Never mix two schedule realities in one output (no 'sessions only' statement plus separate boxing-day listing).",
                 "Keep the language on technical rhythm, sharpness, one meaningful strength touch, and freshness.",
@@ -970,6 +972,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Render session-by-session, not as a weekly build.",
                 "Lead each item with its countdown label (D-N) and then weekday.",
+                "Use placement to choose legal countdown days, but keep insert rendering scoped to app-owned sessions only.",
                 "No hard sparring — technical rhythm and sharpness touch only.",
                 "When this is an insert, cap coach-prescribed insert work to 2 sessions: one power touch or technical rhythm session + one freshness session.",
                 "If this does not fully prescribe every active day, label exactly: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.",
@@ -1002,6 +1005,8 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Render session-by-session, not as a program block.",
                 "Lead each session with countdown-first framing (D-N, then weekday).",
+                "Placement engine chooses where roles land; insert renderer chooses how little to show.",
+                "Render only app-owned visible roles as sessions and keep boxing days as contextual references only.",
                 "If this does not fully prescribe every active day, label exactly: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.",
                 "Never mix insert-only wording with separate full-week boxing listings in the same output.",
                 "Use sharpness session, technical touch, low-noise power, freshness session, primer, and reset language.",
@@ -1409,6 +1414,26 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     )
 
 
+def _is_app_owned_visible_role(role_key: Any) -> bool:
+    """
+    Return whether a role should be rendered as an app-owned visible session.
+
+    Declared boxing load (for example hard sparring) must stay in the
+    placement map as context, but should not be rendered as coach-prescribed
+    S&C session ownership in insert-style countdown outputs.
+    """
+    return str(role_key or "").strip().lower() not in {"hard_sparring_day"}
+
+
+def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Filter post-placement sessions to the app-owned roles only."""
+    return [
+        session
+        for session in session_sequence
+        if _is_app_owned_visible_role(session.get("role_key"))
+    ]
+
+
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
@@ -1558,6 +1583,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     payload_block = _days_out_payload_block(days_until_fight, athlete_model)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
     session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
+    visible_session_sequence = _visible_insert_session_sequence(session_sequence)
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
     plan_creation_weekday = athlete_model.get("plan_creation_weekday")
@@ -1573,6 +1599,9 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "session_cap": len(roles),
         "session_roles": [role.get("role_key") for role in roles],
         "session_sequence": session_sequence,
+        "visible_session_cap": len(visible_session_sequence),
+        "visible_session_roles": [entry.get("role_key") for entry in visible_session_sequence],
+        "visible_session_sequence": visible_session_sequence,
         "allowed_session_types": payload_block["allowed_session_types"],
         "forbidden_session_types": payload_block["forbidden_session_types"],
         "forbidden_blocks": payload_block["forbidden_blocks"],
@@ -1591,6 +1620,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "D-13 TO D-0 OUTPUT CONTRACT\n"
         "For any athlete with 13 days or fewer until fight, use one coherent countdown truth.\n"
         "Lead each active day with countdown-first labeling (D-N first, weekday second), and avoid fake Monday-Sunday framing.\n"
+        "Use countdown placement logic only for day assignment, spacing, and legality — not to expand the visible session list.\n"
+        "After placement, filter to app-owned visible roles for athlete-facing rendering and keep boxing ownership as context.\n"
         "If output does NOT fully prescribe every active day, label it exactly as: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
         "When output fully prescribes all active days, use one unified section title: Countdown schedule.\n"
         "Do not frame late windows as a normal Monday-Sunday week without countdown labels.\n"
@@ -1660,6 +1691,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Do NOT frame this as a normal camp week.\n"
             "Present the plan session-by-session, not as a program block.\n"
             "Do NOT render week headers, Monday-to-Sunday structure, or a full weekly schedule.\n"
+            "Placement engine chooses where role slots land; insert renderer decides how they are shown.\n"
+            "Do not increase visible session count because of declared boxing collisions.\n"
             "Do NOT use broad development language, weekly architecture language, phase-explanation dumps, or long rationale sections.\n"
             "Do NOT generate strength blocks, conditioning stressors, support-strength language, or glycolytic build logic.\n"
             "D-4 may keep one short sharpness session plus one freshness session.\n"
@@ -1692,6 +1725,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Do NOT generate hard sparring under any circumstances.\n"
             "All declared hard sparring days convert to technical rhythm only.\n"
             "If this is an insert, max 2 coach-prescribed insert sessions: one technical rhythm or power touch + one freshness session.\n"
+            "Use placement outcomes for countdown legality and spacing only; do not let them expand athlete-facing session ownership.\n"
             "Cap meaningful stress exposures at 1 and cap each session at 4 blocks.\n"
             "No primary strength, no anchor day, no conditioning block, and no glycolytic work.\n"
             "No development language, volume-build language, or program-block framing.\n"

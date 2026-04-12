@@ -396,6 +396,14 @@ class TestStage2PayloadBranching:
         assert spec["max_active_roles"] == 3
         assert "standalone_glycolytic" in spec["forbidden_blocks"]
 
+    def test_d7_plan_spec_keeps_boxing_roles_out_of_visible_insert_sessions(self):
+        spec = _build_late_fight_plan_spec(7, _athlete(7))
+
+        assert "hard_sparring_day" in spec["session_roles"]
+        assert "hard_sparring_day" not in spec["visible_session_roles"]
+        assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
+        assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
+
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
         athlete_model = payload["athlete_model"]
@@ -462,6 +470,7 @@ class TestHandoffText:
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)
         assert "Do NOT render week headers" in text
+        assert "Placement engine chooses where role slots land; insert renderer decides how they are shown." in text
 
     def test_d7_handoff_uses_sharpness_week_heading_map(self):
         text = self._build_handoff(7)
@@ -488,3 +497,9 @@ class TestHandoffText:
 
         assert "Walk-through reminders" in text
         assert "Do NOT add any training session" in text
+
+    def test_late_fight_handoff_uses_app_owned_insert_contract(self):
+        text = self._build_handoff(10)
+
+        assert "Use countdown placement logic only for day assignment, spacing, and legality" in text
+        assert "After placement, filter to app-owned visible roles for athlete-facing rendering" in text
