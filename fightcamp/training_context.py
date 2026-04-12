@@ -75,7 +75,6 @@ class TrainingContext:
     weight_cut_pct: float
     fight_format: str
     status: str
-    training_split: dict
     key_goals: list[str]
     training_preference: str
     mental_block: list[str] | str
