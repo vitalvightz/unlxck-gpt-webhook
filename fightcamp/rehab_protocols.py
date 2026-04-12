@@ -86,6 +86,11 @@ def normalize_rehab_location(location: str | None) -> list[str]:
     return filtered or candidates
 
 
+def _entry_phases(entry: dict) -> list[str]:
+    """Return the normalized phase tokens for a rehab bank entry."""
+    return _split_phase_progression(entry.get("phase_progression", ""))
+
+
 def _split_phase_progression(text: str) -> list[str]:
     """Return normalized phase tokens from either arrow encoding."""
     normalized = (text or "").replace("\u00e2\u2020\u2019", "\u2192")
@@ -646,10 +651,6 @@ def generate_rehab_protocols(
 
     lines = []
 
-    def _phases(entry):
-        progress = entry.get("phase_progression", "")
-        return _split_phase_progression(progress)
-
     for itype, loc in unique_entries:
         loc_candidates = normalize_rehab_location(loc)
         matches = [
@@ -664,7 +665,7 @@ def generate_rehab_protocols(
                 entry.get("location") in loc_candidates
                 or entry.get("location") == "unspecified"
             )
-            and current_phase.upper() in _phases(entry)
+            and current_phase.upper() in _entry_phases(entry)
         ]
         if matches:
             drills: list[tuple[str, str]] = []  # (name, notes_for_phase)
@@ -959,10 +960,6 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
     phase = phase.upper()
     drills: list[str] = []
 
-    def _phases(entry):
-        progress = entry.get("phase_progression", "")
-        return _split_phase_progression(progress)
-
     def _append_drills(entry):
         for drill in entry.get("drills", []):
             name = drill.get("name")
@@ -997,7 +994,7 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
                     continue
                 if entry.get("location") != c_loc:
                     continue
-                if phase not in _phases(entry):
+                if phase not in _entry_phases(entry):
                     continue
                 _append_drills(entry)
                 if len(drills) >= limit:

@@ -16,26 +16,23 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 
+class _FuzzFallback:
+    """SequenceMatcher-based fallback used when rapidfuzz is unavailable."""
+
+    @staticmethod
+    def partial_ratio(a: str, b: str) -> int:
+        return int(SequenceMatcher(None, a, b).ratio() * 100)
+
+
 try:  # pragma: no cover - optional dependency
     if _RAPIDFUZZ_AVAILABLE:
         from rapidfuzz import fuzz
     else:
         raise ImportError
-except ImportError:  # pragma: no cover - fallback when rapidfuzz missing
-    class _FuzzFallback:
-        @staticmethod
-        def partial_ratio(a: str, b: str) -> int:
-            return int(SequenceMatcher(None, a, b).ratio() * 100)
-
+except ImportError:  # pragma: no cover - rapidfuzz not installed
     fuzz = _FuzzFallback()
 except Exception:  # pragma: no cover - import side effects are environment dependent
     logger.exception("[optional-import-failed] module=rapidfuzz")
-
-    class _FuzzFallback:
-        @staticmethod
-        def partial_ratio(a: str, b: str) -> int:
-            return int(SequenceMatcher(None, a, b).ratio() * 100)
-
     fuzz = _FuzzFallback()
 
 BLOCK_PRIORITY = [
