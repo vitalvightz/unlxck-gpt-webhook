@@ -250,16 +250,17 @@ def place_roles_in_countdown(
         is_locked = id(role) in locked_role_ids
 
         entry: dict[str, Any] = {
-            "session_index":    idx,
-            "category":         role.get("category"),
-            "role_key":         role.get("role_key"),
-            "preferred_pool":   role.get("preferred_pool"),
+            "session_index": idx,
+            "category": role.get("category"),
+            "role_key": role.get("role_key"),
+            "preferred_pool": role.get("preferred_pool"),
             "preferred_system": role.get("preferred_system"),
-            "selection_rule":   role.get("selection_rule"),
-            "placement_rule":   role.get("placement_rule"),
-            "anchor":           role.get("anchor"),
-            "countdown_label":  lbl,
-            "placement_basis":  "locked" if is_locked else role_cost(role),
+            "selection_rule": role.get("selection_rule"),
+            "placement_rule": role.get("placement_rule"),
+            "anchor": role.get("anchor"),
+            "countdown_label": lbl,
+            "countdown_display_label": _countdown_display_label(lbl, weekday),
+            "placement_basis": "locked" if is_locked else role_cost(role),
         }
         if weekday:
             entry["real_weekday"] = weekday
