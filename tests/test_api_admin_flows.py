@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from api.auth import AuthenticatedUser
 from api.models import ManualStage2SubmissionRequest
-from api_test_support import (
+from support import (
     SYSTEM_SCENARIOS,
     FakeStage2Automator,
     _build_client,

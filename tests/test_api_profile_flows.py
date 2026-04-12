@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
-from api_test_support import FakeStore, _build_client, _build_request
+from support import FakeStore, _build_client, _build_request
 
 
 def test_admin_athlete_profile_includes_latest_intake_details():

@@ -9,7 +9,7 @@ from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
-from api_test_support import (
+from support import (
     SYSTEM_SCENARIOS,
     FakeAuthService,
     FakeStage2Automator,

@@ -6,6 +6,7 @@ from typing import Any
 from .injury_formatting import parse_injury_entry
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
 from .weight_cut import compute_weight_cut_pct
+from .normalization import _clean_list
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -147,16 +148,6 @@ def _band_from_score(score: int) -> str:
         if score >= threshold:
             return band
     return "green"
-
-
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
 
 
 def _humanize_token(value: str) -> str:

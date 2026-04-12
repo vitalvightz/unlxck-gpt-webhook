@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import re
@@ -24,6 +24,7 @@ from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
+from .normalization import _clean_list, _normalize_text, _phrase_in_text, _slugify
 
 RESTRICTION_PATTERN_HINTS = {
     "deep_knee_flexion": [
@@ -242,21 +243,6 @@ _TEXT_DERIVED_RESTRICTIONS = {
 }
 
 
-def _slugify(value: str) -> str:
-    cleaned = re.sub(r"[^a-z0-9]+", "_", (value or "").strip().lower())
-    return cleaned.strip("_") or "slot"
-
-
-def _clean_list(values) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
-
-
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -266,20 +252,6 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
         seen.add(value)
         result.append(value)
     return result
-
-
-def _normalize_text(value: str) -> str:
-    return normalize_lower_text(value)
-
-
-def _phrase_in_text(text: str, phrase: str) -> bool:
-    if not text or not phrase:
-        return False
-    parts = [re.escape(part) for part in re.split(r"[\s-]+", phrase.strip().lower()) if part]
-    if not parts:
-        return False
-    pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
-    return re.search(pattern, text) is not None
 
 
 def _restriction_item_text(item: dict) -> str:

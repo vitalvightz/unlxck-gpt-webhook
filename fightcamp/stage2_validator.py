@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 from collections import defaultdict
@@ -7,6 +7,7 @@ from typing import Any
 from .phases import PHASE_HEADER_PATTERN
 from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
+from .normalization import _clean_list, _phrase_in_text
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -125,16 +126,6 @@ _LATE_FIGHT_TOKEN_PHRASES = {
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
 
 
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
-
-
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -144,16 +135,6 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
         seen.add(value)
         result.append(value)
     return result
-
-
-def _phrase_in_text(text: str, phrase: str) -> bool:
-    if not text or not phrase:
-        return False
-    parts = [re.escape(part) for part in re.split(r"[\s-]+", phrase.strip().lower()) if part]
-    if not parts:
-        return False
-    pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
-    return re.search(pattern, text.lower()) is not None
 
 
 def _extract_plan_lines(plan_text: str) -> list[str]:

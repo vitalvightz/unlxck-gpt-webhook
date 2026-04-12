@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .normalization import _clean_list
 
 from typing import Any
 
@@ -56,16 +57,6 @@ _WEEKDAY_NAMES = [
     "saturday",
     "sunday",
 ]
-
-
-def _clean_list(values) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
 
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:

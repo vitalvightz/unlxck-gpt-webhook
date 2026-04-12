@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import HTTPException, status
 
-from api_test_support import _build_client, _build_request
+from support import _build_client, _build_request
 
 
 def _get_current_workspace(client) -> dict:
