@@ -40,6 +40,9 @@ class FakeStore:
         self.plans: dict[str, dict] = {}
         self.generation_jobs: dict[str, dict] = {}
 
+    def validate_runtime_schema(self) -> None:
+        return None
+
     def ensure_profile(self, user: AuthenticatedUser) -> dict:
         existing = self.profiles.get(user.user_id)
         if existing:

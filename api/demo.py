@@ -46,6 +46,9 @@ class DemoStore:
         self.plans: dict[str, dict[str, Any]] = {}
         self.generation_jobs: dict[str, dict[str, Any]] = {}
 
+    def validate_runtime_schema(self) -> None:
+        return None
+
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         with self._lock:
             existing = self.profiles.get(user.user_id)
