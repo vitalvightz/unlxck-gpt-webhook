@@ -73,11 +73,12 @@ def clean_list(values: Any) -> list[str]:
     """Coerce *values* to a flat list of non-empty stripped strings."""
     if values is None:
         return []
-    if isinstance(values, list):
+    if isinstance(values, (list, tuple, set)):
         return [str(v).strip() for v in values if str(v).strip()]
     if isinstance(values, str):
         return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
+    s = str(values).strip()
+    return [s] if s else []
 
 
 def dedupe_preserve_order(values: list[str]) -> list[str]:
