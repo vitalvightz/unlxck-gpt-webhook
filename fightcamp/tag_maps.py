@@ -34,6 +34,10 @@ WEAKNESS_NORMALIZER = {
     "coordination/proprioception": ["coordination"],
     "shoulder": ["shoulders"],
     "shoulders": ["shoulders"],
+    "core": ["core stability"],
+    "core strength": ["core stability"],
+    "trunk strength": ["core stability"],
+    "trunk_strength": ["core stability"],
 }
 
 STYLE_TAG_MAP = {
