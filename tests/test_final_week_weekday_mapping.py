@@ -145,11 +145,11 @@ class TestCountdownWeekdayMap:
         assert result["D-2"] == "saturday"
         assert result["D-3"] == "friday"
 
-    def test_capped_at_seven_days(self):
-        # Even if days_until_fight > 7, only 8 labels are included (D-0 .. D-7)
+    def test_not_capped_at_seven_days(self):
+        # Countdown map must project all the way back to D-N, not stop at D-7.
         result = _countdown_weekday_map("monday", 10)
-        assert len(result) == 8
-        assert set(result.keys()) == {"D-0", "D-1", "D-2", "D-3", "D-4", "D-5", "D-6", "D-7"}
+        assert len(result) == 11
+        assert set(result.keys()) == {f"D-{n}" for n in range(0, 11)}
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +251,7 @@ class TestSessionSequenceWeekdayAnnotation:
         athlete = _athlete(5, plan_creation_weekday="monday")
         sequence = _build_late_fight_session_sequence(5, athlete)
         assert sequence[0]["real_weekday"] == "monday"
+        assert sequence[0]["countdown_display_label"] == "D-5 (Monday)"
 
     def test_d5_first_role_is_alactic_sharpness(self):
         athlete = _athlete(5, plan_creation_weekday="monday")

@@ -86,6 +86,13 @@ def countdown_offset(label: str) -> int | None:
         return None
 
 
+def _countdown_display_label(label: str, weekday: str | None) -> str:
+    """Render labels in exact athlete-facing form: ``D-N (Weekday)``."""
+    if not weekday:
+        return label
+    return f"{label} ({str(weekday).strip().title()})"
+
+
 def _min_gap(candidate: int, assigned: list[int]) -> int:
     """Minimum absolute distance from candidate offset to any assigned offset."""
     if not assigned:
