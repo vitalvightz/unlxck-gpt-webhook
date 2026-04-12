@@ -1988,7 +1988,15 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-    if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic"):
+    _is_late_fight_taper = (
+        phase.upper() == "TAPER"
+        and isinstance(days_until_fight, int)
+        and days_until_fight <= 5
+    )
+    if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic") and not _is_late_fight_taper:
+        # Late-fight TAPER (D-0 to D-5): late-fight dosage caps explicitly prohibit
+        # generic multi-round glycolytic structures. Suppress the fallback entirely;
+        # the countdown caps already govern what conditioning is permitted.
         fallback = _glycolytic_fallback(phase)
         grouped_drills["glycolytic"] = [fallback]
         selected_drill_names.append(fallback["name"])
