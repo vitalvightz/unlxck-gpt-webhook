@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .input_parsing import _utc_now
+from .input_parsing import _athlete_calendar_now, _utc_now
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .training_context import TrainingContext, allocate_sessions
@@ -603,6 +603,9 @@ def _build_athlete_model(
     short_notice: bool,
 ) -> dict:
     record_profile = _derive_competitive_maturity(training_context.status, record)
+    # We define plan_creation_weekday as athlete-local weekday so late-fight
+    # weekday mapping remains aligned with the athlete calendar.
+    plan_creation_dt = _athlete_calendar_now(training_context.athlete_timezone, now_utc=_utc_now())
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -632,7 +635,8 @@ def _build_athlete_model(
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
         "short_notice": short_notice,
-        "plan_creation_weekday": _utc_now().strftime("%A").lower(),
+        "plan_creation_weekday": plan_creation_dt.strftime("%A").lower(),
+        "plan_creation_weekday_basis": "athlete_local_weekday",
         "readiness_flags": _derive_readiness_flags(
             fatigue=training_context.fatigue,
             weight_cut_risk=training_context.weight_cut_risk,
@@ -1516,4 +1520,3 @@ _WEEKLY_STAGE_TEMPLATES = {
         },
     },
 }
-

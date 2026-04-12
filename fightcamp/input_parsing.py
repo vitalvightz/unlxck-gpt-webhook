@@ -245,6 +245,19 @@ def _business_timezone(athlete_timezone: str | None = None) -> timezone | ZoneIn
     return _PLATFORM_DEFAULT_TIMEZONE
 
 
+def _normalized_timezone_name(tzinfo: timezone | ZoneInfo) -> str:
+    if tzinfo == timezone.utc:
+        return "UTC"
+    if isinstance(tzinfo, ZoneInfo):
+        return tzinfo.key
+    name = tzinfo.tzname(None)
+    return name or "UTC"
+
+
+def _platform_default_timezone_name() -> str:
+    return _normalized_timezone_name(_PLATFORM_DEFAULT_TIMEZONE)
+
+
 def _athlete_calendar_now(
     athlete_timezone: str | None = None, *, now_utc: datetime | None = None
 ) -> datetime:
@@ -540,11 +553,12 @@ class PlanInput:
             else _metadata("defaulted_missing", "training_availability_missing")
         )
 
+        fallback_timezone_name = _platform_default_timezone_name()
         if not raw_athlete_timezone:
-            effective_athlete_timezone = "UTC"
+            effective_athlete_timezone = fallback_timezone_name
             athlete_timezone_metadata = _metadata("defaulted_missing", "athlete_timezone_missing")
         elif _resolve_timezone(raw_athlete_timezone) is None:
-            effective_athlete_timezone = "UTC"
+            effective_athlete_timezone = fallback_timezone_name
             athlete_timezone_metadata = _metadata(
                 "defaulted_missing",
                 "invalid_athlete_timezone_fallback_to_platform_default",

@@ -381,6 +381,13 @@ def _admin_final_text(row: dict[str, Any]) -> str:
 def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
     summary = _map_plan_summary(row)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
+    raw_stage2_payload = row.get("stage2_payload")
+    fallback_parsing_metadata = (
+        raw_stage2_payload.get("input_parsing_metadata")
+        if isinstance(raw_stage2_payload, dict)
+        else {}
+    )
+    parsing_metadata = row.get("parsing_metadata") or fallback_parsing_metadata or {}
     return PlanDetail(
         **summary.model_dump(mode="json"),
         outputs=PlanOutputs(
@@ -393,7 +400,8 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
                 coach_notes=str(row.get("coach_notes") or ""),
                 why_log=row.get("why_log") or {},
                 planning_brief=planning_brief,
-                stage2_payload=row.get("stage2_payload"),
+                stage2_payload=raw_stage2_payload,
+                parsing_metadata=parsing_metadata if isinstance(parsing_metadata, dict) else {},
                 stage2_handoff_text=str(row.get("stage2_handoff_text") or ""),
                 draft_plan_text=_admin_draft_text(row),
                 final_plan_text=_admin_final_text(row),
