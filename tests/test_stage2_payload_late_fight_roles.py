@@ -465,6 +465,166 @@ def test_placement_regression_tomorrow_or_later_wins_when_spacing_is_cleaner():
     assert labels_by_role["first_stress_day"] == "D-6"
     assert labels_by_role["second_stress_day"] == "D-4"
 
+
+def test_placement_context_penalizes_hard_spar_collision_neighbors():
+    roles = [
+        {
+            "session_index": 1,
+            "category": "strength",
+            "role_key": "strength_touch_day",
+            "preferred_pool": "strength_slots",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "highest_neural_day",
+        }
+    ]
+    sequence = place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=6,
+        countdown_weekday_map={},
+        placement_context={
+            "declared_hard_spar_offsets": [5],  # D-5 collision owner day
+            "today_offset": 6,
+            "fatigue": "low",
+            "readiness_flags": [],
+        },
+    )
+    # Avoid D-6 (day before hard spar) and D-4 (day after hard spar) when cleaner D-3 exists.
+    assert sequence[0]["countdown_label"] == "D-3"
+
+
+def test_placement_context_readiness_penalizes_same_day_medium_role():
+    roles = [
+        {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "technical_touch_day",
+            "preferred_pool": "conditioning_slots",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "support_day",
+        }
+    ]
+    sequence = place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=6,
+        countdown_weekday_map={},
+        placement_context={
+            "declared_hard_spar_offsets": [],
+            "today_offset": 6,
+            "fatigue": "high",
+            "readiness_flags": ["injury_watch"],
+        },
+    )
+    assert sequence[0]["countdown_label"] != "D-6"
+
+
+def test_placement_context_freshness_prefers_latest_clean_slot():
+    roles = [
+        {
+            "session_index": 1,
+            "category": "recovery",
+            "role_key": "fight_week_freshness_day",
+            "preferred_pool": "rehab_slots_or_recovery_only",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "lowest_load_day",
+        }
+    ]
+    sequence = place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=6,
+        countdown_weekday_map={},
+        placement_context={"today_offset": 6, "fatigue": "moderate", "readiness_flags": []},
+    )
+    assert sequence[0]["countdown_label"] == "D-2"
+
+
+def test_placement_context_downgraded_technical_touch_holds_declared_offset():
+    roles = [
+        {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "light_fight_pace_touch_day",
+            "preferred_pool": "declared_technical_skill_days_or_conditioning_slots",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "support_day",
+            "downgraded_from_hard_sparring": True,
+            "countdown_offset": 5,
+        }
+    ]
+    sequence = place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=6,
+        countdown_weekday_map={},
+        placement_context={
+            "declared_hard_spar_offsets": [6],
+            "declared_technical_offsets": [5],
+            "today_offset": 6,
+            "fatigue": "moderate",
+            "readiness_flags": [],
+        },
+    )
+    assert sequence[0]["countdown_label"] == "D-5"
+
+
+def test_non_surviving_declared_hard_days_do_not_repel_neighbor_slots():
+    """
+    Regression: collision penalties should only use capped surviving hard-spar
+    instances. A dropped declared hard day (for example D-11) must not repel
+    adjacent placement like D-10.
+    """
+    roles = [
+        {
+            "session_index": 1,
+            "category": "conditioning",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "highest_glycolytic_day",
+            "countdown_label": "D-13",
+            "countdown_offset": 13,
+            "declared_day_locked": True,
+        },
+        {
+            "session_index": 2,
+            "category": "conditioning",
+            "role_key": "hard_sparring_day",
+            "preferred_pool": "declared_hard_sparring_days",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "highest_glycolytic_day",
+            "countdown_label": "D-8",
+            "countdown_offset": 8,
+            "declared_day_locked": True,
+        },
+        {
+            "session_index": 3,
+            "category": "strength",
+            "role_key": "strength_touch_day",
+            "preferred_pool": "strength_slots",
+            "selection_rule": "rule",
+            "placement_rule": "rule",
+            "anchor": "highest_neural_day",
+        },
+    ]
+    sequence = place_roles_in_countdown(
+        roles=roles,
+        days_until_fight=13,
+        countdown_weekday_map={},
+        placement_context={
+            "declared_hard_spar_offsets": [13, 8],  # surviving capped hard days only
+            "today_offset": 13,
+            "fatigue": "low",
+            "readiness_flags": [],
+        },
+    )
+    strength = next(entry for entry in sequence if entry["role_key"] == "strength_touch_day")
+    assert strength["countdown_label"] == "D-10"
+
+
 def test_role_cost_classifies_correctly():
     """role_cost() must return correct bucket for known anchor types."""
     assert role_cost({"anchor": "highest_neural_day"}) == "high"
