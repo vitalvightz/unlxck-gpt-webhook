@@ -27,4 +27,4 @@ jobs:
         run: python -m pip install --upgrade pip ruff
 
       - name: Run Ruff
-        run: ruff check api fightcamp tests tools
+        run: ruff check api fightcamp tests tools run_stage2_validation.py
