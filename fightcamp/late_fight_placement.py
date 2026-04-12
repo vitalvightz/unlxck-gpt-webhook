@@ -104,50 +104,66 @@ def _min_gap(candidate: int, assigned: list[int]) -> int:
 # Slot-selection strategies
 # ---------------------------------------------------------------------------
 
-def _pick_earlier(slots: list[str], assigned: list[int]) -> str | None:
-    """
-    Pick the earliest available slot (highest D-offset) with decent spacing.
+def _target_offset_for_cost(slots: list[str], cost: str, assigned: list[int]) -> int:
+    """Return a taper-aware target offset for a role cost bucket."""
+    offsets = sorted((countdown_offset(lbl) or 0) for lbl in slots)
+    if not offsets:
+        return 0
 
-    Preference order:
-      1. earliest slot with gap >= 2  (non-consecutive)
-      2. earliest slot with gap >= 1  (not same day)
-      3. earliest slot regardless     (fallback)
+    # Cost-biased quantiles instead of extreme-first picks:
+    # high -> early-ish, medium -> middle, low -> late-ish.
+    if cost == "high" and not assigned:
+        return offsets[-1]
+
+    quantile_index = {
+        "high": 0.70,
+        "medium": 0.55,
+        "low": 0.25,
+    }.get(cost, 0.55)
+    idx = round((len(offsets) - 1) * quantile_index)
+    return offsets[max(0, min(idx, len(offsets) - 1))]
+
+
+def _pick_slot(slots: list[str], assigned: list[int], *, cost: str) -> str | None:
+    """
+    Pick the best slot using taper-aware target proximity plus spacing quality.
+
+    This avoids blanket early-slot bias while still preserving taper intent:
+      • high   tends earlier
+      • medium tends central/early
+      • low    tends later
+
+    Same-day (D-N) placement is allowed, but only when it wins this score.
     """
     if not slots:
         return None
 
-    # Sort earliest-first: highest D-number first
-    ordered = sorted(slots, key=lambda lbl: -(countdown_offset(lbl) or 0))
+    target = _target_offset_for_cost(slots, cost, assigned)
+    best_key: tuple[int, int, int, int] | None = None
+    best_label: str | None = None
 
-    for min_gap in (2, 1, 0):
-        for lbl in ordered:
-            off = countdown_offset(lbl) or 0
-            if _min_gap(off, assigned) >= min_gap:
-                return lbl
-
-    return ordered[0]
-
-
-def _pick_later(slots: list[str], assigned: list[int]) -> str | None:
-    """
-    Pick the latest available slot (lowest D-offset, closest to fight) with
-    at least 1-day spacing.  Falls back to the closest slot when spacing
-    cannot be satisfied.
-    """
-    if not slots:
-        return None
-
-    # Sort latest-first: lowest D-number first (closest to fight)
-    ordered = sorted(slots, key=lambda lbl: countdown_offset(lbl) or 0)
-
-    # Try gap >= 1
-    for lbl in ordered:
+    for lbl in slots:
         off = countdown_offset(lbl) or 0
-        if _min_gap(off, assigned) >= 1:
-            return lbl
+        gap = _min_gap(off, assigned)
 
-    # No gap possible — take closest to fight
-    return ordered[0]
+        # Hard preference: avoid consecutive active days whenever possible.
+        spacing_penalty = 0 if gap >= 2 else (1 if gap == 1 else 3)
+        target_distance = abs(off - target)
+
+        # Cost-direction tie-breaker preserves shape without forcing extremes.
+        if cost == "high":
+            direction_penalty = -off
+        elif cost == "low":
+            direction_penalty = off
+        else:
+            direction_penalty = abs(off - target)
+
+        key = (spacing_penalty, target_distance, direction_penalty, -off)
+        if best_key is None or key < best_key:
+            best_key = key
+            best_label = lbl
+
+    return best_label
 
 
 # ---------------------------------------------------------------------------
@@ -215,11 +231,11 @@ def place_roles_in_countdown(
     pool = list(available)  # mutable working pool
 
     # ── 5. Place high / medium cost roles ────────────────────────────────────
-    #      Prefer earlier slots (higher D-offset) with spacing
     for role in high_medium:
         if not pool:
             break
-        lbl = _pick_earlier(pool, assigned)
+        cost = role_cost(role)
+        lbl = _pick_slot(pool, assigned, cost=cost)
         if lbl:
             unlocked_pairs.append((role, lbl))
             pool.remove(lbl)
@@ -228,11 +244,10 @@ def place_roles_in_countdown(
                 assigned.append(off)
 
     # ── 6. Place low cost roles ──────────────────────────────────────────────
-    #      Prefer later slots (lower D-offset, closer to fight) with spacing
     for role in low_cost:
         if not pool:
             break
-        lbl = _pick_later(pool, assigned)
+        lbl = _pick_slot(pool, assigned, cost="low")
         if lbl:
             unlocked_pairs.append((role, lbl))
             pool.remove(lbl)
