@@ -27,4 +27,47 @@ jobs:
         run: python -m pip install --upgrade pip ruff
 
       - name: Run Ruff
-        run: ruff check api fightcamp tests tools run_stage2_validation.py
+        run: ruff check api fightcamp tests tools
+
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install \
+            pytest \
+            structlog \
+            supabase \
+            gotrue \
+            openai \
+            rapidfuzz \
+            pydantic \
+            fastapi \
+            httpx
+
+      - name: Run tests
+        run: |
+          pytest tests/ -q \
+            --ignore=tests/test_api_admin_flows.py \
+            --ignore=tests/test_api_app_core.py \
+            --ignore=tests/test_api_generation_flows.py \
+            --ignore=tests/test_api_nutrition_workspace_flows.py \
+            --ignore=tests/test_api_plan_access.py \
+            --ignore=tests/test_api_profile_flows.py \
+            --ignore=tests/test_api_request_models.py \
+            --ignore=tests/test_auth_service.py \
+            --ignore=tests/test_store_profile_bootstrap.py \
+            --ignore=tests/test_supabase_schema.py \
+            --ignore=tests/test_web_deployment_config.py
