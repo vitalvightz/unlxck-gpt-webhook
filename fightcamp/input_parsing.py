@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -124,6 +124,8 @@ _UTC_OFFSET_PATTERN = re.compile(
     r"^(?:UTC|GMT)?\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?$",
     re.IGNORECASE,
 )
+_PLATFORM_DEFAULT_TIMEZONE = "Europe/London"
+_HAS_EXPLICIT_TZ_PATTERN = re.compile(r"(?:Z|[+-]\d{2}:?\d{2})$", re.IGNORECASE)
 
 
 def _field_matches_label(field_label: str, target_label: str) -> bool:
@@ -237,11 +239,32 @@ def _resolve_timezone(value: str | None) -> timezone | ZoneInfo | None:
     return timezone(offset)
 
 
-def _athlete_calendar_now(athlete_timezone: str | None = None) -> datetime:
-    tzinfo = _resolve_timezone(athlete_timezone)
-    if tzinfo is None:
-        return _calendar_now()
-    return _utc_now().replace(tzinfo=timezone.utc).astimezone(tzinfo).replace(tzinfo=None)
+def _business_timezone(athlete_timezone: str | None = None) -> timezone | ZoneInfo:
+    return (
+        _resolve_timezone(athlete_timezone)
+        or _resolve_timezone(_PLATFORM_DEFAULT_TIMEZONE)
+        or timezone.utc
+    )
+
+
+def _athlete_calendar_now(athlete_timezone: str | None = None, *, now_utc: datetime | None = None) -> datetime:
+    tzinfo = _business_timezone(athlete_timezone)
+    reference_utc = now_utc or _utc_now()
+    return reference_utc.replace(tzinfo=timezone.utc).astimezone(tzinfo).replace(tzinfo=None)
+
+
+def _fight_local_date(raw_value: str, fight_date: datetime, tzinfo: timezone | ZoneInfo) -> date:
+    raw_text = (raw_value or "").strip()
+    if _DATE_ONLY_PATTERN.match(raw_text):
+        return fight_date.date()
+
+    if _HAS_EXPLICIT_TZ_PATTERN.search(raw_text):
+        return fight_date.replace(tzinfo=timezone.utc).astimezone(tzinfo).date()
+
+    if fight_date.tzinfo is not None:
+        return fight_date.astimezone(tzinfo).date()
+
+    return fight_date.replace(tzinfo=tzinfo).date()
 
 
 def normalize_days_until_fight(days_until_fight: int | None) -> int | None:
@@ -391,14 +414,10 @@ def _compute_days_until_fight(
     athlete_timezone: str | None = None,
     now: datetime | None = None,
 ) -> int | None:
-    if _DATE_ONLY_PATTERN.match((raw_value or "").strip()):
-        reference = now or _athlete_calendar_now(athlete_timezone)
-        raw_days = (fight_date.date() - reference.date()).days
-    else:
-        reference = now or _utc_now()
-        if reference.tzinfo:
-            reference = reference.astimezone(timezone.utc).replace(tzinfo=None)
-        raw_days = int((fight_date - reference).total_seconds() // 86400)
+    tzinfo = _business_timezone(athlete_timezone)
+    reference = _athlete_calendar_now(athlete_timezone, now_utc=now)
+    fight_local_date = _fight_local_date(raw_value, fight_date, tzinfo)
+    raw_days = (fight_local_date - reference.date()).days
     return normalize_days_until_fight(raw_days)
 
 
