@@ -1473,6 +1473,42 @@ export function PlanIntakeForm() {
         {currentStep === 2 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
+              {availabilityConsistency.hardError || availabilityConsistency.softWarning ? (
+                <article className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
+                  <p className="kicker">Consistency check</p>
+                  <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
+                    {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
+                  </p>
+                </article>
+              ) : null}
+              {sparringConsistency.hardError || sparringConsistency.softWarning ? (
+                <article className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
+                  <p className="kicker">Sparring check</p>
+                  <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
+                    {sparringConsistency.hardError ?? sparringConsistency.softWarning}
+                  </p>
+                </article>
+              ) : null}
+              {hardSparringWarning.message ? (
+                <article className={`support-panel ${hardSparringWarningLocked ? "support-panel-alert" : ""}`.trim()}>
+                  <p className="kicker">High-contact warning</p>
+                  <p className="muted">{hardSparringWarning.message}</p>
+                  <label className={`checkbox-card ${hardSparringWarningAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
+                    <input
+                      type="checkbox"
+                      checked={hardSparringWarningAcknowledged}
+                      onChange={(event) => {
+                        setAcknowledgedHardSparringWarningKey(
+                          event.target.checked ? hardSparringWarning.acknowledgementContextKey : null,
+                        );
+                      }}
+                    />
+                    <span className="checkbox-card-copy">
+                      <span className="checkbox-card-title">I understand this hard sparring load needs deliberate recovery planning.</span>
+                    </span>
+                  </label>
+                </article>
+              ) : null}
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Schedule</p>
@@ -1593,42 +1629,6 @@ export function PlanIntakeForm() {
                   <li>Equipment Access: {selectedEquipmentAccess}</li>
                 </ul>
               </div>
-              {availabilityConsistency.hardError || availabilityConsistency.softWarning ? (
-                <div className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
-                  <p className="kicker">Consistency check</p>
-                  <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
-                    {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
-                  </p>
-                </div>
-              ) : null}
-              {sparringConsistency.hardError || sparringConsistency.softWarning ? (
-                <div className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
-                  <p className="kicker">Sparring check</p>
-                  <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
-                    {sparringConsistency.hardError ?? sparringConsistency.softWarning}
-                  </p>
-                </div>
-              ) : null}
-              {hardSparringWarning.message ? (
-                <div className={`support-panel ${hardSparringWarningLocked ? "support-panel-alert" : ""}`.trim()}>
-                  <p className="kicker">High-contact warning</p>
-                  <p className="muted">{hardSparringWarning.message}</p>
-                  <label className={`checkbox-card ${hardSparringWarningAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
-                    <input
-                      type="checkbox"
-                      checked={hardSparringWarningAcknowledged}
-                      onChange={(event) => {
-                        setAcknowledgedHardSparringWarningKey(
-                          event.target.checked ? hardSparringWarning.acknowledgementContextKey : null,
-                        );
-                      }}
-                    />
-                    <span className="checkbox-card-copy">
-                      <span className="checkbox-card-title">I understand this hard sparring load needs deliberate recovery planning.</span>
-                    </span>
-                  </label>
-                </div>
-              ) : null}
               <div className="support-panel">
                 <p className="kicker">Preference</p>
                 <p className="muted">This field is for training feel only, not injuries or general notes.</p>
@@ -1645,6 +1645,34 @@ export function PlanIntakeForm() {
                   <p className="kicker">Restrictions</p>
                   <h2 className="form-section-title">Injuries or restrictions</h2>
                 </div>
+                {injuryMismatchExists ? (
+                  <div className={`support-panel ${injuryGateLocked ? "support-panel-alert" : ""}`.trim()}>
+                    <p className="kicker">Warning: existing injury note will be overwritten</p>
+                    <p className={injuryGateLocked ? "error-text" : "muted"}>
+                      The structured fields produce a summary that differs from the existing injury note. Saving or generating will replace the original wording with the structured summary. Review the difference below before continuing.
+                    </p>
+                    <div className="injury-overwrite-diff">
+                      <div className="injury-overwrite-diff-block">
+                        <p className="kicker">Original note</p>
+                        <p className="muted">{originalInjuriesText}</p>
+                      </div>
+                      <div className="injury-overwrite-diff-block">
+                        <p className="kicker">Generated summary</p>
+                        <p className="muted">{form.injuries?.trim() || "No structured summary generated."}</p>
+                      </div>
+                    </div>
+                    <label className={`checkbox-card ${injuryOverwriteAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
+                      <input
+                        type="checkbox"
+                        checked={injuryOverwriteAcknowledged}
+                        onChange={(event) => setInjuryOverwriteAcknowledged(event.target.checked)}
+                      />
+                      <span className="checkbox-card-copy">
+                        <span className="checkbox-card-title">I understand the original note may be simplified or replaced. Continue with the structured summary.</span>
+                      </span>
+                    </label>
+                  </div>
+                ) : null}
                 <label className={`checkbox-card ${noRestrictions ? "checkbox-card-checked" : ""}`.trim()}>
                   <input
                     type="checkbox"
@@ -1817,34 +1845,6 @@ export function PlanIntakeForm() {
                     {plannerRestrictionPreview}
                   </p>
                 </div>
-                {injuryMismatchExists ? (
-                  <div className={`support-panel ${injuryGateLocked ? "support-panel-alert" : ""}`.trim()}>
-                    <p className="kicker">Warning: existing injury note will be overwritten</p>
-                    <p className="muted">
-                      The structured fields produce a summary that differs from the existing injury note. Saving or generating will replace the original wording with the structured summary. Review the difference below before continuing.
-                    </p>
-                    <div className="injury-overwrite-diff">
-                      <div className="injury-overwrite-diff-block">
-                        <p className="kicker">Original note</p>
-                        <p className="muted">{originalInjuriesText}</p>
-                      </div>
-                      <div className="injury-overwrite-diff-block">
-                        <p className="kicker">Generated summary</p>
-                        <p className="muted">{form.injuries?.trim() || "No structured summary generated."}</p>
-                      </div>
-                    </div>
-                    <label className={`checkbox-card ${injuryOverwriteAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
-                      <input
-                        type="checkbox"
-                        checked={injuryOverwriteAcknowledged}
-                        onChange={(event) => setInjuryOverwriteAcknowledged(event.target.checked)}
-                      />
-                      <span className="checkbox-card-copy">
-                        <span className="checkbox-card-title">I understand the original note may be simplified or replaced. Continue with the structured summary.</span>
-                      </span>
-                    </label>
-                  </div>
-                ) : null}
               </article>
             </div>
 
