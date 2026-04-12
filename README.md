@@ -84,7 +84,7 @@ web/                    Next.js frontend
   components/           UI components
   lib/                  API client, types, utilities
 
-tests/                  Pytest test suite (678 tests)
+tests/                  Pytest test suite
 tools/                  Developer scripts (bank audits, validation, generation)
 notes/                  Tag documentation and reference material
 ```
@@ -191,7 +191,7 @@ pytest --ignore=tests/test_api_admin_flows.py \
        --ignore=tests/test_api_generation_flows.py
 ```
 
-678 tests covering: injury guard, sparring advisories, stage 2 payload modes, planning brief, conditioning diagnostics, surgical rehab integration, input parsing, restriction parsing, and more.
+Tests covering: injury guard, sparring advisories, stage 2 payload modes, planning brief, conditioning diagnostics, surgical rehab integration, input parsing, restriction parsing, and more.
 
 ---
 
