@@ -101,9 +101,6 @@ GOAL_TAG_MAP = {
 
 WEAKNESS_TAG_MAP = {
     "core stability": ["core", "anti_rotation"],
-    "core strength": ["core", "anti_rotation"],
-    "trunk strength": ["core", "anti_rotation"],
-    "trunk_strength": ["core", "anti_rotation"],
     "cns fatigue": ["cns_freshness", "parasympathetic"],
     "speed / reaction": ["speed", "reaction", "reactive", "coordination"],
     "lateral movement": ["lateral_power", "agility", "balance"],
