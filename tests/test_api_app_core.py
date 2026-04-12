@@ -64,7 +64,7 @@ def test_run_stage1_planner_uses_worker_thread():
     main_thread_id = threading.get_ident()
     seen_thread_ids: list[int] = []
 
-    async def planner(payload: dict) -> dict:
+    def planner(payload: dict) -> dict:
         seen_thread_ids.append(threading.get_ident())
         return {"payload": payload}
 

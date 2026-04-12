@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import copy
 import threading
 from dataclasses import dataclass, field
@@ -552,7 +551,7 @@ SYSTEM_SCENARIOS = [
 ]
 
 
-async def _planner(payload: dict) -> dict:
+def _planner(payload: dict) -> dict:
     return stage1_result()
 
 

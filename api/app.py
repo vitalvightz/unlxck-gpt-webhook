@@ -11,7 +11,7 @@ from contextlib import suppress
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from threading import Lock
-from typing import Any, Awaitable, Callable
+from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, status
@@ -21,7 +21,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
-from fightcamp.main import generate_plan
+from fightcamp.main import generate_plan_sync
 from fightcamp.plan_pipeline import prime_plan_banks
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
@@ -59,7 +59,7 @@ from .stage2_automation import (
 )
 from .store import AppStore, SupabaseAppStore
 
-Planner = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
+Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
@@ -301,8 +301,8 @@ def _plan_generate_rate_limit_window_seconds() -> float:
         return 60.0
 
 
-async def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
-    return await generate_plan(payload)
+def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
+    return generate_plan_sync(payload)
 
 
 def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
@@ -314,7 +314,7 @@ def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
 
 
 async def _run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
-    return await asyncio.to_thread(lambda: asyncio.run(planner_fn(payload)))
+    return await asyncio.to_thread(planner_fn, payload)
 
 
 def _decode_structured_text(value: Any) -> dict[str, Any] | None:
