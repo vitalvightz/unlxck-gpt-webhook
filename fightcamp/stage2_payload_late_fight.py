@@ -59,14 +59,25 @@ _WEEKDAY_NAMES = [
 ]
 
 
+def _coerce_days(days_until_fight: Any, default: int | None = None) -> int | None:
+    """Coerce days_until_fight to int, returning *default* on failure.
+
+    Centralises the 19 scattered try/except (TypeError, ValueError) blocks
+    that previously appeared across this module. Every function that needs a
+    numeric days value calls this once at the top instead of repeating the
+    same three-line pattern inline.
+    """
+    try:
+        return int(days_until_fight)
+    except (TypeError, ValueError):
+        return default
 
 
 
 
 def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return None
     if 8 <= days <= 13:
         return 2
@@ -85,17 +96,15 @@ def _future_declared_weekdays_with_countdown(
     """Resolve declared weekdays into real upcoming countdown instances."""
     ordered_declared = _ordered_weekdays(declared_weekdays)
     if not plan_creation_weekday:
-        try:
-            days = int(days_until_fight)
-        except (TypeError, ValueError):
+        days = _coerce_days(days_until_fight)
+        if days is None:
             return []
         return [
             {"weekday": weekday, "countdown_label": None, "offset": days}
             for weekday in ordered_declared
         ]
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return []
     if days <= 0:
         return []
@@ -205,9 +214,8 @@ def _filter_past_weekdays(
     """
     if not plan_creation_weekday or not weekdays:
         return weekdays
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return weekdays
     if days > 7:
         return weekdays
@@ -232,9 +240,8 @@ def _fight_weekday_from_context(
     """
     if not plan_creation_weekday:
         return None
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return None
     if days < 0:
         return None
@@ -260,9 +267,8 @@ def _countdown_weekday_map(
     if fight_weekday is None:
         return {}
 
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return {}
 
     if days < 0:
@@ -440,9 +446,8 @@ def _suppress_standalone_glycolytic(active_hard_spar_days: list[str], athlete_mo
 
 
 def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fight: Any) -> list[str]:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return []
     if days != 3:
         return []
@@ -478,9 +483,8 @@ def _d3_alactic_suppression_reasons(athlete_model: dict[str, Any], days_until_fi
 
 
 def _allow_late_fight_alactic_sharpness(athlete_model: dict[str, Any], days_until_fight: Any) -> bool:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return False
     if days >= 4:
         return True
@@ -490,9 +494,8 @@ def _allow_late_fight_alactic_sharpness(athlete_model: dict[str, Any], days_unti
 
 
 def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | None:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return None
     if 8 <= days <= 13:
         return 3
@@ -506,9 +509,8 @@ def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | 
 
 
 def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return None
     if 8 <= days <= 13:
         return 4
@@ -524,9 +526,8 @@ def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
 
 
 def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return []
     if 8 <= days <= 13:
         return ["multiple_hard_sparring_exposures", "standalone_glycolytic", "primary_strength_anchor"]
@@ -567,9 +568,8 @@ def _role_anchor(role_key: str) -> str:
 
 
 def _fight_week_override_band(days_until_fight: Any) -> str:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return "none"
     if days < 0:
         return "none"
@@ -638,9 +638,8 @@ def _fight_week_override_payload(days_until_fight: Any) -> dict[str, Any] | None
 
 
 def _days_out_payload_mode(days_until_fight: Any) -> str:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return "camp_payload"
     if days < 0:
         return "camp_payload"
@@ -652,9 +651,8 @@ def _uses_late_fight_stage2_payload(days_until_fight: Any) -> bool:
 
 
 def _days_out_bucket(days_until_fight: Any) -> str:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return "CAMP"
     if days < 0 or days > 13:
         return "CAMP"
@@ -690,10 +688,7 @@ def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], li
     if mode == "late_fight_transition_payload":
         return ["recovery", "technical", "sharpness"], ["full_strength_block", "glycolytic_build", "broad_weekly_architecture", "hard_sparring", "anchor_structure", "standalone_conditioning"]
     if mode == "late_fight_session_payload":
-        try:
-            days = int(days_until_fight)
-        except (TypeError, ValueError):
-            days = 3
+        days = _coerce_days(days_until_fight, default=3)
         if days == 2:
             return ["primer", "technical"], ["conditioning", "hard_sparring", "full_strength_block", "glycolytic_build", "broad_weekly_architecture"]
         allowed = ["recovery", "technical"]
@@ -806,10 +801,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             ],
         }
     if mode == "late_fight_session_payload":
-        try:
-            days = int(days_until_fight)
-        except (TypeError, ValueError):
-            days = 3
+        days = _coerce_days(days_until_fight, default=3)
         allow_alactic_sharpness = _allow_late_fight_alactic_sharpness(athlete_model, days_until_fight)
         return {
             "mode": mode,
@@ -1225,10 +1217,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
         return roles
     if mode == "late_fight_session_payload":
         roles: list[dict[str, Any]] = []
-        try:
-            days = int(days_until_fight)
-        except (TypeError, ValueError):
-            days = 3
+        days = _coerce_days(days_until_fight, default=3)
         if days == 2:
             return [
                 _late_fight_role_entry(
@@ -1294,9 +1283,8 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     resolved_map = _resolve_countdown_weekday_with_availability(countdown_map, available_days)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
 
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return []
 
     if days < 0:
@@ -1387,9 +1375,8 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
     if not declared_hard_days:
         return None
 
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return None
 
     surviving_instances: list[dict[str, Any]] = []
