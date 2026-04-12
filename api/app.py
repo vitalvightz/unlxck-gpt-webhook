@@ -226,6 +226,25 @@ def _restricted_coach_controls(workspace: NutritionWorkspaceState) -> dict[str, 
     return workspace.nutrition_coach_controls.model_dump(mode="json")
 
 
+def _update_profile_with_nutrition_fallback(
+    *,
+    store: AppStore,
+    athlete_id: str,
+    update: ProfileUpdateRequest,
+) -> ProfileRecord:
+    try:
+        return _map_profile_row(store.update_profile(athlete_id, update))
+    except HTTPException as exc:
+        if exc.detail != "failed to update profile" or update.nutrition_profile is None:
+            raise
+        logger.warning(
+            "[nutrition] retrying profile update without nutrition_profile athlete_id=%s",
+            athlete_id,
+        )
+        fallback_update = update.model_copy(update={"nutrition_profile": None})
+        return _map_profile_row(store.update_profile(athlete_id, fallback_update))
+
+
 def _cors_origins() -> list[str]:
     value = os.getenv(
         "APP_CORS_ORIGINS",
@@ -747,11 +766,10 @@ def create_app(
         )
 
         if current_workspace.source == "intake" and current_workspace.intake_id:
-            updated_profile = _map_profile_row(
-                store.update_profile(
-                    profile.athlete_id,
-                    ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
-                )
+            updated_profile = _update_profile_with_nutrition_fallback(
+                store=store,
+                athlete_id=profile.athlete_id,
+                update=ProfileUpdateRequest(nutrition_profile=normalized_update.nutrition_profile),
             )
             store.update_intake(
                 current_workspace.intake_id,
@@ -762,14 +780,13 @@ def create_app(
             refreshed_intake = store.get_latest_intake(profile.athlete_id)
             return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
 
-        updated_profile = _map_profile_row(
-            store.update_profile(
-                profile.athlete_id,
-                ProfileUpdateRequest(
-                    nutrition_profile=normalized_update.nutrition_profile,
-                    onboarding_draft=merged_payload,
-                ),
-            )
+        updated_profile = _update_profile_with_nutrition_fallback(
+            store=store,
+            athlete_id=profile.athlete_id,
+            update=ProfileUpdateRequest(
+                nutrition_profile=normalized_update.nutrition_profile,
+                onboarding_draft=merged_payload,
+            ),
         )
         refreshed_intake = store.get_latest_intake(profile.athlete_id)
         return build_nutrition_workspace(profile=updated_profile, latest_intake_row=refreshed_intake)
