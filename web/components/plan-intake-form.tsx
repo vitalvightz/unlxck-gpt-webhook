@@ -1474,25 +1474,25 @@ export function PlanIntakeForm() {
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
               {availabilityConsistency.hardError || availabilityConsistency.softWarning ? (
-                <article className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
+                <div className={`support-panel ${availabilityConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
                   <p className="kicker">Consistency check</p>
                   <p className={availabilityConsistency.hardError ? "error-text" : "muted"}>
                     {availabilityConsistency.hardError ?? availabilityConsistency.softWarning}
                   </p>
-                </article>
+                </div>
               ) : null}
               {sparringConsistency.hardError || sparringConsistency.softWarning ? (
-                <article className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
+                <div className={`support-panel ${sparringConsistency.hardError ? "support-panel-alert" : ""}`.trim()}>
                   <p className="kicker">Sparring check</p>
                   <p className={sparringConsistency.hardError ? "error-text" : "muted"}>
                     {sparringConsistency.hardError ?? sparringConsistency.softWarning}
                   </p>
-                </article>
+                </div>
               ) : null}
               {hardSparringWarning.message ? (
-                <article className={`support-panel ${hardSparringWarningLocked ? "support-panel-alert" : ""}`.trim()}>
+                <div className={`support-panel ${hardSparringWarningLocked ? "support-panel-alert" : ""}`.trim()}>
                   <p className="kicker">High-contact warning</p>
-                  <p className="muted">{hardSparringWarning.message}</p>
+                  <p className={hardSparringWarningLocked ? "error-text" : "muted"}>{hardSparringWarning.message}</p>
                   <label className={`checkbox-card ${hardSparringWarningAcknowledged ? "checkbox-card-checked" : ""}`.trim()}>
                     <input
                       type="checkbox"
@@ -1507,7 +1507,7 @@ export function PlanIntakeForm() {
                       <span className="checkbox-card-title">I understand this hard sparring load needs deliberate recovery planning.</span>
                     </span>
                   </label>
-                </article>
+                </div>
               ) : null}
               <article className="step-card">
                 <div className="form-section-header">
