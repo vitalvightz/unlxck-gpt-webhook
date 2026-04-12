@@ -542,6 +542,9 @@ class TestHandoffText:
         text = self._build_handoff(10)
 
         assert "Placement governs day assignment only" in text
+        assert "gym/coach owns boxing load; app owns S&C and rehab inserts" in text
         assert "app-owned roles" in text
         assert "surviving_hard_spar_days" in text
         assert "downgraded_declared_spar_days" in text
+        assert "source of truth" in text
+        assert "otherwise make day choice look arbitrary" in text

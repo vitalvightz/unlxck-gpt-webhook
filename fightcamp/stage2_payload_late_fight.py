@@ -1642,12 +1642,14 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "COUNTDOWN CONTRACT\n"
         "One coherent countdown truth. Lead every active day D-N first, weekday second — use resolved countdown_display_label when present.\n"
         "Placement governs day assignment only — it never expands the visible session list.\n"
+        "State the ownership split: gym/coach owns boxing load; app owns S&C and rehab inserts.\n"
         "Render only app-owned roles as athlete-facing sessions; boxing schedule is context.\n"
         "Partial prescription: label exactly — Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
         "Declared hard-spar days are fixed. Downgrade the dose; never move or drop the day.\n"
-        "If late_fight_plan_spec.surviving_hard_spar_days / downgraded_declared_spar_days are present, add one short deterministic sentence using those exact days (hard days first, downgraded days second).\n"
+        "If late_fight_plan_spec.surviving_hard_spar_days / late_fight_plan_spec.downgraded_declared_spar_days are present, use those fields as source of truth and add one short deterministic sentence (hard days first, downgraded days second).\n"
+        "Add one short rationale only when placement/compression would otherwise make day choice look arbitrary.\n"
         "One hard-spar doctrine per output. No split schedule realities."
     )
     if payload_mode == "fight_day_protocol_payload":
