@@ -365,7 +365,7 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
     if tags & {"loaded_carry", "axial_loading", "mech_axial_heavy"}:
         derived.add("axial_loading")
     if tags & {"cod_high", "mech_change_of_direction"}:
-        derived.add("change_of_direction")
+        derived.add("cod_high")
 
     return risk_tags | derived
 
