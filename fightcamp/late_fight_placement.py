@@ -279,7 +279,7 @@ def _pick_slot(
         elif cost == "low":
             direction_penalty = off
         else:
-            direction_penalty = abs(off - target)
+            direction_penalty = -off
 
         key = (
             spacing_penalty,
