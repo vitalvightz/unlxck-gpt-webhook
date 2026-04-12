@@ -155,8 +155,11 @@ async def run_generation_job(
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
-            finalized_result = await stage2.finalize(stage1_result=stage1_result)
-            final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
+            if bool((stage1_result or {}).get("injury_triage", {}).get("should_block_stage2")):
+                final_result = {**stage1_result, "full_name": request_body.athlete.full_name}
+            else:
+                finalized_result = await stage2.finalize(stage1_result=stage1_result)
+                final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
             job = await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
