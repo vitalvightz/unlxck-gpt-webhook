@@ -361,7 +361,7 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
         derived.update({"high_impact", "high_impact_lower"})
 
     if tags & {"cervical_load", "cervical_extension_loaded", "cervical_flexion_loaded", "neck_bridge", "neck"}:
-        derived.add("cervical_loading")
+        derived.add("cervical_load")
     if tags & {"loaded_carry", "axial_loading", "mech_axial_heavy"}:
         derived.add("axial_loading")
     if tags & {"cod_high", "mech_change_of_direction"}:
