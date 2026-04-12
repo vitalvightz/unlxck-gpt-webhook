@@ -104,6 +104,7 @@ def test_stage2_outputs_present_when_pdf_disabled(monkeypatch):
     assert result["stage2_payload"] is not None
     assert result["planning_brief"] is not None
     assert result["stage2_handoff_text"]
+    assert result["parsing_metadata"] == result["stage2_payload"]["input_parsing_metadata"]
 
 
 def test_stage2_outputs_present_when_pdf_enabled(monkeypatch):
@@ -164,4 +165,3 @@ def test_env_var_disabled_pdf_default(monkeypatch):
     monkeypatch.delenv("UNLXCK_ENABLE_PLAN_PDF", raising=False)
     importlib.reload(main_module)
     assert main_module._PDF_ENABLED_BY_DEFAULT is False
-

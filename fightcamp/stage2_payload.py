@@ -26,7 +26,6 @@ from .stage2_payload_late_fight import (
     _late_fight_rendering_rules,
     _uses_late_fight_stage2_payload,
 )
-from .input_parsing import _calendar_now
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS

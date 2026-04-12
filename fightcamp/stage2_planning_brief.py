@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from .input_parsing import _calendar_now
+from .input_parsing import _utc_now
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .training_context import TrainingContext, allocate_sessions
@@ -632,7 +632,7 @@ def _build_athlete_model(
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
         "short_notice": short_notice,
-        "plan_creation_weekday": _calendar_now().strftime("%A").lower(),
+        "plan_creation_weekday": _utc_now().strftime("%A").lower(),
         "readiness_flags": _derive_readiness_flags(
             fatigue=training_context.fatigue,
             weight_cut_risk=training_context.weight_cut_risk,
@@ -1516,5 +1516,4 @@ _WEEKLY_STAGE_TEMPLATES = {
         },
     },
 }
-
 

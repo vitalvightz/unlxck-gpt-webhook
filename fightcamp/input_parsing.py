@@ -210,10 +210,6 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _calendar_now() -> datetime:
-    return datetime.now().astimezone().replace(tzinfo=None)
-
-
 def _resolve_timezone(value: str | None) -> timezone | ZoneInfo | None:
     normalized = str(value or "").strip()
     if not normalized:
@@ -545,13 +541,16 @@ class PlanInput:
         )
 
         if not raw_athlete_timezone:
+            effective_athlete_timezone = "UTC"
             athlete_timezone_metadata = _metadata("defaulted_missing", "athlete_timezone_missing")
         elif _resolve_timezone(raw_athlete_timezone) is None:
+            effective_athlete_timezone = "UTC"
             athlete_timezone_metadata = _metadata(
                 "defaulted_missing",
                 "invalid_athlete_timezone_fallback_to_platform_default",
             )
         else:
+            effective_athlete_timezone = raw_athlete_timezone
             athlete_timezone_metadata = _metadata("user_supplied")
 
         weeks_out: int | str = "N/A"
@@ -560,12 +559,14 @@ class PlanInput:
             days_until_fight = _compute_days_until_fight(
                 next_fight_date,
                 fight_date,
-                athlete_timezone=values["athlete_timezone"],
+                athlete_timezone=effective_athlete_timezone,
             )
             weeks_out = max(1, days_until_fight // 7) if days_until_fight is not None else "N/A"
 
+        normalized_values = {**values, "athlete_timezone": effective_athlete_timezone}
+
         return cls(
-            **values,
+            **normalized_values,
             next_fight_date=next_fight_date,
             injuries=injuries,
             guided_injury=guided_injury,
@@ -598,8 +599,6 @@ class PlanInput:
             issues.append("missing_fighting_style_technical")
         if not self.next_fight_date.strip():
             issues.append("missing_next_fight_date")
-        elif parse_fight_date(self.next_fight_date) is None:
-            issues.append("invalid_next_fight_date")
         if not self.training_days:
             issues.append("missing_training_availability")
         if self.training_frequency < 1:
