@@ -1373,6 +1373,44 @@ def _visible_insert_session_sequence(session_sequence: list[dict[str, Any]]) -> 
     ]
 
 
+def _hard_sparring_context_line(days_until_fight: Any, athlete_model: dict[str, Any]) -> str:
+    """Return one short athlete-facing clarification for declared hard sparring."""
+    plan_weekday = athlete_model.get("plan_creation_weekday")
+    declared_hard_days = _filter_past_weekdays(
+        _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+        plan_weekday,
+        days_until_fight,
+    )
+    if not declared_hard_days:
+        return ""
+
+    try:
+        days = int(days_until_fight)
+    except (TypeError, ValueError):
+        return ""
+
+    if days <= 6:
+        return "Declared hard-spar days in this countdown window are technical-rhythm only (no hard contact)."
+
+    classified = _classify_declared_hard_days_for_late_window(
+        plan_creation_weekday=plan_weekday,
+        days_until_fight=days,
+        declared_weekdays=declared_hard_days,
+    )
+    hard_allowed = [
+        entry for entry in classified
+        if entry.get("status") in {"hard_allowed", "hard_allowed_but_final_window"}
+    ]
+    surviving = _select_capped_declared_hard_day_instances(
+        hard_allowed,
+        _declared_hard_spar_cap(days),
+        protected_day=_protected_collision_owner_day(athlete_model),
+    )
+    if surviving and len(surviving) < len(classified):
+        return "Only capped declared hard-spar days stay hard; remaining declared spar days are technical rhythm."
+    return ""
+
+
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "pre_fight_compressed_payload":
@@ -1551,6 +1589,9 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     }
     if max_blocks is not None:
         spec["max_blocks_per_session"] = max_blocks
+    hard_sparring_context_line = _hard_sparring_context_line(days_until_fight, athlete_model)
+    if hard_sparring_context_line:
+        spec["hard_sparring_context_line"] = hard_sparring_context_line
     return spec
 
 
@@ -1564,6 +1605,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
         "Full prescription: label — Countdown schedule.\n"
         "D-0 = fight-day protocol only. Never a training session.\n"
         "Declared hard-spar days are fixed. Downgrade the dose; never move or drop the day.\n"
+        "If declared hard-spar days are downgraded/suppressed in this window, add one short inline note that they are technical-rhythm only.\n"
         "One hard-spar doctrine per output. No split schedule realities."
     )
     if payload_mode == "fight_day_protocol_payload":
