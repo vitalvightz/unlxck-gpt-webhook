@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -9,6 +9,12 @@ from .injury_formatting import parse_injuries_and_restrictions, parse_injury_ent
 from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry
+
+
+class PlanInputValidationError(ValueError):
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
 
 
 def _normalize_list(field: str | None) -> list[str]:
@@ -439,9 +445,12 @@ class PlanInput:
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
+    parsing_metadata: dict[str, dict[str, str]] = field(default_factory=dict)
 
-    @classmethod
-    def from_payload(cls, data: dict) -> "PlanInput":
+    @staticmethod
+    def _normalize_payload(
+        data: dict,
+    ) -> tuple[dict[str, str], str, str, GuidedInjury | None, list[dict[str, str | None]], list[ParsedRestriction]]:
         fields = _extract_fields(data)
         values = _get_plan_field_values(fields)
         next_fight_date = get_date_value("When is your next fight?", fields)
@@ -453,6 +462,64 @@ class PlanInput:
             parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
         else:
             parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
+        return values, next_fight_date, injuries, guided_injury, parsed_injuries, parsed_restrictions
+
+    @staticmethod
+    def _validate_training_frequency(
+        frequency_raw: str,
+        training_days: list[str],
+        *,
+        metadata: dict[str, dict[str, str]],
+    ) -> int:
+        if frequency_raw.strip():
+            try:
+                training_frequency = int(frequency_raw)
+            except (TypeError, ValueError) as exc:
+                raise PlanInputValidationError(
+                    "invalid_training_frequency_format",
+                    "invalid weekly training frequency: expected integer",
+                ) from exc
+            metadata["training_frequency"] = {"source": "user_supplied"}
+            return training_frequency
+
+        inferred_frequency = len(training_days)
+        metadata["training_frequency"] = {
+            "source": "system_inferred",
+            "reason": "missing_frequency_raw_inferred_from_training_days",
+        }
+        return inferred_frequency
+
+    @staticmethod
+    def _validate_fight_timing_strategy(next_fight_date: str, athlete_timezone: str) -> None:
+        if not next_fight_date:
+            return
+        parsed = parse_fight_date(next_fight_date)
+        if parsed is None:
+            return
+        is_date_only = _DATE_ONLY_PATTERN.match(next_fight_date.strip()) is not None
+        if not is_date_only:
+            return
+        if not athlete_timezone.strip():
+            raise PlanInputValidationError(
+                "missing_timezone_strategy",
+                "missing timezone strategy: provide Athlete Time Zone for date-only fight dates"
+            )
+        if _resolve_timezone(athlete_timezone) is None:
+            raise PlanInputValidationError(
+                "invalid_timezone_strategy",
+                "invalid timezone strategy: Athlete Time Zone must be an IANA timezone or UTC offset"
+            )
+
+    @classmethod
+    def from_payload(cls, data: dict) -> "PlanInput":
+        (
+            values,
+            next_fight_date,
+            injuries,
+            guided_injury,
+            parsed_injuries,
+            parsed_restrictions,
+        ) = cls._normalize_payload(data)
 
         training_days = [d.strip() for d in values["available_days"].split(",") if d.strip()]
         hard_sparring_days = [
@@ -461,10 +528,23 @@ class PlanInput:
         technical_skill_days = [
             d.strip() for d in values["technical_skill_days_raw"].split(",") if d.strip()
         ]
-        try:
-            training_frequency = int(values["frequency_raw"])
-        except (TypeError, ValueError):
-            training_frequency = len(training_days)
+
+        parsing_metadata: dict[str, dict[str, str]] = {
+            "available_days": {
+                "source": "user_supplied" if values["available_days"].strip() else "defaulted_missing"
+            },
+            "athlete_timezone": {
+                "source": "user_supplied" if values["athlete_timezone"].strip() else "defaulted_missing"
+            },
+        }
+
+        training_frequency = cls._validate_training_frequency(
+            values["frequency_raw"],
+            training_days,
+            metadata=parsing_metadata,
+        )
+
+        cls._validate_fight_timing_strategy(next_fight_date, values["athlete_timezone"])
 
         weeks_out: int | str = "N/A"
         days_until_fight = None
@@ -490,6 +570,7 @@ class PlanInput:
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,
+            parsing_metadata=parsing_metadata,
         )
 
     @property

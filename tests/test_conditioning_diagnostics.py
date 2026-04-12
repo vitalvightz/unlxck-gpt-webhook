@@ -262,6 +262,49 @@ def test_generate_plan_returns_controlled_error_for_invalid_payload():
     assert result["stage2_payload"] is None
 
 
+def test_generate_plan_returns_structured_code_for_invalid_training_frequency_format():
+    result = asyncio.run(
+        generate_plan(
+            {
+                "data": {
+                    "fields": [
+                        {"label": "Full name", "value": "Test Athlete"},
+                        {"label": "Fighting Style (Technical)", "value": "boxing"},
+                        {"label": "When is your next fight?", "value": "2026-04-26"},
+                        {"label": "Athlete Time Zone", "value": "UTC"},
+                        {"label": "Training Availability", "value": "Mon, Wed"},
+                        {"label": "Weekly Training Frequency", "value": "abc"},
+                    ]
+                }
+            }
+        )
+    )
+
+    assert result["status"] == "invalid_input"
+    assert result["missing_fields"] == ["invalid_training_frequency_format"]
+
+
+def test_generate_plan_returns_structured_code_for_missing_timezone_strategy():
+    result = asyncio.run(
+        generate_plan(
+            {
+                "data": {
+                    "fields": [
+                        {"label": "Full name", "value": "Test Athlete"},
+                        {"label": "Fighting Style (Technical)", "value": "boxing"},
+                        {"label": "When is your next fight?", "value": "2026-04-26"},
+                        {"label": "Training Availability", "value": "Mon, Wed"},
+                        {"label": "Weekly Training Frequency", "value": "4"},
+                    ]
+                }
+            }
+        )
+    )
+
+    assert result["status"] == "invalid_input"
+    assert result["missing_fields"] == ["missing_timezone_strategy"]
+
+
 def test_generate_plan_rejects_missing_generation_requirements():
     result = asyncio.run(
         generate_plan(

@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from time import perf_counter
 
-from .input_parsing import PlanInput
+from .input_parsing import PlanInput, PlanInputValidationError
 from .logging_utils import configure_logging
 from .plan_pipeline import (
     _filter_mindset_blocks,
@@ -109,6 +109,10 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     timer_start = perf_counter()
     try:
         plan_input = PlanInput.from_payload(data)
+    except PlanInputValidationError as exc:
+        _record_timing("parse_input", timer_start)
+        logger.warning("invalid payload: %s", exc)
+        return _invalid_result(str(exc), missing_fields=[exc.code])
     except ValueError as exc:
         _record_timing("parse_input", timer_start)
         logger.warning("invalid payload: %s", exc)

@@ -13,7 +13,7 @@ def _payload(fields: list[dict]) -> dict:
     return {"data": {"fields": fields}}
 
 
-def test_training_frequency_fallback():
+def test_training_frequency_rejects_invalid_numeric_payload():
     data = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},
@@ -21,9 +21,21 @@ def test_training_frequency_fallback():
             {"label": "Training Availability", "value": "Mon, Wed"},
         ]
     )
+    with pytest.raises(ValueError, match="invalid weekly training frequency"):
+        PlanInput.from_payload(data)
+
+
+def test_missing_training_frequency_is_inferred_from_training_days():
+    data = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Training Availability", "value": "Mon, Wed"},
+        ]
+    )
     parsed = PlanInput.from_payload(data)
     assert parsed.training_frequency == 2
     assert parsed.training_days == ["Mon", "Wed"]
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "system_inferred"
 
 
 def test_missing_fight_date_sets_na():
@@ -36,6 +48,7 @@ def test_missing_fight_date_sets_na():
     parsed = PlanInput.from_payload(data)
     assert parsed.weeks_out == "N/A"
     assert parsed.days_until_fight is None
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "defaulted_missing"
 
 
 def test_style_parsing_lowercases():
@@ -55,6 +68,7 @@ def test_past_fight_date_handling_is_explicit():
         [
             {"label": "Full name", "value": "Test Athlete"},
             {"label": "When is your next fight?", "value": "2000-01-01"},
+            {"label": "Athlete Time Zone", "value": "UTC"},
         ]
     )
     parsed = PlanInput.from_payload(data)
@@ -68,6 +82,7 @@ def test_same_day_fight_date_remains_fight_week_active():
         [
             {"label": "Full name", "value": "Test Athlete"},
             {"label": "When is your next fight?", "value": today},
+            {"label": "Athlete Time Zone", "value": "UTC"},
         ]
     )
     parsed = PlanInput.from_payload(data)
@@ -84,6 +99,7 @@ def test_field_alias_matching_for_key_inputs():
             {"label": "Training frequency", "value": "4"},
             {"label": "Available training days", "value": "Mon, Wed, Fri"},
             {"label": "Current injuries", "value": "wrist soreness"},
+            {"label": "Athlete Time Zone", "value": "UTC"},
         ]
     )
     parsed = PlanInput.from_payload(data)
@@ -101,6 +117,7 @@ def test_whitespace_case_insensitive_label_matching():
             {"label": "  weekly training frequency  ", "value": "3"},
             {"label": "  training availability  ", "value": "Tue, Thu"},
             {"label": "  when IS your NEXT fight?  ", "value": "2099-02-01"},
+            {"label": "athlete timezone", "value": "UTC"},
         ]
     )
     parsed = PlanInput.from_payload(data)
@@ -116,6 +133,7 @@ def test_exact_match_still_preferred_over_alias():
             {"label": "When is your next fight?", "value": "2099-03-01"},
             {"label": "Training frequency", "value": "2"},
             {"label": "Weekly Training Frequency", "value": "5"},
+            {"label": "Athlete Time Zone", "value": "UTC"},
         ]
     )
     parsed = PlanInput.from_payload(data)
@@ -189,6 +207,7 @@ def test_contradictory_frequency_and_availability_stay_explicit_for_downstream_r
             {"label": "Weekly Training Frequency", "value": "6"},
             {"label": "Training Availability", "value": "Mon, Wed"},
             {"label": "When is your next fight?", "value": "2099-03-01"},
+            {"label": "Athlete Time Zone", "value": "UTC"},
         ]
     )
 
@@ -197,6 +216,7 @@ def test_contradictory_frequency_and_availability_stay_explicit_for_downstream_r
     assert parsed.training_frequency == 6
     assert parsed.training_days == ["Mon", "Wed"]
     assert parsed.frequency_raw == "6"
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "user_supplied"
 
 
 def test_messy_injury_input_keeps_real_issue_and_discards_empty_markers():
@@ -313,21 +333,19 @@ def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_onl
     assert input_parsing._compute_days_until_fight("2026-03-14", fight_date) == 1
 
 
-def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
+def test_plan_input_requires_explicit_timezone_for_date_only_fight_date(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
     monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
 
-    parsed = PlanInput.from_payload(
-        _payload(
-            [
-                {"label": "Full name", "value": "West Coast Athlete"},
-                {"label": "When is your next fight?", "value": "2026-03-14"},
-            ]
+    with pytest.raises(ValueError, match="missing timezone strategy"):
+        PlanInput.from_payload(
+            _payload(
+                [
+                    {"label": "Full name", "value": "West Coast Athlete"},
+                    {"label": "When is your next fight?", "value": "2026-03-14"},
+                ]
+            )
         )
-    )
-
-    assert parsed.days_until_fight == 1
-    assert parsed.weeks_out == 1
 
 
 def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
@@ -349,25 +367,23 @@ def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
     assert parsed.athlete_locale == "en-US"
     assert parsed.days_until_fight == 1
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "user_supplied"
 
 
-def test_invalid_athlete_timezone_falls_back_to_local_calendar(monkeypatch):
+def test_invalid_athlete_timezone_rejects_date_only_fight_date(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
     monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
 
-    parsed = PlanInput.from_payload(
-        _payload(
-            [
-                {"label": "Full name", "value": "Fallback Athlete"},
-                {"label": "When is your next fight?", "value": "2026-03-14"},
-                {"label": "Timezone", "value": "Mars/Olympus"},
-            ]
+    with pytest.raises(ValueError, match="invalid timezone strategy"):
+        PlanInput.from_payload(
+            _payload(
+                [
+                    {"label": "Full name", "value": "Fallback Athlete"},
+                    {"label": "When is your next fight?", "value": "2026-03-14"},
+                    {"label": "Timezone", "value": "Mars/Olympus"},
+                ]
+            )
         )
-    )
-
-    assert parsed.athlete_timezone == "Mars/Olympus"
-    assert parsed.days_until_fight == 1
-    assert parsed.weeks_out == 1
 
 
 def test_compute_days_until_fight_keeps_utc_reference_for_timestamped_values(monkeypatch):

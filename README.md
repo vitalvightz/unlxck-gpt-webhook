@@ -112,6 +112,9 @@ uvicorn api.app:app --reload
 python -m fightcamp.main
 ```
 
+> Note: for date-only fight dates (e.g., `YYYY-MM-DD`), include `Athlete Time Zone`
+> in the payload. Timestamped fight dates (`...Z`/offset) can omit it.
+
 Required environment variables:
 
 ```

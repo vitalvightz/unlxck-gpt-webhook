@@ -12,6 +12,7 @@
       { "label": "Professional Status", "value": "Amateur" },
       { "label": "Current Record", "value": "8-3-0" },
       { "label": "When is your next fight?", "value": "2026-04-26" },
+      { "label": "Athlete Time Zone", "value": "UTC" },
       { "label": "Rounds x Minutes", "value": "3x3" },
       { "label": "Weekly Training Frequency", "value": "5" },
       { "label": "Fatigue Level", "value": "High" },
