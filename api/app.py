@@ -18,6 +18,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import ValidationError
 
 from fightcamp.logging_utils import bind_log_context, clear_log_context, configure_logging
 from fightcamp.main import generate_plan
@@ -1345,7 +1346,18 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="latest intake not found for athlete",
             )
-        request_body = PlanRequest.model_validate(latest_intake["intake"])
+        try:
+            request_body = PlanRequest.model_validate(latest_intake["intake"])
+        except ValidationError as exc:
+            logger.warning(
+                "[admin] generate_from_latest_intake:invalid_intake athlete_id=%s errors=%s",
+                athlete_id,
+                exc.errors(),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="latest intake is invalid and cannot be used for generation",
+            ) from exc
         focus_validation = validate_performance_focus_selections(
             request_body.fight_date,
             key_goals=request_body.key_goals,
