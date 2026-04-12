@@ -126,15 +126,6 @@ _LATE_FIGHT_TOKEN_PHRASES = {
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
 
 
-def dedupe_preserve_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
 
 
 def _extract_plan_lines(plan_text: str) -> list[str]:

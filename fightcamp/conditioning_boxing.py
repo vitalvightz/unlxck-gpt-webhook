@@ -167,28 +167,6 @@ def _normalize_conditioning_name(name: str, *, fight_format: str) -> str:
     return _sanitize_sport_language(cleaned, fight_format=fight_format)
 
 
-def _restriction_key_set(restrictions) -> set[str]:
-    keys: set[str] = set()
-    for restriction in restrictions or []:
-        if isinstance(restriction, dict):
-            key = str(restriction.get("restriction", "")).strip().lower()
-        else:
-            key = str(restriction).strip().lower()
-        if key:
-            keys.add(key)
-    return keys
-
-
-def _conditioning_context_text(*groups) -> str:
-    parts: list[str] = []
-    for group in groups:
-        if isinstance(group, list):
-            parts.extend(str(item).lower() for item in group if str(item).strip())
-        elif group:
-            parts.append(str(group).lower())
-    return " ".join(parts)
-
-
 def _is_pool_treading_drill(drill: dict) -> bool:
     name = str(drill.get("name", "")).lower()
     return "pool treading" in name or ("treading" in name and "pool" in name)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .normalization import clean_list
+from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 from .sparring_dose_planner import (
     compute_hard_sparring_plan,
     effective_hard_day_count,
@@ -20,6 +20,7 @@ from .stage2_payload_late_fight import (
     _build_late_fight_weekly_role_map,
     _days_out_payload_mode,
     _uses_late_fight_stage2_payload,
+    _role_anchor,
 )
 from .stage2_planning_brief import (
     _build_phase_briefs,
@@ -145,23 +146,6 @@ def _build_week_by_week_progression(
     }
 
 
-def _role_anchor(role_key: str) -> str:
-    if role_key in {
-        "primary_strength_day",
-        "structural_strength_day",
-        "neural_plus_strength_day",
-        "neural_primer_day",
-        "alactic_speed_day",
-        "alactic_sharpness_day",
-        "alactic_coordination_day",
-        "alactic_support_day",
-    }:
-        return "highest_neural_day"
-    if role_key in {"fight_pace_repeatability_day", "light_fight_pace_touch_day"}:
-        return "highest_glycolytic_day"
-    if role_key in {"recovery_reset_day", "tissue_recovery_day", "fight_week_freshness_day"}:
-        return "lowest_load_day"
-    return "support_day"
 
 
 def _placement_rule_for_anchor(anchor: str, week_entry: dict) -> str:
@@ -336,9 +320,6 @@ def _athlete_sport_key(athlete_model: dict) -> str:
     return str(athlete_model.get("sport") or "").strip().lower().replace(" ", "_")
 
 
-def _ordered_weekdays(values: list[str]) -> list[str]:
-    cleaned = dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
-    return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
 
 
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:

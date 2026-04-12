@@ -54,7 +54,8 @@ OUTPUT:
 Return only the revised athlete-facing final plan."""
 
 
-def _json_block(value: dict | list) -> str:
+def _json_block_pretty(value: dict | list) -> str:
+    """JSON block with indentation — used in repair prompts for human readability."""
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
 
 
@@ -337,9 +338,9 @@ def build_stage2_repair_prompt(*, planning_brief: dict, failed_plan_text: str, v
     revision_priorities = _build_revision_priorities(validator_report)
     sections = [
         REPAIR_PROMPT_TEMPLATE.strip(),
-        "REVISION PRIORITIES\n" + _json_block(revision_priorities),
-        "VALIDATOR REPORT\n" + _json_block(validator_report),
-        "PLANNING BRIEF\n" + _json_block(planning_brief),
+        "REVISION PRIORITIES\n" + _json_block_pretty(revision_priorities),
+        "VALIDATOR REPORT\n" + _json_block_pretty(validator_report),
+        "PLANNING BRIEF\n" + _json_block_pretty(planning_brief),
         "PREVIOUS FINAL PLAN\n" + (failed_plan_text or "").strip(),
     ]
     return "\n\n---\n\n".join(section for section in sections if section.strip())

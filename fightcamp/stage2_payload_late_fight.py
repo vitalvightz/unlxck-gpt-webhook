@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .normalization import clean_list, dedupe_preserve_order
+from .normalization import clean_list, dedupe_preserve_order, ordered_weekdays as _ordered_weekdays
 
 from typing import Any
 
@@ -59,20 +59,8 @@ _WEEKDAY_NAMES = [
 ]
 
 
-def dedupe_preserve_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
 
 
-def _ordered_weekdays(values: list[str]) -> list[str]:
-    cleaned = dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
-    return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
 
 
 def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:

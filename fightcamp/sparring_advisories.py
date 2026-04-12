@@ -6,7 +6,7 @@ from typing import Any
 from .injury_formatting import parse_injury_entry
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
 from .weight_cut import compute_weight_cut_pct
-from .normalization import clean_list
+from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -117,11 +117,6 @@ def _humanize_token(value: str) -> str:
     return str(value or "").strip().replace("_", " ")
 
 
-def _ordered_weekdays(values: Any) -> list[str]:
-    cleaned = clean_list(values)
-    order = {day: idx for idx, day in enumerate(_ORDERED_WEEKDAYS)}
-    unique = list(dict.fromkeys(cleaned))
-    return sorted(unique, key=lambda day: order.get(day, len(order)))
 
 
 def _athlete_snapshot(planning_brief: dict[str, Any]) -> dict[str, Any]:

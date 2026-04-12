@@ -104,3 +104,35 @@ def normalize_text_for_matching(text: str) -> str:
     return " ".join(cleaned.split())
 
 
+
+
+def normalize_fight_format(fight_format: str) -> str:
+    """Normalise fight format string — maps muay_thai → kickboxing for drill lookup."""
+    if fight_format == "muay_thai":
+        return "kickboxing"
+    return fight_format
+
+
+WEEKDAY_ORDER: dict[str, int] = {
+    "monday": 0, "mon": 0,
+    "tuesday": 1, "tue": 1,
+    "wednesday": 2, "wed": 2,
+    "thursday": 3, "thu": 3,
+    "friday": 4, "fri": 4,
+    "saturday": 5, "sat": 5,
+    "sunday": 6, "sun": 6,
+}
+
+
+def ordered_weekdays(values: Any) -> list[str]:
+    """Sort a list of weekday strings into Monday-first order, deduplicating.
+
+    Preserves original casing of the first occurrence of each day.
+    """
+    cleaned = clean_list(values)
+    seen: dict[str, str] = {}  # lowercase key → original value
+    for v in cleaned:
+        k = v.strip().lower()
+        if k and k not in seen:
+            seen[k] = v.strip()
+    return sorted(seen.values(), key=lambda d: (WEEKDAY_ORDER.get(d.lower(), 99), d.lower()))

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
-from .normalization import clean_list
+from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -29,10 +29,6 @@ _HIGH_RISK_INJURY_TOKENS = {
 }
 
 
-def _ordered_weekdays(values: Any) -> list[str]:
-    cleaned = clean_list(values)
-    unique = list(dict.fromkeys(cleaned))
-    return sorted(unique, key=lambda day: (_WEEKDAY_ORDER.get(day, 99), day.lower()))
 
 
 def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:

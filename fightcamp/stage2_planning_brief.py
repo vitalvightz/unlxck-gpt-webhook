@@ -233,15 +233,6 @@ _TEXT_DERIVED_RESTRICTIONS = {
 }
 
 
-def dedupe_preserve_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
 
 
 def _restriction_item_text(item: dict) -> str:

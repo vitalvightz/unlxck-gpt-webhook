@@ -63,6 +63,7 @@ from .conditioning_boxing import (
     _suppress_alactic_maintenance,
     _violates_sport_language_blacklist,
 )
+from .normalization import normalize_fight_format as _normalize_fight_format
 
 _TIME_TOKEN = re.compile(
     r"(\d+(?:\.\d+)?)\s*(?:-|-)?\s*(\d+(?:\.\d+)?)?\s*"
@@ -582,10 +583,6 @@ def format_drill_block(drill: dict, *, phase_color: str = "#000", fallback: bool
     return "\n".join(parts) + "\n"
 
 
-def _normalize_fight_format(fight_format: str) -> str:
-    if fight_format == "muay_thai":
-        return "kickboxing"
-    return fight_format
 
 
 def _conditioning_session_title(*, phase: str, systems: set[str]) -> str:
