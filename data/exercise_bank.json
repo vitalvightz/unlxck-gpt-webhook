@@ -1631,7 +1631,13 @@
       "explosive",
       "upper_body",
       "mech_ballistic",
-      "mech_upper_press"
+      "mech_upper_press",
+      "upper_push",
+      "horizontal_push",
+      "explosive_upper_push",
+      "shoulder_heavy",
+      "elbow_extension_heavy",
+      "wrist_extension_high"
     ],
     "equipment": "medicine_ball"
   },

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # }
 _REHAB_BANK_CACHE = None
 _REHAB_LOCATIONS_CACHE = None
+_EXERCISE_BANK_CACHE = None
 
 
 def get_rehab_bank() -> list[dict]:
@@ -45,6 +46,13 @@ def get_rehab_locations() -> set[str]:
 def prime_rehab_bank() -> None:
     get_rehab_bank()
     get_rehab_locations()
+
+
+def get_exercise_bank() -> list[dict]:
+    global _EXERCISE_BANK_CACHE
+    if _EXERCISE_BANK_CACHE is None:
+        _EXERCISE_BANK_CACHE = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
+    return _EXERCISE_BANK_CACHE
 REHAB_LOCATION_ALIASES = {
     "biceps": ["bicep"],
     "bicep": ["biceps"],
@@ -743,7 +751,7 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
 
 
 def generate_support_notes(injury_string: str) -> str:
-    """Return injury support notes consolidated for all phases."""
+    """Return concise injury support notes consolidated for all phases."""
     phrases = split_injury_text(injury_string)
     parsed_types = set()
     for p in phrases:
@@ -756,13 +764,86 @@ def generate_support_notes(injury_string: str) -> str:
     if not parsed_types:
         return ""
 
-    lines = ["## General Injury Support Notes"]
-    for itype in parsed_types:
-        lines.append(f"*{itype.title()} Support Advice:*")
-        lines.extend([f"- {n}" for n in INJURY_SUPPORT_NOTES[itype]])
-        lines.append("")
+    lines = ["## Recovery Focus"]
+    for itype in sorted(parsed_types):
+        notes = INJURY_SUPPORT_NOTES[itype][:2]
+        lines.append(f"- **{itype.title()}**: {'; '.join(notes)}.")
 
     return "\n".join(lines).strip()
+
+
+def _safer_upper_body_replacements(limit: int = 15) -> list[str]:
+    """Return a compact list of safer substitutes when upper-body loading is limited."""
+    safe_options: list[tuple[str, str]] = []
+    seen_names: set[str] = set()
+    banned_name_tokens = (
+        "press",
+        "bench",
+        "dip",
+        "push-up",
+        "push up",
+        "handstand",
+        "toss",
+        "throw",
+        "slam",
+        "jerk",
+        "snatch",
+        "clean",
+        "muscle-up",
+        "muscle up",
+        "crawl",
+    )
+    banned_tags = {
+        "upper_push",
+        "horizontal_push",
+        "press_heavy",
+        "overhead",
+        "dynamic_overhead",
+        "dip_loaded",
+        "grip_max",
+        "wrist_loaded_extension",
+        "wrist_extension_high",
+        "explosive_upper_push",
+        "mech_upper_press",
+        "mech_ballistic",
+    }
+    equipment_priority = [
+        "bodyweight",
+        "bands",
+        "cable",
+        "dumbbells",
+        "kettlebell",
+        "sled",
+        "rower",
+        "stationary_bike",
+    ]
+    for entry in get_exercise_bank():
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        lowered_name = name.lower()
+        if any(token in lowered_name for token in banned_name_tokens):
+            continue
+        tags = {str(tag).lower() for tag in entry.get("tags", [])}
+        if tags & banned_tags:
+            continue
+        equipment = str(entry.get("equipment") or "bodyweight")
+        if name in seen_names:
+            continue
+        seen_names.add(name)
+        safe_options.append((equipment, name))
+
+    def _sort_key(option: tuple[str, str]) -> tuple[int, str]:
+        equipment, name = option
+        try:
+            priority = equipment_priority.index(equipment)
+        except ValueError:
+            priority = len(equipment_priority)
+        return (priority, name)
+
+    safe_options.sort(key=_sort_key)
+    selected = [f"{name} ({equipment})" for equipment, name in safe_options[:limit]]
+    return selected
 
 
 def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]:
@@ -1017,6 +1098,16 @@ def format_injury_guardrails(
             else:
                 lines.append(f"- {summary}: No rehab drills available for this phase.")
 
+    has_upper_limb = any(
+        LOCATION_REGION_MAP.get((entry.get("canonical_location") or ""), "unspecified") == "upper_limb"
+        for entry in entries
+    )
+    if has_upper_limb:
+        replacements = _safer_upper_body_replacements(limit=15)
+        if replacements:
+            lines += ["", "**Safer Replacements (Upper-Body Deload)**"]
+            lines.extend([f"- {replacement}" for replacement in replacements])
+
     base_red_flags = [
         "Pain that worsens and stays elevated the next morning.",
         "Rapidly increasing swelling, instability, or loss of function.",
@@ -1042,4 +1133,3 @@ def format_injury_guardrails(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines).strip()
-

@@ -254,11 +254,15 @@ INJURY_RULES = {
         "ban_tags": [
             "overhead",
             "upper_push",
+            "horizontal_push",
             "shoulder_heavy",
             "high_cns_upper",
             "press_heavy",
             "dip_loaded",
             "dynamic_overhead",
+            "explosive_upper_push",
+            "mech_upper_press",
+            "mech_ballistic",
         ],
     },
     "chest": {
@@ -284,7 +288,15 @@ INJURY_RULES = {
             "clap push-up",
             "clap push up",
         ],
-        "ban_tags": ["upper_push", "horizontal_push", "pec_loaded", "dip_loaded", "explosive_upper_push"],
+        "ban_tags": [
+            "upper_push",
+            "horizontal_push",
+            "pec_loaded",
+            "dip_loaded",
+            "explosive_upper_push",
+            "mech_upper_press",
+            "mech_ballistic",
+        ],
     },
     "elbow": {
         "ban_keywords": [
@@ -310,6 +322,11 @@ INJURY_RULES = {
             "triceps_tendon_heavy",
             "deep_elbow_flexion_loaded",
             "dip_loaded",
+            "upper_push",
+            "horizontal_push",
+            "explosive_upper_push",
+            "mech_upper_press",
+            "mech_ballistic",
         ],
     },
     "forearm": {
@@ -335,7 +352,15 @@ INJURY_RULES = {
             "wrist roller",
             "wrist roll",
         ],
-        "ban_tags": ["grip_max", "forearm_load_high", "finger_flexor_high", "wrist_flexor_high"],
+        "ban_tags": [
+            "grip_max",
+            "forearm_load_high",
+            "finger_flexor_high",
+            "wrist_flexor_high",
+            "wrist_extension_high",
+            "mech_upper_press",
+            "mech_ballistic",
+        ],
     },
     "wrist": {
         "ban_keywords": [
@@ -365,6 +390,11 @@ INJURY_RULES = {
             "front_rack",
             "wrist_compression_high",
             "wrist_extension_high",
+            "upper_push",
+            "horizontal_push",
+            "explosive_upper_push",
+            "mech_upper_press",
+            "mech_ballistic",
         ],
     },
     "hand": {
@@ -386,7 +416,18 @@ INJURY_RULES = {
             "gi pull",
             "gi pull-up",
         ],
-        "ban_tags": ["grip_max", "hand_crush", "finger_load_high", "pinch_grip_high"],
+        "ban_tags": [
+            "grip_max",
+            "hand_crush",
+            "finger_load_high",
+            "pinch_grip_high",
+            "wrist_extension_high",
+            "upper_push",
+            "horizontal_push",
+            "explosive_upper_push",
+            "mech_upper_press",
+            "mech_ballistic",
+        ],
     },
     "hip": {
         "ban_keywords": [
