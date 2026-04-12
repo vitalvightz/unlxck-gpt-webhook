@@ -221,6 +221,62 @@ def test_runtime_app_falls_back_to_health_endpoint_when_runtime_config_is_invali
     }
 
 
+def test_runtime_app_fails_loudly_when_plan_schema_is_invalid_and_fallback_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class SchemaCheckingStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            if app_module.os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK") == "1":
+                return
+            raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
+
+    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
+    monkeypatch.delenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
+
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": False,
+        "app": "unlxck-fight-camp-api",
+        "detail": store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
+    }
+
+
+def test_runtime_app_does_not_fail_schema_check_when_legacy_fallback_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class SchemaCheckingStore(FakeStore):
+        def validate_runtime_schema(self) -> None:
+            if app_module.os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK") == "1":
+                return
+            raise RuntimeError(store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL)
+
+    monkeypatch.delenv("UNLXCK_DEMO_MODE", raising=False)
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+    monkeypatch.setattr(store_module.SupabaseAppStore, "from_env", classmethod(lambda cls: SchemaCheckingStore()))
+    monkeypatch.setattr(auth_module.SupabaseAuthService, "from_env", classmethod(lambda cls: FakeAuthService({})))
+
+    reloaded = importlib.reload(app_module)
+    client = TestClient(reloaded.app)
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "ok": True,
+        "app": "unlxck-fight-camp-api",
+        "mode": "supabase-authenticated",
+    }
+
+
 def test_cors_allows_normalized_production_origin(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("APP_CORS_ORIGINS", "https://unlxck-gpt-webhook.vercel.app/onboarding/")
     client, _, _ = _build_client()

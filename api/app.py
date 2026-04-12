@@ -531,6 +531,9 @@ def create_app(
 
     @asynccontextmanager
     async def _app_lifespan(_: FastAPI):
+        logger.info("[app] startup:schema_validation:start")
+        await asyncio.to_thread(store.validate_runtime_schema)
+        logger.info("[app] startup:schema_validation:ok")
         await asyncio.to_thread(prime_plan_banks, logger=logger)
         yield
 
@@ -1400,14 +1403,18 @@ def _build_runtime_app() -> FastAPI:
     )
     if os.getenv("UNLXCK_DEMO_MODE") == "1":
         logger.info("[app] build_runtime_app:using_demo_mode")
+        store = get_demo_store()
+        store.validate_runtime_schema()
         return create_app(
-            store=get_demo_store(),
+            store=store,
             auth_service=DemoAuthService(),
             mode_label="demo",
         )
     logger.info("[app] build_runtime_app:using_supabase_mode")
+    store = SupabaseAppStore.from_env()
+    store.validate_runtime_schema()
     return create_app(
-        store=SupabaseAppStore.from_env(),
+        store=store,
         auth_service=SupabaseAuthService.from_env(),
         mode_label="supabase-authenticated",
     )
@@ -1441,9 +1448,14 @@ def _build_startup_failure_app(detail: str) -> FastAPI:
 
 try:
     app = _build_runtime_app()
-except RuntimeError:
+except RuntimeError as exc:
     logger.exception("[app] runtime_app_build_failed")
-    app = _build_startup_failure_app("missing supabase configuration")
+    detail = str(exc)
+    if "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required" in detail:
+        detail = "missing supabase configuration"
+    elif not detail:
+        detail = "application startup failed"
+    app = _build_startup_failure_app(detail)
 except ValueError:
     logger.exception("[app] runtime_app_build_failed")
     app = _build_startup_failure_app("application startup failed")
