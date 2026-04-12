@@ -20,7 +20,7 @@ from .strength import (
     prime_strength_banks,
 )
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
-from .training_context import TrainingContext, allocate_sessions, normalize_equipment_list
+from .training_context import TrainingContext, normalize_equipment_list
 from .weight_cut import compute_weight_cut_pct, parse_weight_value
 
 PHASES = ("GPP", "SPP", "TAPER")
@@ -282,7 +282,6 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         weight_cut_pct=weight_cut_pct_val,
         fight_format=selection_format,
         status=plan_input.status.strip().lower(),
-        training_split=allocate_sessions(plan_input.training_frequency),
         key_goals=[
             GOAL_NORMALIZER.get(goal.strip(), goal.strip()).lower()
             for goal in plan_input.key_goals.split(",")

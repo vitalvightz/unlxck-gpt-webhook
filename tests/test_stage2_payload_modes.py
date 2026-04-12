@@ -105,7 +105,6 @@ def _build_stage2(days):
         weight_cut_pct=0.0,
         fight_format="boxing",
         status="amateur",
-        training_split={},
         key_goals=["power"],
         training_preference="short sessions",
         mental_block=[],
