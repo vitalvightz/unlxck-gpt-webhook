@@ -49,6 +49,11 @@ def test_weakness_aliases_resolve_to_existing_canonical_weakness_entries():
             assert canonical in WEAKNESS_TAG_MAP or canonical in vocabulary
 
 
+def test_trunk_strength_alias_resolves_to_core_stability_tags():
+    assert WEAKNESS_NORMALIZER["trunk_strength"] == ["core stability"]
+    assert WEAKNESS_TAG_MAP["core stability"] == ["core", "anti_rotation"]
+
+
 def test_style_and_goal_tags_stay_normalized_for_curated_entries():
     sample_tags = (
         STYLE_TAG_MAP["pressure fighter"]

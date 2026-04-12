@@ -106,7 +106,7 @@ export const WEAK_AREA_OPTIONS: IntakeOption[] = [
   { label: "Balance", value: "balance" },
   { label: "Mobility", value: "mobility" },
   { label: "Coordination", value: "coordination" },
-  { label: "Trunk Strength", value: "trunk_strength" },
+  { label: "Core / Trunk Strength", value: "trunk_strength" },
 ];
 
 export const RECORD_PATTERN = /^\d+-\d+(?:-\d+)?$/;
