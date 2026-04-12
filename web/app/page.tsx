@@ -228,7 +228,7 @@ export default function HomePage() {
               <p className="muted">All generations stay in history.</p>
             </article>
             <article className="overview-snapshot-item">
-              <p className="kicker">Primary style</p>
+              <p className="kicker">Combat sport</p>
               <p className="overview-snapshot-value">{primaryStyle}</p>
               <p className="muted">Pulled from the athlete profile.</p>
             </article>
