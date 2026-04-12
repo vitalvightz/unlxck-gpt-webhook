@@ -56,6 +56,17 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
     "duplicate key value violates unique constraint",
     "generation_jobs_athlete_client_request_key",
 )
+_PLAN_OPTIONAL_SCHEMA_COLUMNS = {
+    "draft_plan_text",
+    "final_plan_text",
+    "planning_brief",
+    "stage2_payload",
+    "stage2_handoff_text",
+    "stage2_retry_text",
+    "stage2_validator_report",
+    "stage2_status",
+    "stage2_attempt_count",
+}
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
@@ -216,6 +227,20 @@ class SupabaseAppStore:
             if part
         ).lower()
         return any(snippet in text for snippet in _GENERATION_JOB_CONFLICT_SNIPPETS)
+
+    def _is_plan_schema_column_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        if "plans" not in text:
+            return False
+        if not any(snippet in text for snippet in ("schema cache", "column", "does not exist")):
+            return False
+        return any(column in text for column in _PLAN_OPTIONAL_SCHEMA_COLUMNS)
 
     def _raise_operation_http_error(
         self,
@@ -506,15 +531,9 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
-        try:
-            logger.info(
-                "[store] create_plan:start athlete_id=%s intake_id=%s status=%s stage2_status=%s",
-                athlete_id,
-                intake_id,
-                payload["status"],
-                payload["stage2_status"],
-            )
-            response = self.client.table("plans").insert(payload).execute()
+
+        def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:
+            response = self.client.table("plans").insert(insert_payload).execute()
             rows = getattr(response, "data", None) or []
             if not rows:
                 logger.error(
@@ -528,13 +547,40 @@ class SupabaseAppStore:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="failed to persist plan",
                 )
+            return rows[0]
+
+        try:
+            logger.info(
+                "[store] create_plan:start athlete_id=%s intake_id=%s status=%s stage2_status=%s",
+                athlete_id,
+                intake_id,
+                payload["status"],
+                payload["stage2_status"],
+            )
+            try:
+                row = _insert_plan(payload)
+            except PostgrestAPIError as exc:
+                if not self._is_plan_schema_column_error(exc):
+                    raise
+                compatibility_payload = {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in _PLAN_OPTIONAL_SCHEMA_COLUMNS
+                }
+                logger.warning(
+                    "[store] create_plan:legacy_schema_fallback athlete_id=%s intake_id=%s dropped_columns=%s",
+                    athlete_id,
+                    intake_id,
+                    sorted(_PLAN_OPTIONAL_SCHEMA_COLUMNS),
+                )
+                row = _insert_plan(compatibility_payload)
             logger.info(
                 "[store] create_plan:success athlete_id=%s intake_id=%s plan_id=%s",
                 athlete_id,
                 intake_id,
-                rows[0].get("id"),
+                row.get("id"),
             )
-            return rows[0]
+            return row
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
