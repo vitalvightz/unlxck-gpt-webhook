@@ -105,43 +105,6 @@ def _override_flags(lowered: str, instability: bool, daily_symptoms: bool) -> li
     return flags
 
 
-def _compute_risk_band_score(
-    *,
-    state_score: int,
-    worsening: bool,
-    improving: bool,
-    stable: bool,
-    instability: bool,
-    daily_symptoms: bool,
-    high_collision_region: bool,
-) -> int:
-    """Derive a 0–10 risk band score from injury state attributes.
-
-    Scoring intent:
-      severe + worsening → 9–10  (black)
-      severe + not worsening → 6–8  (red)
-      instability / daily symptoms → minimum 6  (red)
-      moderate + worsening → 6–8  (red)
-      moderate otherwise → 3–5  (amber)
-      mild + high collision region → 3  (amber)
-      mild + low collision → 0–2  (green)
-    """
-    score = state_score  # base from state detection
-
-    # Override: instability and daily_symptoms force minimum red territory
-    if instability or daily_symptoms:
-        score = max(score, 6)
-
-    # Worsening pushes up by 1 inside any band
-    if worsening:
-        score = min(10, score + 1)
-
-    # Improving pulls down by 1 unless already forced to red+
-    if improving and not (instability or daily_symptoms):
-        score = max(0, score - 1)
-
-    return min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, score))
-
 
 def _band_from_score(score: int) -> str:
     for threshold, band in _RISK_BAND_THRESHOLDS:
@@ -238,32 +201,6 @@ def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> t
 
     return score, reasons
 
-
-def _week_major_minor_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> tuple[int, int]:
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
-    stage_key = str(week.get("stage_key", "")).strip().lower()
-    phase = str(week.get("phase", "")).strip().upper()
-
-    major = 0
-    minor = 0
-    if phase == "TAPER" or "fight_week" in readiness_flags or "fight_week" in stage_key:
-        major = 1
-
-    days_until_fight = athlete_snapshot.get("days_until_fight")
-    try:
-        days_value = int(days_until_fight)
-    except (TypeError, ValueError):
-        days_value = None
-    if days_value is not None:
-        if days_value <= 7:
-            major = 1
-        elif days_value <= 14:
-            minor = 1
-
-    if athlete_snapshot.get("short_notice") or "short_notice" in readiness_flags:
-        minor = 1
-
-    return major, minor
 
 
 def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:

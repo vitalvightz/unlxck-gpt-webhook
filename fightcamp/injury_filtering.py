@@ -1113,11 +1113,5 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
     exclusion_path.write_text(json.dumps(exclusion_map, indent=2, sort_keys=True))
 
 
-def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:
-    """
-    DEPRECATED: This function is kept for backward compatibility but does nothing.
-    Use _log_exclusion() instead for logging excluded items only.
-    """
-    pass
 
 

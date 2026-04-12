@@ -17,3 +17,6 @@ web/node_modules/
 *.log
 web/.env.local
 *.tsbuildinfo
+
+# Generated artifacts (rebuild with tools/split_rehab_bank.py)
+data/rehab_bank_split.json
