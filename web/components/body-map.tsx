@@ -84,6 +84,15 @@ export function BodyMap({
       <p className="body-map-title">Tap a zone to add</p>
       <div className="body-map-svg-wrap">
         <svg viewBox="0 0 180 300" aria-label={`${side === "front" ? "Front" : "Back"} body map for injury selection`}>
+          <defs>
+            <linearGradient id="body-map-silhouette-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0.05" />
+            </linearGradient>
+            <filter id="body-map-soft-glow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="1.6" floodColor="currentColor" floodOpacity="0.2" />
+            </filter>
+          </defs>
           <g className="body-map-silhouette">
             <ellipse cx={90} cy={24} rx={14} ry={17} />
             <path d={SILHOUETTE_PATH} />

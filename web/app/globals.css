@@ -4761,7 +4761,7 @@ html[data-theme="light"] .injury-card-state {
 
 .body-map-svg-wrap {
   position: relative;
-  width: 160px;
+  width: 184px;
   margin: 0 auto;
 }
 
@@ -4772,26 +4772,33 @@ html[data-theme="light"] .injury-card-state {
 }
 
 .body-map-silhouette {
-  opacity: 0.18;
-  fill: none;
-  stroke: var(--text-secondary);
-  stroke-width: 1.2;
+  color: var(--text-secondary);
+}
+
+.body-map-silhouette ellipse,
+.body-map-silhouette path {
+  opacity: 0.28;
+  fill: url(#body-map-silhouette-gradient);
+  stroke: color-mix(in srgb, var(--text-secondary) 82%, transparent);
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
+  filter: url(#body-map-soft-glow);
 }
 
 .body-map-zone {
-  fill: rgba(128, 128, 128, 0.06);
-  stroke: rgba(128, 128, 128, 0.15);
-  stroke-width: 0.8;
+  fill: color-mix(in srgb, var(--surface) 86%, transparent);
+  stroke: rgba(186, 190, 200, 0.32);
+  stroke-width: 1;
   cursor: pointer;
-  transition: fill 0.15s, stroke 0.15s;
+  transition: fill 0.15s, stroke 0.15s, transform 0.15s;
 }
 
 .body-map-zone:hover,
 .body-map-zone-hover {
-  fill: rgba(181, 18, 43, 0.12);
-  stroke: rgba(181, 18, 43, 0.3);
+  fill: rgba(181, 18, 43, 0.16);
+  stroke: rgba(181, 18, 43, 0.42);
+  transform: scale(1.02);
 }
 
 .body-map-zone-used {
@@ -5033,8 +5040,8 @@ html[data-theme="light"] .body-map-panel {
 }
 
 html[data-theme="light"] .body-map-zone {
-  fill: rgba(128, 128, 128, 0.06);
-  stroke: rgba(128, 128, 128, 0.2);
+  fill: rgba(120, 110, 102, 0.05);
+  stroke: rgba(120, 110, 102, 0.24);
 }
 
 html[data-theme="light"] .body-map-zone:hover,
@@ -5167,7 +5174,7 @@ html[data-theme="light"] .injury-card-remove-btn:hover {
   }
 
   .body-map-svg-wrap {
-    width: 140px;
+    width: 161px;
   }
 
   .injury-severity-chips,
