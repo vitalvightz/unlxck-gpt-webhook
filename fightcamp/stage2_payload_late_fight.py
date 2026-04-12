@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .normalization import _clean_list, _dedupe_preserve_order
+from .normalization import clean_list, dedupe_preserve_order
 
 from typing import Any
 
@@ -59,7 +59,7 @@ _WEEKDAY_NAMES = [
 ]
 
 
-def _dedupe_preserve_order(values: list[str]) -> list[str]:
+def dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
     for value in values:
@@ -71,7 +71,7 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 
 
 def _ordered_weekdays(values: list[str]) -> list[str]:
-    cleaned = _dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
+    cleaned = dedupe_preserve_order([str(value).strip() for value in values if str(value).strip()])
     return sorted(cleaned, key=lambda day: (_WEEKDAY_ORDER.get(day.strip().lower(), 99), day.strip().lower()))
 
 
@@ -399,7 +399,7 @@ def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
 
 
 def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:
-    return {flag.strip().lower() for flag in _clean_list(athlete_model.get("readiness_flags", [])) if flag.strip()}
+    return {flag.strip().lower() for flag in clean_list(athlete_model.get("readiness_flags", [])) if flag.strip()}
 
 
 def _planned_sessions_per_week(athlete_model: dict[str, Any]) -> int:
@@ -411,7 +411,7 @@ def _planned_sessions_per_week(athlete_model: dict[str, Any]) -> int:
             return max(0, int(value))
         except (TypeError, ValueError):
             continue
-    available_days = len(_clean_list(athlete_model.get("training_days", [])))
+    available_days = len(clean_list(athlete_model.get("training_days", [])))
     if available_days <= 0:
         return 0
     if available_days <= 5:
@@ -1057,7 +1057,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
     mode = _days_out_payload_mode(days_until_fight)
     plan_weekday = athlete_model.get("plan_creation_weekday")
     declared_hard_days = _filter_past_weekdays(
-        _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+        _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
         plan_weekday,
         days_until_fight,
     )
@@ -1301,7 +1301,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     from fightcamp.late_fight_placement import place_roles_in_countdown
 
     plan_creation_weekday = athlete_model.get("plan_creation_weekday")
-    available_days = _clean_list(athlete_model.get("training_days", []))
+    available_days = clean_list(athlete_model.get("training_days", []))
     countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
     resolved_map = _resolve_countdown_weekday_with_availability(countdown_map, available_days)
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
@@ -1315,7 +1315,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
         return []
 
     fatigue = athlete_model.get("fatigue_level") or athlete_model.get("fatigue")
-    readiness_flags = _clean_list(athlete_model.get("readiness_flags", []))
+    readiness_flags = clean_list(athlete_model.get("readiness_flags", []))
     declared_hard_offsets = [
         int(role.get("countdown_offset"))
         for role in roles
@@ -1331,7 +1331,7 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
         for entry in _future_declared_weekdays_with_countdown(
             plan_creation_weekday=plan_creation_weekday,
             days_until_fight=days,
-            declared_weekdays=_ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+            declared_weekdays=_ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
         )
         if isinstance(entry.get("offset"), int) and int(entry.get("offset")) > 0
     ]
@@ -1392,7 +1392,7 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
     """Return structured surviving/downgraded hard-sparring context plus one concise line."""
     plan_weekday = athlete_model.get("plan_creation_weekday")
     declared_hard_days = _filter_past_weekdays(
-        _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+        _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
         plan_weekday,
         days_until_fight,
     )
@@ -1427,7 +1427,7 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
         surviving_set = {str(entry.get("weekday") or "").strip().lower() for entry in surviving_instances}
         downgraded_days = [day.lower() for day in declared_hard_days if day.lower() not in surviving_set]
 
-    surviving_days = _dedupe_preserve_order(
+    surviving_days = dedupe_preserve_order(
         [
             str(entry.get("weekday") or "").strip().lower()
             for entry in surviving_instances
@@ -1534,22 +1534,22 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
     mode = _days_out_payload_mode(days_until_fight)
     plan_weekday = athlete_model.get("plan_creation_weekday")
     roles = _late_fight_session_roles(days_until_fight, athlete_model)
-    available_days = _clean_list(athlete_model.get("training_days", []))
+    available_days = clean_list(athlete_model.get("training_days", []))
     raw_countdown_map = _countdown_weekday_map(plan_weekday, days_until_fight)
     resolved_countdown_map = _resolve_countdown_weekday_with_availability(raw_countdown_map, available_days)
     if mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload", "late_fight_transition_payload"}:
         weeks: list[dict[str, Any]] = []
     else:
         filtered_training = _filter_past_weekdays(
-            _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
+            _ordered_weekdays(clean_list(athlete_model.get("training_days", []))),
             plan_weekday, days_until_fight,
         )
         filtered_sparring = _filter_past_weekdays(
-            _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+            _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
             plan_weekday, days_until_fight,
         )
         filtered_technical = _filter_past_weekdays(
-            _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+            _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
             plan_weekday, days_until_fight,
         )
         weeks = [
@@ -1606,7 +1606,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
     plan_creation_weekday = athlete_model.get("plan_creation_weekday")
-    available_days = _clean_list(athlete_model.get("training_days", []))
+    available_days = clean_list(athlete_model.get("training_days", []))
     raw_countdown_map = _countdown_weekday_map(plan_creation_weekday, days_until_fight)
     resolved_countdown_map = _resolve_countdown_weekday_with_availability(raw_countdown_map, available_days)
     spec: dict[str, Any] = {

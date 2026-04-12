@@ -27,7 +27,7 @@ from .stage2_payload_late_fight import (
     _uses_late_fight_stage2_payload,
 )
 from .input_parsing import _calendar_now
-from .normalization import _clean_list, _normalize_text, _phrase_in_text, _slugify, _dedupe_preserve_order
+from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
@@ -46,7 +46,7 @@ from .stage2_planning_brief import (  # noqa: F401
     _build_weekly_stress_map,
     _compress_short_camp_priorities,
     _conditioning_slot_priority,
-    _dedupe_preserve_order,
+    dedupe_preserve_order,
     _derive_athlete_archetype,
     _derive_competitive_maturity,
     _derive_main_limiter,
@@ -107,10 +107,10 @@ def _derive_global_priorities(
     push: list[str] = []
     avoid: list[str] = []
 
-    injuries = _clean_list(athlete_model.get("injuries", []))
-    goals = _clean_list(athlete_model.get("key_goals", []))
-    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
-    technical_skill_days = _clean_list(athlete_model.get("technical_skill_days", []))
+    injuries = clean_list(athlete_model.get("injuries", []))
+    goals = clean_list(athlete_model.get("key_goals", []))
+    hard_sparring_days = clean_list(athlete_model.get("hard_sparring_days", []))
+    technical_skill_days = clean_list(athlete_model.get("technical_skill_days", []))
     high_pressure_cut = _is_high_pressure_weight_cut(athlete_model=athlete_model)
     compressed = athlete_model.get("compressed_priorities") or {}
     primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
@@ -172,9 +172,9 @@ def _derive_global_priorities(
         push.append("Keep at least one neural-speed option when the phase or taper calls for sharpness.")
 
     return {
-        "preserve": _dedupe_preserve_order(preserve) or ["Preserve the main phase objectives and any active rehab work."],
-        "push": _dedupe_preserve_order(push) or ["Push the highest-priority phase qualities first."],
-        "avoid": _dedupe_preserve_order(avoid) or ["Avoid changes that break the phase intent or restriction logic."],
+        "preserve": dedupe_preserve_order(preserve) or ["Preserve the main phase objectives and any active rehab work."],
+        "push": dedupe_preserve_order(push) or ["Push the highest-priority phase qualities first."],
+        "avoid": dedupe_preserve_order(avoid) or ["Avoid changes that break the phase intent or restriction logic."],
     }
 
 
@@ -210,11 +210,11 @@ def _build_phase_strategy(
             "objective": brief.get("objective", ""),
             "visible_label": visible_framing["label"],
             "visible_objective": visible_framing["objective"],
-            "build": _clean_list(brief.get("emphasize", [])),
-            "protect": _clean_list(brief.get("risk_flags", [])),
-            "deprioritize": _clean_list(brief.get("deprioritize", [])),
-            "must_keep": _clean_list((brief.get("selection_guardrails") or {}).get("must_keep_if_present", [])),
-            "drop_order_if_thin": _clean_list((brief.get("selection_guardrails") or {}).get("conditioning_drop_order_if_thin", [])),
+            "build": clean_list(brief.get("emphasize", [])),
+            "protect": clean_list(brief.get("risk_flags", [])),
+            "deprioritize": clean_list(brief.get("deprioritize", [])),
+            "must_keep": clean_list((brief.get("selection_guardrails") or {}).get("must_keep_if_present", [])),
+            "drop_order_if_thin": clean_list((brief.get("selection_guardrails") or {}).get("conditioning_drop_order_if_thin", [])),
             "slot_counts": {
                 "strength": len(pool.get("strength_slots", [])),
                 "conditioning": len(pool.get("conditioning_slots", [])),
@@ -335,13 +335,13 @@ def build_planning_brief(
 def _serialize_strength_option(exercise: dict, why: str) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
-    movement_patterns.extend(_clean_list(exercise.get("tags", [])))
+    movement_patterns.extend(clean_list(exercise.get("tags", [])))
     quality_profile = classify_strength_item(exercise)
-    required_equipment = _clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
+    required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
     return {
         "name": exercise.get("name", "Unnamed"),
         "source": "exercise_bank",
-        "movement_patterns": _dedupe_preserve_order(movement_patterns),
+        "movement_patterns": dedupe_preserve_order(movement_patterns),
         "restriction_tags": _extract_restriction_tags(exercise),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
         "prescription": exercise.get("prescription") or exercise.get("method") or "",
@@ -357,12 +357,12 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
 
 
 def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
-    tags = _clean_list(drill.get("tags", []))
-    required_equipment = _clean_list(drill.get("required_equipment") or drill.get("equipment", []))
+    tags = clean_list(drill.get("tags", []))
+    required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
     return {
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
-        "movement_patterns": _dedupe_preserve_order([system] + tags),
+        "movement_patterns": dedupe_preserve_order([system] + tags),
         "restriction_tags": _extract_restriction_tags(drill),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
         "prescription": " | ".join(
@@ -504,7 +504,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
         quality_profile = classify_strength_item(exercise)
         slots.append(
             {
-                "slot_id": f"{phase.lower()}_strength_{idx}_{_slugify(name)}",
+                "slot_id": f"{phase.lower()}_strength_{idx}_{slugify(name)}",
                 "role": role,
                 "purpose": reasons.get("explanation", "balanced selection"),
                 "selected": _serialize_strength_option(
@@ -552,7 +552,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
             reasons = reason_lookup.get(name, {})
             slots.append(
                 {
-                    "slot_id": f"{phase.lower()}_{system}_{idx}_{_slugify(name)}",
+                    "slot_id": f"{phase.lower()}_{system}_{idx}_{slugify(name)}",
                     "role": system,
                     "purpose": CONDITIONING_ROLE_PURPOSES.get(system, reasons.get("explanation", "balanced selection")),
                     "selected": _serialize_conditioning_option(
@@ -581,7 +581,7 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
     for group in _parse_rehab_groups(rehab_block):
         location = group.get("location", "Unspecified")
         injury_type = group.get("injury_type", "unspecified")
-        role = f"rehab_{_slugify(location)}_{_slugify(injury_type)}"
+        role = f"rehab_{slugify(location)}_{slugify(injury_type)}"
         selected_lines = [line for line in group.get("drills", []) if line]
         selected_set = set(selected_lines)
         rehab_options = _rehab_drills_for_phase(
@@ -634,7 +634,7 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             top_alternates = [opt for _, opt in sorted(scored_alternates, key=lambda x: x[0])][:2]
             slots.append(
                 {
-                    "slot_id": f"{phase.lower()}_{role}_{idx}_{_slugify(line)}",
+                    "slot_id": f"{phase.lower()}_{role}_{idx}_{slugify(line)}",
                     "role": role,
                     "purpose": why_today_template,
                     "function_class": drill_func,

@@ -6,7 +6,7 @@ from typing import Any
 from .injury_formatting import parse_injury_entry
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
 from .weight_cut import compute_weight_cut_pct
-from .normalization import _clean_list
+from .normalization import clean_list
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -118,7 +118,7 @@ def _humanize_token(value: str) -> str:
 
 
 def _ordered_weekdays(values: Any) -> list[str]:
-    cleaned = _clean_list(values)
+    cleaned = clean_list(values)
     order = {day: idx for idx, day in enumerate(_ORDERED_WEEKDAYS)}
     unique = list(dict.fromkeys(cleaned))
     return sorted(unique, key=lambda day: order.get(day, len(order)))
@@ -158,7 +158,7 @@ def _fatigue_score(athlete_snapshot: dict[str, Any]) -> tuple[int, str | None]:
 
 
 def _cut_score(athlete_snapshot: dict[str, Any], *, cut_pct: float) -> tuple[int, str | None]:
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     has_active_cut_flag = "active_weight_cut" in readiness_flags
 
     if cut_pct >= 5.0:
@@ -175,7 +175,7 @@ def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> t
     score = 0
     phase = str(week.get("phase", "")).strip().upper()
     stage_key = str(week.get("stage_key", "")).strip().lower()
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
 
     if phase == "TAPER":
         score += 2
@@ -205,7 +205,7 @@ def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> t
 
 def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    for raw in _clean_list(athlete_snapshot.get("injuries", [])):
+    for raw in clean_list(athlete_snapshot.get("injuries", [])):
         raw_text = str(raw).strip()
         lowered = raw_text.lower()
         if not raw_text:
@@ -391,7 +391,7 @@ def _future_state_label(
     elif fatigue == "moderate":
         parts.append("elevated fatigue")
 
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     if cut_pct >= 5.0:
         parts.append("an aggressive cut")
     elif cut_pct >= 3.0 or "active_weight_cut" in readiness_flags:

@@ -4,7 +4,7 @@ import re
 from typing import TypedDict
 
 from .injury_synonyms import parse_injury_phrase
-from .normalization import _normalize_text
+from .normalization import normalize_text
 
 
 # Minimum number of keyword matches required to confidently identify a canonical restriction
@@ -128,7 +128,7 @@ def _extract_laterality(text: str) -> str | None:
 
 
 def _normalize_phrase_for_exact_match(text: str) -> str:
-    return re.sub(r"[\s-]+", " ", _normalize_text(text)).strip()
+    return re.sub(r"[\s-]+", " ", normalize_text(text)).strip()
 
 
 _CANONICAL_RESTRICTION_PHRASES = {
@@ -138,7 +138,7 @@ _CANONICAL_RESTRICTION_PHRASES = {
 
 def _tokenize_words(text: str) -> set[str]:
     """Tokenize words while normalizing punctuation and apostrophes."""
-    normalized = _APOSTROPHE_PATTERN.sub("", _normalize_text(text))
+    normalized = _APOSTROPHE_PATTERN.sub("", normalize_text(text))
     return set(_WORD_BOUNDARY_PATTERN.findall(normalized))
 
 
@@ -154,7 +154,7 @@ def _keyword_in_text(keyword: str, text: str) -> bool:
 
 
 def _normalize_high_impact_restriction(text: str) -> str:
-    normalized = _normalize_text(text)
+    normalized = normalize_text(text)
     lower_keywords = [
         "jump",
         "jumps",
@@ -197,7 +197,7 @@ def _normalize_high_impact_restriction(text: str) -> str:
 
 def _contains_trigger_token(text: str) -> bool:
     """Check if text contains any constraint trigger token."""
-    normalized = _normalize_text(text)
+    normalized = normalize_text(text)
     
     # Check for multi-word triggers first
     for trigger in ["do not", "not comfortable", "hurts when"]:
@@ -211,7 +211,7 @@ def _contains_trigger_token(text: str) -> bool:
 
 def _strip_keywords_from_text(text: str, keywords: list[str]) -> str:
     """Remove matched canonical movement keywords so only surrounding context remains."""
-    stripped = _normalize_text(text)
+    stripped = normalize_text(text)
     for keyword in sorted(keywords, key=len, reverse=True):
         if " " in keyword or "-" in keyword:
             parts = [re.escape(part) for part in re.split(r"[\s-]+", keyword.strip()) if part]
@@ -256,7 +256,7 @@ def is_restriction_phrase(text: str) -> bool:
 
 def _infer_restriction_strength(text: str) -> str:
     """Infer the strength/intensity of the restriction from trigger words."""
-    normalized = _normalize_text(text)
+    normalized = normalize_text(text)
     
     # Use word boundaries for "no" to avoid matching "no" in other words
     # Check for "no" as standalone word using token set
@@ -280,7 +280,7 @@ def _match_canonical_restriction(text: str) -> tuple[str | None, str | None]:
     Returns:
         Tuple of (restriction_key, region) or (None, None) if no match.
     """
-    normalized = _normalize_text(text)
+    normalized = normalize_text(text)
     tokens = set(_WORD_BOUNDARY_PATTERN.findall(normalized))
     
     best_match = None
@@ -316,7 +316,7 @@ def _match_canonical_restriction(text: str) -> tuple[str | None, str | None]:
 
 def _infer_region_from_text(text: str) -> str | None:
     """Infer anatomical region from text if not matched canonically."""
-    normalized = _normalize_text(text)
+    normalized = normalize_text(text)
     tokens = set(_WORD_BOUNDARY_PATTERN.findall(normalized))
     
     # Simple keyword matching for common regions

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from .normalization import _clean_list
+from .normalization import clean_list
 
 import json
 from typing import Any
@@ -77,7 +77,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
             {
                 "phase": item.get("phase"),
                 "requirement": item.get("requirement"),
-                "candidate_names": _clean_list(item.get("candidate_names", [])),
+                "candidate_names": clean_list(item.get("candidate_names", [])),
                 "action": "restore_phase_critical_element",
             }
             )
@@ -119,7 +119,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "restore_anchor_session_quality",
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
-                    "anchor_candidates": _clean_list(warning.get("anchor_candidates", [])),
+                    "anchor_candidates": clean_list(warning.get("anchor_candidates", [])),
                 }
             )
         elif code == "support_takeover_before_anchor":
@@ -128,7 +128,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "move_support_work_after_anchor",
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
-                    "anchor_candidates": _clean_list(warning.get("anchor_candidates", [])),
+                    "anchor_candidates": clean_list(warning.get("anchor_candidates", [])),
                 }
             )
         elif code == "conditional_conditioning_choice":
@@ -177,7 +177,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "replace_with_equipment_valid_same_role_option",
                     "phase": warning.get("phase"),
                     "line": warning.get("line"),
-                    "required_equipment": _clean_list(warning.get("required_equipment", [])),
+                    "required_equipment": clean_list(warning.get("required_equipment", [])),
                 }
             )
         elif code == "missing_week_session_role":
@@ -186,7 +186,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "restore_missing_week_structure",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
-                    "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                    "expected_roles": clean_list(warning.get("expected_roles", [])),
                     "expected_role_days": list(warning.get("expected_role_days") or []),
                 }
             )
@@ -196,7 +196,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "complete_late_camp_week",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
-                    "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                    "expected_roles": clean_list(warning.get("expected_roles", [])),
                     "expected_role_days": list(warning.get("expected_role_days") or []),
                 }
             )
@@ -228,8 +228,8 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
             quality_fixes.append(
                 {
                     "action": "add_summary_and_support_weight_cut_notes",
-                    "summary_lines": _clean_list(warning.get("summary_lines", [])),
-                    "support_lines": _clean_list(warning.get("support_lines", [])),
+                    "summary_lines": clean_list(warning.get("summary_lines", [])),
+                    "support_lines": clean_list(warning.get("support_lines", [])),
                 }
             )
         elif code in {"gimmick_name", "overstyled_drill_name"}:
@@ -262,7 +262,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
                     "line": warning.get("line"),
-                    "risk_context": _clean_list(warning.get("risk_context", [])),
+                    "risk_context": clean_list(warning.get("risk_context", [])),
                 }
             )
         elif code == "hedged_adjustment_without_decision":
@@ -277,7 +277,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 {
                     "action": "replace_empty_safety_line_with_operational_guardrails",
                     "line": warning.get("line"),
-                    "risk_context": _clean_list(warning.get("risk_context", [])),
+                    "risk_context": clean_list(warning.get("risk_context", [])),
                 }
             )
         elif code == "late_fight_forbidden_content":
@@ -286,7 +286,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "remove_late_fight_forbidden_block",
                     "forbidden_block": warning.get("forbidden_block"),
                     "line": warning.get("line"),
-                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
+                    "matched_lines": clean_list(warning.get("matched_lines", [])),
                 }
             )
         elif code == "late_fight_block_overage":

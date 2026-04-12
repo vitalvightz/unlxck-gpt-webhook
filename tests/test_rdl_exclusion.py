@@ -16,8 +16,8 @@ from fightcamp.injury_filtering import (
     match_forbidden,
     injury_violation_reasons,
     normalize_for_substring_match,
-    _normalize_text,
 )
+from fightcamp.normalization import normalize_text_for_matching as _normalize_text
 from fightcamp.injury_exclusion_rules import INJURY_RULES
 
 

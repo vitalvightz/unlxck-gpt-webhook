@@ -40,7 +40,7 @@ def normalize_injury_marker(value: str | None) -> str:
 
 
 def normalize_text(value: str | None) -> str:
-    """Lowercase + collapse whitespace. Canonical form of _normalize_text."""
+    """Lowercase + collapse whitespace. Canonical form of normalize_text."""
     return normalize_lower_text(value)
 
 
@@ -85,15 +85,12 @@ def dedupe_preserve_order(values: list[str]) -> list[str]:
     return list(dict.fromkeys(values))
 
 
-# ── Private aliases (backwards-compat for in-package callers) ────────────────
-# Modules that imported the local private copies will continue to work
-# while we migrate them. Remove these once all callers import directly.
 
-_clean_list = clean_list
-_normalize_text = normalize_text
-_phrase_in_text = phrase_in_text
-_slugify = slugify
-_dedupe_preserve_order = dedupe_preserve_order
+clean_list = clean_list
+normalize_text = normalize_text
+phrase_in_text = phrase_in_text
+slugify = slugify
+dedupe_preserve_order = dedupe_preserve_order
 
 
 def normalize_text_for_matching(text: str) -> str:
@@ -107,5 +104,3 @@ def normalize_text_for_matching(text: str) -> str:
     return " ".join(cleaned.split())
 
 
-# Private alias used by injury_filtering callers
-_normalize_text_for_matching = normalize_text_for_matching

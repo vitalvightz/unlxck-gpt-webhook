@@ -10,7 +10,7 @@ import re
 from typing import Any
 
 from .input_parsing import _calendar_now
-from .normalization import _clean_list, _normalize_text, _phrase_in_text, _slugify, _dedupe_preserve_order
+from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .training_context import TrainingContext, allocate_sessions
 
@@ -233,7 +233,7 @@ _TEXT_DERIVED_RESTRICTIONS = {
 }
 
 
-def _dedupe_preserve_order(values: list[str]) -> list[str]:
+def dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
     for value in values:
@@ -259,8 +259,8 @@ def _restriction_item_text(item: dict) -> str:
         item.get("modality", ""),
         item.get("equipment_note", ""),
     ]
-    fields.extend(_clean_list(item.get("equipment", [])))
-    return _normalize_text(" ".join(str(field) for field in fields if field))
+    fields.extend(clean_list(item.get("equipment", [])))
+    return normalize_text(" ".join(str(field) for field in fields if field))
 
 
 def _derive_mechanical_risk_tags(item: dict) -> set[str]:
@@ -284,7 +284,7 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
 
     if any(tag in tags for tag in {"rotation", "rotational", "anti_rotation", "loaded_rotation", "loaded_twist", "mech_rotational_power"}):
         derived.add("loaded_rotation")
-    if any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["loaded_rotation"]):
+    if any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["loaded_rotation"]):
         derived.add("loaded_rotation")
 
     overhead_tag_hits = {
@@ -299,7 +299,7 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
         "mech_overhead_static",
         "mech_axial_heavy",
     }
-    if tags & overhead_tag_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["heavy_overhead_pressing"]):
+    if tags & overhead_tag_hits or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["heavy_overhead_pressing"]):
         derived.add("heavy_overhead_pressing")
 
     deep_knee_hits = {
@@ -312,16 +312,16 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
         "knee_dominant_heavy",
         "mech_knee_dominant",
     }
-    if tags & deep_knee_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_knee_flexion"]):
+    if tags & deep_knee_hits or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_knee_flexion"]):
         derived.add("deep_knee_flexion")
 
     deep_hip_hits = {"hip_flexion_loaded", "mech_hip_flexion", "mech_core_compression"}
-    if tags & deep_hip_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_hip_flexion"]):
+    if tags & deep_hip_hits or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["deep_hip_flexion"]):
         derived.add("deep_hip_flexion")
 
     if tags & {"situp", "crunch", "flexion", "spinal_flexion", "hip_flexion_loaded", "loaded_flexion"}:
         derived.add("loaded_flexion")
-    if any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["loaded_flexion"]):
+    if any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["loaded_flexion"]):
         derived.add("loaded_flexion")
     if "spinal_flexion" in derived or "loaded_flexion" in derived:
         derived.add("spinal_flexion")
@@ -346,17 +346,17 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
         "mech_deceleration",
         "achilles_high_risk_impact",
     }
-    if tags & lower_impact_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_lower"]):
+    if tags & lower_impact_hits or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_lower"]):
         derived.update({"high_impact", "high_impact_lower"})
 
     upper_impact_hits = {"explosive_upper_push", "mech_upper_ballistic", "mech_horizontal_push"}
-    if tags & upper_impact_hits or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_upper"]):
+    if tags & upper_impact_hits or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_upper"]):
         derived.update({"high_impact", "high_impact_upper"})
 
     if "high_impact" in derived and not ({"high_impact_lower", "high_impact_upper"} & derived):
         derived.add("high_impact_global")
 
-    if tags & {"max_velocity", "mech_max_velocity"} or any(_phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["max_velocity"]):
+    if tags & {"max_velocity", "mech_max_velocity"} or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["max_velocity"]):
         derived.add("max_velocity")
         derived.update({"high_impact", "high_impact_lower"})
 
@@ -392,7 +392,7 @@ def _restriction_patterns_for_key(restriction_key: str) -> list[str]:
     if base_key:
         canonical = CANONICAL_RESTRICTIONS.get(base_key, {})
         patterns.extend(canonical.get("keywords", []))
-    return _dedupe_preserve_order([pattern for pattern in patterns if pattern])
+    return dedupe_preserve_order([pattern for pattern in patterns if pattern])
 
 
 def _serialize_restrictions(restrictions: list[dict]) -> list[dict]:
@@ -439,7 +439,7 @@ def _derive_readiness_flags(
 
 
 def _is_high_pressure_weight_cut(*, athlete_model: dict) -> bool:
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     if "aggressive_weight_cut" in readiness_flags:
         return True
     if not (
@@ -632,7 +632,7 @@ def _build_athlete_model(
         "tactical_styles": training_context.style_tactical,
         "weaknesses": training_context.weaknesses,
         "key_goals": training_context.key_goals,
-        "mental_blocks": _clean_list(training_context.mental_block),
+        "mental_blocks": clean_list(training_context.mental_block),
         "equipment": training_context.equipment,
         "training_frequency": training_context.training_frequency,
         "training_days": training_context.training_days,
@@ -672,9 +672,9 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     else:
         timeline_days = None
 
-    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    weakness_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("weaknesses", [])))
+    goal_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("key_goals", [])))
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     short_window = isinstance(timeline_days, int) and timeline_days <= 7
     ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
 
@@ -774,8 +774,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         )
 
     raw_other_labels = [
-        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("key_goals", []))),
-        *(value.replace("_", " ") for value in _clean_list(athlete_model.get("weaknesses", []))),
+        *(value.replace("_", " ") for value in clean_list(athlete_model.get("key_goals", []))),
+        *(value.replace("_", " ") for value in clean_list(athlete_model.get("weaknesses", []))),
     ]
     claimed_terms = " ".join(_priority_bucket_labels(primary) + _priority_bucket_labels(maintenance) + _priority_bucket_labels(embedded) + _priority_bucket_labels(deferred)).lower()
     for label in raw_other_labels:
@@ -813,7 +813,7 @@ def _build_phase_selection_guardrails(phase: str, training_context: TrainingCont
     guardrails["notes"] = list(guardrails.get("notes", []))
     guardrails["must_keep_rehab_if_present"] = bool(training_context.injuries)
     if training_context.weight_cut_risk and phase == "TAPER":
-        guardrails["conditioning_drop_order_if_thin"] = _dedupe_preserve_order(
+        guardrails["conditioning_drop_order_if_thin"] = dedupe_preserve_order(
             ["glycolytic"] + guardrails.get("conditioning_drop_order_if_thin", [])
         )
         guardrails["notes"].append("During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
@@ -864,7 +864,7 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
             "objective": PHASE_OBJECTIVES.get(phase, ""),
             "emphasize": PHASE_EMPHASIS.get(phase, []),
             "deprioritize": PHASE_DEPRIORITIZE.get(phase, []),
-            "risk_flags": _dedupe_preserve_order(risk_flags),
+            "risk_flags": dedupe_preserve_order(risk_flags),
             "session_counts": session_counts,
             "selection_guardrails": _build_phase_selection_guardrails(phase, training_context),
             "weeks": phase_weeks.get(phase, 0),
@@ -875,12 +875,12 @@ def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) ->
 
 
 def _derive_athlete_archetype(athlete_model: dict) -> dict:
-    technical_styles = _clean_list(athlete_model.get("technical_styles", []))
-    tactical_styles = _clean_list(athlete_model.get("tactical_styles", []))
-    style_identity = _dedupe_preserve_order(technical_styles + tactical_styles) or ["generalist"]
+    technical_styles = clean_list(athlete_model.get("technical_styles", []))
+    tactical_styles = clean_list(athlete_model.get("tactical_styles", []))
+    style_identity = dedupe_preserve_order(technical_styles + tactical_styles) or ["generalist"]
 
     readiness = "stable"
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     if readiness_flags & {"fight_week", "aggressive_weight_cut", "high_fatigue"}:
         readiness = "fragile"
     elif readiness_flags & {"moderate_fatigue", "active_weight_cut", "injury_management", "short_notice"}:
@@ -902,7 +902,7 @@ def _derive_athlete_archetype(athlete_model: dict) -> dict:
         "total_bouts": athlete_model.get("total_bouts"),
         "style_specificity": specificity_guidance,
         "readiness_state": readiness,
-        "equipment_profile": _clean_list(athlete_model.get("equipment", [])),
+        "equipment_profile": clean_list(athlete_model.get("equipment", [])),
     }
 
 
@@ -911,10 +911,10 @@ def _derive_main_limiter(athlete_model: dict) -> str:
     primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
     if primary_labels:
         return f"Primary limiter is {primary_labels[0]}."
-    weaknesses = _clean_list(athlete_model.get("weaknesses", []))
-    goals = _clean_list(athlete_model.get("key_goals", []))
+    weaknesses = clean_list(athlete_model.get("weaknesses", []))
+    goals = clean_list(athlete_model.get("key_goals", []))
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
 
     if weaknesses:
         return f"Primary limiter is {weaknesses[0].replace('_', ' ')}."
@@ -929,8 +929,8 @@ def _derive_main_limiter(athlete_model: dict) -> str:
 
 def _derive_main_risks(athlete_model: dict, restrictions: list[dict]) -> list[str]:
     risks: list[str] = []
-    injuries = _clean_list(athlete_model.get("injuries", []))
-    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
+    injuries = clean_list(athlete_model.get("injuries", []))
+    hard_sparring_days = clean_list(athlete_model.get("hard_sparring_days", []))
     if injuries:
         risks.append("Injury management must constrain exercise choice and loading.")
     if hard_sparring_days:
@@ -1093,12 +1093,12 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     if "gas tank maintenance" in compressed_labels:
         return "aerobic_repeatability"
 
-    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
+    weakness_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("weaknesses", [])))
+    goal_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("key_goals", [])))
     style_tokens = _normalize_limiter_tokens(
-        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
+        clean_list(athlete_model.get("technical_styles", [])) + clean_list(athlete_model.get("tactical_styles", []))
     )
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     days_until_fight = athlete_model.get("days_until_fight")
     restriction_keys = {
         str((restriction or {}).get("restriction", "")).strip().lower()
@@ -1273,15 +1273,15 @@ _SPORT_LOAD_PROFILES = {
 
 
 def _join_rule_parts(*parts: str) -> str:
-    cleaned = _dedupe_preserve_order([str(part).strip() for part in parts if str(part).strip()])
+    cleaned = dedupe_preserve_order([str(part).strip() for part in parts if str(part).strip()])
     return " ".join(cleaned)
 
 
 
 def _primary_sport_load_key(athlete_model: dict) -> str:
-    sport_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("sport")))
+    sport_tokens = _normalize_limiter_tokens(clean_list(athlete_model.get("sport")))
     style_tokens = _normalize_limiter_tokens(
-        _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
+        clean_list(athlete_model.get("technical_styles", [])) + clean_list(athlete_model.get("tactical_styles", []))
     )
     combined = sport_tokens | style_tokens
 
@@ -1322,7 +1322,7 @@ def _resolve_phase_rule_state(
     limiter_profile: dict,
     sport_load_profile: dict,
 ) -> dict:
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     short_notice = bool(athlete_model.get("short_notice"))
     weight_cut_risk = bool(athlete_model.get("weight_cut_risk"))
@@ -1354,8 +1354,8 @@ def _resolve_phase_rule_state(
     )
 
     return {
-        "must_keep": _clean_list(guardrails.get("must_keep_if_present", [])),
-        "drop_order_if_thin": _clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
+        "must_keep": clean_list(guardrails.get("must_keep_if_present", [])),
+        "drop_order_if_thin": clean_list(guardrails.get("conditioning_drop_order_if_thin", [])),
         "conditioning_sequence": list(limiter_profile["conditioning_sequence"].get(phase, [])),
         "conditioning_sequence_driver": "main_limiter",
         "protect_first": protect_first,
