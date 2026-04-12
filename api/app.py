@@ -1280,7 +1280,6 @@ def create_app(
         latest_intake = store.get_latest_intake(athlete_id)
         athlete = _map_admin_athlete(row, latest_intake=latest_intake)
         current_workspace = build_nutrition_workspace(profile=athlete, latest_intake_row=latest_intake)
-        update = update.model_copy(update={"nutrition_coach_controls": current_workspace.nutrition_coach_controls})
         normalized_update = normalize_nutrition_update_request(
             update=update,
             existing_shared_camp_context=current_workspace.shared_camp_context,
