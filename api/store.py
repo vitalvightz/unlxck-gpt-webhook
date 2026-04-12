@@ -68,6 +68,26 @@ _PLAN_OPTIONAL_SCHEMA_COLUMNS = {
     "stage2_attempt_count",
     "parsing_metadata",
 }
+PLAN_RUNTIME_REQUIRED_COLUMNS = (
+    "athlete_id",
+    "intake_id",
+    "fight_date",
+    "technical_style",
+    "full_name",
+    "plan_name",
+    "status",
+    "plan_text",
+    "coach_notes",
+    "pdf_url",
+    "why_log",
+)
+_PLAN_RUNTIME_REQUIRED_COLUMNS_SET = set(PLAN_RUNTIME_REQUIRED_COLUMNS)
+_PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
+    "schema cache",
+    "column",
+    "does not exist",
+    "could not find",
+)
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
@@ -239,9 +259,10 @@ class SupabaseAppStore:
         ).lower()
         if "plans" not in text:
             return False
-        if not any(snippet in text for snippet in ("schema cache", "column", "does not exist")):
+        if not any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS):
             return False
-        return any(column in text for column in _PLAN_OPTIONAL_SCHEMA_COLUMNS)
+        plan_runtime_columns = _PLAN_RUNTIME_REQUIRED_COLUMNS_SET | _PLAN_OPTIONAL_SCHEMA_COLUMNS
+        return any(column in text for column in plan_runtime_columns)
 
     def _raise_operation_http_error(
         self,
@@ -567,7 +588,7 @@ class SupabaseAppStore:
                 compatibility_payload = {
                     key: value
                     for key, value in payload.items()
-                    if key not in _PLAN_OPTIONAL_SCHEMA_COLUMNS
+                    if key in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET
                 }
                 logger.warning(
                     "[store] create_plan:legacy_schema_fallback athlete_id=%s intake_id=%s dropped_columns=%s",
