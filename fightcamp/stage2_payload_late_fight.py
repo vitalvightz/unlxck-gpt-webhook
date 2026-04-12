@@ -1634,8 +1634,8 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
     countdown_contract = (
         "D-13 TO D-0 OUTPUT CONTRACT\n"
         "For any athlete with 13 days or fewer until fight, use one coherent countdown truth.\n"
-        "Lead each active day with countdown-first labeling (D-N first, weekday second), and avoid fake Monday-Sunday framing.\n"
-        "Use countdown placement logic only for day assignment, spacing, and legality — not to expand the visible session list.\n"
+        "Lead each active day with countdown-first labeling in this exact form: D-N (Weekday). Example: D-8 (Sunday). Avoid fake Monday-Sunday framing.\n"
+        "Use countdown placement logic only for day assignment, spacing, and legality. Use the resolved countdown_display_label when present, and do not expand the visible session list.\n"
         "After placement, filter to app-owned visible roles for athlete-facing rendering and keep boxing ownership as context.\n"
         "If output does NOT fully prescribe every active day, label it exactly as: Coach-prescribed S&C / rehab schedule only. Boxing schedule remains as set by gym/coach.\n"
         "When output fully prescribes all active days, use one unified section title: Countdown schedule.\n"
