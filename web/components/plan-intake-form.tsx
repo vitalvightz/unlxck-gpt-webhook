@@ -1648,7 +1648,7 @@ export function PlanIntakeForm() {
                 {injuryMismatchExists ? (
                   <div className={`support-panel ${injuryGateLocked ? "support-panel-alert" : ""}`.trim()}>
                     <p className="kicker">Warning: existing injury note will be overwritten</p>
-                    <p className="muted">
+                    <p className={injuryGateLocked ? "error-text" : "muted"}>
                       The structured fields produce a summary that differs from the existing injury note. Saving or generating will replace the original wording with the structured summary. Review the difference below before continuing.
                     </p>
                     <div className="injury-overwrite-diff">
