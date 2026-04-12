@@ -1,20 +1,20 @@
-fastapi
-uvicorn
-google-api-python-client
-google-auth
-google-auth-httplib2
-google-auth-oauthlib
-gspread
-oauth2client
-rapidfuzz
-spacy>=3.7,<3.8
+# Runtime dependencies (production)
+fastapi==0.115.12
+uvicorn==0.34.2
+google-api-python-client==2.169.0
+google-auth==2.40.1
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.2
+gspread==6.2.0
+oauth2client==4.1.3
+rapidfuzz==3.13.0
+spacy==3.7.5
 # Injury parsing support: negation detection + English model.
-negspacy>=1.0.4,<1.1
+negspacy==1.0.4
 en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
-pdfkit
-supabase
-gotrue
-markdown2
-openai
-pytest
-structlog>=24.0,<26.0
+pdfkit==1.0.0
+supabase==2.15.2
+gotrue==2.12.0
+markdown2==2.5.4
+openai==1.77.0
+structlog==25.4.0
