@@ -87,6 +87,7 @@ class TrainingContext:
     days_until_fight: int | None
     hard_sparring_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)
+    athlete_timezone: str = ""
 
     def to_flags(self) -> dict:
         return asdict(self)

@@ -636,6 +636,7 @@ class AdminPlanOutputs(BaseModel):
     why_log: dict[str, Any] = Field(default_factory=dict)
     planning_brief: dict[str, Any] | None = None
     stage2_payload: dict[str, Any] | None = None
+    parsing_metadata: dict[str, Any] = Field(default_factory=dict)
     stage2_handoff_text: str = ""
     draft_plan_text: str = ""
     final_plan_text: str = ""
