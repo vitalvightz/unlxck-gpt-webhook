@@ -115,6 +115,7 @@ alter table public.plans add column if not exists stage2_retry_text text not nul
 alter table public.plans add column if not exists stage2_validator_report jsonb not null default '{}'::jsonb;
 alter table public.plans add column if not exists stage2_status text not null default '';
 alter table public.plans add column if not exists stage2_attempt_count integer not null default 0;
+alter table public.plans add column if not exists parsing_metadata jsonb not null default '{}'::jsonb;
 alter table public.generation_jobs add column if not exists source text not null default 'self_service';
 alter table public.generation_jobs add column if not exists request_payload jsonb not null default '{}'::jsonb;
 alter table public.generation_jobs add column if not exists status text not null default 'queued';
