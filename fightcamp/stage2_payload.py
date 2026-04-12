@@ -27,7 +27,7 @@ from .stage2_payload_late_fight import (
     _uses_late_fight_stage2_payload,
 )
 from .input_parsing import _calendar_now
-from .normalization import normalize_lower_text, _clean_list, _normalize_text, _phrase_in_text, _slugify
+from .normalization import _clean_list, _normalize_text, _phrase_in_text, _slugify, _dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
