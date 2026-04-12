@@ -43,8 +43,18 @@ const WEIGH_IN_OPTIONS = [
   { value: "day_before", label: "Day before" },
   { value: "informal", label: "Informal / none" },
 ];
-const FATIGUE_OPTIONS = ["", "Low", "Moderate", "High"];
-const SLEEP_OPTIONS = ["", "Good", "Mixed", "Poor"];
+const FATIGUE_OPTIONS = [
+  { value: "", label: "Select" },
+  { value: "low", label: "Low" },
+  { value: "moderate", label: "Moderate" },
+  { value: "high", label: "High" },
+];
+const SLEEP_OPTIONS = [
+  { value: "", label: "Select" },
+  { value: "good", label: "Good" },
+  { value: "mixed", label: "Mixed" },
+  { value: "poor", label: "Poor" },
+];
 const WEIGHT_SOURCE_OPTIONS = ["", "manual", "latest_bodyweight_log", "imported"];
 const DAY_TYPE_OPTIONS: Array<{ value: Extract<SessionDayType, "hard_spar" | "technical" | "conditioning" | "recovery">; label: string }> = [
   { value: "hard_spar", label: "Hard sparring" },
@@ -478,8 +488,8 @@ export function NutritionWorkspaceScreen() {
                         value={form.shared_camp_context.fatigue_level ?? ""}
                         onChange={(event) => setSharedField("fatigue_level", event.target.value || null)}
                       >
-                        {FATIGUE_OPTIONS.map((value) => (
-                          <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                        {FATIGUE_OPTIONS.map((option) => (
+                          <option key={option.value || "empty"} value={option.value}>{option.label}</option>
                         ))}
                       </select>
                     </div>
@@ -489,8 +499,8 @@ export function NutritionWorkspaceScreen() {
                         value={form.nutrition_readiness.sleep_quality ?? ""}
                         onChange={(event) => setSleepQuality(event.target.value || null)}
                       >
-                        {SLEEP_OPTIONS.map((value) => (
-                          <option key={value || "empty"} value={value}>{value || "Select"}</option>
+                        {SLEEP_OPTIONS.map((option) => (
+                          <option key={option.value || "empty"} value={option.value}>{option.label}</option>
                         ))}
                       </select>
                     </div>
