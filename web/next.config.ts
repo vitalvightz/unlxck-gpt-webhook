@@ -5,7 +5,7 @@ const MISSING_PRODUCTION_REWRITE_ERROR =
   "NEXT_PUBLIC_API_BASE_URL must be set for production builds so /api rewrites are always configured.";
 
 function resolveBackendUrl(): string | null {
-  const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.trim().replace(/\/$/, "");
   if (configured) {
     return configured;
   }
