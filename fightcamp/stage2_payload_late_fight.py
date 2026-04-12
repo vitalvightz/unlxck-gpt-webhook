@@ -270,29 +270,44 @@ def _countdown_weekday_map(
     plan_creation_weekday: str | None,
     days_until_fight: Any,
 ) -> dict[str, str]:
-    """Map each countdown label (D-0, D-1, …) to its real weekday name.
+    """
+    Map each countdown label (D-0, D-1, … D-N) to its real weekday name.
 
-    The fight date is used as the anchor (D-0). Each prior countdown day is
-    projected backwards by the corresponding number of days.  Only countdown
-    days within the current late-fight window (0 ≤ n ≤ days_until_fight,
-    capped at 7) are included.
-
-    Returns an empty dict when the fight weekday cannot be determined.
+    D-0 is the fight day. Every earlier countdown label is projected backwards
+    from that anchor. Do not cap this at 7 days — compressed late-fight windows
+    can run out to D-13 and still need true weekday mapping.
     """
     fight_weekday = _fight_weekday_from_context(plan_creation_weekday, days_until_fight)
     if fight_weekday is None:
         return {}
+
     try:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return {}
+
+    if days < 0:
+        return {}
+
     fight_index = _WEEKDAY_ORDER[fight_weekday]
     countdown_map: dict[str, str] = {}
-    for offset in range(min(days, 7) + 1):
+
+    for offset in range(days + 1):
         label = f"D-{offset}"
         weekday_index = (fight_index - offset) % 7
         countdown_map[label] = _WEEKDAY_NAMES[weekday_index]
+
     return countdown_map
+
+
+def _countdown_display_label(label: str, weekday: str | None) -> str:
+    """
+    Render countdown labels in athlete-facing form:
+    D-8 (Sunday), D-1 (Sunday), etc.
+    """
+    if not weekday:
+        return label
+    return f"{label} ({str(weekday).strip().title()})"
 
 
 def _nearest_available_day(
