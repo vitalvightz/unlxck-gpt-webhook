@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
-const MISSING_PRODUCTION_REWRITE_WARNING =
-  "NEXT_PUBLIC_API_BASE_URL is not set; skipping /api rewrites for this production build.";
+const MISSING_PRODUCTION_REWRITE_ERROR =
+  "NEXT_PUBLIC_API_BASE_URL must be set for production builds so /api rewrites are always configured.";
 
 function resolveBackendUrl(): string | null {
   const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
@@ -21,8 +21,7 @@ const nextConfig: NextConfig = {
   async rewrites() {
     const backendUrl = resolveBackendUrl();
     if (!backendUrl) {
-      console.warn(MISSING_PRODUCTION_REWRITE_WARNING);
-      return [];
+      throw new Error(MISSING_PRODUCTION_REWRITE_ERROR);
     }
 
     return [
