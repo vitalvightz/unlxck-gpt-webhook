@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 
@@ -110,55 +111,70 @@ export default function ResetPasswordPage() {
           <span className="badge status-badge-neutral">Secure</span>
         </div>
 
-        {message ? <div className="success-banner">{message}</div> : null}
-        {error ? <div className="error-banner">{error}</div> : null}
-
-        {!isReady && !message && !error ? (
-          <p className="muted">Verifying your reset link...</p>
-        ) : null}
-
-        <form onSubmit={handleSubmit} className="auth-form-grid">
-          <div className="field">
-            <label htmlFor="password">New password</label>
-            <input
-              id="password"
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              minLength={8}
-              disabled={!isReady}
-            />
-            <PasswordStrengthMeter strength={passwordStrength} />
+        {message ? (
+          <div className="auth-success-state">
+            <div className="success-banner">{message}</div>
+            <div className="form-actions">
+              <Link href="/plans" className="cta">
+                Go to my plans
+              </Link>
+              <Link href="/login" className="ghost-button">
+                Back to log in
+              </Link>
+            </div>
           </div>
-          <div className="field">
-            <label htmlFor="confirmPassword">Confirm new password</label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              required
-              minLength={8}
-              disabled={!isReady}
-            />
-            {confirmPassword && !passwordsMatch ? <p className="error-text">Passwords do not match.</p> : null}
-          </div>
+        ) : (
+          <>
+            {error ? <div className="error-banner">{error}</div> : null}
 
-          <div className="form-actions">
-            <button
-              type="submit"
-              className="cta"
-              disabled={isPending || !isReady || !passwordStrength.isAcceptable || !passwordsMatch}
-            >
-              {isPending ? "Updating..." : "Update password"}
-            </button>
-          </div>
-        </form>
+            {!isReady && !error ? (
+              <p className="muted">Verifying your reset link...</p>
+            ) : null}
+
+            <form onSubmit={handleSubmit} className="auth-form-grid">
+              <div className="field">
+                <label htmlFor="password">New password</label>
+                <input
+                  id="password"
+                  name="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                  minLength={8}
+                  disabled={!isReady}
+                />
+                <PasswordStrengthMeter strength={passwordStrength} />
+              </div>
+              <div className="field">
+                <label htmlFor="confirmPassword">Confirm new password</label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  required
+                  minLength={8}
+                  disabled={!isReady}
+                />
+                {confirmPassword && !passwordsMatch ? <p className="error-text">Passwords do not match.</p> : null}
+              </div>
+
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="cta"
+                  disabled={isPending || !isReady || !passwordStrength.isAcceptable || !passwordsMatch}
+                >
+                  {isPending ? "Updating..." : "Update password"}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </section>
   );

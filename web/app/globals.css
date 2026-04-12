@@ -804,6 +804,11 @@ select:focus-visible {
   gap: 16px;
 }
 
+.auth-success-state {
+  display: grid;
+  gap: 16px;
+}
+
 .form-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
@@ -3279,6 +3284,19 @@ button.mobile-step-rail-item {
 
   .onboarding-panel .form-actions {
     gap: 10px;
+  }
+
+  /* Fix 5: textarea resize unusable on touch — disable it */
+  .field textarea {
+    resize: none;
+    min-height: 100px;
+  }
+
+  /* Fix 8: field labels too small on mobile — bump size, reduce tracking */
+  .field label,
+  .checkbox-group-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
   }
 }
 
@@ -6554,6 +6572,18 @@ html[data-theme="light"] .appearance-mode-state {
   padding-top: 24px;
   margin-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+html[data-theme="light"] .nutrition-group + .nutrition-group {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="light"] .nutrition-group-label {
+  color: var(--text-muted);
+}
+
+html[data-theme="light"] .nutrition-group-label::after {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .nutrition-group-label {
