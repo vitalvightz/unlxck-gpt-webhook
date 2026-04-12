@@ -1,4 +1,3 @@
-﻿import asyncio
 import json
 import logging
 import os
@@ -82,7 +81,7 @@ class _LazyListProxy:
 exercise_bank = _LazyListProxy(get_strength_exercise_bank)
 
 
-async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
+def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     """Generate a fight-camp plan.
 
     Parameters
@@ -183,13 +182,17 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
     }
 
 
+async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
+    return generate_plan_sync(data, generate_pdf=generate_pdf)
+
+
 def main():
     data_file = Path("test_data.json").resolve()
     if not data_file.exists():
         raise FileNotFoundError(f"Test data file not found: {data_file}")
     with open(data_file, "r", encoding="utf-8") as f:
         data = json.load(f)
-    result = asyncio.run(generate_plan(data))
+    result = generate_plan_sync(data)
     print(f"::notice title=Plan PDF::{result.get('pdf_url')}")
 
 
