@@ -96,8 +96,11 @@ notes/                  Tag documentation and reference material
 ### Backend
 
 ```bash
-# Install dependencies
+# Install runtime dependencies
 pip install -r requirements.txt
+
+# Install test/lint tooling (recommended for local development)
+pip install -r requirements-dev.txt
 
 # Set environment variables
 cp .env.example .env  # then fill in values
@@ -137,6 +140,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 ---
+
+
+### Dependency versioning policy
+
+- `requirements.txt` contains **runtime-only** Python dependencies and every package is pinned to an exact version.
+- `requirements-dev.txt` contains development/test tooling and references `requirements.txt` so dev environments stay aligned with production.
+- `web/package.json` uses exact dependency versions (no caret ranges) and `web/package-lock.json` is committed to lock transitive installs.
+- Runtime versions are pinned with `runtime.txt` / `.python-version` for Python and `web/.nvmrc` + `web/package.json#engines` for Node.js.
 
 ## Deployment
 
