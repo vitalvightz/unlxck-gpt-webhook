@@ -1422,10 +1422,45 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
     if days < 0:
         return []
 
+    fatigue = athlete_model.get("fatigue_level") or athlete_model.get("fatigue")
+    readiness_flags = _clean_list(athlete_model.get("readiness_flags", []))
+    declared_hard_offsets = [
+        int(entry.get("offset"))
+        for entry in _classify_declared_hard_days_for_late_window(
+            plan_creation_weekday=plan_creation_weekday,
+            days_until_fight=days,
+            declared_weekdays=_ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
+        )
+        if (
+            isinstance(entry.get("offset"), int)
+            and int(entry.get("offset")) > 0
+            and str(entry.get("status") or "") in {"hard_allowed", "hard_allowed_but_final_window"}
+        )
+    ]
+    declared_technical_offsets = [
+        int(entry.get("offset"))
+        for entry in _future_declared_weekdays_with_countdown(
+            plan_creation_weekday=plan_creation_weekday,
+            days_until_fight=days,
+            declared_weekdays=_ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+        )
+        if isinstance(entry.get("offset"), int) and int(entry.get("offset")) > 0
+    ]
+    placement_context = {
+        "declared_hard_spar_offsets": declared_hard_offsets,
+        "declared_technical_offsets": declared_technical_offsets,
+        "today_label": f"D-{days}",
+        "today_offset": days,
+        "plan_creation_offset": days,
+        "fatigue": str(fatigue or "").strip().lower(),
+        "readiness_flags": readiness_flags,
+    }
+
     return place_roles_in_countdown(
         roles=roles,
         days_until_fight=days,
         countdown_weekday_map=resolved_map,
+        placement_context=placement_context,
     )
 
 
