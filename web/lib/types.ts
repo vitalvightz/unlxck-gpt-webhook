@@ -174,6 +174,10 @@ export type ManualStage2SubmissionRequest = {
   final_plan_text: string;
 };
 
+export type ApproveAndResumeGenerationRequest = {
+  reason: string;
+};
+
 export type ProfileUpdateRequest = {
   full_name?: string;
   technical_style?: string[];
