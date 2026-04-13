@@ -5,7 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
-import { approvePlanForRelease, archivePlan, deletePlan, rejectApprovedPlan, renamePlan, submitManualStage2 } from "@/lib/api";
+import {
+  approvePlanForRelease,
+  archivePlan,
+  deletePlan,
+  rejectApprovedPlan,
+  renamePlan,
+  submitManualStage2,
+} from "@/lib/api";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -16,6 +23,14 @@ type ReviewIssue = {
   severity: "error" | "warning";
   context?: string;
   snippet?: string;
+};
+
+type InjuryTriageView = {
+  mode?: string;
+  red_flags: string[];
+  matched_high_risk_categories: string[];
+  sparring_risk_band?: string;
+  clinician_clearance_required?: boolean;
 };
 
 const BLOCKING_WARNING_CODES = new Set([
@@ -55,6 +70,14 @@ function humanizeStatus(value: string) {
   return value.replace(/_/g, " ");
 }
 
+function titleizeToken(value: string) {
+  const normalized = humanizeStatus(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
 function formatStructuredValue(value: unknown, fallback: string) {
   if (value == null) {
     return fallback;
@@ -73,10 +96,11 @@ function formatStructuredValue(value: unknown, fallback: string) {
 }
 
 function buildArtifactFilename(plan: PlanDetail, suffix: string) {
-  const base = (plan.full_name || "athlete-plan")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "athlete-plan";
+  const base =
+    (plan.full_name || "athlete-plan")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "athlete-plan";
   return `${base}-${suffix}.txt`;
 }
 
@@ -100,13 +124,139 @@ function formatRiskBandLabel(riskBand: NonNullable<PlanAdvisory["risk_band"]>) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function readInjuryTriage(plan: PlanDetail): InjuryTriageView | null {
+  const source =
+    plan.admin_outputs?.why_log && typeof plan.admin_outputs.why_log === "object"
+      ? (plan.admin_outputs.why_log as Record<string, unknown>).injury_triage
+      : null;
+
+  if (source && typeof source === "object") {
+    const triage = source as Record<string, unknown>;
+
+    return {
+      mode: typeof triage.mode === "string" ? triage.mode : undefined,
+      red_flags: Array.isArray(triage.red_flags) ? triage.red_flags.map(String) : [],
+      matched_high_risk_categories: Array.isArray(triage.matched_high_risk_categories)
+        ? triage.matched_high_risk_categories.map(String)
+        : [],
+      sparring_risk_band:
+        typeof triage.sparring_risk_band === "string" ? triage.sparring_risk_band : undefined,
+      clinician_clearance_required:
+        typeof triage.clinician_clearance_required === "boolean"
+          ? triage.clinician_clearance_required
+          : undefined,
+    };
+  }
+
+  if (plan.status === "triage_blocked" || plan.admin_outputs?.stage2_status === "triage_blocked") {
+    return {
+      mode: undefined,
+      red_flags: [],
+      matched_high_risk_categories: [],
+      sparring_risk_band: undefined,
+      clinician_clearance_required: undefined,
+    };
+  }
+
+  return null;
+}
+
+function BlockedPlanDecisionCard({
+  triage,
+}: {
+  triage: InjuryTriageView;
+}) {
+  const isMedicalHold = triage.mode === "medical_hold";
+  const isRestricted = triage.mode === "restricted_rehab_only";
+
+  const title = isMedicalHold
+    ? "Medical hold"
+    : isRestricted
+      ? "Clearance required"
+      : "Planning paused";
+
+  const intro = isMedicalHold
+    ? "No training plan was released. This intake contains urgent or medically disqualifying signals that require review before planning can continue."
+    : isRestricted
+      ? "Normal fight-camp release has been paused. This intake contains structural injury signals that require clinician clearance before loading or sparring resumes."
+      : "Normal fight-camp release has been paused. This intake triggered a protected planner state before finalization.";
+
+  const signalTokens = [...triage.matched_high_risk_categories, ...triage.red_flags]
+    .map(titleizeToken)
+    .filter(Boolean)
+    .slice(0, 6);
+
+  const riskBandLabel =
+    triage.sparring_risk_band &&
+    ["green", "amber", "red", "black"].includes(triage.sparring_risk_band)
+      ? formatRiskBandLabel(
+          triage.sparring_risk_band as NonNullable<PlanAdvisory["risk_band"]>,
+        )
+      : null;
+
+  return (
+    <section
+      className={`support-panel sparring-advisory-card ${
+        isMedicalHold ? "support-panel-alert" : "sparring-advisory-convert"
+      }`}
+    >
+      <div className="plan-header-row">
+        <div>
+          <p className="kicker">Planner decision</p>
+          <h3>{title}</h3>
+        </div>
+        <div className="sparring-advisory-badges">
+          <span className="badge">{isMedicalHold ? "Blocked" : "Protected"}</span>
+          <span className="badge">Stage 2 skipped</span>
+          {riskBandLabel && triage.sparring_risk_band ? (
+            <span
+              className={`sparring-risk-chip sparring-risk-${triage.sparring_risk_band}`}
+              aria-label={`Injury risk ${riskBandLabel}`}
+            >
+              <span className="sparring-risk-dot" aria-hidden="true" />
+              <span>Risk band: {riskBandLabel}</span>
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <p>{intro}</p>
+
+      {signalTokens.length ? (
+        <div className="plan-card-meta">
+          {signalTokens.map((token) => (
+            <span key={token} className="badge status-badge-neutral">
+              {token}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <ul className="summary-list">
+        <li>Stage 2 was skipped intentionally.</li>
+        <li>
+          {isMedicalHold
+            ? "Medical review is required before any plan can be released."
+            : "Only already-approved rehab or clinician-led guidance should continue until clearance."}
+        </li>
+        {triage.clinician_clearance_required ? (
+          <li>Clinician clearance is required before return to loading or sparring.</li>
+        ) : null}
+      </ul>
+    </section>
+  );
+}
+
 function SparringAdvisoryCard({ advisory }: { advisory: PlanAdvisory }) {
-  const actionLabel = advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
+  const actionLabel =
+    advisory.action === "convert" ? "Convert hard sparring" : "Deload hard sparring";
   const daysLabel = advisory.days.join(", ") || "Declared hard sparring";
   const riskBandLabel = advisory.risk_band ? formatRiskBandLabel(advisory.risk_band) : null;
 
   return (
-    <section className={`support-panel sparring-advisory-card sparring-advisory-${advisory.action}`}>
+    <section
+      className={`support-panel sparring-advisory-card sparring-advisory-${advisory.action}`}
+    >
       <div className="plan-header-row">
         <div>
           <p className="kicker">{advisory.title}</p>
@@ -195,9 +345,7 @@ function buildReviewIssue(issue: ValidatorIssue, severity: "error" | "warning"):
       ? issue.message.trim()
       : issueTitle(code);
   const snippet =
-    typeof issue.line === "string" && issue.line.trim()
-      ? issue.line.trim()
-      : undefined;
+    typeof issue.line === "string" && issue.line.trim() ? issue.line.trim() : undefined;
 
   return {
     code,
@@ -222,8 +370,12 @@ function resolveWarningBuckets(report: Record<string, unknown> | null | undefine
   }
 
   return {
-    blockingWarnings: warnings.filter((issue) => BLOCKING_WARNING_CODES.has(String(issue.code || ""))),
-    reviewFlags: warnings.filter((issue) => !BLOCKING_WARNING_CODES.has(String(issue.code || ""))),
+    blockingWarnings: warnings.filter((issue) =>
+      BLOCKING_WARNING_CODES.has(String(issue.code || "")),
+    ),
+    reviewFlags: warnings.filter(
+      (issue) => !BLOCKING_WARNING_CODES.has(String(issue.code || "")),
+    ),
   };
 }
 
@@ -231,19 +383,27 @@ function pluralize(count: number, singular: string) {
   return `${count} ${singular}${count === 1 ? "" : "s"}`;
 }
 
-function buildReviewSummary(report: Record<string, unknown> | null | undefined, stage2Status: string) {
+function buildReviewSummary(
+  report: Record<string, unknown> | null | undefined,
+  stage2Status: string,
+) {
   const errors = safeIssueList(report?.errors).map((issue) => buildReviewIssue(issue, "error"));
   const { blockingWarnings, reviewFlags } = resolveWarningBuckets(report);
   const blocking = blockingWarnings.map((issue) => buildReviewIssue(issue, "warning"));
   const reviewFlagsMapped = reviewFlags.map((issue) => buildReviewIssue(issue, "warning"));
   const blockingCount =
-    typeof report?.blocking_warning_count === "number" ? report.blocking_warning_count : blocking.length;
+    typeof report?.blocking_warning_count === "number"
+      ? report.blocking_warning_count
+      : blocking.length;
   const reviewFlagCount =
-    typeof report?.review_flag_count === "number" ? report.review_flag_count : reviewFlagsMapped.length;
+    typeof report?.review_flag_count === "number"
+      ? report.review_flag_count
+      : reviewFlagsMapped.length;
   const isPublishable =
     typeof report?.is_publishable === "boolean"
       ? report.is_publishable
       : errors.length === 0 && blocking.length === 0;
+
   const summary = {
     errors,
     blocking,
@@ -410,7 +570,9 @@ function AdminArtifactSection({
       {isOpen ? (
         <div className="accordion-panel">
           {description ? <p className="muted">{description}</p> : null}
-          {filename ? <ArtifactActions artifactKey={artifactKey} text={text} filename={filename} /> : null}
+          {filename ? (
+            <ArtifactActions artifactKey={artifactKey} text={text} filename={filename} />
+          ) : null}
           <pre className="code-block">{text}</pre>
         </div>
       ) : null}
@@ -435,24 +597,68 @@ export function PlanViewer({
   const isAdmin = Boolean(plan.admin_outputs);
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
-  const technicalStyles = getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
+  const technicalStyles =
+    getOptionLabels(TECHNICAL_STYLE_OPTIONS, plan.technical_style).join(", ") || "Not provided";
+
   const athletePlanText = plan.outputs.plan_text.trim();
   const hasPublishedPlan = Boolean(athletePlanText);
-  const statusLabel = humanizeStatus(plan.status || "generated");
-  const stage2Status = humanizeStatus(plan.admin_outputs?.stage2_status || "legacy");
+
+  const injuryTriage = readInjuryTriage(plan);
+  const isTriageBlocked =
+    plan.status === "triage_blocked" ||
+    plan.admin_outputs?.stage2_status === "triage_blocked" ||
+    injuryTriage?.mode === "medical_hold" ||
+    injuryTriage?.mode === "restricted_rehab_only";
+
+  const blockedTitle =
+    injuryTriage?.mode === "medical_hold"
+      ? "Medical hold"
+      : injuryTriage?.mode === "restricted_rehab_only"
+        ? "Clearance required"
+        : "Planning paused";
+
+  const statusLabel = isTriageBlocked
+    ? blockedTitle
+    : titleizeToken(plan.status || "generated");
+
+  const stage2Status = isTriageBlocked
+    ? "Stage 2 skipped"
+    : titleizeToken(plan.admin_outputs?.stage2_status || "legacy");
+
+  const heroSummary = isTriageBlocked
+    ? injuryTriage?.mode === "medical_hold"
+      ? "The planner intentionally blocked this intake before finalization because it contains urgent or medically disqualifying signals."
+      : "The planner intentionally paused normal release because this intake contains structural injury signals that require clearance."
+    : hasPublishedPlan
+      ? "This is the validated athlete-facing plan now stored in the app."
+      : "This plan is held back from the athlete view until Stage 2 clears review.";
+
   const handoffText = plan.admin_outputs?.stage2_handoff_text || "";
   const retryText = plan.admin_outputs?.stage2_retry_text || "";
   const draftText = plan.admin_outputs?.draft_plan_text || "No Stage 1 draft.";
   const latestStage2Text = plan.admin_outputs?.final_plan_text || "No Stage 2 output.";
   const coachNotesText = plan.admin_outputs?.coach_notes || "No internal notes.";
-  const validatorText = formatStructuredValue(plan.admin_outputs?.stage2_validator_report, "No validator report.");
+  const validatorText = formatStructuredValue(
+    plan.admin_outputs?.stage2_validator_report,
+    "No validator report.",
+  );
   const validatorReport =
-    plan.admin_outputs?.stage2_validator_report && typeof plan.admin_outputs.stage2_validator_report === "object"
+    plan.admin_outputs?.stage2_validator_report &&
+    typeof plan.admin_outputs.stage2_validator_report === "object"
       ? plan.admin_outputs.stage2_validator_report
       : {};
-  const stage2ReviewSummary = buildReviewSummary(validatorReport, plan.admin_outputs?.stage2_status || "");
-  const planningBriefText = formatStructuredValue(plan.admin_outputs?.planning_brief, "No planning brief.");
-  const payloadText = formatStructuredValue(plan.admin_outputs?.stage2_payload, "No Stage 2 payload.");
+  const stage2ReviewSummary = buildReviewSummary(
+    validatorReport,
+    plan.admin_outputs?.stage2_status || "",
+  );
+  const planningBriefText = formatStructuredValue(
+    plan.admin_outputs?.planning_brief,
+    "No planning brief.",
+  );
+  const payloadText = formatStructuredValue(
+    plan.admin_outputs?.stage2_payload,
+    "No Stage 2 payload.",
+  );
   const reviewPlanText = (plan.admin_outputs?.final_plan_text || "").trim();
   const approvableText =
     plan.admin_outputs?.final_plan_text?.trim() ||
@@ -461,13 +667,18 @@ export function PlanViewer({
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
   const canRejectApproval = isAdmin;
-  const approveButtonLabel = stage2ReviewSummary.isPublishable ? "Approve for athlete view" : "Approve anyway";
-  const reviewPanelClassName = `support-panel stage2-review-panel ${stage2ReviewSummary.isPublishable ? "" : "support-panel-alert"}`.trim();
+  const approveButtonLabel = stage2ReviewSummary.isPublishable
+    ? "Approve for athlete view"
+    : "Approve anyway";
+  const reviewPanelClassName = `support-panel stage2-review-panel ${
+    stage2ReviewSummary.isPublishable ? "" : "support-panel-alert"
+  }`.trim();
   const approvalSourceLabel = plan.admin_outputs?.final_plan_text?.trim()
     ? "saved Stage 2 final output"
     : plan.admin_outputs?.draft_plan_text?.trim()
       ? "saved Stage 1 draft"
       : "current plan text";
+
   const [manualPlanText, setManualPlanText] = useState(plan.admin_outputs?.final_plan_text || "");
   const [manualSubmitPending, setManualSubmitPending] = useState(false);
   const [manualSubmitMessage, setManualSubmitMessage] = useState<string | null>(null);
@@ -485,7 +696,9 @@ export function PlanViewer({
   const [planActionMessage, setPlanActionMessage] = useState<string | null>(null);
   const [planActionError, setPlanActionError] = useState<string | null>(null);
   const [stage2RetryInProgress, setStage2RetryInProgress] = useState(false);
-  const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(null);
+  const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
+    null,
+  );
   const [openAdminSection, setOpenAdminSection] = useState(() => {
     if (retryText.trim()) {
       return "retry";
@@ -530,6 +743,7 @@ export function PlanViewer({
     setStage2RetryJustCompleted(null);
     setManualSubmitError(null);
     setManualSubmitMessage(null);
+
     try {
       const updatedPlan = await submitManualStage2(accessToken, plan.plan_id, {
         final_plan_text: manualPlanText,
@@ -544,7 +758,9 @@ export function PlanViewer({
       );
     } catch (error) {
       setStage2RetryJustCompleted(null);
-      setManualSubmitError(error instanceof Error ? error.message : "Unable to submit manual Stage 2 output.");
+      setManualSubmitError(
+        error instanceof Error ? error.message : "Unable to submit manual Stage 2 output.",
+      );
     } finally {
       setManualSubmitPending(false);
       setStage2RetryInProgress(false);
@@ -566,12 +782,15 @@ export function PlanViewer({
     setApproveMessage(null);
     setRejectError(null);
     setRejectMessage(null);
+
     try {
       const updatedPlan = await approvePlanForRelease(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
       setApproveMessage("Plan approved and released to the athlete view.");
     } catch (error) {
-      setApproveError(error instanceof Error ? error.message : "Unable to approve this plan for athlete view.");
+      setApproveError(
+        error instanceof Error ? error.message : "Unable to approve this plan for athlete view.",
+      );
     } finally {
       setApprovePending(false);
     }
@@ -582,11 +801,13 @@ export function PlanViewer({
       setRejectError("Admin session missing. Please sign in again.");
       return;
     }
+
     setRejectPending(true);
     setRejectError(null);
     setRejectMessage(null);
     setApproveError(null);
     setApproveMessage(null);
+
     try {
       const updatedPlan = await rejectApprovedPlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
@@ -612,6 +833,7 @@ export function PlanViewer({
     setArchivePending(true);
     setArchiveError(null);
     setArchiveMessage(null);
+
     try {
       const updatedPlan = await archivePlan(accessToken, plan.plan_id);
       onPlanUpdated?.(updatedPlan);
@@ -634,6 +856,7 @@ export function PlanViewer({
     if (nextName == null) {
       return;
     }
+
     const normalizedName = nextName.trim();
     if (!normalizedName) {
       setPlanActionError("Plan name cannot be empty.");
@@ -643,15 +866,22 @@ export function PlanViewer({
     setPlanActionPending("rename");
     setPlanActionError(null);
     setPlanActionMessage(null);
+
     try {
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanUpdated?.(updatedPlan);
       setPlanActionMessage("Plan renamed.");
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to rename this plan.";
-      // Provide more helpful error message for retryable failures
-      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setPlanActionError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+      if (
+        errorMessage.includes("Unable to reach the server") ||
+        errorMessage.includes("502") ||
+        errorMessage.includes("503") ||
+        errorMessage.includes("504")
+      ) {
+        setPlanActionError(
+          "Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.",
+        );
       } else {
         setPlanActionError(errorMessage);
       }
@@ -665,6 +895,7 @@ export function PlanViewer({
       setPlanActionError("Session missing. Please sign in again.");
       return;
     }
+
     const confirmed = window.confirm(`Delete "${getPlanDisplayName(plan)}"? This cannot be undone.`);
     if (!confirmed) {
       return;
@@ -673,6 +904,7 @@ export function PlanViewer({
     setPlanActionPending("delete");
     setPlanActionError(null);
     setPlanActionMessage(null);
+
     try {
       await deletePlan(accessToken, plan.plan_id);
       await onPlanDeleted?.();
@@ -680,9 +912,15 @@ export function PlanViewer({
       router.refresh();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unable to delete this plan.";
-      // Provide more helpful error message for retryable failures
-      if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
-        setPlanActionError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
+      if (
+        errorMessage.includes("Unable to reach the server") ||
+        errorMessage.includes("502") ||
+        errorMessage.includes("503") ||
+        errorMessage.includes("504")
+      ) {
+        setPlanActionError(
+          "Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.",
+        );
       } else {
         setPlanActionError(errorMessage);
       }
@@ -732,7 +970,8 @@ export function PlanViewer({
       kicker: "Handoff",
       title: "Stage 2 handoff",
       summary: "Exact handoff prompt generated by the app for manual GPT runs.",
-      description: "Use this if you want to run GPT-5.4 manually with the same Stage 2 handoff the app stored.",
+      description:
+        "Use this if you want to run GPT-5.4 manually with the same Stage 2 handoff the app stored.",
       text: handoffText || "No handoff text.",
       filename: buildArtifactFilename(plan, "stage2-handoff"),
     },
@@ -761,16 +1000,16 @@ export function PlanViewer({
           <div>
             <p className="kicker">Plan Detail</p>
             <h1>{getPlanDisplayName(plan)}</h1>
-            <p className="muted">
-              {hasPublishedPlan
-                ? "This is the validated athlete-facing plan now stored in the app."
-                : "This plan is held back from the athlete view until Stage 2 clears review."}
-            </p>
+            <p className="muted">{heroSummary}</p>
           </div>
           <div className="status-card">
             <p className="status-label">Status</p>
             <h2 className="plan-summary-title">{statusLabel}</h2>
-            <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
+            <p className="muted">
+              {isTriageBlocked
+                ? "Stage 2 was skipped intentionally."
+                : `Created ${new Date(plan.created_at).toLocaleString()}`}
+            </p>
           </div>
         </div>
 
@@ -780,10 +1019,20 @@ export function PlanViewer({
           </Link>
           {canManagePlan ? (
             <>
-              <button type="button" className="ghost-button" onClick={handleRenamePlan} disabled={planActionPending !== null}>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={handleRenamePlan}
+                disabled={planActionPending !== null}
+              >
                 {planActionPending === "rename" ? "Renaming..." : "Rename"}
               </button>
-              <button type="button" className="ghost-button danger-button" onClick={handleDeletePlan} disabled={planActionPending !== null}>
+              <button
+                type="button"
+                className="ghost-button danger-button"
+                onClick={handleDeletePlan}
+                disabled={planActionPending !== null}
+              >
                 {planActionPending === "delete" ? "Deleting..." : "Delete"}
               </button>
             </>
@@ -844,16 +1093,28 @@ export function PlanViewer({
                 <article className="plan-meta-item">
                   <p className="plan-meta-label">Release state</p>
                   <p className="plan-meta-value">
-                    {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
+                    {isTriageBlocked
+                      ? injuryTriage?.mode === "medical_hold"
+                        ? "Blocked"
+                        : "Protected"
+                      : stage2ReviewSummary.isPublishable
+                        ? "Publishable"
+                        : "Held"}
                   </p>
                 </article>
                 <article className="plan-meta-item">
                   <p className="plan-meta-label">Blocking issues</p>
-                  <p className="plan-meta-value">{stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}</p>
+                  <p className="plan-meta-value">
+                    {isTriageBlocked
+                      ? "—"
+                      : stage2ReviewSummary.errors.length + stage2ReviewSummary.blockingCount}
+                  </p>
                 </article>
                 <article className="plan-meta-item">
                   <p className="plan-meta-label">Review flags</p>
-                  <p className="plan-meta-value">{stage2ReviewSummary.reviewFlagCount}</p>
+                  <p className="plan-meta-value">
+                    {isTriageBlocked ? "—" : stage2ReviewSummary.reviewFlagCount}
+                  </p>
                 </article>
               </div>
               {handoffText.trim() ? (
@@ -886,24 +1147,60 @@ export function PlanViewer({
           <div className="plan-header-row">
             <div>
               <p className="kicker">Athlete Plan</p>
-              <h2>{hasPublishedPlan ? "Validated final plan" : "Pending finalization"}</h2>
+              <h2>
+                {isTriageBlocked
+                  ? "Protected plan state"
+                  : hasPublishedPlan
+                    ? "Validated final plan"
+                    : "Pending finalization"}
+              </h2>
             </div>
-            <span className={`badge ${hasPublishedPlan ? "status-badge-success" : "status-badge-neutral"}`}>
-              {hasPublishedPlan ? "Validated" : "Review required"}
+            <span
+              className={`badge ${
+                isTriageBlocked
+                  ? injuryTriage?.mode === "medical_hold"
+                    ? "issue-badge-error"
+                    : ""
+                  : hasPublishedPlan
+                    ? "status-badge-success"
+                    : "status-badge-neutral"
+              }`}
+            >
+              {isTriageBlocked
+                ? injuryTriage?.mode === "medical_hold"
+                  ? "Medical hold"
+                  : "Clearance required"
+                : hasPublishedPlan
+                  ? "Validated"
+                  : "Review required"}
             </span>
           </div>
+
           {primaryAdvisory ? <SparringAdvisoryCard advisory={primaryAdvisory} /> : null}
-          {hasPublishedPlan ? (
+
+          {isTriageBlocked && injuryTriage ? (
+            <BlockedPlanDecisionCard triage={injuryTriage} />
+          ) : hasPublishedPlan ? (
             <>
               <div className="plan-summary-actions">
                 <QuickCopyButton text={athletePlanText} artifactKey="athlete-plan" />
                 {canRejectApproval ? (
-                  <button type="button" className="ghost-button" onClick={handleRejectApproval} disabled={rejectPending}>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={handleRejectApproval}
+                    disabled={rejectPending}
+                  >
                     {rejectPending ? "Rejecting..." : "Reject approval"}
                   </button>
                 ) : null}
                 {isAdmin ? (
-                  <button type="button" className="ghost-button" onClick={handleArchivePlan} disabled={archivePending}>
+                  <button
+                    type="button"
+                    className="ghost-button"
+                    onClick={handleArchivePlan}
+                    disabled={archivePending}
+                  >
                     {archivePending ? "Archiving..." : "Archive"}
                   </button>
                 ) : null}
@@ -929,11 +1226,24 @@ export function PlanViewer({
                       </p>
                     </section>
                   ) : null}
+
                   {stage2RetryJustCompleted ? (
-                    <section className={`support-panel stage2-retry-banner ${stage2RetryJustCompleted === "passed" ? "stage2-retry-passed" : "stage2-retry-failed"}`}>
+                    <section
+                      className={`support-panel stage2-retry-banner ${
+                        stage2RetryJustCompleted === "passed"
+                          ? "stage2-retry-passed"
+                          : "stage2-retry-failed"
+                      }`}
+                    >
                       <div className="form-section-header">
-                        <p className="kicker">Stage 2 Retry — Attempt {plan.admin_outputs?.stage2_attempt_count || 1}</p>
-                        <h3>{stage2RetryJustCompleted === "passed" ? "Retry passed — plan published" : "Retry completed — new validation results below"}</h3>
+                        <p className="kicker">
+                          Stage 2 Retry — Attempt {plan.admin_outputs?.stage2_attempt_count || 1}
+                        </p>
+                        <h3>
+                          {stage2RetryJustCompleted === "passed"
+                            ? "Retry passed — plan published"
+                            : "Retry completed — new validation results below"}
+                        </h3>
                       </div>
                       <p className="muted">
                         {stage2RetryJustCompleted === "passed"
@@ -942,17 +1252,35 @@ export function PlanViewer({
                       </p>
                     </section>
                   ) : null}
-                  <section className={`${reviewPanelClassName}${stage2RetryInProgress ? " stage2-review-panel-stale" : ""}`}>
+
+                  <section
+                    className={`${reviewPanelClassName}${
+                      stage2RetryInProgress ? " stage2-review-panel-stale" : ""
+                    }`}
+                  >
                     <div className="form-section-header">
                       <p className="kicker">
                         Stage 2 review
-                        {plan.admin_outputs?.stage2_attempt_count ? ` — attempt ${plan.admin_outputs.stage2_attempt_count}` : ""}
+                        {plan.admin_outputs?.stage2_attempt_count
+                          ? ` — attempt ${plan.admin_outputs.stage2_attempt_count}`
+                          : ""}
                         {stage2RetryInProgress ? " (previous attempt)" : ""}
                       </p>
-                      <h3>{stage2ReviewSummary.isPublishable ? "Release decision" : "Why this plan is being held"}</h3>
+                      <h3>
+                        {stage2ReviewSummary.isPublishable
+                          ? "Release decision"
+                          : "Why this plan is being held"}
+                      </h3>
                     </div>
+
                     <div className="stage2-review-state-row">
-                      <span className={`badge ${stage2ReviewSummary.isPublishable ? "status-badge-success" : "issue-badge-error"}`}>
+                      <span
+                        className={`badge ${
+                          stage2ReviewSummary.isPublishable
+                            ? "status-badge-success"
+                            : "issue-badge-error"
+                        }`}
+                      >
                         {stage2ReviewSummary.isPublishable ? "Publishable" : "Held"}
                       </span>
                       <span className="badge issue-badge-error">
@@ -962,13 +1290,16 @@ export function PlanViewer({
                         {stage2ReviewSummary.reviewFlagCount} review flags
                       </span>
                     </div>
+
                     <p className="review-summary-text">{stage2ReviewSummary.headline}</p>
                     <p className="muted">{stage2ReviewSummary.guidance}</p>
+
                     {reviewPlanText ? (
                       <div className="plan-summary-actions">
                         <QuickCopyButton text={reviewPlanText} artifactKey="review-stage2" />
                       </div>
                     ) : null}
+
                     {stage2ReviewSummary.hasIssues ? (
                       <div className="review-issue-groups">
                         {stage2ReviewSummary.errors.length || stage2ReviewSummary.blocking.length ? (
@@ -987,29 +1318,43 @@ export function PlanViewer({
                                     <span className="badge issue-badge-error">Error</span>
                                   </div>
                                   <p className="review-issue-message">{issue.message}</p>
-                                  {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
-                                  {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
+                                  {issue.context ? (
+                                    <p className="review-issue-context">{issue.context}</p>
+                                  ) : null}
+                                  {issue.snippet ? (
+                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
+                                  ) : null}
                                 </article>
                               ))}
                               {stage2ReviewSummary.blocking.map((issue, index) => (
-                                <article key={`${issue.code}-blocking-${index}`} className="review-issue-item">
+                                <article
+                                  key={`${issue.code}-blocking-${index}`}
+                                  className="review-issue-item"
+                                >
                                   <div className="review-issue-title-row">
                                     <p className="review-issue-title">{issue.title}</p>
                                     <span className="badge issue-badge-error">Blocker</span>
                                   </div>
                                   <p className="review-issue-message">{issue.message}</p>
-                                  {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
-                                  {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
+                                  {issue.context ? (
+                                    <p className="review-issue-context">{issue.context}</p>
+                                  ) : null}
+                                  {issue.snippet ? (
+                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
+                                  ) : null}
                                 </article>
                               ))}
                             </div>
                           </section>
                         ) : null}
+
                         {stage2ReviewSummary.reviewFlags.length ? (
                           <section className="review-issue-group">
                             <div className="review-issue-group-header">
                               <p className="review-issue-group-title">Review flags</p>
-                              <span className="badge issue-badge-warning">{stage2ReviewSummary.reviewFlags.length}</span>
+                              <span className="badge issue-badge-warning">
+                                {stage2ReviewSummary.reviewFlags.length}
+                              </span>
                             </div>
                             <div className="review-issue-list">
                               {stage2ReviewSummary.reviewFlags.map((issue, index) => (
@@ -1019,8 +1364,12 @@ export function PlanViewer({
                                     <span className="badge issue-badge-warning">Flag</span>
                                   </div>
                                   <p className="review-issue-message">{issue.message}</p>
-                                  {issue.context ? <p className="review-issue-context">{issue.context}</p> : null}
-                                  {issue.snippet ? <p className="review-issue-snippet">Line: {issue.snippet}</p> : null}
+                                  {issue.context ? (
+                                    <p className="review-issue-context">{issue.context}</p>
+                                  ) : null}
+                                  {issue.snippet ? (
+                                    <p className="review-issue-snippet">Line: {issue.snippet}</p>
+                                  ) : null}
                                 </article>
                               ))}
                             </div>
@@ -1031,6 +1380,7 @@ export function PlanViewer({
                   </section>
                 </>
               ) : null}
+
               <div className="support-panel">
                 <div className="form-section-header">
                   <p className="kicker">Publishing hold</p>
@@ -1057,12 +1407,22 @@ export function PlanViewer({
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
                       {isAdmin ? (
-                        <button type="button" className="ghost-button" onClick={handleRejectApproval} disabled={rejectPending}>
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={handleRejectApproval}
+                          disabled={rejectPending}
+                        >
                           {rejectPending ? "Rejecting..." : "Reject"}
                         </button>
                       ) : null}
                       {isAdmin ? (
-                        <button type="button" className="ghost-button" onClick={handleArchivePlan} disabled={archivePending}>
+                        <button
+                          type="button"
+                          className="ghost-button"
+                          onClick={handleArchivePlan}
+                          disabled={archivePending}
+                        >
                           {archivePending ? "Archiving..." : "Archive"}
                         </button>
                       ) : null}
@@ -1091,6 +1451,7 @@ export function PlanViewer({
             <p className="muted">
               Paste a manual GPT-5.4 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
             </p>
+
             {canApproveForRelease ? (
               <div className="support-panel">
                 <div className="form-section-header">
@@ -1112,12 +1473,14 @@ export function PlanViewer({
                 </div>
               </div>
             ) : null}
+
             {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
             {approveError ? <div className="error-banner">{approveError}</div> : null}
             {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
             {rejectError ? <div className="error-banner">{rejectError}</div> : null}
             {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
             {archiveError ? <div className="error-banner">{archiveError}</div> : null}
+
             <div className="field">
               <label htmlFor="manual-stage2-final-plan">Final plan text</label>
               <textarea
@@ -1128,14 +1491,22 @@ export function PlanViewer({
                 placeholder="Paste the manual Stage 2 final plan here"
               />
             </div>
+
             <div className="plan-summary-actions">
-              <button type="button" className="cta" onClick={handleManualStage2Submit} disabled={manualSubmitPending}>
+              <button
+                type="button"
+                className="cta"
+                onClick={handleManualStage2Submit}
+                disabled={manualSubmitPending}
+              >
                 {manualSubmitPending ? "Submitting..." : "Validate and save"}
               </button>
             </div>
+
             {manualSubmitMessage ? <div className="success-banner">{manualSubmitMessage}</div> : null}
             {manualSubmitError ? <div className="error-banner">{manualSubmitError}</div> : null}
           </section>
+
           <section className="viewer-panel">
             <div className="form-section-header">
               <p className="kicker">Stage 2 internals</p>
