@@ -220,6 +220,11 @@ _NEGATION_CUE_PATTERN = compile_regex("injury_synonyms", "negation_cue_pattern")
 
 
 INJURY_SYNONYM_MAP = {
+    # NOTE: Some severe structural/dislocation phrases intentionally remain in
+    # broad rehab synonym buckets for parsing coverage (e.g., ACL tear,
+    # ruptured ligament, tendon rupture, subluxation). Triage pattern matching
+    # must take precedence and route these severe signals before ordinary rehab
+    # typing is used.
     # Ligament - now with every joint instability phrase imaginable
     "sprain": [
         "pop", "popped", "pop sound", "rolling", "rolled", "twist", "twisted",

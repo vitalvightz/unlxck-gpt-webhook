@@ -50,14 +50,29 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bstress\s+fracture\b", "stress_fracture"),
     (r"\brib\s+fracture\b|\bbroken\s+rib\b", "broken_rib"),
     (r"\bfracture\b", "fracture"),
-    (r"\bdislocation\b", "dislocation"),
+    (r"\bdislocat(?:ion|e|ed|es|ing)\b|\bsublux(?:ation|ing|ed)?\b|\bpartial\s+dislocation\b", "dislocation"),
     (r"\bsuspected\s+concussion\b", "suspected_concussion"),
     (r"\bconcussion\b", "concussion"),
     (r"\bachilles\b[\w\s-]{0,30}\b(?:rupture|tear|avulsion)\b|\b(?:rupture|tear|avulsion)\b[\w\s-]{0,30}\bachilles\b", "achilles_rupture"),
     (r"\bfull[-\s]?thickness\s+rotator\s+cuff\s+tear\b", "full_thickness_rotator_cuff_tear"),
-    (r"\btendon\s+(?:rupture|avulsion)\b|\b(?:rupture|avulsion)\s+tendon\b", "tendon_rupture_or_avulsion"),
-    (r"\bcomplete\s+ligament\s+tear\b|\bligament\s+tear\s+complete\b", "complete_ligament_tear"),
-    (r"\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bacl\b", "acl_tear"),
+    (
+        r"\btendon\s+(?:rupture|avulsion|tear|pop|snap|failure)\b"
+        r"|\b(?:rupture|avulsion|tear|pop|snap|failure)\s+tendon\b",
+        "tendon_rupture_or_avulsion",
+    ),
+    (
+        r"\bcomplete\s+ligament\s+tear\b|\bligament\s+tear\s+complete\b"
+        r"|\b(?:ruptured|torn|blown)\s+ligament\b"
+        r"|\bgrade\s*(?:3|iii)\b[\w\s-]{0,20}\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{0,20}\b(?:tear|rupture|sprain|injury)?\b"
+        r"|\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{0,20}\bgrade\s*(?:3|iii)\b",
+        "complete_ligament_tear",
+    ),
+    (r"\bacl\b", "acl_mention"),
+    (
+        r"\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction|injury|surgery)\b"
+        r"|\b(?:tear|rupture|injury)\b[\w\s-]{0,30}\bacl\b",
+        "acl_tear",
+    ),
     (r"\bpcl\b[\w\s-]{0,30}\b(?:tear|rupture)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bpcl\b", "pcl_tear"),
     (r"\bmcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+mcl\s+tear\b", "mcl_grade3_tear"),
     (r"\blcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+lcl\s+tear\b", "lcl_grade3_tear"),
@@ -133,6 +148,96 @@ _NEGATED_SEVERE_PATTERNS = (
     r"\b(?:acl|pcl)\s+intact\b",
     r"\bno\s+fracture\s+seen\b",
 )
+
+_ACL_HISTORY_TERMS = (
+    "history of",
+    "hx of",
+    "old acl",
+    "prior acl",
+    "previous acl",
+    "post acl",
+    "status post acl",
+    "s/p acl",
+    "acl rehab history",
+    "now cleared",
+    "cleared",
+)
+
+_ACL_CURRENT_CONCERN_TERMS = (
+    "tear",
+    "rupture",
+    "reinjur",
+    "new injury",
+    "fresh",
+    "acute",
+    "swelling",
+    "instability",
+    "giving way",
+    "buckl",
+    "popped",
+    "pop",
+    "pain",
+)
+
+_HISTORY_TERMS = (
+    "history of",
+    "hx of",
+    "old",
+    "prior",
+    "previous",
+    "years ago",
+    "status post",
+    "s/p",
+    "rehab history",
+    "now cleared",
+    "cleared",
+    "healed",
+    "resolved",
+    "fully recovered",
+    "recovered",
+    "past injury",
+)
+
+_CURRENT_CONCERN_TERMS = (
+    "reinjur",
+    "new injury",
+    "fresh",
+    "acute",
+    "current",
+    "currently",
+    "today",
+    "ongoing",
+    "worse",
+    "worsening",
+    "swelling",
+    "instability",
+    "giving way",
+    "buckl",
+    "popped",
+    "pop",
+    "pain",
+    "cannot",
+    "unable",
+)
+
+_RESOLUTION_TERMS = (
+    "now cleared",
+    "cleared",
+    "healed",
+    "resolved",
+    "fully recovered",
+    "recovered",
+    "asymptomatic",
+    "no symptoms",
+    "pain free",
+)
+
+_HISTORY_SUPPRESSIBLE_LABELS = {
+    "acl_tear",
+    "complete_ligament_tear",
+    "tendon_rupture_or_avulsion",
+    "dislocation",
+}
 
 _FUNCTION_LOSS_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bcan(?:not|'t)?\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b", "cannot_bear_weight"),
@@ -210,6 +315,23 @@ def _is_negated_severe_chunk(text: str) -> bool:
     return any(re.search(pattern, lowered) for pattern in _NEGATED_SEVERE_PATTERNS)
 
 
+def _is_acl_history_only_chunk(text: str) -> bool:
+    lowered = str(text or "").lower()
+    if "acl" not in lowered:
+        return False
+    has_history = any(term in lowered for term in _ACL_HISTORY_TERMS)
+    has_current_concern = any(term in lowered for term in _ACL_CURRENT_CONCERN_TERMS)
+    return has_history and not has_current_concern
+
+
+def _is_history_only_chunk(text: str) -> bool:
+    lowered = str(text or "").lower()
+    has_history = any(term in lowered for term in _HISTORY_TERMS)
+    has_resolution = any(term in lowered for term in _RESOLUTION_TERMS)
+    has_current_concern = any(term in lowered for term in _CURRENT_CONCERN_TERMS)
+    return has_history and (has_resolution or not has_current_concern)
+
+
 def build_triage_features(
     *,
     injuries: str,
@@ -266,21 +388,31 @@ def build_triage_features(
             clinician_evidence.add(raw_chunk)
 
         if not _is_negated_severe_chunk(raw_chunk):
+            history_only_chunk = _is_history_only_chunk(cleaned_chunk)
             chunk_high_risk = _collect_matches(cleaned_chunk, _HIGH_RISK_PATTERNS)
+            if "acl_mention" in chunk_high_risk:
+                chunk_high_risk.discard("acl_mention")
+                if not _is_acl_history_only_chunk(cleaned_chunk):
+                    chunk_high_risk.add("acl_tear")
+            if "acl_tear" in chunk_high_risk and _is_acl_history_only_chunk(cleaned_chunk):
+                chunk_high_risk.discard("acl_tear")
+            if history_only_chunk:
+                chunk_high_risk.difference_update(_HISTORY_SUPPRESSIBLE_LABELS)
             if chunk_high_risk:
                 high_risk_diagnoses.update(chunk_high_risk)
                 high_risk_evidence.add(raw_chunk)
 
-            scored = score_injury_phrase(cleaned_chunk)
-            scored_type = str(scored.get("injury_type") or "")
-            if _is_structural_severe_signal(text=cleaned_chunk, scored_injury_type=scored_type):
-                structural_severe_signals.add("structural_severe_signal")
-                structural_evidence.add(raw_chunk)
+            if not history_only_chunk:
+                scored = score_injury_phrase(cleaned_chunk)
+                scored_type = str(scored.get("injury_type") or "")
+                if _is_structural_severe_signal(text=cleaned_chunk, scored_injury_type=scored_type):
+                    structural_severe_signals.add("structural_severe_signal")
+                    structural_evidence.add(raw_chunk)
 
-            for flag in scored.get("flags", []):
-                if str(flag).startswith("urgent"):
-                    urgent_flags.add(str(flag))
-                    urgent_evidence.add(raw_chunk)
+                for flag in scored.get("flags", []):
+                    if str(flag).startswith("urgent"):
+                        urgent_flags.add(str(flag))
+                        urgent_evidence.add(raw_chunk)
 
     return TriageFeatures(
         high_risk_diagnoses=sorted(high_risk_diagnoses),
