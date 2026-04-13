@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
+from typing import Any
 
 from .config import CONDITIONING_PER_DAY, STRENGTH_PER_DAY
 
@@ -87,6 +88,11 @@ class TrainingContext:
     hard_sparring_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)
     athlete_timezone: str = ""
+    injuries_raw_text: str = ""
+    parsed_injuries: list[dict[str, Any]] = field(default_factory=list)
+    guided_injury: dict[str, Any] | None = None
+    injury_restrictions: list[dict[str, Any]] = field(default_factory=list)
+    triage_summary: dict[str, Any] = field(default_factory=dict)
 
     def to_flags(self) -> dict:
         return asdict(self)

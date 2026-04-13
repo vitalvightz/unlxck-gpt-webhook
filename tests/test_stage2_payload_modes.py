@@ -478,6 +478,7 @@ class TestHandoffText:
     def test_camp_handoff_has_no_payload_mode_section(self):
         text = self._build_handoff(14)
         assert "PAYLOAD MODE INSTRUCTIONS" not in text
+        assert "INJURY CONTEXT" in text
         assert "PLANNING BRIEF" in text
 
     @pytest.mark.parametrize(
@@ -495,8 +496,35 @@ class TestHandoffText:
         text = self._build_handoff(days)
         assert "PAYLOAD MODE INSTRUCTIONS" in text
         assert expected_heading in text
+
+    def test_handoff_injury_context_section_is_visible_and_structured(self):
+        payload = _build_stage2(14)
+        payload["injury_context"] = {
+            "raw_injury_text": "sore shoulder after sparring",
+            "injuries_flat": ["shoulder pain"],
+            "parsed_injuries": [{"original_phrase": "shoulder pain", "severity": "mild"}],
+            "guided_injury": {"area": "right shoulder", "severity": "mild"},
+            "restrictions": [{"restriction": "avoid heavy overhead pressing"}],
+            "triage_summary": {"mode": "full_plan", "should_block_stage2": False},
+        }
+        brief = build_planning_brief(
+            athlete_model=payload["athlete_model"],
+            restrictions=payload["restrictions"],
+            phase_briefs=payload["phase_briefs"],
+            candidate_pools=payload["candidate_pools"],
+            omission_ledger=payload["omission_ledger"],
+            rewrite_guidance=payload["rewrite_guidance"],
+        )
+        text = build_stage2_handoff_text(
+            stage2_payload=payload,
+            plan_text="Week 1 ...",
+            planning_brief=brief,
+        )
+        assert "INJURY CONTEXT" in text
+        assert "sore shoulder after sparring" in text
+        assert "avoid heavy overhead pressing" in text
         assert "STAGE 1 DRAFT PLAN" in text
-        assert "Draft plan text." in text
+        assert "Week 1 ..." in text
 
     def test_d10_handoff_blocks_normal_spp_rebuild_language(self):
         text = self._build_handoff(10)

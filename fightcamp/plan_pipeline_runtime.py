@@ -208,7 +208,13 @@ def _apply_muay_thai_filters(text: str, *, allow_grappling: bool) -> str:
     return text
 
 
-def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: logging.Logger) -> PlanRuntimeContext:
+def build_runtime_context(
+    *,
+    plan_input: PlanInput,
+    random_seed: Any,
+    logger: logging.Logger,
+    triage_summary: dict[str, Any] | None = None,
+) -> PlanRuntimeContext:
     parsed_injury_phrases = [
         entry.get("original_phrase")
         for entry in plan_input.parsed_injuries
@@ -263,6 +269,18 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
 
     injuries_only_text = "; ".join(parsed_injury_phrases)
     raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
+    guided_injury = plan_input.guided_injury
+    guided_injury_dict = (
+        {
+            "area": guided_injury.area,
+            "severity": guided_injury.severity,
+            "trend": guided_injury.trend,
+            "avoid": guided_injury.avoid,
+            "notes": guided_injury.notes,
+        }
+        if guided_injury is not None
+        else None
+    )
 
     training_context = TrainingContext(
         fatigue=plan_input.fatigue.lower(),
@@ -298,6 +316,11 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         hard_sparring_days=plan_input.hard_sparring_days,
         technical_skill_days=plan_input.technical_skill_days,
         athlete_timezone=plan_input.athlete_timezone,
+        injuries_raw_text=plan_input.injuries,
+        parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
+        guided_injury=guided_injury_dict,
+        injury_restrictions=[dict(entry) for entry in plan_input.restrictions],
+        triage_summary=dict(triage_summary or {}),
     )
 
     return PlanRuntimeContext(

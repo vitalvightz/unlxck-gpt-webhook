@@ -146,6 +146,7 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
         plan_input=plan_input,
         random_seed=data.get("random_seed"),
         logger=logger,
+        triage_summary=triage_result.to_dict(),
     )
     _record_timing("runtime_context", timer_start)
 
