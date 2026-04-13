@@ -43,6 +43,8 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert saved["pdf_url"] is None
     assert saved["status"] == "ready"
     assert body["admin_outputs"] is None
+    assert body["safety_state"]["state"] == "plan_ready"
+    assert body["safety_state"]["status_chip"] == "PLAN READY"
     assert store.get_latest_intake("athlete-1")["intake"]["fight_date"] == "2026-04-18"
     assert len(store.list_user_plans("athlete-1")) == 1
     saved = next(iter(store.plans.values()))
@@ -189,6 +191,15 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert saved["status"] == "triage_blocked"
     assert saved["stage2_status"] == "triage_blocked"
     assert saved["stage2_payload"] is None
+    detail = client.get(
+        f"/api/plans/{saved['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert detail.status_code == 200
+    safety = detail.json()["safety_state"]
+    assert safety["state"] == "medical_hold"
+    assert safety["status_chip"] == "MEDICAL HOLD"
+    assert safety["stage2_skipped"] is True
 
 def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
     client, store, _ = _build_client(

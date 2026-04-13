@@ -38,6 +38,7 @@ from .models import (
     PlanDetail,
     PlanRenameRequest,
     PlanOutputs,
+    PlanSafetyState,
     PlanRequest,
     PlanSummary,
     ProfileRecord,
@@ -349,6 +350,72 @@ def _admin_final_text(row: dict[str, Any]) -> str:
     return str(row.get("final_plan_text") or row.get("plan_text") or "")
 
 
+def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
+    triage = {}
+    why_log = row.get("why_log")
+    if isinstance(why_log, dict):
+        triage = why_log.get("injury_triage") or {}
+    if not isinstance(triage, dict):
+        triage = {}
+
+    mode = str(triage.get("mode") or "")
+    triage_blocked = str(row.get("status") or "").strip().lower() == "triage_blocked"
+    stage2_was_skipped = bool(triage.get("should_block_stage2")) or triage_blocked
+    if mode == "medical_hold":
+        return PlanSafetyState(
+            state="medical_hold",
+            status_chip="MEDICAL HOLD",
+            header="Medical hold: no training plan generated",
+            subtext=(
+                "Urgent neurological or medical red-flag signals were detected. "
+                "Planning was intentionally blocked before normal generation."
+            ),
+            stage2_skipped=stage2_was_skipped,
+            clinician_clearance_required=bool(triage.get("clinician_clearance_required", True)),
+            matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
+            red_flags=list(triage.get("red_flags") or []),
+            sparring_risk_band=triage.get("sparring_risk_band"),
+            next_steps=[
+                "Seek appropriate medical review before training guidance.",
+                "Update the intake after clearance.",
+                "Regenerate only when medically cleared.",
+            ],
+        )
+    if mode == "restricted_rehab_only":
+        return PlanSafetyState(
+            state="restricted_rehab_only",
+            status_chip="RESTRICTED REHAB ONLY",
+            header="Planning paused: clinician clearance required",
+            subtext=(
+                "Serious structural injury signals were detected. "
+                "Normal fight-camp generation is paused to avoid unsafe loading recommendations."
+            ),
+            stage2_skipped=stage2_was_skipped,
+            clinician_clearance_required=bool(triage.get("clinician_clearance_required", True)),
+            matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
+            red_flags=list(triage.get("red_flags") or []),
+            sparring_risk_band=triage.get("sparring_risk_band"),
+            next_steps=[
+                "Review injury details and current restrictions.",
+                "Update the intake after clinician clearance.",
+                "Regenerate normal planning only when safe.",
+            ],
+        )
+
+    return PlanSafetyState(
+        state="plan_ready",
+        status_chip="PLAN READY",
+        header="Plan ready",
+        subtext="Normal planning completed.",
+        stage2_skipped=False,
+        clinician_clearance_required=False,
+        matched_high_risk_categories=[],
+        red_flags=[],
+        sparring_risk_band=None,
+        next_steps=[],
+    )
+
+
 def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
     summary = _map_plan_summary(row)
     planning_brief = _decode_structured_text(row.get("planning_brief"))
@@ -365,6 +432,7 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
             plan_text=str(row.get("plan_text") or ""),
             pdf_url=row.get("pdf_url"),
         ),
+        safety_state=_map_plan_safety_state(row),
         advisories=build_plan_advisories(planning_brief=planning_brief),
         admin_outputs=(
             AdminPlanOutputs(

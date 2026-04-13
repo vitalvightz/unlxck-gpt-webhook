@@ -617,6 +617,19 @@ class PlanOutputs(BaseModel):
     pdf_url: str | None = None
 
 
+class PlanSafetyState(BaseModel):
+    state: Literal["plan_ready", "restricted_rehab_only", "medical_hold"]
+    status_chip: str
+    header: str
+    subtext: str
+    stage2_skipped: bool = False
+    clinician_clearance_required: bool = False
+    matched_high_risk_categories: list[str] = Field(default_factory=list)
+    red_flags: list[str] = Field(default_factory=list)
+    sparring_risk_band: Literal["green", "amber", "red", "black"] | None = None
+    next_steps: list[str] = Field(default_factory=list)
+
+
 class PlanAdvisory(BaseModel):
     kind: Literal["sparring_adjustment"]
     action: Literal["deload", "convert"]
@@ -648,6 +661,7 @@ class AdminPlanOutputs(BaseModel):
 
 class PlanDetail(PlanSummary):
     outputs: PlanOutputs
+    safety_state: PlanSafetyState
     advisories: list[PlanAdvisory] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
 
