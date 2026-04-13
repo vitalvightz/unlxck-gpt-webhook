@@ -568,6 +568,26 @@ class ManualStage2SubmissionRequest(BaseModel):
         return normalized
 
 
+class NeedsReviewStage2ApprovalRequest(BaseModel):
+    reason: str
+    disclaimer_acknowledged: bool
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("reason is required")
+        return normalized
+
+    @field_validator("disclaimer_acknowledged")
+    @classmethod
+    def validate_disclaimer_acknowledged(cls, value: bool) -> bool:
+        if value is not True:
+            raise ValueError("disclaimer_acknowledged must be true")
+        return value
+
+
 class PlanRenameRequest(BaseModel):
     plan_name: str
 
@@ -657,6 +677,13 @@ class AdminPlanOutputs(BaseModel):
     stage2_validator_report: dict[str, Any] = Field(default_factory=dict)
     stage2_status: str = ""
     stage2_attempt_count: int = 0
+    manual_injury_review_required: bool = False
+    approved_for_stage2: bool = False
+    approved_for_stage2_by: str | None = None
+    approved_for_stage2_at: str | None = None
+    approval_reason: str | None = None
+    liability_disclaimer_acknowledged: bool = False
+    stage2_override_source: str | None = None
 
 
 class PlanDetail(PlanSummary):

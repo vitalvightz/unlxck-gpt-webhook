@@ -138,6 +138,17 @@ class FakeStore:
             "stage2_validator_report": result.get("stage2_validator_report", {}),
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
+            "manual_injury_review_required": bool(
+                result.get("manual_injury_review_required")
+                if "manual_injury_review_required" in result
+                else str((result.get("injury_triage") or {}).get("mode") or "") == "needs_review"
+            ),
+            "approved_for_stage2": bool(result.get("approved_for_stage2", False)),
+            "approved_for_stage2_by": result.get("approved_for_stage2_by"),
+            "approved_for_stage2_at": result.get("approved_for_stage2_at"),
+            "approval_reason": result.get("approval_reason"),
+            "liability_disclaimer_acknowledged": bool(result.get("liability_disclaimer_acknowledged", False)),
+            "stage2_override_source": result.get("stage2_override_source"),
             "created_at": _now(),
             "full_name": profile["full_name"],
         }
@@ -282,8 +293,46 @@ class FakeStore:
                 "stage2_validator_report": result.get("stage2_validator_report", {}),
                 "stage2_status": result.get("stage2_status", ""),
                 "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
+                "manual_injury_review_required": bool(
+                    result.get("manual_injury_review_required", row.get("manual_injury_review_required", False))
+                ),
+                "approved_for_stage2": bool(result.get("approved_for_stage2", row.get("approved_for_stage2", False))),
+                "approved_for_stage2_by": result.get("approved_for_stage2_by", row.get("approved_for_stage2_by")),
+                "approved_for_stage2_at": result.get("approved_for_stage2_at", row.get("approved_for_stage2_at")),
+                "approval_reason": result.get("approval_reason", row.get("approval_reason")),
+                "liability_disclaimer_acknowledged": bool(
+                    result.get(
+                        "liability_disclaimer_acknowledged",
+                        row.get("liability_disclaimer_acknowledged", False),
+                    )
+                ),
+                "stage2_override_source": result.get("stage2_override_source", row.get("stage2_override_source")),
             }
         )
+        if "coach_notes" in result:
+            row["coach_notes"] = result.get("coach_notes", "")
+        if "why_log" in result:
+            row["why_log"] = result.get("why_log", {})
+        return row
+
+    def approve_needs_review_for_stage2(
+        self,
+        *,
+        plan_id: str,
+        approver: str,
+        reason: str,
+        disclaimer_acknowledged: bool,
+    ) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        row["manual_injury_review_required"] = True
+        row["approved_for_stage2"] = True
+        row["approved_for_stage2_by"] = approver
+        row["approved_for_stage2_at"] = _now()
+        row["approval_reason"] = reason
+        row["liability_disclaimer_acknowledged"] = bool(disclaimer_acknowledged)
+        row["stage2_override_source"] = "coach_review"
         return row
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict]:

@@ -174,6 +174,11 @@ export type ManualStage2SubmissionRequest = {
   final_plan_text: string;
 };
 
+export type NeedsReviewStage2ApprovalRequest = {
+  reason: string;
+  disclaimer_acknowledged: boolean;
+};
+
 export type ProfileUpdateRequest = {
   full_name?: string;
   technical_style?: string[];
@@ -253,6 +258,13 @@ export type AdminPlanOutputs = {
   stage2_validator_report: Record<string, unknown>;
   stage2_status: string;
   stage2_attempt_count: number;
+  manual_injury_review_required: boolean;
+  approved_for_stage2: boolean;
+  approved_for_stage2_by?: string | null;
+  approved_for_stage2_at?: string | null;
+  approval_reason?: string | null;
+  liability_disclaimer_acknowledged: boolean;
+  stage2_override_source?: string | null;
 };
 
 export type PlanDetail = PlanSummary & {
