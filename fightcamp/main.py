@@ -5,6 +5,7 @@ from pathlib import Path
 from time import perf_counter
 
 from .input_parsing import PlanInput
+from .injury_triage import FULL_PLAN, blocked_mode_output, triage_injuries
 from .logging_utils import configure_logging
 from .plan_pipeline import (
     _filter_mindset_blocks,
@@ -127,6 +128,14 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
             f"missing required planning inputs: {missing_summary}",
             missing_fields=generation_issues,
         )
+
+    timer_start = perf_counter()
+    triage_result = triage_injuries(plan_input)
+    _record_timing("injury_triage", timer_start)
+    if triage_result.mode != FULL_PLAN:
+        blocked = blocked_mode_output(triage=triage_result)
+        blocked["parsing_metadata"] = plan_input.parsing_metadata
+        return blocked
 
     timer_start = perf_counter()
     prime_plan_banks(logger=logger)
