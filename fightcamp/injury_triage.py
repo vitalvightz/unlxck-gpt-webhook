@@ -4,9 +4,9 @@ from dataclasses import asdict, dataclass, field
 import re
 from typing import Any
 
-from .injury_scoring import score_injury_phrase
-from .input_parsing import GuidedInjury, PlanInput
+from .input_parsing import PlanInput
 from .sparring_advisories import summarize_sparring_injury_risk
+from .triage_features import build_triage_features
 
 FULL_PLAN = "full_plan"
 RESTRICTED_REHAB_ONLY = "restricted_rehab_only"
@@ -19,62 +19,14 @@ _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "broken_rib": RESTRICTED_REHAB_ONLY,
     "dislocation": RESTRICTED_REHAB_ONLY,
     "acl_tear": RESTRICTED_REHAB_ONLY,
+    "achilles_rupture": RESTRICTED_REHAB_ONLY,
+    "full_thickness_rotator_cuff_tear": RESTRICTED_REHAB_ONLY,
+    "tendon_rupture_or_avulsion": RESTRICTED_REHAB_ONLY,
+    "complete_ligament_tear": RESTRICTED_REHAB_ONLY,
     "concussion": MEDICAL_HOLD,
     "suspected_concussion": MEDICAL_HOLD,
     "open_fracture": MEDICAL_HOLD,
 }
-
-_RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
-    (r"\bnumb(?:ness)?\b", "numbness"),
-    (r"\btingl(?:e|ing)\b", "tingling"),
-    (r"\bweak(?:ness)?\b", "weakness"),
-    (r"\bcan(?:not|'t)?\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b", "cannot_bear_weight"),
-    (r"\brapid(?:ly)?\s+worsening\s+swelling\b", "rapid_swelling"),
-    (r"\bdeformit(?:y|ies)\b", "deformity"),
-    (r"\bshort(?:ness)?\s+of\s+breath\b", "shortness_of_breath"),
-    (r"\bcough(?:ing)?\s+blood\b|\bhemoptysis\b", "coughing_blood"),
-    (r"\bloss\s+of\s+consciousness\b|\bpassed\s+out\b|\bknocked\s+out\b", "loss_of_consciousness"),
-    (r"\bconfus(?:ed|ion)\b", "confusion"),
-    (r"\bchest\s+pain\b|\bchest\s+pressure\b", "chest_pain"),
-    (r"\bpain\s+(?:when|with)?\s*breath(?:ing)?\b|\bpainful\s+breath(?:ing)?\b", "breathing_pain"),
-)
-
-_HIGH_RISK_CATEGORY_PATTERNS: tuple[tuple[str, str], ...] = (
-    (r"\bopen\s+fracture\b", "open_fracture"),
-    (r"\bstress\s+fracture\b", "stress_fracture"),
-    (r"\brib\s+fracture\b|\bbroken\s+rib\b", "broken_rib"),
-    (r"\bacl\b[\w\s-]{0,24}\b(?:tear|rupture|reconstruction)\b|\b(?:tear|rupture)\b[\w\s-]{0,24}\bacl\b", "acl_tear"),
-    (r"\bfracture\b", "fracture"),
-    (r"\bdislocation\b", "dislocation"),
-    (r"\bsuspected\s+concussion\b", "suspected_concussion"),
-    (r"\bconcussion\b", "concussion"),
-)
-_STRUCTURAL_SEVERE_TERMS = (
-    "tear",
-    "rupture",
-    "full thickness",
-    "full-thickness",
-    "grade 3",
-    "grade iii",
-    "reconstruction",
-    "snapped",
-    "complete",
-)
-_STRUCTURAL_TISSUE_TERMS = (
-    "ligament",
-    "tendon",
-    "acl",
-    "pcl",
-    "mcl",
-    "lcl",
-    "meniscus",
-    "labrum",
-    "rotator cuff",
-    "achilles",
-    "hamstring",
-    "patellar tendon",
-    "bicep tendon",
-)
 
 _TRAUMA_CONTEXT_PATTERNS = (
     r"\bhit\b",
@@ -104,87 +56,25 @@ class InjuryTriageResult:
         return asdict(self)
 
 
-def _collect_matches(text: str, patterns: tuple[tuple[str, str], ...]) -> set[str]:
-    lowered = str(text or "").lower()
-    matches: set[str] = set()
-    for pattern, label in patterns:
-        if re.search(pattern, lowered):
-            matches.add(label)
-    return matches
-
-
-def _is_structural_severe_signal(*, text: str, scored_injury_type: str) -> bool:
-    lowered = str(text or "").lower()
-    injury_type = str(scored_injury_type or "").lower()
-    has_severe_term = any(term in lowered for term in _STRUCTURAL_SEVERE_TERMS)
-    if not has_severe_term:
-        return False
-    if injury_type in {"sprain", "strain", "instability"}:
-        return True
-    return any(term in lowered for term in _STRUCTURAL_TISSUE_TERMS)
-
-
-def _guided_injury_text_chunks(guided: GuidedInjury | None) -> list[str]:
-    if guided is None:
-        return []
-    chunks = [
-        str(guided.area or "").strip(),
-        str(guided.severity or "").strip(),
-        str(guided.trend or "").strip(),
-        str(guided.avoid or "").strip(),
-        str(guided.notes or "").strip(),
-    ]
-    return [chunk for chunk in chunks if chunk]
-
-
-def _restriction_text_chunks(restrictions: list[dict[str, Any]]) -> list[str]:
-    chunks: list[str] = []
-    for item in restrictions or []:
-        if not isinstance(item, dict):
-            continue
-        parts = [
-            str(item.get("original_phrase") or "").strip(),
-            str(item.get("restriction") or "").replace("_", " ").strip(),
-            str(item.get("strength") or "").strip(),
-            str(item.get("region") or "").strip(),
-        ]
-        chunks.extend([part for part in parts if part])
-    return chunks
-
-
 def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
-    injury_texts: list[str] = []
-    if plan_input.injuries:
-        injury_texts.extend([chunk.strip() for chunk in plan_input.injuries.split(",") if chunk.strip()])
-    injury_texts.extend(
-        str(item.get("original_phrase") or "").strip()
-        for item in (plan_input.parsed_injuries or [])
-        if isinstance(item, dict)
+    features = build_triage_features(
+        injuries=plan_input.injuries,
+        parsed_injuries=plan_input.parsed_injuries,
+        guided_injury=plan_input.guided_injury,
+        restrictions=plan_input.restrictions,
     )
-    injury_texts.extend(_guided_injury_text_chunks(plan_input.guided_injury))
-    injury_texts.extend(_restriction_text_chunks(plan_input.restrictions))
-    injury_texts = [text for text in injury_texts if text]
 
+    injury_texts = list(features.raw_evidence.get("all_input") or [])
     combined_text = " | ".join(injury_texts).lower()
-    red_flags = _collect_matches(combined_text, _RED_FLAG_PATTERNS)
 
-    urgent_flags: set[str] = set()
-    structural_severe_signal = False
-    for text in injury_texts:
-        scored = score_injury_phrase(text)
-        scored_type = str(scored.get("injury_type") or "")
-        if _is_structural_severe_signal(text=text, scored_injury_type=scored_type):
-            structural_severe_signal = True
-        for flag in scored.get("flags", []):
-            if str(flag).startswith("urgent"):
-                urgent_flags.add(str(flag))
-
-    matched_categories = _collect_matches(combined_text, _HIGH_RISK_CATEGORY_PATTERNS)
+    matched_categories = set(features.high_risk_diagnoses)
+    red_flags = set(features.red_flags)
+    urgent_flags = set(features.urgent_flags)
     routing_reasons: set[str] = set()
 
-    for category, route in _HIGH_RISK_CATEGORY_ROUTE.items():
-        if category.replace("_", " ") in combined_text:
-            matched_categories.add(category)
+    for category in matched_categories:
+        route = _HIGH_RISK_CATEGORY_ROUTE.get(category)
+        if route:
             routing_reasons.add(f"mapped:{category}:{route}")
 
     if "urgent_fracture" in urgent_flags:
@@ -205,7 +95,10 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
     if guided_severity in {"high", "severe"}:
         routing_reasons.add("guided_injury:high_severity")
-        if any(token in combined_text for token in ("rib", "fracture", "dislocation", "instability", "cannot bear weight")):
+        if any(
+            token in combined_text
+            for token in ("rib", "fracture", "dislocation", "instability", "cannot bear weight")
+        ):
             matched_categories.add("structural_high_severity")
 
     if guided_trend in {"worse", "worsening", "regressing", "worsened"}:
@@ -220,7 +113,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons.add("guided_injury:breathing_symptoms")
     rib_or_chest_context = any(token in combined_text for token in ("rib", "intercostal", "chest"))
 
-    # Strict medical-hold escalation rules (combination based, not broad single phrases).
     medical_hold = False
     if any(flag in red_flags for flag in ("loss_of_consciousness", "coughing_blood", "deformity")):
         medical_hold = True
@@ -239,6 +131,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if chest_with_systemic:
         medical_hold = True
         routing_reasons.add("chest_red_flag_combination")
+
     rib_breathing_unsafe = rib_or_chest_context and ("breathing_pain" in red_flags) and (
         any(category in matched_categories for category in ("broken_rib", "fracture", "open_fracture"))
         or any(re.search(pattern, combined_text) for pattern in _TRAUMA_CONTEXT_PATTERNS)
@@ -262,15 +155,27 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     restricted_rehab = False
     if any(
         category in matched_categories
-        for category in ("fracture", "stress_fracture", "broken_rib", "dislocation", "acl_tear", "structural_high_severity")
+        for category in (
+            "fracture",
+            "stress_fracture",
+            "broken_rib",
+            "dislocation",
+            "acl_tear",
+            "achilles_rupture",
+            "full_thickness_rotator_cuff_tear",
+            "tendon_rupture_or_avulsion",
+            "complete_ligament_tear",
+            "structural_high_severity",
+        )
     ):
         restricted_rehab = True
         routing_reasons.add("mapped_restricted_category")
+
     if any(flag in red_flags for flag in ("cannot_bear_weight", "rapid_swelling")):
         restricted_rehab = True
         routing_reasons.add("structural_function_red_flag")
 
-    if structural_severe_signal:
+    if features.structural_severe_signals:
         restricted_rehab = True
         routing_reasons.add("scored_structural_severe_signal")
 
@@ -288,8 +193,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     elif highest_band == "red" and restricted_rehab:
         routing_reasons.add("sparring_red_risk")
 
-    matched_categories = sorted(matched_categories)
-    routing_reasons = sorted(routing_reasons)
+    matched_categories_sorted = sorted(matched_categories)
+    routing_reasons_sorted = sorted(routing_reasons)
 
     if medical_hold:
         return InjuryTriageResult(
@@ -300,8 +205,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             ],
             clinician_clearance_required=True,
             red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories,
-            routing_reasons=routing_reasons,
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
             urgent_flags=sorted(urgent_flags),
             sparring_risk_band=highest_band,
@@ -316,8 +221,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             ],
             clinician_clearance_required=True,
             red_flags=sorted(red_flags),
-            matched_high_risk_categories=matched_categories,
-            routing_reasons=routing_reasons,
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
             should_block_stage2=True,
             urgent_flags=sorted(urgent_flags),
             sparring_risk_band=highest_band,
@@ -328,8 +233,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         reasons=["No pre-planning medical hold signals detected."],
         clinician_clearance_required=False,
         red_flags=sorted(red_flags),
-        matched_high_risk_categories=matched_categories,
-        routing_reasons=routing_reasons,
+        matched_high_risk_categories=matched_categories_sorted,
+        routing_reasons=routing_reasons_sorted,
         should_block_stage2=False,
         urgent_flags=sorted(urgent_flags),
         sparring_risk_band=highest_band,
