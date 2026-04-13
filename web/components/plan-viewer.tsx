@@ -33,6 +33,16 @@ type InjuryTriageView = {
   clinician_clearance_required?: boolean;
 };
 
+const FRACTURE_CATEGORY_SET = new Set([
+  "fracture",
+  "stress_fracture",
+  "hairline_fracture",
+  "rib_fracture",
+  "broken_rib",
+]);
+
+type RiskBandTone = "green" | "amber" | "red" | "black";
+
 const BLOCKING_WARNING_CODES = new Set([
   "missing_required_element",
   "phase_section_missing",
@@ -186,13 +196,26 @@ function BlockedPlanDecisionCard({
     .filter(Boolean)
     .slice(0, 6);
 
-  const riskBandLabel =
+  const triageRiskBand =
     triage.sparring_risk_band &&
     ["green", "amber", "red", "black"].includes(triage.sparring_risk_band)
-      ? formatRiskBandLabel(
-          triage.sparring_risk_band as NonNullable<PlanAdvisory["risk_band"]>,
-        )
+      ? (triage.sparring_risk_band as RiskBandTone)
       : null;
+  const hasFractureSignal = triage.matched_high_risk_categories.some((category) =>
+    FRACTURE_CATEGORY_SET.has(category),
+  );
+  const displayedRiskBand = isMedicalHold
+    ? triageRiskBand === "black"
+      ? "black"
+      : null
+    : triageRiskBand === "green" || triageRiskBand === "amber"
+      ? hasFractureSignal
+        ? "red"
+        : triageRiskBand
+      : triageRiskBand;
+  const riskBandLabel = displayedRiskBand
+    ? formatRiskBandLabel(displayedRiskBand as NonNullable<PlanAdvisory["risk_band"]>)
+    : null;
 
   return (
     <section
@@ -206,15 +229,15 @@ function BlockedPlanDecisionCard({
           <h3>{title}</h3>
         </div>
         <div className="sparring-advisory-badges">
-          <span className="badge">{isMedicalHold ? "Blocked" : "Protected"}</span>
-          <span className="badge">Stage 2 skipped</span>
-          {riskBandLabel && triage.sparring_risk_band ? (
+          <span className="badge">PROTECTED</span>
+          <span className="badge">STAGE 2 SKIPPED</span>
+          {riskBandLabel && displayedRiskBand ? (
             <span
-              className={`sparring-risk-chip sparring-risk-${triage.sparring_risk_band}`}
+              className={`sparring-risk-chip sparring-risk-${displayedRiskBand}`}
               aria-label={`Injury risk ${riskBandLabel}`}
             >
               <span className="sparring-risk-dot" aria-hidden="true" />
-              <span>Risk band: {riskBandLabel}</span>
+              <span>Sparring risk: {riskBandLabel}</span>
             </span>
           ) : null}
         </div>
@@ -622,7 +645,7 @@ export function PlanViewer({
     : titleizeToken(plan.status || "generated");
 
   const stage2Status = isTriageBlocked
-    ? "Stage 2 skipped"
+    ? "Stage 2 skipped intentionally"
     : titleizeToken(plan.admin_outputs?.stage2_status || "legacy");
 
   const heroSummary = isTriageBlocked
@@ -1149,7 +1172,7 @@ export function PlanViewer({
               <p className="kicker">Athlete Plan</p>
               <h2>
                 {isTriageBlocked
-                  ? "Protected plan state"
+                  ? blockedTitle
                   : hasPublishedPlan
                     ? "Validated final plan"
                     : "Pending finalization"}
@@ -1167,9 +1190,7 @@ export function PlanViewer({
               }`}
             >
               {isTriageBlocked
-                ? injuryTriage?.mode === "medical_hold"
-                  ? "Medical hold"
-                  : "Clearance required"
+                ? blockedTitle
                 : hasPublishedPlan
                   ? "Validated"
                   : "Review required"}
@@ -1445,66 +1466,80 @@ export function PlanViewer({
         <div className="admin-review-stack">
           <section className="viewer-panel">
             <div className="form-section-header">
-              <p className="kicker">Admin Review</p>
-              <h3>Manual Stage 2 actions</h3>
+              <p className="kicker">ADMIN REVIEW</p>
+              <h3>
+                {isTriageBlocked ? "Planning blocked before Stage 2" : "Manual Stage 2 actions"}
+              </h3>
             </div>
-            <p className="muted">
-              Paste a manual GPT-5.4 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
-            </p>
-
-            {canApproveForRelease ? (
-              <div className="support-panel">
-                <div className="form-section-header">
-                  <p className="kicker">Quick approval</p>
-                  <h3>Release the current saved plan</h3>
-                </div>
+            {isTriageBlocked ? (
+              <p className="muted">
+                {injuryTriage?.mode === "restricted_rehab_only"
+                  ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
+                  : injuryTriage?.mode === "medical_hold"
+                    ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
+                    : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
+              </p>
+            ) : (
+              <>
                 <p className="muted">
-                  If the current saved version is good enough, approve it directly for athlete view without rerunning Stage 2. Source: {approvalSourceLabel}.
+                  Paste a manual GPT-5.4 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
                 </p>
+
+                {canApproveForRelease ? (
+                  <div className="support-panel">
+                    <div className="form-section-header">
+                      <p className="kicker">Quick approval</p>
+                      <h3>Release the current saved plan</h3>
+                    </div>
+                    <p className="muted">
+                      If the current saved version is good enough, approve it directly for athlete view without rerunning Stage 2. Source: {approvalSourceLabel}.
+                    </p>
+                    <div className="plan-summary-actions">
+                      <button
+                        type="button"
+                        className={stage2ReviewSummary.isPublishable ? "cta" : "ghost-button"}
+                        onClick={handleApproveForRelease}
+                        disabled={approvePending}
+                      >
+                        {approvePending ? "Approving..." : approveButtonLabel}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
+                {approveError ? <div className="error-banner">{approveError}</div> : null}
+                {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
+                {rejectError ? <div className="error-banner">{rejectError}</div> : null}
+                {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
+                {archiveError ? <div className="error-banner">{archiveError}</div> : null}
+
+                <div className="field">
+                  <label htmlFor="manual-stage2-final-plan">Final plan text</label>
+                  <textarea
+                    id="manual-stage2-final-plan"
+                    rows={16}
+                    value={manualPlanText}
+                    onChange={(event) => setManualPlanText(event.target.value)}
+                    placeholder="Paste the manual Stage 2 final plan here"
+                  />
+                </div>
+
                 <div className="plan-summary-actions">
                   <button
                     type="button"
-                    className={stage2ReviewSummary.isPublishable ? "cta" : "ghost-button"}
-                    onClick={handleApproveForRelease}
-                    disabled={approvePending}
+                    className="cta"
+                    onClick={handleManualStage2Submit}
+                    disabled={manualSubmitPending}
                   >
-                    {approvePending ? "Approving..." : approveButtonLabel}
+                    {manualSubmitPending ? "Submitting..." : "Validate and save"}
                   </button>
                 </div>
-              </div>
-            ) : null}
 
-            {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
-            {approveError ? <div className="error-banner">{approveError}</div> : null}
-            {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
-            {rejectError ? <div className="error-banner">{rejectError}</div> : null}
-            {archiveMessage ? <div className="success-banner">{archiveMessage}</div> : null}
-            {archiveError ? <div className="error-banner">{archiveError}</div> : null}
-
-            <div className="field">
-              <label htmlFor="manual-stage2-final-plan">Final plan text</label>
-              <textarea
-                id="manual-stage2-final-plan"
-                rows={16}
-                value={manualPlanText}
-                onChange={(event) => setManualPlanText(event.target.value)}
-                placeholder="Paste the manual Stage 2 final plan here"
-              />
-            </div>
-
-            <div className="plan-summary-actions">
-              <button
-                type="button"
-                className="cta"
-                onClick={handleManualStage2Submit}
-                disabled={manualSubmitPending}
-              >
-                {manualSubmitPending ? "Submitting..." : "Validate and save"}
-              </button>
-            </div>
-
-            {manualSubmitMessage ? <div className="success-banner">{manualSubmitMessage}</div> : null}
-            {manualSubmitError ? <div className="error-banner">{manualSubmitError}</div> : null}
+                {manualSubmitMessage ? <div className="success-banner">{manualSubmitMessage}</div> : null}
+                {manualSubmitError ? <div className="error-banner">{manualSubmitError}</div> : null}
+              </>
+            )}
           </section>
 
           <section className="viewer-panel">
