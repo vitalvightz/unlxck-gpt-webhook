@@ -380,7 +380,7 @@ def build_triage_features(
     raw_chunks.extend(_parsed_injury_chunks(parsed_injuries))
     raw_chunks.extend(_guided_injury_text_chunks(guided_injury))
     raw_chunks.extend(_restriction_text_chunks(restrictions or []))
-    raw_chunks = [chunk for chunk in raw_chunks if chunk]
+    raw_chunks = list(dict.fromkeys(chunk for chunk in raw_chunks if chunk))
 
     cleaned_chunks: list[str] = []
     high_risk_diagnoses: set[str] = set()
