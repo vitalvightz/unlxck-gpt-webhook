@@ -21,7 +21,7 @@ class TriageFeatures:
 
 
 _TEAR_SYNONYM_PATTERN = r"(?:tears?|torn)"
-_RUPTURE_OR_TEAR_PATTERN = rf"(?:rupture|ruptured|{_TEAR_SYNONYM_PATTERN})"
+_RUPTURE_OR_TEAR_PATTERN = rf"(?:ruptured?|{_TEAR_SYNONYM_PATTERN})"
 
 _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bnumb(?:ness)?\b", "numbness"),
