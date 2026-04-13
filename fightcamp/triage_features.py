@@ -254,7 +254,7 @@ _FUNCTION_LOSS_PATTERNS: tuple[tuple[str, str], ...] = (
 _CLINICIAN_RESTRICTION_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bavoid\s+(?:contact|spar|impact|loaded|weight\s*bearing)\b", "avoid_high_load"),
     (r"\bno\s+spar(?:ring)?\b", "no_sparring"),
-    (r"\bpost[-\s]?op\b|\breconstruction\b|\brecent\s+surgery\b", "post_op_or_reconstruction"),
+    (r"\bpost[-\s]?op\b|\breconstruction\b|\bsurgery\b", "post_op_or_reconstruction"),
     (r"\bnon[-\s]?weight\s*bearing\b|\bnwb\b", "non_weight_bearing"),
     (r"\bin\s+(?:a\s+)?(?:walking\s+)?(?:boot|cast)\b|\bwearing\s+(?:a\s+)?(?:boot|cast)\b", "in_a_boot_or_cast"),
     (r"\bon\s+crutches\b|\busing\s+crutches\b", "on_crutches"),
