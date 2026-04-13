@@ -337,7 +337,7 @@ def test_admin_can_approve_review_required_plan_for_release():
 
 
 def test_admin_can_approve_triage_block_to_allow_stage2():
-    client, store, _ = _build_client()
+    client, store, stage2 = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
         email="ari@example.com",
@@ -363,9 +363,10 @@ def test_admin_can_approve_triage_block_to_allow_stage2():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "review_required"
-    assert body["outputs"]["plan_text"] == ""
-    assert body["admin_outputs"]["stage2_status"] == "triage_override_approved"
+    assert body["status"] == "ready"
+    assert body["outputs"]["plan_text"] == "# Final Plan"
+    assert body["admin_outputs"]["stage2_status"] == "stage2_pass"
+    assert len(stage2.calls) == 1
 
 
 def test_plan_owner_cannot_approve_triage_block_to_allow_stage2():

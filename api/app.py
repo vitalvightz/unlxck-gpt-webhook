@@ -57,6 +57,8 @@ from .generation_runtime import (
     schedule_generation_job_if_needed,
 )
 from .stage2_automation import (
+    Stage2AutomationError,
+    Stage2AutomationUnavailableError,
     Stage2Automator,
     build_default_stage2_automator,
 )
@@ -600,6 +602,24 @@ def _triage_override_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _stage1_result_from_plan_row(plan_row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": str(plan_row.get("status") or ""),
+        "plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
+        "coach_notes": str(plan_row.get("coach_notes") or ""),
+        "pdf_url": plan_row.get("pdf_url"),
+        "why_log": plan_row.get("why_log") or {},
+        "planning_brief": _decode_structured_text(plan_row.get("planning_brief")) or {},
+        "stage2_payload": plan_row.get("stage2_payload") or {},
+        "stage2_handoff_text": str(plan_row.get("stage2_handoff_text") or ""),
+        "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
+        "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+        "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
+        "stage2_status": str(plan_row.get("stage2_status") or ""),
+        "final_plan_text": str(plan_row.get("final_plan_text") or ""),
+    }
+
+
 def create_app(
     *,
     store: AppStore,
@@ -1022,7 +1042,7 @@ def create_app(
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/plans/{plan_id}/approve-stage2", response_model=PlanDetail)
-    def approve_plan_for_stage2(
+    async def approve_plan_for_stage2(
         plan_id: str,
         _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
@@ -1031,7 +1051,18 @@ def create_app(
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
-        updated = store.update_plan_stage2(plan_id, _triage_override_result(plan_row))
+        stage2 = app.state.stage2_automator
+        stage1_result = _stage1_result_from_plan_row(plan_row)
+        try:
+            resumed_result = await stage2.finalize(stage1_result=stage1_result)
+            updated = store.update_plan_stage2(plan_id, resumed_result)
+        except (
+            KeyError,
+            TypeError,
+            Stage2AutomationUnavailableError,
+            Stage2AutomationError,
+        ):
+            updated = store.update_plan_stage2(plan_id, _triage_override_result(plan_row))
         return _map_plan_detail(updated, include_admin=True)
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
