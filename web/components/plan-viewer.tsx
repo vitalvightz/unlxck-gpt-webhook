@@ -195,6 +195,10 @@ function BlockedPlanDecisionCard({
     .map(titleizeToken)
     .filter(Boolean)
     .slice(0, 6);
+  const flaggedSignals = [...triage.red_flags, ...triage.matched_high_risk_categories]
+    .map(titleizeToken)
+    .filter(Boolean)
+    .slice(0, 8);
 
   const triageRiskBand =
     triage.sparring_risk_band &&
@@ -254,6 +258,22 @@ function BlockedPlanDecisionCard({
           ))}
         </div>
       ) : null}
+
+      <div className="blocked-signals-panel">
+        <p className="kicker">Flagged injury signals</p>
+        {flaggedSignals.length ? (
+          <ul className="summary-list blocked-signals-list">
+            {flaggedSignals.map((signal) => (
+              <li key={signal}>{signal}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">
+            No specific signal labels were returned in this run, but triage still marked this intake
+            as protected and blocked pending clinical review.
+          </p>
+        )}
+      </div>
 
       <ul className="summary-list">
         <li>Stage 2 was skipped intentionally.</li>
@@ -688,6 +708,7 @@ export function PlanViewer({
     plan.admin_outputs?.draft_plan_text?.trim() ||
     athletePlanText ||
     "";
+  const canSeeApprovalControls = isAdmin && !hasPublishedPlan;
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
   const canRejectApproval = isAdmin;
   const approveButtonLabel = stage2ReviewSummary.isPublishable
@@ -1410,7 +1431,7 @@ export function PlanViewer({
                 <p className="muted">
                   The automation flow generated a plan that still needs manual review before it can be shown to the athlete.
                 </p>
-                {canApproveForRelease ? (
+                {canSeeApprovalControls ? (
                   <>
                     <p className="muted">
                       Current approval source: {approvalSourceLabel}.{" "}
@@ -1423,7 +1444,7 @@ export function PlanViewer({
                         type="button"
                         className={stage2ReviewSummary.isPublishable ? "cta" : "ghost-button"}
                         onClick={handleApproveForRelease}
-                        disabled={approvePending}
+                        disabled={approvePending || !canApproveForRelease}
                       >
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
@@ -1448,6 +1469,12 @@ export function PlanViewer({
                         </button>
                       ) : null}
                     </div>
+                    {!canApproveForRelease ? (
+                      <p className="muted">
+                        Approval unavailable: save a Stage 1 draft or Stage 2 final plan first so
+                        there is plan text to release.
+                      </p>
+                    ) : null}
                   </>
                 ) : null}
                 {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
@@ -1485,7 +1512,7 @@ export function PlanViewer({
                   Paste a manual GPT-5.4 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
                 </p>
 
-                {canApproveForRelease ? (
+                {canSeeApprovalControls ? (
                   <div className="support-panel">
                     <div className="form-section-header">
                       <p className="kicker">Quick approval</p>
@@ -1499,11 +1526,17 @@ export function PlanViewer({
                         type="button"
                         className={stage2ReviewSummary.isPublishable ? "cta" : "ghost-button"}
                         onClick={handleApproveForRelease}
-                        disabled={approvePending}
+                        disabled={approvePending || !canApproveForRelease}
                       >
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
                     </div>
+                    {!canApproveForRelease ? (
+                      <p className="muted">
+                        Approval unavailable: save a Stage 1 draft or Stage 2 final plan first so
+                        there is plan text to release.
+                      </p>
+                    ) : null}
                   </div>
                 ) : null}
 
