@@ -686,6 +686,18 @@ def _build_omission_ledger(
     return ledger
 
 
+def _build_injury_context(*, athlete_model: dict) -> dict[str, Any]:
+    triage_summary = athlete_model.get("triage_summary")
+    return {
+        "raw_injury_text": athlete_model.get("injuries_raw_text") or "",
+        "injuries_flat": clean_list(athlete_model.get("injuries", [])),
+        "parsed_injuries": athlete_model.get("parsed_injuries") or [],
+        "guided_injury": athlete_model.get("guided_injury"),
+        "restrictions": athlete_model.get("injury_restrictions") or [],
+        "triage_summary": triage_summary if isinstance(triage_summary, dict) else {},
+    }
+
+
 def build_stage2_payload(
     *,
     training_context: TrainingContext,
@@ -718,6 +730,8 @@ def build_stage2_payload(
         camp_length_weeks=camp_len,
         short_notice=short_notice,
     )
+    athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
+    injury_context = _build_injury_context(athlete_model=athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
     omission_ledger = _build_omission_ledger(
@@ -793,6 +807,7 @@ def build_stage2_payload(
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
+            "injury_context": injury_context,
             "restrictions": serialized_restrictions,
             "phase_briefs": phase_briefs,
             "candidate_pools": candidate_pools,
@@ -804,6 +819,7 @@ def build_stage2_payload(
         "schema_version": "stage2_payload.v1",
         "generator_mode": "restriction_aware_candidate_generator",
         "athlete_model": athlete_model,
+        "injury_context": injury_context,
         "restrictions": serialized_restrictions,
         "phase_briefs": phase_briefs,
         "candidate_pools": candidate_pools,
@@ -857,6 +873,7 @@ RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
 Active injury: lead with constraints, substitutions, and stop rules — not optional language.
 Both flags narrow training tolerance and must shape the output structurally.
+When injury wording is vague or underspecified, use INJURY CONTEXT to infer the safest high-probability interpretation. Never override hard restrictions or triage blocks, and prefer conservative substitutions and wording when detail is incomplete.
 
 RULE 11 — OUTPUT DISCIPLINE
 Write like an elite coach, not a document generator. Coach voice should feel decisive, respectful, and gym-realistic.
@@ -934,6 +951,9 @@ def build_stage2_handoff_text(
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
     sections.append("PLANNING BRIEF\n" + _json_block(context_block))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+    injury_context = stage2_payload.get("injury_context")
+    if isinstance(injury_context, dict):
+        sections.append("INJURY CONTEXT\n" + _json_block(injury_context))
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)

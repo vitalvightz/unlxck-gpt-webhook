@@ -135,6 +135,63 @@ def test_stage2_payload_plan_creation_weekday_uses_athlete_local_day(monkeypatch
     athlete_model = payload["athlete_model"]
     assert athlete_model["plan_creation_weekday"] == "saturday"
     assert athlete_model["plan_creation_weekday_basis"] == "athlete_local_weekday"
+    assert athlete_model["injuries_raw_text"] == ""
+    assert athlete_model["parsed_injuries"] == []
+    assert athlete_model["guided_injury"] is None
+    assert athlete_model["injury_restrictions"] == []
+
+
+def test_stage2_payload_injury_context_carries_rich_injury_fields():
+    training_context = TrainingContext(
+        fatigue="moderate",
+        training_frequency=4,
+        days_available=4,
+        training_days=["Mon", "Tue", "Thu", "Sat"],
+        injuries=["left knee pain"],
+        style_technical=["boxing"],
+        style_tactical=["pressure_fighter"],
+        weaknesses=["gas_tank"],
+        equipment=["heavy_bag"],
+        weight_cut_risk=False,
+        weight_cut_pct=0.0,
+        fight_format="boxing",
+        status="amateur",
+        key_goals=["conditioning"],
+        training_preference="balanced",
+        mental_block=[],
+        age=25,
+        weight=70.0,
+        prev_exercises=[],
+        recent_exercises=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        days_until_fight=30,
+        injuries_raw_text="left knee pain from kicking; avoid deep knee bend",
+        parsed_injuries=[{"original_phrase": "left knee pain", "severity": "moderate"}],
+        guided_injury={"area": "left knee", "severity": "moderate", "avoid": "deep knee bend"},
+        injury_restrictions=[{"restriction": "avoid deep knee flexion", "region": "knee"}],
+        triage_summary={"mode": "full_plan", "should_block_stage2": False},
+    )
+
+    payload = build_stage2_payload(
+        training_context=training_context,
+        mapped_format="boxing",
+        record="3-0",
+        rounds_format="3x3",
+        camp_len=5,
+        short_notice=False,
+        restrictions=[],
+        phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
+        strength_blocks={},
+        conditioning_blocks={},
+        rehab_blocks={},
+    )
+
+    injury_context = payload["injury_context"]
+    assert injury_context["injuries_flat"] == ["left knee pain"]
+    assert injury_context["raw_injury_text"] == "left knee pain from kicking; avoid deep knee bend"
+    assert injury_context["parsed_injuries"] == [{"original_phrase": "left knee pain", "severity": "moderate"}]
+    assert injury_context["guided_injury"] == {"area": "left knee", "severity": "moderate", "avoid": "deep knee bend"}
+    assert injury_context["restrictions"] == [{"restriction": "avoid deep knee flexion", "region": "knee"}]
 
 def _build_taper_payload_and_brief() -> tuple[dict, dict]:
     training_context = TrainingContext(
