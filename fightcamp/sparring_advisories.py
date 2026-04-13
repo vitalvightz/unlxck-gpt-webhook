@@ -201,33 +201,68 @@ def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> t
 def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for raw in clean_list(athlete_snapshot.get("injuries", [])):
-        raw_text = str(raw).strip()
+        parsed_payload: dict[str, Any] | None = raw if isinstance(raw, dict) else None
+        raw_text = str(
+            (
+                (parsed_payload or {}).get("raw")
+                or (parsed_payload or {}).get("text")
+                or (parsed_payload or {}).get("label")
+                or raw
+            )
+        ).strip()
         lowered = raw_text.lower()
+        structured_text = ""
+        if parsed_payload:
+            structured_text = " ".join(
+                str(parsed_payload.get(key) or "").strip()
+                for key in ("severity", "status", "trajectory", "notes")
+                if str(parsed_payload.get(key) or "").strip()
+            ).lower()
+        lowered_for_signals = f"{lowered} {structured_text}".strip()
         if not raw_text:
             continue
 
         parsed = parse_injury_entry(raw_text) or {}
-        region = str(parsed.get("canonical_location") or "unspecified").strip().lower()
-        injury_type = str(parsed.get("injury_type") or "unspecified").strip().lower()
-        laterality = str(parsed.get("laterality") or parsed.get("side") or "").strip().lower()
+        region = str(
+            parsed.get("canonical_location")
+            or (parsed_payload or {}).get("canonical_location")
+            or (parsed_payload or {}).get("region")
+            or "unspecified"
+        ).strip().lower()
+        injury_type = str(
+            parsed.get("injury_type")
+            or (parsed_payload or {}).get("injury_type")
+            or "unspecified"
+        ).strip().lower()
+        laterality = str(
+            parsed.get("laterality")
+            or parsed.get("side")
+            or (parsed_payload or {}).get("laterality")
+            or (parsed_payload or {}).get("side")
+            or ""
+        ).strip().lower()
 
         # -- Trajectory (exclusive: worsening wins) --
-        worsening = any(token in lowered for token in _WORSENING_TOKENS)
-        improving = any(token in lowered for token in _IMPROVING_TOKENS)
-        stable = any(token in lowered for token in _STABLE_TOKENS)
+        worsening = any(token in lowered_for_signals for token in _WORSENING_TOKENS)
+        improving = any(token in lowered_for_signals for token in _IMPROVING_TOKENS)
+        stable = any(token in lowered_for_signals for token in _STABLE_TOKENS)
         traj = _trajectory(lowered, worsening, improving, stable)
 
         # -- Override flags --
-        instability = any(token in lowered for token in ("instability", "giving way", "buckled", "locking", "locked"))
-        daily_symptoms = any(token in lowered for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
-        oflags = _override_flags(lowered, instability, daily_symptoms)
+        instability = any(
+            token in lowered_for_signals for token in ("instability", "giving way", "buckled", "locking", "locked")
+        )
+        daily_symptoms = any(
+            token in lowered_for_signals for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant")
+        )
+        oflags = _override_flags(lowered_for_signals, instability, daily_symptoms)
 
         # -- Legacy state_score (old algorithm, kept for backward compat) --
         severe = instability or daily_symptoms or any(
-            token in lowered for token in ("sharp", "severe", "tear", "rupture")
-        ) or _contains_cannot_phrase(lowered)
+            token in lowered_for_signals for token in ("sharp", "severe", "tear", "rupture")
+        ) or _contains_cannot_phrase(lowered_for_signals)
         moderate = severe or any(
-            token in lowered
+            token in lowered_for_signals
             for token in (
                 "strain", "sprain", "pain", "tendon", "tendonitis",
                 "tendinopathy", "impingement", "soreness", "stiffness", "irritation",
@@ -253,7 +288,7 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
         state_score = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, state_score))
 
         # -- Severity tier and collision context (new system) --
-        tier = _severity_tier(lowered, instability, daily_symptoms)
+        tier = _severity_tier(lowered_for_signals, instability, daily_symptoms)
         ctx = _collision_context(region)
 
         # -- risk_band_score (new system, used for band classification) --

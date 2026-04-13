@@ -414,6 +414,21 @@ class TestRiskBandKeyRules:
     def test_mild_improving_is_green(self):
         assert _entry("improving wrist stiffness")["risk_band"] == "green"
 
+    def test_structured_injury_payload_uses_severity_and_status_signals(self):
+        entries = _sparring_injury_entries(
+            {
+                "injuries": [
+                    {
+                        "canonical_location": "knee",
+                        "injury_type": "sprain",
+                        "severity": "moderate",
+                        "status": "worsening",
+                    }
+                ]
+            }
+        )
+        assert entries[0]["risk_band"] == "red"
+
 
 class TestRiskBandScoreDerives:
     def test_green_score_range(self):
