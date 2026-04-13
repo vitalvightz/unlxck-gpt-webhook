@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import {
-  approvePlanForStage2,
   approvePlanForRelease,
   archivePlan,
   deletePlan,
@@ -196,13 +195,6 @@ function BlockedPlanDecisionCard({
     .map(titleizeToken)
     .filter(Boolean)
     .slice(0, 6);
-  const flaggedSignals = Array.from(
-    new Set(
-      [...triage.red_flags, ...triage.matched_high_risk_categories]
-        .map(titleizeToken)
-        .filter(Boolean),
-    ),
-  ).slice(0, 8);
 
   const triageRiskBand =
     triage.sparring_risk_band &&
@@ -262,22 +254,6 @@ function BlockedPlanDecisionCard({
           ))}
         </div>
       ) : null}
-
-      <div className="blocked-signals-panel">
-        <p className="kicker">Flagged injury signals</p>
-        {flaggedSignals.length ? (
-          <ul className="summary-list blocked-signals-list">
-            {flaggedSignals.map((signal) => (
-              <li key={signal}>{signal}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">
-            No specific signal labels were returned in this run, but triage still marked this intake
-            as protected and blocked pending clinical review.
-          </p>
-        )}
-      </div>
 
       <ul className="summary-list">
         <li>Stage 2 was skipped intentionally.</li>
@@ -651,13 +627,11 @@ export function PlanViewer({
   const hasPublishedPlan = Boolean(athletePlanText);
 
   const injuryTriage = readInjuryTriage(plan);
-  const stage2OverrideApproved = plan.admin_outputs?.stage2_status === "triage_override_approved";
   const isTriageBlocked =
-    !stage2OverrideApproved &&
-    (plan.status === "triage_blocked" ||
-      plan.admin_outputs?.stage2_status === "triage_blocked" ||
-      injuryTriage?.mode === "medical_hold" ||
-      injuryTriage?.mode === "restricted_rehab_only");
+    plan.status === "triage_blocked" ||
+    plan.admin_outputs?.stage2_status === "triage_blocked" ||
+    injuryTriage?.mode === "medical_hold" ||
+    injuryTriage?.mode === "restricted_rehab_only";
 
   const blockedTitle =
     injuryTriage?.mode === "medical_hold"
@@ -714,10 +688,8 @@ export function PlanViewer({
     plan.admin_outputs?.draft_plan_text?.trim() ||
     athletePlanText ||
     "";
-  const canSeeApprovalControls = isAdmin && !hasPublishedPlan;
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
   const canRejectApproval = isAdmin;
-  const canApproveStage2 = isAdmin && isTriageBlocked;
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";
@@ -737,9 +709,6 @@ export function PlanViewer({
   const [approvePending, setApprovePending] = useState(false);
   const [approveMessage, setApproveMessage] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
-  const [stage2ApprovePending, setStage2ApprovePending] = useState(false);
-  const [stage2ApproveMessage, setStage2ApproveMessage] = useState<string | null>(null);
-  const [stage2ApproveError, setStage2ApproveError] = useState<string | null>(null);
   const [rejectPending, setRejectPending] = useState(false);
   const [rejectMessage, setRejectMessage] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
@@ -870,39 +839,6 @@ export function PlanViewer({
       setRejectError(error instanceof Error ? error.message : "Unable to reject this plan.");
     } finally {
       setRejectPending(false);
-    }
-  }
-
-  async function handleApproveForStage2() {
-    if (!accessToken) {
-      setStage2ApproveError("Session missing. Please sign in again.");
-      return;
-    }
-    if (!canApproveStage2) {
-      setStage2ApproveError("This plan is not currently in a triage-blocked state.");
-      return;
-    }
-
-    setStage2ApprovePending(true);
-    setStage2ApproveError(null);
-    setStage2ApproveMessage(null);
-    setApproveError(null);
-    setApproveMessage(null);
-    setRejectError(null);
-    setRejectMessage(null);
-
-    try {
-      const updatedPlan = await approvePlanForStage2(accessToken, plan.plan_id);
-      onPlanUpdated?.(updatedPlan);
-      setStage2ApproveMessage(
-        "Stage 2 approval saved. You can now continue with manual Stage 2 actions for this intake.",
-      );
-    } catch (error) {
-      setStage2ApproveError(
-        error instanceof Error ? error.message : "Unable to approve this plan for Stage 2.",
-      );
-    } finally {
-      setStage2ApprovePending(false);
     }
   }
 
@@ -1474,30 +1410,7 @@ export function PlanViewer({
                 <p className="muted">
                   The automation flow generated a plan that still needs manual review before it can be shown to the athlete.
                 </p>
-                {canApproveStage2 ? (
-                  <div className="support-panel">
-                    <div className="form-section-header">
-                      <p className="kicker">Admin approval</p>
-                      <h3>Allow Stage 2 for this intake</h3>
-                    </div>
-                    <p className="muted">
-                      If admin review is complete, approve this intake to unlock Stage 2 actions.
-                    </p>
-                    <div className="plan-summary-actions">
-                      <button
-                        type="button"
-                        className="cta"
-                        onClick={handleApproveForStage2}
-                        disabled={stage2ApprovePending}
-                      >
-                        {stage2ApprovePending ? "Approving..." : "Approve and unlock Stage 2"}
-                      </button>
-                    </div>
-                    {stage2ApproveMessage ? <div className="success-banner">{stage2ApproveMessage}</div> : null}
-                    {stage2ApproveError ? <div className="error-banner">{stage2ApproveError}</div> : null}
-                  </div>
-                ) : null}
-                {canSeeApprovalControls ? (
+                {canApproveForRelease ? (
                   <>
                     <p className="muted">
                       Current approval source: {approvalSourceLabel}.{" "}
@@ -1510,7 +1423,7 @@ export function PlanViewer({
                         type="button"
                         className={stage2ReviewSummary.isPublishable ? "cta" : "ghost-button"}
                         onClick={handleApproveForRelease}
-                        disabled={approvePending || !canApproveForRelease}
+                        disabled={approvePending}
                       >
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
@@ -1535,12 +1448,6 @@ export function PlanViewer({
                         </button>
                       ) : null}
                     </div>
-                    {!canApproveForRelease ? (
-                      <p className="muted">
-                        Approval unavailable: save a Stage 1 draft or Stage 2 final plan first so
-                        there is plan text to release.
-                      </p>
-                    ) : null}
                   </>
                 ) : null}
                 {approveMessage ? <div className="success-banner">{approveMessage}</div> : null}
@@ -1565,22 +1472,20 @@ export function PlanViewer({
               </h3>
             </div>
             {isTriageBlocked ? (
-              <>
-                <p className="muted">
-                  {injuryTriage?.mode === "restricted_rehab_only"
-                    ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
-                    : injuryTriage?.mode === "medical_hold"
-                      ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
-                      : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
-                </p>
-              </>
+              <p className="muted">
+                {injuryTriage?.mode === "restricted_rehab_only"
+                  ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
+                  : injuryTriage?.mode === "medical_hold"
+                    ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
+                    : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
+              </p>
             ) : (
               <>
                 <p className="muted">
                   Paste a manual GPT-5.4 final plan here. The app will validate it, publish it if it passes, or refresh the retry prompt if it still needs work.
                 </p>
 
-                {canSeeApprovalControls ? (
+                {canApproveForRelease ? (
                   <div className="support-panel">
                     <div className="form-section-header">
                       <p className="kicker">Quick approval</p>
@@ -1594,17 +1499,11 @@ export function PlanViewer({
                         type="button"
                         className={stage2ReviewSummary.isPublishable ? "cta" : "ghost-button"}
                         onClick={handleApproveForRelease}
-                        disabled={approvePending || !canApproveForRelease}
+                        disabled={approvePending}
                       >
                         {approvePending ? "Approving..." : approveButtonLabel}
                       </button>
                     </div>
-                    {!canApproveForRelease ? (
-                      <p className="muted">
-                        Approval unavailable: save a Stage 1 draft or Stage 2 final plan first so
-                        there is plan text to release.
-                      </p>
-                    ) : null}
                   </div>
                 ) : null}
 
