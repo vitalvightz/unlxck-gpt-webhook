@@ -336,6 +336,66 @@ def test_admin_can_approve_review_required_plan_for_release():
     assert body["admin_outputs"]["stage2_status"] == "admin_review_approved"
 
 
+def test_admin_can_approve_triage_block_to_allow_stage2():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_triage",
+        request=_build_request(),
+        result=finalized_result(
+            status="triage_blocked",
+            plan_text="## Injury Triage: Restricted Rehab Only",
+            stage2_status="triage_blocked",
+        ),
+    )
+
+    response = client.post(
+        f"/api/plans/{plan['id']}/approve-stage2",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "review_required"
+    assert body["outputs"]["plan_text"] == ""
+    assert body["admin_outputs"]["stage2_status"] == "triage_override_approved"
+
+
+def test_plan_owner_cannot_approve_triage_block_to_allow_stage2():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_triage",
+        request=_build_request(),
+        result=finalized_result(
+            status="triage_blocked",
+            plan_text="## Injury Triage: Needs Review",
+            stage2_status="triage_blocked",
+        ),
+    )
+
+    response = client.post(
+        f"/api/plans/{plan['id']}/approve-stage2",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 403
+
+
 def test_admin_can_reject_approved_plan_back_to_review():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
