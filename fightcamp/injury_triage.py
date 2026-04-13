@@ -171,7 +171,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         medical_hold = True
         routing_reasons.add("critical_red_flag")
 
-    if has_mapped_medical_hold:
+    if any(_HIGH_RISK_CATEGORY_ROUTE.get(c) == MEDICAL_HOLD for c in matched_categories):
         medical_hold = True
         routing_reasons.add("mapped_medical_hold_category")
 
