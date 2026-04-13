@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from fightcamp.injury_triage import (
     FULL_PLAN,
     MEDICAL_HOLD,
@@ -143,6 +145,55 @@ def test_acl_rupture_routes_to_restricted_rehab_only():
 
     assert triage.mode == RESTRICTED_REHAB_ONLY
     assert "acl_tear" in triage.matched_high_risk_categories
+
+
+@pytest.mark.parametrize(
+    ("injury_text", "expected_category"),
+    [
+        ("acl", "acl_tear"),
+        ("acl tear", "acl_tear"),
+        ("acl reconstruction", "acl_tear"),
+        ("ruptured ligament", "complete_ligament_tear"),
+        ("tendon rupture", "tendon_rupture_or_avulsion"),
+        ("dislocating shoulder", "dislocation"),
+        ("subluxation", "dislocation"),
+        ("partial dislocation", "dislocation"),
+        ("grade 3 MCL", "complete_ligament_tear"),
+        ("grade 3 ligament tear", "complete_ligament_tear"),
+    ],
+)
+def test_structural_dislocation_phrases_route_restricted_before_rehab_typing(
+    injury_text: str, expected_category: str
+):
+    parsed = PlanInput.from_payload(_payload_with_injury(injury_text))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert expected_category in triage.matched_high_risk_categories
+
+
+def test_muscle_rupture_routes_to_restricted_rehab_only_via_structural_severe_signal():
+    parsed = PlanInput.from_payload(_payload_with_injury("muscle rupture"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "scored_structural_severe_signal" in triage.routing_reasons
+
+
+@pytest.mark.parametrize(
+    "injury_text",
+    [
+        "old ACL surgery",
+        "ACL rehab history",
+        "post ACL, now cleared",
+    ],
+)
+def test_acl_history_or_cleared_language_does_not_overfire(injury_text: str):
+    parsed = PlanInput.from_payload(_payload_with_injury(injury_text))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert "acl_tear" not in triage.matched_high_risk_categories
 
 
 def test_achilles_rupture_routes_to_restricted_rehab_only():
