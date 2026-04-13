@@ -147,14 +147,25 @@ def test_acl_rupture_routes_to_restricted_rehab_only():
     assert "acl_tear" in triage.matched_high_risk_categories
 
 
+def test_user_input_sentence_with_torn_variant_routes_restricted():
+    parsed = PlanInput.from_payload(_payload_with_injury("right knee feels unstable and acl torn in training"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "acl_tear" in triage.matched_high_risk_categories
+
+
 @pytest.mark.parametrize(
     ("injury_text", "expected_category"),
     [
         ("acl", "acl_tear"),
         ("acl tear", "acl_tear"),
+        ("acl torn", "acl_tear"),
         ("acl reconstruction", "acl_tear"),
         ("ruptured ligament", "complete_ligament_tear"),
+        ("torn ligament", "complete_ligament_tear"),
         ("tendon rupture", "tendon_rupture_or_avulsion"),
+        ("torn tendon", "tendon_rupture_or_avulsion"),
         ("dislocating shoulder", "dislocation"),
         ("subluxation", "dislocation"),
         ("partial dislocation", "dislocation"),
