@@ -70,6 +70,13 @@ PLAN_RUNTIME_REQUIRED_COLUMNS = (
     "stage2_status",
     "stage2_attempt_count",
     "parsing_metadata",
+    "manual_injury_review_required",
+    "approved_for_stage2",
+    "approved_for_stage2_by",
+    "approved_for_stage2_at",
+    "approval_reason",
+    "liability_disclaimer_acknowledged",
+    "stage2_override_source",
 )
 _PLAN_RUNTIME_REQUIRED_COLUMNS_SET = set(PLAN_RUNTIME_REQUIRED_COLUMNS)
 _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
@@ -130,6 +137,15 @@ class AppStore(Protocol):
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
+
+    def approve_needs_review_for_stage2(
+        self,
+        *,
+        plan_id: str,
+        approver: str,
+        reason: str,
+        disclaimer_acknowledged: bool,
+    ) -> dict[str, Any]: ...
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]: ...
 
@@ -574,6 +590,17 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
             "parsing_metadata": result.get("parsing_metadata"),
+            "manual_injury_review_required": bool(
+                result.get("manual_injury_review_required")
+                if "manual_injury_review_required" in result
+                else str((result.get("injury_triage") or {}).get("mode") or "") == "needs_review"
+            ),
+            "approved_for_stage2": bool(result.get("approved_for_stage2", False)),
+            "approved_for_stage2_by": result.get("approved_for_stage2_by"),
+            "approved_for_stage2_at": result.get("approved_for_stage2_at"),
+            "approval_reason": result.get("approval_reason"),
+            "liability_disclaimer_acknowledged": bool(result.get("liability_disclaimer_acknowledged", False)),
+            "stage2_override_source": result.get("stage2_override_source"),
         }
 
         def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:
@@ -1048,7 +1075,18 @@ class SupabaseAppStore:
             "stage2_validator_report": result.get("stage2_validator_report", {}),
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
+            "manual_injury_review_required": bool(result.get("manual_injury_review_required", False)),
+            "approved_for_stage2": bool(result.get("approved_for_stage2", False)),
+            "approved_for_stage2_by": result.get("approved_for_stage2_by"),
+            "approved_for_stage2_at": result.get("approved_for_stage2_at"),
+            "approval_reason": result.get("approval_reason"),
+            "liability_disclaimer_acknowledged": bool(result.get("liability_disclaimer_acknowledged", False)),
+            "stage2_override_source": result.get("stage2_override_source"),
         }
+        if "coach_notes" in result:
+            payload["coach_notes"] = result.get("coach_notes", "")
+        if "why_log" in result:
+            payload["why_log"] = result.get("why_log", {})
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
@@ -1067,6 +1105,39 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"update_plan_stage2 plan_id={plan_id}",
                 detail="failed to update plan stage 2",
+                exc=exc,
+            )
+
+    def approve_needs_review_for_stage2(
+        self,
+        *,
+        plan_id: str,
+        approver: str,
+        reason: str,
+        disclaimer_acknowledged: bool,
+    ) -> dict[str, Any]:
+        payload = {
+            "manual_injury_review_required": True,
+            "approved_for_stage2": True,
+            "approved_for_stage2_by": approver,
+            "approved_for_stage2_at": _utc_now_iso(),
+            "approval_reason": reason,
+            "liability_disclaimer_acknowledged": bool(disclaimer_acknowledged),
+            "stage2_override_source": "coach_review",
+        }
+        try:
+            logger.info("[store] approve_needs_review_for_stage2:start plan_id=%s", plan_id)
+            self.client.table("plans").update(payload).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"approve_needs_review_for_stage2 plan_id={plan_id}",
+                detail="failed to approve needs_review plan",
                 exc=exc,
             )
 

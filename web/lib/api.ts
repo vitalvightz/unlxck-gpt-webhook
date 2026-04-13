@@ -2,6 +2,7 @@ import type {
   AdminAthleteRecord,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
+  NeedsReviewStage2ApprovalRequest,
   GenerationJobResponse,
   MeResponse,
   NutritionWorkspaceState,
@@ -429,6 +430,18 @@ export function approvePlanForRelease(token: string, planId: string): Promise<Pl
   return readJson<PlanDetail>(`/api/admin/plans/${planId}/approve`, {
     method: "POST",
     token,
+  });
+}
+
+export function approveNeedsReviewForStage2(
+  token: string,
+  planId: string,
+  payload: NeedsReviewStage2ApprovalRequest,
+): Promise<PlanDetail> {
+  return readJson<PlanDetail>(`/api/admin/plans/${planId}/approve-needs-review-for-stage2`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
   });
 }
 

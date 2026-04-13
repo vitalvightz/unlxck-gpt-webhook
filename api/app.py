@@ -32,6 +32,7 @@ from .models import (
     AdminPlanSummary,
     GenerationJobResponse,
     ManualStage2SubmissionRequest,
+    NeedsReviewStage2ApprovalRequest,
     MeResponse,
     NutritionWorkspaceState,
     NutritionWorkspaceUpdateRequest,
@@ -66,6 +67,12 @@ Planner = Callable[[dict[str, Any]], dict[str, Any]]
 security = HTTPBearer(auto_error=False)
 logger = logging.getLogger(__name__)
 LOCAL_HOST_NAMES = ("localhost", "127.0.0.1", "::1")
+MANUAL_REVIEW_DISCLAIMER = (
+    "This plan was generated after manual coach review of a flagged injury case. "
+    "It is performance guidance only and is not medical advice, diagnosis, or treatment. "
+    "Do not use this plan as a substitute for assessment by a qualified clinician. "
+    "Stop training and seek medical help immediately if symptoms worsen or urgent symptoms develop."
+)
 
 
 class SlidingWindowRateLimiter:
@@ -468,11 +475,53 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
                 stage2_validator_report=row.get("stage2_validator_report") or {},
                 stage2_status=str(row.get("stage2_status") or "legacy"),
                 stage2_attempt_count=int(row.get("stage2_attempt_count") or 0),
+                manual_injury_review_required=bool(row.get("manual_injury_review_required", False)),
+                approved_for_stage2=bool(row.get("approved_for_stage2", False)),
+                approved_for_stage2_by=(
+                    str(row.get("approved_for_stage2_by"))
+                    if row.get("approved_for_stage2_by")
+                    else None
+                ),
+                approved_for_stage2_at=(
+                    str(row.get("approved_for_stage2_at"))
+                    if row.get("approved_for_stage2_at")
+                    else None
+                ),
+                approval_reason=(str(row.get("approval_reason")) if row.get("approval_reason") else None),
+                liability_disclaimer_acknowledged=bool(row.get("liability_disclaimer_acknowledged", False)),
+                stage2_override_source=(str(row.get("stage2_override_source")) if row.get("stage2_override_source") else None),
             )
             if include_admin
             else None
         ),
     )
+
+
+def _triage_mode(row: dict[str, Any]) -> str:
+    triage = {}
+    why_log = row.get("why_log")
+    if isinstance(why_log, dict):
+        triage = why_log.get("injury_triage") or {}
+    if not isinstance(triage, dict):
+        return ""
+    return str(triage.get("mode") or "").strip().lower()
+
+
+def _is_manual_needs_review_override(row: dict[str, Any]) -> bool:
+    return (
+        _triage_mode(row) == "needs_review"
+        and bool(row.get("liability_disclaimer_acknowledged"))
+        and str(row.get("stage2_override_source") or "").strip().lower() == "coach_review"
+    )
+
+
+def _apply_manual_review_disclaimer(plan_text: str) -> str:
+    normalized = str(plan_text or "").strip()
+    if MANUAL_REVIEW_DISCLAIMER in normalized:
+        return normalized
+    if not normalized:
+        return MANUAL_REVIEW_DISCLAIMER
+    return f"**Disclaimer:** {MANUAL_REVIEW_DISCLAIMER}\n\n{normalized}"
 
 
 def _map_admin_plan_summary(row: dict[str, Any]) -> AdminPlanSummary:
@@ -516,16 +565,38 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
     had_retry_prompt = bool(str(plan_row.get("stage2_retry_text") or "").strip())
 
     if review["status"] == "PASS":
+        final_text = _apply_manual_review_disclaimer(final_plan_text) if _is_manual_needs_review_override(plan_row) else final_plan_text
+        why_log = dict(plan_row.get("why_log") or {})
+        if _is_manual_needs_review_override(plan_row):
+            why_log["manual_injury_review"] = {
+                "approved_by": plan_row.get("approved_for_stage2_by"),
+                "approved_at": plan_row.get("approved_for_stage2_at"),
+                "approval_reason": plan_row.get("approval_reason"),
+                "disclaimer": MANUAL_REVIEW_DISCLAIMER,
+                "override_source": plan_row.get("stage2_override_source"),
+            }
         return {
             "status": "ready",
-            "plan_text": final_plan_text,
+            "plan_text": final_text,
             "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
-            "final_plan_text": final_plan_text,
+            "final_plan_text": final_text,
             "pdf_url": None,
             "stage2_retry_text": "",
             "stage2_validator_report": review["validator_report"],
             "stage2_status": "manual_stage2_retry_pass" if had_retry_prompt else "manual_stage2_pass",
             "stage2_attempt_count": next_attempt_count,
+            "why_log": why_log,
+            "coach_notes": (
+                f"{str(plan_row.get('coach_notes') or '').strip()}\n"
+                "coach_note: manually approved from needs_review before Stage 2."
+            ).strip(),
+            "approved_for_stage2": False if _is_manual_needs_review_override(plan_row) else bool(plan_row.get("approved_for_stage2")),
+            "manual_injury_review_required": bool(plan_row.get("manual_injury_review_required", False)),
+            "approved_for_stage2_by": plan_row.get("approved_for_stage2_by"),
+            "approved_for_stage2_at": plan_row.get("approved_for_stage2_at"),
+            "approval_reason": plan_row.get("approval_reason"),
+            "liability_disclaimer_acknowledged": bool(plan_row.get("liability_disclaimer_acknowledged", False)),
+            "stage2_override_source": plan_row.get("stage2_override_source"),
         }
 
     retry = build_stage2_retry(
@@ -543,6 +614,13 @@ def _manual_stage2_result(plan_row: dict[str, Any], final_plan_text: str) -> dic
         "stage2_validator_report": review["validator_report"],
         "stage2_status": "manual_stage2_retry_required",
         "stage2_attempt_count": next_attempt_count,
+        "manual_injury_review_required": bool(plan_row.get("manual_injury_review_required", False)),
+        "approved_for_stage2": bool(plan_row.get("approved_for_stage2", False)),
+        "approved_for_stage2_by": plan_row.get("approved_for_stage2_by"),
+        "approved_for_stage2_at": plan_row.get("approved_for_stage2_at"),
+        "approval_reason": plan_row.get("approval_reason"),
+        "liability_disclaimer_acknowledged": bool(plan_row.get("liability_disclaimer_acknowledged", False)),
+        "stage2_override_source": plan_row.get("stage2_override_source"),
     }
 
 
@@ -553,6 +631,7 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No saved Stage 2 or draft text is available to approve.",
         )
+    approved_text = _apply_manual_review_disclaimer(approved_text) if _is_manual_needs_review_override(plan_row) else approved_text
     return {
         "status": "ready",
         "plan_text": approved_text,
@@ -563,6 +642,13 @@ def _admin_approved_result(plan_row: dict[str, Any]) -> dict[str, Any]:
         "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
         "stage2_status": "admin_review_approved",
         "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
+        "approved_for_stage2": False if _is_manual_needs_review_override(plan_row) else bool(plan_row.get("approved_for_stage2")),
+        "manual_injury_review_required": bool(plan_row.get("manual_injury_review_required", False)),
+        "approved_for_stage2_by": plan_row.get("approved_for_stage2_by"),
+        "approved_for_stage2_at": plan_row.get("approved_for_stage2_at"),
+        "approval_reason": plan_row.get("approval_reason"),
+        "liability_disclaimer_acknowledged": bool(plan_row.get("liability_disclaimer_acknowledged", False)),
+        "stage2_override_source": plan_row.get("stage2_override_source"),
     }
 
 
@@ -1026,10 +1112,45 @@ def create_app(
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if _triage_mode(plan_row) == "needs_review" and not bool(plan_row.get("approved_for_stage2")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="needs_review plans require explicit manual approval before Stage 2 actions.",
+            )
+        if _triage_mode(plan_row) == "medical_hold":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="medical_hold plans cannot be overridden to Stage 2.",
+            )
 
         updated = store.update_plan_stage2(
             plan_id,
             _manual_stage2_result(plan_row, submission.final_plan_text),
+        )
+        return _map_plan_detail(updated, include_admin=True)
+
+    @app.post("/api/admin/plans/{plan_id}/approve-needs-review-for-stage2", response_model=PlanDetail)
+    def approve_needs_review_for_stage2(
+        plan_id: str,
+        submission: NeedsReviewStage2ApprovalRequest,
+        admin_profile: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+    ) -> PlanDetail:
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        mode = _triage_mode(plan_row)
+        if mode != "needs_review":
+            detail = "manual approval is only valid for needs_review triage mode"
+            if mode == "medical_hold":
+                detail = "medical_hold plans cannot be approved for Stage 2"
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
+
+        updated = store.approve_needs_review_for_stage2(
+            plan_id=plan_id,
+            approver=admin_profile.email or admin_profile.full_name or admin_profile.athlete_id,
+            reason=submission.reason,
+            disclaimer_acknowledged=submission.disclaimer_acknowledged,
         )
         return _map_plan_detail(updated, include_admin=True)
 
@@ -1042,6 +1163,16 @@ def create_app(
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if _triage_mode(plan_row) == "medical_hold":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="medical_hold plans cannot be overridden to Stage 2.",
+            )
+        if _triage_mode(plan_row) == "needs_review" and not bool(plan_row.get("approved_for_stage2")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="needs_review plans require explicit manual approval before Stage 2 release.",
+            )
 
         updated = store.update_plan_stage2(
             plan_id,

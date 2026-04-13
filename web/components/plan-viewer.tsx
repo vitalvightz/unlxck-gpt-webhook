@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import {
+  approveNeedsReviewForStage2,
   approvePlanForRelease,
   archivePlan,
   deletePlan,
@@ -722,6 +723,11 @@ export function PlanViewer({
   const [stage2RetryJustCompleted, setStage2RetryJustCompleted] = useState<"passed" | "failed" | null>(
     null,
   );
+  const [needsReviewApprovalReason, setNeedsReviewApprovalReason] = useState("");
+  const [needsReviewDisclaimerAcknowledged, setNeedsReviewDisclaimerAcknowledged] = useState(false);
+  const [needsReviewApprovePending, setNeedsReviewApprovePending] = useState(false);
+  const [needsReviewApproveMessage, setNeedsReviewApproveMessage] = useState<string | null>(null);
+  const [needsReviewApproveError, setNeedsReviewApproveError] = useState<string | null>(null);
   const [openAdminSection, setOpenAdminSection] = useState(() => {
     if (retryText.trim()) {
       return "retry";
@@ -865,6 +871,36 @@ export function PlanViewer({
       setArchiveError(error instanceof Error ? error.message : "Unable to archive this plan.");
     } finally {
       setArchivePending(false);
+    }
+  }
+
+  async function handleApproveNeedsReviewForStage2() {
+    if (!accessToken) {
+      setNeedsReviewApproveError("Admin session missing. Please sign in again.");
+      return;
+    }
+    if (!needsReviewApprovalReason.trim()) {
+      setNeedsReviewApproveError("Approval reason is required.");
+      return;
+    }
+    if (!needsReviewDisclaimerAcknowledged) {
+      setNeedsReviewApproveError("Disclaimer acknowledgement is required.");
+      return;
+    }
+    setNeedsReviewApprovePending(true);
+    setNeedsReviewApproveMessage(null);
+    setNeedsReviewApproveError(null);
+    try {
+      const updatedPlan = await approveNeedsReviewForStage2(accessToken, plan.plan_id, {
+        reason: needsReviewApprovalReason.trim(),
+        disclaimer_acknowledged: true,
+      });
+      onPlanUpdated?.(updatedPlan);
+      setNeedsReviewApproveMessage("Needs-review case approved for one Stage 2 run.");
+    } catch (error) {
+      setNeedsReviewApproveError(error instanceof Error ? error.message : "Unable to approve this needs-review plan.");
+    } finally {
+      setNeedsReviewApprovePending(false);
     }
   }
 
@@ -1472,13 +1508,61 @@ export function PlanViewer({
               </h3>
             </div>
             {isTriageBlocked ? (
-              <p className="muted">
-                {injuryTriage?.mode === "restricted_rehab_only"
-                  ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
-                  : injuryTriage?.mode === "medical_hold"
-                    ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
-                    : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
-              </p>
+              <>
+                <p className="muted">
+                  {injuryTriage?.mode === "restricted_rehab_only"
+                    ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
+                    : injuryTriage?.mode === "medical_hold"
+                      ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
+                      : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
+                </p>
+                {injuryTriage?.mode === "needs_review" ? (
+                  <div className="support-panel">
+                    <div className="form-section-header">
+                      <p className="kicker">Protected approval</p>
+                      <h3>Manual injury review required</h3>
+                    </div>
+                    <div className="field">
+                      <label htmlFor="needs-review-approval-reason">Approval reason</label>
+                      <input
+                        id="needs-review-approval-reason"
+                        type="text"
+                        value={needsReviewApprovalReason}
+                        onChange={(event) => setNeedsReviewApprovalReason(event.target.value)}
+                        placeholder="Short reason for Stage 2 approval"
+                      />
+                    </div>
+                    <label className="checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={needsReviewDisclaimerAcknowledged}
+                        onChange={(event) => setNeedsReviewDisclaimerAcknowledged(event.target.checked)}
+                      />
+                      <span>
+                        I have manually reviewed this flagged injury case.
+                        <br />
+                        I understand Stage 2 output is performance guidance only and not medical advice, diagnosis, or treatment.
+                      </span>
+                    </label>
+                    <div className="plan-summary-actions">
+                      <button type="button" className="cta" onClick={handleApproveNeedsReviewForStage2} disabled={needsReviewApprovePending}>
+                        {needsReviewApprovePending ? "Approving..." : "Approve to Stage 2"}
+                      </button>
+                      <button type="button" className="ghost-button" disabled>
+                        Escalate to Restricted Rehab Only
+                      </button>
+                      <button type="button" className="ghost-button" disabled>
+                        Escalate to Medical Hold
+                      </button>
+                      <button type="button" className="ghost-button" disabled>
+                        Request updated injury details
+                      </button>
+                    </div>
+                    {needsReviewApproveMessage ? <div className="success-banner">{needsReviewApproveMessage}</div> : null}
+                    {needsReviewApproveError ? <div className="error-banner">{needsReviewApproveError}</div> : null}
+                  </div>
+                ) : null}
+              </>
             ) : (
               <>
                 <p className="muted">

@@ -84,6 +84,13 @@ create table if not exists public.plans (
   stage2_validator_report jsonb not null default '{}'::jsonb,
   stage2_status text not null default '',
   stage2_attempt_count integer not null default 0,
+  manual_injury_review_required boolean not null default false,
+  approved_for_stage2 boolean not null default false,
+  approved_for_stage2_by text,
+  approved_for_stage2_at timestamptz,
+  approval_reason text,
+  liability_disclaimer_acknowledged boolean not null default false,
+  stage2_override_source text,
   created_at timestamptz not null default timezone('utc', now())
 );
 
@@ -116,6 +123,13 @@ alter table public.plans add column if not exists stage2_validator_report jsonb 
 alter table public.plans add column if not exists stage2_status text not null default '';
 alter table public.plans add column if not exists stage2_attempt_count integer not null default 0;
 alter table public.plans add column if not exists parsing_metadata jsonb not null default '{}'::jsonb;
+alter table public.plans add column if not exists manual_injury_review_required boolean not null default false;
+alter table public.plans add column if not exists approved_for_stage2 boolean not null default false;
+alter table public.plans add column if not exists approved_for_stage2_by text;
+alter table public.plans add column if not exists approved_for_stage2_at timestamptz;
+alter table public.plans add column if not exists approval_reason text;
+alter table public.plans add column if not exists liability_disclaimer_acknowledged boolean not null default false;
+alter table public.plans add column if not exists stage2_override_source text;
 alter table public.generation_jobs add column if not exists source text not null default 'self_service';
 alter table public.generation_jobs add column if not exists request_payload jsonb not null default '{}'::jsonb;
 alter table public.generation_jobs add column if not exists status text not null default 'queued';
