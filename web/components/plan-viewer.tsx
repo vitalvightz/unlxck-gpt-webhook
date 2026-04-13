@@ -641,7 +641,7 @@ export function PlanViewer({
   onPlanDeleted?: () => Promise<void> | void;
 }) {
   const router = useRouter();
-  const isAdmin = Boolean(plan.admin_outputs);
+  const isAdmin = viewerRole === "admin";
   const canManagePlan = viewerRole === "admin" || viewerRole === "athlete";
   const primaryAdvisory = Array.isArray(plan.advisories) ? plan.advisories[0] ?? null : null;
   const technicalStyles =
@@ -714,7 +714,7 @@ export function PlanViewer({
     plan.admin_outputs?.draft_plan_text?.trim() ||
     athletePlanText ||
     "";
-  const canSeeApprovalControls = isAdmin && !hasPublishedPlan;
+  const canSeeApprovalControls = isAdmin && (!hasPublishedPlan || isTriageBlocked);
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
   const canRejectApproval = isAdmin;
   const canApproveStage2 = isAdmin && isTriageBlocked;
