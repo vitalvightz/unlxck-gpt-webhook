@@ -6,7 +6,7 @@ from typing import Any
 
 from .injury_scoring import score_injury_phrase
 from .input_parsing import GuidedInjury, PlanInput
-from .sparring_advisories import _highest_risk_entry, _sparring_injury_entries
+from .sparring_advisories import summarize_sparring_injury_risk
 
 FULL_PLAN = "full_plan"
 RESTRICTED_REHAB_ONLY = "restricted_rehab_only"
@@ -35,6 +35,7 @@ _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bloss\s+of\s+consciousness\b|\bpassed\s+out\b|\bknocked\s+out\b", "loss_of_consciousness"),
     (r"\bconfus(?:ed|ion)\b", "confusion"),
     (r"\bchest\s+pain\b|\bchest\s+pressure\b", "chest_pain"),
+    (r"\bpain\s+(?:when|with)?\s*breath(?:ing)?\b|\bpainful\s+breath(?:ing)?\b", "breathing_pain"),
 )
 
 _HIGH_RISK_CATEGORY_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -174,6 +175,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if "breath" in guided_notes and any(token in combined_text for token in ("rib", "chest", "pain")):
         red_flags.add("breathing_pain")
         routing_reasons.add("guided_injury:breathing_symptoms")
+    rib_or_chest_context = any(token in combined_text for token in ("rib", "intercostal", "chest"))
 
     # Strict medical-hold escalation rules (combination based, not broad single phrases).
     medical_hold = False
@@ -194,6 +196,14 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if chest_with_systemic:
         medical_hold = True
         routing_reasons.add("chest_red_flag_combination")
+    rib_breathing_unsafe = rib_or_chest_context and ("breathing_pain" in red_flags) and (
+        any(category in matched_categories for category in ("broken_rib", "fracture", "open_fracture"))
+        or any(re.search(pattern, combined_text) for pattern in _TRAUMA_CONTEXT_PATTERNS)
+        or "shortness_of_breath" in red_flags
+    )
+    if rib_breathing_unsafe:
+        medical_hold = True
+        routing_reasons.add("rib_breathing_red_flag_combination")
 
     neuro_combo = (
         bool(re.search(_NEURO_CONTEXT_PATTERN, combined_text))
@@ -214,9 +224,8 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         restricted_rehab = True
         routing_reasons.add("structural_function_red_flag")
 
-    sparring_entries = _sparring_injury_entries({"injuries": injury_texts})
-    highest_sparring = _highest_risk_entry(sparring_entries)
-    highest_band = str((highest_sparring or {}).get("risk_band") or "green")
+    sparring_risk = summarize_sparring_injury_risk(injury_texts=injury_texts)
+    highest_band = str(sparring_risk.get("risk_band") or "green")
     if highest_band == "black":
         routing_reasons.add("sparring_black_risk")
         if any(flag in red_flags for flag in ("loss_of_consciousness", "coughing_blood", "deformity")):

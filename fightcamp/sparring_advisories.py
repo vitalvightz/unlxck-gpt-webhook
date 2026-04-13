@@ -528,6 +528,24 @@ def _build_week_advisory(
     return rank, advisory
 
 
+def summarize_sparring_injury_risk(*, injury_texts: list[str]) -> dict[str, Any]:
+    entries = _sparring_injury_entries({"injuries": injury_texts})
+    highest = _highest_risk_entry(entries)
+    if highest is None:
+        return {
+            "risk_band": "green",
+            "risk_band_score": 0,
+            "entry": None,
+            "entry_count": 0,
+        }
+    return {
+        "risk_band": str(highest.get("risk_band") or "green"),
+        "risk_band_score": int(highest.get("risk_band_score", highest.get("state_score", 0))),
+        "entry": highest,
+        "entry_count": len(entries),
+    }
+
+
 def build_plan_advisories(*, planning_brief: dict[str, Any] | None) -> list[dict[str, Any]]:
     if not isinstance(planning_brief, dict):
         return []

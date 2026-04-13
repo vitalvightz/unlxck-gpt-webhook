@@ -74,9 +74,10 @@ def test_guided_injury_and_restrictions_are_used_for_triage():
     parsed = PlanInput.from_payload(payload)
     triage = triage_injuries(parsed)
 
-    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.mode == MEDICAL_HOLD
     assert "breathing_pain" in triage.red_flags
     assert "guided_injury:worsening" in triage.routing_reasons
+    assert "rib_breathing_red_flag_combination" in triage.routing_reasons
 
 
 def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
