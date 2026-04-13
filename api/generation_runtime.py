@@ -67,6 +67,43 @@ async def run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> di
     return await asyncio.to_thread(planner_fn, payload)
 
 
+def _is_truthy_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        return normalized in {"1", "true", "yes", "y", "on"}
+    return False
+
+
+def should_skip_stage2(stage1_result: dict[str, Any]) -> bool:
+    status_value = str(stage1_result.get("status") or "").strip().lower()
+    if status_value == "triage_blocked":
+        return True
+
+    injury_triage = stage1_result.get("injury_triage")
+    if isinstance(injury_triage, dict):
+        if _is_truthy_flag(injury_triage.get("should_block_stage2")):
+            return True
+        triage_mode = str(injury_triage.get("mode") or "").strip().lower()
+        if triage_mode in {"medical_hold", "restricted_rehab_only", "needs_review"}:
+            return True
+
+    why_log = stage1_result.get("why_log")
+    if isinstance(why_log, dict):
+        why_log_triage = why_log.get("injury_triage")
+        if isinstance(why_log_triage, dict):
+            if _is_truthy_flag(why_log_triage.get("should_block_stage2")):
+                return True
+            triage_mode = str(why_log_triage.get("mode") or "").strip().lower()
+            if triage_mode in {"medical_hold", "restricted_rehab_only", "needs_review"}:
+                return True
+
+    return False
+
+
 async def heartbeat_generation_job(job_id: str, store: AppStore, stop_event: asyncio.Event) -> None:
     while not stop_event.is_set():
         try:
@@ -155,7 +192,7 @@ async def run_generation_job(
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
-            if bool((stage1_result or {}).get("injury_triage", {}).get("should_block_stage2")):
+            if should_skip_stage2(stage1_result):
                 final_result = {**stage1_result, "full_name": request_body.athlete.full_name}
             else:
                 finalized_result = await stage2.finalize(stage1_result=stage1_result)
