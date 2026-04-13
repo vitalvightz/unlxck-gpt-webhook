@@ -60,7 +60,7 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bacl\b", "acl_tear"),
     (r"\bpcl\b[\w\s-]{0,30}\b(?:tear|rupture)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bpcl\b", "pcl_tear"),
     (r"\bmcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+mcl\s+tear\b", "mcl_grade3_tear"),
-    (r"\blcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)\s+)?lcl\s+tear\b", "lcl_grade3_tear"),
+    (r"\blcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+lcl\s+tear\b", "lcl_grade3_tear"),
     (r"\bbucket[\s-]?handle\s+tear\b[\w\s-]{0,20}\bmeniscus\b|\bmeniscus\b[\w\s-]{0,30}\bbucket[\s-]?handle\s+tear\b", "meniscus_bucket_handle_tear"),
     (r"\bpatellar\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\bjumper'?s\s+knee\s+rupture\b", "patellar_tendon_rupture"),
     (r"\bquadriceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b", "quadriceps_tendon_rupture"),
