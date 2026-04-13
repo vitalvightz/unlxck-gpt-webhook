@@ -18,6 +18,7 @@ _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "rib_fracture": RESTRICTED_REHAB_ONLY,
     "broken_rib": RESTRICTED_REHAB_ONLY,
     "dislocation": RESTRICTED_REHAB_ONLY,
+    "acl_tear": RESTRICTED_REHAB_ONLY,
     "concussion": MEDICAL_HOLD,
     "suspected_concussion": MEDICAL_HOLD,
     "open_fracture": MEDICAL_HOLD,
@@ -42,10 +43,37 @@ _HIGH_RISK_CATEGORY_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bopen\s+fracture\b", "open_fracture"),
     (r"\bstress\s+fracture\b", "stress_fracture"),
     (r"\brib\s+fracture\b|\bbroken\s+rib\b", "broken_rib"),
+    (r"\bacl\b[\w\s-]{0,24}\b(?:tear|rupture|reconstruction)\b|\b(?:tear|rupture)\b[\w\s-]{0,24}\bacl\b", "acl_tear"),
     (r"\bfracture\b", "fracture"),
     (r"\bdislocation\b", "dislocation"),
     (r"\bsuspected\s+concussion\b", "suspected_concussion"),
     (r"\bconcussion\b", "concussion"),
+)
+_STRUCTURAL_SEVERE_TERMS = (
+    "tear",
+    "rupture",
+    "full thickness",
+    "full-thickness",
+    "grade 3",
+    "grade iii",
+    "reconstruction",
+    "snapped",
+    "complete",
+)
+_STRUCTURAL_TISSUE_TERMS = (
+    "ligament",
+    "tendon",
+    "acl",
+    "pcl",
+    "mcl",
+    "lcl",
+    "meniscus",
+    "labrum",
+    "rotator cuff",
+    "achilles",
+    "hamstring",
+    "patellar tendon",
+    "bicep tendon",
 )
 
 _TRAUMA_CONTEXT_PATTERNS = (
@@ -83,6 +111,17 @@ def _collect_matches(text: str, patterns: tuple[tuple[str, str], ...]) -> set[st
         if re.search(pattern, lowered):
             matches.add(label)
     return matches
+
+
+def _is_structural_severe_signal(*, text: str, scored_injury_type: str) -> bool:
+    lowered = str(text or "").lower()
+    injury_type = str(scored_injury_type or "").lower()
+    has_severe_term = any(term in lowered for term in _STRUCTURAL_SEVERE_TERMS)
+    if not has_severe_term:
+        return False
+    if injury_type in {"sprain", "strain", "instability"}:
+        return True
+    return any(term in lowered for term in _STRUCTURAL_TISSUE_TERMS)
 
 
 def _guided_injury_text_chunks(guided: GuidedInjury | None) -> list[str]:
@@ -130,8 +169,12 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     red_flags = _collect_matches(combined_text, _RED_FLAG_PATTERNS)
 
     urgent_flags: set[str] = set()
+    structural_severe_signal = False
     for text in injury_texts:
         scored = score_injury_phrase(text)
+        scored_type = str(scored.get("injury_type") or "")
+        if _is_structural_severe_signal(text=text, scored_injury_type=scored_type):
+            structural_severe_signal = True
         for flag in scored.get("flags", []):
             if str(flag).startswith("urgent"):
                 urgent_flags.add(str(flag))
@@ -217,15 +260,25 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons.add("neurological_red_flag_combination")
 
     restricted_rehab = False
-    if any(category in matched_categories for category in ("fracture", "stress_fracture", "broken_rib", "dislocation", "structural_high_severity")):
+    if any(
+        category in matched_categories
+        for category in ("fracture", "stress_fracture", "broken_rib", "dislocation", "acl_tear", "structural_high_severity")
+    ):
         restricted_rehab = True
         routing_reasons.add("mapped_restricted_category")
     if any(flag in red_flags for flag in ("cannot_bear_weight", "rapid_swelling")):
         restricted_rehab = True
         routing_reasons.add("structural_function_red_flag")
 
+    if structural_severe_signal:
+        restricted_rehab = True
+        routing_reasons.add("scored_structural_severe_signal")
+
     sparring_risk = summarize_sparring_injury_risk(injury_texts=injury_texts)
     highest_band = str(sparring_risk.get("risk_band") or "green")
+    if highest_band in {"red", "black"} and guided_severity in {"high", "severe"}:
+        restricted_rehab = True
+        routing_reasons.add("guided_high_severity_with_elevated_sparring_risk")
     if highest_band == "black":
         routing_reasons.add("sparring_black_risk")
         if any(flag in red_flags for flag in ("loss_of_consciousness", "coughing_blood", "deformity")):

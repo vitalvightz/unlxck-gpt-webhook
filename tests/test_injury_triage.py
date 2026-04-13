@@ -80,6 +80,40 @@ def test_guided_injury_and_restrictions_are_used_for_triage():
     assert "rib_breathing_red_flag_combination" in triage.routing_reasons
 
 
+def test_guided_injury_acl_rupture_routes_to_restricted_rehab_only():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "slide tackle went wrong which caused me to rupture acl",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert "acl_tear" in triage.matched_high_risk_categories
+
+
+def test_guided_injury_structural_tear_not_limited_to_acl():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left shoulder",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "full thickness rotator cuff tear after fall",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+    assert "scored_structural_severe_signal" in triage.routing_reasons
+
+
 def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     payload = _payload_with_injury("open fracture with deformity")
 

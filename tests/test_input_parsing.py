@@ -282,6 +282,26 @@ def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     assert all("knee" not in injury for injury in context.training_context.injuries)
 
 
+def test_guided_injury_structural_notes_are_retained_in_original_phrase():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "right knee"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "right knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "rupture acl after a collision",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert "rupture acl" in parsed.parsed_injuries[0]["original_phrase"].lower()
+
+
 @pytest.mark.parametrize(
     ("guided_severity", "expected_severity"),
     [("low", "mild"), ("high", "severe")],
