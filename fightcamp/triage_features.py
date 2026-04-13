@@ -20,7 +20,7 @@ class TriageFeatures:
     raw_evidence: dict[str, list[str]] = field(default_factory=dict)
 
 
-_TEAR_SYNONYM_PATTERN = r"(?:tear|tears?|torn)"
+_TEAR_SYNONYM_PATTERN = r"(?:tears?|torn)"
 _RUPTURE_OR_TEAR_PATTERN = rf"(?:rupture|ruptured|{_TEAR_SYNONYM_PATTERN})"
 
 _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
