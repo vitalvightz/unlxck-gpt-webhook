@@ -50,14 +50,29 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bstress\s+fracture\b", "stress_fracture"),
     (r"\brib\s+fracture\b|\bbroken\s+rib\b", "broken_rib"),
     (r"\bfracture\b", "fracture"),
-    (r"\bdislocation\b", "dislocation"),
+    (r"\bdislocat(?:ion|e|ed|es|ing)\b|\bsublux(?:ation|ing|ed)?\b|\bpartial\s+dislocation\b", "dislocation"),
     (r"\bsuspected\s+concussion\b", "suspected_concussion"),
     (r"\bconcussion\b", "concussion"),
     (r"\bachilles\b[\w\s-]{0,30}\b(?:rupture|tear|avulsion)\b|\b(?:rupture|tear|avulsion)\b[\w\s-]{0,30}\bachilles\b", "achilles_rupture"),
     (r"\bfull[-\s]?thickness\s+rotator\s+cuff\s+tear\b", "full_thickness_rotator_cuff_tear"),
-    (r"\btendon\s+(?:rupture|avulsion)\b|\b(?:rupture|avulsion)\s+tendon\b", "tendon_rupture_or_avulsion"),
-    (r"\bcomplete\s+ligament\s+tear\b|\bligament\s+tear\s+complete\b", "complete_ligament_tear"),
-    (r"\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bacl\b", "acl_tear"),
+    (
+        r"\btendon\s+(?:rupture|avulsion|tear|pop|snap|failure)\b"
+        r"|\b(?:rupture|avulsion|tear|pop|snap|failure)\s+tendon\b",
+        "tendon_rupture_or_avulsion",
+    ),
+    (
+        r"\bcomplete\s+ligament\s+tear\b|\bligament\s+tear\s+complete\b"
+        r"|\b(?:ruptured|torn|blown)\s+ligament\b"
+        r"|\bgrade\s*(?:3|iii)\b[\w\s-]{0,20}\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{0,20}\b(?:tear|rupture|sprain|injury)?\b"
+        r"|\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{0,20}\bgrade\s*(?:3|iii)\b",
+        "complete_ligament_tear",
+    ),
+    (
+        r"\bacl\b"
+        r"|\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction|injury|surgery)\b"
+        r"|\b(?:tear|rupture|injury)\b[\w\s-]{0,30}\bacl\b",
+        "acl_tear",
+    ),
     (r"\bpcl\b[\w\s-]{0,30}\b(?:tear|rupture)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bpcl\b", "pcl_tear"),
     (r"\bmcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+mcl\s+tear\b", "mcl_grade3_tear"),
     (r"\blcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+lcl\s+tear\b", "lcl_grade3_tear"),
