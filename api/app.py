@@ -1067,7 +1067,7 @@ def create_app(
         active_tasks: set[str] = Depends(get_active_generation_tasks),
         enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
     ) -> GenerationJobResponse:
-        plan_row = store.get_plan(plan_id)
+        plan_row = await asyncio.to_thread(store.get_plan, plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
 
