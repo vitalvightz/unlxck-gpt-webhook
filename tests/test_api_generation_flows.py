@@ -7,6 +7,7 @@ import pytest
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.generation_runtime import should_skip_stage2
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from support import (
@@ -200,6 +201,30 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert safety["state"] == "medical_hold"
     assert safety["status_chip"] == "MEDICAL HOLD"
     assert safety["stage2_skipped"] is True
+
+
+def test_should_skip_stage2_when_triage_blocked_status_has_no_nested_flag():
+    assert (
+        should_skip_stage2(
+            {
+                "status": "triage_blocked",
+                "injury_triage": {},
+            }
+        )
+        is True
+    )
+
+
+def test_should_skip_stage2_when_why_log_carries_needs_review_mode():
+    assert (
+        should_skip_stage2(
+            {
+                "status": "generated",
+                "why_log": {"injury_triage": {"mode": "needs_review"}},
+            }
+        )
+        is True
+    )
 
 def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
     client, store, _ = _build_client(
