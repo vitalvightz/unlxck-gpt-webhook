@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
+
+from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import ManualStage2SubmissionRequest
 from support import (
+    FakeAuthService,
+    FakeStore,
     SYSTEM_SCENARIOS,
     FakeStage2Automator,
     _build_client,
@@ -10,6 +15,7 @@ from support import (
     _review_required_result,
     _start_generation,
     finalized_result,
+    stage1_result,
 )
 
 
@@ -370,6 +376,97 @@ def test_admin_can_reject_approved_plan_back_to_review():
     assert body["outputs"]["plan_text"] == ""
     assert body["admin_outputs"]["final_plan_text"] == "# Released Stage 2 Output"
     assert body["admin_outputs"]["stage2_status"] == "admin_review_rejected"
+
+
+def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    stage2 = FakeStage2Automator(result=finalized_result())
+    planner_calls: list[dict] = []
+
+    def planner(payload: dict) -> dict:
+        planner_calls.append(payload)
+        return stage1_result()
+
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=planner,
+            stage2_automator=stage2,
+        )
+    )
+
+    resume_response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "injury details clarified"},
+    )
+    assert resume_response.status_code == 202
+    job_id = resume_response.json()["job_id"]
+
+    job_response = client.get(f"/api/generation-jobs/{job_id}", headers={"Authorization": "Bearer admin-token"})
+    assert job_response.status_code == 200
+    job = job_response.json()
+    assert job["status"] == "completed"
+    assert len(planner_calls) == 1
+    assert len(stage2.calls) == 1
+    assert stage2.calls[0]["plan_text"] == "# Stage 1 Draft"
+
+
+def test_medical_hold_cannot_use_approve_and_resume_generation():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "medical_hold", "should_block_stage2": True}},
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{blocked_plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "should fail"},
+    )
+
+    assert response.status_code == 409
 
 
 def test_curated_review_required_scenarios_are_fast_for_admin_to_resolve():

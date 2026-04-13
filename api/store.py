@@ -90,6 +90,7 @@ class AppStore(Protocol):
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]: ...
 
     def get_latest_intake(self, athlete_id: str) -> dict[str, Any] | None: ...
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None: ...
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
@@ -130,6 +131,7 @@ class AppStore(Protocol):
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
+    def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]: ...
 
@@ -502,6 +504,9 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .order("created_at", desc=True)
         )
+
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("athlete_intakes").select("*").eq("id", intake_id))
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]:
         payload = {
@@ -1067,6 +1072,35 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"update_plan_stage2 plan_id={plan_id}",
                 detail="failed to update plan stage 2",
+                exc=exc,
+            )
+
+    def update_plan_triage_approval(
+        self,
+        plan_id: str,
+        *,
+        why_log: dict[str, Any],
+        stage2_status: str,
+    ) -> dict[str, Any]:
+        payload = {"why_log": why_log, "stage2_status": stage2_status}
+        try:
+            logger.info("[store] update_plan_triage_approval:start plan_id=%s", plan_id)
+            self.client.table("plans").update(payload).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning("[store] update_plan_triage_approval:plan_missing_after_update plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] update_plan_triage_approval:success plan_id=%s", plan_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_plan_triage_approval plan_id={plan_id}",
+                detail="failed to update triage approval",
                 exc=exc,
             )
 

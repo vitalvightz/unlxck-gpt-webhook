@@ -568,6 +568,18 @@ class ManualStage2SubmissionRequest(BaseModel):
         return normalized
 
 
+class ApproveAndResumeGenerationRequest(BaseModel):
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("reason is required")
+        return normalized
+
+
 class PlanRenameRequest(BaseModel):
     plan_name: str
 

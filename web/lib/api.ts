@@ -1,4 +1,5 @@
 import type {
+  ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
@@ -430,6 +431,22 @@ export function approvePlanForRelease(token: string, planId: string): Promise<Pl
     method: "POST",
     token,
   });
+}
+
+export function approveAndResumeGeneration(
+  token: string,
+  planId: string,
+  payload: ApproveAndResumeGenerationRequest,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>(`/api/admin/plans/${planId}/approve-and-resume-generation`, {
+      method: "POST",
+      token,
+      clientRequestId,
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {

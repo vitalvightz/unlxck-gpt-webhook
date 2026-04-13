@@ -27,6 +27,7 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
 from .models import (
+    ApproveAndResumeGenerationRequest,
     AdminAthleteRecord,
     AdminPlanOutputs,
     AdminPlanSummary,
@@ -586,6 +587,10 @@ def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _can_approve_and_resume_triage(triage_mode: str) -> bool:
+    return triage_mode in {"needs_review", "restricted_rehab_only"}
+
+
 def create_app(
     *,
     store: AppStore,
@@ -1048,6 +1053,76 @@ def create_app(
             _admin_approved_result(plan_row),
         )
         return _map_plan_detail(updated, include_admin=True)
+
+    @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
+    async def approve_and_resume_generation(
+        request: Request,
+        plan_id: str,
+        approval: ApproveAndResumeGenerationRequest,
+        background_tasks: BackgroundTasks,
+        profile: ProfileRecord = Depends(require_admin),
+        store: AppStore = Depends(get_store),
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
+    ) -> GenerationJobResponse:
+        plan_row = await asyncio.to_thread(store.get_plan, plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+
+        why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
+        triage = why_log.get("injury_triage") if isinstance(why_log.get("injury_triage"), dict) else {}
+        triage_mode = str(triage.get("mode") or "").strip().lower()
+        if not _can_approve_and_resume_triage(triage_mode):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
+            )
+
+        intake_id = str(plan_row.get("intake_id") or "").strip()
+        if not intake_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
+        intake_row = store.get_intake(intake_id)
+        if not intake_row or not isinstance(intake_row.get("intake"), dict):
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
+        request_payload = intake_row.get("intake")
+
+        approval_log = {
+            "approved_by_user_id": profile.athlete_id,
+            "approved_by_email": profile.email,
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "reason": approval.reason,
+            "action": "approve_and_resume_generation",
+        }
+        updated_why_log = dict(why_log)
+        updated_why_log["triage_resume_approval"] = approval_log
+        updated_why_log["triage_regeneration_cleared"] = True
+        store.update_plan_triage_approval(
+            plan_id,
+            why_log=updated_why_log,
+            stage2_status="triage_resume_approved",
+        )
+
+        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"triage_resume_{uuid.uuid4().hex}"
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=str(plan_row["athlete_id"]),
+            client_request_id=client_request_id,
+            source="admin_triage_resume",
+            request_payload=request_payload,
+        )
+        job = await schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            is_stale_job=_is_stale_job,
+        )
+        return _job_response(job)
 
     @app.post("/api/admin/plans/{plan_id}/reject", response_model=PlanDetail)
     def reject_approved_plan(

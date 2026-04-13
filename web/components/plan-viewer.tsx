@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import {
+  approveAndResumeGeneration,
   approvePlanForRelease,
   archivePlan,
   deletePlan,
@@ -689,6 +690,8 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
+  const canApproveAndResumeGeneration =
+    isAdmin && isTriageBlocked && (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
   const canRejectApproval = isAdmin;
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
@@ -709,6 +712,10 @@ export function PlanViewer({
   const [approvePending, setApprovePending] = useState(false);
   const [approveMessage, setApproveMessage] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
+  const [resumeReason, setResumeReason] = useState("");
+  const [resumePending, setResumePending] = useState(false);
+  const [resumeMessage, setResumeMessage] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [rejectPending, setRejectPending] = useState(false);
   const [rejectMessage, setRejectMessage] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
@@ -816,6 +823,34 @@ export function PlanViewer({
       );
     } finally {
       setApprovePending(false);
+    }
+  }
+
+  async function handleApproveAndResumeGeneration() {
+    if (!accessToken) {
+      setResumeError("Admin session missing. Please sign in again.");
+      return;
+    }
+    if (!canApproveAndResumeGeneration) {
+      setResumeError("This plan cannot be resumed from its current triage state.");
+      return;
+    }
+    if (!resumeReason.trim()) {
+      setResumeError("Please enter a short reason before resuming generation.");
+      return;
+    }
+    setResumePending(true);
+    setResumeError(null);
+    setResumeMessage(null);
+    try {
+      const clientRequestId = crypto.randomUUID();
+      await approveAndResumeGeneration(accessToken, plan.plan_id, { reason: resumeReason.trim() }, clientRequestId);
+      setResumeMessage("Approved. Normal generation has been resumed from the stored intake.");
+      setResumeReason("");
+    } catch (error) {
+      setResumeError(error instanceof Error ? error.message : "Unable to approve and resume generation.");
+    } finally {
+      setResumePending(false);
     }
   }
 
@@ -1472,13 +1507,36 @@ export function PlanViewer({
               </h3>
             </div>
             {isTriageBlocked ? (
-              <p className="muted">
-                {injuryTriage?.mode === "restricted_rehab_only"
-                  ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
-                  : injuryTriage?.mode === "medical_hold"
-                    ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
-                    : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
-              </p>
+              <>
+                <p className="muted">
+                  {injuryTriage?.mode === "restricted_rehab_only"
+                    ? "This intake requires clinician clearance before normal planning can resume. Stage 2 finalization was intentionally skipped."
+                    : injuryTriage?.mode === "medical_hold"
+                      ? "This intake contains urgent or medically disqualifying signals. No planning should continue until medical review is complete."
+                      : "Normal planning is paused for this intake. Stage 2 was skipped intentionally until additional review is complete."}
+                </p>
+                {canApproveAndResumeGeneration ? (
+                  <div className="support-panel">
+                    <div className="field">
+                      <label htmlFor="resume-generation-reason">Reason</label>
+                      <input
+                        id="resume-generation-reason"
+                        type="text"
+                        value={resumeReason}
+                        onChange={(event) => setResumeReason(event.target.value)}
+                        placeholder="Short reason"
+                      />
+                    </div>
+                    <div className="plan-summary-actions">
+                      <button type="button" className="cta" onClick={handleApproveAndResumeGeneration} disabled={resumePending}>
+                        {resumePending ? "Resuming..." : "Approve and resume generation"}
+                      </button>
+                    </div>
+                    {resumeMessage ? <div className="success-banner">{resumeMessage}</div> : null}
+                    {resumeError ? <div className="error-banner">{resumeError}</div> : null}
+                  </div>
+                ) : null}
+              </>
             ) : (
               <>
                 <p className="muted">

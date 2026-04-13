@@ -82,6 +82,13 @@ class FakeStore:
         items = self.intakes.get(athlete_id, [])
         return items[-1] if items else None
 
+    def get_intake(self, intake_id: str) -> dict | None:
+        for items in self.intakes.values():
+            for intake in items:
+                if intake["id"] == intake_id:
+                    return intake
+        return None
+
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict:
         intake = {
             "id": f"intake_{uuid4().hex[:10]}",
@@ -284,6 +291,14 @@ class FakeStore:
                 "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
             }
         )
+        return row
+
+    def update_plan_triage_approval(self, plan_id: str, *, why_log: dict, stage2_status: str) -> dict:
+        row = self.plans.get(plan_id)
+        if not row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        row["why_log"] = why_log
+        row["stage2_status"] = stage2_status
         return row
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict]:
