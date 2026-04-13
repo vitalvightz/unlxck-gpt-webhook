@@ -1024,14 +1024,12 @@ def create_app(
     @app.post("/api/plans/{plan_id}/approve-stage2", response_model=PlanDetail)
     def approve_plan_for_stage2(
         plan_id: str,
-        profile: ProfileRecord = Depends(require_profile),
+        _: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin":
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
 
         updated = store.update_plan_stage2(plan_id, _triage_override_result(plan_row))
         return _map_plan_detail(updated, include_admin=True)
