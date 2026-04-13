@@ -618,7 +618,7 @@ class PlanOutputs(BaseModel):
 
 
 class PlanSafetyState(BaseModel):
-    state: Literal["plan_ready", "restricted_rehab_only", "medical_hold"]
+    state: Literal["plan_ready", "restricted_rehab_only", "medical_hold", "needs_review"]
     status_chip: str
     header: str
     subtext: str

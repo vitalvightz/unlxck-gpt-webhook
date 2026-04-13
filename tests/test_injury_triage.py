@@ -1,7 +1,13 @@
 import json
 from pathlib import Path
 
-from fightcamp.injury_triage import FULL_PLAN, MEDICAL_HOLD, RESTRICTED_REHAB_ONLY, triage_injuries
+from fightcamp.injury_triage import (
+    FULL_PLAN,
+    MEDICAL_HOLD,
+    NEEDS_REVIEW,
+    RESTRICTED_REHAB_ONLY,
+    triage_injuries,
+)
 from fightcamp.input_parsing import PlanInput
 from fightcamp.main import generate_plan_sync
 
@@ -238,3 +244,88 @@ def test_negated_new_severe_phrases_do_not_trigger_blocking():
     triage = triage_injuries(parsed)
 
     assert triage.mode == FULL_PLAN
+
+
+def test_high_worsening_vague_guided_injury_routes_to_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "worsening", "notes": "pain"}
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+
+
+def test_high_stable_vague_guided_injury_routes_to_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "shoulder", "severity": "high", "trend": "stable", "notes": "pain"}
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+
+
+def test_moderate_worsening_vague_guided_injury_routes_to_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "ankle", "severity": "moderate", "trend": "worsening", "notes": "pain"}
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+
+
+def test_low_worsening_vague_guided_injury_routes_to_needs_review():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "elbow", "severity": "low", "trend": "worsening", "notes": "sore"}
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+
+
+def test_high_stable_acl_rupture_remains_restricted_rehab_only():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "right knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "confirmed acl rupture",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
+
+
+def test_high_worsening_with_chest_breathing_red_flags_routes_to_medical_hold():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left chest",
+        "severity": "high",
+        "trend": "worsening",
+        "notes": "chest pain and shortness of breath after impact",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == MEDICAL_HOLD
+    assert triage.should_block_stage2 is True
+
+
+def test_moderate_stable_mild_non_structural_case_can_reach_full_plan():
+    payload = _payload_with_injury("mild shoulder soreness after mitt work")
+    payload["guided_injury"] = {
+        "area": "left shoulder",
+        "severity": "moderate",
+        "trend": "stable",
+        "notes": "mild soreness after heavy bag, no restrictions",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
