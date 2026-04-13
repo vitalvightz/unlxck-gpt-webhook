@@ -343,6 +343,10 @@ _GUIDED_SEVERITY_MAP = {
     "high": "severe",
     "severe": "severe",
 }
+_GUIDED_STRUCTURAL_NOTE_PATTERN = re.compile(
+    r"\b(?:acl|tear|rupture|reconstruction|dislocation|fracture|concussion)\b",
+    re.IGNORECASE,
+)
 
 
 def _extract_guided_injury(data: dict) -> GuidedInjury | None:
@@ -395,6 +399,9 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         mapped_severity = _GUIDED_SEVERITY_MAP.get(guided_injury.severity.lower())
         if mapped_severity:
             injury_entry["severity"] = mapped_severity
+
+        if guided_injury.notes and _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
+            injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         injuries.append(injury_entry)
 
     if guided_injury.avoid:
