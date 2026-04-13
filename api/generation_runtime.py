@@ -155,8 +155,11 @@ async def run_generation_job(
 
         final_result = job.get("final_result")
         if not isinstance(final_result, dict):
-            finalized_result = await stage2.finalize(stage1_result=stage1_result)
-            final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
+            if bool((stage1_result or {}).get("injury_triage", {}).get("should_block_stage2")):
+                final_result = {**stage1_result, "full_name": request_body.athlete.full_name}
+            else:
+                finalized_result = await stage2.finalize(stage1_result=stage1_result)
+                final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
             job = await asyncio.to_thread(
                 store.update_generation_job,
                 job_id,
@@ -188,7 +191,8 @@ async def run_generation_job(
         except Exception:
             logger.exception("[jobs] generation:clear_onboarding_draft_failed athlete_id=%s job_id=%s", athlete_id, job_id)
 
-        final_status = "completed" if str(plan_row.get("status") or "ready") == "ready" else str(plan_row.get("status") or "failed")
+        plan_status = str(plan_row.get("status") or "failed")
+        final_status = "completed" if plan_status in {"ready", "triage_blocked"} else plan_status
         await asyncio.to_thread(
             store.update_generation_job,
             job_id,
