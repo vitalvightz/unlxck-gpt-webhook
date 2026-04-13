@@ -129,3 +129,61 @@ def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     assert result["stage2_payload"] is None
     assert result["stage2_status"] == "triage_blocked"
     assert result["injury_triage"]["mode"] == MEDICAL_HOLD
+
+
+def test_acl_rupture_routes_to_restricted_rehab_only():
+    parsed = PlanInput.from_payload(_payload_with_injury("right knee acl rupture during scramble"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "acl_tear" in triage.matched_high_risk_categories
+
+
+def test_achilles_rupture_routes_to_restricted_rehab_only():
+    parsed = PlanInput.from_payload(_payload_with_injury("felt pop then achilles rupture while sprinting"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "achilles_rupture" in triage.matched_high_risk_categories
+
+
+def test_full_thickness_rotator_cuff_tear_routes_to_restricted_rehab_only():
+    parsed = PlanInput.from_payload(_payload_with_injury("MRI showed full-thickness rotator cuff tear"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "full_thickness_rotator_cuff_tear" in triage.matched_high_risk_categories
+
+
+def test_negated_severe_phrases_do_not_trigger_blocking_by_themselves():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("no fracture, ACL intact, not a concussion, ruled out dislocation")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+
+
+def test_guided_structural_note_is_retained_and_used_for_triage():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "left ankle",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "suspected tendon rupture post-op follow up",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    assert "tendon rupture" in (parsed.parsed_injuries[0].get("original_phrase") or "").lower()
+
+    triage = triage_injuries(parsed)
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "tendon_rupture_or_avulsion" in triage.matched_high_risk_categories
+
+
+def test_not_a_concussion_does_not_route_to_medical_hold():
+    parsed = PlanInput.from_payload(_payload_with_injury("not a concussion, mild soreness only"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
