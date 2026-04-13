@@ -498,10 +498,10 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
 
 
 def _triage_mode(row: dict[str, Any]) -> str:
-    triage = {}
     why_log = row.get("why_log")
-    if isinstance(why_log, dict):
-        triage = why_log.get("injury_triage") or {}
+    if not isinstance(why_log, dict):
+        return ""
+    triage = why_log.get("injury_triage")
     if not isinstance(triage, dict):
         return ""
     return str(triage.get("mode") or "").strip().lower()
