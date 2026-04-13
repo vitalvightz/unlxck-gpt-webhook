@@ -164,8 +164,6 @@ _ACL_HISTORY_TERMS = (
 )
 
 _ACL_CURRENT_CONCERN_TERMS = (
-    "tear",
-    "rupture",
     "reinjur",
     "new injury",
     "fresh",
@@ -299,6 +297,13 @@ def _collect_matches(text: str, patterns: tuple[tuple[str, str], ...]) -> set[st
     return matches
 
 
+def _contains_any_term(text: str, terms: tuple[str, ...]) -> bool:
+    if not terms:
+        return False
+    pattern = rf"(?<!\w)(?:{'|'.join(re.escape(t) for t in terms)})(?!\w)"
+    return bool(re.search(pattern, text))
+
+
 def _is_structural_severe_signal(*, text: str, scored_injury_type: str) -> bool:
     lowered = str(text or "").lower()
     injury_type = str(scored_injury_type or "").lower()
@@ -319,17 +324,16 @@ def _is_acl_history_only_chunk(text: str) -> bool:
     lowered = str(text or "").lower()
     if "acl" not in lowered:
         return False
-    has_history = any(term in lowered for term in _ACL_HISTORY_TERMS)
-    has_current_concern = any(term in lowered for term in _ACL_CURRENT_CONCERN_TERMS)
+    has_history = _contains_any_term(lowered, _ACL_HISTORY_TERMS)
+    has_current_concern = _contains_any_term(lowered, _ACL_CURRENT_CONCERN_TERMS)
     return has_history and not has_current_concern
 
 
 def _is_history_only_chunk(text: str) -> bool:
     lowered = str(text or "").lower()
-    has_history = any(term in lowered for term in _HISTORY_TERMS)
-    has_resolution = any(term in lowered for term in _RESOLUTION_TERMS)
-    has_current_concern = any(term in lowered for term in _CURRENT_CONCERN_TERMS)
-    return has_history and (has_resolution or not has_current_concern)
+    has_history = _contains_any_term(lowered, _HISTORY_TERMS)
+    has_current_concern = _contains_any_term(lowered, _CURRENT_CONCERN_TERMS)
+    return has_history and not has_current_concern
 
 
 def build_triage_features(
@@ -371,6 +375,7 @@ def build_triage_features(
         if not cleaned_chunk:
             continue
         cleaned_chunks.append(cleaned_chunk)
+        history_only_chunk = _is_history_only_chunk(cleaned_chunk)
 
         chunk_red_flags = _collect_matches(cleaned_chunk, _RED_FLAG_PATTERNS)
         if chunk_red_flags:
@@ -382,13 +387,14 @@ def build_triage_features(
             function_loss_signals.update(chunk_function_loss)
             function_loss_evidence.add(raw_chunk)
 
-        chunk_clinician_signals = _collect_matches(cleaned_chunk, _CLINICIAN_RESTRICTION_PATTERNS)
+        chunk_clinician_signals = set()
+        if not history_only_chunk:
+            chunk_clinician_signals = _collect_matches(cleaned_chunk, _CLINICIAN_RESTRICTION_PATTERNS)
         if chunk_clinician_signals:
             clinician_restriction_signals.update(chunk_clinician_signals)
             clinician_evidence.add(raw_chunk)
 
         if not _is_negated_severe_chunk(raw_chunk):
-            history_only_chunk = _is_history_only_chunk(cleaned_chunk)
             chunk_high_risk = _collect_matches(cleaned_chunk, _HIGH_RISK_PATTERNS)
             if "acl_mention" in chunk_high_risk:
                 chunk_high_risk.discard("acl_mention")

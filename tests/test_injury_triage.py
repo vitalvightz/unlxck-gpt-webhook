@@ -216,6 +216,30 @@ def test_history_only_structural_language_does_not_overfire(injury_text: str):
     }.intersection(set(triage.matched_high_risk_categories))
 
 
+def test_history_word_boundary_prevents_false_positive_history_detection():
+    parsed = PlanInput.from_payload(_payload_with_injury("told about shoulder dislocation but pain today"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "dislocation" in triage.matched_high_risk_categories
+
+
+def test_current_concern_overrides_resolution_markers_in_same_chunk():
+    parsed = PlanInput.from_payload(_payload_with_injury("old tendon rupture healed but pain today"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "tendon_rupture_or_avulsion" in triage.matched_high_risk_categories
+
+
+def test_history_of_acl_tear_without_current_symptoms_stays_full_plan():
+    parsed = PlanInput.from_payload(_payload_with_injury("history of ACL tear"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN
+    assert "acl_tear" not in triage.matched_high_risk_categories
+
+
 def test_achilles_rupture_routes_to_restricted_rehab_only():
     parsed = PlanInput.from_payload(_payload_with_injury("felt pop then achilles rupture while sprinting"))
     triage = triage_injuries(parsed)
