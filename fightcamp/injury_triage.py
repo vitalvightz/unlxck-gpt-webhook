@@ -11,6 +11,7 @@ from .triage_features import build_triage_features
 FULL_PLAN = "full_plan"
 RESTRICTED_REHAB_ONLY = "restricted_rehab_only"
 MEDICAL_HOLD = "medical_hold"
+NEEDS_REVIEW = "needs_review"
 
 _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "fracture": RESTRICTED_REHAB_ONLY,
@@ -106,13 +107,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         route = _HIGH_RISK_CATEGORY_ROUTE.get(category)
         if route:
             routing_reasons.add(f"mapped:{category}:{route}")
-    has_mapped_medical_hold = any(
-        _HIGH_RISK_CATEGORY_ROUTE.get(category) == MEDICAL_HOLD for category in matched_categories
-    )
-    has_mapped_restricted = any(
-        _HIGH_RISK_CATEGORY_ROUTE.get(category) == RESTRICTED_REHAB_ONLY for category in matched_categories
-    )
-
     if "urgent_fracture" in urgent_flags:
         matched_categories.add("fracture")
         routing_reasons.add("urgent_flag:urgent_fracture")
@@ -271,6 +265,194 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             sparring_risk_band=highest_band,
         )
 
+    has_dangerous_red_flags = any(
+        flag in red_flags
+        for flag in (
+            "loss_of_consciousness",
+            "coughing_blood",
+            "deformity",
+            "vomiting_after_head_impact",
+            "severe_headache_after_head_impact",
+            "seizure_or_convulsion",
+            "amnesia_or_memory_loss",
+            "blurred_or_double_vision",
+            "unequal_pupils",
+            "worsening_drowsiness_or_cannot_wake",
+            "slurred_speech",
+            "neck_pain_after_trauma",
+            "bowel_or_bladder_changes_after_back_injury",
+            "shortness_of_breath",
+            "chest_pain",
+            "breathing_pain",
+        )
+    )
+    has_chest_or_neuro_combo = chest_with_systemic or rib_breathing_unsafe or neuro_combo
+    has_mapped_medical_hold = any(_HIGH_RISK_CATEGORY_ROUTE.get(category) == MEDICAL_HOLD for category in matched_categories)
+    has_mapped_restricted = any(_HIGH_RISK_CATEGORY_ROUTE.get(category) == RESTRICTED_REHAB_ONLY for category in matched_categories)
+    has_structural_severe_signal = bool(features.structural_severe_signals)
+    has_clinician_restriction_signal = bool(features.clinician_restriction_signals)
+    has_function_loss_signal = bool(features.function_loss_signals)
+    has_uncertainty_trigger = bool(guided) and not any(
+        (
+            matched_categories,
+            red_flags,
+            features.structural_severe_signals,
+            features.clinician_restriction_signals,
+            features.function_loss_signals,
+            urgent_flags,
+        )
+    ) and len(guided_notes.split()) < 3
+
+    guided_combo = (guided_severity, guided_trend)
+    if guided_combo in {("high", "worse"), ("high", "worsening"), ("high", "regressing"), ("high", "worsened"), ("severe", "worse"), ("severe", "worsening"), ("severe", "regressing"), ("severe", "worsened")}:
+        routing_reasons.add("combo_gate:high_worsening")
+        routing_reasons_sorted = sorted(routing_reasons)
+        if has_dangerous_red_flags or has_chest_or_neuro_combo or has_mapped_medical_hold:
+            return InjuryTriageResult(
+                mode=MEDICAL_HOLD,
+                reasons=[
+                    "High-severity worsening injury with dangerous escalation signals was detected.",
+                    "Training guidance is blocked pending immediate medical review.",
+                ],
+                clinician_clearance_required=True,
+                red_flags=sorted(red_flags),
+                matched_high_risk_categories=matched_categories_sorted,
+                routing_reasons=routing_reasons_sorted,
+                should_block_stage2=True,
+                urgent_flags=sorted(urgent_flags),
+                sparring_risk_band=highest_band,
+            )
+        return InjuryTriageResult(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "High-severity worsening injury requires coach/admin review before any normal plan.",
+                "Automatic full-plan generation is blocked by triage combo gate.",
+            ],
+            clinician_clearance_required=False,
+            red_flags=sorted(red_flags),
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
+            should_block_stage2=True,
+            urgent_flags=sorted(urgent_flags),
+            sparring_risk_band=highest_band,
+        )
+
+    if guided_combo in {("high", "stable"), ("severe", "stable")}:
+        routing_reasons.add("combo_gate:high_stable")
+        routing_reasons_sorted = sorted(routing_reasons)
+        if (
+            has_structural_severe_signal
+            or has_mapped_restricted
+            or has_clinician_restriction_signal
+            or has_function_loss_signal
+        ):
+            return InjuryTriageResult(
+                mode=RESTRICTED_REHAB_ONLY,
+                reasons=[
+                    "High-severity stable injury still shows structural/restriction risk signals.",
+                    "Normal fight-camp loading/sparring generation remains suspended.",
+                ],
+                clinician_clearance_required=True,
+                red_flags=sorted(red_flags),
+                matched_high_risk_categories=matched_categories_sorted,
+                routing_reasons=routing_reasons_sorted,
+                should_block_stage2=True,
+                urgent_flags=sorted(urgent_flags),
+                sparring_risk_band=highest_band,
+            )
+        return InjuryTriageResult(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "High-severity stable injury requires coach/admin review before any normal plan.",
+                "Automatic full-plan generation is blocked by triage combo gate.",
+            ],
+            clinician_clearance_required=False,
+            red_flags=sorted(red_flags),
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
+            should_block_stage2=True,
+            urgent_flags=sorted(urgent_flags),
+            sparring_risk_band=highest_band,
+        )
+
+    if guided_combo in {("moderate", "worse"), ("moderate", "worsening"), ("moderate", "regressing"), ("moderate", "worsened")}:
+        routing_reasons.add("combo_gate:moderate_worsening")
+        routing_reasons_sorted = sorted(routing_reasons)
+        if has_dangerous_red_flags or has_mapped_medical_hold:
+            return InjuryTriageResult(
+                mode=MEDICAL_HOLD,
+                reasons=[
+                    "Moderate worsening injury includes dangerous escalation signals.",
+                    "Training guidance is blocked pending immediate medical review.",
+                ],
+                clinician_clearance_required=True,
+                red_flags=sorted(red_flags),
+                matched_high_risk_categories=matched_categories_sorted,
+                routing_reasons=routing_reasons_sorted,
+                should_block_stage2=True,
+                urgent_flags=sorted(urgent_flags),
+                sparring_risk_band=highest_band,
+            )
+        return InjuryTriageResult(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Moderate worsening injury requires coach/admin review before any normal plan.",
+                "Automatic full-plan generation is blocked by triage combo gate.",
+            ],
+            clinician_clearance_required=False,
+            red_flags=sorted(red_flags),
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
+            should_block_stage2=True,
+            urgent_flags=sorted(urgent_flags),
+            sparring_risk_band=highest_band,
+        )
+
+    if guided_combo in {("low", "worse"), ("low", "worsening"), ("low", "regressing"), ("low", "worsened")}:
+        routing_reasons.add("combo_gate:low_worsening")
+        routing_reasons_sorted = sorted(routing_reasons)
+        return InjuryTriageResult(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "Low-severity worsening injury still requires review before normal planning.",
+                "Automatic full-plan generation is blocked by triage combo gate.",
+            ],
+            clinician_clearance_required=False,
+            red_flags=sorted(red_flags),
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
+            should_block_stage2=True,
+            urgent_flags=sorted(urgent_flags),
+            sparring_risk_band=highest_band,
+        )
+
+    if guided_combo == ("moderate", "stable"):
+        routing_reasons.add("combo_gate:moderate_stable_allowlist_check")
+        has_mapped_serious_category = has_mapped_medical_hold or has_mapped_restricted
+        if (
+            has_dangerous_red_flags
+            or has_structural_severe_signal
+            or has_clinician_restriction_signal
+            or has_mapped_serious_category
+            or has_uncertainty_trigger
+        ):
+            routing_reasons.add("combo_gate:moderate_stable_blocked")
+            routing_reasons_sorted = sorted(routing_reasons)
+            return InjuryTriageResult(
+                mode=NEEDS_REVIEW,
+                reasons=[
+                    "Moderate stable injury did not meet the strict allowlist for automatic full planning.",
+                    "Coach/admin review is required before normal plan generation.",
+                ],
+                clinician_clearance_required=False,
+                red_flags=sorted(red_flags),
+                matched_high_risk_categories=matched_categories_sorted,
+                routing_reasons=routing_reasons_sorted,
+                should_block_stage2=True,
+                urgent_flags=sorted(urgent_flags),
+                sparring_risk_band=highest_band,
+            )
+
     return InjuryTriageResult(
         mode=FULL_PLAN,
         reasons=["No pre-planning medical hold signals detected."],
@@ -285,7 +467,18 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
 
 
 def blocked_mode_output(*, triage: InjuryTriageResult) -> dict[str, Any]:
-    if triage.mode == RESTRICTED_REHAB_ONLY:
+    if triage.mode == NEEDS_REVIEW:
+        plan_text = (
+            "## Injury Triage: Needs Review\n"
+            "Automatic full-plan generation is paused.\n\n"
+            "- Coach/admin approval is required before Stage 2 or normal planning can run.\n"
+            "- Update injury specifics, restrictions, and progression status before regenerating."
+        )
+        coach_notes = (
+            "needs_review: severity/trend combo safety gate triggered; "
+            "stage2 and normal generation blocked pending coach/admin approval."
+        )
+    elif triage.mode == RESTRICTED_REHAB_ONLY:
         plan_text = (
             "## Injury Triage: Restricted Rehab Only\n"
             "Normal fight-camp planning is intentionally suspended.\n\n"

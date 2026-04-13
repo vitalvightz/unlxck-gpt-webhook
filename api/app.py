@@ -401,6 +401,26 @@ def _map_plan_safety_state(row: dict[str, Any]) -> PlanSafetyState:
                 "Regenerate normal planning only when safe.",
             ],
         )
+    if mode == "needs_review":
+        return PlanSafetyState(
+            state="needs_review",
+            status_chip="NEEDS REVIEW",
+            header="Safety review required before planning",
+            subtext=(
+                "Guided injury severity/trend combinations triggered a conservative safety gate. "
+                "Automatic planning is paused pending coach/admin review."
+            ),
+            stage2_skipped=stage2_was_skipped,
+            clinician_clearance_required=bool(triage.get("clinician_clearance_required", False)),
+            matched_high_risk_categories=list(triage.get("matched_high_risk_categories") or []),
+            red_flags=list(triage.get("red_flags") or []),
+            sparring_risk_band=triage.get("sparring_risk_band"),
+            next_steps=[
+                "Review guided injury severity/trend details.",
+                "Clarify diagnosis progression and restrictions.",
+                "Approve before rerunning full planning.",
+            ],
+        )
 
     return PlanSafetyState(
         state="plan_ready",
