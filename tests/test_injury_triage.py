@@ -187,3 +187,54 @@ def test_not_a_concussion_does_not_route_to_medical_hold():
     triage = triage_injuries(parsed)
 
     assert triage.mode == FULL_PLAN
+
+
+def test_pcl_tear_routes_to_restricted_rehab_only():
+    parsed = PlanInput.from_payload(_payload_with_injury("MRI confirms PCL tear after knee trauma"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "pcl_tear" in triage.matched_high_risk_categories
+
+
+def test_patellar_tendon_rupture_routes_to_restricted_rehab_only():
+    parsed = PlanInput.from_payload(_payload_with_injury("acute patellar tendon rupture while jumping"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "patellar_tendon_rupture" in triage.matched_high_risk_categories
+
+
+def test_pneumothorax_routes_to_medical_hold():
+    parsed = PlanInput.from_payload(_payload_with_injury("small pneumothorax after hard body shot"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == MEDICAL_HOLD
+    assert "pneumothorax" in triage.matched_high_risk_categories
+
+
+def test_vomiting_after_head_impact_routes_to_medical_hold():
+    parsed = PlanInput.from_payload(_payload_with_injury("vomiting after head impact in sparring"))
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == MEDICAL_HOLD
+    assert "vomiting_after_head_impact" in triage.red_flags
+
+
+def test_non_weight_bearing_and_boot_or_crutches_route_to_restricted_rehab_only():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("currently non-weight-bearing, in a walking boot, and on crutches")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert "clinician_restriction_signal" in triage.routing_reasons
+
+
+def test_negated_new_severe_phrases_do_not_trigger_blocking():
+    parsed = PlanInput.from_payload(
+        _payload_with_injury("no PCL tear, ruled out pneumothorax, not vomiting, ACL intact, no fracture seen")
+    )
+    triage = triage_injuries(parsed)
+
+    assert triage.mode == FULL_PLAN

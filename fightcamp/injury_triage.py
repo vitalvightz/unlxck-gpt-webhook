@@ -26,6 +26,36 @@ _HIGH_RISK_CATEGORY_ROUTE: dict[str, str] = {
     "concussion": MEDICAL_HOLD,
     "suspected_concussion": MEDICAL_HOLD,
     "open_fracture": MEDICAL_HOLD,
+    "pcl_tear": RESTRICTED_REHAB_ONLY,
+    "mcl_grade3_tear": RESTRICTED_REHAB_ONLY,
+    "lcl_grade3_tear": RESTRICTED_REHAB_ONLY,
+    "meniscus_bucket_handle_tear": RESTRICTED_REHAB_ONLY,
+    "patellar_tendon_rupture": RESTRICTED_REHAB_ONLY,
+    "quadriceps_tendon_rupture": RESTRICTED_REHAB_ONLY,
+    "distal_biceps_tendon_rupture": RESTRICTED_REHAB_ONLY,
+    "triceps_tendon_rupture": RESTRICTED_REHAB_ONLY,
+    "pec_major_tear": RESTRICTED_REHAB_ONLY,
+    "patellar_dislocation": RESTRICTED_REHAB_ONLY,
+    "recurrent_shoulder_dislocation": RESTRICTED_REHAB_ONLY,
+    "labral_tear_with_instability": RESTRICTED_REHAB_ONLY,
+    "hip_labral_tear": RESTRICTED_REHAB_ONLY,
+    "syndesmotic_high_ankle_sprain_severe": RESTRICTED_REHAB_ONLY,
+    "lisfranc_injury": RESTRICTED_REHAB_ONLY,
+    "tibial_plateau_fracture": RESTRICTED_REHAB_ONLY,
+    "scaphoid_fracture": RESTRICTED_REHAB_ONLY,
+    "jaw_fracture": RESTRICTED_REHAB_ONLY,
+    "post_op_reconstruction_active": RESTRICTED_REHAB_ONLY,
+    "post_op_tendon_repair_active": RESTRICTED_REHAB_ONLY,
+    "post_op_fracture_fixation_active": RESTRICTED_REHAB_ONLY,
+    "spinal_fracture": MEDICAL_HOLD,
+    "orbital_fracture": MEDICAL_HOLD,
+    "facial_fracture": MEDICAL_HOLD,
+    "retinal_detachment_or_eye_trauma": MEDICAL_HOLD,
+    "pneumothorax": MEDICAL_HOLD,
+    "hemothorax": MEDICAL_HOLD,
+    "spleen_or_liver_injury": MEDICAL_HOLD,
+    "cervical_spine_injury": MEDICAL_HOLD,
+    "septic_joint_or_bone_infection": MEDICAL_HOLD,
 }
 
 _TRAUMA_CONTEXT_PATTERNS = (
@@ -76,6 +106,12 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         route = _HIGH_RISK_CATEGORY_ROUTE.get(category)
         if route:
             routing_reasons.add(f"mapped:{category}:{route}")
+    has_mapped_medical_hold = any(
+        _HIGH_RISK_CATEGORY_ROUTE.get(category) == MEDICAL_HOLD for category in matched_categories
+    )
+    has_mapped_restricted = any(
+        _HIGH_RISK_CATEGORY_ROUTE.get(category) == RESTRICTED_REHAB_ONLY for category in matched_categories
+    )
 
     if "urgent_fracture" in urgent_flags:
         matched_categories.add("fracture")
@@ -114,11 +150,28 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     rib_or_chest_context = any(token in combined_text for token in ("rib", "intercostal", "chest"))
 
     medical_hold = False
-    if any(flag in red_flags for flag in ("loss_of_consciousness", "coughing_blood", "deformity")):
+    if any(
+        flag in red_flags
+        for flag in (
+            "loss_of_consciousness",
+            "coughing_blood",
+            "deformity",
+            "vomiting_after_head_impact",
+            "severe_headache_after_head_impact",
+            "seizure_or_convulsion",
+            "amnesia_or_memory_loss",
+            "blurred_or_double_vision",
+            "unequal_pupils",
+            "worsening_drowsiness_or_cannot_wake",
+            "slurred_speech",
+            "neck_pain_after_trauma",
+            "bowel_or_bladder_changes_after_back_injury",
+        )
+    ):
         medical_hold = True
         routing_reasons.add("critical_red_flag")
 
-    if any(category in matched_categories for category in ("concussion", "suspected_concussion", "open_fracture")):
+    if any(_HIGH_RISK_CATEGORY_ROUTE.get(c) == MEDICAL_HOLD for c in matched_categories):
         medical_hold = True
         routing_reasons.add("mapped_medical_hold_category")
 
@@ -153,21 +206,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons.add("neurological_red_flag_combination")
 
     restricted_rehab = False
-    if any(
-        category in matched_categories
-        for category in (
-            "fracture",
-            "stress_fracture",
-            "broken_rib",
-            "dislocation",
-            "acl_tear",
-            "achilles_rupture",
-            "full_thickness_rotator_cuff_tear",
-            "tendon_rupture_or_avulsion",
-            "complete_ligament_tear",
-            "structural_high_severity",
-        )
-    ):
+    if any(_HIGH_RISK_CATEGORY_ROUTE.get(c) == RESTRICTED_REHAB_ONLY for c in matched_categories) or "structural_high_severity" in matched_categories:
         restricted_rehab = True
         routing_reasons.add("mapped_restricted_category")
 
@@ -178,6 +217,10 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     if features.structural_severe_signals:
         restricted_rehab = True
         routing_reasons.add("scored_structural_severe_signal")
+
+    if features.clinician_restriction_signals:
+        restricted_rehab = True
+        routing_reasons.add("clinician_restriction_signal")
 
     sparring_risk = summarize_sparring_injury_risk(injury_texts=injury_texts)
     highest_band = str(sparring_risk.get("risk_band") or "green")

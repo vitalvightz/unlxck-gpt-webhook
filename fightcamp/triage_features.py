@@ -33,6 +33,16 @@ _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bconfus(?:ed|ion)\b", "confusion"),
     (r"\bchest\s+pain\b|\bchest\s+pressure\b", "chest_pain"),
     (r"\bpain\s+(?:when|with)?\s*breath(?:ing)?\b|\bpainful\s+breath(?:ing)?\b", "breathing_pain"),
+    (r"\bvomit(?:ing|ed)?\b[\w\s-]{0,40}\b(?:head|concussion|impact|hit)\b|\b(?:head|concussion|impact|hit)\b[\w\s-]{0,40}\bvomit(?:ing|ed)?\b", "vomiting_after_head_impact"),
+    (r"\bsevere\s+headache\b[\w\s-]{0,40}\b(?:head|concussion|impact|hit)\b|\b(?:head|concussion|impact|hit)\b[\w\s-]{0,40}\bsevere\s+headache\b", "severe_headache_after_head_impact"),
+    (r"\bseizure(?:s)?\b|\bconvulsion(?:s)?\b", "seizure_or_convulsion"),
+    (r"\bamnesi(?:a|c)\b|\bmemory\s+loss\b", "amnesia_or_memory_loss"),
+    (r"\bblurred\s+vision\b|\bdouble\s+vision\b|\bdiplopia\b", "blurred_or_double_vision"),
+    (r"\bunequal\s+pupil(?:s)?\b|\bone\s+pupil\s+(?:larger|bigger)\b", "unequal_pupils"),
+    (r"\bworsening\s+drows(?:y|iness)\b|\bcannot\s+wake\b|\bcan(?:not|'t)\s+wake(?:\s+up)?\b|\bhard\s+to\s+wake\b", "worsening_drowsiness_or_cannot_wake"),
+    (r"\bslurred\s+speech\b", "slurred_speech"),
+    (r"\bneck\s+pain\b[\w\s-]{0,40}\b(?:after|from)\s+(?:trauma|fall|impact|collision|hit)\b|\b(?:trauma|fall|impact|collision|hit)\b[\w\s-]{0,40}\bneck\s+pain\b", "neck_pain_after_trauma"),
+    (r"\b(?:bowel|bladder)\s+(?:changes?|issues?|dysfunction|incontinence)\b[\w\s-]{0,40}\b(?:back|spine|spinal)\b|\b(?:back|spine|spinal)\b[\w\s-]{0,40}\b(?:bowel|bladder)\s+(?:changes?|issues?|dysfunction|incontinence)\b", "bowel_or_bladder_changes_after_back_injury"),
 )
 
 _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
@@ -48,6 +58,36 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\btendon\s+(?:rupture|avulsion)\b|\b(?:rupture|avulsion)\s+tendon\b", "tendon_rupture_or_avulsion"),
     (r"\bcomplete\s+ligament\s+tear\b|\bligament\s+tear\s+complete\b", "complete_ligament_tear"),
     (r"\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bacl\b", "acl_tear"),
+    (r"\bpcl\b[\w\s-]{0,30}\b(?:tear|rupture)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bpcl\b", "pcl_tear"),
+    (r"\bmcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+mcl\s+tear\b", "mcl_grade3_tear"),
+    (r"\blcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+lcl\s+tear\b", "lcl_grade3_tear"),
+    (r"\bbucket[\s-]?handle\s+tear\b[\w\s-]{0,20}\bmeniscus\b|\bmeniscus\b[\w\s-]{0,30}\bbucket[\s-]?handle\s+tear\b", "meniscus_bucket_handle_tear"),
+    (r"\bpatellar\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\bjumper'?s\s+knee\s+rupture\b", "patellar_tendon_rupture"),
+    (r"\bquadriceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b", "quadriceps_tendon_rupture"),
+    (r"\bdistal\s+biceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\bdistal\s+biceps\s+rupture\b", "distal_biceps_tendon_rupture"),
+    (r"\btriceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\btriceps\s+rupture\b", "triceps_tendon_rupture"),
+    (r"\bpec(?:toralis)?\s+major\b[\w\s-]{0,30}\b(?:tear|rupture)\b", "pec_major_tear"),
+    (r"\bpatellar\s+dislocation\b|\bdislocated\s+patella\b", "patellar_dislocation"),
+    (r"\brecurrent\s+shoulder\s+dislocation\b|\bshoulder\s+dislocat(?:ion|ed)\b[\w\s-]{0,20}\brecurrent\b", "recurrent_shoulder_dislocation"),
+    (r"\blabral\s+tear\b[\w\s-]{0,40}\binstability\b|\binstability\b[\w\s-]{0,40}\blabral\s+tear\b", "labral_tear_with_instability"),
+    (r"\bhip\s+labral\s+tear\b", "hip_labral_tear"),
+    (r"\bsyndesmotic\s+high\s+ankle\s+sprain\b|\bhigh\s+ankle\s+sprain\b[\w\s-]{0,20}\b(?:grade\s*(?:3|iii)|severe)\b", "syndesmotic_high_ankle_sprain_severe"),
+    (r"\blisfranc\s+(?:injury|fracture|sprain)\b", "lisfranc_injury"),
+    (r"\btibial\s+plateau\s+fracture\b", "tibial_plateau_fracture"),
+    (r"\bscaphoid\s+fracture\b", "scaphoid_fracture"),
+    (r"\bspinal\s+fracture\b|\bvertebral\s+fracture\b", "spinal_fracture"),
+    (r"\borbital\s+fracture\b", "orbital_fracture"),
+    (r"\bjaw\s+fracture\b|\bmandib(?:le|ular)\s+fracture\b", "jaw_fracture"),
+    (r"\bfacial\s+fracture\b|\bzygoma(?:tic)?\s+fracture\b|\bmaxillary\s+fracture\b", "facial_fracture"),
+    (r"\bretinal\s+detach(?:ment|ed)\b|\beye\s+trauma\b|\bocular\s+trauma\b", "retinal_detachment_or_eye_trauma"),
+    (r"\bpneumothorax\b|\bcollapsed\s+lung\b", "pneumothorax"),
+    (r"\bhemothorax\b|\bhaemothorax\b", "hemothorax"),
+    (r"\b(?:spleen|splenic|liver|hepatic)\s+(?:injury|laceration|rupture)\b", "spleen_or_liver_injury"),
+    (r"\bcervical\s+spine\s+injury\b|\bc[-\s]?spine\s+injury\b|\bneck\s+fracture\b", "cervical_spine_injury"),
+    (r"\bpost[-\s]?op\b[\w\s-]{0,40}\b(?:acl|pcl|mcl|lcl|labral|meniscus|reconstruction)\b|\brecent\s+reconstruction\b", "post_op_reconstruction_active"),
+    (r"\bpost[-\s]?op\b[\w\s-]{0,40}\b(?:tendon|repair)\b|\brecent\s+tendon\s+repair\b", "post_op_tendon_repair_active"),
+    (r"\bpost[-\s]?op\b[\w\s-]{0,40}\b(?:orif|fixation|fracture\s+repair)\b|\brecent\s+fracture\s+fixation\b", "post_op_fracture_fixation_active"),
+    (r"\bseptic\s+(?:joint|arthritis|bursitis|bone)\b|\bosteomyelitis\b", "septic_joint_or_bone_infection"),
 )
 
 _STRUCTURAL_SEVERE_TERMS = (
@@ -80,24 +120,40 @@ _STRUCTURAL_TISSUE_TERMS = (
     "hamstring",
     "patellar tendon",
     "bicep tendon",
+    "quadriceps tendon",
+    "triceps tendon",
+    "pec major",
+    "lisfranc",
+    "syndesmotic",
 )
 
 _NEGATED_SEVERE_PATTERNS = (
-    r"\b(?:no|not|without|denies?|denied)\s+(?:an?\s+)?(?:fracture|stress\s+fracture|dislocation|concussion|acl\s+tear|tear|rupture)\b",
-    r"\bruled\s+out\s+(?:an?\s+)?(?:fracture|dislocation|concussion|tear|rupture)\b",
-    r"\bacl\s+intact\b",
+    r"\b(?:no|not|without|denies?|denied)\s+(?:an?\s+)?(?:fracture|stress\s+fracture|dislocation|concussion|acl\s+tear|pcl\s+tear|tear|rupture|pneumothorax|hemothorax|vomit(?:ing)?)\b",
+    r"\bruled\s+out\s+(?:an?\s+)?(?:fracture|dislocation|concussion|tear|rupture|pneumothorax|hemothorax)\b",
+    r"\b(?:acl|pcl)\s+intact\b",
+    r"\bno\s+fracture\s+seen\b",
 )
 
 _FUNCTION_LOSS_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bcan(?:not|'t)?\s+bear\s+weight\b|\bunable\s+to\s+bear\s+weight\b", "cannot_bear_weight"),
     (r"\bcannot\s+lift\s+arm\b|\bunable\s+to\s+lift\s+arm\b", "cannot_lift_arm"),
     (r"\bgiving\s+way\b|\bbuckled\b", "instability_event"),
+    (r"\bcan(?:not|'t)\s+(?:fully\s+)?straighten\s+(?:my\s+)?knee\b|\bunable\s+to\s+straighten\s+knee\b", "cannot_straighten_knee"),
+    (r"\bcan(?:not|'t)\s+(?:raise|lift)\s+(?:my\s+)?arm\b|\bunable\s+to\s+raise\s+arm\b", "cannot_raise_arm"),
+    (r"\bcan(?:not|'t)\s+push\s+off\s+(?:my\s+)?foot\b|\bunable\s+to\s+push\s+off\b", "cannot_push_off_foot"),
+    (r"\bcan(?:not|'t)\s+(?:grip|hold)\b|\bunable\s+to\s+(?:grip|hold)\b", "cannot_grip_or_hold"),
+    (r"\blocked\s+knee\b|\bknee\s+is\s+locked\b", "locked_knee"),
+    (r"\bjoint\s+gives\s+way\b|\bgives\s+way\s+repeatedly\b|\brecurrent\s+giving\s+way\b", "joint_gives_way_repeatedly"),
 )
 
 _CLINICIAN_RESTRICTION_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bavoid\s+(?:contact|spar|impact|loaded|weight\s*bearing)\b", "avoid_high_load"),
     (r"\bno\s+spar(?:ring)?\b", "no_sparring"),
     (r"\bpost[-\s]?op\b|\breconstruction\b|\bsurgery\b", "post_op_or_reconstruction"),
+    (r"\bnon[-\s]?weight\s*bearing\b|\bnwb\b", "non_weight_bearing"),
+    (r"\bin\s+(?:a\s+)?(?:walking\s+)?(?:boot|cast)\b|\bwearing\s+(?:a\s+)?(?:boot|cast)\b", "in_a_boot_or_cast"),
+    (r"\bon\s+crutches\b|\busing\s+crutches\b", "on_crutches"),
+    (r"\b(?:doctor|dr\.?|physio|physical\s+therap(?:ist|y))\b[\w\s-]{0,40}\b(?:no\s+contact|no\s+spar(?:ring)?)\b", "doctor_or_physio_said_no_contact_or_no_sparring"),
 )
 
 
