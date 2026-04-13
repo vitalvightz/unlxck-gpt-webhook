@@ -5,7 +5,7 @@ import re
 from typing import Any
 
 from .injury_scoring import score_injury_phrase
-from .injury_synonyms import remove_negated_phrases
+from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .input_parsing import GuidedInjury
 
 
@@ -19,6 +19,9 @@ class TriageFeatures:
     urgent_flags: list[str] = field(default_factory=list)
     raw_evidence: dict[str, list[str]] = field(default_factory=dict)
 
+
+_TEAR_SYNONYM_PATTERN = r"(?:tears?|torn)"
+_RUPTURE_OR_TEAR_PATTERN = rf"(?:ruptured?|{_TEAR_SYNONYM_PATTERN})"
 
 _RED_FLAG_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bnumb(?:ness)?\b", "numbness"),
@@ -53,39 +56,43 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
     (r"\bdislocat(?:ion|e|ed|es|ing)\b|\bsublux(?:ation|ing|ed)?\b|\bpartial\s+dislocation\b", "dislocation"),
     (r"\bsuspected\s+concussion\b", "suspected_concussion"),
     (r"\bconcussion\b", "concussion"),
-    (r"\bachilles\b[\w\s-]{0,30}\b(?:rupture|tear|avulsion)\b|\b(?:rupture|tear|avulsion)\b[\w\s-]{0,30}\bachilles\b", "achilles_rupture"),
-    (r"\bfull[-\s]?thickness\s+rotator\s+cuff\s+tear\b", "full_thickness_rotator_cuff_tear"),
     (
-        r"\btendon\s+(?:rupture|avulsion|tear|pop|snap|failure)\b"
-        r"|\b(?:rupture|avulsion|tear|pop|snap|failure)\s+tendon\b",
+        rf"\bachilles\b[\w\s-]{{0,30}}\b(?:{_RUPTURE_OR_TEAR_PATTERN}|avulsion)\b"
+        rf"|\b(?:{_RUPTURE_OR_TEAR_PATTERN}|avulsion)\b[\w\s-]{{0,30}}\bachilles\b",
+        "achilles_rupture",
+    ),
+    (rf"\bfull[-\s]?thickness\s+rotator\s+cuff\s+{_TEAR_SYNONYM_PATTERN}\b", "full_thickness_rotator_cuff_tear"),
+    (
+        rf"\btendon\s+(?:{_RUPTURE_OR_TEAR_PATTERN}|avulsion|pop|snap|failure)\b"
+        rf"|\b(?:{_RUPTURE_OR_TEAR_PATTERN}|avulsion|pop|snap|failure)\s+tendon\b",
         "tendon_rupture_or_avulsion",
     ),
     (
-        r"\bcomplete\s+ligament\s+tear\b|\bligament\s+tear\s+complete\b"
+        rf"\bcomplete\s+ligament\s+{_TEAR_SYNONYM_PATTERN}\b|\bligament\s+{_TEAR_SYNONYM_PATTERN}\s+complete\b"
         r"|\b(?:ruptured|torn|blown)\s+ligament\b"
-        r"|\bgrade\s*(?:3|iii)\b[\w\s-]{0,20}\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{0,20}\b(?:tear|rupture|sprain|injury)?\b"
+        rf"|\bgrade\s*(?:3|iii)\b[\w\s-]{{0,20}}\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{{0,20}}\b(?:{_RUPTURE_OR_TEAR_PATTERN}|sprain|injury)?\b"
         r"|\b(?:ligament|mcl|lcl|acl|pcl|ucl)\b[\w\s-]{0,20}\bgrade\s*(?:3|iii)\b",
         "complete_ligament_tear",
     ),
     (r"\bacl\b", "acl_mention"),
     (
-        r"\bacl\b[\w\s-]{0,30}\b(?:tear|rupture|reconstruction|injury|surgery)\b"
-        r"|\b(?:tear|rupture|injury)\b[\w\s-]{0,30}\bacl\b",
+        rf"\bacl\b[\w\s-]{{0,30}}\b(?:{_RUPTURE_OR_TEAR_PATTERN}|reconstruction|injury|surgery)\b"
+        rf"|\b(?:{_RUPTURE_OR_TEAR_PATTERN}|injury)\b[\w\s-]{{0,30}}\bacl\b",
         "acl_tear",
     ),
-    (r"\bpcl\b[\w\s-]{0,30}\b(?:tear|rupture)\b|\b(?:tear|rupture)\b[\w\s-]{0,30}\bpcl\b", "pcl_tear"),
-    (r"\bmcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+mcl\s+tear\b", "mcl_grade3_tear"),
-    (r"\blcl\b[\w\s-]{0,30}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{0,20}\b(?:tear|rupture)\b|\b(?:grade\s*(?:3|iii)|complete)\s+lcl\s+tear\b", "lcl_grade3_tear"),
-    (r"\bbucket[\s-]?handle\s+tear\b[\w\s-]{0,20}\bmeniscus\b|\bmeniscus\b[\w\s-]{0,30}\bbucket[\s-]?handle\s+tear\b", "meniscus_bucket_handle_tear"),
-    (r"\bpatellar\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\bjumper'?s\s+knee\s+rupture\b", "patellar_tendon_rupture"),
-    (r"\bquadriceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b", "quadriceps_tendon_rupture"),
-    (r"\bdistal\s+biceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\bdistal\s+biceps\s+rupture\b", "distal_biceps_tendon_rupture"),
-    (r"\btriceps\s+tendon\b[\w\s-]{0,30}\b(?:rupture|tear)\b|\btriceps\s+rupture\b", "triceps_tendon_rupture"),
-    (r"\bpec(?:toralis)?\s+major\b[\w\s-]{0,30}\b(?:tear|rupture)\b", "pec_major_tear"),
+    (rf"\bpcl\b[\w\s-]{{0,30}}\b{_RUPTURE_OR_TEAR_PATTERN}\b|\b{_RUPTURE_OR_TEAR_PATTERN}\b[\w\s-]{{0,30}}\bpcl\b", "pcl_tear"),
+    (rf"\bmcl\b[\w\s-]{{0,30}}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{{0,20}}\b{_RUPTURE_OR_TEAR_PATTERN}\b|\b(?:grade\s*(?:3|iii)|complete)\s+mcl\s+{_TEAR_SYNONYM_PATTERN}\b", "mcl_grade3_tear"),
+    (rf"\blcl\b[\w\s-]{{0,30}}\b(?:grade\s*(?:3|iii)|complete)\b[\w\s-]{{0,20}}\b{_RUPTURE_OR_TEAR_PATTERN}\b|\b(?:grade\s*(?:3|iii)|complete)\s+lcl\s+{_TEAR_SYNONYM_PATTERN}\b", "lcl_grade3_tear"),
+    (rf"\bbucket[\s-]?handle\s+{_TEAR_SYNONYM_PATTERN}\b[\w\s-]{{0,20}}\bmeniscus\b|\bmeniscus\b[\w\s-]{{0,30}}\bbucket[\s-]?handle\s+{_TEAR_SYNONYM_PATTERN}\b", "meniscus_bucket_handle_tear"),
+    (rf"\bpatellar\s+tendon\b[\w\s-]{{0,30}}\b{_RUPTURE_OR_TEAR_PATTERN}\b|\bjumper'?s\s+knee\s+rupture\b", "patellar_tendon_rupture"),
+    (rf"\bquadriceps\s+tendon\b[\w\s-]{{0,30}}\b{_RUPTURE_OR_TEAR_PATTERN}\b", "quadriceps_tendon_rupture"),
+    (rf"\bdistal\s+biceps\s+tendon\b[\w\s-]{{0,30}}\b{_RUPTURE_OR_TEAR_PATTERN}\b|\bdistal\s+biceps\s+rupture\b", "distal_biceps_tendon_rupture"),
+    (rf"\btriceps\s+tendon\b[\w\s-]{{0,30}}\b{_RUPTURE_OR_TEAR_PATTERN}\b|\btriceps\s+rupture\b", "triceps_tendon_rupture"),
+    (rf"\bpec(?:toralis)?\s+major\b[\w\s-]{{0,30}}\b{_RUPTURE_OR_TEAR_PATTERN}\b", "pec_major_tear"),
     (r"\bpatellar\s+dislocation\b|\bdislocated\s+patella\b", "patellar_dislocation"),
     (r"\brecurrent\s+shoulder\s+dislocation\b|\bshoulder\s+dislocat(?:ion|ed)\b[\w\s-]{0,20}\brecurrent\b", "recurrent_shoulder_dislocation"),
-    (r"\blabral\s+tear\b[\w\s-]{0,40}\binstability\b|\binstability\b[\w\s-]{0,40}\blabral\s+tear\b", "labral_tear_with_instability"),
-    (r"\bhip\s+labral\s+tear\b", "hip_labral_tear"),
+    (rf"\blabral\s+{_TEAR_SYNONYM_PATTERN}\b[\w\s-]{{0,40}}\binstability\b|\binstability\b[\w\s-]{{0,40}}\blabral\s+{_TEAR_SYNONYM_PATTERN}\b", "labral_tear_with_instability"),
+    (rf"\bhip\s+labral\s+{_TEAR_SYNONYM_PATTERN}\b", "hip_labral_tear"),
     (r"\bsyndesmotic\s+high\s+ankle\s+sprain\b|\bhigh\s+ankle\s+sprain\b[\w\s-]{0,20}\b(?:grade\s*(?:3|iii)|severe)\b", "syndesmotic_high_ankle_sprain_severe"),
     (r"\blisfranc\s+(?:injury|fracture|sprain)\b", "lisfranc_injury"),
     (r"\btibial\s+plateau\s+fracture\b", "tibial_plateau_fracture"),
@@ -107,6 +114,7 @@ _HIGH_RISK_PATTERNS: tuple[tuple[str, str], ...] = (
 
 _STRUCTURAL_SEVERE_TERMS = (
     "tear",
+    "torn",
     "rupture",
     "full thickness",
     "full-thickness",
@@ -143,8 +151,8 @@ _STRUCTURAL_TISSUE_TERMS = (
 )
 
 _NEGATED_SEVERE_PATTERNS = (
-    r"\b(?:no|not|without|denies?|denied)\s+(?:an?\s+)?(?:fracture|stress\s+fracture|dislocation|concussion|acl\s+tear|pcl\s+tear|tear|rupture|pneumothorax|hemothorax|vomit(?:ing)?)\b",
-    r"\bruled\s+out\s+(?:an?\s+)?(?:fracture|dislocation|concussion|tear|rupture|pneumothorax|hemothorax)\b",
+    rf"\b(?:no|not|without|denies?|denied)\s+(?:an?\s+)?(?:fracture|stress\s+fracture|dislocation|concussion|acl\s+{_TEAR_SYNONYM_PATTERN}|pcl\s+{_TEAR_SYNONYM_PATTERN}|{_TEAR_SYNONYM_PATTERN}|{_RUPTURE_OR_TEAR_PATTERN}|pneumothorax|hemothorax|vomit(?:ing)?)\b",
+    rf"\bruled\s+out\s+(?:an?\s+)?(?:fracture|dislocation|concussion|{_TEAR_SYNONYM_PATTERN}|{_RUPTURE_OR_TEAR_PATTERN}|pneumothorax|hemothorax)\b",
     r"\b(?:acl|pcl)\s+intact\b",
     r"\bno\s+fracture\s+seen\b",
 )
@@ -288,6 +296,30 @@ def _restriction_text_chunks(restrictions: list[dict[str, Any]]) -> list[str]:
     return chunks
 
 
+def _injury_text_chunks(injuries: str) -> list[str]:
+    text = str(injuries or "").strip()
+    if not text:
+        return []
+    chunks = [chunk.strip() for chunk in split_injury_text(text) if chunk.strip()]
+    return list(dict.fromkeys([text, *chunks]))
+
+
+def _parsed_injury_chunks(parsed_injuries: list[dict[str, Any]] | None) -> list[str]:
+    chunks: list[str] = []
+    for item in parsed_injuries or []:
+        if not isinstance(item, dict):
+            continue
+        original_phrase = str(item.get("original_phrase") or "").strip()
+        if original_phrase:
+            chunks.append(original_phrase)
+        injury_type = str(item.get("injury_type") or "").strip()
+        canonical_location = str(item.get("canonical_location") or item.get("region") or "").strip()
+        normalized = " ".join(part for part in (canonical_location, injury_type) if part)
+        if normalized:
+            chunks.append(normalized)
+    return chunks
+
+
 def _collect_matches(text: str, patterns: tuple[tuple[str, str], ...]) -> set[str]:
     lowered = str(text or "").lower()
     matches: set[str] = set()
@@ -344,16 +376,11 @@ def build_triage_features(
     restrictions: list[dict[str, Any]] | None,
 ) -> TriageFeatures:
     raw_chunks: list[str] = []
-    if injuries:
-        raw_chunks.extend([chunk.strip() for chunk in injuries.split(",") if chunk.strip()])
-    raw_chunks.extend(
-        str(item.get("original_phrase") or "").strip()
-        for item in (parsed_injuries or [])
-        if isinstance(item, dict)
-    )
+    raw_chunks.extend(_injury_text_chunks(injuries))
+    raw_chunks.extend(_parsed_injury_chunks(parsed_injuries))
     raw_chunks.extend(_guided_injury_text_chunks(guided_injury))
     raw_chunks.extend(_restriction_text_chunks(restrictions or []))
-    raw_chunks = [chunk for chunk in raw_chunks if chunk]
+    raw_chunks = list(dict.fromkeys(chunk for chunk in raw_chunks if chunk))
 
     cleaned_chunks: list[str] = []
     high_risk_diagnoses: set[str] = set()
@@ -374,28 +401,33 @@ def build_triage_features(
         cleaned_chunk = remove_negated_phrases(raw_chunk).strip().lower()
         if not cleaned_chunk:
             continue
+        parsed_type, parsed_location = parse_injury_phrase(cleaned_chunk)
+        canonical_chunk = " ".join(
+            piece for piece in (str(parsed_location or "").strip(), str(parsed_type or "").strip()) if piece
+        ).strip()
+        enriched_chunk = " ".join(piece for piece in (cleaned_chunk, canonical_chunk) if piece)
         cleaned_chunks.append(cleaned_chunk)
         history_only_chunk = _is_history_only_chunk(cleaned_chunk)
 
-        chunk_red_flags = _collect_matches(cleaned_chunk, _RED_FLAG_PATTERNS)
+        chunk_red_flags = _collect_matches(enriched_chunk, _RED_FLAG_PATTERNS)
         if chunk_red_flags:
             red_flags.update(chunk_red_flags)
             red_flag_evidence.add(raw_chunk)
 
-        chunk_function_loss = _collect_matches(cleaned_chunk, _FUNCTION_LOSS_PATTERNS)
+        chunk_function_loss = _collect_matches(enriched_chunk, _FUNCTION_LOSS_PATTERNS)
         if chunk_function_loss:
             function_loss_signals.update(chunk_function_loss)
             function_loss_evidence.add(raw_chunk)
 
         chunk_clinician_signals = set()
         if not history_only_chunk:
-            chunk_clinician_signals = _collect_matches(cleaned_chunk, _CLINICIAN_RESTRICTION_PATTERNS)
+            chunk_clinician_signals = _collect_matches(enriched_chunk, _CLINICIAN_RESTRICTION_PATTERNS)
         if chunk_clinician_signals:
             clinician_restriction_signals.update(chunk_clinician_signals)
             clinician_evidence.add(raw_chunk)
 
         if not _is_negated_severe_chunk(raw_chunk):
-            chunk_high_risk = _collect_matches(cleaned_chunk, _HIGH_RISK_PATTERNS)
+            chunk_high_risk = _collect_matches(enriched_chunk, _HIGH_RISK_PATTERNS)
             if "acl_mention" in chunk_high_risk:
                 chunk_high_risk.discard("acl_mention")
                 if not _is_acl_history_only_chunk(cleaned_chunk):
