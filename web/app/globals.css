@@ -2475,6 +2475,23 @@ button.mobile-step-rail-item {
   align-items: center;
 }
 
+.blocked-signals-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(7, 10, 17, 0.44);
+}
+
+.blocked-signals-panel .kicker {
+  margin: 0;
+}
+
+.blocked-signals-list {
+  margin: 0;
+}
+
 .plans-status-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5727,6 +5744,11 @@ html[data-theme="light"] .sparring-advisory-card .sparring-risk-black {
   border-color: rgba(97, 88, 122, 0.18);
   background: rgba(242, 240, 249, 0.98);
   color: #3f3558;
+}
+
+html[data-theme="light"] .blocked-signals-panel {
+  border-color: rgba(88, 62, 58, 0.14);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 html[data-theme="light"] .stage2-retry-in-progress {
