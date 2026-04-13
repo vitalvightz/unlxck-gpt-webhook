@@ -297,12 +297,11 @@ def _collect_matches(text: str, patterns: tuple[tuple[str, str], ...]) -> set[st
     return matches
 
 
-def _contains_term(text: str, term: str) -> bool:
-    return bool(re.search(rf"(?<!\w){re.escape(term)}(?!\w)", text))
-
-
 def _contains_any_term(text: str, terms: tuple[str, ...]) -> bool:
-    return any(_contains_term(text, term) for term in terms)
+    if not terms:
+        return False
+    pattern = rf"(?<!\w)(?:{'|'.join(re.escape(t) for t in terms)})(?!\w)"
+    return bool(re.search(pattern, text))
 
 
 def _is_structural_severe_signal(*, text: str, scored_injury_type: str) -> bool:
