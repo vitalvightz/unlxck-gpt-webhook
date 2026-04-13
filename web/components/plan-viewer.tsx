@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
 import {
-  approvePlanForStage2,
+  approveAndResumeGeneration,
   approvePlanForRelease,
   archivePlan,
   deletePlan,
@@ -717,7 +717,10 @@ export function PlanViewer({
   const canSeeApprovalControls = isAdmin && !hasPublishedPlan;
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
   const canRejectApproval = isAdmin;
-  const canApproveStage2 = isAdmin && isTriageBlocked;
+  const canApproveAndResumeGeneration =
+    isAdmin &&
+    isTriageBlocked &&
+    (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";
@@ -737,9 +740,10 @@ export function PlanViewer({
   const [approvePending, setApprovePending] = useState(false);
   const [approveMessage, setApproveMessage] = useState<string | null>(null);
   const [approveError, setApproveError] = useState<string | null>(null);
-  const [stage2ApprovePending, setStage2ApprovePending] = useState(false);
-  const [stage2ApproveMessage, setStage2ApproveMessage] = useState<string | null>(null);
-  const [stage2ApproveError, setStage2ApproveError] = useState<string | null>(null);
+  const [resumeGenerationReason, setResumeGenerationReason] = useState("");
+  const [resumeGenerationPending, setResumeGenerationPending] = useState(false);
+  const [resumeGenerationMessage, setResumeGenerationMessage] = useState<string | null>(null);
+  const [resumeGenerationError, setResumeGenerationError] = useState<string | null>(null);
   const [rejectPending, setRejectPending] = useState(false);
   const [rejectMessage, setRejectMessage] = useState<string | null>(null);
   const [rejectError, setRejectError] = useState<string | null>(null);
@@ -873,36 +877,42 @@ export function PlanViewer({
     }
   }
 
-  async function handleApproveForStage2() {
+  async function handleApproveAndResumeGeneration() {
     if (!accessToken) {
-      setStage2ApproveError("Session missing. Please sign in again.");
+      setResumeGenerationError("Session missing. Please sign in again.");
       return;
     }
-    if (!canApproveStage2) {
-      setStage2ApproveError("This plan is not currently in a triage-blocked state.");
+    if (!canApproveAndResumeGeneration) {
+      setResumeGenerationError("This plan cannot be resumed from its current triage state.");
+      return;
+    }
+    if (!resumeGenerationReason.trim()) {
+      setResumeGenerationError("A short reason is required.");
       return;
     }
 
-    setStage2ApprovePending(true);
-    setStage2ApproveError(null);
-    setStage2ApproveMessage(null);
+    setResumeGenerationPending(true);
+    setResumeGenerationError(null);
+    setResumeGenerationMessage(null);
     setApproveError(null);
     setApproveMessage(null);
     setRejectError(null);
     setRejectMessage(null);
 
     try {
-      const updatedPlan = await approvePlanForStage2(accessToken, plan.plan_id);
-      onPlanUpdated?.(updatedPlan);
-      setStage2ApproveMessage(
-        "Stage 2 approval saved. You can now continue with manual Stage 2 actions for this intake.",
+      await approveAndResumeGeneration(accessToken, plan.plan_id, {
+        reason: resumeGenerationReason.trim(),
+      });
+      setResumeGenerationMessage(
+        "Approved. Regeneration has been queued from the stored intake using the normal pipeline.",
       );
+      router.refresh();
     } catch (error) {
-      setStage2ApproveError(
-        error instanceof Error ? error.message : "Unable to approve this plan for Stage 2.",
+      setResumeGenerationError(
+        error instanceof Error ? error.message : "Unable to approve and resume generation.",
       );
     } finally {
-      setStage2ApprovePending(false);
+      setResumeGenerationPending(false);
     }
   }
 
@@ -1474,27 +1484,36 @@ export function PlanViewer({
                 <p className="muted">
                   The automation flow generated a plan that still needs manual review before it can be shown to the athlete.
                 </p>
-                {canApproveStage2 ? (
+                {canApproveAndResumeGeneration ? (
                   <div className="support-panel">
                     <div className="form-section-header">
                       <p className="kicker">Admin approval</p>
-                      <h3>Allow Stage 2 for this intake</h3>
+                      <h3>Approve and resume generation</h3>
                     </div>
                     <p className="muted">
-                      If admin review is complete, approve this intake to unlock Stage 2 actions.
+                      Approve this triage block to rerun normal generation from the saved intake.
                     </p>
+                    <div className="field">
+                      <label htmlFor="resume-generation-reason">Reason</label>
+                      <input
+                        id="resume-generation-reason"
+                        value={resumeGenerationReason}
+                        onChange={(event) => setResumeGenerationReason(event.target.value)}
+                        placeholder="Short reason"
+                      />
+                    </div>
                     <div className="plan-summary-actions">
                       <button
                         type="button"
                         className="cta"
-                        onClick={handleApproveForStage2}
-                        disabled={stage2ApprovePending}
+                        onClick={handleApproveAndResumeGeneration}
+                        disabled={resumeGenerationPending}
                       >
-                        {stage2ApprovePending ? "Approving..." : "Approve and unlock Stage 2"}
+                        {resumeGenerationPending ? "Approving..." : "Approve and resume generation"}
                       </button>
                     </div>
-                    {stage2ApproveMessage ? <div className="success-banner">{stage2ApproveMessage}</div> : null}
-                    {stage2ApproveError ? <div className="error-banner">{stage2ApproveError}</div> : null}
+                    {resumeGenerationMessage ? <div className="success-banner">{resumeGenerationMessage}</div> : null}
+                    {resumeGenerationError ? <div className="error-banner">{resumeGenerationError}</div> : null}
                   </div>
                 ) : null}
                 {canSeeApprovalControls ? (

@@ -91,6 +91,8 @@ class AppStore(Protocol):
 
     def get_latest_intake(self, athlete_id: str) -> dict[str, Any] | None: ...
 
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None: ...
+
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
     def create_plan(
@@ -502,6 +504,9 @@ class SupabaseAppStore:
             .eq("athlete_id", athlete_id)
             .order("created_at", desc=True)
         )
+
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("athlete_intakes").select("*").eq("id", intake_id))
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]:
         payload = {
@@ -1049,6 +1054,8 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
+        if "why_log" in result:
+            payload["why_log"] = result.get("why_log") or {}
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()

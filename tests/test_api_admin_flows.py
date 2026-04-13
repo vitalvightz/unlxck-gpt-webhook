@@ -336,7 +336,7 @@ def test_admin_can_approve_review_required_plan_for_release():
     assert body["admin_outputs"]["stage2_status"] == "admin_review_approved"
 
 
-def test_admin_can_approve_triage_block_to_allow_stage2():
+def test_admin_can_approve_needs_review_triage_block_and_resume_generation():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
         user_id="athlete-1",
@@ -345,55 +345,98 @@ def test_admin_can_approve_triage_block_to_allow_stage2():
         metadata={},
     )
     store.ensure_profile(athlete)
+    intake = store.create_intake("athlete-1", _build_request())
     plan = store.create_plan(
         athlete_id="athlete-1",
-        intake_id="intake_triage",
-        request=_build_request(),
-        result=finalized_result(
-            status="triage_blocked",
-            plan_text="## Injury Triage: Restricted Rehab Only",
-            stage2_status="triage_blocked",
-        ),
-    )
-
-    response = client.post(
-        f"/api/plans/{plan['id']}/approve-stage2",
-        headers={"Authorization": "Bearer admin-token"},
-    )
-
-    assert response.status_code == 200
-    body = response.json()
-    assert body["status"] == "review_required"
-    assert body["outputs"]["plan_text"] == ""
-    assert body["admin_outputs"]["stage2_status"] == "triage_override_approved"
-
-
-def test_plan_owner_cannot_approve_triage_block_to_allow_stage2():
-    client, store, _ = _build_client()
-    athlete = AuthenticatedUser(
-        user_id="athlete-1",
-        email="ari@example.com",
-        full_name="Ari Mensah",
-        metadata={},
-    )
-    store.ensure_profile(athlete)
-    plan = store.create_plan(
-        athlete_id="athlete-1",
-        intake_id="intake_triage",
+        intake_id=intake["id"],
         request=_build_request(),
         result=finalized_result(
             status="triage_blocked",
             plan_text="## Injury Triage: Needs Review",
             stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
         ),
     )
 
     response = client.post(
-        f"/api/plans/{plan['id']}/approve-stage2",
-        headers={"Authorization": "Bearer athlete-token"},
+        f"/api/admin/plans/{plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "Reviewed injury details and cleared to retry."},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] in {"queued", "running", "completed"}
+    saved = store.get_plan(plan["id"])
+    assert saved["stage2_status"] == "triage_resume_approved"
+    assert saved["why_log"]["triage_resume_approval"]["reason"] == "Reviewed injury details and cleared to retry."
+
+
+def test_admin_cannot_approve_and_resume_medical_hold():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    intake = store.create_intake("athlete-1", _build_request())
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=intake["id"],
+        request=_build_request(),
+        result=finalized_result(
+            status="triage_blocked",
+            plan_text="## Injury Triage: Medical Hold",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "medical_hold", "should_block_stage2": True}},
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "Trying to override hold."},
+    )
+
+    assert response.status_code == 409
+
+
+def test_resume_generation_uses_normal_pipeline_and_does_not_finalize_from_blocked_row():
+    stage2 = FakeStage2Automator(result=finalized_result(status="ready"))
+    client, store, _ = _build_client(stage2)
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    intake = store.create_intake("athlete-1", _build_request())
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id=intake["id"],
+        request=_build_request(),
+        result=finalized_result(
+            status="triage_blocked",
+            plan_text="## Injury Triage: Needs Review",
+            stage2_status="triage_blocked",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+
+    response = client.post(
+        f"/api/admin/plans/{plan['id']}/approve-and-resume-generation",
+        headers={"Authorization": "Bearer admin-token"},
+        json={"reason": "Cleared after manual review."},
+    )
+
+    assert response.status_code == 202
+    job = response.json()
+    assert "job_id" in job
+    assert len(stage2.calls) == 1
+    assert store.get_plan(plan["id"])["status"] == "triage_blocked"
 
 
 def test_admin_can_reject_approved_plan_back_to_review():

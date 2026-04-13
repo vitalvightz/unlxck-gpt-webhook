@@ -91,6 +91,14 @@ class DemoStore:
             items = self.intakes.get(athlete_id, [])
             return dict(items[-1]) if items else None
 
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            for athlete_intakes in self.intakes.values():
+                for row in athlete_intakes:
+                    if row["id"] == intake_id:
+                        return dict(row)
+        return None
+
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]:
         with self._lock:
             intake = {
@@ -309,6 +317,8 @@ class DemoStore:
                     "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
                 }
             )
+            if "why_log" in result:
+                row["why_log"] = result.get("why_log") or {}
             return dict(row)
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]:

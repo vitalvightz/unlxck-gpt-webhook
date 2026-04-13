@@ -27,6 +27,7 @@ from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
 from .models import (
+    ApproveAndResumeGenerationRequest,
     AdminAthleteRecord,
     AdminPlanOutputs,
     AdminPlanSummary,
@@ -600,6 +601,16 @@ def _triage_override_result(plan_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _extract_triage_mode(plan_row: dict[str, Any]) -> str:
+    why_log = plan_row.get("why_log")
+    if not isinstance(why_log, dict):
+        return ""
+    triage = why_log.get("injury_triage")
+    if not isinstance(triage, dict):
+        return ""
+    return str(triage.get("mode") or "").strip().lower()
+
+
 def create_app(
     *,
     store: AppStore,
@@ -1021,18 +1032,98 @@ def create_app(
         store.delete_plan(plan_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    @app.post("/api/plans/{plan_id}/approve-stage2", response_model=PlanDetail)
-    def approve_plan_for_stage2(
+    @app.post("/api/admin/plans/{plan_id}/approve-and-resume-generation", response_model=GenerationJobResponse, status_code=202)
+    async def approve_and_resume_generation(
         plan_id: str,
-        _: ProfileRecord = Depends(require_admin),
+        body: ApproveAndResumeGenerationRequest,
+        request: Request,
+        background_tasks: BackgroundTasks,
+        admin_profile: ProfileRecord = Depends(require_admin),
         store: AppStore = Depends(get_store),
-    ) -> PlanDetail:
+        planner_fn: Planner = Depends(get_planner),
+        stage2: Stage2Automator = Depends(get_stage2_automator),
+        active_tasks: set[str] = Depends(get_active_generation_tasks),
+        enable_in_process_generation: bool = Depends(get_enable_in_process_generation),
+    ) -> GenerationJobResponse:
         plan_row = store.get_plan(plan_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if str(plan_row.get("status") or "").strip().lower() != "triage_blocked":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is not triage blocked")
 
-        updated = store.update_plan_stage2(plan_id, _triage_override_result(plan_row))
-        return _map_plan_detail(updated, include_admin=True)
+        triage_mode = _extract_triage_mode(plan_row)
+        if triage_mode == "medical_hold":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="medical_hold plans cannot be approved for automatic resume",
+            )
+        if triage_mode not in {"needs_review", "restricted_rehab_only"}:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="only needs_review or restricted_rehab_only triage modes can be resumed",
+            )
+
+        intake_id = str(plan_row.get("intake_id") or "").strip()
+        if not intake_id:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
+        intake_row = store.get_intake(intake_id)
+        if not intake_row or not isinstance(intake_row.get("intake"), dict):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="stored intake not found for this plan",
+            )
+        try:
+            request_body = PlanRequest.model_validate(intake_row["intake"])
+        except ValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="stored intake is invalid and cannot be used for regeneration",
+            ) from exc
+
+        existing_why_log = plan_row.get("why_log") if isinstance(plan_row.get("why_log"), dict) else {}
+        updated_why_log = {
+            **existing_why_log,
+            "triage_resume_approval": {
+                "approved_by_admin_id": admin_profile.athlete_id,
+                "approved_by_admin_email": admin_profile.email,
+                "approved_at": _utc_now_iso(),
+                "reason": body.reason,
+            },
+        }
+        store.update_plan_stage2(
+            plan_id,
+            {
+                "status": str(plan_row.get("status") or "triage_blocked"),
+                "plan_text": str(plan_row.get("plan_text") or ""),
+                "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
+                "final_plan_text": str(plan_row.get("final_plan_text") or ""),
+                "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
+                "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
+                "stage2_status": "triage_resume_approved",
+                "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
+                "why_log": updated_why_log,
+            },
+        )
+
+        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"cli_{uuid.uuid4().hex}"
+        job = await asyncio.to_thread(
+            store.create_or_get_generation_job,
+            athlete_id=str(plan_row["athlete_id"]),
+            client_request_id=client_request_id,
+            source="admin_triage_resume",
+            request_payload=request_body.model_dump(mode="json"),
+        )
+        job = await schedule_generation_job_if_needed(
+            job=job,
+            background_tasks=background_tasks,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            active_tasks=active_tasks,
+            enable_in_process_generation=enable_in_process_generation,
+            is_stale_job=_is_stale_job,
+        )
+        return _job_response(job)
 
     @app.get("/api/admin/plans", response_model=list[AdminPlanSummary])
     def list_admin_plans(

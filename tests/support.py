@@ -82,6 +82,13 @@ class FakeStore:
         items = self.intakes.get(athlete_id, [])
         return items[-1] if items else None
 
+    def get_intake(self, intake_id: str) -> dict | None:
+        for athlete_intakes in self.intakes.values():
+            for row in athlete_intakes:
+                if row["id"] == intake_id:
+                    return row
+        return None
+
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict:
         intake = {
             "id": f"intake_{uuid4().hex[:10]}",
@@ -284,6 +291,8 @@ class FakeStore:
                 "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
             }
         )
+        if "why_log" in result:
+            row["why_log"] = result.get("why_log") or {}
         return row
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict]:

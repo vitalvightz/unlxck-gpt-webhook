@@ -1,4 +1,5 @@
 import type {
+  ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
@@ -436,6 +437,18 @@ export function approvePlanForStage2(token: string, planId: string): Promise<Pla
   return readJson<PlanDetail>(`/api/plans/${planId}/approve-stage2`, {
     method: "POST",
     token,
+  });
+}
+
+export function approveAndResumeGeneration(
+  token: string,
+  planId: string,
+  payload: ApproveAndResumeGenerationRequest,
+): Promise<GenerationJobResponse> {
+  return readJson<GenerationJobResponse>(`/api/admin/plans/${planId}/approve-and-resume-generation`, {
+    method: "POST",
+    token,
+    body: JSON.stringify(payload),
   });
 }
 
