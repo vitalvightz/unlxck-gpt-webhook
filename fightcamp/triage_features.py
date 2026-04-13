@@ -300,12 +300,8 @@ def _injury_text_chunks(injuries: str) -> list[str]:
     text = str(injuries or "").strip()
     if not text:
         return []
-    chunks: list[str] = [text]
     chunks = [chunk.strip() for chunk in split_injury_text(text) if chunk.strip()]
-    if chunks:
-        return list(dict.fromkeys([text, *chunks]))
-    comma_chunks = [chunk.strip() for chunk in text.split(",") if chunk.strip()]
-    return list(dict.fromkeys([text, *comma_chunks]))
+    return list(dict.fromkeys([text, *chunks]))
 
 
 def _parsed_injury_chunks(parsed_injuries: list[dict[str, Any]] | None) -> list[str]:
