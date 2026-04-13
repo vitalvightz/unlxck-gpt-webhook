@@ -206,7 +206,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons.add("neurological_red_flag_combination")
 
     restricted_rehab = False
-    if has_mapped_restricted or "structural_high_severity" in matched_categories:
+    if any(_HIGH_RISK_CATEGORY_ROUTE.get(c) == RESTRICTED_REHAB_ONLY for c in matched_categories) or "structural_high_severity" in matched_categories:
         restricted_rehab = True
         routing_reasons.add("mapped_restricted_category")
 
