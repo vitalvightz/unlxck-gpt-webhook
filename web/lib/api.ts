@@ -432,13 +432,6 @@ export function approvePlanForRelease(token: string, planId: string): Promise<Pl
   });
 }
 
-export function approvePlanForStage2(token: string, planId: string): Promise<PlanDetail> {
-  return readJson<PlanDetail>(`/api/plans/${planId}/approve-stage2`, {
-    method: "POST",
-    token,
-  });
-}
-
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
     method: "POST",
