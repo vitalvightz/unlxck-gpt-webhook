@@ -717,7 +717,7 @@ export function PlanViewer({
   const canSeeApprovalControls = isAdmin && !hasPublishedPlan;
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
   const canRejectApproval = isAdmin;
-  const canApproveStage2 = canManagePlan && isTriageBlocked;
+  const canApproveStage2 = isAdmin && isTriageBlocked;
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
     : "Approve anyway";
