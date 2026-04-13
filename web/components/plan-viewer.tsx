@@ -843,7 +843,8 @@ export function PlanViewer({
     setResumeError(null);
     setResumeMessage(null);
     try {
-      await approveAndResumeGeneration(accessToken, plan.plan_id, { reason: resumeReason.trim() });
+      const clientRequestId = crypto.randomUUID();
+      await approveAndResumeGeneration(accessToken, plan.plan_id, { reason: resumeReason.trim() }, clientRequestId);
       setResumeMessage("Approved. Normal generation has been resumed from the stored intake.");
       setResumeReason("");
     } catch (error) {
