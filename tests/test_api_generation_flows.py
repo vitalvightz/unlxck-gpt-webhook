@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 import pytest
@@ -7,7 +9,7 @@ import pytest
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
-from api.generation_runtime import should_skip_stage2
+from api.generation_runtime import run_generation_job, should_skip_stage2
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
 from support import (
@@ -201,6 +203,61 @@ def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
     assert safety["state"] == "medical_hold"
     assert safety["status_chip"] == "MEDICAL HOLD"
     assert safety["stage2_skipped"] is True
+
+
+def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            plan_text="",
+            final_plan_text="",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-job",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
+    stage2 = FakeStage2Automator(result=finalized_result())
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=stage2,
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    updated_plan = store.get_plan(blocked_plan["id"])
+
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job["plan_id"] == blocked_plan["id"]
+    assert updated_plan["status"] == "ready"
+    assert updated_plan["stage2_status"] == "stage2_pass"
+    assert updated_plan["plan_text"] == "# Final Plan"
+    assert updated_plan["final_plan_text"] == "# Final Plan"
+    assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
+    assert len(store.list_user_plans(athlete.user_id)) == 1
 
 
 def test_should_skip_stage2_when_triage_blocked_status_has_no_nested_flag():

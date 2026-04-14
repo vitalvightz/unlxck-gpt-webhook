@@ -220,6 +220,12 @@ async def run_generation_job(
             if latest_plan and str(latest_plan.get("intake_id") or "") == intake_id:
                 plan_row = latest_plan
                 plan_id = str(latest_plan.get("id") or "")
+        if plan_row and plan_id:
+            plan_row = await asyncio.to_thread(
+                store.update_plan_stage2,
+                plan_id,
+                final_result,
+            )
         if not plan_row:
             plan_row = await asyncio.to_thread(
                 store.create_plan,
