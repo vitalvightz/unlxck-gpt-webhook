@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from dataclasses import replace
 from pathlib import Path
 from time import perf_counter
 
@@ -60,19 +59,6 @@ def _triage_resume_override_allows_continuation(data: dict, *, triage_mode: str)
         return False
     normalized_modes = {str(item).strip().lower() for item in allowed_modes if str(item).strip()}
     return mode in normalized_modes
-
-
-def _neutralized_triage_summary(original_summary: dict) -> dict:
-    return {
-        **original_summary,
-        "mode": FULL_PLAN,
-        "should_block_stage2": False,
-        "resumed_by_admin_override": True,
-    }
-
-
-def _sanitized_runtime_plan_input(plan_input: PlanInput) -> PlanInput:
-    return replace(plan_input, guided_injury=None, restrictions=[])
 
 
 def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> dict:
@@ -179,18 +165,15 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     _record_timing("prime_banks", timer_start)
 
     timer_start = perf_counter()
-    triage_summary_for_runtime = triage_result.to_dict()
-    runtime_plan_input = plan_input
-    if triage_resume_override_applied:
-        triage_summary_for_runtime = _neutralized_triage_summary(triage_summary_for_runtime)
-        runtime_plan_input = _sanitized_runtime_plan_input(plan_input)
+    runtime_context_kwargs = {
+        "plan_input": plan_input,
+        "random_seed": data.get("random_seed"),
+        "logger": logger,
+    }
+    if not triage_resume_override_applied:
+        runtime_context_kwargs["triage_summary"] = triage_result.to_dict()
 
-    context = build_runtime_context(
-        plan_input=runtime_plan_input,
-        random_seed=data.get("random_seed"),
-        logger=logger,
-        triage_summary=triage_summary_for_runtime,
-    )
+    context = build_runtime_context(**runtime_context_kwargs)
     _record_timing("runtime_context", timer_start)
 
     blocks = generate_plan_blocks(context=context, record_timing=_record_timing, logger=logger)
