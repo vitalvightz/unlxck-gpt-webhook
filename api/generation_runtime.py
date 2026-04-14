@@ -18,6 +18,7 @@ from .store import AppStore
 
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 logger = logging.getLogger(__name__)
+_TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
 
 
 def utc_now_iso() -> str:
@@ -139,7 +140,8 @@ async def run_generation_job(
             return
 
         athlete_id = str(job["athlete_id"])
-        request_body = parse_plan_request(job.get("request_payload") or {})
+        raw_request_payload = job.get("request_payload") or {}
+        request_body = parse_plan_request(raw_request_payload)
         logger.info("[jobs] generation:start athlete_id=%s job_id=%s", athlete_id, job_id)
 
         try:
@@ -174,7 +176,12 @@ async def run_generation_job(
 
         stage1_result = job.get("stage1_result")
         if not isinstance(stage1_result, dict):
-            stage1_result = await run_stage1_planner(planner_fn, request_body.to_payload())
+            planner_payload = request_body.to_payload()
+            if isinstance(raw_request_payload, dict):
+                triage_override = raw_request_payload.get(_TRIAGE_RESUME_OVERRIDE_KEY)
+                if isinstance(triage_override, dict):
+                    planner_payload[_TRIAGE_RESUME_OVERRIDE_KEY] = triage_override
+            stage1_result = await run_stage1_planner(planner_fn, planner_payload)
             if stage1_result.get("status") == "invalid_input":
                 raise HTTPException(
                     status_code=422,

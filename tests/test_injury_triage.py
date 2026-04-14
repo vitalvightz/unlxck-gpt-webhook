@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -137,6 +138,81 @@ def test_blocked_modes_do_not_reach_stage2_or_normal_pipeline(monkeypatch):
     assert result["stage2_payload"] is None
     assert result["stage2_status"] == "triage_blocked"
     assert result["injury_triage"]["mode"] == MEDICAL_HOLD
+
+
+def _stub_normal_pipeline(monkeypatch):
+    monkeypatch.setattr("fightcamp.main.prime_plan_banks", lambda logger: None)
+    monkeypatch.setattr("fightcamp.main.build_runtime_context", lambda **kwargs: object())
+    monkeypatch.setattr("fightcamp.main.generate_plan_blocks", lambda **kwargs: {})
+    monkeypatch.setattr(
+        "fightcamp.main.render_plan_bundle",
+        lambda **kwargs: SimpleNamespace(
+            reason_log={},
+            coach_notes="stub",
+            fight_plan_text="# Stub Plan",
+            html="<html></html>",
+        ),
+    )
+    monkeypatch.setattr(
+        "fightcamp.main.build_stage2_outputs",
+        lambda **kwargs: ({}, {"summary": "stub"}, "stub handoff"),
+    )
+
+
+def test_needs_review_override_allows_stage2_continuation(monkeypatch):
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
+    payload["_triage_resume_override"] = {
+        "approved": True,
+        "allowed_modes": ["needs_review", "restricted_rehab_only"],
+    }
+    _stub_normal_pipeline(monkeypatch)
+
+    result = generate_plan_sync(payload)
+
+    assert result.get("status") != "triage_blocked"
+    assert result["plan_text"] == "# Stub Plan"
+    assert result["why_log"]["injury_triage_resume_override"]["bypassed_blocking"] is True
+    assert result["why_log"]["injury_triage_resume_override"]["triage_mode"] == NEEDS_REVIEW
+
+
+def test_restricted_rehab_only_override_allows_stage2_continuation(monkeypatch):
+    payload = _payload_with_injury("right knee acl rupture during scramble")
+    payload["_triage_resume_override"] = {
+        "approved": True,
+        "allowed_modes": ["needs_review", "restricted_rehab_only"],
+    }
+    _stub_normal_pipeline(monkeypatch)
+
+    result = generate_plan_sync(payload)
+
+    assert result.get("status") != "triage_blocked"
+    assert result["plan_text"] == "# Stub Plan"
+    assert result["why_log"]["injury_triage_resume_override"]["triage_mode"] == RESTRICTED_REHAB_ONLY
+
+
+def test_medical_hold_cannot_be_overridden(monkeypatch):
+    payload = _payload_with_injury("suspected concussion with headache after sparring")
+    payload["_triage_resume_override"] = {
+        "approved": True,
+        "allowed_modes": ["needs_review", "restricted_rehab_only", "medical_hold"],
+    }
+    _stub_normal_pipeline(monkeypatch)
+
+    result = generate_plan_sync(payload)
+
+    assert result["status"] == "triage_blocked"
+    assert result["injury_triage"]["mode"] == MEDICAL_HOLD
+
+
+def test_needs_review_without_override_still_blocks():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
+
+    result = generate_plan_sync(payload)
+
+    assert result["status"] == "triage_blocked"
+    assert result["injury_triage"]["mode"] == NEEDS_REVIEW
 
 
 def test_acl_rupture_routes_to_restricted_rehab_only():

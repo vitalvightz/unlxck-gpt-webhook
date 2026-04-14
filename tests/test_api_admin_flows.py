@@ -434,6 +434,10 @@ def test_needs_review_can_be_approved_and_resumed_with_normal_generation_flow():
     job = job_response.json()
     assert job["status"] == "completed"
     assert len(planner_calls) == 1
+    assert planner_calls[0]["_triage_resume_override"]["approved"] is True
+    assert planner_calls[0]["_triage_resume_override"]["reason"] == "injury details clarified"
+    assert planner_calls[0]["_triage_resume_override"]["allowed_modes"] == ["needs_review", "restricted_rehab_only"]
+    assert "_triage_resume_override" not in intake["intake"]
     assert len(stage2.calls) == 1
     assert stage2.calls[0]["plan_text"] == "# Stage 1 Draft"
 
