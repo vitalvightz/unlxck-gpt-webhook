@@ -1128,7 +1128,7 @@ def create_app(
             stage2_status="triage_resume_approved",
         )
 
-        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"triage_resume_{plan_id}"
+        client_request_id = f"triage_resume_{plan_id}"
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),
