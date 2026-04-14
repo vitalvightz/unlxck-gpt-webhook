@@ -146,7 +146,7 @@ class PlanRuntimeContext:
 
     @property
     def selection_ignore_restrictions(self) -> bool:
-        return not bool(self.plan_input.restrictions)
+        return not bool(self.training_context.injury_restrictions)
 
 
 @dataclass
