@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import logging
 import os
@@ -1086,7 +1087,16 @@ def create_app(
         intake_row = store.get_intake(intake_id)
         if not intake_row or not isinstance(intake_row.get("intake"), dict):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="stored intake is missing for this plan")
-        request_payload = intake_row.get("intake")
+        request_payload = copy.deepcopy(intake_row.get("intake"))
+        request_payload["_triage_resume_override"] = {
+            "approved": True,
+            "approved_by": {
+                "user_id": profile.athlete_id,
+                "email": profile.email,
+            },
+            "reason": approval.reason,
+            "allowed_modes": ["needs_review", "restricted_rehab_only"],
+        }
 
         approval_log = {
             "approved_by_user_id": profile.athlete_id,
