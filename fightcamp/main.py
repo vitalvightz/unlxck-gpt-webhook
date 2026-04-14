@@ -61,6 +61,15 @@ def _triage_resume_override_allows_continuation(data: dict, *, triage_mode: str)
     return mode in normalized_modes
 
 
+def _neutralized_triage_summary(original_summary: dict) -> dict:
+    return {
+        **original_summary,
+        "mode": FULL_PLAN,
+        "should_block_stage2": False,
+        "resumed_by_admin_override": True,
+    }
+
+
 def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> dict:
     return {
         "status": "invalid_input",
@@ -165,11 +174,15 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     _record_timing("prime_banks", timer_start)
 
     timer_start = perf_counter()
+    triage_summary_for_runtime = triage_result.to_dict()
+    if triage_resume_override_applied:
+        triage_summary_for_runtime = _neutralized_triage_summary(triage_summary_for_runtime)
+
     context = build_runtime_context(
         plan_input=plan_input,
         random_seed=data.get("random_seed"),
         logger=logger,
-        triage_summary=triage_result.to_dict(),
+        triage_summary=triage_summary_for_runtime,
     )
     _record_timing("runtime_context", timer_start)
 
@@ -226,8 +239,10 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
             why_log["injury_triage_resume_override"] = {
                 "bypassed_blocking": True,
                 "triage_mode": triage_mode,
+                "runtime_triage_mode": FULL_PLAN,
                 "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
             }
+            why_log["injury_triage_original"] = triage_result.to_dict()
     return result
 
 
