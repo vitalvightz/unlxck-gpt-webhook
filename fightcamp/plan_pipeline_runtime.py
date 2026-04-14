@@ -214,6 +214,7 @@ def build_runtime_context(
     random_seed: Any,
     logger: logging.Logger,
     triage_summary: dict[str, Any] | None = None,
+    is_approved_triage_resume: bool = False,
 ) -> PlanRuntimeContext:
     parsed_injury_phrases = [
         entry.get("original_phrase")
@@ -269,7 +270,7 @@ def build_runtime_context(
 
     injuries_only_text = "; ".join(parsed_injury_phrases)
     raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
-    guided_injury = plan_input.guided_injury
+    guided_injury = None if is_approved_triage_resume else plan_input.guided_injury
     guided_injury_dict = (
         {
             "area": guided_injury.area,
@@ -319,8 +320,8 @@ def build_runtime_context(
         injuries_raw_text=plan_input.injuries,
         parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
         guided_injury=guided_injury_dict,
-        injury_restrictions=[dict(entry) for entry in plan_input.restrictions],
-        triage_summary=dict(triage_summary or {}),
+        injury_restrictions=[] if is_approved_triage_resume else [dict(entry) for entry in plan_input.restrictions],
+        triage_summary={} if is_approved_triage_resume else dict(triage_summary or {}),
     )
 
     return PlanRuntimeContext(

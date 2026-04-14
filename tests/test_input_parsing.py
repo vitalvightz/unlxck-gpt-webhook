@@ -282,6 +282,38 @@ def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     assert all("knee" not in injury for injury in context.training_context.injuries)
 
 
+def test_approved_resume_runtime_context_keeps_parsed_injuries_but_strips_triage_shaping():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "moderate",
+        "trend": "stable",
+        "avoid": "deep hip flexion",
+        "notes": "pain at end-range",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+        triage_summary={"mode": "needs_review", "should_block_stage2": True},
+        is_approved_triage_resume=True,
+    )
+
+    assert context.training_context.injuries_raw_text == parsed.injuries
+    assert context.training_context.parsed_injuries == [dict(entry) for entry in parsed.parsed_injuries]
+    assert context.training_context.guided_injury is None
+    assert context.training_context.injury_restrictions == []
+    assert context.training_context.triage_summary == {}
+
+
 def test_guided_injury_structural_notes_are_retained_in_original_phrase():
     payload = _payload(
         [

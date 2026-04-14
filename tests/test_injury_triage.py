@@ -207,6 +207,7 @@ def test_resume_override_neutralizes_runtime_triage_context(monkeypatch):
 
     def _capture_runtime_context(**kwargs):
         captured["triage_summary"] = kwargs.get("triage_summary")
+        captured["is_approved_triage_resume"] = kwargs.get("is_approved_triage_resume")
         captured["plan_input"] = kwargs.get("plan_input")
         return object()
 
@@ -215,11 +216,11 @@ def test_resume_override_neutralizes_runtime_triage_context(monkeypatch):
     result = generate_plan_sync(payload)
 
     assert result.get("status") != "triage_blocked"
-    assert captured["triage_summary"]["mode"] == FULL_PLAN
-    assert captured["triage_summary"]["should_block_stage2"] is False
-    assert captured["triage_summary"]["resumed_by_admin_override"] is True
-    assert captured["plan_input"].guided_injury is None
-    assert captured["plan_input"].restrictions == []
+    assert captured["is_approved_triage_resume"] is True
+    assert captured["triage_summary"]["mode"] == NEEDS_REVIEW
+    assert captured["triage_summary"]["should_block_stage2"] is True
+    assert captured["plan_input"].guided_injury == expected_input.guided_injury
+    assert captured["plan_input"].restrictions == expected_input.restrictions
     assert captured["plan_input"].injuries == expected_input.injuries
     assert captured["plan_input"].parsed_injuries == expected_input.parsed_injuries
     assert result["why_log"]["injury_triage_original"]["mode"] == NEEDS_REVIEW
@@ -240,6 +241,7 @@ def test_non_resume_runtime_context_keeps_guided_injury_and_restrictions(monkeyp
 
     def _capture_runtime_context(**kwargs):
         captured["plan_input"] = kwargs.get("plan_input")
+        captured["is_approved_triage_resume"] = kwargs.get("is_approved_triage_resume")
         return object()
 
     monkeypatch.setattr("fightcamp.main.build_runtime_context", _capture_runtime_context)
@@ -247,6 +249,7 @@ def test_non_resume_runtime_context_keeps_guided_injury_and_restrictions(monkeyp
     result = generate_plan_sync(payload)
 
     assert result.get("status") != "triage_blocked"
+    assert captured["is_approved_triage_resume"] is False
     assert captured["plan_input"].guided_injury == expected_input.guided_injury
     assert captured["plan_input"].restrictions == expected_input.restrictions
 
