@@ -1080,7 +1080,6 @@ def create_app(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="approve_and_resume_generation is only allowed for needs_review or restricted_rehab_only plans",
             )
-
         intake_id = str(plan_row.get("intake_id") or "").strip()
         if not intake_id:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="plan is missing intake_id")
@@ -1114,7 +1113,7 @@ def create_app(
             stage2_status="triage_resume_approved",
         )
 
-        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"triage_resume_{uuid.uuid4().hex}"
+        client_request_id = (request.headers.get("X-Client-Request-Id") or "").strip() or f"triage_resume_{plan_id}"
         job = await asyncio.to_thread(
             store.create_or_get_generation_job,
             athlete_id=str(plan_row["athlete_id"]),

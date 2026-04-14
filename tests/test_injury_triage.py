@@ -174,6 +174,8 @@ def test_needs_review_override_allows_stage2_continuation(monkeypatch):
     assert result["plan_text"] == "# Stub Plan"
     assert result["why_log"]["injury_triage_resume_override"]["bypassed_blocking"] is True
     assert result["why_log"]["injury_triage_resume_override"]["triage_mode"] == NEEDS_REVIEW
+    assert result["why_log"]["injury_triage_resume_override"]["runtime_triage_mode"] == FULL_PLAN
+    assert result["why_log"]["injury_triage_original"]["mode"] == NEEDS_REVIEW
 
 
 def test_restricted_rehab_only_override_allows_stage2_continuation(monkeypatch):
@@ -189,6 +191,32 @@ def test_restricted_rehab_only_override_allows_stage2_continuation(monkeypatch):
     assert result.get("status") != "triage_blocked"
     assert result["plan_text"] == "# Stub Plan"
     assert result["why_log"]["injury_triage_resume_override"]["triage_mode"] == RESTRICTED_REHAB_ONLY
+    assert result["why_log"]["injury_triage_original"]["mode"] == RESTRICTED_REHAB_ONLY
+
+
+def test_resume_override_neutralizes_runtime_triage_context(monkeypatch):
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
+    payload["_triage_resume_override"] = {
+        "approved": True,
+        "allowed_modes": ["needs_review", "restricted_rehab_only"],
+    }
+    _stub_normal_pipeline(monkeypatch)
+    captured: dict = {}
+
+    def _capture_runtime_context(**kwargs):
+        captured["triage_summary"] = kwargs.get("triage_summary")
+        return object()
+
+    monkeypatch.setattr("fightcamp.main.build_runtime_context", _capture_runtime_context)
+
+    result = generate_plan_sync(payload)
+
+    assert result.get("status") != "triage_blocked"
+    assert captured["triage_summary"]["mode"] == FULL_PLAN
+    assert captured["triage_summary"]["should_block_stage2"] is False
+    assert captured["triage_summary"]["resumed_by_admin_override"] is True
+    assert result["why_log"]["injury_triage_original"]["mode"] == NEEDS_REVIEW
 
 
 def test_medical_hold_cannot_be_overridden(monkeypatch):
