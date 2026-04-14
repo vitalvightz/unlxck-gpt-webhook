@@ -10,10 +10,13 @@ import {
   approvePlanForRelease,
   archivePlan,
   deletePlan,
+  getPlan,
   rejectApprovedPlan,
   renamePlan,
   submitManualStage2,
 } from "@/lib/api";
+import { PremiumLoadingScreen } from "@/components/premium-loading-screen";
+import { useGenerationController } from "@/lib/generation-controller";
 import type { PlanAdvisory, PlanDetail, UserRole } from "@/lib/types";
 
 type ValidatorIssue = Record<string, unknown>;
@@ -690,8 +693,14 @@ export function PlanViewer({
     athletePlanText ||
     "";
   const canApproveForRelease = isAdmin && !hasPublishedPlan && Boolean(approvableText);
+  const hasResumeApproval =
+    plan.admin_outputs?.stage2_status === "triage_resume_approved" ||
+    Boolean((plan.admin_outputs?.why_log as Record<string, unknown> | undefined)?.triage_regeneration_cleared);
   const canApproveAndResumeGeneration =
-    isAdmin && isTriageBlocked && (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
+    isAdmin &&
+    !hasResumeApproval &&
+    isTriageBlocked &&
+    (injuryTriage?.mode === "needs_review" || injuryTriage?.mode === "restricted_rehab_only");
   const canRejectApproval = isAdmin;
   const approveButtonLabel = stage2ReviewSummary.isPublishable
     ? "Approve for athlete view"
@@ -740,6 +749,29 @@ export function PlanViewer({
       return "handoff";
     }
     return "draft";
+  });
+  const generationController = useGenerationController({
+    token: accessToken,
+    storageKey: `unlxck:pending-generation:triage-resume:${plan.plan_id}`,
+    createJob: async (clientRequestId) => {
+      if (!accessToken) {
+        throw new Error("Admin session missing. Please sign in again.");
+      }
+      return approveAndResumeGeneration(
+        accessToken,
+        plan.plan_id,
+        { reason: resumeReason.trim() },
+        clientRequestId,
+      );
+    },
+    onComplete: async ({ planId }) => {
+      if (!accessToken) {
+        return;
+      }
+      const refreshedPlan = await getPlan(accessToken, planId || plan.plan_id);
+      onPlanUpdated?.(refreshedPlan);
+      router.refresh();
+    },
   });
 
   useEffect(() => {
@@ -840,18 +872,36 @@ export function PlanViewer({
       return;
     }
     setResumePending(true);
+    generationController.setError(null);
     setResumeError(null);
     setResumeMessage(null);
     try {
-      const clientRequestId = crypto.randomUUID();
-      await approveAndResumeGeneration(accessToken, plan.plan_id, { reason: resumeReason.trim() }, clientRequestId);
-      setResumeMessage("Approved. Normal generation has been resumed from the stored intake.");
+      await generationController.startGeneration();
+      if (!generationController.error) {
+        setResumeMessage("Approved and resumed. Watching generation job now.");
+      }
       setResumeReason("");
     } catch (error) {
       setResumeError(error instanceof Error ? error.message : "Unable to approve and resume generation.");
     } finally {
       setResumePending(false);
     }
+  }
+
+  useEffect(() => {
+    if (generationController.error) {
+      setResumeError(generationController.error);
+    }
+  }, [generationController.error]);
+
+  if (generationController.isGenerating || generationController.hasPendingGeneration) {
+    return (
+      <PremiumLoadingScreen
+        phase={generationController.phase}
+        error={generationController.error}
+        statusMessage={generationController.statusMessage}
+      />
+    );
   }
 
   async function handleRejectApproval() {
@@ -1534,6 +1584,12 @@ export function PlanViewer({
                     </div>
                     {resumeMessage ? <div className="success-banner">{resumeMessage}</div> : null}
                     {resumeError ? <div className="error-banner">{resumeError}</div> : null}
+                  </div>
+                ) : hasResumeApproval ? (
+                  <div className="support-panel">
+                    <p className="muted">
+                      Resume already approved for this blocked plan. Additional approve-and-resume actions are disabled.
+                    </p>
                   </div>
                 ) : null}
               </>
