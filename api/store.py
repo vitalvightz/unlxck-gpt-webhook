@@ -1054,6 +1054,16 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
+        for optional_field in (
+            "coach_notes",
+            "why_log",
+            "planning_brief",
+            "stage2_payload",
+            "parsing_metadata",
+            "stage2_handoff_text",
+        ):
+            if optional_field in result:
+                payload[optional_field] = result.get(optional_field)
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()

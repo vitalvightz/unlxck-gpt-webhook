@@ -291,6 +291,16 @@ class FakeStore:
                 "stage2_attempt_count": result.get("stage2_attempt_count", row.get("stage2_attempt_count", 0)),
             }
         )
+        for optional_field in (
+            "coach_notes",
+            "why_log",
+            "planning_brief",
+            "stage2_payload",
+            "parsing_metadata",
+            "stage2_handoff_text",
+        ):
+            if optional_field in result:
+                row[optional_field] = result.get(optional_field)
         return row
 
     def update_plan_triage_approval(self, plan_id: str, *, why_log: dict, stage2_status: str) -> dict:
