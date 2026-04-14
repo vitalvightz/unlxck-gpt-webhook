@@ -194,7 +194,7 @@ def test_restricted_rehab_only_override_allows_stage2_continuation(monkeypatch):
     assert result["why_log"]["injury_triage_original"]["mode"] == RESTRICTED_REHAB_ONLY
 
 
-def test_resume_override_neutralizes_runtime_triage_context(monkeypatch):
+def test_resume_override_uses_full_plan_runtime_context(monkeypatch):
     payload = _payload_with_injury("")
     payload["guided_injury"] = {"area": "knee", "severity": "high", "trend": "stable", "notes": "pain"}
     payload["_triage_resume_override"] = {
@@ -217,9 +217,9 @@ def test_resume_override_neutralizes_runtime_triage_context(monkeypatch):
     assert result.get("status") != "triage_blocked"
     assert captured["triage_summary"]["mode"] == FULL_PLAN
     assert captured["triage_summary"]["should_block_stage2"] is False
-    assert captured["triage_summary"]["resumed_by_admin_override"] is True
-    assert captured["plan_input"].guided_injury is None
-    assert captured["plan_input"].restrictions == []
+    assert "resumed_by_admin_override" not in captured["triage_summary"]
+    assert captured["plan_input"].guided_injury == expected_input.guided_injury
+    assert captured["plan_input"].restrictions == expected_input.restrictions
     assert captured["plan_input"].injuries == expected_input.injuries
     assert captured["plan_input"].parsed_injuries == expected_input.parsed_injuries
     assert result["why_log"]["injury_triage_original"]["mode"] == NEEDS_REVIEW
