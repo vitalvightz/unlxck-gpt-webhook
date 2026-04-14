@@ -226,6 +226,21 @@ def test_should_skip_stage2_when_why_log_carries_needs_review_mode():
         is True
     )
 
+
+def test_should_not_skip_stage2_when_triage_resume_override_bypassed_blocking():
+    assert (
+        should_skip_stage2(
+            {
+                "status": "generated",
+                "why_log": {
+                    "injury_triage": {"mode": "needs_review", "should_block_stage2": True},
+                    "injury_triage_resume_override": {"bypassed_blocking": True},
+                },
+            }
+        )
+        is False
+    )
+
 def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
     client, store, _ = _build_client(
         FakeStage2Automator(

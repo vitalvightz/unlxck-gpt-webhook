@@ -80,6 +80,12 @@ def _is_truthy_flag(value: Any) -> bool:
 
 
 def should_skip_stage2(stage1_result: dict[str, Any]) -> bool:
+    why_log = stage1_result.get("why_log")
+    if isinstance(why_log, dict):
+        resume_override = why_log.get("injury_triage_resume_override")
+        if isinstance(resume_override, dict) and _is_truthy_flag(resume_override.get("bypassed_blocking")):
+            return False
+
     status_value = str(stage1_result.get("status") or "").strip().lower()
     if status_value == "triage_blocked":
         return True
@@ -92,7 +98,6 @@ def should_skip_stage2(stage1_result: dict[str, Any]) -> bool:
         if triage_mode in {"medical_hold", "restricted_rehab_only", "needs_review"}:
             return True
 
-    why_log = stage1_result.get("why_log")
     if isinstance(why_log, dict):
         why_log_triage = why_log.get("injury_triage")
         if isinstance(why_log_triage, dict):
