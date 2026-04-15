@@ -363,6 +363,18 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
     reason_codes = list((plan_entry or {}).get("reason_codes") or [])
     coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
+    dose_class = str((plan_entry or {}).get("dose_class") or "").strip() or (
+        "hard_secondary" if status == "hard_as_planned" else "hard_deload"
+    )
+    dose_policy = str((plan_entry or {}).get("dose_policy") or "").strip() or (
+        "as_planned" if status == "hard_as_planned" else "deload"
+    )
+    title_suffix = {
+        "hard_primary": "(Hard Primary)",
+        "hard_secondary": "(Hard Secondary)",
+        "hard_deload": "(Hard Deload)",
+        "technical_rhythm": "(Technical Rhythm)",
+    }.get(dose_class, "(Hard Secondary)")
     role: dict[str, Any] = {
         "category": "sparring",
         "role_key": "hard_sparring_day",
@@ -396,6 +408,9 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "hard_sparring_status": status,
         "hard_sparring_reason_codes": reason_codes,
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
+        "hard_sparring_dose_class": dose_class,
+        "hard_sparring_dose_policy": dose_policy,
+        "visible_title_suffix": title_suffix,
         "coach_note_flags": coach_note_flags,
     }
     if role["coach_note_flags"]:

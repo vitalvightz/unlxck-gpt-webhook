@@ -46,6 +46,8 @@ def test_two_hard_spar_days_normal_week_stay_hard_as_planned():
     )
 
     assert [entry["status"] for entry in plan] == ["hard_as_planned", "hard_as_planned"]
+    assert [entry["dose_class"] for entry in plan] == ["hard_primary", "hard_secondary"]
+    assert all(entry["dose_policy"] == "as_planned" for entry in plan)
 
 
 def test_high_fatigue_with_two_hard_days_downgrades_exactly_one_day():
@@ -58,6 +60,11 @@ def test_high_fatigue_with_two_hard_days_downgrades_exactly_one_day():
     assert len(downgraded) == 1
     assert downgraded[0]["day"] == "Thursday"
     assert downgraded[0]["status"] == "deload_suggested"
+    by_day = {entry["day"]: entry for entry in plan}
+    assert by_day["Tuesday"]["dose_class"] == "hard_primary"
+    assert by_day["Tuesday"]["dose_policy"] == "as_planned"
+    assert by_day["Thursday"]["dose_class"] == "hard_deload"
+    assert by_day["Thursday"]["dose_policy"] == "deload"
 
 
 def test_moderate_fatigue_and_moderate_cut_do_not_downgrade():
@@ -129,6 +136,11 @@ def test_instability_or_daily_symptoms_convert():
 
     assert any(entry["status"] == "convert_to_technical_suggested" for entry in instability_plan)
     assert any(entry["status"] == "convert_to_technical_suggested" for entry in daily_symptom_plan)
+    assert any(entry["dose_class"] == "technical_rhythm" for entry in instability_plan)
+    assert all(
+        entry["dose_policy"] == ("convert" if entry["status"] == "convert_to_technical_suggested" else "as_planned")
+        for entry in instability_plan
+    )
 
 
 def test_worsening_high_risk_converts():

@@ -1815,8 +1815,16 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     assert week["declared_hard_sparring_days"] == ["Tuesday", "Thursday"]
     assert [entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"] == ["Thursday"]
     assert week["effective_hard_sparring_days"] == ["Tuesday"]
+    assert [entry["dose_class"] for entry in week["hard_sparring_plan"]] == ["hard_primary", "hard_deload"]
+    assert [entry["dose_policy"] for entry in week["hard_sparring_plan"]] == ["as_planned", "deload"]
     assert locked_spar_days == ["Tuesday", "Thursday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
+    spar_role_suffixes = [
+        role["visible_title_suffix"]
+        for role in week["session_roles"]
+        if role["role_key"] == "hard_sparring_day"
+    ]
+    assert spar_role_suffixes == ["(Hard Primary)", "(Hard Deload)"]
     # New behaviour: declared spar count (2) drives the cap and priority demotion,
     # so "two_hard_spar_days" is present even when only one day is fully effective.
     assert "two_hard_spar_days" in week["intentional_compression"]["reason_codes"]
