@@ -432,9 +432,8 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
 
         if guided_injury.notes:
             injury_entry["notes"] = guided_injury.notes
-
-        if guided_injury.notes and _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
-            injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
+            if _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
+                injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         injuries.append(injury_entry)
 
     if guided_injury.avoid:
