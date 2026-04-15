@@ -557,7 +557,15 @@ class PlanInput:
             get_value("Any injuries or areas you need to work around?", fields)
         )
         guided_injuries = _extract_guided_injuries(data)
-        guided_injury = _extract_guided_injury(data)
+        if guided_injuries:
+            guided_injury = guided_injuries[0]
+            parsed_injuries, parsed_restrictions = _parse_guided_injuries(guided_injuries)
+        else:
+            guided_injury = _extract_guided_injury(data)
+            if guided_injury is not None:
+                parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
+            else:
+                parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
         if guided_injuries:
             guided_injury = guided_injuries[0]
             parsed_injuries, parsed_restrictions = _parse_guided_injuries(guided_injuries)
