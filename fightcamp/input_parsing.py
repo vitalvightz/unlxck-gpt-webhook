@@ -369,6 +369,32 @@ def _extract_guided_injury(data: dict) -> GuidedInjury | None:
     return guided if guided.has_content() else None
 
 
+def _extract_guided_injuries(data: dict) -> list[GuidedInjury]:
+    if not isinstance(data, dict):
+        return []
+
+    raw_value = data.get("guided_injuries")
+    if not isinstance(raw_value, list):
+        raw_value = data.get("data", {}).get("guided_injuries")
+    if not isinstance(raw_value, list):
+        return []
+
+    injuries: list[GuidedInjury] = []
+    for entry in raw_value:
+        if not isinstance(entry, dict):
+            continue
+        guided = GuidedInjury(
+            area=str(entry.get("area") or "").strip(),
+            severity=str(entry.get("severity") or "").strip(),
+            trend=str(entry.get("trend") or "").strip(),
+            avoid=str(entry.get("avoid") or "").strip(),
+            notes=str(entry.get("notes") or "").strip(),
+        )
+        if guided.has_content():
+            injuries.append(guided)
+    return injuries
+
+
 def _strip_guided_laterality(area: str, laterality: str | None) -> str:
     cleaned = str(area or "").strip()
     if not cleaned or not laterality:
@@ -400,6 +426,9 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
         if mapped_severity:
             injury_entry["severity"] = mapped_severity
 
+        if guided_injury.notes:
+            injury_entry["notes"] = guided_injury.notes
+
         if guided_injury.notes and _GUIDED_STRUCTURAL_NOTE_PATTERN.search(guided_injury.notes):
             injury_entry["original_phrase"] = f"{guided_injury.area}. Notes: {guided_injury.notes}"
         injuries.append(injury_entry)
@@ -415,6 +444,18 @@ def _parse_guided_injury(guided_injury: GuidedInjury) -> tuple[list[dict[str, st
             restrictions.append(restriction)
 
     return injuries, restrictions
+
+
+def _parse_guided_injuries(
+    guided_injuries: list[GuidedInjury],
+) -> tuple[list[dict[str, str | None]], list[ParsedRestriction]]:
+    parsed_injuries: list[dict[str, str | None]] = []
+    parsed_restrictions: list[ParsedRestriction] = []
+    for guided_injury in guided_injuries:
+        injuries, restrictions = _parse_guided_injury(guided_injury)
+        parsed_injuries.extend(injuries)
+        parsed_restrictions.extend(restrictions)
+    return parsed_injuries, parsed_restrictions
 
 
 def _compute_days_until_fight(
@@ -512,8 +553,13 @@ class PlanInput:
         injuries = normalize_injury_text(
             get_value("Any injuries or areas you need to work around?", fields)
         )
+        guided_injuries = _extract_guided_injuries(data)
         guided_injury = _extract_guided_injury(data)
-        if guided_injury is not None:
+        if guided_injuries:
+            if guided_injury is None:
+                guided_injury = guided_injuries[0]
+            parsed_injuries, parsed_restrictions = _parse_guided_injuries(guided_injuries)
+        elif guided_injury is not None:
             parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
         else:
             parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")

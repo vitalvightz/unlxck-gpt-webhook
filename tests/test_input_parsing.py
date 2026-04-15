@@ -254,6 +254,46 @@ def test_guided_injury_payload_treats_area_as_source_of_truth():
     assert parsed.restrictions[0]["region"] == "hip"
 
 
+def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {
+                "label": "Any injuries or areas you need to work around?",
+                "value": "hip flexor (moderate, improving). Right heel. Notes: roadwork flare-up.",
+            },
+        ]
+    )
+    payload["guided_injuries"] = [
+        {
+            "area": "hip flexor",
+            "severity": "moderate",
+            "trend": "improving",
+            "avoid": "deep hip flexion",
+            "notes": "pain when driving knee up past pelvis",
+        },
+        {
+            "area": "right heel",
+            "severity": "low",
+            "trend": "stable",
+            "notes": "roadwork flare-up",
+        },
+    ]
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.area == "hip flexor"
+    assert len(parsed.parsed_injuries) == 2
+    assert parsed.parsed_injuries[0]["display_location"] == "hip flexor"
+    assert parsed.parsed_injuries[0]["notes"] == "pain when driving knee up past pelvis"
+    assert parsed.parsed_injuries[1]["display_location"] == "heel"
+    assert parsed.parsed_injuries[1]["notes"] == "roadwork flare-up"
+    assert len(parsed.restrictions) == 1
+    assert parsed.restrictions[0]["region"] == "hip"
+
+
 def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     payload = _payload(
         [
