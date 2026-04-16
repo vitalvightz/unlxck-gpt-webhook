@@ -1114,6 +1114,47 @@ def _sport_language_warnings(planning_brief: dict, plan_lines: list[str]) -> lis
     return warnings
 
 
+def _sparring_title_suffix_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = weekly_role_map.get("weeks") if isinstance(weekly_role_map, dict) else None
+    if not isinstance(weeks, list) or not weeks:
+        return []
+
+    suffixes: set[str] = set()
+    for week in weeks:
+        if not isinstance(week, dict):
+            continue
+        session_roles = week.get("session_roles")
+        if not isinstance(session_roles, list):
+            continue
+        for role in session_roles:
+            if not isinstance(role, dict):
+                continue
+            if str(role.get("role_key") or "").strip() != "hard_sparring_day":
+                continue
+            suffix = str(role.get("visible_title_suffix") or "").strip()
+            if suffix:
+                suffixes.add(suffix)
+
+    if not suffixes:
+        return []
+
+    lowered_text = final_plan_text.lower()
+    warnings: list[dict] = []
+    for suffix in sorted(suffixes):
+        if suffix.lower() in lowered_text:
+            continue
+        warnings.append(
+            {
+                "code": "sparring_title_suffix_missing",
+                "message": f"Main plan is missing required sparring title suffix {suffix}.",
+                "expected_suffix": suffix,
+                "blocking": False,
+            }
+        )
+    return warnings
+
+
 def _late_fight_plan_spec(planning_brief: dict) -> dict[str, Any]:
     spec = planning_brief.get("late_fight_plan_spec") or {}
     return spec if isinstance(spec, dict) else {}
@@ -1503,6 +1544,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     overstyled_name_warnings = _overstyled_name_warnings(plan_lines)
     coach_voice_warnings = _coach_voice_warnings(planning_brief, plan_lines)
     sport_language_warnings = _sport_language_warnings(planning_brief, plan_lines)
+    sparring_title_suffix_warnings = _sparring_title_suffix_warnings(planning_brief, final_plan_text)
     late_fight_warnings = _late_fight_warnings(planning_brief, final_plan_text)
 
     errors = [
@@ -1544,6 +1586,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(overstyled_name_warnings)
     warnings.extend(coach_voice_warnings)
     warnings.extend(sport_language_warnings)
+    warnings.extend(sparring_title_suffix_warnings)
     warnings.extend(late_fight_warnings)
 
     return {
@@ -1564,6 +1607,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "overstyled_name_warnings": overstyled_name_warnings,
         "gimmick_name_warnings": overstyled_name_warnings,
         "coach_voice_warnings": coach_voice_warnings,
+        "sparring_title_suffix_warnings": sparring_title_suffix_warnings,
         "late_fight_warnings": late_fight_warnings,
         "sport_language_warnings": sport_language_warnings,
     }

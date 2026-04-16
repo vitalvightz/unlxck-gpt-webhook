@@ -1540,6 +1540,8 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
                 "hard_sparring_plan": [],
                 "effective_hard_sparring_days": [],
                 "coach_note_flags": [_late_fight_stage_label(days_until_fight)],
+                "coach_note_flags_detailed": [],
+                "visible_sparring_overrides": [],
                 "intentional_compression": {
                     "active": True,
                     "reason_codes": [mode],

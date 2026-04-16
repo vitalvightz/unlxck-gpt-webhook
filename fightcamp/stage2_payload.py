@@ -775,6 +775,7 @@ def build_stage2_payload(
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
             "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload the sparring dose on that day instead of replacing the day role.",
+            "For every sparring session title, append the visible_title_suffix from weekly_role_map (Hard Primary, Hard Secondary, Hard Deload, or Technical Rhythm). Keep this in the main athlete-facing plan title line, not only in notes.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
@@ -883,6 +884,7 @@ Use autonomy-supportive phrasing only when a real safe choice exists; offer at m
 Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'. No empty safety boilerplate ('listen to your body', 'be careful') unless attached to a concrete rule or symptom trigger.
 — Collapse templates into one final prescription when context resolves the choice. One explicit fallback per session max.
 — Declared hard sparring days are immutable. Deload the dose if readiness is compromised — never replace the role.
+— For sparring session headings, always include the class suffix from weekly_role_map.visible_title_suffix: (Hard Primary), (Hard Secondary), (Hard Deload), or (Technical Rhythm).
 — Do not exceed the session count implied by weekly_role_map. Extra days are left off or clearly optional.
 — If intentional_compression.active, keep the smaller week — do not restore suppressed roles.
 — Placement governs day assignment only — it does not change insert voice, ownership, or visible session count.

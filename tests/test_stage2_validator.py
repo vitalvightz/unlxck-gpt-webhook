@@ -138,6 +138,54 @@ def _late_fight_planning_brief(days_out: str = "D-5") -> dict:
     }
 
 
+def test_validate_stage2_output_warns_when_required_sparring_suffix_missing():
+    report = validate_stage2_output(
+        planning_brief={
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "week_index": 1,
+                        "session_roles": [
+                            {"role_key": "hard_sparring_day", "visible_title_suffix": "(Hard Deload)"},
+                        ],
+                    }
+                ]
+            }
+        },
+        final_plan_text="""
+        ### Week 1 (SPP)
+        Session 1 — Sparring
+        - 4 controlled rounds
+        """,
+    )
+    warning_codes = [item["code"] for item in report["warnings"]]
+    assert "sparring_title_suffix_missing" in warning_codes
+
+
+def test_validate_stage2_output_passes_when_required_sparring_suffix_present():
+    report = validate_stage2_output(
+        planning_brief={
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "week_index": 1,
+                        "session_roles": [
+                            {"role_key": "hard_sparring_day", "visible_title_suffix": "(Technical Rhythm)"},
+                        ],
+                    }
+                ]
+            }
+        },
+        final_plan_text="""
+        ### Week 1 (SPP)
+        Session 1 — Sparring (Technical Rhythm)
+        - 4 technical rounds
+        """,
+    )
+    warning_codes = [item["code"] for item in report["warnings"]]
+    assert "sparring_title_suffix_missing" not in warning_codes
+
+
 
 def test_validate_stage2_output_flags_restriction_violations():
     report = validate_stage2_output(

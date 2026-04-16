@@ -359,10 +359,38 @@ def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) ->
     return ["deload hard sparring"] if status != "hard_as_planned" else []
 
 
+def _hard_sparring_coach_note_flags_detailed(plan_entry: dict[str, Any] | None = None) -> list[str]:
+    status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
+    if status == "convert_to_technical_suggested":
+        return ["convert hard sparring"]
+    if status == "deload_suggested":
+        return ["deload hard sparring"]
+    return []
+
+
 def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
     reason_codes = list((plan_entry or {}).get("reason_codes") or [])
     coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
+    coach_note_flags_detailed = _hard_sparring_coach_note_flags_detailed(plan_entry)
+    fallback_class_by_status = {
+        "hard_as_planned": "hard_secondary",
+        "deload_suggested": "hard_deload",
+        "convert_to_technical_suggested": "technical_rhythm",
+    }
+    fallback_policy_by_status = {
+        "hard_as_planned": "as_planned",
+        "deload_suggested": "deload",
+        "convert_to_technical_suggested": "convert",
+    }
+    dose_class = str((plan_entry or {}).get("dose_class") or "").strip() or fallback_class_by_status.get(status, "hard_secondary")
+    dose_policy = str((plan_entry or {}).get("dose_policy") or "").strip() or fallback_policy_by_status.get(status, "as_planned")
+    title_suffix = {
+        "hard_primary": "(Hard Primary)",
+        "hard_secondary": "(Hard Secondary)",
+        "hard_deload": "(Hard Deload)",
+        "technical_rhythm": "(Technical Rhythm)",
+    }.get(dose_class, "(Hard Secondary)")
     role: dict[str, Any] = {
         "category": "sparring",
         "role_key": "hard_sparring_day",
@@ -396,7 +424,11 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "hard_sparring_status": status,
         "hard_sparring_reason_codes": reason_codes,
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
+        "hard_sparring_dose_class": dose_class,
+        "hard_sparring_dose_policy": dose_policy,
+        "visible_title_suffix": title_suffix,
         "coach_note_flags": coach_note_flags,
+        "coach_note_flags_detailed": coach_note_flags_detailed,
     }
     if role["coach_note_flags"]:
         role["placement_rule"] += " Deload the sparring dose instead of changing the slot."
@@ -1401,6 +1433,13 @@ def _build_weekly_role_map(
                 for flag in _hard_sparring_coach_note_flags(entry)
             ]
         )
+        week_entry["coach_note_flags_detailed"] = _dedupe_clean_strings(
+            [
+                flag
+                for entry in hard_sparring_plan
+                for flag in _hard_sparring_coach_note_flags_detailed(entry)
+            ]
+        )
 
         session_roles = _resequence_session_roles(
             week_entry,
@@ -1449,8 +1488,24 @@ def _build_weekly_role_map(
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),
+                "coach_note_flags_detailed": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags_detailed", []))),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "intentionally_unused_days": list(week_entry.get("intentionally_unused_days") or []),
+                "visible_sparring_overrides": [
+                    {
+                        "day": str(entry.get("day") or "").strip(),
+                        "dose_class": str(entry.get("dose_class") or "").strip(),
+                        "dose_policy": str(entry.get("dose_policy") or "").strip(),
+                        "visible_title_suffix": {
+                            "hard_primary": "(Hard Primary)",
+                            "hard_secondary": "(Hard Secondary)",
+                            "hard_deload": "(Hard Deload)",
+                            "technical_rhythm": "(Technical Rhythm)",
+                        }.get(str(entry.get("dose_class") or "").strip(), "(Hard Secondary)"),
+                    }
+                    for entry in hard_sparring_plan
+                    if str(entry.get("day") or "").strip()
+                ],
                 "session_roles": session_roles,
                 "suppressed_roles": suppressed_roles,
             }
