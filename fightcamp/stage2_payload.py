@@ -249,6 +249,11 @@ def build_planning_brief(
         phase_briefs,
         weekly_stress_map,
     )
+    rewrite_guidance = {
+        "selection_rules": dedupe_preserve_order(rewrite_guidance.get("selection_rules", [])),
+        "writing_rules": dedupe_preserve_order(rewrite_guidance.get("writing_rules", [])),
+    }
+
     days_until_fight = athlete_model.get("days_until_fight")
 
     if _uses_late_fight_stage2_payload(days_until_fight):
@@ -765,6 +770,7 @@ def build_stage2_payload(
             "For any corrective or adjustment line, make one clear coaching call instead of defaulting to hedged advice.",
             "Prefer command-then-reason on corrective lines; do not lead with explanation and then soften it into a suggestion.",
             "Keep rationale short and tie it to performance, safety, readiness, or the week's main objective.",
+            "Keep each session line to one directive, one short why, and at most one fallback.",
             "Do not start corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.",
             "Use autonomy-supportive phrasing only within real guardrails; if choice is safe and useful, offer at most two practical options, and only when both options are safe and materially equivalent for the day's goal.",
             "Replace generic motivation, empty empathy, and boilerplate safety reminders with concrete next-action language.",
@@ -796,6 +802,7 @@ def build_stage2_payload(
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
             "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
             "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
+            "Favor concrete commands over long explanations.",
         ],
     }
 
@@ -840,78 +847,53 @@ STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 Input = PLANNING BRIEF + Stage 1 draft + athlete profile + restrictions + candidate pools.
 
 AUTHORITY ORDER
-1. PLANNING BRIEF — primary authority for intent, phase strategy, priorities, and risks.
-2. Restrictions — hard constraints. Non-negotiable.
-3. Candidate pools — preferred exercise reservoir.
-4. Stage 1 draft — raw material only. Not final authority.
+1. Planning brief.
+2. Restrictions (hard constraints).
+3. Candidate pools.
+4. Stage 1 draft (raw material only).
 
-RULE 1 — HARD FILTER
-Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. Do not modify a violating item into compliance — replace or drop it.
+CORE RULES
+1) Remove anything restriction-violating (including mechanical equivalents). Replace or drop.
+2) Build the best camp from the brief; do not preserve weak Stage 1 inertia.
+3) Keep anchors high-transfer (serious strength/power if compliant). Support work stays support.
+4) Respect equipment, weekly_role_map session count, intentional compression, and immutable hard sparring days.
+5) Taper/fight-week: reduce volume and options; for 0-1 days output readiness-only, for 2-3 days micro-taper, for 4-6 days mini-taper.
+6) Active weight cut and injury management must be explicit and structural. For injury language, lead with constraints/substitutions/stop rules.
+7) Output must be decisive and gym-realistic: make the call, then brief why. Avoid "focus on"/"ensure" openers, generic motivation, and long explanation.
+8) Use at most two practical options only when both are safe and equivalent; otherwise give one final prescription (+ one fallback max).
+9) If fatigue or fight-week pressure is high, reduce optionality and keep directives plain.
 
-RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
-Build the best final plan from the PLANNING BRIEF. Use week_by_week_progression and weekly_role_map to sequence the camp. Reorganise and tighten — coherence over inertia.
-
-RULE 3 — SELECTION ORDER
-Prefer strong compliant Stage 1 items first, then same-role pool alternates, then other compliant pool options. Never keep a weak Stage 1 choice because it already exists.
-
-RULE 4 — ANCHOR STANDARD
-Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant option exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
-
-RULE 5 — SAFE STRONG, NOT SAFE SOFT
-In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists, prefer it over low-output filler for key slots.
-
-RULE 6 — SPORT SPECIFICITY
-The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fatigue, injury context, equipment, and phase.
-
-RULE 7 — SUPPORT WORK STAYS SUPPORT
-Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the brief requires a protection-first camp. When cutting volume, cut accessory work first.
-
-RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
-Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating items with stronger compliant options, not softer ones.
-
-RULE 9 — TAPER DISCIPLINE
-Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.
-If planning_brief.fight_week_override.active is true:
-— 0–1 days: no training; coach note + readiness protocol only.
-— 2–3 days: one short primer max + one light mobility/recovery session.
-— 4–6 days: freshness-first, reduced volume, 1–2 sharpness sessions.
-Never chase fitness in these windows.
-
-RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
-Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
-Active injury: lead with constraints, substitutions, and stop rules — not optional language.
-Both flags narrow training tolerance and must shape the output structurally.
-When injury wording is vague or underspecified, use INJURY CONTEXT to infer the safest high-probability interpretation. Never override hard restrictions or triage blocks, and prefer conservative substitutions and wording when detail is incomplete.
-
-RULE 11 — OUTPUT DISCIPLINE
-Write like an elite coach, not a document generator. Coach voice should feel decisive, respectful, and gym-realistic.
-— Lead with action. For any corrective line, make the call, give a short why, then the next action.
-Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'. Start with the action.
-Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options, only when both are safe and materially equivalent.
-Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'. No empty safety boilerplate ('listen to your body', 'be careful') unless attached to a concrete rule or symptom trigger.
-— Collapse templates into one final prescription when context resolves the choice. One explicit fallback per session max.
-— Declared hard sparring days are immutable. Deload the dose if readiness is compromised — never replace the role.
-— Do not exceed the session count implied by weekly_role_map. Extra days are left off or clearly optional.
-— If intentional_compression.active, keep the smaller week — do not restore suppressed roles.
-— Placement governs day assignment only — it does not change insert voice, ownership, or visible session count.
-— If fatigue is high or fight-week pressure is active, reduce optionality and make the safest call plainly.
-— If injury management is active, lead with constraints, substitutions, or stop rules — not optional language.
-
-RULE 12 — SURGICAL REHAB INTEGRATION
-Rehab must be intentional, not copy-pasted. Full authority to add, adjust, or remove any rehab item.
-Use the function_class tags (activation / control / isometric_analgesia / mobility / tendon_loading / recovery_downregulation) as scoring guidance — not hard constraints.
-— Each session: 1–2 rehab functions, 5–10 minutes total.
-— Spar days: 1 drill max — activation or brief post-session reset only.
-— Strength/power days: prepare the specific risk point for the main lift.
-— Aerobic/recovery days: tissue tolerance, control, mobility, low-load patterning.
-
-Render every rehab item as:
-  • [Drill name] — [Dose]
-    Purpose: [exact mechanism — the specific limitation, not just the body part]
-    Why today: [why this day type — pre-sparring activation / post-strength reset / aerobic tolerance / etc.]
-
-If a drill repeats across sessions, the Why today must make the changed role explicit. Use precise mechanism wording — not vague body-part labels. Before keeping any rehab item: confirm it solves a specific issue, belongs on this day, and does not duplicate a same-role drill already used this week. Drop it if it fails two of three.
+REHAB INTEGRATION
+- Keep rehab intentional, short, and role-specific (usually 1-2 functions, 5-10 min).
+- Spar days: 1 rehab drill max. Strength days: prep the risk point. Recovery days: tolerance/control/mobility.
+- Format: [Drill] — [Dose] + Purpose + Why today.
 """
+
+
+_RULE_SECTION_LIMITS = {
+    "selection_rules": 8,
+    "writing_rules": 14,
+}
+_VERBOSE_RULE_KEYS = {"explanation", "rationale", "why", "notes", "coach_notes", "details"}
+
+
+def _compact_rule_section(value: object, *, limit: int) -> list[str]:
+    rules = dedupe_preserve_order(clean_list(value if isinstance(value, list) else []))
+    return rules[:limit]
+
+
+def _compact_for_handoff(value: object) -> object:
+    if isinstance(value, list):
+        return [_compact_for_handoff(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+
+    compact: dict[str, object] = {}
+    for key, raw in value.items():
+        if key in _VERBOSE_RULE_KEYS:
+            continue
+        compact[key] = _compact_for_handoff(raw)
+    return compact
 
 
 
@@ -952,18 +934,44 @@ def build_stage2_handoff_text(
     # ── Payload-mode-sensitive hard instructions ──────────────────
     mode_instructions = _handoff_mode_instructions(payload_mode)
 
-    sections = [
+    sections: list[str] = [
         STAGE2_FINALIZER_PROMPT.strip(),
     ]
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
-    sections.append("PLANNING BRIEF\n" + _json_block(context_block))
-    sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+
+    compact_context = _compact_for_handoff(dict(context_block) if isinstance(context_block, dict) else context_block)
+    if isinstance(compact_context, dict) and isinstance(compact_context.get("decision_rules"), dict):
+        rules = compact_context["decision_rules"]
+        compact_context["decision_rules"] = {
+            section: _compact_rule_section(
+                rules.get(section, []),
+                limit=_RULE_SECTION_LIMITS.get(section, 10),
+            )
+            for section in ("selection_rules", "writing_rules")
+        }
+    sections.append("PLANNING BRIEF\n" + _json_block(compact_context))
+
+    if athlete_profile:
+        sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+
     injury_context = stage2_payload.get("injury_context")
+    if not isinstance(injury_context, dict):
+        athlete_model = stage2_payload.get("athlete_model")
+        injury_context = _build_injury_context(athlete_model=athlete_model if isinstance(athlete_model, dict) else {})
     if isinstance(injury_context, dict):
-        sections.append("INJURY CONTEXT\n" + _json_block(injury_context))
+        sections.append("INJURY CONTEXT\n" + _json_block(_compact_for_handoff(injury_context)))
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
-    return "\n\n---\n\n".join(section for section in sections if section.strip())
+
+    unique_sections: list[str] = []
+    seen: set[str] = set()
+    for section in sections:
+        normalized = section.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_sections.append(normalized)
+    return "\n\n---\n\n".join(unique_sections)
