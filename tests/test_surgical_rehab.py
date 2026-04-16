@@ -455,6 +455,18 @@ def test_build_rehab_slots_same_function_alternates_not_blocked():
     assert isinstance(slots, list)
 
 
+def test_build_rehab_slots_bans_nordics_in_taper():
+    rehab_block = (
+        "- Hamstring (Strain):\n"
+        "  • Nordic Hamstring Curl Eccentrics – tendon load\n"
+        "  • Banded Hamstring ISO Hold – safe hold\n"
+    )
+    slots = _build_rehab_slots(rehab_block, "TAPER")
+
+    selected_names = [slot.get("selected", {}).get("name", "").lower() for slot in slots]
+    assert all("nordic" not in name for name in selected_names)
+
+
 # ---------------------------------------------------------------------------
 # STAGE2_FINALIZER_PROMPT — Rule 12 content
 # ---------------------------------------------------------------------------

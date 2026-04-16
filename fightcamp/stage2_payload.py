@@ -582,6 +582,10 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
         injury_type = group.get("injury_type", "unspecified")
         role = f"rehab_{slugify(location)}_{slugify(injury_type)}"
         selected_lines = [line for line in group.get("drills", []) if line]
+        if phase.upper() == "TAPER":
+            selected_lines = [line for line in selected_lines if "nordic" not in line.lower()]
+            if not selected_lines:
+                continue
         selected_set = set(selected_lines)
         rehab_options = _rehab_drills_for_phase(
             injury_type.lower(),
@@ -609,7 +613,11 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             # We gather up to 4 candidates so diversity sorting has enough to work with.
             scored_alternates: list[tuple[int, dict]] = []
             for option in rehab_options:
-                if option == line or option in selected_set:
+                if (
+                    option == line
+                    or option in selected_set
+                    or (phase.upper() == "TAPER" and "nordic" in option.lower())
+                ):
                     continue
                 opt_func = classify_drill_function(option)
                 # Prefer function diversity, but do not hard-block same-function
