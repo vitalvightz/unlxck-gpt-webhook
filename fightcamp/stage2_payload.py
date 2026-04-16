@@ -249,6 +249,11 @@ def build_planning_brief(
         phase_briefs,
         weekly_stress_map,
     )
+    rewrite_guidance = {
+        "selection_rules": dedupe_preserve_order(rewrite_guidance.get("selection_rules", [])),
+        "writing_rules": dedupe_preserve_order(rewrite_guidance.get("writing_rules", [])),
+    }
+
     days_until_fight = athlete_model.get("days_until_fight")
 
     if _uses_late_fight_stage2_payload(days_until_fight):
@@ -765,6 +770,7 @@ def build_stage2_payload(
             "For any corrective or adjustment line, make one clear coaching call instead of defaulting to hedged advice.",
             "Prefer command-then-reason on corrective lines; do not lead with explanation and then soften it into a suggestion.",
             "Keep rationale short and tie it to performance, safety, readiness, or the week's main objective.",
+            "Keep each session line to one directive, one short why, and at most one fallback.",
             "Do not start corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.",
             "Use autonomy-supportive phrasing only within real guardrails; if choice is safe and useful, offer at most two practical options, and only when both options are safe and materially equivalent for the day's goal.",
             "Replace generic motivation, empty empathy, and boilerplate safety reminders with concrete next-action language.",
@@ -796,6 +802,7 @@ def build_stage2_payload(
             "If injury management is active, lead with constraints, substitutions, or stop rules instead of optional language.",
             "If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.",
             "Vary sentence openings and cut repeated filler reminders so the final plan reads like a coach's final prescription, not a template.",
+            "Favor concrete commands over long explanations.",
         ],
     }
 
@@ -952,13 +959,24 @@ def build_stage2_handoff_text(
     # ── Payload-mode-sensitive hard instructions ──────────────────
     mode_instructions = _handoff_mode_instructions(payload_mode)
 
-    sections = [
+    sections: list[str] = [
         STAGE2_FINALIZER_PROMPT.strip(),
     ]
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
-    sections.append("PLANNING BRIEF\n" + _json_block(context_block))
-    sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+
+    compact_context = dict(context_block) if isinstance(context_block, dict) else context_block
+    if isinstance(compact_context, dict) and isinstance(compact_context.get("decision_rules"), dict):
+        rules = compact_context["decision_rules"]
+        compact_context["decision_rules"] = {
+            "selection_rules": dedupe_preserve_order(clean_list(rules.get("selection_rules", []))),
+            "writing_rules": dedupe_preserve_order(clean_list(rules.get("writing_rules", []))),
+        }
+    sections.append("PLANNING BRIEF\n" + _json_block(compact_context))
+
+    if athlete_profile:
+        sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+
     injury_context = stage2_payload.get("injury_context")
     if isinstance(injury_context, dict):
         sections.append("INJURY CONTEXT\n" + _json_block(injury_context))
@@ -966,4 +984,13 @@ def build_stage2_handoff_text(
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
-    return "\n\n---\n\n".join(section for section in sections if section.strip())
+
+    unique_sections: list[str] = []
+    seen: set[str] = set()
+    for section in sections:
+        normalized = section.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_sections.append(normalized)
+    return "\n\n---\n\n".join(unique_sections)
