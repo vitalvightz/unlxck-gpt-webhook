@@ -135,7 +135,7 @@ def test_build_stage2_repair_prompt_requests_athlete_facing_output_only():
 
     assert "Return only the revised athlete-facing final plan." in prompt
     assert "Do not mention the validator" in prompt
-    assert "For corrective lines: command then short reason" in prompt
+    assert "For corrective lines: lead with action, give one short why, then next action" in prompt
     assert "Replace generic motivation, scripted empathy, and empty safety language" in prompt
     assert "Start with the action (not generic openers)" in prompt
     assert "immutable hard_sparring_day slots" in prompt
