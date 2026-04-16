@@ -35,7 +35,7 @@ REPAIR RULES:
 22. Keep global rules (weight cut, stop rules, ownership) stated once unless day-specific changes are required.
 23. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
 24. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
-25. For corrective lines: command then short reason. Start with the action (not generic openers).
+25. For corrective lines: lead with action, give one short why, then next action. Start with the action (not generic openers).
 26. Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options when both are safe and equivalent.
 27. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
 28. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
