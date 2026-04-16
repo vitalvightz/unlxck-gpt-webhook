@@ -78,3 +78,15 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
     assert "injury" in handoff.lower() and ("constraints" in handoff.lower() or "stop rules" in handoff.lower()), (
         "Handoff should address injury → lead with constraints"
     )
+
+
+def test_build_stage2_handoff_text_enforces_tight_athlete_facing_session_format():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={},
+        plan_text="Week 1\n- Landmine Press - 4x5",
+        planning_brief={"athlete_snapshot": {"sport": "boxing"}},
+    )
+
+    assert "ks4" in handoff.lower(), "Handoff should anchor readable athlete-facing language level"
+    assert "2–4 main bullets max" in handoff, "Handoff should enforce tight session bullet count"
+    assert "one rehab line" in handoff.lower(), "Handoff should enforce single-line rehab rendering"

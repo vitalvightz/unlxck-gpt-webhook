@@ -31,6 +31,9 @@ REPAIR RULES:
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
 19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
 20. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+20a. Keep wording at roughly KS4 level: simple words, short sentences, low jargon.
+20b. Keep each session tight: session title, one short goal line, 2–4 main bullets max, one rehab line, and one short coach call only if needed.
+20c. Keep global rules (weight cut, stop rules, ownership) stated once unless day-specific changes are required.
 21. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
 22. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
 23. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
@@ -45,6 +48,7 @@ REPAIR RULES:
 32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
 33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
 34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+34a. Remove repeated "Purpose / Why today / mechanism" rehab scaffolding. Keep rehab as one plain line tied to the day.
 35. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
 36. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
 37. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
