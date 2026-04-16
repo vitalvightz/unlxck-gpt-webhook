@@ -2145,6 +2145,11 @@ def test_weight_cut_brief_and_payload_surface_cut_stress_explicitly():
     assert any("recovery spacing" in line for line in brief["global_priorities"]["preserve"])
     assert any("glycolytic density" in line for line in brief["global_priorities"]["avoid"])
     assert any("explicitly acknowledge" in line for line in payload["rewrite_guidance"]["writing_rules"])
+    assert any(
+        "For corrective lines: command then short reason. Start with the action (not generic openers)." in line
+        for line in payload["rewrite_guidance"]["writing_rules"]
+    )
+    assert any("1–2 rehab lines max" in line for line in payload["rewrite_guidance"]["writing_rules"])
 
 
 def test_weight_cut_support_blocks_keep_protocol_and_plain_acknowledgement():

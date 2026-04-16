@@ -31,24 +31,22 @@ REPAIR RULES:
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
 19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
 20. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-21. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
-22. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
-23. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
-24. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
-25. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
-26. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+21. Keep wording at roughly KS4 level (simple words, short sentences, low jargon), and keep sessions tight: session title, one short goal line, 2–4 main bullets max, 1–2 rehab lines max, and one short coach call only if needed.
+22. Keep global rules (weight cut, stop rules, ownership) stated once unless day-specific changes are required.
+23. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+24. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+25. For corrective lines: command then short reason. Start with the action (not generic openers).
+26. Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options when both are safe and equivalent.
 27. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
-28. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
-29. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
-30. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-31. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
-35. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
-36. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
-37. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
-38. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
+28. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+29. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+30. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+31. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+32. Remove repeated labels/openers and Purpose/Why/mechanism rehab scaffolding so the repaired plan reads like a final coach prescription, not a template.
+33. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
+34. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
+35. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
+36. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
