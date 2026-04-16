@@ -12,6 +12,7 @@ _APP_STATUS_REVIEW_REQUIRED = "review_required"
 _STAGE2_PASS = "stage2_pass"
 _STAGE2_RETRY_PASS = "stage2_retry_pass"
 _STAGE2_FAILED = "stage2_failed"
+_STAGE2_RETRY_ENV = "UNLXCK_STAGE2_RETRY_ACTIVE"
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,7 @@ def _review_required_result(
     latest_plan_text: str,
     validator_report: dict[str, Any],
     retry_text: str,
+    attempt_count: int,
 ) -> dict[str, Any]:
     return {
         **_base_result(stage1_result, draft_plan_text=draft_plan_text),
@@ -115,8 +117,13 @@ def _review_required_result(
         "stage2_status": _STAGE2_FAILED,
         "stage2_validator_report": validator_report,
         "stage2_retry_text": retry_text,
-        "stage2_attempt_count": 2,
+        "stage2_attempt_count": attempt_count,
     }
+
+
+def _is_stage2_retry_active() -> bool:
+    raw = os.getenv(_STAGE2_RETRY_ENV, "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
 
 
 @dataclass
@@ -189,11 +196,13 @@ class OpenAIStage2Automator:
         package = build_stage2_package(stage1_result=stage1_result)
         draft_plan_text = str(package.get("draft_plan_text") or "")
         handoff_text = str(package["handoff_text"])
+        retry_active = _is_stage2_retry_active()
         logger.info(
-            "[stage2] package ready model=%s handoff_chars=%s draft_chars=%s",
+            "[stage2] package ready model=%s handoff_chars=%s draft_chars=%s retry_active=%s",
             self.model,
             len(handoff_text),
             len(draft_plan_text),
+            retry_active,
         )
 
         first_pass_text = await self._generate_text(handoff_text, attempt_label="first_pass")
@@ -232,6 +241,18 @@ class OpenAIStage2Automator:
                 latest_plan_text=first_pass_text,
                 validator_report=first_review["validator_report"],
                 retry_text="",
+                attempt_count=1,
+            )
+
+        if not retry_active:
+            logger.info("[stage2] retry disabled by env=%s; sending review_required after first pass", _STAGE2_RETRY_ENV)
+            return _review_required_result(
+                stage1_result,
+                draft_plan_text=draft_plan_text,
+                latest_plan_text=first_pass_text,
+                validator_report=first_review["validator_report"],
+                retry_text=retry_text,
+                attempt_count=1,
             )
 
         second_pass_text = await self._generate_text(retry_text, attempt_label="retry_pass")
@@ -262,6 +283,7 @@ class OpenAIStage2Automator:
             latest_plan_text=second_pass_text,
             validator_report=second_review["validator_report"],
             retry_text=retry_text,
+            attempt_count=2,
         )
 
 
