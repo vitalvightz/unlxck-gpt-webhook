@@ -122,7 +122,7 @@ def _review_required_result(
 
 
 def _is_stage2_retry_active() -> bool:
-    raw = os.getenv(_STAGE2_RETRY_ENV, "0").strip().lower()
+    raw = os.getenv(_STAGE2_RETRY_ENV, "1").strip().lower()
     return raw in {"1", "true", "yes", "on"}
 
 
