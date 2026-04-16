@@ -225,5 +225,28 @@ def test_dose_profile_is_exposed_for_operational_meaning():
     )
     by_day = {entry["day"]: entry for entry in plan}
 
-    assert by_day["Tuesday"]["dose_profile"]["collision_cap"] == "highest_weekly"
-    assert by_day["Thursday"]["dose_profile"]["technical_finish_required"] is True
+    assert by_day["Tuesday"]["dose_profile"] == {
+        "max_round_fraction": 1.0,
+        "max_live_intensity_pct": 100,
+        "max_collision_intensity_pct": 100,
+        "technical_finish_min_rounds": 0,
+        "padwork_share_min_pct": 0,
+    }
+    assert by_day["Thursday"]["dose_profile"] == {
+        "max_round_fraction": 0.65,
+        "max_live_intensity_pct": 75,
+        "max_collision_intensity_pct": 55,
+        "technical_finish_min_rounds": 2,
+        "padwork_share_min_pct": 40,
+    }
+
+
+def test_countdown_convert_all_uses_technical_profile_for_every_declared_day():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday"]),
+        athlete_snapshot=_athlete(days_until_fight=5, hard_days=["Monday", "Wednesday"]),
+    )
+
+    assert [entry["dose_class"] for entry in plan] == ["technical_rhythm", "technical_rhythm"]
+    assert all(entry["dose_policy"] == "convert" for entry in plan)
+    assert all(entry["dose_profile"]["max_collision_intensity_pct"] == 20 for entry in plan)

@@ -37,34 +37,34 @@ _DOSE_CLASS_TECHNICAL_RHYTHM = "technical_rhythm"
 def _dose_operational_profile(dose_class: str) -> dict[str, Any]:
     if dose_class == _DOSE_CLASS_HARD_PRIMARY:
         return {
-            "round_cap": "full_declared",
-            "live_intensity_cap": "full_hard",
-            "collision_cap": "highest_weekly",
-            "technical_finish_required": False,
-            "pad_heavy_bias": False,
+            "max_round_fraction": 1.0,
+            "max_live_intensity_pct": 100,
+            "max_collision_intensity_pct": 100,
+            "technical_finish_min_rounds": 0,
+            "padwork_share_min_pct": 0,
         }
     if dose_class == _DOSE_CLASS_HARD_SECONDARY:
         return {
-            "round_cap": "minus_1_round_or_15pct",
-            "live_intensity_cap": "hard_but_submax",
-            "collision_cap": "moderate_high",
-            "technical_finish_required": True,
-            "pad_heavy_bias": False,
+            "max_round_fraction": 0.85,
+            "max_live_intensity_pct": 90,
+            "max_collision_intensity_pct": 80,
+            "technical_finish_min_rounds": 1,
+            "padwork_share_min_pct": 20,
         }
     if dose_class == _DOSE_CLASS_HARD_DELOAD:
         return {
-            "round_cap": "half_to_two_thirds_declared",
-            "live_intensity_cap": "controlled_moderate",
-            "collision_cap": "strict_low",
-            "technical_finish_required": True,
-            "pad_heavy_bias": True,
+            "max_round_fraction": 0.65,
+            "max_live_intensity_pct": 75,
+            "max_collision_intensity_pct": 55,
+            "technical_finish_min_rounds": 2,
+            "padwork_share_min_pct": 40,
         }
     return {
-        "round_cap": "technical_only",
-        "live_intensity_cap": "light_technical",
-        "collision_cap": "near_zero",
-        "technical_finish_required": True,
-        "pad_heavy_bias": True,
+        "max_round_fraction": 0.5,
+        "max_live_intensity_pct": 60,
+        "max_collision_intensity_pct": 20,
+        "technical_finish_min_rounds": 3,
+        "padwork_share_min_pct": 60,
     }
 
 
@@ -74,6 +74,14 @@ def _status_from_dose_class(dose_class: str) -> str:
     if dose_class == _DOSE_CLASS_HARD_DELOAD:
         return "deload_suggested"
     return "hard_as_planned"
+
+
+def _dose_policy_from_dose_class(dose_class: str) -> str:
+    if dose_class == _DOSE_CLASS_TECHNICAL_RHYTHM:
+        return "convert"
+    if dose_class == _DOSE_CLASS_HARD_DELOAD:
+        return "deload"
+    return "as_planned"
 
 
 def _effective_load_from_dose_class(dose_class: str) -> str:
@@ -422,22 +430,6 @@ def _reason_codes(
     return codes
 
 
-def _dose_policy_from_status(status: str) -> str:
-    if status == "convert_to_technical_suggested":
-        return "convert"
-    if status == "deload_suggested":
-        return "deload"
-    return "as_planned"
-
-
-def _dose_class_from_status(status: str) -> str:
-    if status == "convert_to_technical_suggested":
-        return _DOSE_CLASS_TECHNICAL_RHYTHM
-    if status == "deload_suggested":
-        return _DOSE_CLASS_HARD_DELOAD
-    return _DOSE_CLASS_HARD_SECONDARY
-
-
 def _dose_rank(dose_class: str) -> int:
     return {
         _DOSE_CLASS_HARD_PRIMARY: 0,
@@ -445,32 +437,6 @@ def _dose_rank(dose_class: str) -> int:
         _DOSE_CLASS_HARD_DELOAD: 2,
         _DOSE_CLASS_TECHNICAL_RHYTHM: 3,
     }.get(dose_class, 1)
-
-
-def _annotate_dose_classes(*, plan: list[dict[str, Any]], week: dict[str, Any], hard_days: list[str]) -> list[dict[str, Any]]:
-    if not plan:
-        return []
-
-    annotated: list[dict[str, Any]] = []
-    protected_day = _pick_protected_hard_day(hard_days, week=week)
-    hard_days_as_planned = [entry.get("day") for entry in plan if entry.get("status") == "hard_as_planned"]
-    if protected_day not in hard_days_as_planned:
-        protected_day = str(hard_days_as_planned[0]) if hard_days_as_planned else ""
-
-    for entry in plan:
-        status = str(entry.get("status") or "hard_as_planned").strip() or "hard_as_planned"
-        day = str(entry.get("day") or "").strip()
-        policy = _dose_policy_from_status(status)
-        dose_class = _dose_class_from_status(status)
-        if status == "hard_as_planned":
-            dose_class = _DOSE_CLASS_HARD_PRIMARY if day == protected_day else _DOSE_CLASS_HARD_SECONDARY
-        annotated_entry = dict(entry)
-        annotated_entry["dose_policy"] = policy
-        annotated_entry["dose_class"] = dose_class
-        annotated_entry["dose_rank"] = _dose_rank(dose_class)
-        annotated_entry["dose_profile"] = _dose_operational_profile(dose_class)
-        annotated.append(annotated_entry)
-    return annotated
 
 
 def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -523,7 +489,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             "reason_codes": list(reason_codes_list) if status != "hard_as_planned" else [],
             "reason": reason_text if status != "hard_as_planned" else "",
             "dose_class": dose_class,
-            "dose_policy": _dose_policy_from_status(status),
+            "dose_policy": _dose_policy_from_dose_class(dose_class),
             "dose_rank": _dose_rank(dose_class),
             "dose_profile": _dose_operational_profile(dose_class),
         }
@@ -533,7 +499,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 note_action_by_countdown[countdown_override],
             )
         plan.append(entry)
-    return _annotate_dose_classes(plan=plan, week=week, hard_days=hard_days)
+    return plan
 
 
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {
