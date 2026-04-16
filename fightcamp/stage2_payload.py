@@ -757,7 +757,7 @@ def build_stage2_payload(
             "Keep wording at roughly KS4 level: simple words, short sentences, low jargon.",
             "Use this visible session format: session title, one short goal line, 2–4 main bullets max, 1–2 rehab lines max, one short coach call only if needed.",
             "State global rules (weight cut, stop rules, ownership) once unless day-specific changes are required.",
-            "For corrective lines: command then short reason. Start with the action (not generic openers).",
+            "For corrective lines: command then short reason. Start with the action (avoid generic openers like 'focus on' or 'ensure').",
             "Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options when both are safe and equivalent.",
             "Replace generic motivation, empty empathy, and boilerplate safety reminders with concrete next-action language.",
             "Aim critique at the plan, load, or execution issue, never at the athlete's character.",
