@@ -12,6 +12,7 @@ from fightcamp.stage2_payload import (
     build_planning_brief,
     build_stage2_payload,
 )
+from fightcamp.stage2_role_map import _hard_sparring_role
 from fightcamp.nutrition import generate_nutrition_block
 from fightcamp.recovery import generate_recovery_block
 from fightcamp.training_context import TrainingContext
@@ -77,6 +78,22 @@ def test_parse_record_invalid_string_returns_unknown_maturity():
     assert parsed["draws"] is None
     assert parsed["total_bouts"] is None
     assert parsed["competitive_maturity"] == "unknown_competitive_maturity"
+
+
+def test_hard_sparring_role_fallback_maps_convert_status_to_technical_rhythm():
+    role = _hard_sparring_role(
+        {"resolved_rule_state": {}},
+        "Thursday",
+        plan_entry={
+            "status": "convert_to_technical_suggested",
+            "reason_codes": ["instability"],
+            "reason": "instability",
+        },
+    )
+
+    assert role["hard_sparring_dose_class"] == "technical_rhythm"
+    assert role["hard_sparring_dose_policy"] == "convert"
+    assert role["visible_title_suffix"] == "(Technical Rhythm)"
 
 
 def test_competitive_maturity_buckets_amateur_by_total_bouts():
@@ -1815,8 +1832,31 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     assert week["declared_hard_sparring_days"] == ["Tuesday", "Thursday"]
     assert [entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"] == ["Thursday"]
     assert week["effective_hard_sparring_days"] == ["Tuesday"]
+    assert [entry["dose_class"] for entry in week["hard_sparring_plan"]] == ["hard_primary", "hard_deload"]
+    assert [entry["dose_policy"] for entry in week["hard_sparring_plan"]] == ["as_planned", "deload"]
     assert locked_spar_days == ["Tuesday", "Thursday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
+    assert week["coach_note_flags_detailed"] == ["deload hard sparring"]
+    spar_role_suffixes = [
+        role["visible_title_suffix"]
+        for role in week["session_roles"]
+        if role["role_key"] == "hard_sparring_day"
+    ]
+    assert spar_role_suffixes == ["(Hard Primary)", "(Hard Deload)"]
+    assert week["visible_sparring_overrides"] == [
+        {
+            "day": "Tuesday",
+            "dose_class": "hard_primary",
+            "dose_policy": "as_planned",
+            "visible_title_suffix": "(Hard Primary)",
+        },
+        {
+            "day": "Thursday",
+            "dose_class": "hard_deload",
+            "dose_policy": "deload",
+            "visible_title_suffix": "(Hard Deload)",
+        },
+    ]
     # New behaviour: declared spar count (2) drives the cap and priority demotion,
     # so "two_hard_spar_days" is present even when only one day is fully effective.
     assert "two_hard_spar_days" in week["intentional_compression"]["reason_codes"]

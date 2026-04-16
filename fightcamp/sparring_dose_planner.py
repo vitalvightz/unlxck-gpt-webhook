@@ -28,6 +28,11 @@ _HIGH_RISK_INJURY_TOKENS = {
     "subluxation",
 }
 
+_DOSE_CLASS_HARD_PRIMARY = "hard_primary"
+_DOSE_CLASS_HARD_SECONDARY = "hard_secondary"
+_DOSE_CLASS_HARD_DELOAD = "hard_deload"
+_DOSE_CLASS_TECHNICAL_RHYTHM = "technical_rhythm"
+
 
 
 
@@ -298,6 +303,56 @@ def _reason_codes(
     return codes
 
 
+def _dose_policy_from_status(status: str) -> str:
+    if status == "convert_to_technical_suggested":
+        return "convert"
+    if status == "deload_suggested":
+        return "deload"
+    return "as_planned"
+
+
+def _dose_class_from_status(status: str) -> str:
+    if status == "convert_to_technical_suggested":
+        return _DOSE_CLASS_TECHNICAL_RHYTHM
+    if status == "deload_suggested":
+        return _DOSE_CLASS_HARD_DELOAD
+    return _DOSE_CLASS_HARD_SECONDARY
+
+
+def _dose_rank(dose_class: str) -> int:
+    return {
+        _DOSE_CLASS_HARD_PRIMARY: 0,
+        _DOSE_CLASS_HARD_SECONDARY: 1,
+        _DOSE_CLASS_HARD_DELOAD: 2,
+        _DOSE_CLASS_TECHNICAL_RHYTHM: 3,
+    }.get(dose_class, 1)
+
+
+def _annotate_dose_classes(*, plan: list[dict[str, Any]], week: dict[str, Any], hard_days: list[str]) -> list[dict[str, Any]]:
+    if not plan:
+        return []
+
+    annotated: list[dict[str, Any]] = []
+    protected_day = _pick_protected_hard_day(hard_days, week=week)
+    hard_days_as_planned = [entry.get("day") for entry in plan if entry.get("status") == "hard_as_planned"]
+    if protected_day not in hard_days_as_planned:
+        protected_day = str(hard_days_as_planned[0]) if hard_days_as_planned else ""
+
+    for entry in plan:
+        status = str(entry.get("status") or "hard_as_planned").strip() or "hard_as_planned"
+        day = str(entry.get("day") or "").strip()
+        policy = _dose_policy_from_status(status)
+        dose_class = _dose_class_from_status(status)
+        if status == "hard_as_planned":
+            dose_class = _DOSE_CLASS_HARD_PRIMARY if day == protected_day else _DOSE_CLASS_HARD_SECONDARY
+        annotated_entry = dict(entry)
+        annotated_entry["dose_policy"] = policy
+        annotated_entry["dose_class"] = dose_class
+        annotated_entry["dose_rank"] = _dose_rank(dose_class)
+        annotated.append(annotated_entry)
+    return annotated
+
+
 def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     hard_days = _ordered_weekdays(
         week.get("declared_hard_sparring_days")
@@ -321,7 +376,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         days_until_fight=days_until_fight,
     )
     if action is None:
-        return [
+        return _annotate_dose_classes(plan=[
             {
                 "day": day,
                 "status": "hard_as_planned",
@@ -330,7 +385,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "reason": "",
             }
             for day in hard_days
-        ]
+        ], week=week, hard_days=hard_days)
 
     reason_codes_list = _reason_codes(
         fatigue=fatigue,
@@ -350,7 +405,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         if "fight_week_taper" not in countdown_codes:
             countdown_codes.insert(0, "fight_week_taper")
         countdown_reason = ", ".join(countdown_codes)
-        return [
+        return _annotate_dose_classes(plan=[
             {
                 "day": day,
                 "status": target_status,
@@ -360,7 +415,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "coach_note": _sparring_override_coach_note(days_until_fight, action),
             }
             for day in hard_days
-        ]
+        ], week=week, hard_days=hard_days)
 
     # --- D-7 countdown cap: keep only one hard day and downgrade the rest ---
     if countdown_override == "cap_one":
@@ -393,7 +448,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                     "coach_note": _sparring_override_coach_note(days_until_fight, action),
                 }
             )
-        return plan
+        return _annotate_dose_classes(plan=plan, week=week, hard_days=hard_days)
 
     # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
@@ -421,7 +476,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "reason": "",
             }
         )
-    return plan
+    return _annotate_dose_classes(plan=plan, week=week, hard_days=hard_days)
 
 
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {
