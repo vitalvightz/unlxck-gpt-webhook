@@ -385,6 +385,7 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
     }
     dose_class = str((plan_entry or {}).get("dose_class") or "").strip() or fallback_class_by_status.get(status, "hard_secondary")
     dose_policy = str((plan_entry or {}).get("dose_policy") or "").strip() or fallback_policy_by_status.get(status, "as_planned")
+    dose_profile = dict((plan_entry or {}).get("dose_profile") or {})
     title_suffix = {
         "hard_primary": "(Hard Primary)",
         "hard_secondary": "(Hard Secondary)",
@@ -426,6 +427,7 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
         "hard_sparring_dose_class": dose_class,
         "hard_sparring_dose_policy": dose_policy,
+        "hard_sparring_dose_profile": dose_profile,
         "visible_title_suffix": title_suffix,
         "coach_note_flags": coach_note_flags,
         "coach_note_flags_detailed": coach_note_flags_detailed,

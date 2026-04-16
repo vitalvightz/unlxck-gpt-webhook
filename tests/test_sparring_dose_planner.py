@@ -173,3 +173,57 @@ def test_pick_downgrade_target_defaults_to_latest_declared_day():
     target = _pick_downgrade_target(["Tuesday", "Thursday"], week=_week())
 
     assert target == "Thursday"
+
+
+def test_four_declared_days_only_allow_one_primary_and_two_secondary_in_normal_week():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Tuesday", "Thursday", "Saturday"]),
+        athlete_snapshot=_athlete(hard_days=["Monday", "Tuesday", "Thursday", "Saturday"]),
+    )
+
+    assert [entry["dose_class"] for entry in plan] == [
+        "hard_primary",
+        "hard_secondary",
+        "hard_secondary",
+        "technical_rhythm",
+    ]
+    assert [entry["status"] for entry in plan] == [
+        "hard_as_planned",
+        "hard_as_planned",
+        "hard_as_planned",
+        "convert_to_technical_suggested",
+    ]
+
+
+def test_high_fatigue_high_cut_reduces_secondaries_to_deload_and_technical():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday", "Sunday"]),
+        athlete_snapshot=_athlete(
+            fatigue="high",
+            weight_cut_pct=5.3,
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut", "high_fatigue"],
+            hard_days=["Monday", "Wednesday", "Friday", "Sunday"],
+        ),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+
+    assert by_day["Monday"]["dose_class"] == "hard_primary"
+    assert by_day["Wednesday"]["dose_class"] == "hard_deload"
+    assert by_day["Friday"]["dose_class"] == "hard_deload"
+    assert by_day["Sunday"]["dose_class"] == "hard_deload"
+    assert all(
+        by_day[day]["status"] == "deload_suggested"
+        for day in ("Wednesday", "Friday", "Sunday")
+    )
+
+
+def test_dose_profile_is_exposed_for_operational_meaning():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(fatigue="high"),
+    )
+    by_day = {entry["day"]: entry for entry in plan}
+
+    assert by_day["Tuesday"]["dose_profile"]["collision_cap"] == "highest_weekly"
+    assert by_day["Thursday"]["dose_profile"]["technical_finish_required"] is True
