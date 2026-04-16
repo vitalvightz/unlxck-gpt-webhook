@@ -880,7 +880,7 @@ RULE 11 — OUTPUT DISCIPLINE
 — Athlete-facing readability target: KS4 level, simple wording, short sentences, low jargon.
 — Keep the visible plan tight and scan-friendly (no mini-explanations):
 — Session title
-— Goal: one short line
+— One short goal line
 — 2–4 main bullets max
 — 1–2 rehab lines max
 — One short coach call only if needed
