@@ -85,8 +85,11 @@ class TrainingContext:
     recent_exercises: list[str]
     phase_weeks: dict
     days_until_fight: int | None
+    weekly_active_session_budget: int = 0
     hard_sparring_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)
+    recovery_only_days: list[str] = field(default_factory=list)
+    primary_anchor_day: str | None = None
     athlete_timezone: str = ""
     injuries_raw_text: str = ""
     parsed_injuries: list[dict[str, Any]] = field(default_factory=list)

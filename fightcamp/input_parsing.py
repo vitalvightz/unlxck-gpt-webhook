@@ -11,6 +11,8 @@ from .normalization import normalize_injury_marker as _normalize_injury_marker
 from .normalization import normalize_label as _normalize_label
 from .restriction_parsing import ParsedRestriction, parse_restriction_entry
 
+SPORT_SAFE_DEFAULT_WEEKLY_BUDGET_CAP = 5
+
 
 def _normalize_list(field: str | None) -> list[str]:
     return [w.strip().lower() for w in field.split(",") if w.strip()] if field else []
@@ -604,10 +606,10 @@ class PlanInput:
             training_frequency_metadata = _metadata("user_supplied")
         else:
             # Explicit inference step.
-            training_frequency = len(training_days)
+            training_frequency = min(len(training_days), SPORT_SAFE_DEFAULT_WEEKLY_BUDGET_CAP)
             training_frequency_metadata = _metadata(
                 "system_inferred",
-                "weekly_training_frequency_missing_inferred_from_training_availability",
+                "weekly_training_frequency_missing_inferred_with_conservative_cap",
             )
 
         available_days_metadata = (

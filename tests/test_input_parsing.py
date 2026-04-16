@@ -227,6 +227,24 @@ def test_incomplete_input_can_still_be_salvaged_when_training_days_exist():
     assert parsed.injuries == ""
 
 
+def test_missing_frequency_uses_conservative_cap_instead_of_full_availability():
+    data = _payload(
+        [
+            {"label": "Training Availability", "value": "Mon, Tue, Wed, Thu, Fri, Sat"},
+        ]
+    )
+
+    parsed = PlanInput.from_payload(data)
+
+    assert parsed.training_days == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    assert parsed.training_frequency == 5
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "system_inferred"
+    assert (
+        parsed.parsing_metadata["training_frequency"]["reason"]
+        == "weekly_training_frequency_missing_inferred_with_conservative_cap"
+    )
+
+
 def test_guided_injury_payload_treats_area_as_source_of_truth():
     payload = _payload(
         [

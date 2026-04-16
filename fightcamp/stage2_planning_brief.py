@@ -602,6 +602,24 @@ def _build_athlete_model(
     camp_length_weeks: int,
     short_notice: bool,
 ) -> dict:
+    available_training_days = list(training_context.training_days)
+    available_training_day_set = set(available_training_days)
+    reserved_combat_days = [
+        day for day in training_context.hard_sparring_days if day in available_training_day_set
+    ]
+    technical_only_days = [
+        day
+        for day in training_context.technical_skill_days
+        if day in available_training_day_set and day not in set(reserved_combat_days)
+    ]
+    recovery_only_days = [
+        day for day in clean_list(getattr(training_context, "recovery_only_days", [])) if day in available_training_day_set
+    ]
+    weekly_active_session_budget = int(
+        getattr(training_context, "weekly_active_session_budget", 0) or training_context.training_frequency or 0
+    )
+    primary_anchor_day = getattr(training_context, "primary_anchor_day", None)
+
     record_profile = _derive_competitive_maturity(training_context.status, record)
     # We define plan_creation_weekday as athlete-local weekday so late-fight
     # weekday mapping remains aligned with the athlete calendar.
@@ -629,9 +647,15 @@ def _build_athlete_model(
         "mental_blocks": clean_list(training_context.mental_block),
         "equipment": training_context.equipment,
         "training_frequency": training_context.training_frequency,
+        "weekly_active_session_budget": weekly_active_session_budget,
         "training_days": training_context.training_days,
+        "available_training_days": available_training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
         "technical_skill_days": training_context.technical_skill_days,
+        "reserved_combat_days": reserved_combat_days,
+        "technical_only_days": technical_only_days,
+        "recovery_only_days": recovery_only_days,
+        "primary_anchor_day": primary_anchor_day,
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
         "injuries_raw_text": training_context.injuries_raw_text,
@@ -848,10 +872,13 @@ def _conditioning_slot_priority(phase: str, system: str, idx: int) -> str:
 
 def _build_phase_briefs(training_context: TrainingContext, phase_weeks: dict) -> dict[str, dict]:
     briefs: dict[str, dict] = {}
+    weekly_active_session_budget = int(
+        getattr(training_context, "weekly_active_session_budget", 0) or training_context.training_frequency or 0
+    )
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
-        session_counts = allocate_sessions(training_context.training_frequency, phase)
+        session_counts = allocate_sessions(weekly_active_session_budget, phase)
         risk_flags: list[str] = []
         if training_context.injuries:
             risk_flags.append("respect injury guardrails")

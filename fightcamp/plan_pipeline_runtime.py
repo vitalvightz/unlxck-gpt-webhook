@@ -286,6 +286,7 @@ def build_runtime_context(
     training_context = TrainingContext(
         fatigue=plan_input.fatigue.lower(),
         training_frequency=plan_input.training_frequency,
+        weekly_active_session_budget=plan_input.training_frequency,
         days_available=len(plan_input.training_days),
         training_days=plan_input.training_days,
         injuries=raw_injury_list,

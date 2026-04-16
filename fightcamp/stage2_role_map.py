@@ -320,12 +320,37 @@ def _athlete_sport_key(athlete_model: dict) -> str:
     return str(athlete_model.get("sport") or "").strip().lower().replace(" ", "_")
 
 
+def _available_training_days(athlete_model: dict) -> list[str]:
+    return _ordered_weekdays(
+        clean_list(athlete_model.get("available_training_days") or athlete_model.get("training_days", []))
+    )
+
+
+def _weekly_active_session_budget(athlete_model: dict) -> int:
+    return int(
+        athlete_model.get("weekly_active_session_budget")
+        or athlete_model.get("training_frequency")
+        or len(_available_training_days(athlete_model))
+        or 0
+    )
 
 
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
-    training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
-    hard_sparring = {day for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))) if day in training_days}
-    technical_skill = {day for day in _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))) if day in training_days}
+    training_days = _available_training_days(athlete_model)
+    hard_sparring = {
+        day
+        for day in _ordered_weekdays(
+            clean_list(athlete_model.get("reserved_combat_days") or athlete_model.get("hard_sparring_days", []))
+        )
+        if day in training_days
+    }
+    technical_skill = {
+        day
+        for day in _ordered_weekdays(
+            clean_list(athlete_model.get("technical_only_days") or athlete_model.get("technical_skill_days", []))
+        )
+        if day in training_days
+    }
     return training_days, hard_sparring, technical_skill
 
 
@@ -1035,7 +1060,7 @@ def _apply_high_fatigue_week_compression(
     if compressed.get("is_short_camp"):
         return session_roles, suppressed_roles
 
-    training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
+    training_days = _available_training_days(athlete_model)
     if not training_days:
         # Without declared training days we cannot enforce the spar-first cap;
         # fall back to legacy single-role high-fatigue compression.
@@ -1048,8 +1073,10 @@ def _apply_high_fatigue_week_compression(
         )
 
     # Step 1: Count sparring against the weekly cap
-    hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
-    sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
+    hard_sparring_days_set = set(
+        _ordered_weekdays(clean_list(athlete_model.get("reserved_combat_days") or athlete_model.get("hard_sparring_days", [])))
+    )
+    sessions_per_week = _weekly_active_session_budget(athlete_model)
     weekly_cap = min(sessions_per_week, len(training_days))
     locked_spar_days = {day for day in training_days if day in hard_sparring_days_set}
     spar_count = len(locked_spar_days)
@@ -1151,6 +1178,65 @@ def _compute_intentionally_unused_days(
                 "role": "off_day" if has_recovery_role else "recovery_only_day",
             })
     return result
+
+
+def _enforce_weekly_active_session_budget(
+    week_entry: dict,
+    session_roles: list[dict],
+    suppressed_roles: list[dict],
+    athlete_model: dict,
+) -> tuple[list[dict], list[dict]]:
+    training_days = _available_training_days(athlete_model)
+    if not session_roles:
+        week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
+            training_days, [], has_recovery_role=False
+        )
+        return session_roles, suppressed_roles
+
+    weekly_budget = max(0, _weekly_active_session_budget(athlete_model))
+    if weekly_budget <= 0:
+        return session_roles, suppressed_roles
+    weekly_cap = min(weekly_budget, len(training_days)) if training_days else weekly_budget
+
+    if len(session_roles) <= weekly_cap:
+        week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
+            training_days,
+            session_roles,
+            has_recovery_role=any(role.get("category") == "recovery" for role in session_roles),
+        )
+        return session_roles, suppressed_roles
+
+    hard_spar_roles = [role for role in session_roles if role.get("role_key") == "hard_sparring_day"]
+    other_roles = [role for role in session_roles if role.get("role_key") != "hard_sparring_day"]
+    keep_other_count = max(0, weekly_cap - len(hard_spar_roles))
+    kept_roles = hard_spar_roles[:weekly_cap] if keep_other_count == 0 else hard_spar_roles + other_roles[:keep_other_count]
+    dropped_roles = hard_spar_roles[weekly_cap:] + other_roles[keep_other_count:]
+
+    updated = list(suppressed_roles)
+    for role in dropped_roles:
+        updated.append(
+            _make_compression_suppression(
+                role,
+                ["weekly_active_session_budget_cap"],
+                "Weekly active session budget enforced before rendering.",
+            )
+        )
+
+    week_entry["intentional_compression"] = {
+        "active": True,
+        "reason_codes": _dedupe_clean_strings(
+            clean_list((week_entry.get("intentional_compression") or {}).get("reason_codes", []))
+            + ["weekly_active_session_budget_cap"]
+        ),
+        "reason": "weekly_active_session_budget_cap",
+        "summary": "Weekly active session budget enforced before rendering.",
+    }
+    week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
+        training_days,
+        kept_roles,
+        has_recovery_role=any(role.get("category") == "recovery" for role in kept_roles),
+    )
+    return kept_roles, updated
 
 
 def _apply_legacy_high_fatigue_compression(
@@ -1435,6 +1521,12 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
+        session_roles, suppressed_roles = _enforce_weekly_active_session_budget(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+        )
 
         weeks.append(
             {
@@ -1443,9 +1535,19 @@ def _build_weekly_role_map(
                 "stage_key": week_entry.get("stage_key"),
                 "phase_week_index": week_entry.get("phase_week_index"),
                 "phase_week_total": week_entry.get("phase_week_total"),
+                "weekly_active_session_budget": _weekly_active_session_budget(athlete_model),
                 "declared_training_days": _ordered_weekdays(clean_list(athlete_model.get("training_days", []))),
+                "available_training_days": _available_training_days(athlete_model),
                 "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_technical_skill_days": _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
+                "reserved_combat_days": _ordered_weekdays(
+                    clean_list(athlete_model.get("reserved_combat_days") or athlete_model.get("hard_sparring_days", []))
+                ),
+                "technical_only_days": _ordered_weekdays(
+                    clean_list(athlete_model.get("technical_only_days") or athlete_model.get("technical_skill_days", []))
+                ),
+                "recovery_only_days": _ordered_weekdays(clean_list(athlete_model.get("recovery_only_days", []))),
+                "primary_anchor_day": athlete_model.get("primary_anchor_day"),
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),

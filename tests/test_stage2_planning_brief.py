@@ -135,6 +135,12 @@ def test_stage2_payload_plan_creation_weekday_uses_athlete_local_day(monkeypatch
     athlete_model = payload["athlete_model"]
     assert athlete_model["plan_creation_weekday"] == "saturday"
     assert athlete_model["plan_creation_weekday_basis"] == "athlete_local_weekday"
+    assert athlete_model["weekly_active_session_budget"] == 4
+    assert athlete_model["available_training_days"] == ["Mon", "Tue", "Thu", "Sat"]
+    assert athlete_model["reserved_combat_days"] == []
+    assert athlete_model["technical_only_days"] == []
+    assert athlete_model["recovery_only_days"] == []
+    assert athlete_model["primary_anchor_day"] is None
     assert athlete_model["injuries_raw_text"] == ""
     assert athlete_model["parsed_injuries"] == []
     assert athlete_model["guided_injury"] is None
@@ -2293,9 +2299,15 @@ def _base_athlete(
         "weaknesses": [],
         "equipment": ["air_bike"],
         "training_days": td,
+        "available_training_days": td,
         "training_frequency": training_frequency or len(td),
+        "weekly_active_session_budget": training_frequency or len(td),
         "hard_sparring_days": hard_sparring_days or [],
         "technical_skill_days": [],
+        "reserved_combat_days": hard_sparring_days or [],
+        "technical_only_days": [],
+        "recovery_only_days": [],
+        "primary_anchor_day": None,
         "injuries": injuries or [],
         "weight_cut_risk": weight_cut_risk,
         "weight_cut_pct": weight_cut_pct,
@@ -2494,3 +2506,67 @@ def test_spar_first_no_compression_when_no_sparring_and_low_fatigue():
     suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
     assert week["intentional_compression"]["active"] is False
     assert len(suppressed_compression) == 0
+
+
+def test_weekly_active_budget_separates_from_availability_in_role_map():
+    athlete = _base_athlete(
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        training_frequency=5,
+        hard_sparring_days=["Tuesday"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    assert week["weekly_active_session_budget"] == 5
+    assert week["available_training_days"] == ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    assert len(week["session_roles"]) <= 5
+
+
+def test_reserved_combat_days_survive_budget_enforcement():
+    athlete = _base_athlete(
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        training_frequency=4,
+        hard_sparring_days=["Tuesday", "Thursday"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    hard_days = [role["scheduled_day_hint"] for role in week["session_roles"] if role["role_key"] == "hard_sparring_day"]
+    assert set(week["reserved_combat_days"]) == {"Tuesday", "Thursday"}
+    assert set(hard_days) == {"Tuesday", "Thursday"}
+
+
+def test_intentionally_unused_days_come_from_leftover_available_days_after_budget():
+    athlete = _base_athlete(
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        training_frequency=4,
+        hard_sparring_days=["Tuesday"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    used_days = {
+        str(role.get("scheduled_day_hint") or "").strip()
+        for role in week["session_roles"]
+        if str(role.get("scheduled_day_hint") or "").strip()
+    }
+    unused_days = {entry["day"] for entry in week.get("intentionally_unused_days", [])}
+    assert unused_days == set(week["available_training_days"]) - used_days
+    assert all(entry["role"] in {"off_day", "recovery_only_day"} for entry in week.get("intentionally_unused_days", []))
+
+
+def test_planning_brief_exposes_budget_and_day_semantic_fields():
+    athlete = _base_athlete(
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        training_frequency=5,
+        hard_sparring_days=["Tuesday"],
+    )
+    athlete["technical_skill_days"] = ["Friday"]
+    athlete["technical_only_days"] = ["Friday"]
+    athlete["primary_anchor_day"] = "Thursday"
+    brief = _build_brief(athlete)
+    athlete_model = brief["athlete_model"]
+
+    assert athlete_model["weekly_active_session_budget"] == 5
+    assert athlete_model["available_training_days"] == ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    assert athlete_model["reserved_combat_days"] == ["Tuesday"]
+    assert athlete_model["technical_only_days"] == ["Friday"]
+    assert athlete_model["recovery_only_days"] == []
+    assert athlete_model["primary_anchor_day"] == "Thursday"

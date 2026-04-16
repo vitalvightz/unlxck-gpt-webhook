@@ -262,6 +262,7 @@ def build_planning_brief(
             "generator_mode": "deterministic_late_fight_planner_plus_ai_finalizer",
             "payload_variant": "late_fight_stage2_payload",
             "athlete_snapshot": athlete_model,
+            "athlete_model": athlete_model,
             "days_out_payload": days_out_payload,
             "late_fight_plan_spec": _build_late_fight_plan_spec(days_until_fight, athlete_model),
             "late_fight_session_sequence": session_sequence,
@@ -304,6 +305,7 @@ def build_planning_brief(
         "schema_version": "planning_brief.v1",
         "generator_mode": "deterministic_planner_plus_ai_finalizer",
         "athlete_snapshot": athlete_model,
+        "athlete_model": athlete_model,
         "fight_demands": {
             "sport": athlete_model.get("sport"),
             "status": athlete_model.get("status"),
