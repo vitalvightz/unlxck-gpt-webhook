@@ -3,7 +3,7 @@
 
 ---
 
-# 🔥4 KEY UPGRADE CATEGORIES 
+# 🔥 4 KEY UPGRADE CATEGORIES 
 *(Your body gets better at these when you train right)*
 
 ### 1. 🧠 NEURO UPGRADES (Brain-Muscle Connection)
