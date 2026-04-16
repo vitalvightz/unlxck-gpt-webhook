@@ -885,10 +885,10 @@ Keep the visible plan tight and scan-friendly (no mini-explanations):
 — 2–4 main bullets max
 — 1–2 rehab lines max
 — One short coach call only if needed
-State global rules once (weight cut, stop rules, ownership); do not repeat them every day unless the rule changes that day.
-For corrective lines: lead with action, give one short why, then next action. Do not open with 'focus on', 'ensure', 'make sure', or 'it's important to'.
-Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options when both are safe and equivalent.
-Avoid generic motivation and empty safety filler.
+— State global rules once (weight cut, stop rules, ownership); do not repeat them every day unless the rule changes that day.
+— For corrective lines: lead with action, give one short why, then next action. Do not open with 'focus on', 'ensure', 'make sure', or 'it's important to'.
+— Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options when both are safe and equivalent.
+— Avoid generic motivation and empty safety filler.
 — Collapse templates into one final prescription when context resolves the choice. One explicit fallback per session max.
 — Declared hard sparring days are immutable. Deload the dose if readiness is compromised — never replace the role.
 — For sparring session headings, always include the class suffix from weekly_role_map.visible_title_suffix: (Hard Primary), (Hard Secondary), (Hard Deload), or (Technical Rhythm).
