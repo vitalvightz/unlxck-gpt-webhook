@@ -885,7 +885,7 @@ RULE 11 — OUTPUT DISCIPLINE
 — 1–2 rehab lines max
 — One short coach call only if needed
 — State global rules once (weight cut, stop rules, ownership); do not repeat them every day unless the rule changes that day.
-— For corrective lines: command then short reason. Start with the action (not generic openers).
+— For corrective lines: command then short reason. Start with the action (avoid generic openers like 'focus on' or 'ensure').
 — Use autonomy-supportive phrasing only when a real safe choice exists; offer at most two practical options when both are safe and equivalent.
 — Avoid generic motivation and empty safety filler.
 — Collapse templates into one final prescription when context resolves the choice. One explicit fallback per session max.
