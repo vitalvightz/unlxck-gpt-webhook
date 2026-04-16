@@ -42,13 +42,14 @@ REPAIR RULES:
 29. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
 30. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
 31. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
-35. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
-36. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
-37. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
-38. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
+32. Do not prescribe exercises the plan already marks as avoid/contraindicated for the athlete's injury status.
+33. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+34. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+35. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+36. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
+37. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
+38. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
+39. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
