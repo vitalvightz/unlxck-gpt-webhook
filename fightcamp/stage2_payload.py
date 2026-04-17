@@ -915,6 +915,35 @@ If a drill repeats across sessions, the Why today must make the changed role exp
 
 
 
+_RULE_SECTION_LIMITS = {
+    "selection_rules": 8,
+    "writing_rules": 14,
+}
+
+
+def _compact_rule_section(value: object, *, limit: int) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return dedupe_preserve_order(clean_list(value))[:limit]
+
+
+def _compact_context_for_handoff(context_block: dict | None) -> dict:
+    context = dict(context_block or {})
+    decision_rules = context.get("decision_rules")
+    if isinstance(decision_rules, dict):
+        context["decision_rules"] = {
+            "selection_rules": _compact_rule_section(
+                decision_rules.get("selection_rules", []),
+                limit=_RULE_SECTION_LIMITS["selection_rules"],
+            ),
+            "writing_rules": _compact_rule_section(
+                decision_rules.get("writing_rules", []),
+                limit=_RULE_SECTION_LIMITS["writing_rules"],
+            ),
+        }
+    return context
+
+
 def _json_block(value: dict | list) -> str:
     return "```json\n" + json.dumps(value, separators=(",", ":"), ensure_ascii=False) + "\n```"
 
@@ -949,19 +978,30 @@ def build_stage2_handoff_text(
     athlete_profile = _athlete_profile_block(planning_brief, stage2_payload)
     payload_mode = stage2_payload.get("payload_mode") or stage2_payload.get("effective_stage2_mode") or "camp_payload"
 
-    # ── Payload-mode-sensitive hard instructions ──────────────────
     mode_instructions = _handoff_mode_instructions(payload_mode)
+    compact_context = (
+        _compact_context_for_handoff(context_block)
+        if isinstance(context_block, dict)
+        else {}
+    )
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
     ]
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
-    sections.append("PLANNING BRIEF\n" + _json_block(context_block))
+    sections.append("PLANNING BRIEF\n" + _json_block(compact_context))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+
     injury_context = stage2_payload.get("injury_context")
+    if not isinstance(injury_context, dict):
+        athlete_model = stage2_payload.get("athlete_model")
+        injury_context = _build_injury_context(
+            athlete_model=athlete_model if isinstance(athlete_model, dict) else {}
+        )
     if isinstance(injury_context, dict):
         sections.append("INJURY CONTEXT\n" + _json_block(injury_context))
+
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)
