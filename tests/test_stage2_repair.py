@@ -242,6 +242,32 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
                 "actual_session_count": 6,
             },
             {
+                "code": "crowded_week_non_spar_overage",
+                "phase": "SPP",
+                "week_index": 5,
+                "actual_non_spar_sessions": 3,
+                "max_non_spar_roles": 2,
+                "risk_signals": ["high_spar_load", "meaningful_weight_cut"],
+            },
+            {
+                "code": "anchor_day_identity_overload",
+                "phase": "SPP",
+                "week_index": 5,
+                "session_index": 3,
+                "line": "Saturday - Strength",
+                "matched_lines": ["Hard Shuttle - 6x20s / 60s"],
+                "matched_tokens": ["standalone_glycolytic"],
+            },
+            {
+                "code": "support_recovery_day_stress_leak",
+                "phase": "SPP",
+                "week_index": 5,
+                "session_index": 4,
+                "line": "Sunday - Recovery",
+                "matched_lines": ["Trap Bar Deadlift - 4x3"],
+                "matched_tokens": ["primary_strength_anchor"],
+            },
+            {
                 "code": "weekly_rhythm_broken",
                 "phase": "SPP",
                 "week_index": 5,
@@ -279,6 +305,9 @@ def test_build_stage2_repair_prompt_surfaces_quality_repairs():
     assert "replace_with_equipment_valid_same_role_option" in prompt
     assert "remove_unneeded_fallback_branch_or_make_contingency_explicit" in prompt
     assert "collapse_options_to_safe_equivalent_choices_or_one_final_call" in prompt
+    assert "trim_crowded_week_to_anchor_plus_support_budget" in prompt
+    assert "strip_extra_stress_from_anchor_day" in prompt
+    assert "restore_support_day_to_low_load_only" in prompt
     assert '"scheduled_day_hint": "Tuesday"' in prompt
 
 def test_build_stage2_repair_prompt_surfaces_late_fight_repairs():

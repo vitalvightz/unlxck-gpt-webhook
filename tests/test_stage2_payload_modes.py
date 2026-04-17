@@ -185,6 +185,8 @@ class TestDaysOutPayloadBlock:
         assert block["late_fight_window"] == "d4_to_d2"
         assert "rendering_rules" in block
         assert "late_fight_permissions" in block
+        assert "permission_policy" in block
+        assert "role_budget" in block
 
 
 class TestLateFightPermissionsAndRendering:
@@ -394,6 +396,40 @@ class TestStage2PayloadBranching:
         assert spec["max_meaningful_stress_exposures"] == 2
         assert spec["max_active_roles"] == 3
         assert "standalone_glycolytic" in spec["forbidden_blocks"]
+        assert spec["max_support_roles"] == 1
+        assert "role_budget" in spec
+        assert "allocator" in spec
+        assert "permission_policy" in spec
+
+    def test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields(self):
+        spec = _build_late_fight_plan_spec(5, _athlete(5))
+
+        assert spec["allocator"]["legal_countdown_labels"] == ["D-5", "D-4", "D-3", "D-2", "D-1"]
+        assert spec["role_budget"]["selected_active_roles"] == len(spec["session_sequence"])
+        assert all("scheduled_countdown_label" in role for role in spec["session_sequence"])
+        assert all("placement_source" in role for role in spec["session_sequence"])
+
+    def test_d5_plan_spec_marks_downgraded_declared_hard_day_as_technical_touch(self):
+        spec = _build_late_fight_plan_spec(
+            5,
+            _athlete(5, hard_sparring_days=["thursday"], plan_creation_weekday="monday"),
+        )
+
+        assert spec["permission_policy"]["declared_hard_day_actions"] == [
+            {
+                "day": "thursday",
+                "outcome": "technical_touch_day",
+                "locked": False,
+                "downgraded_from_role_key": "hard_sparring_day",
+            }
+        ]
+
+    def test_short_notice_window_keeps_allocator_metadata_even_with_fight_week_override(self):
+        brief = _build_brief_for(3)
+
+        assert brief["fight_week_override"]["active"] is True
+        assert "allocator" in brief["late_fight_plan_spec"]
+        assert "role_budget" in brief["late_fight_plan_spec"]
 
     def test_d7_plan_spec_keeps_boxing_roles_out_of_visible_insert_sessions(self):
         spec = _build_late_fight_plan_spec(7, _athlete(7))

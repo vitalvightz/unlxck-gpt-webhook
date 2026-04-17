@@ -150,6 +150,7 @@ class TestCountdownWeekdayMap:
         result = _countdown_weekday_map("monday", 10)
         assert len(result) == 11
         assert set(result.keys()) == {f"D-{n}" for n in range(0, 11)}
+        assert result["D-10"] == "monday"
 
 
 # ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ _MINIMAL_ATHLETE = {
     "weight_cut_pct": 0.0,
     "readiness_flags": [],
     "injuries": [],
+    "plan_creation_weekday": "monday",
 }
 
 
@@ -142,6 +143,64 @@ def test_d7_role_list_remains_unchanged():
 
     assert role_keys == ["hard_sparring_day", "neural_primer_day", "fight_week_freshness_day"]
 
+
+def test_pre_fight_compressed_surfaces_downgraded_hard_day_as_technical_touch_suppression():
+    spec = _build_late_fight_plan_spec(
+        8,
+        _athlete(8, hard_sparring_days=["monday", "thursday", "saturday"]),
+    )
+
+    suppressed_technical = [
+        item for item in spec["suppressed_roles"]
+        if item["role_key"] == "technical_touch_day"
+    ]
+
+    assert suppressed_technical
+    assert suppressed_technical[0]["downgraded_from_role_key"] == "hard_sparring_day"
+
+
+def test_d5_permission_policy_marks_declared_hard_day_as_technical_touch_only():
+    spec = _build_late_fight_plan_spec(
+        5,
+        _athlete(5, hard_sparring_days=["thursday"], plan_creation_weekday="monday"),
+    )
+
+    actions = spec["permission_policy"]["declared_hard_day_actions"]
+
+    assert actions == [
+        {
+            "day": "thursday",
+            "outcome": "technical_touch_day",
+            "locked": False,
+            "downgraded_from_role_key": "hard_sparring_day",
+        }
+    ]
+
+
+def test_freshness_lands_latest_when_multiple_legal_countdown_days_exist():
+    sequence = _build_late_fight_session_sequence(
+        5,
+        _athlete(5, plan_creation_weekday="monday"),
+    )
+
+    freshness = next(role for role in sequence if role["role_key"] == "fight_week_freshness_day")
+    sharpness = next(role for role in sequence if role["role_key"] == "alactic_sharpness_day")
+
+    assert freshness["scheduled_countdown_label"] == "D-1"
+    assert sharpness["scheduled_countdown_label"] == "D-5"
+
+
+def test_session_sequence_exposes_allocator_metadata_fields():
+    sequence = _build_late_fight_session_sequence(
+        5,
+        _athlete(5, plan_creation_weekday="monday"),
+    )
+
+    first = sequence[0]
+
+    assert "scheduled_countdown_label" in first
+    assert "placement_source" in first
+    assert "day_assignment_reason" in first
 
 def test_d9_midweek_submission_uses_only_surviving_declared_hard_day():
     athlete = _athlete(

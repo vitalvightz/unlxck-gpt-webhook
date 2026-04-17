@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import re
 from typing import Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from dateutil.tz import gettz
 
 from .injury_formatting import parse_injuries_and_restrictions, parse_injury_entry
 from .normalization import normalize_injury_marker as _normalize_injury_marker
@@ -221,6 +222,10 @@ def _resolve_timezone(value: str | None) -> timezone | ZoneInfo | None:
         return ZoneInfo(normalized)
     except ZoneInfoNotFoundError:
         pass
+
+    dateutil_tz = gettz(normalized)
+    if dateutil_tz is not None:
+        return dateutil_tz
 
     offset_match = _UTC_OFFSET_PATTERN.match(normalized)
     if not offset_match:
