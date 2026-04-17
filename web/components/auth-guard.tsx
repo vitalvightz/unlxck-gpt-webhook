@@ -42,7 +42,7 @@ export function RequireAuth({
       router.replace("/login");
       return;
     }
-    if (adminOnly && role && role !== "admin") {
+    if (adminOnly && role !== "admin") {
       router.replace("/plans");
     }
   }, [adminOnly, demoMode, isMeHydrated, isReady, me, role, router, session, signInDemo]);
