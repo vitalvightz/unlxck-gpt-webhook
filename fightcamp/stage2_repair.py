@@ -28,26 +28,28 @@ REPAIR RULES:
 16. If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 17. If a week contains intentionally_unused_days entries, leave those days as light recovery or completely off. Do not add active training sessions to intentionally unused days.
 18. Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload hard sparring on that day; do not replace it with strength, recovery, aerobic, or technical-only work.
-19. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
-20. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
-21. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
-22. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
-23. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
-24. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
-25. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
-26. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
-27. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
-28. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
-29. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
-30. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
-31. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-32. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-33. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-34. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
-35. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
-36. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
-37. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
-38. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
+19. If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve at most one anchor and one low-load support day, and cut accessory, transfer, glycolytic, and optional alactic extras before touching the anchor.
+20. In boxing crowded weeks, anchor days and recovery/support days cannot pick up a second meaningful stressor. Strip the extra stressor instead of redistributing it across the week.
+21. In taper weeks, keep the work short, direct, and low-noise with minimal branching.
+22. Keep the final output athlete-facing. Do not mention the validator, the repair process, or rejected items.
+23. If active weight cut shaped the plan, acknowledge it plainly in the athlete-facing output.
+24. For high-pressure cuts, include one short summary-level note and one short support-level note without turning the plan into a long weight-cut essay.
+25. For any corrective or adjustment line, make one clear coaching call with a short why tied to performance, safety, readiness, or the week's main objective.
+26. Prefer command then reason on corrective lines; do not lead with explanation and then soften it into a suggestion.
+27. Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'; start with the action.
+28. Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
+29. Replace generic motivation, scripted empathy, and empty safety language with concrete next-action coaching.
+30. Do not use generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
+31. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
+32. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
+33. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
+34. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+35. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+36. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+37. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
+38. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
+39. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
+40. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
@@ -218,6 +220,41 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "phase": warning.get("phase"),
                     "expected_session_count": warning.get("expected_session_count"),
                     "actual_session_count": warning.get("actual_session_count"),
+                }
+            )
+        elif code == "crowded_week_non_spar_overage":
+            quality_fixes.append(
+                {
+                    "action": "trim_crowded_week_to_anchor_plus_support_budget",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                    "actual_non_spar_sessions": warning.get("actual_non_spar_sessions"),
+                    "max_non_spar_roles": warning.get("max_non_spar_roles"),
+                    "risk_signals": _clean_list(warning.get("risk_signals", [])),
+                }
+            )
+        elif code == "anchor_day_identity_overload":
+            quality_fixes.append(
+                {
+                    "action": "strip_extra_stress_from_anchor_day",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                    "line": warning.get("line"),
+                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
+                    "matched_tokens": _clean_list(warning.get("matched_tokens", [])),
+                }
+            )
+        elif code == "support_recovery_day_stress_leak":
+            quality_fixes.append(
+                {
+                    "action": "restore_support_day_to_low_load_only",
+                    "week_index": warning.get("week_index"),
+                    "phase": warning.get("phase"),
+                    "session_index": warning.get("session_index"),
+                    "line": warning.get("line"),
+                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
+                    "matched_tokens": _clean_list(warning.get("matched_tokens", [])),
                 }
             )
         elif code == "weekly_rhythm_broken":

@@ -968,6 +968,150 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
     return warnings
 
 
+def _crowded_week_block_matches_day(block: list[str], scheduled_day_hint: str) -> bool:
+    if not block or not scheduled_day_hint:
+        return False
+    return _phrase_in_text(_normalize_render_line(block[0]), scheduled_day_hint.strip().lower())
+
+
+def _match_crowded_week_session_block_index(
+    session_blocks: list[list[str]],
+    role: dict[str, Any],
+    *,
+    fallback_index: int,
+    used_indices: set[int],
+) -> int | None:
+    scheduled_day_hint = str(role.get("scheduled_day_hint") or "").strip()
+    if scheduled_day_hint:
+        for idx, block in enumerate(session_blocks):
+            if idx in used_indices:
+                continue
+            if _crowded_week_block_matches_day(block, scheduled_day_hint):
+                return idx
+
+    if 0 <= fallback_index < len(session_blocks) and fallback_index not in used_indices:
+        return fallback_index
+
+    return next((idx for idx in range(len(session_blocks)) if idx not in used_indices), None)
+
+
+def _boxing_crowded_week_warnings(planning_brief: dict, final_plan_text: str) -> list[dict]:
+    weekly_role_map = planning_brief.get("weekly_role_map") or {}
+    weeks = list(weekly_role_map.get("weeks") or [])
+    if not weeks:
+        return []
+    if str(_athlete_snapshot(planning_brief).get("sport", "")).strip().lower() != "boxing":
+        return []
+
+    warnings: list[dict] = []
+    week_sections = _week_sections(final_plan_text)
+
+    for week in weeks:
+        intentional_compression = week.get("intentional_compression") or {}
+        if not (intentional_compression.get("active") and intentional_compression.get("policy") == "boxing_crowded_week"):
+            continue
+
+        week_index = int(week.get("week_index", 0) or 0)
+        if week_index <= 0:
+            continue
+        week_section = week_sections.get(week_index)
+        if not week_section:
+            continue
+
+        expected_roles = list(week.get("session_roles") or [])
+        session_blocks = _phase_session_blocks(week_section.get("lines", []))
+        actual_hard_spar_count = sum(1 for block in session_blocks if _block_contains_token(block, "hard_sparring"))
+        max_non_spar_roles = int(intentional_compression.get("max_non_spar_roles") or 0)
+        actual_non_spar_sessions = max(0, len(session_blocks) - actual_hard_spar_count)
+        used_block_indices: set[int] = set()
+
+        if max_non_spar_roles >= 0 and actual_non_spar_sessions > max_non_spar_roles:
+            warnings.append(
+                {
+                    "code": "crowded_week_non_spar_overage",
+                    "message": (
+                        f"Week {week_index} renders {actual_non_spar_sessions} non-spar sessions even though "
+                        f"the crowded-week budget only allows {max_non_spar_roles}."
+                    ),
+                    "week_index": week_index,
+                    "phase": week.get("phase"),
+                    "actual_non_spar_sessions": actual_non_spar_sessions,
+                    "max_non_spar_roles": max_non_spar_roles,
+                    "risk_signals": _clean_list(intentional_compression.get("risk_signals", [])),
+                    "blocking": True,
+                }
+            )
+
+        for session_index, role in enumerate(expected_roles, start=1):
+            governance = role.get("governance") or {}
+            main_job = str(governance.get("main_job") or "").strip()
+            if main_job not in {"anchor", "support_recovery"}:
+                continue
+
+            forbidden_tokens = _clean_list(governance.get("forbidden_secondary_stressors", []))
+            if not forbidden_tokens:
+                continue
+
+            block_index = _match_crowded_week_session_block_index(
+                session_blocks,
+                role,
+                fallback_index=session_index - 1,
+                used_indices=used_block_indices,
+            )
+            if block_index is None:
+                continue
+            used_block_indices.add(block_index)
+
+            block = session_blocks[block_index]
+            body_lines = block[1:] if len(block) > 1 else []
+            matched_lines: list[str] = []
+            matched_tokens: list[str] = []
+            for line in body_lines:
+                for token in forbidden_tokens:
+                    if _line_matches_late_fight_token(line, token):
+                        matched_lines.append(line)
+                        matched_tokens.append(token)
+                        break
+
+            if not matched_lines:
+                continue
+
+            warning = {
+                "week_index": week_index,
+                "phase": week.get("phase"),
+                "session_index": block_index + 1,
+                "role_key": role.get("role_key"),
+                "line": block[0],
+                "matched_lines": _dedupe_preserve_order(matched_lines),
+                "matched_tokens": _dedupe_preserve_order(matched_tokens),
+                "blocking": True,
+            }
+            if main_job == "anchor":
+                warnings.append(
+                    {
+                        **warning,
+                        "code": "anchor_day_identity_overload",
+                        "message": (
+                            f"Week {week_index} anchor day reintroduces extra meaningful stress instead of "
+                            "staying a single main-job anchor session."
+                        ),
+                    }
+                )
+            else:
+                warnings.append(
+                    {
+                        **warning,
+                        "code": "support_recovery_day_stress_leak",
+                        "message": (
+                            f"Week {week_index} support/recovery day regained meaningful stress instead of "
+                            "staying low-load."
+                        ),
+                    }
+                )
+
+    return warnings
+
+
 def _line_mentions_weight_cut(line: str) -> bool:
     return any(pattern.search(line) for pattern in _WEIGHT_CUT_PATTERNS)
 
@@ -1520,6 +1664,10 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         planning_brief,
         final_plan_text,
     )
+    crowded_week_warnings = _boxing_crowded_week_warnings(
+        planning_brief,
+        final_plan_text,
+    )
     weight_cut_acknowledgement_warnings = _weight_cut_acknowledgement_warnings(
         planning_brief,
         final_plan_text,
@@ -1567,6 +1715,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
     warnings.extend(equipment_congruence_warnings)
     warnings.extend(unresolved_access_fallback_warnings)
     warnings.extend(week_completeness_warnings)
+    warnings.extend(crowded_week_warnings)
     warnings.extend(weight_cut_acknowledgement_warnings)
     warnings.extend(weight_cut_contradiction_warnings)
     warnings.extend(overstyled_name_warnings)
@@ -1587,6 +1736,7 @@ def validate_stage2_output(*, planning_brief: dict, final_plan_text: str) -> dic
         "equipment_congruence_warnings": equipment_congruence_warnings,
         "unresolved_access_fallback_warnings": unresolved_access_fallback_warnings,
         "week_completeness_warnings": week_completeness_warnings,
+        "crowded_week_warnings": crowded_week_warnings,
         "weight_cut_acknowledgement_warnings": weight_cut_acknowledgement_warnings,
         "weight_cut_contradiction_warnings": weight_cut_contradiction_warnings,
         "overstyled_name_warnings": overstyled_name_warnings,

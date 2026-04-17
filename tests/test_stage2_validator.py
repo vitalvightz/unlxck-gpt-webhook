@@ -138,6 +138,79 @@ def _late_fight_planning_brief(days_out: str = "D-5") -> dict:
     }
 
 
+def _boxing_crowded_week_planning_brief() -> dict:
+    return {
+        "athlete_model": {"sport": "boxing", "equipment": ["landmine", "bike", "bands"]},
+        "restrictions": [],
+        "phase_strategy": {},
+        "candidate_pools": {},
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "intentional_compression": {
+                        "active": True,
+                        "policy": "boxing_crowded_week",
+                        "risk_signals": ["high_spar_load", "meaningful_weight_cut"],
+                        "max_non_spar_roles": 2,
+                        "max_support_roles": 1,
+                        "standalone_glycolytic_allowed": False,
+                    },
+                    "session_roles": [
+                        {
+                            "role_key": "hard_sparring_day",
+                            "category": "sparring",
+                            "scheduled_day_hint": "Tuesday",
+                            "governance": {"main_job": "hard_sparring"},
+                        },
+                        {
+                            "role_key": "hard_sparring_day",
+                            "category": "sparring",
+                            "scheduled_day_hint": "Thursday",
+                            "governance": {"main_job": "hard_sparring"},
+                        },
+                        {
+                            "role_key": "neural_plus_strength_day",
+                            "category": "strength",
+                            "scheduled_day_hint": "Saturday",
+                            "governance": {
+                                "main_job": "anchor",
+                                "support_cap": "light_only",
+                                "forbidden_secondary_stressors": [
+                                    "standalone_glycolytic",
+                                    "hinge_transfer",
+                                    "contrast_work",
+                                    "jumps",
+                                    "sharpness_touch",
+                                    "hard_sparring",
+                                ],
+                            },
+                        },
+                        {
+                            "role_key": "recovery_reset_day",
+                            "category": "recovery",
+                            "scheduled_day_hint": "Sunday",
+                            "governance": {
+                                "main_job": "support_recovery",
+                                "support_cap": "light_only",
+                                "forbidden_secondary_stressors": [
+                                    "primary_strength_anchor",
+                                    "standalone_glycolytic",
+                                    "hinge_transfer",
+                                    "contrast_work",
+                                    "jumps",
+                                    "sharpness_touch",
+                                    "hard_sparring",
+                                ],
+                            },
+                        },
+                    ],
+                }
+            ]
+        },
+    }
+
 
 def test_validate_stage2_output_flags_restriction_violations():
     report = validate_stage2_output(
@@ -955,6 +1028,115 @@ def test_validate_stage2_output_counts_explicit_numbered_session_headings():
 
     warning_codes = [warning["code"] for warning in report["warnings"]]
     assert "weekly_session_overage" in warning_codes
+
+
+def test_validate_stage2_output_warns_when_crowded_week_exceeds_non_spar_budget():
+    report = validate_stage2_output(
+        planning_brief=_boxing_crowded_week_planning_brief(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Tuesday - Hard Sparring
+        - Hard Sparring - 6 x 3 min
+        #### Thursday - Hard Sparring
+        - Hard Sparring - 5 x 3 min
+        #### Saturday - Strength
+        - Landmine Press - 4x5
+        #### Sunday - Recovery
+        - Walk + mobility
+        #### Monday - Extra Conditioning
+        - Hard Shuttle - 6x20s / 60s
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "crowded_week_non_spar_overage" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_anchor_day_identity_overload():
+    report = validate_stage2_output(
+        planning_brief=_boxing_crowded_week_planning_brief(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Tuesday - Hard Sparring
+        - Hard Sparring - 6 x 3 min
+        #### Thursday - Hard Sparring
+        - Hard Sparring - 5 x 3 min
+        #### Saturday - Strength
+        - Landmine Press - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        #### Sunday - Recovery
+        - Walk + mobility
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "anchor_day_identity_overload" in warning_codes
+
+
+def test_validate_stage2_output_matches_anchor_warning_by_scheduled_day_when_reordered():
+    report = validate_stage2_output(
+        planning_brief=_boxing_crowded_week_planning_brief(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Tuesday - Hard Sparring
+        - Hard Sparring - 6 x 3 min
+        #### Thursday - Hard Sparring
+        - Hard Sparring - 5 x 3 min
+        #### Sunday - Recovery
+        - Walk + mobility
+        #### Saturday - Strength
+        - Landmine Press - 4x5
+        - Hard Shuttle - 6x20s / 60s
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "anchor_day_identity_overload" in warning_codes
+
+
+def test_validate_stage2_output_warns_for_support_day_stress_leak():
+    report = validate_stage2_output(
+        planning_brief=_boxing_crowded_week_planning_brief(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Tuesday - Hard Sparring
+        - Hard Sparring - 6 x 3 min
+        #### Thursday - Hard Sparring
+        - Hard Sparring - 5 x 3 min
+        #### Saturday - Strength
+        - Landmine Press - 4x5
+        #### Sunday - Recovery
+        - Trap Bar Deadlift - 4x3
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "support_recovery_day_stress_leak" in warning_codes
+
+
+def test_validate_stage2_output_matches_support_warning_by_scheduled_day_when_reordered():
+    report = validate_stage2_output(
+        planning_brief=_boxing_crowded_week_planning_brief(),
+        final_plan_text="""
+        ## PHASE 2: SPP
+        ### Week 1
+        #### Tuesday - Hard Sparring
+        - Hard Sparring - 6 x 3 min
+        #### Thursday - Hard Sparring
+        - Hard Sparring - 5 x 3 min
+        #### Sunday - Recovery
+        - Trap Bar Deadlift - 4x3
+        #### Saturday - Strength
+        - Landmine Press - 4x5
+        """,
+    )
+
+    warning_codes = [warning["code"] for warning in report["warnings"]]
+    assert "support_recovery_day_stress_leak" in warning_codes
 
 
 def _weight_cut_planning_brief(high_pressure: bool = True) -> dict:
