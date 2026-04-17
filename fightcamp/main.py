@@ -1,4 +1,3 @@
-﻿import asyncio
 import json
 import logging
 import os
@@ -6,6 +5,7 @@ from pathlib import Path
 from time import perf_counter
 
 from .input_parsing import PlanInput
+from .injury_triage import FULL_PLAN, blocked_mode_output, triage_injuries
 from .logging_utils import configure_logging
 from .plan_pipeline import (
     _filter_mindset_blocks,
@@ -41,6 +41,24 @@ _INPUT_ERROR_LABELS = {
     "missing_training_availability": "training availability",
     "invalid_training_frequency": "weekly training frequency",
 }
+_TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
+_NON_OVERRIDABLE_TRIAGE_MODES = {"medical_hold"}
+
+
+def _triage_resume_override_allows_continuation(data: dict, *, triage_mode: str) -> bool:
+    override = data.get(_TRIAGE_RESUME_OVERRIDE_KEY)
+    if not isinstance(override, dict):
+        return False
+    if override.get("approved") is not True:
+        return False
+    mode = str(triage_mode or "").strip().lower()
+    if not mode or mode in _NON_OVERRIDABLE_TRIAGE_MODES:
+        return False
+    allowed_modes = override.get("allowed_modes")
+    if not isinstance(allowed_modes, list):
+        return False
+    normalized_modes = {str(item).strip().lower() for item in allowed_modes if str(item).strip()}
+    return mode in normalized_modes
 
 
 def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> dict:
@@ -56,6 +74,7 @@ def _invalid_result(error: str, *, missing_fields: list[str] | None = None) -> d
         "stage2_payload": None,
         "planning_brief": None,
         "stage2_handoff_text": "",
+        "parsing_metadata": {},
     }
 
 
@@ -82,7 +101,7 @@ class _LazyListProxy:
 exercise_bank = _LazyListProxy(get_strength_exercise_bank)
 
 
-async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
+def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     """Generate a fight-camp plan.
 
     Parameters
@@ -129,6 +148,19 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         )
 
     timer_start = perf_counter()
+    triage_result = triage_injuries(plan_input)
+    _record_timing("injury_triage", timer_start)
+    triage_mode = str(triage_result.mode or "").strip().lower()
+    triage_resume_override_applied = _triage_resume_override_allows_continuation(
+        data,
+        triage_mode=triage_mode,
+    )
+    if triage_result.mode != FULL_PLAN and not triage_resume_override_applied:
+        blocked = blocked_mode_output(triage=triage_result)
+        blocked["parsing_metadata"] = plan_input.parsing_metadata
+        return blocked
+
+    timer_start = perf_counter()
     prime_plan_banks(logger=logger)
     _record_timing("prime_banks", timer_start)
 
@@ -137,6 +169,8 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         plan_input=plan_input,
         random_seed=data.get("random_seed"),
         logger=logger,
+        triage_summary=triage_result.to_dict(),
+        is_approved_triage_resume=triage_resume_override_applied,
     )
     _record_timing("runtime_context", timer_start)
 
@@ -154,6 +188,11 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         blocks=blocks,
         rendered=rendered,
     )
+    if isinstance(stage2_payload, dict):
+        stage2_payload = {
+            **stage2_payload,
+            "input_parsing_metadata": plan_input.parsing_metadata,
+        }
     _record_timing("stage2_outputs", timer_start)
 
     # PDF generation is optional and off by default.
@@ -172,7 +211,7 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         slowest_label = max(timings, key=timings.get)
         logger.info("[timing] slowest_stage=%s %.2fs", slowest_label, timings[slowest_label])
 
-    return {
+    result = {
         "pdf_url": pdf_url,
         "why_log": rendered.reason_log,
         "coach_notes": rendered.coach_notes,
@@ -180,7 +219,24 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
         "stage2_payload": stage2_payload,
         "planning_brief": planning_brief,
         "stage2_handoff_text": stage2_handoff_text,
+        "parsing_metadata": plan_input.parsing_metadata,
     }
+    if triage_resume_override_applied:
+        why_log = result.get("why_log")
+        if isinstance(why_log, dict):
+            why_log["injury_triage_resume_override"] = {
+                "bypassed_blocking": True,
+                "triage_mode": triage_mode,
+                "runtime_triage_mode": FULL_PLAN,
+                "override_key": _TRIAGE_RESUME_OVERRIDE_KEY,
+            }
+            why_log["injury_triage_original"] = triage_result.to_dict()
+    return result
+
+
+async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
+    import asyncio
+    return await asyncio.to_thread(generate_plan_sync, data, generate_pdf=generate_pdf)
 
 
 def main():
@@ -189,7 +245,7 @@ def main():
         raise FileNotFoundError(f"Test data file not found: {data_file}")
     with open(data_file, "r", encoding="utf-8") as f:
         data = json.load(f)
-    result = asyncio.run(generate_plan(data))
+    result = generate_plan_sync(data)
     print(f"::notice title=Plan PDF::{result.get('pdf_url')}")
 
 

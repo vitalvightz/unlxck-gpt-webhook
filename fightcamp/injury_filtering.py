@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import copy
 import json
@@ -6,17 +6,16 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Iterable, TYPE_CHECKING
+from typing import Iterable
 
-if TYPE_CHECKING:
-    from .injury_guard import Decision
-
+from .injury_models import Decision
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS, INJURY_RULES
 from .injury_synonyms import parse_injury_phrase, remove_negated_phrases, split_injury_text
 from .bank_schema import validate_training_item
 from .tagging import normalize_item_tags, normalize_tags
 # Refactored: Import centralized DATA_DIR from config
 from .config import DATA_DIR
+from .normalization import normalize_text_for_matching as normalize_text, phrase_in_text
 INJURY_MATCH_ALLOWLIST: list[str] = [
     "pressure fighter",
     "pressure cooker",
@@ -458,7 +457,7 @@ _INJURY_MATCH_DETAILS_CACHE: dict[tuple[object, ...], list[dict]] = {}
 
 def _injury_strings_cache_key(injuries: Iterable[str]) -> tuple[str, ...]:
     normalized = [
-        _normalize_text(str(injury))
+        normalize_text(str(injury))
         for injury in injuries
         if str(injury or "").strip()
     ]
@@ -591,21 +590,6 @@ def expand_injury_tags(tags: Iterable[str], *, item: dict | None = None) -> set[
     return expanded
 
 
-def _normalize_text(text: str) -> str:
-    """
-    Normalize text for matching by:
-    - Converting to lowercase
-    - Replacing hyphens and underscores with spaces
-    - Removing all punctuation/parentheses
-    - Collapsing whitespace
-    
-    This is used for word-boundary based matching.
-    """
-    cleaned = text.lower().replace("-", " ").replace("_", " ")
-    cleaned = re.sub(r"[^\w\s]", " ", cleaned)
-    return " ".join(cleaned.split())
-
-
 def normalize_for_substring_match(text: str) -> str:
     """
     Normalize text for substring matching by:
@@ -635,24 +619,14 @@ def _module_for_item(item: dict) -> str:
     return "strength"
 
 
-def _phrase_in_text(text: str, phrase: str) -> bool:
-    normalized_phrase = _normalize_text(phrase)
-    phrase_tokens = normalized_phrase.split()
-    if not phrase_tokens:
-        return False
-    escaped = r"\s+".join(re.escape(token) for token in phrase_tokens)
-    pattern = rf"\b{escaped}\b"
-    return re.search(pattern, text) is not None
-
-
 def _infer_mechanism_tags_from_name(name: str) -> set[str]:
-    normalized_name = _normalize_text(name)
+    normalized_name = normalize_text(name)
     if not normalized_name:
         return set()
     inferred: set[str] = set()
     for tag, keywords in MECH_KEYWORDS:
         for phrase in keywords:
-            if _phrase_in_text(normalized_name, phrase):
+            if phrase_in_text(normalized_name, phrase):
                 inferred.add(tag)
                 break
     return inferred
@@ -685,14 +659,14 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
     Returns:
         List of matched patterns (original form, not normalized)
     """
-    normalized_text = _normalize_text(text)
+    normalized_text = normalize_text(text)
     if not normalized_text:
         return []
     
     # Check allowlist first with word-boundary matching to avoid false positives
     allowlist = allowlist or []
     for phrase in allowlist:
-        if _phrase_in_text(normalized_text, phrase):
+        if phrase_in_text(normalized_text, phrase):
             return []
     
     # First pass: try word-boundary matching for all patterns
@@ -701,7 +675,7 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
     substring_candidates: list[str] = []  # Patterns to check with substring matching
     
     for pattern in patterns:
-        normalized_pattern = _normalize_text(pattern)
+        normalized_pattern = normalize_text(pattern)
         if not normalized_pattern:
             continue
         
@@ -712,7 +686,7 @@ def match_forbidden(text: str, patterns: Iterable[str], *, allowlist: Iterable[s
             continue
         
         # Try word-boundary matching
-        if _phrase_in_text(normalized_text, normalized_pattern):
+        if phrase_in_text(normalized_text, normalized_pattern):
             if pattern not in seen:
                 word_boundary_matches.append(pattern)
                 seen.add(pattern)
@@ -813,7 +787,7 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
 
     regions: set[str] = set()
     for injury in injury_list:
-        normalized = _normalize_text(injury)
+        normalized = normalize_text(injury)
         direct_key = normalized.replace(" ", "_")
         if direct_key in INJURY_RULES:
             regions.add(direct_key)
@@ -852,7 +826,7 @@ def normalize_injury_regions(injuries: Iterable[str]) -> set[str]:
     return set(regions)
 
 def _looks_like_constraint_phrase(phrase: str) -> bool:
-    normalized = _normalize_text(phrase)
+    normalized = normalize_text(phrase)
     if not normalized:
         return False
     tokens = set(normalized.split())
@@ -868,7 +842,7 @@ def injury_violation_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     for detail in injury_match_details(item, injuries, risk_levels=("exclude",)):
         region = detail["region"]
         for keyword in detail["patterns"]:
-            reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
+            reasons.add(f"{region}:keyword:{normalize_text(keyword)}")
         for tag in detail["tags"]:
             reasons.add(f"{region}:tag:{tag}")
     return sorted(reasons)
@@ -888,7 +862,7 @@ def injury_violation_reasons_with_fields(
     for detail in injury_match_details(item, injuries, fields=fields, risk_levels=("exclude",)):
         region = detail["region"]
         for keyword in detail["patterns"]:
-            reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
+            reasons.add(f"{region}:keyword:{normalize_text(keyword)}")
         for tag in detail["tags"]:
             reasons.add(f"{region}:tag:{tag}")
     return sorted(reasons)
@@ -899,7 +873,7 @@ def injury_flag_reasons(item: dict, injuries: Iterable[str]) -> list[str]:
     for detail in injury_match_details(item, injuries, risk_levels=("flag",)):
         region = detail["region"]
         for keyword in detail["patterns"]:
-            reasons.add(f"{region}:keyword:{_normalize_text(keyword)}")
+            reasons.add(f"{region}:keyword:{normalize_text(keyword)}")
         for tag in detail["tags"]:
             reasons.add(f"{region}:tag:{tag}")
     return sorted(reasons)
@@ -1137,11 +1111,5 @@ def write_injury_exclusion_files(output_dir: Path | None = None) -> None:
     exclusion_path.write_text(json.dumps(exclusion_map, indent=2, sort_keys=True))
 
 
-def log_injury_debug(items: Iterable[dict], injuries: Iterable[str], *, label: str) -> None:
-    """
-    DEPRECATED: This function is kept for backward compatibility but does nothing.
-    Use _log_exclusion() instead for logging excluded items only.
-    """
-    pass
 
 

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # }
 _REHAB_BANK_CACHE = None
 _REHAB_LOCATIONS_CACHE = None
+_EXERCISE_BANK_CACHE = None
 
 
 def get_rehab_bank() -> list[dict]:
@@ -45,6 +46,13 @@ def get_rehab_locations() -> set[str]:
 def prime_rehab_bank() -> None:
     get_rehab_bank()
     get_rehab_locations()
+
+
+def get_exercise_bank() -> list[dict]:
+    global _EXERCISE_BANK_CACHE
+    if _EXERCISE_BANK_CACHE is None:
+        _EXERCISE_BANK_CACHE = json.loads((DATA_DIR / "exercise_bank.json").read_text(encoding="utf-8"))
+    return _EXERCISE_BANK_CACHE
 REHAB_LOCATION_ALIASES = {
     "biceps": ["bicep"],
     "bicep": ["biceps"],
@@ -76,6 +84,11 @@ def normalize_rehab_location(location: str | None) -> list[str]:
 
     filtered = [candidate for candidate in candidates if candidate in get_rehab_locations()]
     return filtered or candidates
+
+
+def _entry_phases(entry: dict) -> list[str]:
+    """Return the normalized phase tokens for a rehab bank entry."""
+    return _split_phase_progression(entry.get("phase_progression", ""))
 
 
 def _split_phase_progression(text: str) -> list[str]:
@@ -561,9 +574,7 @@ def generate_rehab_protocols(
     deliberate risk-management decision rather than a template copy-paste.
 
     Function classification is used as *guidance* only — the same function may
-    appear more than once if the injury profile genuinely requires it.  Hard
-    deduplication is limited to preventing the exact same drill key from
-    appearing verbatim across phases (via ``seen_drills``).
+    appear more than once if the injury profile genuinely requires it.
 
     Parameters
     ----------
@@ -574,8 +585,8 @@ def generate_rehab_protocols(
     current_phase:
         Phase name (``GPP``/``SPP``/``TAPER``).
     seen_drills:
-        Set used to track drills already listed in earlier phases.  Prevents
-        the same drill from appearing verbatim across phases.
+        Legacy return/state parameter retained for compatibility with existing
+        callers. Drill selection no longer deduplicates across phases.
     day_type:
         Optional session type context (``'sparring'``, ``'strength'``,
         ``'aerobic'``, ``'recovery'``).  Affects volume ceiling and "Why today"
@@ -589,7 +600,6 @@ def generate_rehab_protocols(
     injury_phrases = split_injury_text(injury_string)
 
     parsed_entries = []
-    parsed_types = []
     for phrase in injury_phrases:
         itype, loc = parse_injury_phrase(phrase)
         if not itype:
@@ -598,7 +608,6 @@ def generate_rehab_protocols(
                 itype = "unspecified"
             else:
                 continue
-        parsed_types.append(itype)
         parsed_entries.append((itype, loc))
 
     # Prioritize specific injuries over unspecified duplicates
@@ -642,10 +651,6 @@ def generate_rehab_protocols(
 
     lines = []
 
-    def _phases(entry):
-        progress = entry.get("phase_progression", "")
-        return _split_phase_progression(progress)
-
     for itype, loc in unique_entries:
         loc_candidates = normalize_rehab_location(loc)
         matches = [
@@ -660,7 +665,7 @@ def generate_rehab_protocols(
                 entry.get("location") in loc_candidates
                 or entry.get("location") == "unspecified"
             )
-            and current_phase.upper() in _phases(entry)
+            and current_phase.upper() in _entry_phases(entry)
         ]
         if matches:
             drills: list[tuple[str, str]] = []  # (name, notes_for_phase)
@@ -675,16 +680,10 @@ def generate_rehab_protocols(
                     if parsed:
                         for phase_label, text in parsed:
                             if phase_label == current_phase.upper():
-                                key = name if not text else f"{name} – {text}"
-                                if key not in seen_drills:
-                                    drills.append((name, text))
-                                    seen_drills.add(key)
+                                drills.append((name, text))
                                 break
                     else:
-                        key = name if not notes else f"{name} – {notes}"
-                        if key not in seen_drills:
-                            drills.append((name, notes))
-                            seen_drills.add(key)
+                        drills.append((name, notes))
 
             # Apply volume ceiling.  Function classification is recorded as
             # a tag but does NOT hard-block same-function drills — the model
@@ -753,7 +752,7 @@ def combine_three_phase_drills(location: str, injury_type: str) -> list[dict]:
 
 
 def generate_support_notes(injury_string: str) -> str:
-    """Return injury support notes consolidated for all phases."""
+    """Return concise injury support notes consolidated for all phases."""
     phrases = split_injury_text(injury_string)
     parsed_types = set()
     for p in phrases:
@@ -766,13 +765,86 @@ def generate_support_notes(injury_string: str) -> str:
     if not parsed_types:
         return ""
 
-    lines = ["## General Injury Support Notes"]
-    for itype in parsed_types:
-        lines.append(f"*{itype.title()} Support Advice:*")
-        lines.extend([f"- {n}" for n in INJURY_SUPPORT_NOTES[itype]])
-        lines.append("")
+    lines = ["## Recovery Focus"]
+    for itype in sorted(parsed_types):
+        notes = INJURY_SUPPORT_NOTES[itype][:2]
+        lines.append(f"- **{itype.title()}**: {'; '.join(notes)}.")
 
     return "\n".join(lines).strip()
+
+
+def _safer_upper_body_replacements(limit: int = 15) -> list[str]:
+    """Return a compact list of safer substitutes when upper-body loading is limited."""
+    safe_options: list[tuple[str, str]] = []
+    seen_names: set[str] = set()
+    banned_name_tokens = (
+        "press",
+        "bench",
+        "dip",
+        "push-up",
+        "push up",
+        "handstand",
+        "toss",
+        "throw",
+        "slam",
+        "jerk",
+        "snatch",
+        "clean",
+        "muscle-up",
+        "muscle up",
+        "crawl",
+    )
+    banned_tags = {
+        "upper_push",
+        "horizontal_push",
+        "press_heavy",
+        "overhead",
+        "dynamic_overhead",
+        "dip_loaded",
+        "grip_max",
+        "wrist_loaded_extension",
+        "wrist_extension_high",
+        "explosive_upper_push",
+        "mech_upper_press",
+        "mech_ballistic",
+    }
+    equipment_priority = [
+        "bodyweight",
+        "bands",
+        "cable",
+        "dumbbells",
+        "kettlebell",
+        "sled",
+        "rower",
+        "stationary_bike",
+    ]
+    for entry in get_exercise_bank():
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        lowered_name = name.lower()
+        if any(token in lowered_name for token in banned_name_tokens):
+            continue
+        tags = {str(tag).lower() for tag in entry.get("tags", [])}
+        if tags & banned_tags:
+            continue
+        equipment = str(entry.get("equipment") or "bodyweight")
+        if name in seen_names:
+            continue
+        seen_names.add(name)
+        safe_options.append((equipment, name))
+
+    def _sort_key(option: tuple[str, str]) -> tuple[int, str]:
+        equipment, name = option
+        try:
+            priority = equipment_priority.index(equipment)
+        except ValueError:
+            priority = len(equipment_priority)
+        return (priority, name)
+
+    safe_options.sort(key=_sort_key)
+    selected = [f"{name} ({equipment})" for equipment, name in safe_options[:limit]]
+    return selected
 
 
 def _normalize_injury_entries(injury_string: str) -> list[dict[str, str | None]]:
@@ -888,10 +960,6 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
     phase = phase.upper()
     drills: list[str] = []
 
-    def _phases(entry):
-        progress = entry.get("phase_progression", "")
-        return _split_phase_progression(progress)
-
     def _append_drills(entry):
         for drill in entry.get("drills", []):
             name = drill.get("name")
@@ -926,7 +994,7 @@ def _rehab_drills_for_phase(itype: str, loc: str | None, phase: str, limit: int 
                     continue
                 if entry.get("location") != c_loc:
                     continue
-                if phase not in _phases(entry):
+                if phase not in _entry_phases(entry):
                     continue
                 _append_drills(entry)
                 if len(drills) >= limit:
@@ -1027,6 +1095,16 @@ def format_injury_guardrails(
             else:
                 lines.append(f"- {summary}: No rehab drills available for this phase.")
 
+    has_upper_limb = any(
+        LOCATION_REGION_MAP.get((entry.get("canonical_location") or ""), "unspecified") == "upper_limb"
+        for entry in entries
+    )
+    if has_upper_limb:
+        replacements = _safer_upper_body_replacements(limit=15)
+        if replacements:
+            lines += ["", "**Safer Replacements (Upper-Body Deload)**"]
+            lines.extend([f"- {replacement}" for replacement in replacements])
+
     base_red_flags = [
         "Pain that worsens and stays elevated the next morning.",
         "Rapidly increasing swelling, instability, or loss of function.",
@@ -1052,5 +1130,3 @@ def format_injury_guardrails(
         lines.append(f"- {BFR_SAFETY_GATE}")
 
     return "\n".join(lines).strip()
-
-

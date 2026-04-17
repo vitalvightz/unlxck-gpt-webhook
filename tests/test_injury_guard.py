@@ -627,3 +627,13 @@ def test_regression_sentinel_drills_per_region():
             assert injury_violation_reasons({"name": name, "tags": []}, [region])
         for name in cases["allowed"]:
             assert injury_violation_reasons({"name": name, "tags": []}, [region]) == []
+
+
+def test_medicine_ball_chest_toss_is_excluded_for_upper_body_injuries():
+    exercise = {
+        "name": "Medicine-Ball Chest Toss",
+        "tags": ["explosive", "upper_body", "mech_ballistic", "mech_upper_press"],
+    }
+    for injury in ("shoulder impingement", "elbow tendonitis", "wrist pain", "chest strain", "forearm strain"):
+        decision = injury_decision(exercise, [injury], "SPP", "low")
+        assert decision.action == "exclude"

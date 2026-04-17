@@ -1,4 +1,4 @@
-### FIGHT TRAINING ADAPTATIONS CHEATSHEET
+## FIGHT TRAINING ADAPTATIONS CHEATSHEET
 *What your body actually improves when you train - and **WHY** some matter more than others*
 
 ---

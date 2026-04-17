@@ -65,33 +65,48 @@ export default function ForgotPasswordPage() {
           <span className="badge status-badge-neutral">Secure</span>
         </div>
 
-        {message ? <div className="success-banner">{message}</div> : null}
-        {error ? <div className="error-banner">{error}</div> : null}
-
-        <form onSubmit={handleSubmit} className="auth-form-grid">
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              placeholder="your@email.com"
-            />
+        {message ? (
+          <div className="auth-success-state">
+            <div className="success-banner">{message}</div>
+            <div className="support-panel">
+              <p className="kicker">Next step</p>
+              <p className="muted">Open your email app and look for a message from us. The reset link expires after a short window, so use it soon.</p>
+            </div>
+            <div className="form-actions">
+              <Link href="/login" className="ghost-button">
+                Back to log in
+              </Link>
+            </div>
           </div>
+        ) : (
+          <>
+            {error ? <div className="error-banner">{error}</div> : null}
+            <form onSubmit={handleSubmit} className="auth-form-grid">
+              <div className="field">
+                <label htmlFor="email">Email</label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                  placeholder="your@email.com"
+                />
+              </div>
 
-          <div className="form-actions">
-            <button type="submit" className="cta" disabled={isPending}>
-              {isPending ? "Sending..." : "Send reset link"}
-            </button>
-            <Link href="/login" className="ghost-button">
-              Back to log in
-            </Link>
-          </div>
-        </form>
+              <div className="form-actions">
+                <button type="submit" className="cta" disabled={isPending}>
+                  {isPending ? "Sending..." : "Send reset link"}
+                </button>
+                <Link href="/login" className="ghost-button">
+                  Back to log in
+                </Link>
+              </div>
+            </form>
+          </>
+        )}
       </div>
     </section>
   );

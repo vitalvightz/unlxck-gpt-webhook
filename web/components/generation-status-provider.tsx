@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { getGenerationJob } from "@/lib/api";
 import type { GenerationJobResponse, GenerationJobStatus } from "@/lib/types";
 
@@ -27,7 +27,6 @@ interface PendingGenerationState {
 function getPendingGeneration(): PendingGenerationState | null {
   if (typeof window === "undefined") return null;
 
-  // Look for keys matching the pattern "unlxck:pending-generation:*"
   const storageKeys = Object.keys(window.sessionStorage).filter((key) =>
     key.startsWith("unlxck:pending-generation:")
   );
@@ -85,9 +84,22 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   const [planId, setPlanId] = useState<string | null>(null);
   const [statusMessageText, setStatusMessageText] = useState<string | null>(null);
 
+  // Track the clear timeout so we can cancel it on unmount — prevents
+  // state updates on an unmounted component
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cancel any pending clear timer when the component unmounts
+  useEffect(() => {
+    return () => {
+      if (clearTimerRef.current !== null) {
+        clearTimeout(clearTimerRef.current);
+      }
+    };
+  }, []);
+
   const checkStatus = useCallback(async () => {
     const pending = getPendingGeneration();
-    
+
     if (!pending) {
       setPhase(null);
       setJobId(null);
@@ -97,7 +109,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     }
 
     setClientRequestId(pending.clientRequestId);
-    
+
     if (pending.jobId && token) {
       try {
         const job = await getGenerationJob(token, pending.jobId);
@@ -105,31 +117,24 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setPhase(newPhase);
         setJobId(pending.jobId);
         setStatusMessageText(statusMessage(newPhase));
-        
-        // Track plan ID when completed
+
         if (job.status === "completed" || job.status === "review_required") {
           setPlanId(job.plan_id || job.latest_plan_id || null);
         }
-        
-        // Clear completed/failed after showing briefly
+
+        // Schedule the status clear — cancel any previous pending clear first
         if (job.status === "completed" || job.status === "review_required" || job.status === "failed") {
-          if (job.status === "completed" || job.status === "review_required") {
-            // Keep showing "completed" for 5 seconds before clearing
-            setTimeout(() => {
-              setPhase(null);
-              setJobId(null);
-              setClientRequestId(null);
-              setPlanId(null);
-            }, 5000);
-          } else {
-            // Failed - clear immediately after a shorter delay
-            setTimeout(() => {
-              setPhase(null);
-              setJobId(null);
-              setClientRequestId(null);
-              setPlanId(null);
-            }, 3000);
+          if (clearTimerRef.current !== null) {
+            clearTimeout(clearTimerRef.current);
           }
+          const delay = job.status === "failed" ? 3000 : 5000;
+          clearTimerRef.current = setTimeout(() => {
+            clearTimerRef.current = null;
+            setPhase(null);
+            setJobId(null);
+            setClientRequestId(null);
+            setPlanId(null);
+          }, delay);
         }
       } catch {
         // If we can't check status but have pending data, assume still running
@@ -137,28 +142,24 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
         setStatusMessageText("Generating plan...");
       }
     } else {
-      // No job ID yet, still in submitting/queued phase
       setPhase("queued");
       setStatusMessageText("Plan request queued...");
     }
   }, [token]);
 
   useEffect(() => {
-    // Check immediately on mount
     void checkStatus();
-    
-    // Poll every 3 seconds while active
+
     const interval = setInterval(() => {
       void checkStatus();
     }, 3000);
-    
-    // Also check when storage changes (e.g., when generation starts on another page)
+
     const handleStorageChange = () => {
       void checkStatus();
     };
-    
+
     window.addEventListener("storage", handleStorageChange);
-    
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("storage", handleStorageChange);

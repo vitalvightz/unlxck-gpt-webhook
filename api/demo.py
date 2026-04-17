@@ -46,6 +46,9 @@ class DemoStore:
         self.plans: dict[str, dict[str, Any]] = {}
         self.generation_jobs: dict[str, dict[str, Any]] = {}
 
+    def validate_runtime_schema(self) -> None:
+        return None
+
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]:
         with self._lock:
             existing = self.profiles.get(user.user_id)
@@ -223,6 +226,35 @@ class DemoStore:
         with self._lock:
             job = self.generation_jobs.get(job_id)
             return dict(job) if job else None
+
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
+        with self._lock:
+            now = datetime.now(timezone.utc)
+            rows = []
+            for job in self.generation_jobs.values():
+                status_value = str(job.get("status") or "")
+                if status_value == "queued":
+                    rows.append(dict(job))
+                    continue
+                if status_value != "running":
+                    continue
+                heartbeat_raw = job.get("heartbeat_at")
+                started_raw = job.get("started_at")
+                heartbeat = (
+                    datetime.fromisoformat(str(heartbeat_raw).replace("Z", "+00:00"))
+                    if isinstance(heartbeat_raw, str) and heartbeat_raw
+                    else None
+                )
+                started_at = (
+                    datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
+                    if isinstance(started_raw, str) and started_raw
+                    else None
+                )
+                last_progress_at = heartbeat or started_at
+                if last_progress_at and (now - last_progress_at).total_seconds() >= stale_after_seconds:
+                    rows.append(dict(job))
+        rows.sort(key=lambda row: str(row.get("created_at") or ""))
+        return rows[:limit]
 
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
         with self._lock:

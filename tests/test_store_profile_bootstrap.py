@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from postgrest.exceptions import APIError
 
 import api.store as store_module
+from support import _build_request
 from api.auth import AuthenticatedUser
 from api.store import SupabaseAppStore
 
@@ -287,6 +288,123 @@ def test_create_or_get_generation_job_returns_existing_row_after_unique_conflict
     )
 
     assert result == existing_job
+
+
+def test_validate_runtime_schema_raises_when_required_plan_columns_missing_by_default():
+    store = _make_store()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
+
+    with pytest.raises(RuntimeError) as exc_info:
+        store.validate_runtime_schema()
+
+    assert str(exc_info.value) == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
+
+
+def test_validate_runtime_schema_allows_legacy_missing_columns_when_flag_enabled(monkeypatch):
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    store.client.table.return_value.select.return_value.limit.return_value.execute.side_effect = schema_error
+
+    store.validate_runtime_schema()
+
+
+def test_create_plan_retries_with_legacy_payload_when_optional_plan_columns_are_missing(monkeypatch):
+    monkeypatch.setenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "1")
+    store = _make_store()
+    request = _build_request()
+    schema_error = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+    insert_execute = store.client.table.return_value.insert.return_value.execute
+    success_response = MagicMock()
+    success_response.data = [{"id": "plan-1"}]
+    insert_execute.side_effect = [schema_error, success_response]
+
+    row = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake-1",
+        request=request,
+        result={"plan_text": "# Plan", "stage2_payload": {"ok": True}},
+    )
+
+    assert row["id"] == "plan-1"
+    assert insert_execute.call_count == 2
+    first_payload = store.client.table.return_value.insert.call_args_list[0].args[0]
+    second_payload = store.client.table.return_value.insert.call_args_list[1].args[0]
+    assert "stage2_payload" in first_payload
+    assert "stage2_payload" not in second_payload
+
+
+def test_create_plan_raises_clear_schema_error_when_required_columns_missing_by_default():
+    store = _make_store()
+    request = _build_request()
+    insert_execute = store.client.table.return_value.insert.return_value.execute
+    insert_execute.side_effect = APIError(
+        {
+            "message": "Could not find the 'stage2_payload' column of 'plans' in the schema cache",
+            "code": "PGRST204",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake-1",
+            request=request,
+            result={"plan_text": "# Plan", "stage2_payload": {"ok": True}},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == store_module.PLAN_RUNTIME_SCHEMA_ERROR_DETAIL
+    assert insert_execute.call_count == 1
+
+
+def test_create_plan_raises_when_non_schema_insert_error_occurs():
+    store = _make_store()
+    request = _build_request()
+    insert_execute = store.client.table.return_value.insert.return_value.execute
+    insert_execute.side_effect = APIError(
+        {
+            "message": "new row violates row-level security policy for table \"plans\"",
+            "code": "42501",
+            "hint": None,
+            "details": None,
+        }
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        store.create_plan(
+            athlete_id="athlete-1",
+            intake_id="intake-1",
+            request=request,
+            result={"plan_text": "# Plan"},
+        )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == "create_plan failed"
 
 
 def test_claim_generation_job_returns_none_when_compare_and_swap_loses(monkeypatch):

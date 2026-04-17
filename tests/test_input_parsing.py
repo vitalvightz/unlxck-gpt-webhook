@@ -13,7 +13,7 @@ def _payload(fields: list[dict]) -> dict:
     return {"data": {"fields": fields}}
 
 
-def test_training_frequency_fallback():
+def test_invalid_training_frequency_raises_value_error():
     data = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},
@@ -21,9 +21,8 @@ def test_training_frequency_fallback():
             {"label": "Training Availability", "value": "Mon, Wed"},
         ]
     )
-    parsed = PlanInput.from_payload(data)
-    assert parsed.training_frequency == 2
-    assert parsed.training_days == ["Mon", "Wed"]
+    with pytest.raises(ValueError, match="invalid Weekly Training Frequency"):
+        PlanInput.from_payload(data)
 
 
 def test_missing_fight_date_sets_na():
@@ -62,8 +61,9 @@ def test_past_fight_date_handling_is_explicit():
     assert parsed.weeks_out == "N/A"
 
 
-def test_same_day_fight_date_remains_fight_week_active():
-    today = datetime.now().strftime("%Y-%m-%d")
+def test_same_day_fight_date_remains_fight_week_active(monkeypatch):
+    today = "2026-03-14"
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
     data = _payload(
         [
             {"label": "Full name", "value": "Test Athlete"},
@@ -254,6 +254,74 @@ def test_guided_injury_payload_treats_area_as_source_of_truth():
     assert parsed.restrictions[0]["region"] == "hip"
 
 
+def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {
+                "label": "Any injuries or areas you need to work around?",
+                "value": "hip flexor (moderate, improving). Right heel. Notes: roadwork flare-up.",
+            },
+        ]
+    )
+    payload["guided_injuries"] = [
+        {
+            "area": "hip flexor",
+            "severity": "moderate",
+            "trend": "improving",
+            "avoid": "deep hip flexion",
+            "notes": "pain when driving knee up past pelvis",
+        },
+        {
+            "area": "right heel",
+            "severity": "low",
+            "trend": "stable",
+            "notes": "roadwork flare-up",
+        },
+    ]
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.area == "hip flexor"
+    assert len(parsed.parsed_injuries) == 2
+    assert parsed.parsed_injuries[0]["display_location"] == "hip flexor"
+    assert parsed.parsed_injuries[0]["notes"] == "pain when driving knee up past pelvis"
+    assert parsed.parsed_injuries[1]["display_location"] == "heel"
+    assert parsed.parsed_injuries[1]["notes"] == "roadwork flare-up"
+    assert len(parsed.restrictions) == 1
+    assert parsed.restrictions[0]["region"] == "hip"
+
+
+def test_guided_injuries_override_conflicting_guided_injury_for_consistency():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "right heel, hip flexor"},
+        ]
+    )
+    payload["guided_injuries"] = [
+        {"area": "right heel", "notes": "roadwork flare-up"},
+        {"area": "hip flexor", "severity": "moderate"},
+    ]
+    payload["guided_injury"] = {"area": "left shoulder", "severity": "high"}
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.area == "right heel"
+    assert [entry["display_location"] for entry in parsed.parsed_injuries] == ["heel", "hip flexor"]
+
+
+def test_extract_guided_injuries_ignores_non_dict_nested_data():
+    injuries = input_parsing._extract_guided_injuries({"data": None, "guided_injuries": [{"area": "right heel"}]})
+
+    assert len(injuries) == 1
+    assert injuries[0].area == "right heel"
+
+
 def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     payload = _payload(
         [
@@ -282,6 +350,58 @@ def test_guided_injury_runtime_context_does_not_leak_note_body_parts():
     assert all("knee" not in injury for injury in context.training_context.injuries)
 
 
+def test_approved_resume_runtime_context_keeps_parsed_injuries_but_strips_triage_shaping():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "hip flexor"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "hip flexor",
+        "severity": "moderate",
+        "trend": "stable",
+        "avoid": "deep hip flexion",
+        "notes": "pain at end-range",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=None,
+        logger=logging.getLogger(__name__),
+        triage_summary={"mode": "needs_review", "should_block_stage2": True},
+        is_approved_triage_resume=True,
+    )
+
+    assert context.training_context.injuries_raw_text == parsed.injuries
+    assert context.training_context.parsed_injuries == [dict(entry) for entry in parsed.parsed_injuries]
+    assert context.training_context.guided_injury is None
+    assert context.training_context.injury_restrictions == []
+    assert context.training_context.triage_summary == {}
+
+
+def test_guided_injury_structural_notes_are_retained_in_original_phrase():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": "right knee"},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "right knee",
+        "severity": "high",
+        "trend": "stable",
+        "notes": "rupture acl after a collision",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert "rupture acl" in parsed.parsed_injuries[0]["original_phrase"].lower()
+
+
 @pytest.mark.parametrize(
     ("guided_severity", "expected_severity"),
     [("low", "mild"), ("high", "severe")],
@@ -304,18 +424,40 @@ def test_guided_injury_payload_converts_frontend_to_backend_severity_vocab(guide
     assert parsed.parsed_injuries[0]["severity"] == expected_severity
 
 
-def test_compute_days_until_fight_uses_patchable_calendar_reference_for_date_only_values(monkeypatch):
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 23, 30))
+def test_missing_frequency_is_intentionally_inferred_and_marked_system_inferred():
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Training Availability", "value": "Mon, Thu, Sat"},
+            ]
+        )
+    )
+    assert parsed.training_frequency == 3
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "system_inferred"
 
-    fight_date = input_parsing.parse_fight_date("2026-03-14")
 
-    assert fight_date is not None
-    assert input_parsing._compute_days_until_fight("2026-03-14", fight_date) == 1
+def test_user_supplied_frequency_is_marked_user_supplied():
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "Weekly Training Frequency", "value": "4"},
+                {"label": "Training Availability", "value": "Mon, Thu, Sat"},
+            ]
+        )
+    )
+    assert parsed.training_frequency == 4
+    assert parsed.parsing_metadata["training_frequency"]["source"] == "user_supplied"
 
 
-def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
+def test_malformed_fight_date_raises_value_error():
+    with pytest.raises(ValueError, match="invalid fight date format"):
+        PlanInput.from_payload(
+            _payload([{"label": "When is your next fight?", "value": "03-14-2026"}])
+        )
+
+
+def test_date_only_fight_date_with_missing_timezone_uses_platform_default_timezone(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
 
     parsed = PlanInput.from_payload(
         _payload(
@@ -326,13 +468,13 @@ def test_plan_input_uses_local_calendar_day_for_date_only_rollover(monkeypatch):
         )
     )
 
-    assert parsed.days_until_fight == 1
+    assert parsed.days_until_fight == 0
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "defaulted_missing"
 
 
 def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 14, 0, 30))
 
     parsed = PlanInput.from_payload(
         _payload(
@@ -349,11 +491,11 @@ def test_plan_input_uses_athlete_timezone_for_date_only_rollover(monkeypatch):
     assert parsed.athlete_locale == "en-US"
     assert parsed.days_until_fight == 1
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "user_supplied"
 
 
-def test_invalid_athlete_timezone_falls_back_to_local_calendar(monkeypatch):
+def test_invalid_athlete_timezone_falls_back_to_platform_default(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 0, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 19, 30))
 
     parsed = PlanInput.from_payload(
         _payload(
@@ -365,16 +507,56 @@ def test_invalid_athlete_timezone_falls_back_to_local_calendar(monkeypatch):
         )
     )
 
-    assert parsed.athlete_timezone == "Mars/Olympus"
-    assert parsed.days_until_fight == 1
+    assert parsed.athlete_timezone == "UTC"
+    assert parsed.days_until_fight == 0
     assert parsed.weeks_out == 1
+    assert parsed.parsing_metadata["athlete_timezone"]["source"] == "defaulted_missing"
 
 
-def test_compute_days_until_fight_keeps_utc_reference_for_timestamped_values(monkeypatch):
+def test_timestamped_and_date_only_countdown_use_consistent_date_model(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 12, 0))
+
+    date_only = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": "2026-03-15"},
+                {"label": "Athlete Time Zone", "value": "UTC"},
+            ]
+        )
+    )
+    timestamped = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": "2026-03-15T00:00:00Z"},
+                {"label": "Athlete Time Zone", "value": "UTC"},
+            ]
+        )
+    )
+
+    assert date_only.days_until_fight == 2
+    assert timestamped.days_until_fight == 2
+
+
+def test_countdown_depends_only_on_utc_now(monkeypatch):
     monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 13, 23, 30))
-    monkeypatch.setattr(input_parsing, "_calendar_now", lambda: datetime(2026, 3, 13, 10, 0))
 
-    fight_date = input_parsing.parse_fight_date("2026-03-15T00:00:00Z")
+    parsed = PlanInput.from_payload(
+        _payload([{"label": "When is your next fight?", "value": "2026-03-14"}])
+    )
 
-    assert fight_date is not None
-    assert input_parsing._compute_days_until_fight("2026-03-15T00:00:00Z", fight_date) == 1
+    assert parsed.days_until_fight == 1
+
+
+def test_countdown_stable_across_timezone_edge_cases(monkeypatch):
+    monkeypatch.setattr(input_parsing, "_utc_now", lambda: datetime(2026, 3, 14, 7, 30))
+
+    parsed = PlanInput.from_payload(
+        _payload(
+            [
+                {"label": "When is your next fight?", "value": "2026-03-14"},
+                {"label": "Athlete Time Zone", "value": "UTC-08:00"},
+            ]
+        )
+    )
+
+    assert parsed.days_until_fight == 1

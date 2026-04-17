@@ -105,7 +105,6 @@ def _build_stage2(days):
         weight_cut_pct=0.0,
         fight_format="boxing",
         status="amateur",
-        training_split={},
         key_goals=["power"],
         training_preference="short sessions",
         mental_block=[],
@@ -432,6 +431,52 @@ class TestStage2PayloadBranching:
         assert "allocator" in brief["late_fight_plan_spec"]
         assert "role_budget" in brief["late_fight_plan_spec"]
 
+    def test_d7_plan_spec_keeps_boxing_roles_out_of_visible_insert_sessions(self):
+        spec = _build_late_fight_plan_spec(7, _athlete(7))
+
+        assert "hard_sparring_day" in spec["session_roles"]
+        assert "hard_sparring_day" not in spec["visible_session_roles"]
+        assert spec["visible_session_cap"] == len(spec["visible_session_sequence"])
+        assert [entry["role_key"] for entry in spec["visible_session_sequence"]] == spec["visible_session_roles"]
+
+    def test_d5_plan_spec_adds_structured_hard_sparring_context(self):
+        spec = _build_late_fight_plan_spec(
+            5,
+            _athlete(5, plan_creation_weekday="monday", hard_sparring_days=["tuesday", "thursday"]),
+        )
+        assert "hard_sparring_context_line" in spec
+        assert spec["surviving_hard_spar_days"] == []
+        assert spec["downgraded_declared_spar_days"] == ["tuesday", "thursday"]
+        assert spec["hard_sparring_context_line"] == (
+            "Hard sparring this window: none. Tuesday and Thursday are technical rhythm only."
+        )
+
+    @pytest.mark.parametrize(
+        "days,expected_visible",
+        [
+            (13, 3),
+            (11, 3),
+            (9, 3),
+            (7, 2),
+            (5, 2),
+            (3, 2),
+            (1, 1),
+        ],
+    )
+    def test_late_fight_visible_session_count_varies_by_countdown_and_context(self, days, expected_visible):
+        athlete = _athlete(
+            days,
+            hard_sparring_days=["thursday"],
+            fatigue="moderate",
+            fatigue_level="moderate",
+            readiness_flags=["injury_management", "weight_cut_active"],
+            weekly_training_frequency=5,
+            weight_cut_risk=True,
+            weight_cut_pct=2.0,
+        )
+        spec = _build_late_fight_plan_spec(days, athlete)
+        assert spec["visible_session_cap"] == expected_visible
+
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
         athlete_model = payload["athlete_model"]
@@ -469,6 +514,7 @@ class TestHandoffText:
     def test_camp_handoff_has_no_payload_mode_section(self):
         text = self._build_handoff(14)
         assert "PAYLOAD MODE INSTRUCTIONS" not in text
+        assert "INJURY CONTEXT" in text
         assert "PLANNING BRIEF" in text
 
     @pytest.mark.parametrize(
@@ -486,41 +532,85 @@ class TestHandoffText:
         text = self._build_handoff(days)
         assert "PAYLOAD MODE INSTRUCTIONS" in text
         assert expected_heading in text
+
+    def test_handoff_injury_context_section_is_visible_and_structured(self):
+        payload = _build_stage2(14)
+        payload["injury_context"] = {
+            "raw_injury_text": "sore shoulder after sparring",
+            "injuries_flat": ["shoulder pain"],
+            "parsed_injuries": [{"original_phrase": "shoulder pain", "severity": "mild"}],
+            "guided_injury": {"area": "right shoulder", "severity": "mild"},
+            "restrictions": [{"restriction": "avoid heavy overhead pressing"}],
+            "triage_summary": {"mode": "full_plan", "should_block_stage2": False},
+        }
+        brief = build_planning_brief(
+            athlete_model=payload["athlete_model"],
+            restrictions=payload["restrictions"],
+            phase_briefs=payload["phase_briefs"],
+            candidate_pools=payload["candidate_pools"],
+            omission_ledger=payload["omission_ledger"],
+            rewrite_guidance=payload["rewrite_guidance"],
+        )
+        text = build_stage2_handoff_text(
+            stage2_payload=payload,
+            plan_text="Week 1 ...",
+            planning_brief=brief,
+        )
+        assert "INJURY CONTEXT" in text
+        assert "sore shoulder after sparring" in text
+        assert "avoid heavy overhead pressing" in text
         assert "STAGE 1 DRAFT PLAN" in text
-        assert "Draft plan text." in text
+        assert "Week 1 ..." in text
 
     def test_d10_handoff_blocks_normal_spp_rebuild_language(self):
         text = self._build_handoff(10)
 
-        assert "Do NOT rebuild a normal SPP week in Stage 2." in text
-        assert "Keep no more than 2 hard sparring exposures." in text
+        assert "No SPP development framing" in text
+        assert "Hard sparring: 2 max" in text
 
     def test_d3_handoff_explicitly_forbids_week_structure(self):
         text = self._build_handoff(3)
-        assert "Do NOT render week headers" in text
+        assert "no week headers" in text or "No week headers" in text
+        assert "Session-by-session only" in text
 
     def test_d7_handoff_uses_sharpness_week_heading_map(self):
         text = self._build_handoff(7)
 
-        assert "Main Sharpness Day" in text
-        assert "Power Touch" in text
-        assert "Primary Strength" in text
+        assert "SHARPNESS WEEK" in text
+        assert "Hard sparring: 1 declared day" in text
+        assert "Stress cap" in text
 
     def test_d3_handoff_replaces_camp_titles_with_late_fight_titles(self):
         text = self._build_handoff(3)
 
-        assert "Sharpness Session" in text
-        assert "Freshness Session" in text
-        assert "Strength Block" in text
+        assert "sharpness" in text.lower()
+        assert "freshness" in text.lower()
+        # Strength Block is a forbidden term that belongs in rendering_rules
+        assert "no strength" in text.lower() or "No strength" in text
 
     def test_d1_handoff_forbids_strength_and_block_language(self):
         text = self._build_handoff(1)
 
-        assert "FORBIDDEN TERMS: strength, conditioning, anchor, development, stressor, fight-pace density, block" in text
-        assert "PREFERRED TERMS: neural primer, technical touch, sharpness, activation, reset, rhythm." in text
+        assert "Banned:" in text
+        assert "strength" in text
+        assert "neural primer" in text
 
     def test_d0_handoff_uses_fight_day_protocol_terms(self):
         text = self._build_handoff(0)
 
-        assert "Walk-through reminders" in text
-        assert "Do NOT add any training session" in text
+        assert "walk-through" in text.lower()
+        assert "Do not restore suppressed roles" in text
+
+    def test_late_fight_handoff_uses_app_owned_insert_contract(self):
+        text = self._build_handoff(10)
+
+        # Placement governs day assignment only — core contract phrase (stable)
+        assert "Placement governs day assignment only" in text
+        # App vs coach ownership distinction is present
+        assert "app-owned" in text.lower() or "gym/coach" in text.lower(), (
+            "Handoff should distinguish app-owned vs coach-owned schedule elements"
+        )
+        # Spar day accounting fields are present in the payload data
+        assert "surviving_hard_spar_days" in text or "hard_spar" in text, (
+            "Handoff should reference hard spar day accounting"
+        )

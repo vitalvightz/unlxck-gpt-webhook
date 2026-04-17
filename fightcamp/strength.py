@@ -34,6 +34,7 @@ from .strength_session_quality import (
     strength_quality_adjustment,
 )
 from .session_restraint import NEAR_EQUAL_SCORE_BAND, sort_weighted_candidates
+from .normalization import normalize_fight_format as _normalize_fight_format
 
 logger = logging.getLogger(__name__)
 
@@ -295,10 +296,6 @@ def _has_isometric_setup_equipment(equipment_access: list[str]) -> bool:
     eq = set(normalize_equipment_list(equipment_access))
     valid = {"power_rack", "squat_rack", "rack", "safety_pins", "pins"}
     return bool(eq & valid)
-def _normalize_fight_format(fight_format: str) -> str:
-    if fight_format == "muay_thai":
-        return "kickboxing"
-    return fight_format
 
 def get_exercise_bank() -> list[dict]:
     global _exercise_bank_cache

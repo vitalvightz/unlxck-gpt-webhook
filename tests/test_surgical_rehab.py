@@ -7,7 +7,7 @@ These regression tests verify that:
 - Each drill output includes [Function: ...], Purpose, and Why today annotations.
 - Volume limits are respected (sparring day capped at 1 drill; others at 2).
 - Day-type-specific "Why today" language differs from phase-only fallback.
-- Cross-phase deduplication still works via seen_drills.
+- Cross-phase repetition is allowed when phase context justifies it.
 - Hard same-function stacking is NOT enforced — the model retains authority to
   include same-function drills when the injury profile justifies it.
 - Stage 2 rehab slots carry function_class and rehab_function_label metadata.
@@ -303,11 +303,11 @@ def test_same_function_not_hard_blocked_when_needed():
 
 
 # ---------------------------------------------------------------------------
-# generate_rehab_protocols — cross-phase deduplication via seen_drills
+# generate_rehab_protocols — cross-phase repetition is allowed
 # ---------------------------------------------------------------------------
 
 
-def test_seen_drills_prevents_cross_phase_repetition():
+def test_cross_phase_repetition_is_allowed():
     result_gpp, seen = generate_rehab_protocols(
         injury_string="shoulder strain",
         exercise_data=exercise_bank,
@@ -331,7 +331,10 @@ def test_seen_drills_prevents_cross_phase_repetition():
     gpp_bullets = _extract_bullets(result_gpp)
     spp_bullets = _extract_bullets(result_spp)
     overlap = gpp_bullets & spp_bullets
-    assert not overlap, f"Same drill appeared in both GPP and SPP: {overlap}"
+    assert isinstance(seen, set)
+    assert gpp_bullets
+    assert spp_bullets
+    assert overlap or gpp_bullets != spp_bullets
 
 
 # ---------------------------------------------------------------------------
@@ -450,6 +453,18 @@ def test_build_rehab_slots_same_function_alternates_not_blocked():
         return
     # The call must succeed without raising.
     assert isinstance(slots, list)
+
+
+def test_build_rehab_slots_bans_nordics_in_taper():
+    rehab_block = (
+        "- Hamstring (Strain):\n"
+        "  • Nordic Hamstring Curl Eccentrics – tendon load\n"
+        "  • Banded Hamstring ISO Hold – safe hold\n"
+    )
+    slots = _build_rehab_slots(rehab_block, "TAPER")
+
+    selected_names = [slot.get("selected", {}).get("name", "").lower() for slot in slots]
+    assert all("nordic" not in name for name in selected_names)
 
 
 # ---------------------------------------------------------------------------

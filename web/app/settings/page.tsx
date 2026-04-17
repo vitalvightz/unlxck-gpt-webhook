@@ -75,7 +75,6 @@ export default function SettingsPage() {
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>("dark");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [urlInputValue, setUrlInputValue] = useState("");
-  const [showUrlInput, setShowUrlInput] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -148,7 +147,7 @@ export default function SettingsPage() {
     });
   }
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_AVATAR_FILE_BYTES) {
@@ -161,7 +160,7 @@ export default function SettingsPage() {
       const dataUrl = e.target?.result;
       if (typeof dataUrl === "string") {
         setAvatarUrl(dataUrl);
-        setShowUrlInput(false);
+        setUrlInputValue("");
         setError(null);
       }
     };
@@ -248,18 +247,19 @@ export default function SettingsPage() {
               <div className="form-section-header">
                 <p className="kicker">Identity</p>
                 <h2 className="form-section-title">Profile image</h2>
-                <p className="muted">Choose a photo from your device or gallery. Tap the avatar to upload.</p>
+                <p className="muted">Upload a photo from your device or paste a URL.</p>
               </div>
 
-              <div className="avatar-upload-block">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="avatar-file-input"
-                  aria-label="Upload profile photo"
-                  onChange={handleFileChange}
-                />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="avatar-file-input"
+                aria-label="Upload profile photo"
+                onChange={handleFileChange}
+              />
+
+              <div className="avatar-editor-row">
                 <button
                   type="button"
                   className="avatar-upload-trigger"
@@ -279,33 +279,29 @@ export default function SettingsPage() {
                       </svg>
                     </div>
                   </div>
-                  <span className="avatar-upload-hint">
-                    {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? "CHANGE PHOTO" : "UPLOAD PHOTO"}
-                  </span>
                 </button>
 
-                {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+                <div className="avatar-editor-actions">
                   <button
                     type="button"
-                    className="avatar-remove-btn"
-                    onClick={handleRemoveAvatar}
+                    className="secondary-button avatar-upload-btn"
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    Remove
+                    {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? "Change photo" : "Upload photo"}
                   </button>
-                ) : null}
-              </div>
 
-              <div className="avatar-url-section">
-                <button
-                  type="button"
-                  className="avatar-url-toggle"
-                  onClick={() => setShowUrlInput((prev) => !prev)}
-                >
-                  {showUrlInput ? "Hide URL input" : "Use URL instead"}
-                </button>
-                {showUrlInput ? (
+                  {avatarUrl.trim() && isSafeImageUrl(avatarUrl.trim()) ? (
+                    <button
+                      type="button"
+                      className="ghost-button danger-button"
+                      onClick={handleRemoveAvatar}
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+
                   <div className="field avatar-url-field">
-                    <label htmlFor="settingsAvatarUrl">Profile image URL</label>
+                    <label htmlFor="settingsAvatarUrl">Or paste image URL</label>
                     <input
                       id="settingsAvatarUrl"
                       type="url"
@@ -314,10 +310,10 @@ export default function SettingsPage() {
                         setUrlInputValue(event.target.value);
                         setAvatarUrl(event.target.value);
                       }}
-                      placeholder="https://example.com/your-photo.jpg"
+                      placeholder="https://example.com/photo.jpg"
                     />
                   </div>
-                ) : null}
+                </div>
               </div>
             </article>
 

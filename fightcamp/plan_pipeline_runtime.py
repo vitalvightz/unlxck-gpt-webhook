@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import logging
 import re
@@ -20,7 +20,7 @@ from .strength import (
     prime_strength_banks,
 )
 from .tag_maps import GOAL_NORMALIZER, WEAKNESS_NORMALIZER
-from .training_context import TrainingContext, allocate_sessions, normalize_equipment_list
+from .training_context import TrainingContext, normalize_equipment_list
 from .weight_cut import compute_weight_cut_pct, parse_weight_value
 
 PHASES = ("GPP", "SPP", "TAPER")
@@ -79,15 +79,14 @@ STYLE_MAP = {
 TimingRecorder = Callable[[str, float], None]
 
 # Module-level flag that tracks whether plan banks have been fully loaded at
-# least once.  Guards the fast warm path in prime_plan_banks() so that
-# subsequent requests skip the three individual prime-function calls entirely.
+# least once in this Python process. Guards the fast warm path in
+# prime_plan_banks() so subsequent requests skip the three prime-function calls.
 #
-# Thread-safety note: No lock is used here intentionally.  The underlying bank
-# loaders (e.g. `if _exercise_bank_cache is None: …`) follow the same
-# unsynchronised pattern throughout this codebase, which targets a
-# single-process async deployment (uvicorn single-worker).  In the rare
-# multi-threaded edge-case two threads may both execute the cold path once;
-# that is harmless because the loaders are idempotent.
+# Concurrency/deployment note: this is intentionally process-local and
+# unsynchronised. In multi-worker deployments (for example uvicorn --workers 2),
+# each worker warms its own in-memory caches on first use. In a rare concurrent
+# cold-start race, two threads in the same process could both run the cold path;
+# this is acceptable because the bank loaders are idempotent.
 _BANKS_WARM: bool = False
 
 
@@ -147,7 +146,7 @@ class PlanRuntimeContext:
 
     @property
     def selection_ignore_restrictions(self) -> bool:
-        return not bool(self.plan_input.restrictions)
+        return not bool(self.training_context.injury_restrictions)
 
 
 @dataclass
@@ -209,7 +208,14 @@ def _apply_muay_thai_filters(text: str, *, allow_grappling: bool) -> str:
     return text
 
 
-def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: logging.Logger) -> PlanRuntimeContext:
+def build_runtime_context(
+    *,
+    plan_input: PlanInput,
+    random_seed: Any,
+    logger: logging.Logger,
+    triage_summary: dict[str, Any] | None = None,
+    is_approved_triage_resume: bool = False,
+) -> PlanRuntimeContext:
     parsed_injury_phrases = [
         entry.get("original_phrase")
         for entry in plan_input.parsed_injuries
@@ -264,6 +270,18 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
 
     injuries_only_text = "; ".join(parsed_injury_phrases)
     raw_injury_list = [phrase.strip().lower() for phrase in parsed_injury_phrases if phrase.strip()]
+    guided_injury = None if is_approved_triage_resume else plan_input.guided_injury
+    guided_injury_dict = (
+        {
+            "area": guided_injury.area,
+            "severity": guided_injury.severity,
+            "trend": guided_injury.trend,
+            "avoid": guided_injury.avoid,
+            "notes": guided_injury.notes,
+        }
+        if guided_injury is not None
+        else None
+    )
 
     training_context = TrainingContext(
         fatigue=plan_input.fatigue.lower(),
@@ -283,7 +301,6 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         weight_cut_pct=weight_cut_pct_val,
         fight_format=selection_format,
         status=plan_input.status.strip().lower(),
-        training_split=allocate_sessions(plan_input.training_frequency),
         key_goals=[
             GOAL_NORMALIZER.get(goal.strip(), goal.strip()).lower()
             for goal in plan_input.key_goals.split(",")
@@ -299,6 +316,12 @@ def build_runtime_context(*, plan_input: PlanInput, random_seed: Any, logger: lo
         days_until_fight=plan_input.days_until_fight,
         hard_sparring_days=plan_input.hard_sparring_days,
         technical_skill_days=plan_input.technical_skill_days,
+        athlete_timezone=plan_input.athlete_timezone,
+        injuries_raw_text=plan_input.injuries,
+        parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
+        guided_injury=guided_injury_dict,
+        injury_restrictions=[] if is_approved_triage_resume else [dict(entry) for entry in plan_input.restrictions],
+        triage_summary={} if is_approved_triage_resume else dict(triage_summary or {}),
     )
 
     return PlanRuntimeContext(

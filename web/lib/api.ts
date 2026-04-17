@@ -1,4 +1,5 @@
 import type {
+  ApproveAndResumeGenerationRequest,
   AdminAthleteRecord,
   AdminPlanSummary,
   ManualStage2SubmissionRequest,
@@ -17,6 +18,8 @@ const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
 
 function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
+    // Keep browser requests same-origin so Next.js rewrites can proxy /api calls.
+    // This avoids direct cross-origin calls that can fail due to CORS/SSL mismatches.
     return "";
   }
 
@@ -428,6 +431,22 @@ export function approvePlanForRelease(token: string, planId: string): Promise<Pl
     method: "POST",
     token,
   });
+}
+
+export function approveAndResumeGeneration(
+  token: string,
+  planId: string,
+  payload: ApproveAndResumeGenerationRequest,
+  clientRequestId?: string,
+): Promise<GenerationJobResponse> {
+  return withTransientRetries(() =>
+    readJson<GenerationJobResponse>(`/api/admin/plans/${planId}/approve-and-resume-generation`, {
+      method: "POST",
+      token,
+      clientRequestId,
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {

@@ -568,6 +568,18 @@ class ManualStage2SubmissionRequest(BaseModel):
         return normalized
 
 
+class ApproveAndResumeGenerationRequest(BaseModel):
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def validate_reason(cls, value: str) -> str:
+        normalized = str(value or "").strip()
+        if not normalized:
+            raise ValueError("reason is required")
+        return normalized
+
+
 class PlanRenameRequest(BaseModel):
     plan_name: str
 
@@ -617,6 +629,19 @@ class PlanOutputs(BaseModel):
     pdf_url: str | None = None
 
 
+class PlanSafetyState(BaseModel):
+    state: Literal["plan_ready", "restricted_rehab_only", "medical_hold", "needs_review"]
+    status_chip: str
+    header: str
+    subtext: str
+    stage2_skipped: bool = False
+    clinician_clearance_required: bool = False
+    matched_high_risk_categories: list[str] = Field(default_factory=list)
+    red_flags: list[str] = Field(default_factory=list)
+    sparring_risk_band: Literal["green", "amber", "red", "black"] | None = None
+    next_steps: list[str] = Field(default_factory=list)
+
+
 class PlanAdvisory(BaseModel):
     kind: Literal["sparring_adjustment"]
     action: Literal["deload", "convert"]
@@ -636,6 +661,7 @@ class AdminPlanOutputs(BaseModel):
     why_log: dict[str, Any] = Field(default_factory=dict)
     planning_brief: dict[str, Any] | None = None
     stage2_payload: dict[str, Any] | None = None
+    parsing_metadata: dict[str, Any] = Field(default_factory=dict)
     stage2_handoff_text: str = ""
     draft_plan_text: str = ""
     final_plan_text: str = ""
@@ -647,6 +673,7 @@ class AdminPlanOutputs(BaseModel):
 
 class PlanDetail(PlanSummary):
     outputs: PlanOutputs
+    safety_state: PlanSafetyState
     advisories: list[PlanAdvisory] = Field(default_factory=list)
     admin_outputs: AdminPlanOutputs | None = None
 

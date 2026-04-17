@@ -5,7 +5,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Protocol
 
 import httpx
@@ -56,16 +56,41 @@ _GENERATION_JOB_CONFLICT_SNIPPETS = (
     "duplicate key value violates unique constraint",
     "generation_jobs_athlete_client_request_key",
 )
+PLAN_RUNTIME_SCHEMA_ERROR_DETAIL = (
+    "plans table is missing required runtime columns; apply latest Supabase schema and redeploy"
+)
+PLAN_RUNTIME_REQUIRED_COLUMNS = (
+    "draft_plan_text",
+    "final_plan_text",
+    "planning_brief",
+    "stage2_payload",
+    "stage2_handoff_text",
+    "stage2_retry_text",
+    "stage2_validator_report",
+    "stage2_status",
+    "stage2_attempt_count",
+    "parsing_metadata",
+)
+_PLAN_RUNTIME_REQUIRED_COLUMNS_SET = set(PLAN_RUNTIME_REQUIRED_COLUMNS)
+_PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS = (
+    "schema cache",
+    "column",
+    "does not exist",
+    "could not find",
+)
 GENERATION_JOB_UNAVAILABLE_DETAIL = "generation job service temporarily unavailable"
 GENERATION_JOB_SCHEMA_DETAIL = "generation job store is not ready; apply the latest Supabase schema and redeploy"
 
 
 class AppStore(Protocol):
+    def validate_runtime_schema(self) -> None: ...
+
     def ensure_profile(self, user: AuthenticatedUser) -> dict[str, Any]: ...
 
     def update_profile(self, athlete_id: str, update: ProfileUpdateRequest) -> dict[str, Any]: ...
 
     def get_latest_intake(self, athlete_id: str) -> dict[str, Any] | None: ...
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None: ...
 
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]: ...
 
@@ -99,11 +124,14 @@ class AppStore(Protocol):
 
     def get_generation_job(self, job_id: str) -> dict[str, Any] | None: ...
 
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]: ...
+
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None: ...
 
     def update_generation_job(self, job_id: str, **changes: Any) -> dict[str, Any]: ...
 
     def update_plan_stage2(self, plan_id: str, result: dict[str, Any]) -> dict[str, Any]: ...
+    def update_plan_triage_approval(self, plan_id: str, *, why_log: dict[str, Any], stage2_status: str) -> dict[str, Any]: ...
 
     def list_admin_plans(self, *, limit: int = 50, offset: int = 0) -> list[dict[str, Any]]: ...
 
@@ -216,6 +244,48 @@ class SupabaseAppStore:
             if part
         ).lower()
         return any(snippet in text for snippet in _GENERATION_JOB_CONFLICT_SNIPPETS)
+
+    def _is_plan_schema_column_error(self, exc: Exception) -> bool:
+        if not isinstance(exc, PostgrestAPIError):
+            return False
+        text = " ".join(
+            str(part)
+            for part in (exc.code, exc.message, exc.hint, exc.details)
+            if part
+        ).lower()
+        if "plans" not in text:
+            return False
+        if not any(snippet in text for snippet in _PLAN_RUNTIME_SCHEMA_ERROR_SNIPPETS):
+            return False
+        return any(column in text for column in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET)
+
+    def _legacy_plan_schema_fallback_enabled(self) -> bool:
+        return os.getenv("UNLXCK_ALLOW_LEGACY_PLAN_SCHEMA_FALLBACK", "").strip() == "1"
+
+    def validate_runtime_schema(self) -> None:
+        legacy_fallback_enabled = self._legacy_plan_schema_fallback_enabled()
+        logger.info(
+            "[store] validate_runtime_schema:start legacy_fallback_enabled=%s",
+            legacy_fallback_enabled,
+        )
+        try:
+            (
+                self.client.table("plans")
+                .select(",".join(PLAN_RUNTIME_REQUIRED_COLUMNS))
+                .limit(1)
+                .execute()
+            )
+        except PostgrestAPIError as exc:
+            if not self._is_plan_schema_column_error(exc):
+                raise
+            if legacy_fallback_enabled:
+                logger.warning(
+                    "[store] validate_runtime_schema:legacy_fallback_enabled; continuing despite schema mismatch"
+                )
+                return
+            logger.exception("[store] validate_runtime_schema:schema_mismatch")
+            raise RuntimeError(PLAN_RUNTIME_SCHEMA_ERROR_DETAIL) from exc
+        logger.info("[store] validate_runtime_schema:ok")
 
     def _raise_operation_http_error(
         self,
@@ -435,6 +505,9 @@ class SupabaseAppStore:
             .order("created_at", desc=True)
         )
 
+    def get_intake(self, intake_id: str) -> dict[str, Any] | None:
+        return self._select_first(self.client.table("athlete_intakes").select("*").eq("id", intake_id))
+
     def create_intake(self, athlete_id: str, request: PlanRequest) -> dict[str, Any]:
         payload = {
             "athlete_id": athlete_id,
@@ -505,16 +578,11 @@ class SupabaseAppStore:
             "stage2_validator_report": result.get("stage2_validator_report", {}),
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
+            "parsing_metadata": result.get("parsing_metadata"),
         }
-        try:
-            logger.info(
-                "[store] create_plan:start athlete_id=%s intake_id=%s status=%s stage2_status=%s",
-                athlete_id,
-                intake_id,
-                payload["status"],
-                payload["stage2_status"],
-            )
-            response = self.client.table("plans").insert(payload).execute()
+
+        def _insert_plan(insert_payload: dict[str, Any]) -> dict[str, Any]:
+            response = self.client.table("plans").insert(insert_payload).execute()
             rows = getattr(response, "data", None) or []
             if not rows:
                 logger.error(
@@ -528,13 +596,50 @@ class SupabaseAppStore:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="failed to persist plan",
                 )
+            return rows[0]
+
+        try:
+            logger.info(
+                "[store] create_plan:start athlete_id=%s intake_id=%s status=%s stage2_status=%s",
+                athlete_id,
+                intake_id,
+                payload["status"],
+                payload["stage2_status"],
+            )
+            try:
+                row = _insert_plan(payload)
+            except PostgrestAPIError as exc:
+                if not self._is_plan_schema_column_error(exc):
+                    raise
+                if not self._legacy_plan_schema_fallback_enabled():
+                    logger.exception(
+                        "[store] create_plan:schema_mismatch athlete_id=%s intake_id=%s",
+                        athlete_id,
+                        intake_id,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=PLAN_RUNTIME_SCHEMA_ERROR_DETAIL,
+                    ) from exc
+                compatibility_payload = {
+                    key: value
+                    for key, value in payload.items()
+                    if key not in _PLAN_RUNTIME_REQUIRED_COLUMNS_SET
+                }
+                logger.warning(
+                    "[store] create_plan:legacy_schema_fallback athlete_id=%s intake_id=%s dropped_columns=%s",
+                    athlete_id,
+                    intake_id,
+                    sorted(_PLAN_RUNTIME_REQUIRED_COLUMNS_SET),
+                )
+                row = _insert_plan(compatibility_payload)
             logger.info(
                 "[store] create_plan:success athlete_id=%s intake_id=%s plan_id=%s",
                 athlete_id,
                 intake_id,
-                rows[0].get("id"),
+                row.get("id"),
             )
-            return rows[0]
+            return row
         except HTTPException:
             raise
         except _STORE_CLIENT_ERRORS as exc:
@@ -719,6 +824,74 @@ class SupabaseAppStore:
                 detail="failed to load generation job",
             ) from exc
 
+    def list_claimable_generation_jobs(self, *, limit: int = 20, stale_after_seconds: int = 90) -> list[dict[str, Any]]:
+        try:
+            cutoff_iso = (
+                datetime.now(timezone.utc) - timedelta(seconds=max(1, stale_after_seconds))
+            ).isoformat()
+            queued_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_queued",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "queued")
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            stale_heartbeat_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_running_stale_heartbeat",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "running")
+                .lte("heartbeat_at", cutoff_iso)
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+            stale_without_heartbeat_response = self._run_with_transient_retry(
+                operation="list_claimable_generation_jobs:select_running_stale_started",
+                fn=lambda: self.client.table("generation_jobs")
+                .select(GENERATION_JOB_SELECT)
+                .eq("status", "running")
+                .is_("heartbeat_at", "null")
+                .lte("started_at", cutoff_iso)
+                .order("created_at", desc=False)
+                .limit(limit)
+                .execute(),
+            )
+
+            merged_rows: dict[str, dict[str, Any]] = {}
+            for response in (queued_response, stale_heartbeat_response, stale_without_heartbeat_response):
+                for row in response.data or []:
+                    if not isinstance(row, dict):
+                        continue
+                    row_id = str(row.get("id") or "")
+                    if not row_id:
+                        continue
+                    merged_rows[row_id] = dict(row)
+            return sorted(merged_rows.values(), key=lambda row: str(row.get("created_at") or ""))[:limit]
+        except _STORE_CLIENT_ERRORS as exc:
+            if self._is_transient_store_error(exc):
+                logger.warning(
+                    "[store] list_claimable_generation_jobs:transient_failure error_type=%s",
+                    type(exc).__name__,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=GENERATION_JOB_UNAVAILABLE_DETAIL,
+                ) from exc
+            if self._is_generation_job_schema_error(exc):
+                logger.exception("[store] list_claimable_generation_jobs:schema_mismatch")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=GENERATION_JOB_SCHEMA_DETAIL,
+                ) from exc
+            logger.exception("[store] list_claimable_generation_jobs:exception")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="failed to list generation jobs",
+            ) from exc
+
     def claim_generation_job(self, job_id: str, *, stale_after_seconds: int = 90) -> dict[str, Any] | None:
         try:
             job = self.get_generation_job(job_id)
@@ -881,6 +1054,16 @@ class SupabaseAppStore:
             "stage2_status": result.get("stage2_status", ""),
             "stage2_attempt_count": result.get("stage2_attempt_count", 0),
         }
+        for optional_field in (
+            "coach_notes",
+            "why_log",
+            "planning_brief",
+            "stage2_payload",
+            "parsing_metadata",
+            "stage2_handoff_text",
+        ):
+            if optional_field in result:
+                payload[optional_field] = result.get(optional_field)
         try:
             logger.info("[store] update_plan_stage2:start plan_id=%s status=%s", plan_id, payload["status"])
             self.client.table("plans").update(payload).eq("id", plan_id).execute()
@@ -899,6 +1082,35 @@ class SupabaseAppStore:
             self._raise_operation_http_error(
                 operation=f"update_plan_stage2 plan_id={plan_id}",
                 detail="failed to update plan stage 2",
+                exc=exc,
+            )
+
+    def update_plan_triage_approval(
+        self,
+        plan_id: str,
+        *,
+        why_log: dict[str, Any],
+        stage2_status: str,
+    ) -> dict[str, Any]:
+        payload = {"why_log": why_log, "stage2_status": stage2_status}
+        try:
+            logger.info("[store] update_plan_triage_approval:start plan_id=%s", plan_id)
+            self.client.table("plans").update(payload).eq("id", plan_id).execute()
+            updated = self.get_plan(plan_id)
+            if not updated:
+                logger.warning("[store] update_plan_triage_approval:plan_missing_after_update plan_id=%s", plan_id)
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="plan not found",
+                )
+            logger.info("[store] update_plan_triage_approval:success plan_id=%s", plan_id)
+            return updated
+        except HTTPException:
+            raise
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"update_plan_triage_approval plan_id={plan_id}",
+                detail="failed to update triage approval",
                 exc=exc,
             )
 

@@ -295,7 +295,7 @@ export function AthleteProfileHero({ athlete }: { athlete: AdminAthleteRecord })
           </p>
         </article>
         <article className="athlete-profile-metric">
-          <p className="plan-meta-label">Primary styles</p>
+          <p className="plan-meta-label">Combat sports</p>
           <p className="athlete-profile-metric-copy">
             {formatList(getOptionLabels(TECHNICAL_STYLE_OPTIONS, athlete.technical_style), "No style saved")}
           </p>

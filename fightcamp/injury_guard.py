@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections import OrderedDict
 import hashlib
 import json
@@ -9,6 +8,7 @@ import os
 import re
 from typing import Callable, Iterable
 
+from .injury_models import Decision
 from .injury_exclusion_rules import INJURY_REGION_KEYWORDS
 from .injury_filtering import injury_match_details, match_forbidden, normalize_injury_regions
 from .injury_formatting import parse_injury_entry
@@ -256,9 +256,23 @@ MATCH_RISK_MULTIPLIERS = [
     ({"high_impact_plyo", "landing_stress_high", "reactive_rebound_high", "impact_rebound_high", "foot_impact_high"}, 1.5),
     ({"max_velocity", "mech_max_velocity", "running_volume_high", "shin_splints_risk"}, 1.3),
     ({"overhead", "dynamic_overhead", "press_heavy"}, 1.1),
+    ({"explosive_upper_push", "mech_upper_press", "mech_ballistic"}, 1.35),
     ({"hinge_heavy", "lumbar_loaded", "axial_heavy", "posterior_chain_heavy"}, 1.2),
     ({"knee_dominant_heavy", "deep_flexion", "deep_knee_flexion_loaded"}, 1.15),
 ]
+
+MED_BALL_CHEST_TOSS_UPPER_BODY_REGIONS = {
+    "shoulder",
+    "chest",
+    "elbow",
+    "forearm",
+    "wrist",
+    "hand",
+    "biceps",
+    "triceps",
+    "upper_back",
+    "neck",
+}
 
 MODS_BY_REGION = {
     "shoulder": ["reduce_overhead", "limit_range", "slow_tempo"],
@@ -402,16 +416,6 @@ def _cache_injury_decision(cache_key: tuple[str, ...], payload: dict[str, object
     _INJURY_DECISION_CACHE.move_to_end(cache_key)
     while len(_INJURY_DECISION_CACHE) > _INJURY_DECISION_CACHE_MAX_SIZE:
         _INJURY_DECISION_CACHE.popitem(last=False)
-
-
-@dataclass(frozen=True)
-class Decision:
-    action: str
-    risk_score: float
-    threshold: float
-    matched_tags: list[str]
-    mods: list[str]
-    reason: dict
 
 
 def _normalize_injury_list(injuries: Iterable[str | dict] | str | dict | None) -> list[str | dict]:
@@ -742,6 +746,50 @@ def injury_decision(exercise: dict, injuries: Iterable[str | dict] | str | dict,
         _INJURY_SEVERITY_DEBUGGED = True
     modify_band, threshold = _thresholds(phase, fatigue)
     threshold_version = f"{modify_band:.2f}:{threshold:.2f}"
+
+    if name.strip().lower() == "medicine-ball chest toss":
+        for region, severity in region_severity.items():
+            if region not in MED_BALL_CHEST_TOSS_UPPER_BODY_REGIONS:
+                continue
+            severity_weight = SEVERITY_WEIGHTS.get(severity, 1.0)
+            region_weight = REGION_RISK_WEIGHTS.get(region, 1.0)
+            forced_risk = max(
+                threshold + 0.25,
+                region_weight * severity_weight * 1.35,
+            )
+            return Decision(
+                action="exclude",
+                risk_score=round(forced_risk, 3),
+                threshold=threshold,
+                matched_tags=[
+                    "upper_push",
+                    "horizontal_push",
+                    "explosive_upper_push",
+                    "mech_upper_press",
+                    "mech_ballistic",
+                ],
+                mods=[],
+                reason={
+                    "region": region,
+                    "severity": severity,
+                    "bucket": "press",
+                    "matches": [
+                        {
+                            "region": region,
+                            "fields": ["name"],
+                            "patterns": ["medicine-ball chest toss"],
+                            "tags": [
+                                "upper_push",
+                                "horizontal_push",
+                                "explosive_upper_push",
+                                "mech_upper_press",
+                                "mech_ballistic",
+                            ],
+                            "risk_level": "exclude",
+                        }
+                    ],
+                },
+            )
 
     # For injury_match_details, we need to pass string representations
     # Extract strings from both string and dict injuries

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
+from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -28,20 +29,6 @@ _HIGH_RISK_INJURY_TOKENS = {
 }
 
 
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
-
-
-def _ordered_weekdays(values: Any) -> list[str]:
-    cleaned = _clean_list(values)
-    unique = list(dict.fromkeys(cleaned))
-    return sorted(unique, key=lambda day: (_WEEKDAY_ORDER.get(day, 99), day.lower()))
 
 
 def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:
@@ -50,7 +37,7 @@ def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:
 
 
 def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     cut_pct = athlete_snapshot.get("weight_cut_pct")
     try:
         cut_value = float(cut_pct or 0.0)
@@ -65,7 +52,7 @@ def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
 
 
 def _week_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> str:
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     phase = str(week.get("phase") or "").strip().upper()
     stage_key = str(week.get("stage_key") or "").strip().lower()
     days_until_fight = athlete_snapshot.get("days_until_fight")
@@ -110,7 +97,7 @@ def _injury_assessment(athlete_snapshot: dict[str, Any]) -> dict[str, Any]:
     daily_symptoms = False
     high_risk = False
 
-    for raw_entry in _clean_list(athlete_snapshot.get("injuries", [])):
+    for raw_entry in clean_list(athlete_snapshot.get("injuries", [])):
         lowered = raw_entry.lower()
         parsed = parse_injury_entry(raw_entry) or {}
         region = str(parsed.get("canonical_location") or "").strip().lower()

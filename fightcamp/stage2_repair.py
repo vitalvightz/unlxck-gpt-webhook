@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .normalization import clean_list
 
 import json
 from typing import Any
@@ -43,31 +44,22 @@ REPAIR RULES:
 31. Do not use empty safety language such as 'listen to your body', 'be careful', or 'avoid overtraining' unless it adds a concrete rule, symptom trigger, or plan change.
 32. If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.
 33. If injury management is active, lead with constraints, substitutions, or stop rules rather than optional language.
-34. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
-35. Aim critique at the plan, load, or execution issue, never at the athlete's character.
-36. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
-37. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
-38. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
-39. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
-40. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
+34. Do not prescribe exercises the plan already marks as avoid/contraindicated for the athlete's injury status.
+35. If active weight cut is present, keep the language shorter, safety-first, and non-negotiable about recovery margin.
+36. Aim critique at the plan, load, or execution issue, never at the athlete's character.
+37. Reduce repeated openers, labels, and filler reminders so the repaired plan reads like a final coach prescription, not a template.
+38. If late_fight_plan_spec is present, treat its session cap, meaningful-stress cap, max_blocks_per_session, and forbidden_blocks as hard constraints.
+39. In late-fight windows, do not restore suppressed roles just to make the plan feel like a normal week; stripped-down D-6/D-5 structures are intentional.
+40. In late-fight windows, remove forbidden content instead of downgrading it into a disguised build session.
+41. For D-1 and D-0, keep the output minimal and execution-focused; do not re-expand into a layered session menu.
 
 OUTPUT:
 Return only the revised athlete-facing final plan."""
 
 
-def _json_block(value: dict | list) -> str:
+def _json_block_pretty(value: dict | list) -> str:
+    """JSON block with indentation — used in repair prompts for human readability."""
     return "```json\n" + json.dumps(value, indent=2) + "\n```"
-
-
-
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
 
 
 
@@ -89,7 +81,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
             {
                 "phase": item.get("phase"),
                 "requirement": item.get("requirement"),
-                "candidate_names": _clean_list(item.get("candidate_names", [])),
+                "candidate_names": clean_list(item.get("candidate_names", [])),
                 "action": "restore_phase_critical_element",
             }
             )
@@ -131,7 +123,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "restore_anchor_session_quality",
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
-                    "anchor_candidates": _clean_list(warning.get("anchor_candidates", [])),
+                    "anchor_candidates": clean_list(warning.get("anchor_candidates", [])),
                 }
             )
         elif code == "support_takeover_before_anchor":
@@ -140,7 +132,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "move_support_work_after_anchor",
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
-                    "anchor_candidates": _clean_list(warning.get("anchor_candidates", [])),
+                    "anchor_candidates": clean_list(warning.get("anchor_candidates", [])),
                 }
             )
         elif code == "conditional_conditioning_choice":
@@ -189,7 +181,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "replace_with_equipment_valid_same_role_option",
                     "phase": warning.get("phase"),
                     "line": warning.get("line"),
-                    "required_equipment": _clean_list(warning.get("required_equipment", [])),
+                    "required_equipment": clean_list(warning.get("required_equipment", [])),
                 }
             )
         elif code == "missing_week_session_role":
@@ -198,7 +190,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "restore_missing_week_structure",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
-                    "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                    "expected_roles": clean_list(warning.get("expected_roles", [])),
                     "expected_role_days": list(warning.get("expected_role_days") or []),
                 }
             )
@@ -208,7 +200,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "complete_late_camp_week",
                     "week_index": warning.get("week_index"),
                     "phase": warning.get("phase"),
-                    "expected_roles": _clean_list(warning.get("expected_roles", [])),
+                    "expected_roles": clean_list(warning.get("expected_roles", [])),
                     "expected_role_days": list(warning.get("expected_role_days") or []),
                 }
             )
@@ -230,7 +222,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "phase": warning.get("phase"),
                     "actual_non_spar_sessions": warning.get("actual_non_spar_sessions"),
                     "max_non_spar_roles": warning.get("max_non_spar_roles"),
-                    "risk_signals": _clean_list(warning.get("risk_signals", [])),
+                    "risk_signals": clean_list(warning.get("risk_signals", [])),
                 }
             )
         elif code == "anchor_day_identity_overload":
@@ -241,8 +233,8 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
                     "line": warning.get("line"),
-                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
-                    "matched_tokens": _clean_list(warning.get("matched_tokens", [])),
+                    "matched_lines": clean_list(warning.get("matched_lines", [])),
+                    "matched_tokens": clean_list(warning.get("matched_tokens", [])),
                 }
             )
         elif code == "support_recovery_day_stress_leak":
@@ -253,8 +245,8 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
                     "line": warning.get("line"),
-                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
-                    "matched_tokens": _clean_list(warning.get("matched_tokens", [])),
+                    "matched_lines": clean_list(warning.get("matched_lines", [])),
+                    "matched_tokens": clean_list(warning.get("matched_tokens", [])),
                 }
             )
         elif code == "weekly_rhythm_broken":
@@ -275,8 +267,8 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
             quality_fixes.append(
                 {
                     "action": "add_summary_and_support_weight_cut_notes",
-                    "summary_lines": _clean_list(warning.get("summary_lines", [])),
-                    "support_lines": _clean_list(warning.get("support_lines", [])),
+                    "summary_lines": clean_list(warning.get("summary_lines", [])),
+                    "support_lines": clean_list(warning.get("support_lines", [])),
                 }
             )
         elif code in {"gimmick_name", "overstyled_drill_name"}:
@@ -309,7 +301,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "phase": warning.get("phase"),
                     "session_index": warning.get("session_index"),
                     "line": warning.get("line"),
-                    "risk_context": _clean_list(warning.get("risk_context", [])),
+                    "risk_context": clean_list(warning.get("risk_context", [])),
                 }
             )
         elif code == "hedged_adjustment_without_decision":
@@ -324,7 +316,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                 {
                     "action": "replace_empty_safety_line_with_operational_guardrails",
                     "line": warning.get("line"),
-                    "risk_context": _clean_list(warning.get("risk_context", [])),
+                    "risk_context": clean_list(warning.get("risk_context", [])),
                 }
             )
         elif code == "late_fight_forbidden_content":
@@ -333,7 +325,7 @@ def _build_revision_priorities(validator_report: dict) -> dict[str, list[dict]]:
                     "action": "remove_late_fight_forbidden_block",
                     "forbidden_block": warning.get("forbidden_block"),
                     "line": warning.get("line"),
-                    "matched_lines": _clean_list(warning.get("matched_lines", [])),
+                    "matched_lines": clean_list(warning.get("matched_lines", [])),
                 }
             )
         elif code == "late_fight_block_overage":
@@ -384,9 +376,9 @@ def build_stage2_repair_prompt(*, planning_brief: dict, failed_plan_text: str, v
     revision_priorities = _build_revision_priorities(validator_report)
     sections = [
         REPAIR_PROMPT_TEMPLATE.strip(),
-        "REVISION PRIORITIES\n" + _json_block(revision_priorities),
-        "VALIDATOR REPORT\n" + _json_block(validator_report),
-        "PLANNING BRIEF\n" + _json_block(planning_brief),
+        "REVISION PRIORITIES\n" + _json_block_pretty(revision_priorities),
+        "VALIDATOR REPORT\n" + _json_block_pretty(validator_report),
+        "PLANNING BRIEF\n" + _json_block_pretty(planning_brief),
         "PREVIOUS FINAL PLAN\n" + (failed_plan_text or "").strip(),
     ]
     return "\n\n---\n\n".join(section for section in sections if section.strip())

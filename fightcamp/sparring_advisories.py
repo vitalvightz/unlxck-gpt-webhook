@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
 from .weight_cut import compute_weight_cut_pct
+from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -28,29 +30,93 @@ _HIGH_COLLISION_REGIONS = {
     "neck",
 }
 _LOWER_LIMB_REGIONS = {"ankle", "knee", "shin", "hip", "foot", "achilles", "groin"}
+_UPPER_BODY_COLLISION_REGIONS = {"shoulder", "neck"}
 _DISCLAIMER = "Treat this as a flag, not an automatic change to your saved plan."
 _SPARRING_INJURY_STATE_SCORE_CAP = 10
 
+# Risk band thresholds (risk_band_score → band)
+# green: 0–2, amber: 3–5, red: 6–8, black: 9–10
+_RISK_BAND_THRESHOLDS = [
+    (9, "black"),
+    (6, "red"),
+    (3, "amber"),
+    (0, "green"),
+]
+_RISK_BAND_RANK = {"black": 3, "red": 2, "amber": 1, "green": 0}
 
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
+# Severity tier token sets — soreness/stiffness are LOW, not moderate
+_HIGH_SEVERITY_TOKENS = {"tear", "rupture", "severe", "sharp"}
+_MODERATE_SEVERITY_TOKENS = {
+    "strain", "sprain", "pain", "tendon", "tendonitis", "tendinopathy", "impingement",
+}
+_SEVERITY_BASE_SCORE = {"high": 8, "moderate": 4, "low": 1}
+
+# Trajectory token sets
+_WORSENING_TOKENS = {"worsen", "worsening", "worse", "flared", "aggravated", "regressing"}
+_IMPROVING_TOKENS = {"improving", "better", "settling", "resolved", "resolving"}
+_STABLE_TOKENS = {"stable", "managed", "manageable", "maintenance"}
+_CANNOT_PATTERN = re.compile(r"\b(?:cannot|can['\u2019]t)\b")
+
+
+def _contains_cannot_phrase(lowered: str) -> bool:
+    return bool(_CANNOT_PATTERN.search(lowered))
+
+
+def _severity_tier(lowered: str, instability: bool, daily_symptoms: bool) -> str:
+    """Classify structural severity: high / moderate / low."""
+    if any(token in lowered for token in _HIGH_SEVERITY_TOKENS) or _contains_cannot_phrase(lowered):
+        return "high"
+    if any(token in lowered for token in _MODERATE_SEVERITY_TOKENS):
+        return "moderate"
+    return "low"
+
+
+def _trajectory(lowered: str, worsening: bool, improving: bool, stable: bool) -> str:
+    """Return exclusive trajectory; worsening wins when mixed."""
+    if worsening:
+        return "worsening"
+    if improving:
+        return "improving"
+    if stable:
+        return "stable"
+    return "unknown"
+
+
+def _collision_context(region: str) -> str:
+    if region in _LOWER_LIMB_REGIONS:
+        return "lower_limb"
+    if region in _UPPER_BODY_COLLISION_REGIONS:
+        return "upper_body_collision"
+    return "low_collision"
+
+
+def _override_flags(lowered: str, instability: bool, daily_symptoms: bool) -> list[str]:
+    flags: list[str] = []
+    if instability:
+        flags.append("instability")
+    if daily_symptoms:
+        flags.append("daily_symptoms")
+    if any(token in lowered for token in ("rest pain",)):
+        flags.append("rest_pain")
+    if _contains_cannot_phrase(lowered):
+        flags.append("cannot_load")
+    if any(token in lowered for token in ("giving way", "buckled", "locking", "locked")):
+        flags.append("giving_way")
+    return flags
+
+
+
+def _band_from_score(score: int) -> str:
+    for threshold, band in _RISK_BAND_THRESHOLDS:
+        if score >= threshold:
+            return band
+    return "green"
 
 
 def _humanize_token(value: str) -> str:
     return str(value or "").strip().replace("_", " ")
 
 
-def _ordered_weekdays(values: Any) -> list[str]:
-    cleaned = _clean_list(values)
-    order = {day: idx for idx, day in enumerate(_ORDERED_WEEKDAYS)}
-    unique = list(dict.fromkeys(cleaned))
-    return sorted(unique, key=lambda day: order.get(day, len(order)))
 
 
 def _athlete_snapshot(planning_brief: dict[str, Any]) -> dict[str, Any]:
@@ -87,7 +153,7 @@ def _fatigue_score(athlete_snapshot: dict[str, Any]) -> tuple[int, str | None]:
 
 
 def _cut_score(athlete_snapshot: dict[str, Any], *, cut_pct: float) -> tuple[int, str | None]:
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     has_active_cut_flag = "active_weight_cut" in readiness_flags
 
     if cut_pct >= 5.0:
@@ -104,7 +170,7 @@ def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> t
     score = 0
     phase = str(week.get("phase", "")).strip().upper()
     stage_key = str(week.get("stage_key", "")).strip().lower()
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
 
     if phase == "TAPER":
         score += 2
@@ -131,69 +197,77 @@ def _pressure_score(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> t
     return score, reasons
 
 
-def _week_major_minor_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> tuple[int, int]:
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
-    stage_key = str(week.get("stage_key", "")).strip().lower()
-    phase = str(week.get("phase", "")).strip().upper()
-
-    major = 0
-    minor = 0
-    if phase == "TAPER" or "fight_week" in readiness_flags or "fight_week" in stage_key:
-        major = 1
-
-    days_until_fight = athlete_snapshot.get("days_until_fight")
-    try:
-        days_value = int(days_until_fight)
-    except (TypeError, ValueError):
-        days_value = None
-    if days_value is not None:
-        if days_value <= 7:
-            major = 1
-        elif days_value <= 14:
-            minor = 1
-
-    if athlete_snapshot.get("short_notice") or "short_notice" in readiness_flags:
-        minor = 1
-
-    return major, minor
-
 
 def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
-    for raw in _clean_list(athlete_snapshot.get("injuries", [])):
-        raw_text = str(raw).strip()
+    for raw in clean_list(athlete_snapshot.get("injuries", [])):
+        parsed_payload: dict[str, Any] | None = raw if isinstance(raw, dict) else None
+        raw_text = str(
+            (
+                (parsed_payload or {}).get("raw")
+                or (parsed_payload or {}).get("text")
+                or (parsed_payload or {}).get("label")
+                or raw
+            )
+        ).strip()
         lowered = raw_text.lower()
+        structured_text = ""
+        if parsed_payload:
+            structured_text = " ".join(
+                str(parsed_payload.get(key) or "").strip()
+                for key in ("severity", "status", "trajectory", "notes")
+                if str(parsed_payload.get(key) or "").strip()
+            ).lower()
+        lowered_for_signals = f"{lowered} {structured_text}".strip()
         if not raw_text:
             continue
 
         parsed = parse_injury_entry(raw_text) or {}
-        region = str(parsed.get("canonical_location") or "unspecified").strip().lower()
-        injury_type = str(parsed.get("injury_type") or "unspecified").strip().lower()
-        laterality = str(parsed.get("laterality") or parsed.get("side") or "").strip().lower()
-        worsening = any(token in lowered for token in ("worsen", "worsening", "worse", "flared", "aggravated", "regressing"))
-        improving = any(token in lowered for token in ("improving", "better", "settling", "resolved", "resolving"))
-        stable = any(token in lowered for token in ("stable", "managed", "manageable", "maintenance"))
-        instability = any(token in lowered for token in ("instability", "giving way", "buckled", "locking", "locked"))
-        daily_symptoms = any(token in lowered for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant"))
-        severe = instability or daily_symptoms or any(
-            token in lowered for token in ("sharp", "severe", "tear", "rupture", "cannot", "can't", "can’t")
+        region = str(
+            parsed.get("canonical_location")
+            or (parsed_payload or {}).get("canonical_location")
+            or (parsed_payload or {}).get("region")
+            or "unspecified"
+        ).strip().lower()
+        injury_type = str(
+            parsed.get("injury_type")
+            or (parsed_payload or {}).get("injury_type")
+            or "unspecified"
+        ).strip().lower()
+        laterality = str(
+            parsed.get("laterality")
+            or parsed.get("side")
+            or (parsed_payload or {}).get("laterality")
+            or (parsed_payload or {}).get("side")
+            or ""
+        ).strip().lower()
+
+        # -- Trajectory (exclusive: worsening wins) --
+        worsening = any(token in lowered_for_signals for token in _WORSENING_TOKENS)
+        improving = any(token in lowered_for_signals for token in _IMPROVING_TOKENS)
+        stable = any(token in lowered_for_signals for token in _STABLE_TOKENS)
+        traj = _trajectory(lowered, worsening, improving, stable)
+
+        # -- Override flags --
+        instability = any(
+            token in lowered_for_signals for token in ("instability", "giving way", "buckled", "locking", "locked")
         )
+        daily_symptoms = any(
+            token in lowered_for_signals for token in ("rest pain", "daily", "walking", "stairs", "sleep", "constant")
+        )
+        oflags = _override_flags(lowered_for_signals, instability, daily_symptoms)
+
+        # -- Legacy state_score (old algorithm, kept for backward compat) --
+        severe = instability or daily_symptoms or any(
+            token in lowered_for_signals for token in ("sharp", "severe", "tear", "rupture")
+        ) or _contains_cannot_phrase(lowered_for_signals)
         moderate = severe or any(
-            token in lowered
+            token in lowered_for_signals
             for token in (
-                "strain",
-                "sprain",
-                "pain",
-                "tendon",
-                "tendonitis",
-                "tendinopathy",
-                "impingement",
-                "soreness",
-                "stiffness",
-                "irritation",
+                "strain", "sprain", "pain", "tendon", "tendonitis",
+                "tendinopathy", "impingement", "soreness", "stiffness", "irritation",
             )
         )
-
         state_score = 0
         if moderate:
             state_score = 2
@@ -213,6 +287,30 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
             state_score += 1
         state_score = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, state_score))
 
+        # -- Severity tier and collision context (new system) --
+        tier = _severity_tier(lowered_for_signals, instability, daily_symptoms)
+        ctx = _collision_context(region)
+
+        # -- risk_band_score (new system, used for band classification) --
+        base = _SEVERITY_BASE_SCORE[tier]
+        if tier == "low" and region in _HIGH_COLLISION_REGIONS:
+            base += 2  # lifts mild high-collision injuries to amber territory
+        if traj == "worsening":
+            base += 2
+        elif traj == "improving":
+            base -= 1
+        # Override floor: instability/daily_symptoms force minimum red (6).
+        # When worsening is ALSO present, the floor is 7 (active deterioration
+        # on top of an already-flagged injury).
+        if instability or daily_symptoms:
+            if worsening:
+                base = max(base, 7)
+            else:
+                base = max(base, 6)
+
+        rbs = min(_SPARRING_INJURY_STATE_SCORE_CAP, max(0, base))
+        band = _band_from_score(rbs)
+
         entries.append(
             {
                 "raw": raw_text,
@@ -220,6 +318,8 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
                 "injury_type": injury_type,
                 "laterality": laterality,
                 "state_score": state_score,
+                "severity_tier": tier,
+                "trajectory": traj,
                 "worsening": worsening,
                 "improving": improving,
                 "stable": stable,
@@ -227,21 +327,35 @@ def _sparring_injury_entries(athlete_snapshot: dict[str, Any]) -> list[dict[str,
                 "daily_symptoms": daily_symptoms,
                 "high_collision_region": region in _HIGH_COLLISION_REGIONS,
                 "lower_limb": region in _LOWER_LIMB_REGIONS,
+                "collision_context": ctx,
+                "override_flags": oflags,
+                "risk_band_score": rbs,
+                "risk_band": band,
             }
         )
     return entries
 
-
 def _injury_risk(entries: list[dict[str, Any]]) -> int:
     if not entries:
         return 0
-    return min(10, max(int(entry.get("state_score", 0)) for entry in entries) + (1 if len(entries) > 1 else 0))
+    best = _highest_risk_entry(entries)
+    if best is None:
+        return 0
+    base = int(best.get("risk_band_score", best.get("state_score", 0)))
+    bonus = 1 if len(entries) > 1 else 0
+    return min(10, base + bonus)
 
 
 def _highest_risk_entry(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not entries:
         return None
-    return max(entries, key=lambda entry: int(entry.get("state_score", 0)))
+    return max(
+        entries,
+        key=lambda e: (
+            _RISK_BAND_RANK.get(str(e.get("risk_band", "green")), 0),
+            int(e.get("risk_band_score", e.get("state_score", 0))),
+        ),
+    )
 
 
 def _replacement_focus(*, athlete_snapshot: dict[str, Any], injuries: list[dict[str, Any]], phase: str) -> str:
@@ -307,7 +421,7 @@ def _future_state_label(
     elif fatigue == "moderate":
         parts.append("elevated fatigue")
 
-    readiness_flags = {flag.lower() for flag in _clean_list(athlete_snapshot.get("readiness_flags", []))}
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     if cut_pct >= 5.0:
         parts.append("an aggressive cut")
     elif cut_pct >= 3.0 or "active_weight_cut" in readiness_flags:
@@ -430,8 +544,8 @@ def _build_week_advisory(
         "suggestion": suggestion,
         "disclaimer": _DISCLAIMER,
     }
-    if highest_injury and highest_injury.get("risk_band"):
-        advisory["risk_band"] = str(highest_injury.get("risk_band"))
+    if highest_injury:
+        advisory["risk_band"] = str(highest_injury.get("risk_band", "green"))
     if action == "convert":
         advisory["replacement"] = _replacement_focus(
             athlete_snapshot=athlete_snapshot,
@@ -447,6 +561,24 @@ def _build_week_advisory(
         fatigue_score + cut_score,
     )
     return rank, advisory
+
+
+def summarize_sparring_injury_risk(*, injury_texts: list[str]) -> dict[str, Any]:
+    entries = _sparring_injury_entries({"injuries": injury_texts})
+    highest = _highest_risk_entry(entries)
+    if highest is None:
+        return {
+            "risk_band": "green",
+            "risk_band_score": 0,
+            "entry": None,
+            "entry_count": 0,
+        }
+    return {
+        "risk_band": str(highest.get("risk_band") or "green"),
+        "risk_band_score": int(highest.get("risk_band_score", highest.get("state_score", 0))),
+        "entry": highest,
+        "entry_count": len(entries),
+    }
 
 
 def build_plan_advisories(*, planning_brief: dict[str, Any] | None) -> list[dict[str, Any]]:

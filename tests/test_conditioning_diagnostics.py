@@ -317,7 +317,7 @@ def test_generate_plan_returns_stage2_payload():
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (planner/finalizer)." in handoff_text
     assert "PLANNING BRIEF" in handoff_text
-    assert "SOURCE OF TRUTH" in handoff_text
+    assert "AUTHORITY ORDER" in handoff_text
     assert "ATHLETE PROFILE" in handoff_text
     assert "STAGE 1 DRAFT PLAN" in handoff_text
 
@@ -343,7 +343,6 @@ def test_stage2_payload_uses_slot_alternates_and_rehab_drills():
         weight_cut_pct=0.0,
         fight_format="boxing",
         status="amateur",
-        training_split={},
         key_goals=["conditioning"],
         training_preference="balanced",
         mental_block=[],
@@ -471,7 +470,6 @@ def test_stage2_payload_exposes_mechanical_restriction_hints():
         weight_cut_pct=0.0,
         fight_format="boxing",
         status="amateur",
-        training_split={},
         key_goals=["power"],
         training_preference="balanced",
         mental_block=[],
@@ -568,7 +566,6 @@ def test_stage2_payload_phase_guardrails_prioritize_survival_structure():
         weight_cut_pct=5.5,
         fight_format="boxing",
         status="amateur",
-        training_split={},
         key_goals=["conditioning"],
         training_preference="balanced",
         mental_block=[],

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 from collections import defaultdict
@@ -7,6 +7,7 @@ from typing import Any
 from .phases import PHASE_HEADER_PATTERN
 from .regex_config import compile_regex, compile_regex_list
 from .restriction_filtering import evaluate_restriction_impact
+from .normalization import clean_list, phrase_in_text, dedupe_preserve_order
 
 _BULLET_PREFIX = compile_regex("stage2_validator", "bullet_prefix")
 _PHASE_HEADER = PHASE_HEADER_PATTERN
@@ -125,35 +126,6 @@ _LATE_FIGHT_TOKEN_PHRASES = {
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
 
 
-def _clean_list(values: Any) -> list[str]:
-    if values is None:
-        return []
-    if isinstance(values, list):
-        return [str(value).strip() for value in values if str(value).strip()]
-    if isinstance(values, str):
-        return [values.strip()] if values.strip() else []
-    return [str(values).strip()]
-
-
-def _dedupe_preserve_order(values: list[str]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        if value in seen:
-            continue
-        seen.add(value)
-        result.append(value)
-    return result
-
-
-def _phrase_in_text(text: str, phrase: str) -> bool:
-    if not text or not phrase:
-        return False
-    parts = [re.escape(part) for part in re.split(r"[\s-]+", phrase.strip().lower()) if part]
-    if not parts:
-        return False
-    pattern = r"\b" + r"[\s-]+".join(parts) + r"\b"
-    return re.search(pattern, text.lower()) is not None
 
 
 def _extract_plan_lines(plan_text: str) -> list[str]:
@@ -264,20 +236,20 @@ def _restriction_guard_entry(restriction: dict) -> dict:
 
 def _restriction_phrases(restriction: dict) -> list[str]:
     phrases = []
-    phrases.extend(_clean_list(restriction.get("blocked_patterns")))
-    phrases.extend(_clean_list(restriction.get("mechanical_equivalents")))
+    phrases.extend(clean_list(restriction.get("blocked_patterns")))
+    phrases.extend(clean_list(restriction.get("mechanical_equivalents")))
     source_phrase = str(restriction.get("source_phrase", "")).strip()
     if source_phrase:
         phrases.append(source_phrase)
     restriction_key = str(restriction.get("restriction", "")).strip().replace("_", " ")
     if restriction_key:
         phrases.append(restriction_key)
-    return _dedupe_preserve_order([phrase for phrase in phrases if phrase])
+    return dedupe_preserve_order([phrase for phrase in phrases if phrase])
 
 
 def _line_is_instruction_only(line: str, phrase: str | None = None) -> bool:
     normalized = line.lower()
-    if phrase and not _phrase_in_text(normalized, phrase):
+    if phrase and not phrase_in_text(normalized, phrase):
         return False
     return any(marker in normalized for marker in _NEGATION_MARKERS)
 
@@ -290,7 +262,7 @@ def _find_restricted_hits(planning_brief: dict, plan_lines: list[str]) -> list[d
         guard_entry = _restriction_guard_entry(restriction)
         for line in plan_lines:
             line_key = line.lower()
-            phrase_match = next((phrase for phrase in phrases if _phrase_in_text(line_key, phrase)), None)
+            phrase_match = next((phrase for phrase in phrases if phrase_in_text(line_key, phrase)), None)
             if _line_is_instruction_only(line, phrase_match):
                 continue
             guard_result = evaluate_restriction_impact(
@@ -331,7 +303,7 @@ def _slot_candidate_names(slot: dict) -> list[str]:
         name = str((alternate or {}).get("name", "")).strip()
         if name:
             names.append(name)
-    return _dedupe_preserve_order(names)
+    return dedupe_preserve_order(names)
 
 
 def _slots_for_requirement(phase_pool: dict, requirement: str) -> list[dict]:
@@ -355,14 +327,14 @@ def _line_matches_requirement(line: str, requirement: str, candidate_names: list
     if _line_is_instruction_only(line):
         return False
     normalized = line.lower()
-    if any(_phrase_in_text(normalized, name) for name in candidate_names):
+    if any(phrase_in_text(normalized, name) for name in candidate_names):
         return True
     section_hints = _SECTION_HINTS.get(requirement, ())
-    return any(_phrase_in_text(normalized, hint) for hint in section_hints)
+    return any(phrase_in_text(normalized, hint) for hint in section_hints)
 
 
 def _find_missing_phase_sections(planning_brief: dict, phase_sections: dict[str, list[str]]) -> list[dict]:
-    expected_phases = [phase for phase, strategy in (planning_brief.get("phase_strategy") or {}).items() if _clean_list(strategy.get("must_keep", []))]
+    expected_phases = [phase for phase, strategy in (planning_brief.get("phase_strategy") or {}).items() if clean_list(strategy.get("must_keep", []))]
     if len(expected_phases) <= 1:
         return []
 
@@ -390,11 +362,11 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
     for phase, strategy in phase_strategy.items():
         phase_pool = candidate_pools.get(phase, {})
         phase_lines = phase_sections.get(phase, []) if multi_phase_expected else phase_sections.get(phase, all_plan_lines)
-        for requirement in _clean_list(strategy.get("must_keep", [])):
+        for requirement in clean_list(strategy.get("must_keep", [])):
             slots = _slots_for_requirement(phase_pool, requirement)
             if not slots:
                 continue
-            candidate_names = _dedupe_preserve_order([name for slot in slots for name in _slot_candidate_names(slot)])
+            candidate_names = dedupe_preserve_order([name for slot in slots for name in _slot_candidate_names(slot)])
             if any(_line_matches_requirement(line, requirement, candidate_names) for line in phase_lines):
                 continue
             missing.append(
@@ -410,7 +382,7 @@ def _find_missing_required_elements(planning_brief: dict, plan_text: str) -> lis
 
 
 def _candidate_option_names(options: list[dict]) -> list[str]:
-    return _dedupe_preserve_order(
+    return dedupe_preserve_order(
         [
             str(option.get("name", "")).strip()
             for option in options
@@ -431,7 +403,7 @@ def _athlete_snapshot(planning_brief: dict) -> dict:
 
 def _weight_cut_context(planning_brief: dict) -> dict[str, bool]:
     athlete = _athlete_snapshot(planning_brief)
-    readiness_flags = set(_clean_list(athlete.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete.get("readiness_flags", [])))
     active = bool(
         athlete.get("weight_cut_risk")
         or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}
@@ -453,11 +425,11 @@ def _weight_cut_context(planning_brief: dict) -> dict[str, bool]:
 
 def _risk_tone_context(planning_brief: dict) -> dict[str, bool]:
     athlete = _athlete_snapshot(planning_brief)
-    readiness_flags = set(_clean_list(athlete.get("readiness_flags", [])))
+    readiness_flags = set(clean_list(athlete.get("readiness_flags", [])))
     fatigue = str(athlete.get("fatigue", "")).strip().lower()
     days_until_fight = athlete.get("days_until_fight")
     weight_cut = _weight_cut_context(planning_brief)
-    injury_present = bool(_clean_list(athlete.get("injuries"))) or "injury_management" in readiness_flags
+    injury_present = bool(clean_list(athlete.get("injuries"))) or "injury_management" in readiness_flags
     fight_week = bool(
         "fight_week" in readiness_flags
         or (isinstance(days_until_fight, int) and days_until_fight <= 7)
@@ -502,7 +474,7 @@ def _line_has_risk_context(line: str) -> bool:
 
 def _normalize_equipment_set(values: Any) -> set[str]:
     equipment: set[str] = set()
-    for value in _clean_list(values):
+    for value in clean_list(values):
         normalized = str(value).strip().lower().replace(" ", "_")
         if normalized:
             equipment.add(normalized)
@@ -548,7 +520,7 @@ def _matching_option_records(line: str, option_records: list[dict]) -> list[dict
     return [
         record
         for record in option_records
-        if _phrase_in_text(normalized, record.get("name", ""))
+        if phrase_in_text(normalized, record.get("name", ""))
     ]
 
 
@@ -587,26 +559,26 @@ def _strength_session_quality_warnings(
                 support_names.extend(
                     _candidate_option_names([option for option in alternates if option.get("support_only")])
                 )
-            anchor_names = _dedupe_preserve_order(anchor_names)
-            support_names = _dedupe_preserve_order(support_names)
+            anchor_names = dedupe_preserve_order(anchor_names)
+            support_names = dedupe_preserve_order(support_names)
             if not anchor_names:
                 continue
             matched_lines = [
                 line
                 for line in phase_lines
-                if any(_phrase_in_text(line, name) for name in session_names)
+                if any(phrase_in_text(line, name) for name in session_names)
             ]
             if not matched_lines:
                 continue
             anchor_lines = [
                 line
                 for line in matched_lines
-                if any(_phrase_in_text(line, name) for name in anchor_names)
+                if any(phrase_in_text(line, name) for name in anchor_names)
             ]
             support_lines = [
                 line
                 for line in matched_lines
-                if any(_phrase_in_text(line, name) for name in support_names)
+                if any(phrase_in_text(line, name) for name in support_names)
             ]
             if not anchor_lines and support_lines:
                 warnings.append(
@@ -621,7 +593,7 @@ def _strength_session_quality_warnings(
                 )
                 first_two = matched_lines[:2]
                 if len(first_two) >= 1 and all(
-                    any(_phrase_in_text(line, name) for name in support_names)
+                    any(phrase_in_text(line, name) for name in support_names)
                     for line in first_two[: min(2, len(first_two))]
                 ):
                     warnings.append(
@@ -637,10 +609,10 @@ def _strength_session_quality_warnings(
             elif support_lines:
                 first_two = matched_lines[:2]
                 if first_two and not any(
-                    any(_phrase_in_text(line, name) for name in anchor_names)
+                    any(phrase_in_text(line, name) for name in anchor_names)
                     for line in first_two
                 ) and all(
-                    any(_phrase_in_text(line, name) for name in support_names)
+                    any(phrase_in_text(line, name) for name in support_names)
                     for line in first_two
                 ):
                     warnings.append(
@@ -971,7 +943,7 @@ def _week_completeness_warnings(planning_brief: dict, plan_text: str) -> list[di
 def _crowded_week_block_matches_day(block: list[str], scheduled_day_hint: str) -> bool:
     if not block or not scheduled_day_hint:
         return False
-    return _phrase_in_text(_normalize_render_line(block[0]), scheduled_day_hint.strip().lower())
+    return phrase_in_text(_normalize_render_line(block[0]), scheduled_day_hint.strip().lower())
 
 
 def _match_crowded_week_session_block_index(
@@ -1037,7 +1009,7 @@ def _boxing_crowded_week_warnings(planning_brief: dict, final_plan_text: str) ->
                     "phase": week.get("phase"),
                     "actual_non_spar_sessions": actual_non_spar_sessions,
                     "max_non_spar_roles": max_non_spar_roles,
-                    "risk_signals": _clean_list(intentional_compression.get("risk_signals", [])),
+                    "risk_signals": clean_list(intentional_compression.get("risk_signals", [])),
                     "blocking": True,
                 }
             )
@@ -1048,7 +1020,7 @@ def _boxing_crowded_week_warnings(planning_brief: dict, final_plan_text: str) ->
             if main_job not in {"anchor", "support_recovery"}:
                 continue
 
-            forbidden_tokens = _clean_list(governance.get("forbidden_secondary_stressors", []))
+            forbidden_tokens = clean_list(governance.get("forbidden_secondary_stressors", []))
             if not forbidden_tokens:
                 continue
 
@@ -1082,8 +1054,8 @@ def _boxing_crowded_week_warnings(planning_brief: dict, final_plan_text: str) ->
                 "session_index": block_index + 1,
                 "role_key": role.get("role_key"),
                 "line": block[0],
-                "matched_lines": _dedupe_preserve_order(matched_lines),
-                "matched_tokens": _dedupe_preserve_order(matched_tokens),
+                    "matched_lines": dedupe_preserve_order(matched_lines),
+                    "matched_tokens": dedupe_preserve_order(matched_tokens),
                 "blocking": True,
             }
             if main_job == "anchor":
@@ -1305,7 +1277,7 @@ def _late_fight_block_body(block: list[str]) -> list[str]:
 def _block_contains_token(block: list[str], token: str) -> bool:
     text = " ".join(block).lower()
     phrases = _LATE_FIGHT_TOKEN_PHRASES.get(token, ())
-    return any(_phrase_in_text(text, phrase) for phrase in phrases)
+    return any(phrase_in_text(text, phrase) for phrase in phrases)
 
 
 def _line_matches_late_fight_token(line: str, token: str) -> bool:
@@ -1313,7 +1285,7 @@ def _line_matches_late_fight_token(line: str, token: str) -> bool:
         return False
     lowered = line.lower()
     phrases = _LATE_FIGHT_TOKEN_PHRASES.get(token, ())
-    return any(_phrase_in_text(lowered, phrase) for phrase in phrases)
+    return any(phrase_in_text(lowered, phrase) for phrase in phrases)
 
 
 def _late_fight_meaningful_exposure_count(blocks: list[list[str]]) -> tuple[int, list[dict[str, Any]]]:
@@ -1345,7 +1317,7 @@ def _late_fight_forbidden_matches(token: str, plan_lines: list[str], blocks: lis
             rehab_lines = [
                 line
                 for line in _late_fight_block_body(block)
-                if any(_phrase_in_text(line.lower(), phrase) for phrase in _LATE_FIGHT_REHAB_PHRASES)
+                if any(phrase_in_text(line.lower(), phrase) for phrase in _LATE_FIGHT_REHAB_PHRASES)
             ]
             if len(rehab_lines) >= 2:
                 matched.append(block[0])

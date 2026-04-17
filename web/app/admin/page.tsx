@@ -16,12 +16,14 @@ export default function AdminPage() {
   const { session } = useAppSession();
   const [athletes, setAthletes] = useState<AdminAthleteRecord[]>([]);
   const [plans, setPlans] = useState<AdminPlanSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session?.access_token) {
       return;
     }
+    setIsLoading(true);
     Promise.all([listAdminAthletes(session.access_token), listAdminPlans(session.access_token)])
       .then(([nextAthletes, nextPlans]) => {
         setAthletes(nextAthletes);
@@ -29,7 +31,8 @@ export default function AdminPage() {
       })
       .catch((adminError) => {
         setError(adminError instanceof Error ? adminError.message : "Unable to load admin data.");
-      });
+      })
+      .finally(() => setIsLoading(false));
   }, [session?.access_token]);
 
   return (
@@ -43,7 +46,9 @@ export default function AdminPage() {
           </div>
           <div className="status-card">
             <p className="status-label">Records</p>
-            <h2 className="plan-summary-title">{athletes.length + plans.length}</h2>
+            <h2 className="plan-summary-title">
+              {isLoading ? "—" : athletes.length + plans.length}
+            </h2>
             <p className="muted">Athlete accounts and saved plans visible in support mode.</p>
           </div>
         </div>
@@ -56,20 +61,39 @@ export default function AdminPage() {
               <p className="kicker">Athletes</p>
               <h2>Recent accounts</h2>
             </div>
-            <div className="plans-grid">
-              {athletes.map((athlete) => (
-                <article key={athlete.athlete_id} className="plan-card">
-                  <div className="plan-card-header">
-                    <div>
-                      <h3 className="plan-card-title">{athlete.full_name || athlete.email}</h3>
-                      <p className="muted">{athlete.email}</p>
+
+            {isLoading ? (
+              <div className="support-panel">
+                <p className="muted">Loading athlete accounts…</p>
+              </div>
+            ) : athletes.length === 0 ? (
+              <div className="support-panel">
+                <p className="kicker">No athletes yet</p>
+                <p className="muted">Athlete accounts will appear here once someone signs up.</p>
+              </div>
+            ) : (
+              <div className="plans-grid">
+                {athletes.map((athlete) => (
+                  <article key={athlete.athlete_id} className="plan-card">
+                    <div className="plan-card-header">
+                      <div>
+                        <Link href={`/admin/athletes/${athlete.athlete_id}`}>
+                          <h3 className="plan-card-title">{athlete.full_name || athlete.email}</h3>
+                        </Link>
+                        <p className="muted">{athlete.email}</p>
+                      </div>
+                      <span className="badge">{athlete.plan_count} plan{athlete.plan_count === 1 ? "" : "s"}</span>
                     </div>
-                    <span className="badge">{athlete.plan_count} plans</span>
-                  </div>
-                  <p className="muted">Created {new Date(athlete.created_at).toLocaleString()}</p>
-                </article>
-              ))}
-            </div>
+                    <p className="muted">Created {new Date(athlete.created_at).toLocaleString()}</p>
+                    <div className="plan-card-actions">
+                      <Link href={`/admin/athletes/${athlete.athlete_id}`} className="ghost-button">
+                        View profile
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </article>
 
           <article className="list-card">
@@ -77,22 +101,39 @@ export default function AdminPage() {
               <p className="kicker">Plans</p>
               <h2>Latest generations</h2>
             </div>
-            <div className="plans-grid">
-              {plans.map((plan) => (
-                <article key={plan.plan_id} className="plan-card">
-                  <div className="plan-card-header">
-                    <div>
-                      <Link href={`/plans/${plan.plan_id}`}>
-                        <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
-                      </Link>
-                      <p className="muted">{plan.athlete_email}</p>
+
+            {isLoading ? (
+              <div className="support-panel">
+                <p className="muted">Loading plan history…</p>
+              </div>
+            ) : plans.length === 0 ? (
+              <div className="support-panel">
+                <p className="kicker">No plans yet</p>
+                <p className="muted">Generated fight camp plans will appear here once athletes start creating them.</p>
+              </div>
+            ) : (
+              <div className="plans-grid">
+                {plans.map((plan) => (
+                  <article key={plan.plan_id} className="plan-card">
+                    <div className="plan-card-header">
+                      <div>
+                        <Link href={`/plans/${plan.plan_id}`}>
+                          <h3 className="plan-card-title">{getPlanDisplayName(plan)}</h3>
+                        </Link>
+                        <p className="muted">{plan.athlete_email}</p>
+                      </div>
+                      <span className="badge">{plan.status}</span>
                     </div>
-                    <span className="badge">{plan.status}</span>
-                  </div>
-                  <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
-                </article>
-              ))}
-            </div>
+                    <p className="muted">Created {new Date(plan.created_at).toLocaleString()}</p>
+                    <div className="plan-card-actions">
+                      <Link href={`/plans/${plan.plan_id}`} className="ghost-button">
+                        Open plan
+                      </Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </article>
         </div>
       </section>

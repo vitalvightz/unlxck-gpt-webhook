@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from api.auth import AuthenticatedUser
 from api.models import PlanRenameRequest
-from api_test_support import advisory_planning_brief, _build_client, _build_request, _start_generation, finalized_result, stage1_result
+from support import advisory_planning_brief, _build_client, _build_request, _start_generation, finalized_result, stage1_result
 
 
 def test_athlete_cannot_read_another_athlete_plan():
@@ -45,6 +45,7 @@ def test_admin_can_view_internal_plan_outputs():
         result=finalized_result(
             stage2_retry_text="repair prompt",
             planning_brief={"schema_version": "planning_brief.v1"},
+            parsing_metadata={"athlete_timezone": {"source": "defaulted_missing"}},
         ),
     )
 
@@ -59,6 +60,7 @@ def test_admin_can_view_internal_plan_outputs():
     assert admin_outputs["draft_plan_text"] == "# Stage 1 Draft"
     assert admin_outputs["stage2_retry_text"] == "repair prompt"
     assert admin_outputs["stage2_status"] == "stage2_pass"
+    assert admin_outputs["parsing_metadata"] == {"athlete_timezone": {"source": "defaulted_missing"}}
 
 
 def test_legacy_rows_with_only_plan_text_remain_readable():

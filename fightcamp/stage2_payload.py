@@ -1,9 +1,19 @@
-﻿from __future__ import annotations
+"""Stage 2 payload assembly, candidate pools, finalizer prompt, and handoff text.
+
+Internal implementation is split across:
+  - stage2_planning_brief  — athlete model, phases, limiter, sport load
+  - stage2_role_map        — week progression, role slots, compression
+
+Everything is re-exported here so external callers don't need to change
+their import paths.
+"""
+from __future__ import annotations
 
 import json
 import re
 from typing import Any
 
+from . import stage2_planning_brief as stage2_planning_brief_module
 from .stage2_payload_late_fight import (
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
@@ -17,128 +27,80 @@ from .stage2_payload_late_fight import (
     _late_fight_rendering_rules,
     _uses_late_fight_stage2_payload,
 )
-from .input_parsing import _calendar_now
-from .normalization import normalize_lower_text
+from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
 
-RESTRICTION_PATTERN_HINTS = {
-    "deep_knee_flexion": [
-        "deep bilateral squat",
-        "full ROM lunge",
-        "split squat",
-        "rear-foot-elevated split squat",
-        "deep knee-dominant step-up",
-    ],
-    "deep_hip_flexion": [
-        "deep hip flexion",
-        "knee drive above pelvis",
-        "loaded tuck",
-        "loaded pike",
-        "deep seated compression",
-    ],
-    "high_impact": ["jump", "bound", "hop", "sprint landing", "reactive pogo"],
-    "high_impact_lower": [
-        "jump",
-        "bound",
-        "hop",
-        "landing",
-        "depth drop",
-        "reactive pogo",
-        "hard change of direction",
-    ],
-    "high_impact_upper": [
-        "clap push-up",
-        "plyo push-up",
-        "explosive push-up",
-        "ballistic upper-body catch",
-    ],
-    "high_impact_global": [
-        "jump",
-        "bound",
-        "hop",
-        "landing",
-        "reactive rebound",
-        "impact running",
-    ],
-    "heavy_overhead_pressing": [
-        "overhead press",
-        "jerk",
-        "push press",
-        "thruster",
-        "overhead carry",
-        "overhead slam",
-        "z press",
-    ],
-    "spinal_flexion": ["loaded spinal flexion", "sit-up", "rounded hinge"],
-    "loaded_flexion": ["weighted sit-up", "loaded crunch", "V-up", "toe-touch"],
-    "loaded_rotation": ["med-ball rotational throw", "loaded twist", "dynamic trunk rotation"],
-    "max_velocity": ["max sprint", "all-out sprint", "flying sprint", "overspeed sprint"],
-}
+# Re-export from sub-modules for backward compatibility
+from .stage2_planning_brief import (  # noqa: F401
+    CONDITIONING_ROLE_PURPOSES,
+    PLANNING_DECISION_HIERARCHY,
+    RESTRICTION_PATTERN_HINTS,
+    _MECHANICAL_TAG_PREFIXES,
+    _MECHANICAL_TAGS,
+    _RESTRICTION_CANONICAL_KEYS,
+    _build_athlete_model,
+    _build_limiter_profile,
+    _build_phase_briefs,
+    _build_phase_selection_guardrails,
+    _build_sport_load_profile,
+    _build_weekly_stress_map,
+    _compress_short_camp_priorities,
+    _conditioning_slot_priority,
+    dedupe_preserve_order,
+    _derive_athlete_archetype,
+    _derive_competitive_maturity,
+    _derive_main_limiter,
+    _derive_main_risks,
+    _derive_readiness_flags,
+    _downgrade_priority,
+    _extract_mechanical_risk_tags,
+    _extract_restriction_tags,
+    _is_high_pressure_weight_cut,
+    _join_rule_parts,
+    _normalize_limiter_tokens,
+    _parse_record,
+    _primary_limiter_key,
+    _primary_sport_load_key,
+    _priority_bucket,
+    _priority_bucket_labels,
+    _priority_value,
+    _resolve_phase_rule_state,
+    _serialize_restrictions,
+    _strength_slot_priority,
+)
+from .stage2_role_map import (  # noqa: F401
+    _active_injury_is_moderate_plus,
+    _active_weight_cut_is_meaningful,
+    _apply_high_fatigue_week_compression,
+    _apply_legacy_high_fatigue_compression,
+    _apply_short_camp_role_compression,
+    _assign_declared_day_hints,
+    _build_spar_allocation_reason_codes,
+    _build_week_by_week_progression,
+    _build_weekly_role_map,
+    _compression_floor_value,
+    _compression_summary,
+    _compute_intentionally_unused_days,
+    _compute_readiness_compression,
+    _high_fatigue_compression_reason_codes,
+    _intentional_compression_stub,
+    _lock_declared_hard_sparring_roles,
+    _make_compression_suppression,
+    _non_spar_role_priority_rank,
+    _phase_progression_slot_count,
+    _preferred_boxer_conditioning_sequence,
+    _resequence_session_roles,
+    _role_anchor,
+    _role_governance,
+    _role_selection_rule,
+    _split_phase_days,
+)
 
-_RESTRICTION_CANONICAL_KEYS = {
-    "deep_knee_flexion": "deep knee flexion",
-    "deep_hip_flexion": "deep hip flexion",
-    "heavy_overhead_pressing": "heavy overhead pressing",
-    "high_impact": "high impact",
-    "high_impact_lower": "high impact",
-    "high_impact_upper": "high impact",
-    "high_impact_global": "high impact",
-    "loaded_flexion": "loaded flexion",
-    "max_velocity": "max velocity",
-}
 
-_MECHANICAL_TAG_PREFIXES = ("mech_",)
-_MECHANICAL_TAGS = {
-    "overhead",
-    "press",
-    "push_press",
-    "jerk",
-    "thruster",
-    "dynamic_overhead",
-    "press_heavy",
-    "high_impact",
-    "high_impact_plyo",
-    "plyometric",
-    "jumping",
-    "landing_stress_high",
-    "reactive_rebound_high",
-    "impact_rebound_high",
-    "foot_impact_high",
-    "forefoot_load_high",
-    "sprint",
-    "max_velocity",
-    "decel_high",
-    "cod_high",
-    "rotation",
-    "rotational",
-    "anti_rotation",
-    "loaded_rotation",
-    "loaded_twist",
-    "squat",
-    "lunge",
-    "split_squat",
-    "quad_dominant",
-    "quad_dominant_heavy",
-    "deep_knee_flexion_loaded",
-    "knee_dominant_heavy",
-    "situp",
-    "crunch",
-    "flexion",
-    "spinal_flexion",
-    "hip_flexion_loaded",
-    "neck",
-    "cervical_load",
-    "cervical_extension_loaded",
-    "cervical_flexion_loaded",
-    "neck_bridge",
-    "loaded_carry",
-    "axial_loading",
-    "mech_axial_heavy",
-}
 
 _TEXT_DERIVED_RESTRICTIONS = {
     "deep_knee_flexion": [
@@ -269,7 +231,7 @@ def _dedupe_preserve_order(values: list[str]) -> list[str]:
 
 
 def _normalize_text(value: str) -> str:
-    return normalize_lower_text(value)
+    return normalize_text(value)
 
 
 def _phrase_in_text(text: str, phrase: str) -> bool:
@@ -650,6 +612,10 @@ def _build_athlete_model(
     short_notice: bool,
 ) -> dict:
     record_profile = _derive_competitive_maturity(training_context.status, record)
+    plan_creation_dt = stage2_planning_brief_module._athlete_calendar_now(
+        training_context.athlete_timezone,
+        now_utc=stage2_planning_brief_module._utc_now(),
+    )
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -678,8 +644,13 @@ def _build_athlete_model(
         "technical_skill_days": training_context.technical_skill_days,
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
+        "injuries_raw_text": training_context.injuries_raw_text,
+        "parsed_injuries": [dict(item) for item in training_context.parsed_injuries],
+        "guided_injury": dict(training_context.guided_injury) if training_context.guided_injury else None,
+        "injury_restrictions": [dict(item) for item in training_context.injury_restrictions],
         "short_notice": short_notice,
-        "plan_creation_weekday": _calendar_now().strftime("%A").lower(),
+        "plan_creation_weekday": plan_creation_dt.strftime("%A").lower(),
+        "plan_creation_weekday_basis": "athlete_local_weekday",
         "readiness_flags": _derive_readiness_flags(
             fatigue=training_context.fatigue,
             weight_cut_risk=training_context.weight_cut_risk,
@@ -3390,10 +3361,10 @@ def _derive_global_priorities(
     push: list[str] = []
     avoid: list[str] = []
 
-    injuries = _clean_list(athlete_model.get("injuries", []))
-    goals = _clean_list(athlete_model.get("key_goals", []))
-    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
-    technical_skill_days = _clean_list(athlete_model.get("technical_skill_days", []))
+    injuries = clean_list(athlete_model.get("injuries", []))
+    goals = clean_list(athlete_model.get("key_goals", []))
+    hard_sparring_days = clean_list(athlete_model.get("hard_sparring_days", []))
+    technical_skill_days = clean_list(athlete_model.get("technical_skill_days", []))
     high_pressure_cut = _is_high_pressure_weight_cut(athlete_model=athlete_model)
     compressed = athlete_model.get("compressed_priorities") or {}
     primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
@@ -3455,9 +3426,9 @@ def _derive_global_priorities(
         push.append("Keep at least one neural-speed option when the phase or taper calls for sharpness.")
 
     return {
-        "preserve": _dedupe_preserve_order(preserve) or ["Preserve the main phase objectives and any active rehab work."],
-        "push": _dedupe_preserve_order(push) or ["Push the highest-priority phase qualities first."],
-        "avoid": _dedupe_preserve_order(avoid) or ["Avoid changes that break the phase intent or restriction logic."],
+        "preserve": dedupe_preserve_order(preserve) or ["Preserve the main phase objectives and any active rehab work."],
+        "push": dedupe_preserve_order(push) or ["Push the highest-priority phase qualities first."],
+        "avoid": dedupe_preserve_order(avoid) or ["Avoid changes that break the phase intent or restriction logic."],
     }
 
 
@@ -3493,11 +3464,11 @@ def _build_phase_strategy(
             "objective": brief.get("objective", ""),
             "visible_label": visible_framing["label"],
             "visible_objective": visible_framing["objective"],
-            "build": _clean_list(brief.get("emphasize", [])),
-            "protect": _clean_list(brief.get("risk_flags", [])),
-            "deprioritize": _clean_list(brief.get("deprioritize", [])),
-            "must_keep": _clean_list((brief.get("selection_guardrails") or {}).get("must_keep_if_present", [])),
-            "drop_order_if_thin": _clean_list((brief.get("selection_guardrails") or {}).get("conditioning_drop_order_if_thin", [])),
+            "build": clean_list(brief.get("emphasize", [])),
+            "protect": clean_list(brief.get("risk_flags", [])),
+            "deprioritize": clean_list(brief.get("deprioritize", [])),
+            "must_keep": clean_list((brief.get("selection_guardrails") or {}).get("must_keep_if_present", [])),
+            "drop_order_if_thin": clean_list((brief.get("selection_guardrails") or {}).get("conditioning_drop_order_if_thin", [])),
             "slot_counts": {
                 "strength": len(pool.get("strength_slots", [])),
                 "conditioning": len(pool.get("conditioning_slots", [])),
@@ -3618,13 +3589,13 @@ def build_planning_brief(
 def _serialize_strength_option(exercise: dict, why: str) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
-    movement_patterns.extend(_clean_list(exercise.get("tags", [])))
+    movement_patterns.extend(clean_list(exercise.get("tags", [])))
     quality_profile = classify_strength_item(exercise)
-    required_equipment = _clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
+    required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
     return {
         "name": exercise.get("name", "Unnamed"),
         "source": "exercise_bank",
-        "movement_patterns": _dedupe_preserve_order(movement_patterns),
+        "movement_patterns": dedupe_preserve_order(movement_patterns),
         "restriction_tags": _extract_restriction_tags(exercise),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(exercise),
         "prescription": exercise.get("prescription") or exercise.get("method") or "",
@@ -3640,12 +3611,12 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
 
 
 def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
-    tags = _clean_list(drill.get("tags", []))
-    required_equipment = _clean_list(drill.get("required_equipment") or drill.get("equipment", []))
+    tags = clean_list(drill.get("tags", []))
+    required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
     return {
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
-        "movement_patterns": _dedupe_preserve_order([system] + tags),
+        "movement_patterns": dedupe_preserve_order([system] + tags),
         "restriction_tags": _extract_restriction_tags(drill),
         "mechanical_risk_tags": _extract_mechanical_risk_tags(drill),
         "prescription": " | ".join(
@@ -3787,7 +3758,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
         quality_profile = classify_strength_item(exercise)
         slots.append(
             {
-                "slot_id": f"{phase.lower()}_strength_{idx}_{_slugify(name)}",
+                "slot_id": f"{phase.lower()}_strength_{idx}_{slugify(name)}",
                 "role": role,
                 "purpose": reasons.get("explanation", "balanced selection"),
                 "selected": _serialize_strength_option(
@@ -3835,7 +3806,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
             reasons = reason_lookup.get(name, {})
             slots.append(
                 {
-                    "slot_id": f"{phase.lower()}_{system}_{idx}_{_slugify(name)}",
+                    "slot_id": f"{phase.lower()}_{system}_{idx}_{slugify(name)}",
                     "role": system,
                     "purpose": CONDITIONING_ROLE_PURPOSES.get(system, reasons.get("explanation", "balanced selection")),
                     "selected": _serialize_conditioning_option(
@@ -3864,8 +3835,12 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
     for group in _parse_rehab_groups(rehab_block):
         location = group.get("location", "Unspecified")
         injury_type = group.get("injury_type", "unspecified")
-        role = f"rehab_{_slugify(location)}_{_slugify(injury_type)}"
+        role = f"rehab_{slugify(location)}_{slugify(injury_type)}"
         selected_lines = [line for line in group.get("drills", []) if line]
+        if phase.upper() == "TAPER":
+            selected_lines = [line for line in selected_lines if "nordic" not in line.lower()]
+            if not selected_lines:
+                continue
         selected_set = set(selected_lines)
         rehab_options = _rehab_drills_for_phase(
             injury_type.lower(),
@@ -3893,7 +3868,11 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             # We gather up to 4 candidates so diversity sorting has enough to work with.
             scored_alternates: list[tuple[int, dict]] = []
             for option in rehab_options:
-                if option == line or option in selected_set:
+                if (
+                    option == line
+                    or option in selected_set
+                    or (phase.upper() == "TAPER" and "nordic" in option.lower())
+                ):
                     continue
                 opt_func = classify_drill_function(option)
                 # Prefer function diversity, but do not hard-block same-function
@@ -3917,7 +3896,7 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             top_alternates = [opt for _, opt in sorted(scored_alternates, key=lambda x: x[0])][:2]
             slots.append(
                 {
-                    "slot_id": f"{phase.lower()}_{role}_{idx}_{_slugify(line)}",
+                    "slot_id": f"{phase.lower()}_{role}_{idx}_{slugify(line)}",
                     "role": role,
                     "purpose": why_today_template,
                     "function_class": drill_func,
@@ -3970,6 +3949,18 @@ def _build_omission_ledger(
     return ledger
 
 
+def _build_injury_context(*, athlete_model: dict) -> dict[str, Any]:
+    triage_summary = athlete_model.get("triage_summary")
+    return {
+        "raw_injury_text": athlete_model.get("injuries_raw_text") or "",
+        "injuries_flat": clean_list(athlete_model.get("injuries", [])),
+        "parsed_injuries": athlete_model.get("parsed_injuries") or [],
+        "guided_injury": athlete_model.get("guided_injury"),
+        "restrictions": athlete_model.get("injury_restrictions") or [],
+        "triage_summary": triage_summary if isinstance(triage_summary, dict) else {},
+    }
+
+
 def build_stage2_payload(
     *,
     training_context: TrainingContext,
@@ -4002,6 +3993,8 @@ def build_stage2_payload(
         camp_length_weeks=camp_len,
         short_notice=short_notice,
     )
+    athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
+    injury_context = _build_injury_context(athlete_model=athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
     omission_ledger = _build_omission_ledger(
@@ -4079,6 +4072,7 @@ def build_stage2_payload(
             "rendering_rules": days_out_payload.get("rendering_rules", {}),
             "late_fight_permissions": days_out_payload.get("late_fight_permissions", {}),
             "athlete_model": athlete_model,
+            "injury_context": injury_context,
             "restrictions": serialized_restrictions,
             "phase_briefs": phase_briefs,
             "candidate_pools": candidate_pools,
@@ -4090,6 +4084,7 @@ def build_stage2_payload(
         "schema_version": "stage2_payload.v1",
         "generator_mode": "restriction_aware_candidate_generator",
         "athlete_model": athlete_model,
+        "injury_context": injury_context,
         "restrictions": serialized_restrictions,
         "phase_briefs": phase_briefs,
         "candidate_pools": candidate_pools,
@@ -4099,77 +4094,55 @@ def build_stage2_payload(
 
 STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 
-Input = PLANNING BRIEF + Stage 1 draft plan + athlete profile + restrictions + candidate pools.
+Input = PLANNING BRIEF + Stage 1 draft + athlete profile + restrictions + candidate pools.
 
-SOURCE OF TRUTH
-1. PLANNING BRIEF = primary authority for athlete intent, phase strategy, priorities, and risks.
-2. Restrictions = hard constraints.
-3. Candidate pools = preferred exercise reservoir.
-4. Stage 1 draft = raw material only, not final authority.
+AUTHORITY ORDER
+1. PLANNING BRIEF — primary authority for intent, phase strategy, priorities, and risks.
+2. Restrictions — hard constraints. Non-negotiable.
+3. Candidate pools — preferred exercise reservoir.
+4. Stage 1 draft — raw material only. Not final authority.
 
-RULE 1 - HARD FILTER
-Remove any exercise, drill, or prescription that violates any restriction, including synonyms and mechanically equivalent patterns.
-Apply this to strength, conditioning, rehab, warm-ups, finishers, and any new item considered.
-Do not modify a violating item into compliance. Replace it or drop it.
+RULE 1 — HARD FILTER
+Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. Do not modify a violating item into compliance — replace or drop it.
 
-RULE 2 - PLAN THE CAMP, DON'T JUST EDIT
-Build the best final plan from the PLANNING BRIEF.
-Use week_by_week_progression and weekly_role_map to sequence the camp.
-You may reorganize sessions, simplify sections, tighten phase focus, and improve sequencing if the result is more coherent and still consistent with the planning brief and restrictions.
+RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
+Build the best final plan from the PLANNING BRIEF. Use week_by_week_progression and weekly_role_map to sequence the camp. Reorganise and tighten — coherence over inertia.
 
-RULE 3 - SELECTION ORDER
-Prefer:
-1. strong compliant Stage 1 items
-2. same-role compliant alternates from candidate pools
-3. other compliant options from candidate pools
+RULE 3 — SELECTION ORDER
+Prefer strong compliant Stage 1 items first, then same-role pool alternates, then other compliant pool options. Never keep a weak Stage 1 choice because it already exists.
 
-Do not keep a weak Stage 1 choice just because it already exists.
+RULE 4 — ANCHOR STANDARD
+Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant option exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
 
-RULE 4 - ANCHOR SESSION STANDARD
-Each weekly anchor strength/power session must contain at least one serious high-transfer strength or power exercise if a compliant option exists for the athlete's sport, phase, equipment, and injury profile.
-Do not build anchor sessions mostly from bird dogs, dead bugs, planks, carries, bridge holds, breathing drills, mobility, or rehab-level work unless restrictions clearly force that outcome.
-Support work may assist the anchor. It cannot become the anchor.
+RULE 5 — SAFE STRONG, NOT SAFE SOFT
+In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists, prefer it over low-output filler for key slots.
 
-RULE 5 - SAFE STRONG, NOT SAFE SOFT
-Do not confuse tissue protection with undertraining.
-In GPP and SPP, choose the safest strong option, not the safest soft option.
-If a compliant loaded pattern exists, prefer it over low-output filler for key slots.
+RULE 6 — SPORT SPECIFICITY
+The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fatigue, injury context, equipment, and phase.
 
-RULE 6 - SPORT SPECIFICITY
-The final plan must look like a real combat-sport camp for this athlete, not generic athletic work.
-Conditioning, power work, weekly rhythm, and taper choices must clearly match the athlete's sport, style, fatigue state, injury context, equipment access, and phase priorities.
+RULE 7 — SUPPORT WORK STAYS SUPPORT
+Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the brief requires a protection-first camp. When cutting volume, cut accessory work first.
 
-RULE 7 - SUPPORT WORK STAYS IN SUPPORT ROLE
-Rehab, isometrics, carries, trunk stability, breathing, mobility, and tissue-protection work should support the plan, not dominate it, unless the planning brief clearly requires a protection-first camp.
-If volume must be cut, cut accessory/support work first.
+RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
+Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating items with stronger compliant options, not softer ones.
 
-RULE 8 - EQUIPMENT CONGRUENCE
-Every primary drill, support drill, and fallback must be valid for the athlete's declared equipment access unless an explicit contingency note says otherwise.
-If the athlete profile already resolves the access question, render only the resolved option.
-
-RULE 9 - REPLACEMENTS MUST IMPROVE QUALITY
-When removing weak or violating items, replace them with stronger compliant options, not weaker support work.
-Do not leave unresolved access branches when one valid choice is already obvious from the athlete profile.
-
-RULE 10 - TAPER DISCIPLINE
-In taper weeks, simplify aggressively.
-Remove novelty, reduce accessory volume, avoid soreness-inducing density, and keep only the most useful sharpness, rhythm, confidence, and freshness work.
-Do not render taper sessions as option menus or branching templates.
-In normal taper sessions, resolve to one final prescription with no default fallback branch.
-If planning_brief.fight_week_override.active is true, follow it as a hard override:
-- 0-1 days: no training week; output coach note plus readiness protocol only.
-- 2-3 days: micro-taper only (one short primer max + one light mobility/recovery session).
-- 4-6 days: mini taper only (freshness-first, reduced volume, 1-2 sharpness sessions).
+RULE 9 — TAPER DISCIPLINE
+Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.
+If planning_brief.fight_week_override.active is true:
+— 0–1 days: no training; coach note + readiness protocol only.
+— 2–3 days: one short primer max + one light mobility/recovery session.
+— 4–6 days: freshness-first, reduced volume, 1–2 sharpness sessions.
 Never chase fitness in these windows.
 
-RULE 11 - OUTPUT DISCIPLINE
-Keep the athlete-facing output concise, high-signal, and easy to scan.
-Minimize repetition.
-Cut filler, duplication, and generic coaching reminders.
-Keep coaching notes short and only where session-critical.
-Coach voice should feel decisive, respectful, and gym-realistic.
-For any corrective or adjustment line, make the call, give a short why, and then the next action.
-Prefer command then reason, not explanation then suggestion.
+RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
+Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
+Active injury: lead with constraints, substitutions, and stop rules — not optional language.
+Both flags narrow training tolerance and must shape the output structurally.
+When injury wording is vague or underspecified, use INJURY CONTEXT to infer the safest high-probability interpretation. Never override hard restrictions or triage blocks, and prefer conservative substitutions and wording when detail is incomplete.
+
+RULE 11 — OUTPUT DISCIPLINE
+Write like an elite coach, not a document generator. Coach voice should feel decisive, respectful, and gym-realistic.
+— Lead with action. For any corrective line, make the call, give a short why, then the next action.
 Do not open corrective lines with 'focus on', 'ensure', 'make sure', or 'it's important to'. Start with the action.
 Use autonomy-supportive phrasing only when a real safe choice exists; if so, offer at most two practical options, and only when both are safe and materially equivalent.
 Do not rely on generic motivation such as 'stay consistent', 'trust the process', 'push yourself', or 'you've got this'.
@@ -4193,46 +4166,24 @@ Never write 'weight cut none active' or 'recovery tolerance is standard' when ac
 If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
 In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
+Placement governs day assignment only; it does not change insert voice, ownership, or visible session count.
 
-RULE 12 - SURGICAL REHAB INTEGRATION
-Rehab must never feel copy-pasted, generic, or repeated by default.
-You have full authority to choose, adjust, or remove any rehab item from the candidate pools based on athlete context.
-Use the function_class tags (activation / control / isometric_analgesia / mobility / tendon_loading / recovery_downregulation) as scoring guidance — not hard constraints. A drill may repeat across sessions if it serves a meaningfully different role.
-A session should usually contain only 1–2 rehab functions and 5–10 minutes of total rehab work.
-Hard sparring days: minimal rehab only (at most 1 drill — low-volume activation or a brief post-session reset if needed; nothing that competes with freshness).
-Strength/power days: choose rehab that prepares the specific risk point for the main lift (e.g. glute activation before unilateral lower-body, scap prep before pressing).
-Aerobic/recovery days: rehab may be slightly more developmental (tissue tolerance, control, mobility, low-load patterning).
+RULE 12 — SURGICAL REHAB INTEGRATION
+Rehab must be intentional, not copy-pasted. Full authority to add, adjust, or remove any rehab item.
+Use the function_class tags (activation / control / isometric_analgesia / mobility / tendon_loading / recovery_downregulation) as scoring guidance — not hard constraints.
+— Each session: 1–2 rehab functions, 5–10 minutes total.
+— Spar days: 1 drill max — activation or brief post-session reset only.
+— Strength/power days: prepare the specific risk point for the main lift.
+— Aerobic/recovery days: tissue tolerance, control, mobility, low-load patterning.
 
-For every rehab item you keep or add, render it in this format:
+Render every rehab item as:
   • [Drill name] — [Dose]
-    Purpose: [what exact mechanism this addresses — reference the specific limitation, not just the body part]
-    Why today: [why this drill appears on this specific day type — pre-sparring activation / post-strength reset / aerobic-day tolerance / recovery reset / etc.]
+    Purpose: [exact mechanism — the specific limitation, not just the body part]
+    Why today: [why this day type — pre-sparring activation / post-strength reset / aerobic tolerance / etc.]
 
-If a drill repeats across sessions, the Why today line must make the changed role explicit (e.g. "activation before unilateral lower-body work" vs "downregulation after high-volume sparring"). Identical role + identical drill on multiple days requires explicit justification in the Why today line.
-
-Use precise mechanism wording: "hip flexor irritation under loaded unilateral patterns", "ankle instability during stance changes", not "hip rehab" or "shoulder activation".
-
-Before finalizing any rehab item, ask:
-1. What exact issue is this solving?
-2. Why is it on this day specifically?
-3. Does it duplicate a rehab item already used this week with the same role?
-4. Is this the lowest effective dose?
-5. Would this still look intentional if the athlete read it line by line?
-If any rehab item fails three or more of these checks, remove or replace it.
-
-Do not add rehab as filler. The model retains explicit authority to add, adjust, repeat, or remove any rehab item when the athlete context justifies it.
-
-OUTPUT
-Return a clean athlete-facing final plan that is:
-- concise
-- coach-readable
-- sport-specific
-- restriction-compliant
-- internally coherent
-- phase-appropriate
-
-Preserve the best of Stage 1, but remove weak exercise choices, filler, poor sequencing, underpowered anchor sessions, unresolved access branches, and incomplete late-camp weeks.
+If a drill repeats across sessions, the Why today must make the changed role explicit. Use precise mechanism wording — not vague body-part labels. Before keeping any rehab item: confirm it solves a specific issue, belongs on this day, and does not duplicate a same-role drill already used this week. Drop it if it fails two of three.
 """
+
 
 
 def _json_block(value: dict | list) -> str:
@@ -4279,9 +4230,11 @@ def build_stage2_handoff_text(
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
     sections.append("PLANNING BRIEF\n" + _json_block(context_block))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+    injury_context = stage2_payload.get("injury_context")
+    if isinstance(injury_context, dict):
+        sections.append("INJURY CONTEXT\n" + _json_block(injury_context))
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
     return "\n\n---\n\n".join(section for section in sections if section.strip())
-

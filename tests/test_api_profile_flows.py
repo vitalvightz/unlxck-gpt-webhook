@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from api.auth import AuthenticatedUser
 from api.models import ProfileUpdateRequest
-from api_test_support import FakeStore, _build_client, _build_request
+from support import FakeStore, _build_client, _build_request
 
 
 def test_admin_athlete_profile_includes_latest_intake_details():
@@ -42,7 +44,7 @@ def test_admin_athlete_profile_includes_latest_intake_details():
                 "athlete_timezone": "Europe/London",
                 "athlete_locale": "en-GB",
             },
-            "fight_date": "2026-04-18",
+            "fight_date": (date.today() + timedelta(days=42)).isoformat(),
             "rounds_format": "3 x 3",
             "weekly_training_frequency": 5,
             "fatigue_level": "moderate",
@@ -153,6 +155,33 @@ def test_admin_generation_from_latest_intake_rejects_focus_picks_above_cap():
 
     assert response.status_code == 409
     assert response.json()["detail"] == "This camp allows 7 total focus picks. Remove 1 goal or weak-area selection before generating."
+
+
+def test_admin_generation_from_latest_intake_rejects_invalid_saved_payload():
+    client, store, _ = _build_client()
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    assert me_response.status_code == 200
+
+    invalid_payload = _build_request().model_dump(mode="json")
+    invalid_payload["athlete"] = "not-an-object"
+    store.intakes.setdefault("athlete-1", []).append(
+        {
+            "id": "intake_invalid_payload",
+            "athlete_id": "athlete-1",
+            "fight_date": invalid_payload["fight_date"],
+            "technical_style": [],
+            "intake": invalid_payload,
+            "created_at": "2026-04-01T00:00:00+00:00",
+        }
+    )
+
+    response = client.post(
+        "/api/admin/athletes/athlete-1/plans/generate-from-latest-intake",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "latest intake is invalid and cannot be used for generation"
 
 
 def test_auth_is_required_for_draft_save():

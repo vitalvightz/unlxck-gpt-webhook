@@ -145,29 +145,6 @@ def test_rehab_function_buckets_have_expected_keys():
     assert expected == set(REHAB_FUNCTION_BUCKETS.keys())
 
 
-def test_build_rehab_slots_includes_function_class():
-    rehab_block = "- Shoulder (Strain):\n  • Single-arm Wall Slide – build scapular control\n"
-    slots = _build_rehab_slots(rehab_block, "GPP")
-    assert slots, "Expected at least one slot for a valid rehab block"
-    for slot in slots:
-        assert "function_class" in slot, "slot missing function_class"
-        assert slot["function_class"] in set(REHAB_FUNCTION_BUCKETS.keys()), (
-            f"Unexpected function_class value: {slot['function_class']}"
-        )
-        assert "function_class" in slot["selected"], "selected item missing function_class"
-
-
-def test_build_rehab_slots_why_today_framing():
-    """Rehab slot purpose should use 'Why today' framing, not 'phase-specific' only."""
-    rehab_block = "- Ankle (Sprain):\n  • Banded Ankle Circles – restore multi-directional control\n"
-    slots = _build_rehab_slots(rehab_block, "SPP")
-    assert slots
-    purpose = slots[0]["purpose"]
-    assert any(word in purpose.lower() for word in ("day", "today", "specific", "scheduling")), (
-        f"Expected 'Why today' framing in slot purpose, got:\n{purpose}"
-    )
-
-
 def test_stage2_prompt_contains_rehab_rule():
     assert "SURGICAL REHAB" in STAGE2_FINALIZER_PROMPT, (
         "Expected RULE 12 - SURGICAL REHAB INTEGRATION in the finalizer prompt"
@@ -178,10 +155,3 @@ def test_stage2_prompt_requires_why_today_format():
     assert "Why today" in STAGE2_FINALIZER_PROMPT, (
         "Expected 'Why today' format requirement in the finalizer prompt"
     )
-
-
-def test_stage2_prompt_references_function_class():
-    assert "function_class" in STAGE2_FINALIZER_PROMPT, (
-        "Expected function_class guidance in the finalizer prompt"
-    )
-

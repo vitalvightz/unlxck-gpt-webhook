@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import HTTPException, status
 from fastapi.testclient import TestClient
 import pytest
@@ -7,9 +9,10 @@ import pytest
 import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
+from api.generation_runtime import run_generation_job, should_skip_stage2
 from api.models import ProfileUpdateRequest
 from api.stage2_automation import Stage2AutomationError, Stage2AutomationUnavailableError
-from api_test_support import (
+from support import (
     SYSTEM_SCENARIOS,
     FakeAuthService,
     FakeStage2Automator,
@@ -43,6 +46,8 @@ def test_generate_plan_persists_validated_final_plan_and_history():
     assert saved["pdf_url"] is None
     assert saved["status"] == "ready"
     assert body["admin_outputs"] is None
+    assert body["safety_state"]["state"] == "plan_ready"
+    assert body["safety_state"]["status_chip"] == "PLAN READY"
     assert store.get_latest_intake("athlete-1")["intake"]["fight_date"] == "2026-04-18"
     assert len(store.list_user_plans("athlete-1")) == 1
     saved = next(iter(store.plans.values()))
@@ -134,6 +139,151 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
         assert saved["stage2_status"] == "stage2_failed"
         assert saved["stage2_retry_text"] == "repair prompt"
 
+
+
+
+def test_generation_pipeline_persists_triage_blocked_without_stage2_call():
+    stage2 = FakeStage2Automator(result=finalized_result())
+
+    def triage_blocked_planner(payload: dict) -> dict:
+        return {
+            "status": "triage_blocked",
+            "ok": False,
+            "plan_text": "## Injury Triage: Medical Hold",
+            "coach_notes": "medical_hold",
+            "pdf_url": None,
+            "why_log": {"injury_triage": {"mode": "medical_hold"}},
+            "stage2_payload": None,
+            "planning_brief": None,
+            "stage2_handoff_text": "",
+            "stage2_status": "triage_blocked",
+            "injury_triage": {
+                "mode": "medical_hold",
+                "should_block_stage2": True,
+            },
+            "parsing_metadata": {},
+        }
+
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    admin = AuthenticatedUser(
+        user_id="admin-1",
+        email="ops@unlxck.test",
+        full_name="Ops Admin",
+        metadata={},
+    )
+    store = FakeStore()
+    client = TestClient(
+        create_app(
+            store=store,
+            auth_service=FakeAuthService({"athlete-token": athlete, "admin-token": admin}),
+            planner=triage_blocked_planner,
+            stage2_automator=stage2,
+        )
+    )
+
+    _, job = _start_generation(client)
+    saved = next(iter(store.plans.values()))
+
+    assert stage2.calls == []
+    assert job["status"] == "completed"
+    assert saved["status"] == "triage_blocked"
+    assert saved["stage2_status"] == "triage_blocked"
+    assert saved["stage2_payload"] is None
+    detail = client.get(
+        f"/api/plans/{saved['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    assert detail.status_code == 200
+    safety = detail.json()["safety_state"]
+    assert safety["state"] == "medical_hold"
+    assert safety["status_chip"] == "MEDICAL HOLD"
+    assert safety["stage2_skipped"] is True
+
+
+def test_run_generation_job_updates_existing_plan_for_same_intake_after_resume():
+    store = FakeStore()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    request = _build_request()
+    intake = store.create_intake(athlete.user_id, request)
+    blocked_plan = store.create_plan(
+        athlete_id=athlete.user_id,
+        intake_id=str(intake["id"]),
+        request=request,
+        result=finalized_result(
+            status="triage_blocked",
+            stage2_status="triage_blocked",
+            plan_text="",
+            final_plan_text="",
+            why_log={"injury_triage": {"mode": "needs_review", "should_block_stage2": True}},
+        ),
+    )
+    job = store.create_or_get_generation_job(
+        athlete_id=athlete.user_id,
+        client_request_id="triage-resume-job",
+        source="admin_triage_resume",
+        request_payload=request.model_dump(mode="json"),
+    )
+    store.update_generation_job(job["id"], intake_id=str(intake["id"]))
+    stage2 = FakeStage2Automator(result=finalized_result())
+
+    asyncio.run(
+        run_generation_job(
+            job_id=job["id"],
+            store=store,
+            planner_fn=_planner,
+            stage2=stage2,
+            active_tasks=set(),
+        )
+    )
+
+    refreshed_job = store.get_generation_job(job["id"])
+    updated_plan = store.get_plan(blocked_plan["id"])
+
+    assert refreshed_job["status"] == "completed"
+    assert refreshed_job["plan_id"] == blocked_plan["id"]
+    assert updated_plan["status"] == "ready"
+    assert updated_plan["stage2_status"] == "stage2_pass"
+    assert updated_plan["plan_text"] == "# Final Plan"
+    assert updated_plan["final_plan_text"] == "# Final Plan"
+    assert updated_plan["why_log"] == {"strength": {}}
+    assert updated_plan["coach_notes"] == "### Coach Review"
+    assert store.get_latest_plan(athlete.user_id)["id"] == blocked_plan["id"]
+    assert len(store.list_user_plans(athlete.user_id)) == 1
+
+
+def test_should_skip_stage2_when_triage_blocked_status_has_no_nested_flag():
+    assert (
+        should_skip_stage2(
+            {
+                "status": "triage_blocked",
+                "injury_triage": {},
+            }
+        )
+        is True
+    )
+
+
+def test_should_skip_stage2_when_why_log_carries_needs_review_mode():
+    assert (
+        should_skip_stage2(
+            {
+                "status": "generated",
+                "why_log": {"injury_triage": {"mode": "needs_review"}},
+            }
+        )
+        is True
+    )
 
 def test_stage2_unavailable_returns_failed_job_without_persisting_plan():
     client, store, _ = _build_client(
