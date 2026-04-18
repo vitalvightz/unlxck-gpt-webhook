@@ -381,6 +381,8 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
 
     assert athlete_snapshot["hard_sparring_days"] == ["Tuesday", "Saturday"]
     assert athlete_snapshot["support_work_days"] == ["Monday"]
+    assert athlete_snapshot["cut_severity_score"] == 0.0
+    assert athlete_snapshot["cut_severity_bucket"] == "none"
     assert any("hard sparring" in item.lower() for item in brief["main_risks"])
     assert any("primary neural strength day away from declared hard sparring" in item.lower() for item in brief["global_priorities"]["push"])
 
@@ -2783,3 +2785,29 @@ def test_boxing_spacing_pass_skips_structured_non_crowded_week_with_hard_spar_hi
 
     assert updated_roles == original_roles
     assert suppressed == []
+
+
+def test_readiness_compression_uses_numeric_cut_bucket_before_weight_cut_risk():
+    athlete_model = {
+        "fatigue": "low",
+        "injuries": [],
+        "days_until_fight": 28,
+        "weight_cut_risk": True,
+        "cut_severity_bucket": "low",
+        "readiness_flags": [],
+    }
+
+    assert _compute_readiness_compression(athlete_model) == 0
+
+
+def test_readiness_compression_uses_weight_cut_risk_as_fallback_when_numeric_missing():
+    athlete_model = {
+        "fatigue": "low",
+        "injuries": [],
+        "days_until_fight": 28,
+        "weight_cut_risk": True,
+        "weight_cut_pct": "unknown",
+        "readiness_flags": [],
+    }
+
+    assert _compute_readiness_compression(athlete_model) == 1
