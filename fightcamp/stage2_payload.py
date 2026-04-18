@@ -1936,13 +1936,11 @@ def _main_job_for_role(role: dict[str, Any]) -> str:
         return "hard_sparring"
     if _is_anchor_role(role):
         return "anchor"
-    if role.get("category") == "technical" or role_key in {"technical_touch_day"}:
-        return "technical"
     if _is_low_load_support_role(role):
         return "support_recovery"
     if role.get("category") == "conditioning":
         return "conditioning"
-    return "support_recovery"
+    return role_key or str(role.get("category") or "").strip()
 
 
 def _apply_day_identity_governance(role: dict[str, Any], *, crowded_week_active: bool) -> None:
@@ -1950,40 +1948,15 @@ def _apply_day_identity_governance(role: dict[str, Any], *, crowded_week_active:
     main_job = _main_job_for_role(role)
     governance["main_job"] = main_job
 
-    if main_job == "anchor":
+    if crowded_week_active and main_job == "anchor":
         governance["support_cap"] = "light_only"
-        governance["preferred_preceding_day_class"] = ["off", "support_recovery", "technical"]
-        governance["forbidden_secondary_stressors"] = [
-            "standalone_glycolytic",
-            "main_conditioning_stressor",
-            "full_neural_session",
-            "fight_pace_block",
-            "second_anchor",
-        ]
-    elif main_job in {"support_recovery", "technical"}:
+        governance["forbidden_secondary_stressors"] = list(_CROWDED_ANCHOR_FORBIDDEN_TOKENS)
+    elif crowded_week_active and main_job == "support_recovery":
         governance["support_cap"] = "light_only"
-        governance["forbidden_secondary_stressors"] = [
-            "anchor",
-            "standalone_glycolytic",
-            "main_conditioning_stressor",
-            "full_neural_session",
-        ]
-        governance.setdefault("preferred_preceding_day_class", [])
+        governance["forbidden_secondary_stressors"] = list(_CROWDED_SUPPORT_FORBIDDEN_TOKENS)
     else:
         governance.setdefault("support_cap", "")
         governance.setdefault("forbidden_secondary_stressors", [])
-        governance.setdefault("preferred_preceding_day_class", [])
-
-    if crowded_week_active and main_job == "anchor":
-        governance["support_cap"] = "light_only"
-        governance["forbidden_secondary_stressors"] = _dedupe_clean_strings(
-            governance.get("forbidden_secondary_stressors", []) + list(_CROWDED_ANCHOR_FORBIDDEN_TOKENS)
-        )
-    elif crowded_week_active and main_job in {"support_recovery", "technical"}:
-        governance["support_cap"] = "light_only"
-        governance["forbidden_secondary_stressors"] = _dedupe_clean_strings(
-            governance.get("forbidden_secondary_stressors", []) + list(_CROWDED_SUPPORT_FORBIDDEN_TOKENS)
-        )
 
     role["governance"] = governance
 
@@ -2482,7 +2455,15 @@ def _boxing_day_identity_and_spacing_pass(
     athlete_model: dict,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     phase = str(week_entry.get("phase") or "").strip().upper()
-    if _athlete_sport_key(athlete_model) != "boxing" or phase not in {"GPP", "SPP"} or not session_roles:
+    crowded_week_active = (
+        (week_entry.get("intentional_compression") or {}).get("policy") == "boxing_crowded_week"
+    )
+    if (
+        _athlete_sport_key(athlete_model) != "boxing"
+        or phase not in {"GPP", "SPP"}
+        or not crowded_week_active
+        or not session_roles
+    ):
         return session_roles, suppressed_roles
 
     training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
@@ -3707,15 +3688,16 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-        session_roles, suppressed_roles = _boxing_day_identity_and_spacing_pass(
-            week_entry,
-            session_roles,
-            suppressed_roles,
-            athlete_model,
-        )
         crowded_week_active = (
             (week_entry.get("intentional_compression") or {}).get("policy") == "boxing_crowded_week"
         )
+        if crowded_week_active:
+            session_roles, suppressed_roles = _boxing_day_identity_and_spacing_pass(
+                week_entry,
+                session_roles,
+                suppressed_roles,
+                athlete_model,
+            )
         if crowded_week_active:
             session_roles = _sort_roles_by_scheduled_day(session_roles)
             week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
