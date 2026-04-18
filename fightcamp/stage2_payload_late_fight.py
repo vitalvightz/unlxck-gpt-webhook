@@ -594,7 +594,7 @@ def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
     if 8 <= days <= 13:
         return 2
     if 14 <= days <= 21:
-        return 1
+        return 2
     if 3 <= days <= 7:
         return 1
     if 1 <= days <= 2:
