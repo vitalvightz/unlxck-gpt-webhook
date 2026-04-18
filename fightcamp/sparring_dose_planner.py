@@ -499,7 +499,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
 
-    plan = []
+    plan: list[dict[str, Any]] = []
     for day in hard_days:
         if day == target_day:
             plan.append(
