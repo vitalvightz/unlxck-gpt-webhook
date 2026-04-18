@@ -225,6 +225,84 @@ def test_athlete_can_rename_their_saved_plan():
     assert store.get_plan(plan["id"])["plan_name"] == "April Fight Camp"
 
 
+def test_athlete_can_rename_their_saved_plan_via_documented_name_route():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(),
+    )
+
+    response = client.patch(
+        f"/api/plans/{plan['id']}/name",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=PlanRenameRequest(plan_name="Camp A").model_dump(mode="json"),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["plan_name"] == "Camp A"
+    assert store.get_plan(plan["id"])["plan_name"] == "Camp A"
+
+
+def test_archived_plan_is_hidden_from_athlete_routes():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    visible_plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_visible",
+        request=_build_request({"fight_date": "2026-05-01"}),
+        result=finalized_result(status="ready", plan_text="# Visible", final_plan_text="# Visible"),
+    )
+    archived_plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_archived",
+        request=_build_request({"fight_date": "2026-06-01"}),
+        result=finalized_result(
+            status="archived",
+            plan_text="",
+            final_plan_text="# Archived copy",
+            stage2_status="admin_archived",
+        ),
+    )
+
+    list_response = client.get("/api/plans", headers={"Authorization": "Bearer athlete-token"})
+    latest_response = client.get("/api/plans/latest", headers={"Authorization": "Bearer athlete-token"})
+    me_response = client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    archived_detail_response = client.get(
+        f"/api/plans/{archived_plan['id']}",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    admin_detail_response = client.get(
+        f"/api/plans/{archived_plan['id']}",
+        headers={"Authorization": "Bearer admin-token"},
+    )
+
+    assert list_response.status_code == 200
+    assert [plan["plan_id"] for plan in list_response.json()] == [visible_plan["id"]]
+    assert latest_response.status_code == 200
+    assert latest_response.json()["plan_id"] == visible_plan["id"]
+    assert me_response.status_code == 200
+    assert me_response.json()["latest_plan"]["plan_id"] == visible_plan["id"]
+    assert me_response.json()["plan_count"] == 1
+    assert archived_detail_response.status_code == 404
+    assert admin_detail_response.status_code == 200
+    assert admin_detail_response.json()["status"] == "archived"
+
+
 def test_athlete_can_delete_their_saved_plan():
     client, store, _ = _build_client()
     athlete = AuthenticatedUser(
