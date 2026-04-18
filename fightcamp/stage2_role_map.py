@@ -328,7 +328,7 @@ def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[st
     support_work = {
         day
         for day in _ordered_weekdays(
-            clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))
+            clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
         )
         if day in training_days
     }
