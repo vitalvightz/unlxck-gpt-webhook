@@ -44,6 +44,18 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
     assert fields["Where do you feel weakest right now?"] == []
 
 
+def test_plan_request_rejects_more_than_four_hard_sparring_days():
+    with pytest.raises(ValidationError, match="hard sparring days cap is 4"):
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+            },
+            fight_date="2026-04-18",
+            hard_sparring_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        )
+
+
 def test_plan_request_migrates_legacy_technical_skill_days_to_support_work_days():
     request = PlanRequest(
         athlete={
