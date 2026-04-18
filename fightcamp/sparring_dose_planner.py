@@ -323,18 +323,20 @@ def sandwiched_training_days(
     """Non-spar training days that fall between two effective hard spar days in the week."""
     if len(effective_hard_days_set) < 2:
         return set()
-    hard_indices = sorted(
-        _WEEKDAY_ORDER.get(d, -1) for d in effective_hard_days_set if _WEEKDAY_ORDER.get(d, -1) >= 0
-    )
+    order = {k.lower(): v for k, v in _WEEKDAY_ORDER.items()}
+    hard_indices = sorted([order[d.lower()] for d in effective_hard_days_set if d.lower() in order])
+    if len(hard_indices) < 2:
+        return set()
+
+    min_idx, max_idx = hard_indices[0], hard_indices[-1]
     result: set[str] = set()
     for day in training_days:
         if day in effective_hard_days_set:
             continue
-        idx = _WEEKDAY_ORDER.get(day, -1)
-        if idx < 0:
-            continue
-        if any(h < idx for h in hard_indices) and any(h > idx for h in hard_indices):
+        idx = order.get(day.lower(), -1)
+        if min_idx < idx < max_idx:
             result.add(day)
+    return result
     return result
 
 
