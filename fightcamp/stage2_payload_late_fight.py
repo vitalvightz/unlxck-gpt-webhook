@@ -1033,7 +1033,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
                 ],
             },
             "forbid": [
-                "broad development language",
+                "broad development week",
                 "soreness-heavy novelty",
                 "high pulls",
                 "nordic hamstring curls",
