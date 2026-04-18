@@ -928,9 +928,9 @@ def _cut_severity_compression_points(athlete_model: dict) -> int:
     cut_bucket = _resolved_cut_severity_bucket(athlete_model)
     if cut_bucket is None:
         return 1 if athlete_model.get("weight_cut_risk") else 0
-    if cut_bucket in {"critical", "extreme"}:
+    if cut_bucket in {"high", "critical", "extreme"}:
         return 2
-    if cut_bucket in {"moderate", "high"}:
+    if cut_bucket == "moderate":
         return 1
     return 0
 
