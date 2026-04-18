@@ -1,4 +1,5 @@
 from fightcamp.sparring_advisories import (
+    _cut_score,
     _highest_risk_entry,
     _injury_risk,
     _sparring_injury_entries,
@@ -76,6 +77,18 @@ def test_no_advisory_for_mild_stable_issue_in_normal_week():
     )
 
     assert advisories == []
+
+
+def test_cut_score_uses_stronger_wording_for_critical_or_extreme_bucket():
+    score, reason = _cut_score({"cut_severity_bucket": "critical", "days_until_fight": 7}, cut_pct=6.2)
+    assert score == 2
+    assert reason == "cut pressure is severe at about 6.2%"
+
+
+def test_cut_score_keeps_meaningful_wording_for_high_bucket():
+    score, reason = _cut_score({"cut_severity_bucket": "high", "days_until_fight": 10}, cut_pct=5.1)
+    assert score == 2
+    assert reason == "cut pressure is meaningful at about 5.1%"
 
 
 def test_deload_advisory_requires_real_hard_sparring_collision_in_taper_week():
@@ -227,7 +240,7 @@ def test_future_week_advisory_uses_conditional_static_app_wording():
     assert advisory["week_label"] == "Week 2"
     assert advisory["reason"].startswith("If the current readiness picture carries into Week 2")
     assert "worsening ankle instability" in advisory["reason"]
-    assert advisory["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by Week 2")
+    assert advisory["suggestion"].startswith("If high fatigue, an active cut, and worsening ankle instability are still there by Week 2")
 
 
 # ---------------------------------------------------------------------------

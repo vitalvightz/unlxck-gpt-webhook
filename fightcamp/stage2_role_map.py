@@ -39,6 +39,7 @@ from .stage2_planning_brief import (
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
 )
+from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 def _phase_progression_slot_count(brief: dict) -> int:
     weeks = int(brief.get("weeks") or 0)
@@ -887,13 +888,51 @@ def _make_compression_suppression(role: dict, reason_codes: list[str], summary: 
 
 def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
     """True when the athlete has a non-trivial active weight cut."""
+    cut_bucket = _resolved_cut_severity_bucket(athlete_model)
+    if cut_bucket is not None:
+        return cut_bucket in {"moderate", "high", "critical", "extreme"}
     if athlete_model.get("weight_cut_risk"):
-        return True
-    weight_cut_pct = float(athlete_model.get("weight_cut_pct") or 0.0)
-    if weight_cut_pct >= 3.0:
         return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     return bool(readiness_flags & {"active_weight_cut", "aggressive_weight_cut"})
+
+
+def _resolved_cut_severity_bucket(athlete_model: dict) -> str | None:
+    """Resolve cut severity bucket from numeric truth when available."""
+    explicit_bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
+    if explicit_bucket in {"none", "low", "moderate", "high", "critical", "extreme"}:
+        return explicit_bucket
+
+    try:
+        cut_score = float(athlete_model.get("cut_severity_score"))
+    except (TypeError, ValueError):
+        cut_score = None
+    if cut_score is not None:
+        return cut_severity_bucket(cut_score)
+
+    try:
+        float(athlete_model.get("weight_cut_pct"))
+    except (TypeError, ValueError):
+        return None
+
+    return cut_severity_bucket(
+        compute_cut_severity_score(
+            athlete_model.get("weight_cut_pct"),
+            athlete_model.get("days_until_fight"),
+        )
+    )
+
+
+def _cut_severity_compression_points(athlete_model: dict) -> int:
+    """Convert cut severity bucket into readiness compression points."""
+    cut_bucket = _resolved_cut_severity_bucket(athlete_model)
+    if cut_bucket is None:
+        return 1 if athlete_model.get("weight_cut_risk") else 0
+    if cut_bucket in {"high", "critical", "extreme"}:
+        return 2
+    if cut_bucket == "moderate":
+        return 1
+    return 0
 
 
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
@@ -906,9 +945,9 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
 
 def _compute_readiness_compression(athlete_model: dict) -> int:
     """
-    Compute readiness compression score (0–4) based on:
+    Compute readiness compression score (0–5) based on:
     - High fatigue (+1)
-    - Meaningful active weight cut (+1)
+    - Active cut severity (+0/+1/+2)
     - Active injury/restriction at moderate or greater severity (+1)
     - Proximity to fight (≤17 days) (+1)
     """
@@ -916,8 +955,7 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     if fatigue == "high":
         compression += 1
-    if _active_weight_cut_is_meaningful(athlete_model):
-        compression += 1
+    compression += _cut_severity_compression_points(athlete_model)
     if _active_injury_is_moderate_plus(athlete_model):
         compression += 1
     days_to_fight = athlete_model.get("days_until_fight")
