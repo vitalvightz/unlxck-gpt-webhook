@@ -2558,7 +2558,7 @@ def _boxing_day_identity_and_spacing_pass(
                 meaningful,
                 key=lambda role: (
                     role_priority.get(_main_job_for_role(role), 0),
-                    0 if str(role.get("role_key") or "") == "hard_sparring_day" else 1,
+                    1 if str(role.get("role_key") or "") == "hard_sparring_day" else 0,
                 ),
             )
             candidate_days = [d for d in training_days if not day_to_roles[d]]
