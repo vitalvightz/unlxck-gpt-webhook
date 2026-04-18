@@ -3756,7 +3756,7 @@ def _build_weekly_role_map(
             suppressed_roles,
             athlete_model,
         )
-        if crowded_week_active:
+        if crowded_week_active or sparse_week_active:
             session_roles = _sort_roles_by_scheduled_day(session_roles)
             week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
                 _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
