@@ -12,6 +12,8 @@ export type AppetiteStatus = "normal" | "low" | "high";
 export type FoundationStatus = "incomplete" | "sufficient" | "complete";
 export type NutritionWorkspaceSource = "default" | "draft" | "intake";
 export type FightWeekOverrideBand = "none" | "final_day_protocol" | "micro_taper_protocol" | "mini_taper_protocol";
+// NOTE: "technical" is a legacy internal token kept for saved-draft/API compatibility.
+// It represents support_work_days (non-hard training / S&C-compatible slots).
 export type SessionDayType = "hard_spar" | "technical" | "strength" | "conditioning" | "recovery" | "off";
 
 export type GenerationJobStatus = "queued" | "running" | "completed" | "review_required" | "failed";

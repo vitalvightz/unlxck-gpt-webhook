@@ -58,7 +58,7 @@ const SLEEP_OPTIONS = [
 const WEIGHT_SOURCE_OPTIONS = ["", "manual", "latest_bodyweight_log", "imported"];
 const DAY_TYPE_OPTIONS: Array<{ value: Extract<SessionDayType, "hard_spar" | "technical" | "conditioning" | "recovery">; label: string }> = [
   { value: "hard_spar", label: "Hard sparring" },
-  { value: "technical", label: "Light technical" },
+  { value: "technical", label: "Support work (non-hard)" },
   { value: "conditioning", label: "Conditioning" },
   { value: "recovery", label: "Recovery" },
 ];
@@ -521,7 +521,7 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and light technical still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
+                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and Support Work Days (non-hard training / S&C-compatible slots) still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
                 </article>
 
                 <article className="step-card nutrition-section">

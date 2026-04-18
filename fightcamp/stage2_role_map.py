@@ -325,8 +325,14 @@ def _athlete_sport_key(athlete_model: dict) -> str:
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
     training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
     hard_sparring = {day for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))) if day in training_days}
-    technical_skill = {day for day in _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))) if day in training_days}
-    return training_days, hard_sparring, technical_skill
+    support_work = {
+        day
+        for day in _ordered_weekdays(
+            clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
+        )
+        if day in training_days
+    }
+    return training_days, hard_sparring, support_work
 
 
 def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> None:
@@ -507,7 +513,7 @@ def _assign_declared_day_hints(
     if not ordered:
         return ordered
 
-    training_days, hard_sparring_days, technical_skill_days = _declared_day_sets(athlete_model)
+    training_days, hard_sparring_days, support_work_days = _declared_day_sets(athlete_model)
     if not training_days:
         return ordered
 
@@ -555,7 +561,7 @@ def _assign_declared_day_hints(
             score = 100
             if recovery_day not in hard_sparring_days:
                 score += 10
-            if recovery_day in technical_skill_days:
+            if recovery_day in support_work_days:
                 score += 4
             score -= abs((idx + 1) - middle)
             if score > best_score:
@@ -583,7 +589,7 @@ def _assign_declared_day_hints(
             used_days.add(preferred_glycolytic_day)
 
     if aerobic_idx is not None:
-        preferred_aerobic_day = next((day for day in training_days if day in technical_skill_days and day not in used_days), None)
+        preferred_aerobic_day = next((day for day in training_days if day in support_work_days and day not in used_days), None)
         if preferred_aerobic_day:
             day_assignments[aerobic_idx] = preferred_aerobic_day
             used_days.add(preferred_aerobic_day)
@@ -599,8 +605,8 @@ def _assign_declared_day_hints(
             reason = "Use the lowest-load day immediately before the primary strength anchor when possible."
         elif idx == glycolytic_idx and day in hard_sparring_days:
             reason = "Let declared hard sparring own the main collision-heavy combat load when it already exists."
-        elif idx == aerobic_idx and day in technical_skill_days:
-            reason = "Use declared technical skill days for lower-noise support work when possible."
+        elif idx == aerobic_idx and day in support_work_days:
+            reason = "Use declared Support Work Days (non-hard training days / S&C-compatible slots) for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
 
     for idx, role in enumerate(ordered):
@@ -1445,6 +1451,7 @@ def _build_weekly_role_map(
                 "phase_week_total": week_entry.get("phase_week_total"),
                 "declared_training_days": _ordered_weekdays(clean_list(athlete_model.get("training_days", []))),
                 "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
+                "declared_support_work_days": _ordered_weekdays(clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
                 "declared_technical_skill_days": _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),

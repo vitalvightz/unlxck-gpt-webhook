@@ -20,6 +20,8 @@ AppetiteStatus = Literal["normal", "low", "high"]
 FoundationStatus = Literal["incomplete", "sufficient", "complete"]
 NutritionWorkspaceSource = Literal["default", "draft", "intake"]
 FightWeekOverrideBand = Literal["none", "final_day_protocol", "micro_taper_protocol", "mini_taper_protocol"]
+# NOTE: "technical" is a legacy internal enum token retained for stored drafts and API compatibility.
+# It maps to support_work_days (non-hard training / S&C-compatible slots) in planner and UI flows.
 SessionDayType = Literal["hard_spar", "technical", "strength", "conditioning", "recovery", "off"]
 
 
