@@ -471,7 +471,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             countdown_codes.insert(0, "fight_week_taper")
         countdown_reason = ", ".join(countdown_codes)
 
-        plan = []
+        plan: list[dict[str, Any]] = []
         for day in hard_days:
             if day == protected_day:
                 plan.append(
