@@ -1256,7 +1256,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
                 "5 blocks per session max. Keep strength support to 1-2 small items.",
             ],
             "preferred_terms": ["compressed SPP", "hard sparring-led stress", "strength anchor", "technical rhythm", "freshness support"],
-            "forbidden_terms": ["broad development block", "soreness-heavy novelty", "high pull", "nordic hamstring curl", "push press", "heavy contrast pairing"],
+            "forbidden_terms": ["broad development week", "soreness-heavy novelty", "high pulls", "nordic hamstring curls", "push press", "heavy contrast pairings"],
         }
     if mode == "pre_fight_compressed_payload":
         return {
