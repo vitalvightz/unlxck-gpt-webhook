@@ -227,7 +227,7 @@ def test_future_week_advisory_uses_conditional_static_app_wording():
     assert advisory["week_label"] == "Week 2"
     assert advisory["reason"].startswith("If the current readiness picture carries into Week 2")
     assert "worsening ankle instability" in advisory["reason"]
-    assert advisory["suggestion"].startswith("If high fatigue, an aggressive cut, and worsening ankle instability are still there by Week 2")
+    assert advisory["suggestion"].startswith("If high fatigue, an active cut, and worsening ankle instability are still there by Week 2")
 
 
 # ---------------------------------------------------------------------------
