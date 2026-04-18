@@ -607,6 +607,7 @@ def _build_athlete_model(
     # We define plan_creation_weekday as athlete-local weekday so late-fight
     # weekday mapping remains aligned with the athlete calendar.
     plan_creation_dt = _athlete_calendar_now(training_context.athlete_timezone, now_utc=_utc_now())
+    support_work_days = training_context.support_work_days or training_context.technical_skill_days
     cut_severity_score = compute_cut_severity_score(
         training_context.weight_cut_pct,
         training_context.days_until_fight,
@@ -638,6 +639,7 @@ def _build_athlete_model(
         "training_frequency": training_context.training_frequency,
         "training_days": training_context.training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
+        "support_work_days": support_work_days,
         "technical_skill_days": training_context.technical_skill_days,
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
