@@ -3,10 +3,12 @@
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
 from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
+    _boxing_day_identity_and_spacing_pass,
     _compute_readiness_compression,
     _compression_floor_value,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
+    _is_meaningful_stressor,
     _non_spar_role_priority_rank,
     _parse_record,
     build_planning_brief,
@@ -2553,3 +2555,122 @@ def test_spar_first_no_compression_when_no_sparring_and_low_fatigue():
     suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
     assert week["intentional_compression"]["active"] is False
     assert len(suppressed_compression) == 0
+
+def test_meaningful_stressor_detects_explicit_high_load_markers():
+    assert _is_meaningful_stressor(
+        {
+            "category": "conditioning",
+            "role_key": "main_conditioning_stressor",
+            "preferred_system": "aerobic",
+        }
+    )
+    assert _is_meaningful_stressor(
+        {
+            "category": "conditioning",
+            "role_key": "repeatability_support_day",
+            "preferred_system": "aerobic",
+            "stress_flags": ["high_metabolic"],
+        }
+    )
+    assert not _is_meaningful_stressor(
+        {
+            "category": "conditioning",
+            "role_key": "repeatability_support_day",
+            "preferred_system": "aerobic",
+            "stress_flags": [],
+        }
+    )
+
+
+def test_boxing_spacing_prefers_reshuffling_lighter_role_before_drop():
+    week_entry = {"phase": "SPP", "intentional_compression": {"policy": "boxing_crowded_week"}}
+    athlete = {
+        "sport": "boxing",
+        "training_days": ["Monday", "Tuesday"],
+        "fatigue": "low",
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "injuries": [],
+    }
+    session_roles = [
+        {"session_index": 1, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": "Monday"},
+        {"session_index": 2, "category": "conditioning", "role_key": "fight_pace_repeatability_day", "preferred_system": "glycolytic", "scheduled_day_hint": "Monday"},
+        {"session_index": 3, "category": "recovery", "role_key": "recovery_reset_day", "scheduled_day_hint": "Tuesday"},
+    ]
+
+    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+
+    assert not suppressed
+    day_to_roles = {}
+    for role in updated_roles:
+        day_to_roles.setdefault(role.get("scheduled_day_hint"), []).append(role)
+    monday_meaningful = sum(1 for role in day_to_roles.get("Monday", []) if _is_meaningful_stressor(role))
+    tuesday_meaningful = sum(1 for role in day_to_roles.get("Tuesday", []) if _is_meaningful_stressor(role))
+    assert monday_meaningful <= 1
+    assert tuesday_meaningful <= 1
+    assert any(role.get("role_key") == "fight_pace_repeatability_day" and role.get("scheduled_day_hint") == "Tuesday" for role in updated_roles)
+
+
+def test_boxing_spacing_pass_structures_sparse_non_crowded_weeks():
+    week_entry = {"phase": "SPP", "intentional_compression": {"policy": ""}}
+    athlete = {
+        "sport": "boxing",
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "fatigue": "moderate",
+        "readiness_flags": ["moderate_fatigue"],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "injuries": [],
+    }
+    session_roles = [
+        {"session_index": 1, "category": "strength", "role_key": "strength_touch_day", "scheduled_day_hint": ""},
+        {"session_index": 2, "category": "conditioning", "role_key": "repeatability_support_day", "preferred_system": "aerobic", "scheduled_day_hint": ""},
+        {"session_index": 3, "category": "recovery", "role_key": "recovery_reset_day", "scheduled_day_hint": ""},
+        {"session_index": 4, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": ""},
+        {"session_index": 5, "category": "conditioning", "role_key": "fight_pace_repeatability_day", "preferred_system": "glycolytic", "scheduled_day_hint": ""},
+    ]
+
+    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+
+    assert not suppressed
+    assert all(role.get("scheduled_day_hint") for role in updated_roles)
+    day_to_roles: dict[str, list[dict]] = {}
+    for role in updated_roles:
+        day_to_roles.setdefault(role.get("scheduled_day_hint"), []).append(role)
+    assert all(sum(1 for role in roles if _is_meaningful_stressor(role)) <= 1 for roles in day_to_roles.values())
+    anchor = next(role for role in updated_roles if role.get("role_key") == "neural_plus_strength_day")
+    glycolytic = next(role for role in updated_roles if role.get("role_key") == "fight_pace_repeatability_day")
+    training_days = athlete["training_days"]
+    assert abs(training_days.index(anchor["scheduled_day_hint"]) - training_days.index(glycolytic["scheduled_day_hint"])) >= 2
+    assert next(role for role in updated_roles if role.get("role_key") == "strength_touch_day")["scheduled_day_hint"] != anchor["scheduled_day_hint"]
+    assert suppressed == []
+
+
+def test_boxing_spacing_pass_skips_structured_non_crowded_week_with_hard_spar_hints():
+    week_entry = {
+        "phase": "SPP",
+        "intentional_compression": {"policy": ""},
+        "declared_hard_sparring_days": ["Wednesday"],
+    }
+    athlete = {
+        "sport": "boxing",
+        "training_days": ["Monday", "Wednesday", "Friday"],
+        "hard_sparring_days": ["Wednesday"],
+        "fatigue": "low",
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "injuries": [],
+    }
+    session_roles = [
+        {"session_index": 1, "category": "conditioning", "role_key": "repeatability_support_day", "preferred_system": "aerobic", "scheduled_day_hint": "Monday"},
+        {"session_index": 2, "category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday"},
+        {"session_index": 3, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": "Friday"},
+    ]
+    original_roles = [dict(role) for role in session_roles]
+
+    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+
+    assert updated_roles == original_roles
+    assert suppressed == []
