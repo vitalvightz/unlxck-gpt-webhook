@@ -3,10 +3,12 @@
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
 from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
+    _boxing_day_identity_and_spacing_pass,
     _compute_readiness_compression,
     _compression_floor_value,
     _derive_competitive_maturity,
     _high_fatigue_compression_reason_codes,
+    _is_meaningful_stressor,
     _non_spar_role_priority_rank,
     _parse_record,
     build_planning_brief,
@@ -2553,3 +2555,167 @@ def test_spar_first_no_compression_when_no_sparring_and_low_fatigue():
     suppressed_compression = [s for s in week["suppressed_roles"] if s.get("intentional_compression")]
     assert week["intentional_compression"]["active"] is False
     assert len(suppressed_compression) == 0
+
+
+def _meaningful_stressor(role: dict) -> bool:
+    role_key = str(role.get("role_key") or "")
+    if role_key == "hard_sparring_day":
+        return True
+    governance = role.get("governance") or {}
+    main_job = str(governance.get("main_job") or "")
+    if main_job == "anchor":
+        return True
+    if main_job == "conditioning" and role.get("preferred_system") == "glycolytic":
+        return True
+    return False
+
+
+def test_meaningful_stressor_detects_explicit_high_load_markers():
+    assert _is_meaningful_stressor(
+        {
+            "category": "conditioning",
+            "role_key": "main_conditioning_stressor",
+            "preferred_system": "aerobic",
+        }
+    )
+    assert _is_meaningful_stressor(
+        {
+            "category": "conditioning",
+            "role_key": "repeatability_support_day",
+            "preferred_system": "aerobic",
+            "stress_flags": ["high_metabolic"],
+        }
+    )
+    assert not _is_meaningful_stressor(
+        {
+            "category": "conditioning",
+            "role_key": "repeatability_support_day",
+            "preferred_system": "aerobic",
+            "stress_flags": [],
+        }
+    )
+
+
+def test_boxing_spacing_prefers_reshuffling_lighter_role_before_drop():
+    week_entry = {"phase": "SPP"}
+    athlete = {
+        "sport": "boxing",
+        "training_days": ["Monday", "Tuesday"],
+        "fatigue": "low",
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "injuries": [],
+    }
+    session_roles = [
+        {"session_index": 1, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": "Monday"},
+        {"session_index": 2, "category": "conditioning", "role_key": "fight_pace_repeatability_day", "preferred_system": "glycolytic", "scheduled_day_hint": "Monday"},
+        {"session_index": 3, "category": "recovery", "role_key": "recovery_reset_day", "scheduled_day_hint": "Tuesday"},
+    ]
+
+    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+
+    assert not suppressed
+    day_to_roles = {}
+    for role in updated_roles:
+        day_to_roles.setdefault(role.get("scheduled_day_hint"), []).append(role)
+    monday_meaningful = sum(1 for role in day_to_roles.get("Monday", []) if _is_meaningful_stressor(role))
+    tuesday_meaningful = sum(1 for role in day_to_roles.get("Tuesday", []) if _is_meaningful_stressor(role))
+    assert monday_meaningful <= 1
+    assert tuesday_meaningful <= 1
+    assert any(role.get("role_key") == "fight_pace_repeatability_day" and role.get("scheduled_day_hint") == "Tuesday" for role in updated_roles)
+
+
+def _assert_boxing_day_identity(week: dict) -> None:
+    allowed_main_jobs = {"hard_sparring", "anchor", "support_recovery", "conditioning", "technical"}
+    day_to_roles: dict[str, list[dict]] = {}
+    for role in week["session_roles"]:
+        governance = role.get("governance") or {}
+        main_job = str(governance.get("main_job") or "")
+        assert main_job in allowed_main_jobs
+        day = str(role.get("scheduled_day_hint") or "").strip()
+        if day:
+            day_to_roles.setdefault(day, []).append(role)
+
+    for roles in day_to_roles.values():
+        meaningful_count = sum(1 for role in roles if _meaningful_stressor(role))
+        assert meaningful_count <= 1
+
+    anchors = [role for role in week["session_roles"] if (role.get("governance") or {}).get("main_job") == "anchor"]
+    for anchor in anchors:
+        governance = anchor.get("governance") or {}
+        assert governance.get("support_cap") == "light_only"
+        assert governance.get("preferred_preceding_day_class") == ["off", "support_recovery", "technical"]
+        forbidden = set(governance.get("forbidden_secondary_stressors") or [])
+        assert {
+            "standalone_glycolytic",
+            "main_conditioning_stressor",
+            "full_neural_session",
+            "fight_pace_block",
+            "second_anchor",
+        }.issubset(forbidden)
+
+    for role in week["session_roles"]:
+        main_job = (role.get("governance") or {}).get("main_job")
+        if main_job not in {"support_recovery", "technical"}:
+            continue
+        forbidden = set((role.get("governance") or {}).get("forbidden_secondary_stressors") or [])
+        assert {"anchor", "standalone_glycolytic", "main_conditioning_stressor", "full_neural_session"}.issubset(forbidden)
+
+
+def test_boxing_no_hints_low_fatigue_enforces_day_identity_and_anchor_governance():
+    athlete = _base_athlete(
+        fatigue="low",
+        hard_sparring_days=[],
+        readiness_flags=[],
+    )
+    week = _spp_week_role_map(athlete)
+
+    _assert_boxing_day_identity(week)
+
+
+def test_boxing_no_hints_moderate_fatigue_prefers_clean_anchor_spacing():
+    athlete = _base_athlete(
+        fatigue="moderate",
+        hard_sparring_days=[],
+        readiness_flags=["moderate_fatigue"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    _assert_boxing_day_identity(week)
+    anchor = next((r for r in week["session_roles"] if (r.get("governance") or {}).get("main_job") == "anchor"), None)
+    glycolytic = next(
+        (
+            r for r in week["session_roles"]
+            if (r.get("governance") or {}).get("main_job") == "conditioning" and r.get("preferred_system") == "glycolytic"
+        ),
+        None,
+    )
+    training_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    if anchor and glycolytic and anchor.get("scheduled_day_hint") and glycolytic.get("scheduled_day_hint"):
+        assert abs(training_days.index(anchor["scheduled_day_hint"]) - training_days.index(glycolytic["scheduled_day_hint"])) != 1
+
+
+def test_boxing_no_hints_active_cut_keeps_identity_rules_without_sparring_hints():
+    athlete = _base_athlete(
+        fatigue="moderate",
+        hard_sparring_days=[],
+        weight_cut_risk=True,
+        weight_cut_pct=4.0,
+        readiness_flags=["moderate_fatigue", "active_weight_cut"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    _assert_boxing_day_identity(week)
+
+
+def test_boxing_no_hints_injury_management_keeps_identity_rules_without_sparring_hints():
+    athlete = _base_athlete(
+        fatigue="moderate",
+        hard_sparring_days=[],
+        injuries=["moderate shoulder impingement"],
+        readiness_flags=["moderate_fatigue", "injury_management"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    _assert_boxing_day_identity(week)
