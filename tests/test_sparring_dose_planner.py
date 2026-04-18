@@ -161,3 +161,60 @@ def test_pick_downgrade_target_defaults_to_latest_declared_day():
     target = _pick_downgrade_target(["Tuesday", "Thursday"], week=_week())
 
     assert target == "Thursday"
+
+
+def test_four_hard_spar_days_force_one_managed_exposure_even_when_other_signals_are_low():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="low",
+            weight_cut_pct=0.0,
+            weight_cut_risk=False,
+            injuries=[],
+            hard_days=["Monday", "Wednesday", "Thursday", "Friday"],
+        ),
+    )
+
+    managed = [entry for entry in plan if entry["status"] == "deload_suggested"]
+    assert len(managed) == 1
+    assert managed[0]["day"] == "Friday"
+    assert [entry["hard_day_class"] for entry in plan].count("managed_hard") == 1
+    assert [entry["hard_day_class"] for entry in plan].count("primary_hard") == 1
+
+
+def test_protected_day_is_the_only_primary_hard_when_not_first_declared_day():
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            hard_days=["Monday", "Thursday", "Saturday"],
+            session_roles=[
+                {
+                    "role_key": "fight_pace_repeatability_day",
+                    "collision_owner_day": "Thursday",
+                }
+            ],
+        ),
+        athlete_snapshot=_athlete(
+            fatigue="low",
+            injuries=[],
+            hard_days=["Monday", "Thursday", "Saturday"],
+        ),
+    )
+
+    primary_days = [entry["day"] for entry in plan if entry.get("hard_day_class") == "primary_hard"]
+    assert primary_days == ["Thursday"]
+    assert [entry["hard_day_class"] for entry in plan].count("primary_hard") == 1
+
+
+def test_four_plus_hard_days_with_injury_convert_signal_returns_convert_not_deload():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="low",
+            injuries=["ankle instability"],
+            hard_days=["Monday", "Wednesday", "Thursday", "Friday"],
+        ),
+    )
+
+    statuses = [entry["status"] for entry in plan]
+    assert "convert_to_technical_suggested" in statuses
+    assert "deload_suggested" not in statuses

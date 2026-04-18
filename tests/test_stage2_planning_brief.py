@@ -2458,6 +2458,21 @@ def test_spar_first_sparring_counted_against_weekly_cap():
     assert len(non_spar_roles) <= 3  # non-spar budget is capped at 5 - 2 = 3
 
 
+def test_sparring_classification_is_carried_into_weekly_role_map():
+    athlete = _base_athlete(
+        fatigue="low",
+        training_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        hard_sparring_days=["Monday", "Wednesday", "Thursday", "Friday"],
+    )
+    week = _spp_week_role_map(athlete)
+
+    spar_roles = [r for r in week["session_roles"] if r["role_key"] == "hard_sparring_day"]
+
+    assert len(spar_roles) == 4
+    assert any(role.get("hard_sparring_class") == "managed_hard" for role in spar_roles)
+    assert any(role.get("hard_sparring_class") == "primary_hard" for role in spar_roles)
+
+
 # ── Scenario 2: Compression affects only non-sparring slots ─────────────────
 
 def test_spar_first_compression_applies_only_to_non_spar_slots():
