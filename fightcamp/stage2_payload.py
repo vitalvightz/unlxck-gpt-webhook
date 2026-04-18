@@ -3750,7 +3750,7 @@ def _build_weekly_role_map(
         crowded_week_active = (
             (week_entry.get("intentional_compression") or {}).get("policy") == "boxing_crowded_week"
         )
-        session_roles, suppressed_roles = _boxing_day_identity_and_spacing_pass(
+        session_roles, suppressed_roles, sparse_week_active = _boxing_day_identity_and_spacing_pass(
             week_entry,
             session_roles,
             suppressed_roles,
