@@ -2612,21 +2612,61 @@ def test_boxing_spacing_prefers_reshuffling_lighter_role_before_drop():
     assert any(role.get("role_key") == "fight_pace_repeatability_day" and role.get("scheduled_day_hint") == "Tuesday" for role in updated_roles)
 
 
-def test_boxing_spacing_pass_skips_non_crowded_weeks():
+def test_boxing_spacing_pass_structures_sparse_non_crowded_weeks():
     week_entry = {"phase": "SPP", "intentional_compression": {"policy": ""}}
     athlete = {
         "sport": "boxing",
-        "training_days": ["Monday", "Tuesday"],
+        "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
         "fatigue": "moderate",
-        "readiness_flags": ["moderate_fatigue", "active_weight_cut"],
-        "weight_cut_risk": True,
-        "weight_cut_pct": 4.0,
-        "injuries": ["moderate shoulder impingement"],
+        "readiness_flags": ["moderate_fatigue"],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "injuries": [],
     }
     session_roles = [
         {"session_index": 1, "category": "strength", "role_key": "strength_touch_day", "scheduled_day_hint": ""},
-        {"session_index": 2, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": "Monday"},
-        {"session_index": 3, "category": "conditioning", "role_key": "fight_pace_repeatability_day", "preferred_system": "glycolytic", "scheduled_day_hint": "Monday"},
+        {"session_index": 2, "category": "conditioning", "role_key": "repeatability_support_day", "preferred_system": "aerobic", "scheduled_day_hint": ""},
+        {"session_index": 3, "category": "recovery", "role_key": "recovery_reset_day", "scheduled_day_hint": ""},
+        {"session_index": 4, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": ""},
+        {"session_index": 5, "category": "conditioning", "role_key": "fight_pace_repeatability_day", "preferred_system": "glycolytic", "scheduled_day_hint": ""},
+    ]
+
+    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+
+    assert not suppressed
+    assert all(role.get("scheduled_day_hint") for role in updated_roles)
+    day_to_roles: dict[str, list[dict]] = {}
+    for role in updated_roles:
+        day_to_roles.setdefault(role.get("scheduled_day_hint"), []).append(role)
+    assert all(sum(1 for role in roles if _is_meaningful_stressor(role)) <= 1 for roles in day_to_roles.values())
+    anchor = next(role for role in updated_roles if role.get("role_key") == "neural_plus_strength_day")
+    glycolytic = next(role for role in updated_roles if role.get("role_key") == "fight_pace_repeatability_day")
+    training_days = athlete["training_days"]
+    assert abs(training_days.index(anchor["scheduled_day_hint"]) - training_days.index(glycolytic["scheduled_day_hint"])) >= 2
+    assert next(role for role in updated_roles if role.get("role_key") == "strength_touch_day")["scheduled_day_hint"] != anchor["scheduled_day_hint"]
+    assert suppressed == []
+
+
+def test_boxing_spacing_pass_skips_structured_non_crowded_week_with_hard_spar_hints():
+    week_entry = {
+        "phase": "SPP",
+        "intentional_compression": {"policy": ""},
+        "declared_hard_sparring_days": ["Wednesday"],
+    }
+    athlete = {
+        "sport": "boxing",
+        "training_days": ["Monday", "Wednesday", "Friday"],
+        "hard_sparring_days": ["Wednesday"],
+        "fatigue": "low",
+        "readiness_flags": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "injuries": [],
+    }
+    session_roles = [
+        {"session_index": 1, "category": "conditioning", "role_key": "repeatability_support_day", "preferred_system": "aerobic", "scheduled_day_hint": "Monday"},
+        {"session_index": 2, "category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday"},
+        {"session_index": 3, "category": "strength", "role_key": "neural_plus_strength_day", "scheduled_day_hint": "Friday"},
     ]
     original_roles = [dict(role) for role in session_roles]
 

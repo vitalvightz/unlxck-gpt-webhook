@@ -2331,6 +2331,7 @@ def _boxing_day_score(
     day: str,
     *,
     anchor_day: str,
+    prefer_midweek_anchor: bool,
     readiness_sensitive: bool,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
@@ -2345,6 +2346,11 @@ def _boxing_day_score(
 
     if main_job == "anchor":
         score += 6 if previous_class in {"off", "support_recovery", "technical"} else -6
+        if prefer_midweek_anchor:
+            midpoint = (len(training_days) - 1) / 2 if training_days else 0
+            score -= abs(day_idx - midpoint)
+            if 0 < day_idx < len(training_days) - 1:
+                score += 1
     if _is_meaningful_stressor(role):
         score -= 3 * _boxing_adjacent_meaningful_count(day, training_days=training_days, day_to_roles=day_to_roles)
 
@@ -2384,6 +2390,7 @@ def _boxing_best_free_day(
     free_days: list[str],
     *,
     anchor_day: str,
+    prefer_midweek_anchor: bool,
     readiness_sensitive: bool,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
@@ -2396,6 +2403,7 @@ def _boxing_best_free_day(
                 role,
                 day,
                 anchor_day=anchor_day,
+                prefer_midweek_anchor=prefer_midweek_anchor,
                 readiness_sensitive=readiness_sensitive,
                 training_days=training_days,
                 day_to_roles=day_to_roles,
@@ -2448,6 +2456,54 @@ def _boxing_try_swap_with_lighter_role(
     return target_day
 
 
+def _boxing_unassigned_role_priority(role: dict[str, Any]) -> tuple[int, int, str]:
+    main_job = _main_job_for_role(role)
+    role_key = str(role.get("role_key") or "").strip()
+    session_index = int(role.get("session_index") or 0)
+    if main_job == "anchor":
+        return (0, session_index, role_key)
+    if main_job == "conditioning" and _is_meaningful_stressor(role):
+        return (1, session_index, role_key)
+    if main_job == "technical":
+        return (2, session_index, role_key)
+    if main_job == "conditioning":
+        return (3, session_index, role_key)
+    if main_job == "support_recovery":
+        return (4, session_index, role_key)
+    return (5, session_index, role_key)
+
+
+def _boxing_sparse_week_structure_needed(
+    week_entry: dict[str, Any],
+    session_roles: list[dict[str, Any]],
+    athlete_model: dict[str, Any],
+) -> bool:
+    training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
+    if not training_days:
+        return False
+
+    declared_hard_days = _ordered_weekdays(
+        _clean_list(week_entry.get("declared_hard_sparring_days") or athlete_model.get("hard_sparring_days", []))
+    )
+    if not declared_hard_days:
+        return True
+
+    missing_day_hints = [
+        role for role in session_roles
+        if str(role.get("scheduled_day_hint") or "").strip() not in training_days
+    ]
+    if missing_day_hints:
+        return True
+
+    day_to_roles: dict[str, list[dict[str, Any]]] = {day: [] for day in training_days}
+    for role in session_roles:
+        day = str(role.get("scheduled_day_hint") or "").strip()
+        if day in day_to_roles:
+            day_to_roles[day].append(role)
+
+    return any(sum(1 for role in roles if _is_meaningful_stressor(role)) > 1 for roles in day_to_roles.values())
+
+
 def _boxing_day_identity_and_spacing_pass(
     week_entry: dict,
     session_roles: list[dict[str, Any]],
@@ -2458,10 +2514,11 @@ def _boxing_day_identity_and_spacing_pass(
     crowded_week_active = (
         (week_entry.get("intentional_compression") or {}).get("policy") == "boxing_crowded_week"
     )
+    sparse_week_active = _boxing_sparse_week_structure_needed(week_entry, session_roles, athlete_model)
     if (
         _athlete_sport_key(athlete_model) != "boxing"
         or phase not in {"GPP", "SPP"}
-        or not crowded_week_active
+        or (not crowded_week_active and not sparse_week_active)
         or not session_roles
     ):
         return session_roles, suppressed_roles
@@ -2485,6 +2542,8 @@ def _boxing_day_identity_and_spacing_pass(
         role for role in updated_roles
         if str(role.get("scheduled_day_hint") or "").strip() not in day_to_roles
     ]
+    if sparse_week_active and not crowded_week_active:
+        unassigned.sort(key=_boxing_unassigned_role_priority)
 
     def _anchor_day_hint() -> str:
         anchor = next((role for role in updated_roles if _main_job_for_role(role) == "anchor"), None)
@@ -2496,6 +2555,7 @@ def _boxing_day_identity_and_spacing_pass(
             role,
             free_days,
             anchor_day=anchor_day,
+            prefer_midweek_anchor=(sparse_week_active and not crowded_week_active),
             readiness_sensitive=readiness_sensitive,
             training_days=training_days,
             day_to_roles=day_to_roles,
@@ -3691,13 +3751,12 @@ def _build_weekly_role_map(
         crowded_week_active = (
             (week_entry.get("intentional_compression") or {}).get("policy") == "boxing_crowded_week"
         )
-        if crowded_week_active:
-            session_roles, suppressed_roles = _boxing_day_identity_and_spacing_pass(
-                week_entry,
-                session_roles,
-                suppressed_roles,
-                athlete_model,
-            )
+        session_roles, suppressed_roles = _boxing_day_identity_and_spacing_pass(
+            week_entry,
+            session_roles,
+            suppressed_roles,
+            athlete_model,
+        )
         if crowded_week_active:
             session_roles = _sort_roles_by_scheduled_day(session_roles)
             week_entry["intentionally_unused_days"] = _compute_intentionally_unused_days(
