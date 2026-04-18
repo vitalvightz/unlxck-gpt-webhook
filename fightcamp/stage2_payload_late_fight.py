@@ -1435,7 +1435,7 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
                 session_index=1,
                 category="conditioning",
                 role_key="alactic_sharpness_day",
-            preferred_pool="declared_support_work_days_or_conditioning_slots",
+                preferred_pool="declared_support_work_days_or_conditioning_slots",
                 preferred_system="alactic",
                 selection_rule="One short alactic sharpness touch only. Keep it tiny, crisp, and non-fatiguing.",
                 placement_rule="Keep this brief and very low volume. Do not turn it into density work.",
@@ -1830,7 +1830,7 @@ def _late_fight_candidate_roles(
                 _late_fight_role_entry(
                     category="conditioning",
                     role_key="alactic_sharpness_day",
-            preferred_pool="declared_support_work_days_or_conditioning_slots",
+                preferred_pool="declared_support_work_days_or_conditioning_slots",
                     preferred_system="alactic",
                     selection_rule="One short alactic sharpness touch only. Keep it tiny, crisp, and non-fatiguing.",
                     placement_rule="Keep this brief and very low volume. Do not turn it into density work.",
@@ -2343,7 +2343,6 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
             plan_weekday, days_until_fight,
         )
         filtered_technical = _filter_past_weekdays(
-        filtered_technical = _filter_past_weekdays(
             _ordered_weekdays(
                 clean_list(
                     athlete_model.get(
@@ -2355,8 +2354,6 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
             plan_weekday,
             days_until_fight,
         )
-            plan_weekday, days_until_fight,
-        )
         weeks = [
             {
                 "week_index": 1,
@@ -2366,7 +2363,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
                 "phase_week_total": 1,
                 "declared_training_days": filtered_training,
                 "declared_hard_sparring_days": filtered_sparring,
-        "declared_support_work_days": filtered_technical,
+                "declared_support_work_days": filtered_technical,
                 "hard_sparring_plan": [],
                 "effective_hard_sparring_days": [
                     role.get("scheduled_day_hint")

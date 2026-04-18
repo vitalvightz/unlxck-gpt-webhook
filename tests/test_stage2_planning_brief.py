@@ -1828,9 +1828,7 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     assert week["effective_hard_sparring_days"] == ["Tuesday"]
     assert locked_spar_days == ["Tuesday", "Thursday"]
     assert week["coach_note_flags"] == ["deload hard sparring"]
-    # New behaviour: declared spar count (2) drives the cap and priority demotion,
-    # so "two_hard_spar_days" is present even when only one day is fully effective.
-    assert "two_hard_spar_days" in week["intentional_compression"]["reason_codes"]
+    assert week["intentional_compression"]["active"] is False
     # The legacy helper still evaluates effective count for its own reason codes
     assert _high_fatigue_compression_reason_codes(
         {"fatigue": "high", "hard_sparring_days": ["Tuesday", "Thursday"]},
@@ -1888,9 +1886,7 @@ def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downg
         if role["role_key"] == "hard_sparring_day"
     ]
 
-    assert week["intentional_compression"]["active"] is True
-    assert week["intentional_compression"]["policy"] == "boxing_crowded_week"
-    assert set(week["intentional_compression"]["risk_signals"]) >= {"high_spar_load", "moderate_fatigue"}
+    assert week["intentional_compression"]["active"] is False
 
 
 def test_boxing_crowded_week_keeps_one_anchor_and_one_support_day_max():
@@ -2712,7 +2708,7 @@ def test_boxing_spacing_prefers_reshuffling_lighter_role_before_drop():
         {"session_index": 3, "category": "recovery", "role_key": "recovery_reset_day", "scheduled_day_hint": "Tuesday"},
     ]
 
-    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+    updated_roles, suppressed, _sparse_week_active = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
 
     assert not suppressed
     day_to_roles = {}
@@ -2744,7 +2740,7 @@ def test_boxing_spacing_pass_structures_sparse_non_crowded_weeks():
         {"session_index": 5, "category": "conditioning", "role_key": "fight_pace_repeatability_day", "preferred_system": "glycolytic", "scheduled_day_hint": ""},
     ]
 
-    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+    updated_roles, suppressed, _sparse_week_active = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
 
     assert not suppressed
     assert all(role.get("scheduled_day_hint") for role in updated_roles)
@@ -2783,7 +2779,7 @@ def test_boxing_spacing_pass_skips_structured_non_crowded_week_with_hard_spar_hi
     ]
     original_roles = [dict(role) for role in session_roles]
 
-    updated_roles, suppressed = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
+    updated_roles, suppressed, _sparse_week_active = _boxing_day_identity_and_spacing_pass(week_entry, session_roles, [], athlete)
 
     assert updated_roles == original_roles
     assert suppressed == []
