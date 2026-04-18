@@ -24,14 +24,6 @@ _PAYLOAD_MODE_MAP = {
     11: "pre_fight_compressed_payload",
     12: "pre_fight_compressed_payload",
     13: "pre_fight_compressed_payload",
-    14: _SHORT_CAMP_SPP_PAYLOAD,
-    15: _SHORT_CAMP_SPP_PAYLOAD,
-    16: _SHORT_CAMP_SPP_PAYLOAD,
-    17: _SHORT_CAMP_SPP_PAYLOAD,
-    18: _SHORT_CAMP_SPP_PAYLOAD,
-    19: _SHORT_CAMP_SPP_PAYLOAD,
-    20: _SHORT_CAMP_SPP_PAYLOAD,
-    21: _SHORT_CAMP_SPP_PAYLOAD,
 }
 
 _MAX_BLOCKS_PER_SESSION = {
@@ -73,7 +65,6 @@ _WEEKDAY_NAMES = [
 ]
 
 _LATE_FIGHT_WINDOW_BOUNDS = {
-    _SHORT_CAMP_SPP_PAYLOAD: (14, 21),
     "pre_fight_compressed_payload": (8, 13),
     "late_fight_week_payload": (7, 7),
     "late_fight_transition_payload": (5, 6),
@@ -444,7 +435,9 @@ def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
         return []
     if days == 0:
         return [0]
-    return list(range(min(days, 21), 0, -1))
+    if days > 13:
+        return []
+    return list(range(days, 0, -1))
 
 
 def _late_fight_legal_countdown_labels(days_until_fight: Any) -> list[str]:
@@ -609,7 +602,7 @@ def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | 
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
-    if 8 <= days <= 21:
+    if 8 <= days <= 13:
         return 3
     if days == 7:
         return 2
@@ -624,7 +617,7 @@ def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
-    if 8 <= days <= 21:
+    if 8 <= days <= 13:
         return 4
     if days == 7:
         return 3
@@ -641,7 +634,7 @@ def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
-    if 8 <= days <= 21:
+    if 8 <= days <= 13:
         return 2
     if 3 <= days <= 7:
         return 1
@@ -845,8 +838,8 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
     days = _coerce_days(days_until_fight)
     if days is None:
         return []
-    if 14 <= days <= 21:
-        return _SHORT_CAMP_SPP_FORBIDDEN_BLOCKS
+    if days > 13:
+        return []
     if 8 <= days <= 13:
         return ["multiple_hard_sparring_exposures", "standalone_glycolytic", "primary_strength_anchor"]
     if days == 7:
@@ -972,7 +965,7 @@ def _days_out_bucket(days_until_fight: Any) -> str:
     days = _coerce_days(days_until_fight)
     if days is None:
         return "CAMP"
-    if days < 0 or days > 21:
+    if days < 0 or days > 13:
         return "CAMP"
     return f"D-{days}"
 
