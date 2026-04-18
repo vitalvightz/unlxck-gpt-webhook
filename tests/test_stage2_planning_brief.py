@@ -2811,3 +2811,96 @@ def test_readiness_compression_uses_weight_cut_risk_as_fallback_when_numeric_mis
     }
 
     assert _compute_readiness_compression(athlete_model) == 1
+
+
+def test_sandwiched_glycolytic_suppressed_for_boxing_athlete():
+    # Boxing athlete with Mon + Wed hard spar and glycolytic on Tuesday (sandwiched).
+    # The pre-step must fire before the boxing early-exit so the glycolytic is dropped.
+    session_roles = [
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Monday",
+            "governance": {},
+        },
+        {
+            "category": "sparring",
+            "role_key": "hard_sparring_day",
+            "scheduled_day_hint": "Wednesday",
+            "governance": {},
+        },
+        {
+            "category": "conditioning",
+            "role_key": "fight_pace_repeatability_day",
+            "preferred_system": "glycolytic",
+            "scheduled_day_hint": "Tuesday",
+            "governance": {},
+        },
+    ]
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {
+            "phase": "SPP",
+            "week_index": 1,
+            "declared_hard_sparring_days": ["Monday", "Wednesday"],
+        },
+        session_roles,
+        [],
+        {
+            "sport": "boxing",
+            "fatigue": "low",
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "hard_as_planned"},
+        ],
+    )
+
+    kept_keys = [role["role_key"] for role in kept_roles]
+    suppressed_keys = [item["role_key"] for item in suppressed]
+    assert "fight_pace_repeatability_day" not in kept_keys
+    assert "fight_pace_repeatability_day" in suppressed_keys
+    assert any("sandwiched_hard_days" in (item.get("compression_reason_codes") or []) for item in suppressed)
+
+
+def test_sandwiched_glycolytic_preserved_when_must_keep_glycolytic():
+    # must_keep containing "glycolytic" prevents sandwich suppression.
+    session_roles = [
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Monday", "governance": {}},
+        {"category": "sparring", "role_key": "hard_sparring_day", "scheduled_day_hint": "Wednesday", "governance": {}},
+        {
+            "category": "conditioning",
+            "role_key": "fight_pace_repeatability_day",
+            "preferred_system": "glycolytic",
+            "scheduled_day_hint": "Tuesday",
+            "governance": {},
+        },
+    ]
+    kept_roles, suppressed = _apply_high_fatigue_week_compression(
+        {
+            "phase": "SPP",
+            "week_index": 1,
+            "declared_hard_sparring_days": ["Monday", "Wednesday"],
+            "resolved_rule_state": {"must_keep": ["glycolytic"]},
+        },
+        session_roles,
+        [],
+        {
+            "sport": "boxing",
+            "fatigue": "low",
+            "hard_sparring_days": ["Monday", "Wednesday"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Friday"],
+        },
+        hard_sparring_plan=[
+            {"day": "Monday", "status": "hard_as_planned"},
+            {"day": "Wednesday", "status": "hard_as_planned"},
+        ],
+    )
+
+    kept_keys = [role["role_key"] for role in kept_roles]
+    assert "fight_pace_repeatability_day" in kept_keys
+    assert not any(
+        "sandwiched_hard_days" in (item.get("compression_reason_codes") or [])
+        for item in suppressed
+    )
