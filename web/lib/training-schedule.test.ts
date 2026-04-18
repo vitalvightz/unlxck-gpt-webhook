@@ -37,6 +37,20 @@ test("flags overlap between hard sparring and non-hard training days", () => {
   );
 });
 
+test("blocks onboarding when hard sparring exceeds four days", () => {
+  assert.deepStrictEqual(
+    getSparringConsistency(
+      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      [],
+    ),
+    {
+      hardError: "Hard sparring days cap is 4; reduce to 4 or fewer to continue.",
+      softWarning: null,
+    },
+  );
+});
+
 test("does not warn when hard sparring stays at two days or fewer", () => {
   assert.deepStrictEqual(
     getHardSparringWarning(["Monday", "Wednesday"], 5),
