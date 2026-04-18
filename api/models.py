@@ -38,6 +38,7 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
     "high": "high",
     "severe": "high",
 }
+_HARD_SPARRING_DAY_CAP = 4
 
 
 def _clean_list(values: list[str] | None) -> list[str]:
@@ -505,6 +506,24 @@ class PlanRequest(BaseModel):
     @classmethod
     def validate_rounds_format(cls, value: str) -> str:
         return _validate_rounds_format(value)
+
+    @field_validator("training_availability", "hard_sparring_days", "support_work_days", mode="before")
+    @classmethod
+    def clean_day_arrays(cls, value: Any) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, str):
+            return _clean_list([part.strip() for part in value.split(",")])
+        if isinstance(value, list):
+            return _clean_list(value)
+        return _clean_list([value])
+
+    @field_validator("hard_sparring_days")
+    @classmethod
+    def validate_hard_sparring_days_cap(cls, value: list[str]) -> list[str]:
+        if len(value) > _HARD_SPARRING_DAY_CAP:
+            raise ValueError("hard sparring days cap is 4; reduce to 4 or fewer to generate a plan")
+        return value
 
     def to_payload(self) -> dict[str, Any]:
         athlete = self.athlete
