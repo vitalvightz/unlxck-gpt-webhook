@@ -409,3 +409,153 @@ def test_cap_one_countdown_protected_day_is_primary_hard():
     assert len(hard_entries) == 1
     assert len(managed_entries) == 2
     assert hard_entries[0]["status"] == "hard_as_planned"
+
+
+# ── Three hard days with multiple amber readiness signals ────────────────────
+
+def test_three_hard_days_with_two_amber_signals_deloads_one():
+    # Moderate fatigue + moderate cut with 3 well-spaced hard days:
+    # neither signal alone triggers a deload, but together they do.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            weight_cut_pct=3.5,
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+            hard_days=["Monday", "Wednesday", "Friday"],
+        ),
+    )
+    downgraded = [e for e in plan if e["status"] != "hard_as_planned"]
+    assert len(downgraded) == 1
+
+
+def test_three_hard_days_with_single_amber_signal_stays_hard():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            hard_days=["Monday", "Wednesday", "Friday"],
+        ),
+    )
+    assert all(e["status"] == "hard_as_planned" for e in plan)
+
+
+def test_two_hard_days_with_two_amber_signals_stays_hard():
+    # count == 2 does not trigger the multi-amber rule.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            fatigue="moderate",
+            weight_cut_pct=3.5,
+            weight_cut_risk=True,
+            readiness_flags=["active_weight_cut"],
+        ),
+    )
+    assert all(e["status"] == "hard_as_planned" for e in plan)
+
+
+# ── Anchor exclusion after sparring (stage2 scoring) ─────────────────────────
+
+def test_anchor_after_hard_as_planned_spar_day_is_hard_excluded():
+    from fightcamp.stage2_payload import _boxing_day_score
+
+    anchor_role = {
+        "category": "strength",
+        "role_key": "primary_strength_day",
+        "anchor": "max_strength_neural",
+    }
+    spar_role = {
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "hard_sparring_status": "hard_as_planned",
+    }
+    training_days = ["Monday", "Tuesday", "Wednesday"]
+    day_to_roles = {"Tuesday": [spar_role]}
+
+    score = _boxing_day_score(
+        anchor_role,
+        "Wednesday",
+        anchor_day="Wednesday",
+        prefer_midweek_anchor=False,
+        readiness_sensitive=False,
+        training_days=training_days,
+        day_to_roles=day_to_roles,
+    )
+    assert score <= -10_000
+
+
+def test_anchor_after_deloaded_spar_day_gets_heavy_penalty_but_not_excluded():
+    from fightcamp.stage2_payload import _boxing_day_score
+
+    anchor_role = {
+        "category": "strength",
+        "role_key": "primary_strength_day",
+        "anchor": "max_strength_neural",
+    }
+    spar_role = {
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "hard_sparring_status": "deload_suggested",
+    }
+    training_days = ["Monday", "Tuesday", "Wednesday"]
+    day_to_roles = {"Tuesday": [spar_role]}
+
+    score = _boxing_day_score(
+        anchor_role,
+        "Wednesday",
+        anchor_day="Wednesday",
+        prefer_midweek_anchor=False,
+        readiness_sensitive=False,
+        training_days=training_days,
+        day_to_roles=day_to_roles,
+    )
+    # Heavy penalty (-50) but far above the hard-exclusion threshold (-10_000).
+    assert -10_000 < score < 0
+
+
+# ── _finalize_plan uniform post-processing ───────────────────────────────────
+
+def test_countdown_convert_all_plan_has_hard_day_class_labels():
+    # Every return path must pass through _finalize_plan.
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=3, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all("hard_day_class" in e for e in plan)
+
+
+def test_cap_one_countdown_with_collision_owner_picks_collision_day():
+    # D-7 cap_one + collision owner = Friday should keep Friday hard (not Monday).
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            hard_days=["Monday", "Wednesday", "Friday"],
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Friday"}],
+        ),
+        athlete_snapshot=_athlete(days_until_fight=7, hard_days=["Monday", "Wednesday", "Friday"]),
+    )
+    hard_entries = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(hard_entries) == 1
+    assert hard_entries[0]["day"] == "Friday"
+    assert hard_entries[0]["hard_day_class"] == "primary_hard"
+
+
+def test_finalize_plan_never_exceeds_cap_on_any_path():
+    # Post-condition invariant: at most 3 effective hard days across the full input space.
+    scenarios = [
+        {"hard_days": ["Monday", "Wednesday", "Friday"], "fatigue": "low", "days": 24},
+        {"hard_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "fatigue": "low", "days": 24},
+        {"hard_days": ["Monday", "Tuesday", "Wednesday", "Thursday"], "fatigue": "high", "days": 24},
+        {"hard_days": ["Monday", "Wednesday", "Friday", "Sunday"], "fatigue": "low", "days": 7},
+    ]
+    for scenario in scenarios:
+        plan = compute_hard_sparring_plan(
+            week=_week(hard_days=scenario["hard_days"]),
+            athlete_snapshot=_athlete(
+                fatigue=scenario["fatigue"],
+                days_until_fight=scenario["days"],
+                hard_days=scenario["hard_days"],
+            ),
+        )
+        effective = [e for e in plan if e["status"] == "hard_as_planned"]
+        assert len(effective) <= 3, f"{scenario} yielded {len(effective)} effective hard days"
