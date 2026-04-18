@@ -14,6 +14,8 @@ export type HardSparringWarning = {
   requiresAcknowledgement: boolean;
 };
 
+const HARD_SPARRING_DAY_CAP = 4;
+
 function getSortedUniqueDays(days: string[]): string[] {
   return [...new Set(days)].sort((left, right) => left.localeCompare(right));
 }
@@ -52,6 +54,14 @@ export function getSparringConsistency(
   hardSparringDays: string[],
   supportWorkDays: string[],
 ): SparringConsistency {
+  const normalizedHardSparringDays = getSortedUniqueDays(hardSparringDays);
+  if (normalizedHardSparringDays.length > HARD_SPARRING_DAY_CAP) {
+    return {
+      hardError: `Hard sparring days cap is ${HARD_SPARRING_DAY_CAP}; reduce to ${HARD_SPARRING_DAY_CAP} or fewer to continue.`,
+      softWarning: null,
+    };
+  }
+
   const available = new Set(trainingAvailability);
   const invalidHard = hardSparringDays.filter((day) => !available.has(day));
   if (invalidHard.length) {
