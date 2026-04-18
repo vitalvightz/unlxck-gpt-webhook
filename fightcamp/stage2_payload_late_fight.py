@@ -20,6 +20,14 @@ _PAYLOAD_MODE_MAP = {
     11: "pre_fight_compressed_payload",
     12: "pre_fight_compressed_payload",
     13: "pre_fight_compressed_payload",
+    14: "short_camp_spp_payload",
+    15: "short_camp_spp_payload",
+    16: "short_camp_spp_payload",
+    17: "short_camp_spp_payload",
+    18: "short_camp_spp_payload",
+    19: "short_camp_spp_payload",
+    20: "short_camp_spp_payload",
+    21: "short_camp_spp_payload",
 }
 
 _MAX_BLOCKS_PER_SESSION = {
@@ -29,6 +37,7 @@ _MAX_BLOCKS_PER_SESSION = {
     "late_fight_transition_payload": 4,
     "late_fight_week_payload": 5,
     "pre_fight_compressed_payload": 5,
+    "short_camp_spp_payload": 5,
     "camp_payload": None,
 }
 
@@ -60,6 +69,7 @@ _WEEKDAY_NAMES = [
 ]
 
 _LATE_FIGHT_WINDOW_BOUNDS = {
+    "short_camp_spp_payload": (14, 21),
     "pre_fight_compressed_payload": (8, 13),
     "late_fight_week_payload": (7, 7),
     "late_fight_transition_payload": (5, 6),
@@ -291,7 +301,7 @@ def _countdown_weekday_map(
 
     D-0 is the fight day. Every earlier countdown label is projected backwards
     from that anchor. Do not cap this at 7 days — compressed late-fight windows
-    can run out to D-13 and still need true weekday mapping.
+    can run out to D-21 and still need true weekday mapping.
     """
     fight_weekday = _fight_weekday_from_context(plan_creation_weekday, days_until_fight)
     if fight_weekday is None:
@@ -377,7 +387,7 @@ def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
         return []
     if days == 0:
         return [0]
-    return list(range(min(days, 13), 0, -1))
+    return list(range(min(days, 21), 0, -1))
 
 
 def _late_fight_legal_countdown_labels(days_until_fight: Any) -> list[str]:
@@ -544,6 +554,8 @@ def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | 
         return None
     if 8 <= days <= 13:
         return 3
+    if 14 <= days <= 21:
+        return 3
     if days == 7:
         return 2
     if 1 <= days <= 6:
@@ -558,6 +570,8 @@ def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
     if days is None:
         return None
     if 8 <= days <= 13:
+        return 4
+    if 14 <= days <= 21:
         return 4
     if days == 7:
         return 3
@@ -577,6 +591,8 @@ def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
         return None
     if 8 <= days <= 13:
         return 2
+    if 14 <= days <= 21:
+        return 1
     if 3 <= days <= 7:
         return 1
     if 1 <= days <= 2:
@@ -678,7 +694,9 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     )
 
     allowed_role_keys: list[str] = []
-    if mode == "pre_fight_compressed_payload":
+    if mode == "short_camp_spp_payload":
+        allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "technical_touch_day", "fight_week_freshness_day"]
+    elif mode == "pre_fight_compressed_payload":
         allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_week_payload":
         allowed_role_keys = ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
@@ -737,6 +755,19 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
     days = _coerce_days(days_until_fight)
     if days is None:
         return []
+    if 14 <= days <= 21:
+        return [
+            "high_pulls",
+            "nordic_hamstring_curls",
+            "push_press",
+            "heavy_contrast_pairings",
+            "stair_running_intervals",
+            "heavy_bag_conditioning_finishers",
+            "standalone_3_minute_war_when_sparring_exists",
+            "multiple_accessories_after_anchor",
+            "soreness_heavy_novelty",
+            "broad_development_language",
+        ]
     if 8 <= days <= 13:
         return ["multiple_hard_sparring_exposures", "standalone_glycolytic", "primary_strength_anchor"]
     if days == 7:
@@ -862,13 +893,15 @@ def _days_out_bucket(days_until_fight: Any) -> str:
     days = _coerce_days(days_until_fight)
     if days is None:
         return "CAMP"
-    if days < 0 or days > 13:
+    if days < 0 or days > 21:
         return "CAMP"
     return f"D-{days}"
 
 
 def _late_fight_window(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "short_camp_spp_payload":
+        return "d21_to_d14_short_camp_spp"
     if mode == "pre_fight_compressed_payload":
         return "d13_to_d8"
     if mode == "late_fight_week_payload":
@@ -886,6 +919,22 @@ def _late_fight_window(days_until_fight: Any) -> str:
 
 def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], list[str]]:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "short_camp_spp_payload":
+        return (
+            ["sparring", "technical", "strength", "conditioning", "recovery"],
+            [
+                "high_pulls",
+                "nordic_hamstring_curls",
+                "push_press",
+                "heavy_contrast_pairings",
+                "stair_running_intervals",
+                "heavy_bag_conditioning_finishers",
+                "standalone_3_minute_war_when_sparring_exists",
+                "multiple_accessories_after_anchor",
+                "broad_development_week",
+                "soreness_heavy_novelty",
+            ],
+        )
     if mode == "pre_fight_compressed_payload":
         return (
             ["sparring", "technical", "strength", "sharpness", "recovery"],
@@ -927,6 +976,47 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "allow_weekly_frequency_reasoning": True,
             "allow_multi_session_stress": True,
             "sparring_role": "full_collision_owner",
+        }
+    if mode == "short_camp_spp_payload":
+        return {
+            "mode": mode,
+            "allow_full_weekly_structure": True,
+            "allow_compressed_weekly_structure": True,
+            "allow_normal_session_roles": True,
+            "allow_anchor_wording": True,
+            "allow_development_language": False,
+            "allow_glycolytic_build": False,
+            "allow_broad_weakness_building": False,
+            "max_meaningful_strength_anchors": 1,
+            "max_meaningful_conditioning_stressors": 1,
+            "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
+            "max_active_roles": _late_fight_max_active_roles(days_until_fight),
+            "allow_hard_sparring_influence": True,
+            "allow_weekly_frequency_reasoning": True,
+            "allow_multi_session_stress": False,
+            "sparring_role": "collision_owner_narrow",
+            "preferred_strength_anchor": {
+                "exercise": "Trap Bar Deadlift",
+                "sets_reps": ["3 x 2-3", "3 x 3"],
+                "intensity": "RPE 7-8",
+                "max_support_items": 2,
+                "volume_reduction_triggers": [
+                    "hard_sparring_days>=3",
+                    "weight_cut_pct>=3",
+                ],
+            },
+            "forbid": [
+                "broad development language",
+                "soreness-heavy novelty",
+                "high pulls",
+                "nordic hamstring curls",
+                "push press",
+                "heavy contrast pairings",
+                "stair running intervals",
+                "heavy bag conditioning finishers",
+                "standalone 3-minute war when sparring exists",
+                "multiple accessories after the anchor",
+            ],
         }
     if mode == "pre_fight_compressed_payload":
         return {
@@ -1128,6 +1218,19 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "camp_payload":
         return {"mode": mode, "rules": []}
+    if mode == "short_camp_spp_payload":
+        return {
+            "mode": mode,
+            "framing": "compressed_spp_week",
+            "rules": [
+                "Compressed SPP framing with full weekly shape.",
+                "Hard sparring owns fight-pace stress. Standalone glycolytic is suppressed when two or more hard sparring days exist.",
+                "One strength anchor max and one low-load support/recovery role max.",
+                "5 blocks per session max. Keep strength support to 1-2 small items.",
+            ],
+            "preferred_terms": ["compressed SPP", "hard sparring-led stress", "strength anchor", "technical rhythm", "freshness support"],
+            "forbidden_terms": ["broad development block", "soreness-heavy novelty", "high pull", "nordic hamstring curl", "push press", "heavy contrast pairing"],
+        }
     if mode == "pre_fight_compressed_payload":
         return {
             "mode": mode,
@@ -1436,6 +1539,46 @@ def _late_fight_candidate_roles(
 
     preserved_hard_days = permission_policy.get("preserved_hard_days", [])
     has_downgraded_hard_days = bool(permission_policy.get("downgraded_hard_days", []))
+
+    if mode == "short_camp_spp_payload":
+        candidates.append(
+            _late_fight_role_entry(
+                category="strength",
+                role_key="strength_touch_day",
+                preferred_pool="strength_slots",
+                selection_rule="Use one strength anchor touch only, centred on trap-bar-deadlift style intent.",
+                placement_rule="Keep this as one anchor only; add at most one to two small support items and reduce volume when sparring load or cut stress is high.",
+                selection_priority=108,
+                required=True,
+                legal_countdown_labels=legal_countdown_labels,
+            )
+        )
+        if len(preserved_hard_days) < 2:
+            candidates.append(
+                _late_fight_role_entry(
+                    category="conditioning",
+                    role_key="light_fight_pace_touch_day",
+                    preferred_pool="conditioning_slots",
+                    preferred_system="glycolytic",
+                    selection_rule="Allow one light fight-rhythm touch only when hard sparring does not already own the window.",
+                    placement_rule="Keep this light and non-soreness-heavy. Remove it when two or more hard sparring days are present.",
+                    selection_priority=100,
+                    legal_countdown_labels=legal_countdown_labels,
+                )
+            )
+        candidates.append(
+            _late_fight_role_entry(
+                category="recovery",
+                role_key="fight_week_freshness_day",
+                preferred_pool="rehab_slots_or_recovery_only",
+                selection_rule="Allow one low-load recovery/support role only.",
+                placement_rule="Keep this as the lowest-load day in the week shape.",
+                selection_priority=104,
+                required=True,
+                legal_countdown_labels=legal_countdown_labels,
+            )
+        )
+        return candidates
 
     if mode == "pre_fight_compressed_payload":
         strength_selection_rule = "Use one meaningful strength or power touch only."
@@ -1948,6 +2091,8 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "short_camp_spp_payload":
+        return "Compressed SPP Short Camp"
     if mode == "pre_fight_compressed_payload":
         return "Compressed Pre-Fight Week"
     if mode == "late_fight_week_payload":
@@ -1965,6 +2110,12 @@ def _late_fight_stage_label(days_until_fight: Any) -> str:
 
 def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "short_camp_spp_payload":
+        return (
+            "Use compressed SPP with a full week shape. Let hard sparring own fight-pace stress, keep one strength "
+            "anchor max, one low-load support day max, and suppress standalone glycolytic when two or more hard "
+            "sparring days exist."
+        )
     if mode == "pre_fight_compressed_payload":
         return (
             "Use a compressed pre-fight week. Keep no more than two hard sparring exposures, one meaningful "
@@ -2098,7 +2249,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
     return {
         "model": "late_fight_role_overlay.v1",
         "source_of_truth": [
-            "Late-fight Stage 2 payload bypasses the normal camp-week payload path for 13 days and less.",
+            "Late-fight Stage 2 payload bypasses the normal camp-week payload path for 21 days and less.",
             "Use the late-fight role map as a compressed execution guide, not as a normal weekly build.",
             "Keep the output aligned to the time window first, then the athlete profile.",
         ],
@@ -2193,6 +2344,16 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Fight-rhythm touch: 1 max — suppress entirely if sparring already owns the week.\n"
             "One freshness, mobility, or reset session is mandatory.\n"
             "No SPP development framing, no conditioning-build language, no glycolytic stressor between spar days.\n\n"
+            + _CONTRACT
+        )
+    if payload_mode == "short_camp_spp_payload":
+        return (
+            "COMPRESSED SPP SHORT CAMP (D-21 to D-14)\n"
+            "Keep a full weekly shape, but run compressed-camp restrictions.\n"
+            "Hard sparring owns fight-pace stress. If hard sparring is 2+ days, suppress standalone glycolytic work.\n"
+            "Strength anchor: one max (Trap Bar Deadlift bias, 3 x 2-3 or 3 x 3 @ RPE 7-8) plus 1-2 small supports only.\n"
+            "Reduce anchor volume when hard sparring is 3+ days or weight_cut_pct is 3+.\n"
+            "Banned: high pulls, nordic curls, push press, heavy contrast pairings, stair-running intervals, heavy bag conditioning finishers, standalone 3-Minute War when sparring exists, multiple accessories after anchor.\n\n"
             + _CONTRACT
         )
     if payload_mode == "late_fight_week_payload":
