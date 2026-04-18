@@ -14,6 +14,7 @@ import re
 from typing import Any
 
 from . import stage2_planning_brief as stage2_planning_brief_module
+from . import stage2_role_map as stage2_role_map_module
 from .stage2_payload_late_fight import (
     _build_late_fight_plan_spec,
     _build_late_fight_session_sequence,
@@ -33,6 +34,7 @@ from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count, effective_hard_days
 from .strength_session_quality import classify_strength_item, infer_strength_sessions
 from .training_context import TrainingContext, allocate_sessions
+from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 # Re-export from sub-modules for backward compatibility
 from .stage2_planning_brief import (  # noqa: F401
@@ -616,6 +618,10 @@ def _build_athlete_model(
         training_context.athlete_timezone,
         now_utc=stage2_planning_brief_module._utc_now(),
     )
+    cut_severity_score = compute_cut_severity_score(
+        training_context.weight_cut_pct,
+        training_context.days_until_fight,
+    )
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -632,6 +638,8 @@ def _build_athlete_model(
         "age": training_context.age,
         "weight_cut_risk": training_context.weight_cut_risk,
         "weight_cut_pct": training_context.weight_cut_pct,
+        "cut_severity_score": cut_severity_score,
+        "cut_severity_bucket": cut_severity_bucket(cut_severity_score),
         "technical_styles": training_context.style_technical,
         "tactical_styles": training_context.style_tactical,
         "weaknesses": training_context.weaknesses,
@@ -2975,14 +2983,13 @@ def _make_compression_suppression(role: dict, reason_codes: list[str], summary: 
 
 
 def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
-    """True when the athlete has a non-trivial active weight cut."""
-    if athlete_model.get("weight_cut_risk"):
-        return True
-    weight_cut_pct = float(athlete_model.get("weight_cut_pct") or 0.0)
-    if weight_cut_pct >= 3.0:
-        return True
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    return bool(readiness_flags & {"active_weight_cut", "aggressive_weight_cut"})
+    """Compatibility wrapper; keep stage2_payload behavior aligned with stage2_role_map."""
+    return stage2_role_map_module._active_weight_cut_is_meaningful(athlete_model)
+
+
+def _cut_severity_compression_points(athlete_model: dict) -> int:
+    """Compatibility wrapper; keep stage2_payload behavior aligned with stage2_role_map."""
+    return stage2_role_map_module._cut_severity_compression_points(athlete_model)
 
 
 def _active_injury_affects_generic_compression(athlete_model: dict) -> bool:
@@ -3008,9 +3015,9 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
 
 def _compute_readiness_compression(athlete_model: dict) -> int:
     """
-    Compute readiness compression score (0–4) based on:
+    Compute readiness compression score (0–5) based on:
     - High fatigue (+1)
-    - Meaningful active weight cut (+1)
+    - Active cut severity (+0/+1/+2)
     - Active injury/restriction at moderate or greater severity (+1)
     - Proximity to fight (≤17 days) (+1)
     """
@@ -3018,8 +3025,7 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     if fatigue == "high":
         compression += 1
-    if _active_weight_cut_is_meaningful(athlete_model):
-        compression += 1
+    compression += _cut_severity_compression_points(athlete_model)
     if _active_injury_affects_generic_compression(athlete_model):
         compression += 1
     days_to_fight = athlete_model.get("days_until_fight")
