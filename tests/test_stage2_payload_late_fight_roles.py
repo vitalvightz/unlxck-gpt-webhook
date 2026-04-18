@@ -1,6 +1,53 @@
-in note.lower()
-        for note in hard_spar.get("coach_notes", [])
+from fightcamp.stage2_payload_late_fight import (
+    _build_late_fight_plan_spec,
+    _build_late_fight_session_sequence,
+    _classify_declared_hard_days_for_late_window,
+    _days_out_payload_block,
+    _late_fight_session_roles,
+    _planned_sessions_per_week,
+    _select_spaced_hard_days,
+)
+
+
+_MINIMAL_ATHLETE = {
+    "full_name": "Test Athlete",
+    "sport": "boxing",
+    "status": "amateur",
+    "rounds_format": "3x3",
+    "camp_length_weeks": 6,
+    "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+    "hard_sparring_days": ["tuesday", "thursday"],
+        "support_work_days": ["friday"],
+    "fatigue": "moderate",
+    "fatigue_level": "moderate",
+    "weight_cut_risk": False,
+    "weight_cut_pct": 0.0,
+    "readiness_flags": [],
+    "injuries": [],
+    "plan_creation_weekday": "monday",
+}
+
+
+def _athlete(days_until_fight, **overrides):
+    athlete = dict(_MINIMAL_ATHLETE)
+    athlete["days_until_fight"] = days_until_fight
+    athlete.update(overrides)
+    return athlete
+
+
+def test_select_spaced_hard_days_keeps_first_and_last_when_capped_to_two():
+    assert _select_spaced_hard_days(["monday", "thursday", "saturday"], 2) == ["monday", "saturday"]
+
+
+def test_pre_fight_compressed_caps_effective_hard_sparring_roles_at_two():
+    roles = _late_fight_session_roles(
+        8,
+        _athlete(8, hard_sparring_days=["monday", "thursday", "saturday"]),
     )
+
+    assert [role["role_key"] for role in roles].count("hard_sparring_day") == 2
+
+
 
 
 def test_short_camp_spp_allows_max_one_strength_anchor():
@@ -8,6 +55,7 @@ def test_short_camp_spp_allows_max_one_strength_anchor():
         role["role_key"]
         for role in _late_fight_session_roles(18, _athlete(18, hard_sparring_days=["thursday"]))
     ]
+
     assert role_keys.count("strength_touch_day") == 1
 
 
@@ -17,7 +65,27 @@ def test_short_camp_spp_preserves_declared_hard_sparring_without_plan_creation_w
         _athlete(18, plan_creation_weekday=None, hard_sparring_days=["monday", "wednesday"]),
     )
     hard_roles = [role for role in roles if role["role_key"] == "hard_sparring_day"]
+
     assert len(hard_roles) == 2
+
+
+def test_short_camp_spp_adds_readiness_downgrade_note_for_high_fatigue():
+    roles = _late_fight_session_roles(
+        18,
+        _athlete(
+            18,
+            hard_sparring_days=["thursday"],
+            fatigue="high",
+            fatigue_level="high",
+            readiness_flags=["injury_management"],
+        ),
+    )
+    hard_spar = next(role for role in roles if role["role_key"] == "hard_sparring_day")
+
+    assert any(
+        "reduce this declared hard sparring day" in note.lower()
+        for note in hard_spar.get("coach_notes", [])
+    )
 
 
 def test_short_camp_spp_forbids_requested_movements_and_finishers():
@@ -36,7 +104,6 @@ def test_short_camp_spp_forbids_requested_movements_and_finishers():
     assert "stair_running_intervals" in forbidden_blocks
     assert "heavy_bag_conditioning_finishers" in forbidden_blocks
     assert "broad_development_week" in forbidden_blocks
-
 
 def test_pre_fight_compressed_suppresses_standalone_glycolytic_with_two_hard_days():
     role_keys = [

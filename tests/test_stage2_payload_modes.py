@@ -138,7 +138,8 @@ class TestPayloadModeClassification:
         [
             (None, "camp_payload"),
             (-2, "camp_payload"),
-            (14, "camp_payload"),
+            (21, "short_camp_spp_payload"),
+            (14, "short_camp_spp_payload"),
             (13, "pre_fight_compressed_payload"),
             (10, "pre_fight_compressed_payload"),
             (8, "pre_fight_compressed_payload"),
@@ -162,7 +163,7 @@ class TestPayloadModeClassification:
 
 class TestDaysOutPayloadBlock:
     def test_camp_block_uses_camp_bucket(self):
-        block = _days_out_payload_block(14, _athlete(14))
+        block = _days_out_payload_block(22, _athlete(22))
         assert block["payload_mode"] == "camp_payload"
         assert block["payload_variant"] == "normal_stage2_payload"
         assert block["days_out_bucket"] == "CAMP"
@@ -191,8 +192,8 @@ class TestDaysOutPayloadBlock:
 
 class TestLateFightPermissionsAndRendering:
     def test_camp_permissions_remain_unrestricted(self):
-        permissions = _late_fight_permissions(14, _athlete(14))
-        rules = _late_fight_rendering_rules(14)
+        permissions = _late_fight_permissions(22, _athlete(22))
+        rules = _late_fight_rendering_rules(22)
         assert permissions["allow_full_weekly_structure"] is True
         assert permissions["allow_development_language"] is True
         assert rules == {"mode": "camp_payload", "rules": []}
@@ -296,7 +297,7 @@ class TestPlanningBriefBranching:
         assert _late_fight_stage_label(7) == "Sharpness Week"
 
     def test_camp_uses_normal_planning_brief(self):
-        brief = _build_brief_for(14)
+        brief = _build_brief_for(22)
         assert brief["generator_mode"] == "deterministic_planner_plus_ai_finalizer"
         assert "days_out_payload" not in brief
         assert "payload_variant" not in brief
@@ -350,7 +351,7 @@ class TestPlanningBriefBranching:
 
 class TestStage2PayloadBranching:
     def test_camp_payload_stays_on_normal_stage2_schema(self):
-        payload = _build_stage2(14)
+        payload = _build_stage2(22)
         assert payload["generator_mode"] == "restriction_aware_candidate_generator"
         assert "payload_mode" not in payload
         assert "days_out_payload" not in payload
@@ -512,7 +513,7 @@ class TestHandoffText:
         )
 
     def test_camp_handoff_has_no_payload_mode_section(self):
-        text = self._build_handoff(14)
+        text = self._build_handoff(22)
         assert "PAYLOAD MODE INSTRUCTIONS" not in text
         assert "INJURY CONTEXT" in text
         assert "PLANNING BRIEF" in text
@@ -520,6 +521,7 @@ class TestHandoffText:
     @pytest.mark.parametrize(
         "days, expected_heading",
         [
+            (14, "COMPRESSED SPP SHORT CAMP"),
             (10, "COMPRESSED PRE-FIGHT WEEK"),
             (7, "SHARPNESS WEEK"),
             (5, "SHARPNESS & FRESHNESS WINDOW"),
@@ -534,7 +536,7 @@ class TestHandoffText:
         assert expected_heading in text
 
     def test_handoff_injury_context_section_is_visible_and_structured(self):
-        payload = _build_stage2(14)
+        payload = _build_stage2(22)
         payload["injury_context"] = {
             "raw_injury_text": "sore shoulder after sparring",
             "injuries_flat": ["shoulder pain"],
