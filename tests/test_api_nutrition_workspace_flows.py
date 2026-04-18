@@ -62,6 +62,35 @@ def test_nutrition_workspace_missing_required_fields_do_not_include_training_ava
     assert "training_availability" not in workspace["derived"]["missing_required_fields"]
 
 
+def test_nutrition_workspace_rejects_overlap_between_hard_sparring_and_support_work_days():
+    client, _, _ = _build_client()
+    client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})
+    workspace = _get_current_workspace(client)
+    update = {
+        "nutrition_profile": workspace["nutrition_profile"],
+        "shared_camp_context": {
+            **workspace["shared_camp_context"],
+            "training_availability": ["Tuesday"],
+            "hard_sparring_days": ["Tuesday"],
+            "support_work_days": ["Tuesday"],
+            "session_types_by_day": {"tuesday": "hard_spar"},
+        },
+        "s_and_c_preferences": workspace["s_and_c_preferences"],
+        "nutrition_readiness": workspace["nutrition_readiness"],
+        "nutrition_monitoring": workspace["nutrition_monitoring"],
+        "nutrition_coach_controls": workspace["nutrition_coach_controls"],
+    }
+
+    response = client.put(
+        "/api/nutrition/current",
+        headers={"Authorization": "Bearer athlete-token"},
+        json=update,
+    )
+
+    assert response.status_code == 422
+    assert "cannot be both hard_sparring and support_work" in response.json()["detail"].lower()
+
+
 def test_nutrition_workspace_update_retries_profile_update_without_nutrition_profile():
     client, store, _ = _build_client()
     client.get("/api/me", headers={"Authorization": "Bearer athlete-token"})

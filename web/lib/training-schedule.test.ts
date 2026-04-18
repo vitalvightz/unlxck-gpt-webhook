@@ -31,7 +31,7 @@ test("flags overlap between hard sparring and non-hard training days", () => {
   assert.deepStrictEqual(
     getSparringConsistency(["Monday", "Wednesday", "Friday"], ["Wednesday"], ["Wednesday", "Friday"]),
     {
-      hardError: "A day cannot be both hard sparring and non-hard training: Wednesday.",
+      hardError: "A day cannot be both hard sparring and Support Work (non-hard training): Wednesday.",
       softWarning: null,
     },
   );
