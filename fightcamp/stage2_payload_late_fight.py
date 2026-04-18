@@ -2395,7 +2395,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Hard sparring owns fight-pace stress. If hard sparring is 2+ days, suppress standalone glycolytic work.\n"
             "Strength anchor: one max (Trap Bar Deadlift bias, 3 x 2-3 or 3 x 3 @ RPE 7-8) plus 1-2 small supports only.\n"
             "Reduce anchor volume when hard sparring is 3+ days or weight_cut_pct is 3+.\n"
-            "Banned: high pulls, nordic curls, push press, heavy contrast pairings, stair-running intervals, heavy bag conditioning finishers, standalone 3-Minute War when sparring exists, multiple accessories after anchor.\n\n"
+            "Banned: broad development week, soreness-heavy novelty, high pulls, nordic hamstring curls, push press, heavy contrast pairings, stair-running intervals, heavy bag conditioning finishers, standalone 3-Minute War when sparring exists, multiple accessories after anchor.\n\n"
             + _CONTRACT
         )
     if payload_mode == "late_fight_week_payload":
