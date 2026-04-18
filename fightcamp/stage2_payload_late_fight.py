@@ -1055,7 +1055,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
                 "stair running intervals",
                 "heavy bag conditioning finishers",
                 "standalone 3-minute war when sparring exists",
-                "multiple accessories after the anchor",
+                "multiple accessories after anchor",
             ],
         }
     if mode == "pre_fight_compressed_payload":
@@ -1265,7 +1265,7 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
             "rules": [
                 "Compressed SPP framing with full weekly shape.",
                 "Hard sparring owns fight-pace stress. Standalone glycolytic is suppressed when two or more hard sparring days exist.",
-                "One strength anchor max and one low-load support/recovery role max.",
+                "One recovery/freshness role max, plus one conditional technical deload only if readiness requires it.",
                 "5 blocks per session max. Keep strength support to 1-2 small items.",
             ],
             "preferred_terms": ["compressed SPP", "hard sparring-led stress", "strength anchor", "technical rhythm", "freshness support"],
@@ -1541,6 +1541,20 @@ def _late_fight_candidate_roles(
 ) -> list[dict[str, Any]]:
     mode = permission_policy.get("mode")
     legal_countdown_labels = permission_policy.get("legal_countdown_labels", [])
+    poor_readiness_flags = {
+        "injury_management",
+        "recent_hard_spar_collision_spillover",
+        "heavy_spar_spillover",
+        "collision_spillover",
+        "hard_dose_yesterday",
+        "conflicting_hard_dose_previous_day",
+        "back_to_back_collision_risk",
+    }
+    short_camp_readiness_flags = _readiness_flags(athlete_model)
+    conditionally_downgrade_declared_spar = (
+        _normalized_fatigue(athlete_model) == "high"
+        or bool(short_camp_readiness_flags & poor_readiness_flags)
+    )
     declared_day_order = {
         str(item.get("day") or "").strip(): index
         for index, item in enumerate(permission_policy.get("declared_hard_day_actions", []), start=1)
@@ -1553,6 +1567,9 @@ def _late_fight_candidate_roles(
         outcome = str(item.get("outcome") or "").strip()
         day_order = declared_day_order.get(day)
         if outcome == "hard_sparring_day":
+            coach_notes: list[str] = []
+            if mode == "short_camp_spp_payload" and conditionally_downgrade_declared_spar:
+                coach_notes.append("If readiness is poor, reduce this declared hard sparring day to technical rounds or controlled rounds.")
             candidates.append(
                 _late_fight_role_entry(
                     category="sparring",
@@ -1568,6 +1585,7 @@ def _late_fight_candidate_roles(
                     legal_countdown_labels=legal_countdown_labels,
                     declared_day_order=day_order,
                     day_assignment_reason="Declared hard sparring day stays fixed inside the active late-fight window.",
+                    coach_notes=coach_notes,
                 )
             )
         elif outcome == "technical_touch_day":
@@ -1596,20 +1614,6 @@ def _late_fight_candidate_roles(
     )
 
     if mode == "short_camp_spp_payload":
-        poor_readiness_flags = {
-            "injury_management",
-            "recent_hard_spar_collision_spillover",
-            "heavy_spar_spillover",
-            "collision_spillover",
-            "hard_dose_yesterday",
-            "conflicting_hard_dose_previous_day",
-            "back_to_back_collision_risk",
-        }
-        short_camp_readiness_flags = _readiness_flags(athlete_model)
-        conditionally_downgrade_declared_spar = (
-            _normalized_fatigue(athlete_model) == "high"
-            or bool(short_camp_readiness_flags & poor_readiness_flags)
-        )
         candidates.append(
             _late_fight_role_entry(
                 category="strength",
@@ -1647,18 +1651,6 @@ def _late_fight_candidate_roles(
                 legal_countdown_labels=legal_countdown_labels,
             )
         )
-        if conditionally_downgrade_declared_spar and preserved_hard_days:
-            candidates.append(
-                _late_fight_role_entry(
-                    category="technical",
-                    role_key="technical_touch_day",
-                    preferred_pool="declared_technical_touch_days",
-                    selection_rule="If readiness is poor, reduce one declared hard sparring day to technical rounds or controlled rounds.",
-                    placement_rule="Keep this attached to a declared boxing day and never replace hard sparring with extra S&C.",
-                    selection_priority=90,
-                    legal_countdown_labels=legal_countdown_labels,
-                )
-            )
         return candidates
 
     if mode == "pre_fight_compressed_payload":
@@ -2434,7 +2426,7 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "Hard sparring owns fight-pace stress. If hard sparring is 2+ days, suppress standalone glycolytic work.\n"
             "Strength anchor: one max (Trap Bar Deadlift bias, 3 x 2-3 or 3 x 3 @ RPE 7-8) plus 1-2 small supports only.\n"
             "Reduce anchor volume when hard sparring is 3+ days or weight_cut_pct is 3+.\n"
-            "Banned: high pulls, nordic curls, push press, heavy contrast pairings, stair-running intervals, heavy bag conditioning finishers, standalone 3-Minute War when sparring exists, multiple accessories after anchor.\n\n"
+            "Banned: high pulls, nordic hamstring curls, push press, heavy contrast pairings, stair-running intervals, heavy bag conditioning finishers, standalone 3-Minute War when sparring exists, multiple accessories after anchor.\n\n"
             + _CONTRACT
         )
     if payload_mode == "late_fight_week_payload":

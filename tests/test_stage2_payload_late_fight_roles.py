@@ -81,22 +81,26 @@ def test_short_camp_spp_with_three_hard_days_keeps_strength_and_freshness_roles(
     assert "fight_week_freshness_day" in role_keys
 
 
-def test_short_camp_spp_support_cap_allows_freshness_plus_conditional_technical_deload():
-    role_keys = [
-        role["role_key"]
-        for role in _late_fight_session_roles(
+def test_short_camp_spp_conditional_deload_is_advisory_note_on_declared_hard_day():
+    roles = _late_fight_session_roles(
+        18,
+        _athlete(
             18,
-            _athlete(
-                18,
-                hard_sparring_days=["monday"],
-                fatigue="high",
-                fatigue_level="high",
-                readiness_flags=["injury_management"],
-            ),
-        )
-    ]
+            hard_sparring_days=["monday"],
+            fatigue="high",
+            fatigue_level="high",
+            readiness_flags=["injury_management"],
+        ),
+    )
+    role_keys = [role["role_key"] for role in roles]
+    hard_spar = next(role for role in roles if role["role_key"] == "hard_sparring_day")
+
     assert "fight_week_freshness_day" in role_keys
-    assert "technical_touch_day" in role_keys
+    assert "technical_touch_day" not in role_keys
+    assert any(
+        "reduce this declared hard sparring day to technical rounds or controlled rounds" in note.lower()
+        for note in hard_spar.get("coach_notes", [])
+    )
 
 
 def test_short_camp_spp_allows_max_one_strength_anchor():
