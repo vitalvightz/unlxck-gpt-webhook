@@ -2694,9 +2694,8 @@ def _boxing_day_identity_and_spacing_pass(
             else:
                 _drop_role(glycolytic_role, "Readiness guardrail removed standalone glycolytic work clustered around anchor.")
 
-    for idx, role in enumerate(updated_roles, start=1):
-        role["session_index"] = idx
-    return updated_roles, updated_suppressed
+    updated_roles = _sort_roles_by_scheduled_day(updated_roles)
+    return updated_roles, updated_suppressed, sparse_week_active
 
 
 def _preferred_boxer_conditioning_sequence(phase: str, conditioning_sequence: list[str]) -> list[str]:
