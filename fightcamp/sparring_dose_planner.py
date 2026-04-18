@@ -335,10 +335,11 @@ def _annotate_hard_day_classes(
 
 def _consecutive_hard_day_pairs(hard_days: list[str]) -> list[tuple[str, str]]:
     """Return (earlier, later) pairs of hard days that are calendar-adjacent."""
+    order = {k.lower(): v for k, v in _WEEKDAY_ORDER.items()}
     pairs = []
     for i in range(len(hard_days) - 1):
-        idx_a = _WEEKDAY_ORDER.get(hard_days[i], -1)
-        idx_b = _WEEKDAY_ORDER.get(hard_days[i + 1], -1)
+        idx_a = order.get(hard_days[i].lower(), -1)
+        idx_b = order.get(hard_days[i + 1].lower(), -1)
         if idx_b - idx_a == 1:
             pairs.append((hard_days[i], hard_days[i + 1]))
     return pairs
@@ -364,7 +365,6 @@ def sandwiched_training_days(
         idx = order.get(day.lower(), -1)
         if min_idx < idx < max_idx:
             result.add(day)
-    return result
     return result
 
 
@@ -415,12 +415,19 @@ def _apply_hard_day_cap(
         codes = list(entry.get("reason_codes") or [])
         if "hard_day_cap" not in codes:
             codes.append("hard_day_cap")
+        existing_reason = entry.get("reason") or ""
+        cap_note = (
+            "Four or more hard sparring sessions were declared this week. "
+            "This session is preserved in the schedule as a managed/deloaded exposure "
+            "to protect load quality across the full week — the slot is not removed."
+        )
+        new_reason = f"{existing_reason}; {cap_note}".lstrip("; ") if existing_reason else cap_note
         plan_by_day[target] = {
             **entry,
             "status": "deload_suggested",
             "effective_load": "reduced",
             "reason_codes": codes,
-            "reason": entry.get("reason") or "hard_day_cap",
+            "reason": new_reason,
         }
     return [plan_by_day[d] for d in hard_days]
 

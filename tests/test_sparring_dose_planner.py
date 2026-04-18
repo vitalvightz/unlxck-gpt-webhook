@@ -179,6 +179,12 @@ def test_consecutive_hard_day_pairs_detects_adjacent_days():
     ]
 
 
+def test_consecutive_hard_day_pairs_case_insensitive():
+    assert _consecutive_hard_day_pairs(["monday", "tuesday"]) == [("monday", "tuesday")]
+    assert _consecutive_hard_day_pairs(["MONDAY", "TUESDAY"]) == [("MONDAY", "TUESDAY")]
+    assert _consecutive_hard_day_pairs(["Monday", "wednesday"]) == []
+
+
 def test_two_consecutive_hard_days_deload_the_later_day():
     plan = compute_hard_sparring_plan(
         week=_week(hard_days=["Monday", "Tuesday"]),
@@ -237,6 +243,17 @@ def test_four_hard_days_caps_to_two_effective():
 
     effective = [e for e in plan if e["status"] == "hard_as_planned"]
     assert len(effective) == 2
+
+
+def test_hard_day_cap_reason_explains_managed_exposure():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Friday", "Saturday"]),
+        athlete_snapshot=_athlete(fatigue="low", hard_days=["Monday", "Wednesday", "Friday", "Saturday"]),
+    )
+    capped = [e for e in plan if "hard_day_cap" in e.get("reason_codes", [])]
+    assert capped
+    for entry in capped:
+        assert "managed" in entry["reason"].lower() or "preserved" in entry["reason"].lower()
 
 
 def test_four_hard_days_with_consecutive_pair_still_caps_at_two():
