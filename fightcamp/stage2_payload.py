@@ -2525,7 +2525,7 @@ def _boxing_day_identity_and_spacing_pass(
 
     training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
     if not training_days:
-        return session_roles, suppressed_roles
+        return session_roles, suppressed_roles, False
 
     updated_roles = list(session_roles)
     updated_suppressed = list(suppressed_roles)
