@@ -793,7 +793,7 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
             "standalone_3_minute_war_when_sparring_exists",
             "multiple_accessories_after_anchor",
             "soreness_heavy_novelty",
-            "broad_development_language",
+            "broad_development_week",
         ]
     if 8 <= days <= 13:
         return ["multiple_hard_sparring_exposures", "standalone_glycolytic", "primary_strength_anchor"]
