@@ -1,4 +1,9 @@
-from fightcamp.weight_cut import compute_weight_cut_pct, parse_weight_value
+from fightcamp.weight_cut import (
+    compute_cut_severity_score,
+    compute_weight_cut_pct,
+    cut_severity_bucket,
+    parse_weight_value,
+)
 
 
 def test_compute_weight_cut_pct_uses_current_body_mass_denominator():
@@ -13,3 +18,23 @@ def test_parse_weight_value_handles_unit_suffixes():
 
 def test_compute_weight_cut_pct_returns_zero_for_near_zero_current_weight():
     assert compute_weight_cut_pct("0.001 kg", 0) == 0.0
+
+
+def test_cut_severity_score_examples_match_expected_calibration():
+    assert compute_cut_severity_score(2.0, 21) == 10.3
+    assert compute_cut_severity_score(3.8, 18) == 22.9
+    assert compute_cut_severity_score(3.8, 7) == 31.6
+    assert compute_cut_severity_score(5.0, 10) == 39.2
+    assert compute_cut_severity_score(6.0, 4) == 59.8
+
+
+def test_cut_severity_bucket_thresholds():
+    assert cut_severity_bucket(0) == "low"
+    assert cut_severity_bucket(14.9) == "low"
+    assert cut_severity_bucket(15.0) == "moderate"
+    assert cut_severity_bucket(34.9) == "moderate"
+    assert cut_severity_bucket(35.0) == "high"
+    assert cut_severity_bucket(59.9) == "high"
+    assert cut_severity_bucket(60.0) == "critical"
+    assert cut_severity_bucket(84.9) == "critical"
+    assert cut_severity_bucket(85.0) == "extreme"

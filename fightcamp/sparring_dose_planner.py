@@ -4,6 +4,7 @@ from typing import Any
 
 from .injury_formatting import parse_injury_entry
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
+from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -37,16 +38,17 @@ def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:
 
 
 def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
-    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
-    cut_pct = athlete_snapshot.get("weight_cut_pct")
-    try:
-        cut_value = float(cut_pct or 0.0)
-    except (TypeError, ValueError):
-        cut_value = 0.0
-
-    if "aggressive_weight_cut" in readiness_flags or cut_value >= 5.0:
+    cut_bucket = str(athlete_snapshot.get("cut_severity_bucket") or "").strip().lower()
+    if not cut_bucket:
+        cut_bucket = cut_severity_bucket(
+            compute_cut_severity_score(
+                athlete_snapshot.get("weight_cut_pct"),
+                athlete_snapshot.get("days_until_fight"),
+            )
+        )
+    if cut_bucket in {"high", "critical", "extreme"}:
         return "high"
-    if athlete_snapshot.get("weight_cut_risk") or "active_weight_cut" in readiness_flags or cut_value >= 3.0:
+    if cut_bucket == "moderate":
         return "moderate"
     return "none"
 
