@@ -155,7 +155,16 @@ def _fatigue_score(athlete_snapshot: dict[str, Any]) -> tuple[int, str | None]:
 def _cut_score(athlete_snapshot: dict[str, Any], *, cut_pct: float) -> tuple[int, str | None]:
     readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     has_active_cut_flag = "active_weight_cut" in readiness_flags
+    has_aggressive_cut_flag = "aggressive_weight_cut" in readiness_flags
+    has_extreme_cut_flag = "extreme_weight_cut" in readiness_flags
 
+    # Wording should reflect pressure level when planner truth marks higher-risk cuts.
+    if has_extreme_cut_flag:
+        return 2, f"cut pressure is severe at about {cut_pct:.1f}%"
+    if has_aggressive_cut_flag:
+        return 2, f"cut pressure is severe at about {cut_pct:.1f}%"
+    if cut_pct >= 7.0:
+        return 2, f"cut pressure is severe at about {cut_pct:.1f}%"
     if cut_pct >= 5.0:
         return 2, f"cut pressure is meaningful at about {cut_pct:.1f}%"
     if cut_pct >= 3.0:
