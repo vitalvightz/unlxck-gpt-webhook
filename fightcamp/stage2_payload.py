@@ -2335,7 +2335,7 @@ def _boxing_day_score(
     readiness_sensitive: bool,
     training_days: list[str],
     day_to_roles: dict[str, list[dict[str, Any]]],
-) -> int:
+) -> float:
     if day not in training_days:
         return -10_000
     score = 0
