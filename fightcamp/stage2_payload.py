@@ -1975,6 +1975,9 @@ def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) ->
 
 def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
+    hard_day_class = str((plan_entry or {}).get("hard_day_class") or "").strip() or (
+        "managed_hard" if status != "hard_as_planned" else "secondary_hard"
+    )
     reason_codes = list((plan_entry or {}).get("reason_codes") or [])
     coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
     role: dict[str, Any] = {
@@ -2008,6 +2011,7 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "scheduled_day_hint": day,
         "day_assignment_reason": "Declared hard sparring day is fixed in the weekly role map.",
         "hard_sparring_status": status,
+        "hard_sparring_class": hard_day_class,
         "hard_sparring_reason_codes": reason_codes,
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
         "coach_note_flags": coach_note_flags,

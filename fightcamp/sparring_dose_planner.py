@@ -204,6 +204,11 @@ def _decide_action(
     if countdown_override == "cap_one" and hard_day_count >= 2:
         return "deload"
 
+    # Dense hard-spar weeks lose quality without a managed exposure.
+    # Keep schedule fixed, but classify one declared hard day as managed.
+    if hard_day_count >= 4:
+        return "deload"
+
     # --- Injury-based hard overrides ---
     if injury.get("instability"):
         return "convert"
@@ -295,7 +300,24 @@ def _reason_codes(
         codes.append("daily_symptoms")
     if hard_day_count >= 2:
         codes.append("two_hard_days")
+    if hard_day_count >= 4:
+        codes.append("four_hard_days")
     return codes
+
+
+def _hard_day_class(*, day: str, hard_days: list[str], target_day: str = "", protected_day: str = "") -> str:
+    """Deterministic sparring day class for downstream renderers/role map.
+
+    The planner owns sparring dose truth.  This class label lets downstream
+    layers *carry* that truth without re-deciding it.
+    """
+    if target_day and day == target_day:
+        return "managed_hard"
+    if protected_day and day == protected_day:
+        return "primary_hard"
+    if hard_days and day == hard_days[0]:
+        return "primary_hard"
+    return "secondary_hard"
 
 
 def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -321,11 +343,17 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         days_until_fight=days_until_fight,
     )
     if action is None:
+        protected_day = _pick_protected_hard_day(hard_days, week=week)
         return [
             {
                 "day": day,
                 "status": "hard_as_planned",
                 "effective_load": "hard",
+                "hard_day_class": _hard_day_class(
+                    day=day,
+                    hard_days=hard_days,
+                    protected_day=protected_day,
+                ),
                 "reason_codes": [],
                 "reason": "",
             }
@@ -346,6 +374,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
     countdown_override = _countdown_sparring_override(days_until_fight)
     if countdown_override in {"convert_all", "deload_all"}:
+        protected_day = _pick_protected_hard_day(hard_days, week=week)
         countdown_codes = list(reason_codes_list)
         if "fight_week_taper" not in countdown_codes:
             countdown_codes.insert(0, "fight_week_taper")
@@ -355,6 +384,12 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "day": day,
                 "status": target_status,
                 "effective_load": target_load,
+                "hard_day_class": _hard_day_class(
+                    day=day,
+                    hard_days=hard_days,
+                    target_day=day,
+                    protected_day=protected_day,
+                ),
                 "reason_codes": list(countdown_codes),
                 "reason": countdown_reason,
                 "coach_note": _sparring_override_coach_note(days_until_fight, action),
@@ -378,6 +413,11 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                         "day": day,
                         "status": "hard_as_planned",
                         "effective_load": "hard",
+                        "hard_day_class": _hard_day_class(
+                            day=day,
+                            hard_days=hard_days,
+                            protected_day=protected_day,
+                        ),
                         "reason_codes": [],
                         "reason": "",
                     }
@@ -388,6 +428,12 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                     "day": day,
                     "status": target_status,
                     "effective_load": target_load,
+                    "hard_day_class": _hard_day_class(
+                        day=day,
+                        hard_days=hard_days,
+                        target_day=day,
+                        protected_day=protected_day,
+                    ),
                     "reason_codes": list(countdown_codes),
                     "reason": countdown_reason,
                     "coach_note": _sparring_override_coach_note(days_until_fight, action),
@@ -397,6 +443,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
 
     # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
+    protected_day = _pick_protected_hard_day(hard_days, week=week)
 
     plan: list[dict[str, Any]] = []
     for day in hard_days:
@@ -405,6 +452,12 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "day": day,
                 "status": target_status,
                 "effective_load": target_load,
+                "hard_day_class": _hard_day_class(
+                    day=day,
+                    hard_days=hard_days,
+                    target_day=target_day,
+                    protected_day=protected_day,
+                ),
                 "reason_codes": list(reason_codes_list),
                 "reason": target_reason,
             }
@@ -417,6 +470,12 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "day": day,
                 "status": "hard_as_planned",
                 "effective_load": "hard",
+                "hard_day_class": _hard_day_class(
+                    day=day,
+                    hard_days=hard_days,
+                    target_day=target_day,
+                    protected_day=protected_day,
+                ),
                 "reason_codes": [],
                 "reason": "",
             }

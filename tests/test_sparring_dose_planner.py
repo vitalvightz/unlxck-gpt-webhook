@@ -161,3 +161,22 @@ def test_pick_downgrade_target_defaults_to_latest_declared_day():
     target = _pick_downgrade_target(["Tuesday", "Thursday"], week=_week())
 
     assert target == "Thursday"
+
+
+def test_four_hard_spar_days_force_one_managed_exposure_even_when_other_signals_are_low():
+    plan = compute_hard_sparring_plan(
+        week=_week(hard_days=["Monday", "Wednesday", "Thursday", "Friday"]),
+        athlete_snapshot=_athlete(
+            fatigue="low",
+            weight_cut_pct=0.0,
+            weight_cut_risk=False,
+            injuries=[],
+            hard_days=["Monday", "Wednesday", "Thursday", "Friday"],
+        ),
+    )
+
+    managed = [entry for entry in plan if entry["status"] == "deload_suggested"]
+    assert len(managed) == 1
+    assert managed[0]["day"] == "Friday"
+    assert managed[0]["hard_day_class"] == "managed_hard"
+    assert any(entry["hard_day_class"] == "primary_hard" for entry in plan if entry["status"] == "hard_as_planned")
