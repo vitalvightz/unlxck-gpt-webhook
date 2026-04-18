@@ -1054,6 +1054,33 @@ def _apply_high_fatigue_week_compression(
             hard_sparring_plan=hard_sparring_plan,
         )
 
+    # Structural rule: suppress glycolytic on days sandwiched between two effective hard spar days.
+    # This fires unconditionally — it is not gated on fatigue or compression signals.
+    _effective_spar_days = set(effective_hard_days(hard_sparring_plan or []))
+    if len(_effective_spar_days) >= 2:
+        _resolved = dict(week_entry.get("resolved_rule_state") or {})
+        _must_keep_early = set(clean_list(_resolved.get("must_keep", week_entry.get("must_keep", []))))
+        _sandwiched = sandwiched_training_days(training_days, _effective_spar_days)
+        if _sandwiched:
+            _kept: list[dict] = []
+            for _role in session_roles:
+                if (
+                    _role.get("category") == "conditioning"
+                    and _role.get("preferred_system") == "glycolytic"
+                    and _role.get("preferred_system") not in _must_keep_early
+                    and str(_role.get("scheduled_day_hint") or "").strip() in _sandwiched
+                ):
+                    suppressed_roles = list(suppressed_roles) + [
+                        _make_compression_suppression(
+                            _role,
+                            ["sandwiched_hard_days"],
+                            "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
+                        )
+                    ]
+                else:
+                    _kept.append(_role)
+            session_roles = _kept
+
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
     sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))

@@ -2345,6 +2345,8 @@ def _boxing_day_score(
     main_job = _main_job_for_role(role)
 
     if main_job == "anchor":
+        if previous_class == "hard_sparring":
+            return -10_000
         score += 6 if previous_class in {"off", "support_recovery", "technical"} else -6
         if prefer_midweek_anchor:
             midpoint = (len(training_days) - 1) / 2 if training_days else 0
