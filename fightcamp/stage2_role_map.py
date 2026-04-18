@@ -898,7 +898,7 @@ def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
                 athlete_model.get("days_until_fight"),
             )
         )
-    if cut_bucket in {"moderate", "high", "critical"}:
+    if cut_bucket in {"moderate", "high", "critical", "extreme"}:
         return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     return bool(readiness_flags & {"active_weight_cut", "aggressive_weight_cut"})
@@ -916,7 +916,7 @@ def _cut_severity_compression_points(athlete_model: dict) -> int:
                 athlete_model.get("days_until_fight"),
             )
         )
-    if cut_bucket == "critical":
+    if cut_bucket in {"critical", "extreme"}:
         return 2
     if cut_bucket in {"moderate", "high"}:
         return 1

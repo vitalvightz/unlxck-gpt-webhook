@@ -46,7 +46,7 @@ def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
                 athlete_snapshot.get("days_until_fight"),
             )
         )
-    if cut_bucket in {"high", "critical"}:
+    if cut_bucket in {"high", "critical", "extreme"}:
         return "high"
     if cut_bucket == "moderate":
         return "moderate"

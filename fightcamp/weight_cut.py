@@ -39,7 +39,7 @@ def compute_weight_cut_pct(current_weight: object, target_weight: object) -> flo
 def compute_cut_severity_score(weight_cut_pct: object, days_until_fight: object) -> float:
     """
     Deterministic active-cut severity score (0-100):
-      3.2 * (cut_pct^1.15) * (1 + 1.8 * exp(-days_out / 10))
+      3.2 * (cut_pct^1.15) * (1 + 1.8 * exp(-days_out / 15))
     """
     try:
         cut_pct = float(weight_cut_pct or 0.0)
@@ -52,7 +52,7 @@ def compute_cut_severity_score(weight_cut_pct: object, days_until_fight: object)
 
     cut_pct = max(0.0, cut_pct)
     days_out = max(0, days_out)
-    raw_score = 3.2 * (cut_pct ** 1.15) * (1.0 + 1.8 * math.exp(-days_out / 10.0))
+    raw_score = 3.2 * (cut_pct ** 1.15) * (1.0 + 1.8 * math.exp(-days_out / 15.0))
     return round(min(100.0, max(0.0, raw_score)), 1)
 
 
@@ -62,12 +62,12 @@ def cut_severity_bucket(score: object) -> str:
         value = float(score or 0.0)
     except (TypeError, ValueError):
         value = 0.0
-    if value < 10.0:
-        return "none"
-    if value < 18.0:
+    if value < 15.0:
         return "low"
     if value < 35.0:
         return "moderate"
-    if value < 55.0:
+    if value < 60.0:
         return "high"
-    return "critical"
+    if value < 85.0:
+        return "critical"
+    return "extreme"

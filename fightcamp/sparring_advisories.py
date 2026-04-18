@@ -162,7 +162,7 @@ def _cut_score(athlete_snapshot: dict[str, Any], *, cut_pct: float) -> tuple[int
             )
         )
 
-    if bucket in {"high", "critical"}:
+    if bucket in {"high", "critical", "extreme"}:
         return 2, f"cut pressure is meaningful at about {cut_pct:.1f}%"
     if bucket == "moderate":
         return 1, f"an active cut is still in play at about {cut_pct:.1f}%"
@@ -430,7 +430,7 @@ def _future_state_label(
         cut_bucket = cut_severity_bucket(
             compute_cut_severity_score(cut_pct, athlete_snapshot.get("days_until_fight"))
         )
-    if cut_bucket in {"high", "critical"}:
+    if cut_bucket in {"high", "critical", "extreme"}:
         parts.append("an aggressive cut")
     elif cut_bucket == "moderate":
         parts.append("an active cut")
