@@ -2,6 +2,7 @@ from fightcamp.sparring_advisories import (
     _highest_risk_entry,
     _injury_risk,
     _sparring_injury_entries,
+    _cut_score,
     build_plan_advisories,
 )
 
@@ -466,3 +467,31 @@ class TestWithinBandOrdering:
         )
 
         assert _injury_risk(entries) == 8
+
+
+def test_cut_score_uses_meaningful_wording_for_high_cut_pressure():
+    score, reason = _cut_score({"readiness_flags": []}, cut_pct=5.4)
+    assert score == 2
+    assert reason == "cut pressure is meaningful at about 5.4%"
+
+
+def test_cut_score_does_not_escalate_wording_without_critical_or_extreme_flag():
+    score, reason = _cut_score({"readiness_flags": []}, cut_pct=8.1)
+    assert score == 2
+    assert reason == "cut pressure is meaningful at about 8.1%"
+
+
+def test_cut_score_uses_severe_wording_for_critical_or_extreme_cut_pressure():
+    score_critical, reason_critical = _cut_score(
+        {"readiness_flags": ["aggressive_weight_cut"]},
+        cut_pct=5.4,
+    )
+    assert score_critical == 2
+    assert reason_critical == "cut pressure is severe at about 5.4%"
+
+    score_extreme, reason_extreme = _cut_score(
+        {"readiness_flags": ["extreme_weight_cut"]},
+        cut_pct=5.4,
+    )
+    assert score_extreme == 2
+    assert reason_extreme == "cut pressure is severe at about 5.4%"
