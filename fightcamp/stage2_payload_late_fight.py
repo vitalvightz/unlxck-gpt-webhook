@@ -171,6 +171,8 @@ def _future_declared_weekdays_with_countdown(
 
 
 def _hard_spar_status_for_countdown_offset(offset: int) -> str:
+    if 14 <= offset <= 21:
+        return "hard_allowed"
     if 8 <= offset <= 13:
         return "hard_allowed"
     if offset == 7:
@@ -664,6 +666,16 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
         _declared_hard_spar_cap(days_until_fight),
         protected_day=_protected_collision_owner_day(athlete_model),
     )
+    if mode == "short_camp_spp_payload":
+        unique_preserved: list[dict[str, Any]] = []
+        seen_weekdays: set[str] = set()
+        for entry in preserved_hard_instances:
+            weekday = str(entry.get("weekday") or "").strip().lower()
+            if not weekday or weekday in seen_weekdays:
+                continue
+            seen_weekdays.add(weekday)
+            unique_preserved.append(entry)
+        preserved_hard_instances = unique_preserved
     days = _coerce_days(days_until_fight)
     if mode == "pre_fight_compressed_payload" and days == 8 and len(preserved_hard_instances) < 2:
         fallback_instance = next(
@@ -742,10 +754,25 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
 
 
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+    mode = _days_out_payload_mode(days_until_fight)
+    max_active_roles = _late_fight_max_active_roles(days_until_fight)
+    max_meaningful_stress_exposures = _late_fight_max_meaningful_stress_exposures(days_until_fight)
+    if mode == "short_camp_spp_payload":
+        declared_hard_days = _filter_past_weekdays(
+            _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
+            athlete_model.get("plan_creation_weekday"),
+            days_until_fight,
+        )
+        declared_hard_count = len(declared_hard_days)
+        if declared_hard_count > 0:
+            if isinstance(max_active_roles, int):
+                max_active_roles = max(max_active_roles, declared_hard_count + 2)
+            if isinstance(max_meaningful_stress_exposures, int):
+                max_meaningful_stress_exposures = max(max_meaningful_stress_exposures, declared_hard_count + 1)
     return {
-        "mode": _days_out_payload_mode(days_until_fight),
-        "max_active_roles": _late_fight_max_active_roles(days_until_fight),
-        "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
+        "mode": mode,
+        "max_active_roles": max_active_roles,
+        "max_meaningful_stress_exposures": max_meaningful_stress_exposures,
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
     }
@@ -1447,6 +1474,16 @@ def _hard_sparring_window_context(days_until_fight: Any, athlete_model: dict[str
             _declared_hard_spar_cap(days),
             protected_day=_protected_collision_owner_day(athlete_model),
         )
+        if _days_out_payload_mode(days_until_fight) == "short_camp_spp_payload":
+            unique_surviving: list[dict[str, Any]] = []
+            seen_weekdays: set[str] = set()
+            for entry in surviving_instances:
+                weekday = str(entry.get("weekday") or "").strip().lower()
+                if not weekday or weekday in seen_weekdays:
+                    continue
+                seen_weekdays.add(weekday)
+                unique_surviving.append(entry)
+            surviving_instances = unique_surviving
         surviving_set = {str(entry.get("weekday") or "").strip().lower() for entry in surviving_instances}
         downgraded_days = [day.lower() for day in declared_hard_days if day.lower() not in surviving_set]
 
@@ -1539,6 +1576,11 @@ def _late_fight_candidate_roles(
 
     preserved_hard_days = permission_policy.get("preserved_hard_days", [])
     has_downgraded_hard_days = bool(permission_policy.get("downgraded_hard_days", []))
+    declared_hard_days = _filter_past_weekdays(
+        _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
+        athlete_model.get("plan_creation_weekday"),
+        days_until_fight,
+    )
 
     if mode == "short_camp_spp_payload":
         candidates.append(
@@ -1553,7 +1595,7 @@ def _late_fight_candidate_roles(
                 legal_countdown_labels=legal_countdown_labels,
             )
         )
-        if len(preserved_hard_days) < 2:
+        if len(declared_hard_days) < 2:
             candidates.append(
                 _late_fight_role_entry(
                     category="conditioning",
@@ -2212,7 +2254,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
         weeks = [
             {
                 "week_index": 1,
-                "phase": "TAPER",
+                "phase": "SPP" if mode == "short_camp_spp_payload" else "TAPER",
                 "stage_key": _late_fight_window(days_until_fight),
                 "phase_week_index": 1,
                 "phase_week_total": 1,

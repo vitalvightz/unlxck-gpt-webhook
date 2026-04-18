@@ -57,12 +57,45 @@ def test_short_camp_spp_suppresses_standalone_glycolytic_with_two_hard_days():
     assert "light_fight_pace_touch_day" not in role_keys
 
 
+def test_short_camp_spp_preserves_three_declared_hard_spar_days():
+    role_keys = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            18,
+            _athlete(18, hard_sparring_days=["monday", "wednesday", "friday"]),
+        )
+    ]
+    assert role_keys.count("hard_sparring_day") == 3
+
+
+def test_short_camp_spp_with_three_hard_days_keeps_strength_and_freshness_roles():
+    role_keys = [
+        role["role_key"]
+        for role in _late_fight_session_roles(
+            18,
+            _athlete(18, hard_sparring_days=["monday", "wednesday", "friday"]),
+        )
+    ]
+    assert "light_fight_pace_touch_day" not in role_keys
+    assert "strength_touch_day" in role_keys
+    assert "fight_week_freshness_day" in role_keys
+
+
 def test_short_camp_spp_allows_max_one_strength_anchor():
     role_keys = [
         role["role_key"]
         for role in _late_fight_session_roles(18, _athlete(18, hard_sparring_days=["thursday"]))
     ]
     assert role_keys.count("strength_touch_day") == 1
+
+
+def test_short_camp_spp_preserves_declared_hard_sparring_without_plan_creation_weekday():
+    roles = _late_fight_session_roles(
+        18,
+        _athlete(18, plan_creation_weekday=None, hard_sparring_days=["monday", "wednesday"]),
+    )
+    hard_roles = [role for role in roles if role["role_key"] == "hard_sparring_day"]
+    assert len(hard_roles) == 2
 
 
 def test_short_camp_spp_forbids_requested_movements_and_finishers():

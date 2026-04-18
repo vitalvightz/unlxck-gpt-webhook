@@ -295,6 +295,11 @@ class TestLateFightPermissionsAndRendering:
 
 
 class TestLateFightRoleMap:
+    def test_d18_role_map_uses_spp_phase_not_taper(self):
+        role_map = _build_late_fight_weekly_role_map(18, _athlete(18))
+        assert role_map["payload_mode"] == "short_camp_spp_payload"
+        assert role_map["weeks"][0]["phase"] == "SPP"
+
     def test_d5_role_map_uses_transition_overlay(self):
         role_map = _build_late_fight_weekly_role_map(5, _athlete(5))
         assert role_map["model"] == "late_fight_role_overlay.v1"
