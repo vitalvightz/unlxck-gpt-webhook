@@ -381,6 +381,8 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
 
     assert athlete_snapshot["hard_sparring_days"] == ["Tuesday", "Saturday"]
     assert athlete_snapshot["support_work_days"] == ["Monday"]
+    assert athlete_snapshot["cut_severity_score"] == 0.0
+    assert athlete_snapshot["cut_severity_bucket"] == "none"
     assert any("hard sparring" in item.lower() for item in brief["main_risks"])
     assert any("primary neural strength day away from declared hard sparring" in item.lower() for item in brief["global_priorities"]["push"])
 

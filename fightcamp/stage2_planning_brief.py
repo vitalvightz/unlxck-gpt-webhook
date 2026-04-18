@@ -13,6 +13,7 @@ from .input_parsing import _athlete_calendar_now, _utc_now
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .training_context import TrainingContext, allocate_sessions
+from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 
 # ── Restriction and mechanical tag constants ──────────────────────────────
@@ -606,6 +607,10 @@ def _build_athlete_model(
     # We define plan_creation_weekday as athlete-local weekday so late-fight
     # weekday mapping remains aligned with the athlete calendar.
     plan_creation_dt = _athlete_calendar_now(training_context.athlete_timezone, now_utc=_utc_now())
+    cut_severity_score = compute_cut_severity_score(
+        training_context.weight_cut_pct,
+        training_context.days_until_fight,
+    )
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -622,6 +627,8 @@ def _build_athlete_model(
         "age": training_context.age,
         "weight_cut_risk": training_context.weight_cut_risk,
         "weight_cut_pct": training_context.weight_cut_pct,
+        "cut_severity_score": cut_severity_score,
+        "cut_severity_bucket": cut_severity_bucket(cut_severity_score),
         "technical_styles": training_context.style_technical,
         "tactical_styles": training_context.style_tactical,
         "weaknesses": training_context.weaknesses,
