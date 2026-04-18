@@ -26,7 +26,7 @@ export function emptyPlanRequest(fullName = ""): PlanRequest {
     equipment_access: [],
     training_availability: [],
     hard_sparring_days: [],
-    technical_skill_days: [],
+    support_work_days: [],
     injuries: "",
     guided_injury: null,
     guided_injuries: [],
@@ -46,25 +46,31 @@ export function hydratePlanRequest(me: MeResponse | null): PlanRequest {
 
   const base = me.latest_intake ?? fallback;
   const draft = (me.profile.onboarding_draft as PlanRequest | null | undefined) ?? base;
+  const normalizedDraft = draft
+    ? {
+        ...draft,
+        support_work_days: draft.support_work_days ?? (draft as PlanRequest & { technical_skill_days?: string[] }).technical_skill_days ?? [],
+      }
+    : fallback;
 
   return {
     ...fallback,
-    ...draft,
+    ...normalizedDraft,
     athlete: {
       ...fallback.athlete,
-      ...draft.athlete,
-      full_name: draft.athlete?.full_name || me.profile.full_name,
-      sex: draft.athlete?.sex ?? me.profile.nutrition_profile?.sex ?? fallback.athlete.sex,
-      age: draft.athlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
-      height_cm: draft.athlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
-      technical_style: draft.athlete?.technical_style ?? me.profile.technical_style ?? [],
-      tactical_style: draft.athlete?.tactical_style ?? me.profile.tactical_style ?? [],
-      stance: draft.athlete?.stance ?? me.profile.stance ?? "",
+      ...normalizedDraft.athlete,
+      full_name: normalizedDraft.athlete?.full_name || me.profile.full_name,
+      sex: normalizedDraft.athlete?.sex ?? me.profile.nutrition_profile?.sex ?? fallback.athlete.sex,
+      age: normalizedDraft.athlete?.age ?? me.profile.nutrition_profile?.age ?? fallback.athlete.age,
+      height_cm: normalizedDraft.athlete?.height_cm ?? me.profile.nutrition_profile?.height_cm ?? fallback.athlete.height_cm,
+      technical_style: normalizedDraft.athlete?.technical_style ?? me.profile.technical_style ?? [],
+      tactical_style: normalizedDraft.athlete?.tactical_style ?? me.profile.tactical_style ?? [],
+      stance: normalizedDraft.athlete?.stance ?? me.profile.stance ?? "",
       professional_status:
-        draft.athlete?.professional_status ?? me.profile.professional_status ?? "",
-      record: draft.athlete?.record ?? me.profile.record ?? "",
+        normalizedDraft.athlete?.professional_status ?? me.profile.professional_status ?? "",
+      record: normalizedDraft.athlete?.record ?? me.profile.record ?? "",
       athlete_timezone:
-        draft.athlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
+        normalizedDraft.athlete?.athlete_timezone ?? me.profile.athlete_timezone ?? fallback.athlete.athlete_timezone,
     },
   };
 }

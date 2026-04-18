@@ -124,7 +124,7 @@ def test_curated_system_scenarios_cover_generation_and_hold_behavior(scenario: S
     assert latest_intake["equipment_access"] == request.equipment_access
     assert latest_intake["training_availability"] == request.training_availability
     assert latest_intake["hard_sparring_days"] == request.hard_sparring_days
-    assert latest_intake["technical_skill_days"] == request.technical_skill_days
+    assert latest_intake["support_work_days"] == request.support_work_days
     assert store.profiles["athlete-1"]["onboarding_draft"] is None
 
     if scenario.expected_status == "ready":

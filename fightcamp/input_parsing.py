@@ -96,7 +96,10 @@ _CRITICAL_LABEL_ALIASES = {
         _normalize_label("Hard sparring days"),
         _normalize_label("Live sparring days"),
     },
-    _normalize_label("Technical Skill Days"): {
+    _normalize_label("Support Work Days"): {
+        _normalize_label("Support work days"),
+        _normalize_label("Non-hard training days"),
+        _normalize_label("S&C-compatible slots"),
         _normalize_label("Technical days"),
         _normalize_label("Technical skill days"),
         _normalize_label("Lighter skill days"),
@@ -304,7 +307,7 @@ _PLAN_FIELD_LABELS = {
     "equipment_access": "Equipment Access",
     "available_days": "Training Availability",
     "hard_sparring_days_raw": "Hard Sparring Days",
-    "technical_skill_days_raw": "Technical Skill Days",
+    "support_work_days_raw": "Support Work Days",
     "key_goals": "What are your key performance goals?",
     "weak_areas": "Where do you feel weakest right now?",
     "training_preference": "Do you prefer certain training styles?",
@@ -523,7 +526,7 @@ class PlanInput:
     equipment_access: str
     available_days: str
     hard_sparring_days_raw: str
-    technical_skill_days_raw: str
+    support_work_days_raw: str
     injuries: str
     guided_injury: GuidedInjury | None
     parsed_injuries: list[dict[str, str | None]]
@@ -535,7 +538,7 @@ class PlanInput:
     notes: str
     training_days: list[str]
     hard_sparring_days: list[str]
-    technical_skill_days: list[str]
+    support_work_days: list[str]
     training_frequency: int
     weeks_out: int | str
     days_until_fight: int | None
@@ -583,8 +586,8 @@ class PlanInput:
         hard_sparring_days = [
             d.strip() for d in values["hard_sparring_days_raw"].split(",") if d.strip()
         ]
-        technical_skill_days = [
-            d.strip() for d in values["technical_skill_days_raw"].split(",") if d.strip()
+        support_work_days = [
+            d.strip() for d in values["support_work_days_raw"].split(",") if d.strip()
         ]
 
         # Validation step (planning-critical contract).
@@ -656,7 +659,7 @@ class PlanInput:
             restrictions=parsed_restrictions,
             training_days=training_days,
             hard_sparring_days=hard_sparring_days,
-            technical_skill_days=technical_skill_days,
+            support_work_days=support_work_days,
             training_frequency=training_frequency,
             weeks_out=weeks_out,
             days_until_fight=days_until_fight,

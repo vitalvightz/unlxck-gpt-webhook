@@ -741,7 +741,7 @@ export function PlanIntakeForm() {
   }
 
   function toggleFieldValue(
-    key: "training_availability" | "equipment_access" | "key_goals" | "weak_areas" | "hard_sparring_days" | "technical_skill_days",
+    key: "training_availability" | "equipment_access" | "key_goals" | "weak_areas" | "hard_sparring_days" | "support_work_days",
     value: string,
   ) {
     setForm((current) => {
@@ -805,7 +805,7 @@ export function PlanIntakeForm() {
     const sparringConsistency = getSparringConsistency(
       nextForm.training_availability,
       nextForm.hard_sparring_days,
-      nextForm.technical_skill_days,
+      nextForm.support_work_days,
     );
     if (sparringConsistency.hardError) {
       return {
@@ -1079,7 +1079,7 @@ export function PlanIntakeForm() {
   const selectedTrainingAvailabilityLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.training_availability);
   const selectedEquipmentAccessLabels = getOptionLabels(EQUIPMENT_ACCESS_OPTIONS, form.equipment_access);
   const selectedHardSparringLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.hard_sparring_days);
-  const selectedTechnicalSkillLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.technical_skill_days);
+  const selectedSupportWorkLabels = getOptionLabels(TRAINING_AVAILABILITY_OPTIONS, form.support_work_days);
   const selectedGoalLabels = getOptionLabels(KEY_GOAL_OPTIONS, form.key_goals);
   const selectedWeakAreaLabels = getOptionLabels(WEAK_AREA_OPTIONS, form.weak_areas);
   const performanceFocusCap = getPerformanceFocusCap(form.fight_date, {
@@ -1097,7 +1097,7 @@ export function PlanIntakeForm() {
   const selectedTrainingAvailability = formatJoinedLabels(selectedTrainingAvailabilityLabels, "No availability selected");
   const selectedEquipmentAccess = formatJoinedLabels(selectedEquipmentAccessLabels, "No equipment selected");
   const selectedHardSparring = formatJoinedLabels(selectedHardSparringLabels, "No fixed hard sparring days");
-  const selectedTechnicalSkillDays = formatJoinedLabels(selectedTechnicalSkillLabels, "No fixed technical-only days");
+  const selectedSupportWorkDays = formatJoinedLabels(selectedSupportWorkLabels, "No non-hard training days selected");
   const selectedGoals = formatJoinedLabels(selectedGoalLabels, "No goals selected");
   const selectedWeakAreas = formatJoinedLabels(selectedWeakAreaLabels, "No weak areas selected");
   const performanceFocusCapTitle = performanceFocusCapValue === null
@@ -1115,7 +1115,7 @@ export function PlanIntakeForm() {
   const sparringConsistency = getSparringConsistency(
     form.training_availability,
     form.hard_sparring_days,
-    form.technical_skill_days,
+    form.support_work_days,
   );
   const hardSparringWarning = getHardSparringWarning(
     form.hard_sparring_days,
@@ -1165,7 +1165,7 @@ export function PlanIntakeForm() {
   const trainingReviewItems = [
     { label: "Training availability", value: selectedTrainingAvailability },
     { label: "Hard sparring days", value: selectedHardSparring },
-    { label: "Technical / lighter skill days", value: selectedTechnicalSkillDays },
+    { label: "Non-hard training days", value: selectedSupportWorkDays },
     { label: "Equipment access", value: selectedEquipmentAccess },
     ...(availabilityConsistency.hardError
       ? [{ label: "Schedule issue", value: availabilityConsistency.hardError }]
@@ -1430,7 +1430,7 @@ export function PlanIntakeForm() {
                     />
                     <p className="muted">
                       {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                        "Count the total training sessions the week should carry. Hard sparring days and technical / lighter skill days are labels inside that weekly total, not extra sessions on top."}
+                        "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
                     </p>
                   </div>
                   )}
@@ -1531,11 +1531,11 @@ export function PlanIntakeForm() {
               <article className="step-card">
                 <div className="form-section-header">
                   <p className="kicker">Combat load</p>
-                  <h2 className="form-section-title">Sparring and skill day tags</h2>
+                  <h2 className="form-section-title">Sparring and non-hard day tags</h2>
                 </div>
                 <p className="muted">
                   These selections do not add extra sessions. They just show which available days are hard-contact days versus
-                  lighter technical work inside the same weekly total.
+                  non-hard work inside the same weekly total.
                 </p>
                 {shouldHideField(daysOutCtx, "hard_sparring_days") ? (
                   <div className="field">
@@ -1558,23 +1558,23 @@ export function PlanIntakeForm() {
                 </div>
                 </>
                 )}
-                {shouldHideField(daysOutCtx, "technical_skill_days") ? (
+                {shouldHideField(daysOutCtx, "support_work_days") ? (
                   <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Technical / skill day selection is not used for planning at this stage.</p>
+                    <p className="muted" style={{ opacity: 0.5 }}>Non-hard training day selection is not used for planning at this stage.</p>
                   </div>
                 ) : (
                 <>
                 <CheckboxGroup
-                  label="Technical / lighter skill days"
+                  label="Non-hard training days"
                   options={TRAINING_AVAILABILITY_OPTIONS}
-                  selectedValues={form.technical_skill_days}
-                  onToggle={(value) => toggleFieldValue("technical_skill_days", value)}
-                  disableAll={shouldDisableField(daysOutCtx, "technical_skill_days")}
+                  selectedValues={form.support_work_days}
+                  onToggle={(value) => toggleFieldValue("support_work_days", value)}
+                  disableAll={shouldDisableField(daysOutCtx, "support_work_days")}
                 />
                 <div className="field">
                   <p className="muted">
-                    {getFieldHelperText(daysOutCtx, "technical_skill_days") ||
-                      "Use this for lighter drilling, pads, partner technical work, or skill-focused days that should stay cleaner than hard sparring days."}
+                    {getFieldHelperText(daysOutCtx, "support_work_days") ||
+                      "Select days available for lighter work, recovery, technical practice, or S&C. Do not include hard sparring days here."}
                   </p>
                 </div>
                 </>
@@ -1625,7 +1625,7 @@ export function PlanIntakeForm() {
                 <ul className="summary-list">
                   <li>Training Availability: {selectedTrainingAvailability}</li>
                   <li>Hard Sparring Days: {selectedHardSparring}</li>
-                  <li>Technical / lighter skill days: {selectedTechnicalSkillDays}</li>
+                  <li>Non-hard training days: {selectedSupportWorkDays}</li>
                   <li>Equipment Access: {selectedEquipmentAccess}</li>
                 </ul>
               </div>

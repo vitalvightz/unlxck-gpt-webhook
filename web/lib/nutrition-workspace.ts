@@ -69,7 +69,7 @@ export function emptyUpdateRequest(profile?: NutritionProfileInput): NutritionWo
       weekly_training_frequency: null,
       training_availability: [],
       hard_sparring_days: [],
-      technical_skill_days: [],
+      support_work_days: [],
       session_types_by_day: {},
       injuries: "",
       guided_injury: null,

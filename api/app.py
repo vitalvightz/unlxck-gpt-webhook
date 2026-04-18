@@ -139,7 +139,7 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
     training_days = {day.strip().lower() for day in workspace.shared_camp_context.training_availability if str(day).strip()}
     hard_days = {day.strip().lower() for day in workspace.shared_camp_context.hard_sparring_days if str(day).strip()}
-    technical_days = {day.strip().lower() for day in workspace.shared_camp_context.technical_skill_days if str(day).strip()}
+    support_days = {day.strip().lower() for day in workspace.shared_camp_context.support_work_days if str(day).strip()}
 
     for day, session_type in workspace.shared_camp_context.session_types_by_day.items():
         normalized_day = str(day or "").strip().lower()
@@ -148,10 +148,10 @@ def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateReques
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"session_types_by_day.{day} must also be included in hard_sparring_days",
             )
-        if session_type == "technical" and normalized_day not in technical_days:
+        if session_type == "technical" and normalized_day not in support_days:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"session_types_by_day.{day} must also be included in technical_skill_days",
+                detail=f"session_types_by_day.{day} must also be included in support_work_days",
             )
         if session_type != "off" and normalized_day not in training_days:
             raise HTTPException(
@@ -177,24 +177,24 @@ def _validate_schedule_consistency(workspace: NutritionWorkspaceUpdateRequest) -
             detail=f"hard_sparring_days must be included in training_availability: {', '.join(invalid_hard_days)}",
         )
 
-    invalid_technical_days = [day for day in shared.technical_skill_days if str(day).strip().lower() not in normalized_training_days]
-    if invalid_technical_days:
+    invalid_support_days = [day for day in shared.support_work_days if str(day).strip().lower() not in normalized_training_days]
+    if invalid_support_days:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"technical_skill_days must be included in training_availability: {', '.join(invalid_technical_days)}",
+            detail=f"support_work_days must be included in training_availability: {', '.join(invalid_support_days)}",
         )
 
     overlap = sorted(
         {
             hard_day
             for hard_day in shared.hard_sparring_days
-            if str(hard_day).strip().lower() in {day.strip().lower() for day in shared.technical_skill_days if str(day).strip()}
+            if str(hard_day).strip().lower() in {day.strip().lower() for day in shared.support_work_days if str(day).strip()}
         }
     )
     if overlap:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"A day cannot be both hard_sparring and technical_skill: {', '.join(overlap)}",
+            detail=f"A day cannot be both hard_sparring and support_work: {', '.join(overlap)}",
         )
 
 

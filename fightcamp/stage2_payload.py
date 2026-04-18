@@ -641,7 +641,7 @@ def _build_athlete_model(
         "training_frequency": training_context.training_frequency,
         "training_days": training_context.training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
-        "technical_skill_days": training_context.technical_skill_days,
+        "support_work_days": training_context.support_work_days,
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
         "injuries_raw_text": training_context.injuries_raw_text,
@@ -1890,8 +1890,8 @@ def _ordered_weekdays(values: list[str]) -> list[str]:
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
     training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
     hard_sparring = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))) if day in training_days}
-    technical_skill = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))) if day in training_days}
-    return training_days, hard_sparring, technical_skill
+    support_work = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))) if day in training_days}
+    return training_days, hard_sparring, support_work
 
 
 def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> None:
@@ -2121,7 +2121,7 @@ def _assign_declared_day_hints(
     if not ordered:
         return ordered
 
-    training_days, hard_sparring_days, technical_skill_days = _declared_day_sets(athlete_model)
+    training_days, hard_sparring_days, support_work_days = _declared_day_sets(athlete_model)
     if not training_days:
         return ordered
 
@@ -2169,7 +2169,7 @@ def _assign_declared_day_hints(
             score = 100
             if recovery_day not in hard_sparring_days:
                 score += 10
-            if recovery_day in technical_skill_days:
+            if recovery_day in support_work_days:
                 score += 4
             score -= abs((idx + 1) - middle)
             if score > best_score:
@@ -2197,7 +2197,7 @@ def _assign_declared_day_hints(
             used_days.add(preferred_glycolytic_day)
 
     if aerobic_idx is not None:
-        preferred_aerobic_day = next((day for day in training_days if day in technical_skill_days and day not in used_days), None)
+        preferred_aerobic_day = next((day for day in training_days if day in support_work_days and day not in used_days), None)
         if preferred_aerobic_day:
             day_assignments[aerobic_idx] = preferred_aerobic_day
             used_days.add(preferred_aerobic_day)
@@ -2213,8 +2213,8 @@ def _assign_declared_day_hints(
             reason = "Use the lowest-load day immediately before the primary strength anchor when possible."
         elif idx == glycolytic_idx and day in hard_sparring_days:
             reason = "Let declared hard sparring own the main collision-heavy combat load when it already exists."
-        elif idx == aerobic_idx and day in technical_skill_days:
-            reason = "Use declared technical skill days for lower-noise support work when possible."
+        elif idx == aerobic_idx and day in support_work_days:
+            reason = "Use declared support work days for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
 
     for idx, role in enumerate(ordered):
@@ -3775,7 +3775,7 @@ def _build_weekly_role_map(
                 "phase_week_total": week_entry.get("phase_week_total"),
                 "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
-                "declared_technical_skill_days": _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))),
+                "declared_support_work_days": _ordered_weekdays(_clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
                 "coach_note_flags": _dedupe_clean_strings(_clean_list(week_entry.get("coach_note_flags", []))),
@@ -3843,10 +3843,12 @@ def _derive_global_priorities(
     push: list[str] = []
     avoid: list[str] = []
 
-    injuries = clean_list(athlete_model.get("injuries", []))
-    goals = clean_list(athlete_model.get("key_goals", []))
-    hard_sparring_days = clean_list(athlete_model.get("hard_sparring_days", []))
-    technical_skill_days = clean_list(athlete_model.get("technical_skill_days", []))
+    injuries = _clean_list(athlete_model.get("injuries", []))
+    goals = _clean_list(athlete_model.get("key_goals", []))
+    hard_sparring_days = _clean_list(athlete_model.get("hard_sparring_days", []))
+    support_work_days = _clean_list(
+        athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", []))
+    )
     high_pressure_cut = _is_high_pressure_weight_cut(athlete_model=athlete_model)
     compressed = athlete_model.get("compressed_priorities") or {}
     primary_labels = _priority_bucket_labels(compressed.get("primary_targets", []))
@@ -3874,8 +3876,8 @@ def _derive_global_priorities(
         preserve.append("Let declared hard sparring own the highest collision combat load before adding extra glycolytic stress.")
         push.append("Keep the primary neural strength day away from declared hard sparring when a cleaner weekly placement exists.")
         avoid.append("Do not stack the main glycolytic stressor directly beside declared hard sparring unless the schedule truly forces it.")
-    if technical_skill_days:
-        preserve.append("Use declared technical skill days for lower-noise support work when the weekly rhythm needs a lighter combat touch.")
+    if support_work_days:
+        preserve.append("Use declared support work days for lower-noise support work when the weekly rhythm needs a lighter combat touch.")
     if compressed.get("is_short_camp"):
         preserve.append(
             f"Keep the week selective by driving sessions from {', '.join(primary_labels)} and at most one maintenance target."
@@ -4518,7 +4520,7 @@ def build_stage2_payload(
             "Use simple session titles that match the phase and countdown window: Strength, Recovery, Aerobic support, Fight-pace conditioning, Alactic sharpness, or Neural primer in normal camp; Sharpness Session, Technical Touch, Freshness Session, Primer, Activation, or Fight-Day Warm-Up in late-fight windows.",
             "In taper weeks, remove optional branches aggressively and keep the work short, final, and low-noise.",
             "If the athlete's declared equipment already resolves the choice, do not show a fallback branch.",
-            "If declared hard sparring or technical skill days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
+        "If declared hard sparring or support work days exist, use them to make the weekly rhythm more concrete instead of writing generic sparring caveats.",
             "Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots. If readiness is compromised, deload the sparring dose on that day instead of replacing the day role.",
             "Respect the weekly session count implied by weekly_role_map; do not turn extra available days into extra active training days.",
             "If the athlete has more available days than planned sessions, leave the spare days off or clearly optional rather than rendering another full session.",

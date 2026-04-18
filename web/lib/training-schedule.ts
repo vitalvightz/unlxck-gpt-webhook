@@ -50,7 +50,7 @@ export function getAvailabilityConsistency(
 export function getSparringConsistency(
   trainingAvailability: string[],
   hardSparringDays: string[],
-  technicalSkillDays: string[],
+  supportWorkDays: string[],
 ): SparringConsistency {
   const available = new Set(trainingAvailability);
   const invalidHard = hardSparringDays.filter((day) => !available.has(day));
@@ -61,26 +61,26 @@ export function getSparringConsistency(
     };
   }
 
-  const invalidTechnical = technicalSkillDays.filter((day) => !available.has(day));
-  if (invalidTechnical.length) {
+  const invalidSupport = supportWorkDays.filter((day) => !available.has(day));
+  if (invalidSupport.length) {
     return {
-      hardError: `Technical / lighter skill days must also be selected as available days: ${invalidTechnical.join(", ")}.`,
+      hardError: `Non-hard training days must also be selected as available days: ${invalidSupport.join(", ")}.`,
       softWarning: null,
     };
   }
 
-  const overlap = hardSparringDays.filter((day) => technicalSkillDays.includes(day));
+  const overlap = hardSparringDays.filter((day) => supportWorkDays.includes(day));
   if (overlap.length) {
     return {
-      hardError: `A day cannot be both hard sparring and technical / lighter skill: ${overlap.join(", ")}.`,
+      hardError: `A day cannot be both hard sparring and non-hard training: ${overlap.join(", ")}.`,
       softWarning: null,
     };
   }
 
-  if (!hardSparringDays.length && technicalSkillDays.length) {
+  if (!hardSparringDays.length && supportWorkDays.length) {
     return {
       hardError: null,
-      softWarning: "Technical / lighter skill days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
+      softWarning: "Non-hard training days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
     };
   }
 

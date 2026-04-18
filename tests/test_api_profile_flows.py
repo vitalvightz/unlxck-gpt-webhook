@@ -51,7 +51,7 @@ def test_admin_athlete_profile_includes_latest_intake_details():
             "equipment_access": ["heavy_bag", "weights"],
             "training_availability": ["Monday", "Wednesday"],
             "hard_sparring_days": ["Friday"],
-            "technical_skill_days": ["Tuesday"],
+        "support_work_days": ["Tuesday"],
             "injuries": "Left shoulder management",
             "key_goals": ["conditioning", "fight_sharpness"],
             "weak_areas": ["defense", "gas_tank"],

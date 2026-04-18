@@ -37,7 +37,7 @@ def _athlete(days_until_fight: int, **overrides) -> dict:
         "readiness_flags": [],
         "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
         "hard_sparring_days": ["tuesday", "thursday"],
-        "technical_skill_days": ["friday"],
+        "support_work_days": ["friday"],
         "plan_creation_weekday": "monday",
     }
     base.update(overrides)

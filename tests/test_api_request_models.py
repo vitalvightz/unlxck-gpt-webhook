@@ -29,7 +29,7 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
         equipment_access=[],
         training_availability=[],
         hard_sparring_days=[],
-        technical_skill_days=[],
+        support_work_days=[],
         key_goals=[],
         weak_areas=[],
     ).to_payload()
@@ -39,7 +39,7 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
     assert fields["Equipment Access"] == []
     assert fields["Training Availability"] == []
     assert fields["Hard Sparring Days"] == []
-    assert fields["Technical Skill Days"] == []
+    assert fields["Support Work Days"] == []
     assert fields["What are your key performance goals?"] == []
     assert fields["Where do you feel weakest right now?"] == []
 

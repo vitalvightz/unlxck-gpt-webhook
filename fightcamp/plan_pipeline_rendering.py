@@ -27,7 +27,7 @@ from .stage2_payload import build_planning_brief, build_stage2_handoff_text, bui
 
 def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
     hard_days = [str(day).strip() for day in (context.plan_input.hard_sparring_days or []) if str(day).strip()]
-    technical_days = [str(day).strip() for day in (context.plan_input.technical_skill_days or []) if str(day).strip()]
+    support_days = [str(day).strip() for day in (context.plan_input.support_work_days or []) if str(day).strip()]
 
     lines = ["### Sparring & Conditioning Adjustments", ""]
     if hard_days:
@@ -37,9 +37,9 @@ def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
     else:
         lines.append("- **If hard sparring lands today** -> Keep S&C but cut volume by about 30% and trim accessories first.")
 
-    if technical_days:
+    if support_days:
         lines.append(
-            f"- **Technical / lighter skill days:** {', '.join(technical_days)} -> Use these for cleaner aerobic support, recovery, or lower-noise strength support."
+            f"- **S&C-compatible slots:** {', '.join(support_days)} -> Use these for cleaner aerobic support, recovery, primers, or lower-noise strength support."
         )
     if not hard_days:
         lines.append("- **If no sparring is fixed this week** -> Add one clear fight-pace conditioning exposure before extra lifting.")
@@ -243,7 +243,7 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Injuries: {context.injuries_display}",
         f"- Training Availability: {context.plan_input.available_days}",
         f"- Hard Sparring Days: {', '.join(context.plan_input.hard_sparring_days) if context.plan_input.hard_sparring_days else 'Not specified'}",
-        f"- Technical Skill Days: {', '.join(context.plan_input.technical_skill_days) if context.plan_input.technical_skill_days else 'Not specified'}",
+            f"- Support Work Days: {', '.join(context.plan_input.support_work_days) if context.plan_input.support_work_days else 'Not specified'}",
         f"- Equipment Access: {context.equipment_access_display}",
         f"- Weaknesses: {context.plan_input.weak_areas}",
         f"- Key Goals: {context.plan_input.key_goals}",
@@ -283,7 +283,7 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Injuries: {context.injuries_display}",
         f"- Training Availability: {context.plan_input.available_days}",
         f"- Hard Sparring Days: {', '.join(context.plan_input.hard_sparring_days) if context.plan_input.hard_sparring_days else 'Not specified'}",
-        f"- Technical Skill Days: {', '.join(context.plan_input.technical_skill_days) if context.plan_input.technical_skill_days else 'Not specified'}",
+            f"- Support Work Days: {', '.join(context.plan_input.support_work_days) if context.plan_input.support_work_days else 'Not specified'}",
         f"- Equipment Access: {context.equipment_access_display}",
         f"- Weaknesses: {context.plan_input.weak_areas}",
         f"- Key Goals: {context.plan_input.key_goals}",

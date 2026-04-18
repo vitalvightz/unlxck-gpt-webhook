@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 UserRole = Literal["athlete", "admin"]
 GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
@@ -293,16 +293,25 @@ class NutritionSharedCampContext(BaseModel):
     weekly_training_frequency: int | None = None
     training_availability: list[str] = Field(default_factory=list)
     hard_sparring_days: list[str] = Field(default_factory=list)
-    technical_skill_days: list[str] = Field(default_factory=list)
+    support_work_days: list[str] = Field(default_factory=list)
     session_types_by_day: dict[str, SessionDayType] = Field(default_factory=dict)
     injuries: str = ""
     guided_injury: GuidedInjuryInput | None = None
     training_restriction_level: TrainingRestrictionLevel | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_support_work_days(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "support_work_days" not in value and "technical_skill_days" in value:
+            updated = dict(value)
+            updated["support_work_days"] = updated.get("technical_skill_days")
+            return updated
+        return value
+
     @field_validator(
         "training_availability",
         "hard_sparring_days",
-        "technical_skill_days",
+        "support_work_days",
         mode="before",
     )
     @classmethod
@@ -453,7 +462,7 @@ class PlanRequest(BaseModel):
     equipment_access: list[str] = Field(default_factory=list)
     training_availability: list[str] = Field(default_factory=list)
     hard_sparring_days: list[str] = Field(default_factory=list)
-    technical_skill_days: list[str] = Field(default_factory=list)
+    support_work_days: list[str] = Field(default_factory=list)
     injuries: str = ""
     guided_injury: GuidedInjuryInput | None = None
     guided_injuries: list[GuidedInjuryInput] | None = None
@@ -463,6 +472,15 @@ class PlanRequest(BaseModel):
     mindset_challenges: str = ""
     notes: str = ""
     random_seed: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_support_work_days(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "support_work_days" not in value and "technical_skill_days" in value:
+            updated = dict(value)
+            updated["support_work_days"] = updated.get("technical_skill_days")
+            return updated
+        return value
 
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
@@ -508,7 +526,7 @@ class PlanRequest(BaseModel):
             _field("Equipment Access", self.equipment_access),
             _field("Training Availability", self.training_availability),
             _field("Hard Sparring Days", self.hard_sparring_days),
-            _field("Technical Skill Days", self.technical_skill_days),
+            _field("Support Work Days", self.support_work_days),
             _field("Any injuries or areas you need to work around?", self.injuries),
             _field("What are your key performance goals?", self.key_goals),
             _field("Where do you feel weakest right now?", self.weak_areas),

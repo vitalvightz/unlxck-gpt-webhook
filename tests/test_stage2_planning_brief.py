@@ -294,7 +294,7 @@ def test_build_planning_brief_exposes_limiter_led_weekly_stress_map():
             "weaknesses": ["coordination_proprioception"],
             "equipment": ["bodyweight", "bands"],
             "hard_sparring_days": ["Tuesday", "Saturday"],
-            "technical_skill_days": ["Monday"],
+        "support_work_days": ["Monday"],
             "injuries": [],
             "weight_cut_risk": False,
             "weight_cut_pct": 0.0,
@@ -348,7 +348,7 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
         phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
         days_until_fight=32,
         hard_sparring_days=["Tuesday", "Saturday"],
-        technical_skill_days=["Monday"],
+        support_work_days=["Monday"],
     )
 
     payload = build_stage2_payload(
@@ -380,7 +380,7 @@ def test_stage2_payload_carries_declared_sparring_days_into_athlete_model_and_pr
     athlete_snapshot = brief["athlete_snapshot"]
 
     assert athlete_snapshot["hard_sparring_days"] == ["Tuesday", "Saturday"]
-    assert athlete_snapshot["technical_skill_days"] == ["Monday"]
+    assert athlete_snapshot["support_work_days"] == ["Monday"]
     assert any("hard sparring" in item.lower() for item in brief["main_risks"])
     assert any("primary neural strength day away from declared hard sparring" in item.lower() for item in brief["global_priorities"]["push"])
 
@@ -1775,6 +1775,119 @@ def test_boxing_crowded_week_triggers_on_two_risk_signals():
     )
     week = _spp_week_role_map(athlete)
 
+def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["air_bike"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+        "support_work_days": ["Monday"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 6,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    locked_spar_days = [
+        role["scheduled_day_hint"]
+        for role in week["session_roles"]
+        if role["role_key"] == "hard_sparring_day"
+    ]
+
+    assert week["declared_hard_sparring_days"] == ["Tuesday", "Thursday"]
+    assert [entry["day"] for entry in week["hard_sparring_plan"] if entry["status"] != "hard_as_planned"] == ["Thursday"]
+    assert week["effective_hard_sparring_days"] == ["Tuesday"]
+    assert locked_spar_days == ["Tuesday", "Thursday"]
+    assert week["coach_note_flags"] == ["deload hard sparring"]
+    # New behaviour: declared spar count (2) drives the cap and priority demotion,
+    # so "two_hard_spar_days" is present even when only one day is fully effective.
+    assert "two_hard_spar_days" in week["intentional_compression"]["reason_codes"]
+    # The legacy helper still evaluates effective count for its own reason codes
+    assert _high_fatigue_compression_reason_codes(
+        {"fatigue": "high", "hard_sparring_days": ["Tuesday", "Thursday"]},
+        effective_hard_spar_count=1,
+    ) == ["high_fatigue"]
+
+
+def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downgrade():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 4,
+            "days_until_fight": 24,
+            "short_notice": False,
+            "fatigue": "high",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning", "power"],
+            "weaknesses": ["conditioning"],
+            "equipment": ["air_bike"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+        "support_work_days": ["Monday"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": ["high_fatigue"],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["glycolytic repeatability", "sport speed"],
+                "deprioritize": ["non-specific conditioning volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["glycolytic", "alactic", "primary_strength"],
+                    "conditioning_drop_order_if_thin": ["aerobic"],
+                },
+                "weeks": 1,
+                "days": 6,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    role_keys = [role["role_key"] for role in week["session_roles"]]
+    suppressed_keys = {item["role_key"] for item in week["suppressed_roles"]}
+    hard_spar_days = [
+        role["scheduled_day_hint"]
+        for role in week["session_roles"]
+        if role["role_key"] == "hard_sparring_day"
+    ]
+
     assert week["intentional_compression"]["active"] is True
     assert week["intentional_compression"]["policy"] == "boxing_crowded_week"
     assert set(week["intentional_compression"]["risk_signals"]) >= {"high_spar_load", "moderate_fatigue"}
@@ -2322,7 +2435,7 @@ def _base_athlete(
         "training_days": td,
         "training_frequency": training_frequency or len(td),
         "hard_sparring_days": hard_sparring_days or [],
-        "technical_skill_days": [],
+        "support_work_days": [],
         "injuries": injuries or [],
         "weight_cut_risk": weight_cut_risk,
         "weight_cut_pct": weight_cut_pct,

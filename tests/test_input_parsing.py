@@ -172,7 +172,7 @@ def test_sparring_day_fields_round_trip_from_payload():
         [
             {"label": "Training Availability", "value": "Monday, Tuesday, Thursday, Saturday"},
             {"label": "Hard Sparring Days", "value": "Tuesday, Saturday"},
-            {"label": "Technical Skill Days", "value": "Monday"},
+        {"label": "Support Work Days", "value": "Monday"},
         ]
     )
 
@@ -180,7 +180,7 @@ def test_sparring_day_fields_round_trip_from_payload():
 
     assert parsed.training_days == ["Monday", "Tuesday", "Thursday", "Saturday"]
     assert parsed.hard_sparring_days == ["Tuesday", "Saturday"]
-    assert parsed.technical_skill_days == ["Monday"]
+    assert parsed.support_work_days == ["Monday"]
 
 
 def test_contradictory_frequency_and_availability_stay_explicit_for_downstream_review():

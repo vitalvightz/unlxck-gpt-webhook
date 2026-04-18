@@ -27,11 +27,11 @@ test("flags hard sparring days that sit outside the available schedule", () => {
   );
 });
 
-test("flags overlap between hard sparring and technical skill days", () => {
+test("flags overlap between hard sparring and non-hard training days", () => {
   assert.deepStrictEqual(
     getSparringConsistency(["Monday", "Wednesday", "Friday"], ["Wednesday"], ["Wednesday", "Friday"]),
     {
-      hardError: "A day cannot be both hard sparring and technical / lighter skill: Wednesday.",
+      hardError: "A day cannot be both hard sparring and non-hard training: Wednesday.",
       softWarning: null,
     },
   );

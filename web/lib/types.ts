@@ -105,7 +105,7 @@ export type NutritionSharedCampContext = {
   weekly_training_frequency?: number | null;
   training_availability: string[];
   hard_sparring_days: string[];
-  technical_skill_days: string[];
+  support_work_days: string[];
   session_types_by_day: Record<string, SessionDayType>;
   injuries?: string;
   guided_injury?: GuidedInjuryInput | null;
@@ -152,7 +152,7 @@ export type PlanRequest = {
   equipment_access: string[];
   training_availability: string[];
   hard_sparring_days: string[];
-  technical_skill_days: string[];
+  support_work_days: string[];
   injuries?: string;
   guided_injury?: GuidedInjuryInput | null;
   guided_injuries?: GuidedInjuryInput[] | null;

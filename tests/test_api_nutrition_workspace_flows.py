@@ -20,7 +20,7 @@ def test_nutrition_workspace_update_adds_visible_sparring_days_to_hidden_trainin
             {
                 "training_availability": ["Monday", "Wednesday"],
                 "hard_sparring_days": ["Wednesday"],
-                "technical_skill_days": [],
+        "support_work_days": [],
             }
         ),
     )
@@ -32,7 +32,7 @@ def test_nutrition_workspace_update_adds_visible_sparring_days_to_hidden_trainin
             **workspace["shared_camp_context"],
             "training_availability": [],
             "hard_sparring_days": ["Friday"],
-            "technical_skill_days": ["Tuesday"],
+        "support_work_days": ["Tuesday"],
         },
         "s_and_c_preferences": workspace["s_and_c_preferences"],
         "nutrition_readiness": workspace["nutrition_readiness"],

@@ -96,7 +96,7 @@ function normalizeTrainingSelections(
       nextSessionTypes[day] = "hard_spar";
       continue;
     }
-    if (request.shared_camp_context.technical_skill_days.includes(day)) {
+    if (request.shared_camp_context.support_work_days.includes(day)) {
       nextSessionTypes[day] = "technical";
     }
   }
@@ -107,7 +107,7 @@ function normalizeTrainingSelections(
       .filter(([, value]) => value === "hard_spar")
       .map(([day]) => day),
   );
-  const technicalSkillDays = sortTrainingDays(
+  const supportWorkDays = sortTrainingDays(
     Object.entries(nextSessionTypes)
       .filter(([, value]) => value === "technical")
       .map(([day]) => day),
@@ -118,7 +118,7 @@ function normalizeTrainingSelections(
     shared_camp_context: {
       ...request.shared_camp_context,
       hard_sparring_days: hardSparringDays,
-      technical_skill_days: technicalSkillDays,
+      support_work_days: supportWorkDays,
       training_availability: trainingAvailability,
       session_types_by_day: nextSessionTypes,
     },

@@ -39,7 +39,7 @@ _MINIMAL_ATHLETE = {
     "injuries": [],
     "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
     "hard_sparring_days": ["tuesday", "thursday"],
-    "technical_skill_days": ["friday"],
+        "support_work_days": ["friday"],
     "mindset_challenges": "",
     "notes": "",
     "restrictions": [],
@@ -115,7 +115,7 @@ def _build_stage2(days):
         phase_weeks={"GPP": 0, "SPP": 0, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": days or 7}},
         days_until_fight=days,
         hard_sparring_days=["Tue", "Thu"],
-        technical_skill_days=["Fri"],
+        support_work_days=["Fri"],
     )
     return build_stage2_payload(
         training_context=training_context,
@@ -482,7 +482,7 @@ class TestStage2PayloadBranching:
         athlete_model = payload["athlete_model"]
         assert athlete_model["hard_sparring_days"] == ["Tue", "Thu"]
         assert athlete_model["training_days"] == ["Mon", "Tue", "Wed", "Thu", "Fri"]
-        assert athlete_model["technical_skill_days"] == ["Fri"]
+        assert athlete_model["support_work_days"] == ["Fri"]
         assert athlete_model["key_goals"] == ["power"]
 
     def test_d1_payload_still_uses_late_fight_mode_without_week_structure(self):

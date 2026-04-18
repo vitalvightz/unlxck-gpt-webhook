@@ -87,7 +87,10 @@ class TrainingContext:
     days_until_fight: int | None
     training_split: dict[str, Any] = field(default_factory=dict)
     hard_sparring_days: list[str] = field(default_factory=list)
-    technical_skill_days: list[str] = field(default_factory=list)
+    training_split: dict[str, Any] = field(default_factory=dict)
+    hard_sparring_days: list[str] = field(default_factory=list)
+    support_work_days: list[str] = field(default_factory=list)
+    technical_skill_days: list[str] = field(default_factory=list)  # legacy fallback
     athlete_timezone: str = ""
     injuries_raw_text: str = ""
     parsed_injuries: list[dict[str, Any]] = field(default_factory=list)
