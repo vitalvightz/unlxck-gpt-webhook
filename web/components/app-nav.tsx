@@ -208,7 +208,6 @@ export function AppNav() {
   ];
 
   const profile = me?.profile;
-  const hasWorkspaceAccess = Boolean(session && me);
   const displayName = profile?.full_name || "Athlete";
   const initials = getInitials(displayName);
   const avatarUrl = (profile?.avatar_url && isSafeImageUrl(profile.avatar_url)) ? profile.avatar_url : null;
@@ -226,7 +225,7 @@ export function AppNav() {
           onClick={openMobileDrawer}
         >
           <span>Menu</span>
-          {!hasWorkspaceAccess && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
+          {!session && isReady ? <span className="badge status-badge-neutral">Entry</span> : null}
         </button>
       ) : null}
       {desktopNavCollapsed ? (
@@ -287,7 +286,7 @@ export function AppNav() {
             </div>
           ) : null}
 
-          {isReady && !hasWorkspaceAccess ? (
+          {isReady && !session ? (
             <>
               <div className="sidebar-auth">
                 <p className="sidebar-section-label">Access</p>
@@ -319,7 +318,7 @@ export function AppNav() {
             </>
           ) : null}
 
-          {isReady && hasWorkspaceAccess ? (
+          {isReady && session ? (
             <>
               <nav className="sidebar-nav">
                 <p className="sidebar-section-label">Workspace</p>

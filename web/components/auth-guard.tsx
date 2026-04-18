@@ -35,17 +35,13 @@ export function RequireAuth({
       router.replace("/login");
       return;
     }
-    if (!isMeHydrated) {
+    if (adminOnly && !isMeHydrated) {
       return;
     }
-    if (!me) {
-      router.replace("/login");
-      return;
-    }
-    if (adminOnly && role !== "admin") {
+    if (adminOnly && role && role !== "admin") {
       router.replace("/plans");
     }
-  }, [adminOnly, demoMode, isMeHydrated, isReady, me, role, router, session, signInDemo]);
+  }, [adminOnly, demoMode, isMeHydrated, isReady, role, router, session, signInDemo]);
 
   if (!isReady) {
     return <LoadingCard label="Checking your access" />;
@@ -56,8 +52,8 @@ export function RequireAuth({
   if (!isMeHydrated) {
     return <LoadingCard label={adminOnly ? "Restoring admin access" : "Restoring your workspace"} />;
   }
-  if (!me) {
-    return <LoadingCard label="Redirecting to login" />;
+  if (adminOnly && !me) {
+    return <LoadingCard label="Reconnecting your admin workspace" />;
   }
   if (adminOnly && role !== "admin") {
     return <LoadingCard label="Redirecting to your athlete view" />;
