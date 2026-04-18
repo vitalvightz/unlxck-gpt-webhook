@@ -2350,7 +2350,18 @@ def _boxing_day_score(
 
     if main_job == "anchor":
         if previous_class == "hard_sparring":
-            return -10_000
+            prev_spar_status = next(
+                (
+                    str(r.get("hard_sparring_status") or "hard_as_planned")
+                    for r in day_to_roles.get(previous_day, [])
+                    if r.get("role_key") == "hard_sparring_day"
+                ),
+                "hard_as_planned",
+            )
+            # Hard-as-planned spar days hard-exclude the following anchor.
+            # Deloaded/converted spar days apply a heavy but overridable penalty —
+            # the stimulus is technical-level, not a full collision dose.
+            return -10_000 if prev_spar_status == "hard_as_planned" else -50
         score += 6 if previous_class in {"off", "support_recovery", "technical"} else -6
         if prefer_midweek_anchor:
             midpoint = (len(training_days) - 1) / 2 if training_days else 0

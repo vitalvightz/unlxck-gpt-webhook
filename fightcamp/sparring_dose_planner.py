@@ -220,6 +220,14 @@ def _decide_action(
     # Four or more hard days in a single week exceeds safe density regardless of readiness signals.
     if hard_day_count >= 4:
         return "deload"
+    # Three hard days with two or more amber readiness signals: the "well-spaced, ready" allowance
+    # does not hold — deload one.
+    if hard_day_count >= 3:
+        amber_signals = sum(
+            1 for signal in (fatigue, cut, week_press) if signal in {"moderate", "high"}
+        )
+        if amber_signals >= 2:
+            return "deload"
 
     # --- Readiness-based deload ---
     if fatigue == "high" and hard_day_count >= 2:
@@ -432,6 +440,24 @@ def _apply_hard_day_cap(
     return [plan_by_day[d] for d in hard_days]
 
 
+def _finalize_plan(
+    plan: list[dict[str, Any]],
+    *,
+    hard_days: list[str],
+    protected_day: str,
+) -> list[dict[str, Any]]:
+    """Run the post-processing pipeline: consecutive-pair deload, 4+ day cap, classification.
+
+    Centralizes invariants so every return path in ``compute_hard_sparring_plan``
+    is guaranteed to pass through the same rules regardless of which branch produced
+    the plan. Consecutive and cap passes are no-ops when no eligible pairs remain.
+    """
+    plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
+    if len(hard_days) >= 4:
+        plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
+    return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
+
+
 def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     hard_days = _ordered_weekdays(
         week.get("declared_hard_sparring_days")
@@ -466,8 +492,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
             for day in hard_days
         ]
-        plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
-        return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
+        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
     reason_codes_list = _reason_codes(
         fatigue=fatigue,
@@ -498,7 +523,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
             for day in hard_days
         ]
-        return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
+        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
     # --- D-7 countdown cap: keep only one hard day and downgrade the rest ---
     if countdown_override == "cap_one":
@@ -530,7 +555,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                     "coach_note": _sparring_override_coach_note(days_until_fight, action),
                 }
             )
-        return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
+        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
     # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
@@ -557,10 +582,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "reason": "",
             }
         )
-    plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
-    if len(hard_days) >= 4:
-        plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
-    return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
+    return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
 
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {
