@@ -1042,7 +1042,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
                 "stair running intervals",
                 "heavy bag conditioning finishers",
                 "standalone 3-minute war when sparring exists",
-                "multiple accessories after the anchor",
+                "multiple accessories after anchor",
             ],
         }
     if mode == "pre_fight_compressed_payload":
