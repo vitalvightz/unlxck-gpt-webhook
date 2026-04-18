@@ -522,7 +522,7 @@ class PlanRequest(BaseModel):
     @classmethod
     def validate_hard_sparring_days_cap(cls, value: list[str]) -> list[str]:
         if len(value) > _HARD_SPARRING_DAY_CAP:
-            raise ValueError("hard sparring days cap is 4; reduce to 4 or fewer to generate a plan")
+            raise ValueError(f"hard sparring days cap is {_HARD_SPARRING_DAY_CAP}; reduce to {_HARD_SPARRING_DAY_CAP} or fewer to generate a plan")
         return value
 
     def to_payload(self) -> dict[str, Any]:
