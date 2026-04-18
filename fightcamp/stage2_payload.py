@@ -1979,7 +1979,7 @@ def _apply_day_identity_governance(role: dict[str, Any], *, crowded_week_active:
         governance["forbidden_secondary_stressors"] = _dedupe_clean_strings(
             governance.get("forbidden_secondary_stressors", []) + list(_CROWDED_ANCHOR_FORBIDDEN_TOKENS)
         )
-    elif crowded_week_active and main_job == "support_recovery":
+    elif crowded_week_active and main_job in {"support_recovery", "technical"}:
         governance["support_cap"] = "light_only"
         governance["forbidden_secondary_stressors"] = _dedupe_clean_strings(
             governance.get("forbidden_secondary_stressors", []) + list(_CROWDED_SUPPORT_FORBIDDEN_TOKENS)
