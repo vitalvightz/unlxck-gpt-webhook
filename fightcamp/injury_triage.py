@@ -358,10 +358,6 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             ("high", "worsening"),
             ("high", "regressing"),
             ("high", "worsened"),
-            ("severe", "worse"),
-            ("severe", "worsening"),
-            ("severe", "regressing"),
-            ("severe", "worsened"),
         }
     ):
         routing_reasons.add("combo_gate:high_worsening")
