@@ -392,6 +392,24 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             sparring_risk_band=highest_band,
         )
 
+    if ("high", "") in guided_combos:
+        routing_reasons.add("combo_gate:high_trend_missing")
+        routing_reasons_sorted = sorted(routing_reasons)
+        return InjuryTriageResult(
+            mode=NEEDS_REVIEW,
+            reasons=[
+                "High-severity injury is missing trend status and requires coach/admin review.",
+                "Automatic full-plan generation is blocked by triage combo gate.",
+            ],
+            clinician_clearance_required=False,
+            red_flags=sorted(red_flags),
+            matched_high_risk_categories=matched_categories_sorted,
+            routing_reasons=routing_reasons_sorted,
+            should_block_stage2=True,
+            urgent_flags=sorted(urgent_flags),
+            sparring_risk_band=highest_band,
+        )
+
     if ("high", "stable") in guided_combos:
         routing_reasons.add("combo_gate:high_stable")
         routing_reasons_sorted = sorted(routing_reasons)
