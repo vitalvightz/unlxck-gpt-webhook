@@ -14,7 +14,6 @@ from .sparring_dose_planner import (
     compute_hard_sparring_plan,
     effective_hard_day_count,
     effective_hard_days,
-    sandwiched_training_days,
 )
 from .stage2_payload_late_fight import (
     _build_late_fight_week_by_week_progression,
@@ -39,65 +38,6 @@ from .stage2_planning_brief import (
     _WEEKLY_STAGE_TEMPLATES,
     PLANNING_DECISION_HIERARCHY,
 )
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
-
-_WEEKDAY_NAMES = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-]
-_WEEKDAY_ORDER = {name: idx for idx, name in enumerate(_WEEKDAY_NAMES)}
-
-
-def _week_calendar_window(
-    *,
-    plan_creation_weekday: str | None,
-    week_start_offset: int,
-    span_days: int,
-    days_until_fight: Any,
-) -> dict[str, Any]:
-    """Build deterministic calendar truth for a planned week window."""
-    weekday_key = str(plan_creation_weekday or "").strip().lower()
-    base_index = _WEEKDAY_ORDER.get(weekday_key)
-    if base_index is None:
-        return {}
-
-    span = max(0, int(span_days or 0))
-    if span <= 0:
-        return {}
-
-    start_index = (base_index + week_start_offset) % 7
-    active_weekdays = [
-        _WEEKDAY_NAMES[(start_index + day_offset) % 7].title()
-        for day_offset in range(span)
-    ]
-
-    fight_offset: int | None = None
-    if isinstance(days_until_fight, int):
-        if week_start_offset <= days_until_fight < week_start_offset + span:
-            fight_offset = days_until_fight - week_start_offset
-
-    fight_weekday = active_weekdays[fight_offset] if isinstance(fight_offset, int) else None
-    allowed_training_days = (
-        active_weekdays[:fight_offset]
-        if isinstance(fight_offset, int)
-        else list(active_weekdays)
-    )
-
-    return {
-        "week_start_weekday": active_weekdays[0],
-        "week_end_weekday": active_weekdays[-1],
-        "active_weekdays": active_weekdays,
-        "fight_day_week": isinstance(fight_offset, int),
-        "fight_day_weekday": fight_weekday,
-        "fight_day_blocks_from_weekday": fight_weekday,
-        "allowed_training_days": allowed_training_days,
-    }
-
 
 def _phase_progression_slot_count(brief: dict) -> int:
     weeks = int(brief.get("weeks") or 0)
@@ -385,14 +325,8 @@ def _athlete_sport_key(athlete_model: dict) -> str:
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
     training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
     hard_sparring = {day for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))) if day in training_days}
-    support_work = {
-        day
-        for day in _ordered_weekdays(
-            clean_list(athlete_model.get("support_work_days") or athlete_model.get("technical_skill_days") or [])
-        )
-        if day in training_days
-    }
-    return training_days, hard_sparring, support_work
+    technical_skill = {day for day in _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))) if day in training_days}
+    return training_days, hard_sparring, technical_skill
 
 
 def _append_day_hint(role: dict, day: str | None, reason: str | None = None) -> None:
@@ -427,9 +361,6 @@ def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) ->
 
 def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
-    hard_sparring_class = str((plan_entry or {}).get("hard_day_class") or "").strip() or (
-        "managed_hard" if status != "hard_as_planned" else "primary_hard"
-    )
     reason_codes = list((plan_entry or {}).get("reason_codes") or [])
     coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
     role: dict[str, Any] = {
@@ -463,7 +394,6 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "scheduled_day_hint": day,
         "day_assignment_reason": "Declared hard sparring day is fixed in the weekly role map.",
         "hard_sparring_status": status,
-        "hard_sparring_class": hard_sparring_class,
         "hard_sparring_reason_codes": reason_codes,
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
         "coach_note_flags": coach_note_flags,
@@ -577,7 +507,7 @@ def _assign_declared_day_hints(
     if not ordered:
         return ordered
 
-    training_days, hard_sparring_days, support_work_days = _declared_day_sets(athlete_model)
+    training_days, hard_sparring_days, technical_skill_days = _declared_day_sets(athlete_model)
     if not training_days:
         return ordered
 
@@ -625,7 +555,7 @@ def _assign_declared_day_hints(
             score = 100
             if recovery_day not in hard_sparring_days:
                 score += 10
-            if recovery_day in support_work_days:
+            if recovery_day in technical_skill_days:
                 score += 4
             score -= abs((idx + 1) - middle)
             if score > best_score:
@@ -653,7 +583,7 @@ def _assign_declared_day_hints(
             used_days.add(preferred_glycolytic_day)
 
     if aerobic_idx is not None:
-        preferred_aerobic_day = next((day for day in training_days if day in support_work_days and day not in used_days), None)
+        preferred_aerobic_day = next((day for day in training_days if day in technical_skill_days and day not in used_days), None)
         if preferred_aerobic_day:
             day_assignments[aerobic_idx] = preferred_aerobic_day
             used_days.add(preferred_aerobic_day)
@@ -669,8 +599,8 @@ def _assign_declared_day_hints(
             reason = "Use the lowest-load day immediately before the primary strength anchor when possible."
         elif idx == glycolytic_idx and day in hard_sparring_days:
             reason = "Let declared hard sparring own the main collision-heavy combat load when it already exists."
-        elif idx == aerobic_idx and day in support_work_days:
-            reason = "Use declared Support Work Days (non-hard training days / S&C-compatible slots) for lower-noise support work when possible."
+        elif idx == aerobic_idx and day in technical_skill_days:
+            reason = "Use declared technical skill days for lower-noise support work when possible."
         _append_day_hint(role, day, reason)
 
     for idx, role in enumerate(ordered):
@@ -946,51 +876,13 @@ def _make_compression_suppression(role: dict, reason_codes: list[str], summary: 
 
 def _active_weight_cut_is_meaningful(athlete_model: dict) -> bool:
     """True when the athlete has a non-trivial active weight cut."""
-    cut_bucket = _resolved_cut_severity_bucket(athlete_model)
-    if cut_bucket is not None:
-        return cut_bucket in {"moderate", "high", "critical", "extreme"}
     if athlete_model.get("weight_cut_risk"):
+        return True
+    weight_cut_pct = float(athlete_model.get("weight_cut_pct") or 0.0)
+    if weight_cut_pct >= 3.0:
         return True
     readiness_flags = set(clean_list(athlete_model.get("readiness_flags", [])))
     return bool(readiness_flags & {"active_weight_cut", "aggressive_weight_cut"})
-
-
-def _resolved_cut_severity_bucket(athlete_model: dict) -> str | None:
-    """Resolve cut severity bucket from numeric truth when available."""
-    explicit_bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
-    if explicit_bucket in {"none", "low", "moderate", "high", "critical", "extreme"}:
-        return explicit_bucket
-
-    try:
-        cut_score = float(athlete_model.get("cut_severity_score"))
-    except (TypeError, ValueError):
-        cut_score = None
-    if cut_score is not None:
-        return cut_severity_bucket(cut_score)
-
-    try:
-        float(athlete_model.get("weight_cut_pct"))
-    except (TypeError, ValueError):
-        return None
-
-    return cut_severity_bucket(
-        compute_cut_severity_score(
-            athlete_model.get("weight_cut_pct"),
-            athlete_model.get("days_until_fight"),
-        )
-    )
-
-
-def _cut_severity_compression_points(athlete_model: dict) -> int:
-    """Convert cut severity bucket into readiness compression points."""
-    cut_bucket = _resolved_cut_severity_bucket(athlete_model)
-    if cut_bucket is None:
-        return 1 if athlete_model.get("weight_cut_risk") else 0
-    if cut_bucket in {"high", "critical", "extreme"}:
-        return 2
-    if cut_bucket == "moderate":
-        return 1
-    return 0
 
 
 def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
@@ -1003,9 +895,9 @@ def _active_injury_is_moderate_plus(athlete_model: dict) -> bool:
 
 def _compute_readiness_compression(athlete_model: dict) -> int:
     """
-    Compute readiness compression score (0–5) based on:
+    Compute readiness compression score (0–4) based on:
     - High fatigue (+1)
-    - Active cut severity (+0/+1/+2)
+    - Meaningful active weight cut (+1)
     - Active injury/restriction at moderate or greater severity (+1)
     - Proximity to fight (≤17 days) (+1)
     """
@@ -1013,7 +905,8 @@ def _compute_readiness_compression(athlete_model: dict) -> int:
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
     if fatigue == "high":
         compression += 1
-    compression += _cut_severity_compression_points(athlete_model)
+    if _active_weight_cut_is_meaningful(athlete_model):
+        compression += 1
     if _active_injury_is_moderate_plus(athlete_model):
         compression += 1
     days_to_fight = athlete_model.get("days_until_fight")
@@ -1153,33 +1046,6 @@ def _apply_high_fatigue_week_compression(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-
-    # Structural rule: suppress glycolytic on days sandwiched between two effective hard spar days.
-    # This fires unconditionally — it is not gated on fatigue or compression signals.
-    _effective_spar_days = set(effective_hard_days(hard_sparring_plan or []))
-    if len(_effective_spar_days) >= 2:
-        _resolved = dict(week_entry.get("resolved_rule_state") or {})
-        _must_keep_early = set(clean_list(_resolved.get("must_keep", week_entry.get("must_keep", []))))
-        _sandwiched = sandwiched_training_days(training_days, _effective_spar_days)
-        if _sandwiched:
-            _kept: list[dict] = []
-            for _role in session_roles:
-                if (
-                    _role.get("category") == "conditioning"
-                    and _role.get("preferred_system") == "glycolytic"
-                    and _role.get("preferred_system") not in _must_keep_early
-                    and str(_role.get("scheduled_day_hint") or "").strip() in _sandwiched
-                ):
-                    suppressed_roles = list(suppressed_roles) + [
-                        _make_compression_suppression(
-                            _role,
-                            ["sandwiched_hard_days"],
-                            "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
-                        )
-                    ]
-                else:
-                    _kept.append(_role)
-            session_roles = _kept
 
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
@@ -1321,7 +1187,6 @@ def _apply_legacy_high_fatigue_compression(
     if has_downgraded_declared_day:
         _append_week_coach_note_flag(week_entry, "deload hard sparring")
 
-    sandwiched_days = sandwiched_training_days(training_days, effective_days)
     removable_role: dict[str, Any] | None = None
     glycolytic_role = next(
         (
@@ -1330,11 +1195,9 @@ def _apply_legacy_high_fatigue_compression(
         ),
         None,
     )
-    if glycolytic_role is not None and glycolytic_role.get("preferred_system") not in must_keep:
+    if glycolytic_role is not None and has_downgraded_declared_day:
         glycolytic_day = str(glycolytic_role.get("scheduled_day_hint") or "").strip()
-        on_follow_on = glycolytic_day in blocked_follow_on_days and has_downgraded_declared_day
-        on_sandwiched = glycolytic_day in sandwiched_days
-        if on_follow_on or on_sandwiched:
+        if glycolytic_day in blocked_follow_on_days and glycolytic_role.get("preferred_system") not in must_keep:
             removable_role = glycolytic_role
 
     if removable_role is None:
@@ -1391,9 +1254,6 @@ def _build_weekly_role_map(
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
-    days_until_fight = athlete_model.get("days_until_fight")
-    plan_creation_weekday = athlete_model.get("plan_creation_weekday")
-    week_start_offset = 0
 
     for week_entry in week_by_week_progression.get("weeks", []):
         session_counts = dict(week_entry.get("session_counts") or {})
@@ -1575,33 +1435,17 @@ def _build_weekly_role_map(
             athlete_model,
             hard_sparring_plan=hard_sparring_plan,
         )
-        week_calendar = _week_calendar_window(
-            plan_creation_weekday=plan_creation_weekday,
-            week_start_offset=week_start_offset,
-            span_days=int(week_entry.get("span_days") or 0),
-            days_until_fight=days_until_fight,
-        )
-        declared_training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
-        allowed_training_days = set(_ordered_weekdays(clean_list(week_calendar.get("allowed_training_days", []))))
 
         weeks.append(
             {
                 "week_index": week_entry.get("week_index"),
                 "phase": week_entry.get("phase"),
                 "stage_key": week_entry.get("stage_key"),
-                "span_days": week_entry.get("span_days"),
                 "phase_week_index": week_entry.get("phase_week_index"),
                 "phase_week_total": week_entry.get("phase_week_total"),
-                "declared_training_days": declared_training_days,
-                "active_training_days": (
-                    [day for day in declared_training_days if day.title() in allowed_training_days]
-                    if week_calendar
-                    else declared_training_days
-                ),
+                "declared_training_days": _ordered_weekdays(clean_list(athlete_model.get("training_days", []))),
                 "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
-                "declared_support_work_days": _ordered_weekdays(clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
                 "declared_technical_skill_days": _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
-                "week_calendar": week_calendar,
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),
@@ -1611,7 +1455,6 @@ def _build_weekly_role_map(
                 "suppressed_roles": suppressed_roles,
             }
         )
-        week_start_offset += int(week_entry.get("span_days") or 0)
 
     # Legacy fight_week_override compatibility (acts as further filter if still active)
     if fight_week_override and fight_week_override.get("active"):

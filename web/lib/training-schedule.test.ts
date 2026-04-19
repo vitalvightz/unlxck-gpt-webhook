@@ -27,25 +27,11 @@ test("flags hard sparring days that sit outside the available schedule", () => {
   );
 });
 
-test("flags overlap between hard sparring and non-hard training days", () => {
+test("flags overlap between hard sparring and technical skill days", () => {
   assert.deepStrictEqual(
     getSparringConsistency(["Monday", "Wednesday", "Friday"], ["Wednesday"], ["Wednesday", "Friday"]),
     {
-      hardError: "A day cannot be both hard sparring and Support Work (non-hard training): Wednesday.",
-      softWarning: null,
-    },
-  );
-});
-
-test("blocks onboarding when hard sparring exceeds four days", () => {
-  assert.deepStrictEqual(
-    getSparringConsistency(
-      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-      ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-      [],
-    ),
-    {
-      hardError: "Hard sparring days cap is 4; reduce to 4 or fewer to continue.",
+      hardError: "A day cannot be both hard sparring and technical / lighter skill: Wednesday.",
       softWarning: null,
     },
   );

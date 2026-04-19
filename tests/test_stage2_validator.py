@@ -1209,39 +1209,6 @@ def test_validate_stage2_output_flags_weight_cut_state_contradiction():
     assert "weight_cut_state_contradiction" in warning_codes
 
 
-def test_validate_stage2_output_flags_high_pressure_cut_downplayed_as_moderate():
-    report = validate_stage2_output(
-        planning_brief=_weight_cut_planning_brief(high_pressure=True),
-        final_plan_text="""
-        ## PHASE 2: SPP
-        ### Week 5
-        - You are 25 days out with an active, moderate weight cut (~5.6%).
-        - Keep the work crisp.
-        """,
-    )
-
-    warning_codes = [warning["code"] for warning in report["warnings"]]
-    assert "high_pressure_weight_cut_underaddressed" in warning_codes
-
-
-def test_validate_stage2_output_flags_cut_band_contradiction_for_non_high_pressure_context():
-    report = validate_stage2_output(
-        planning_brief=_weight_cut_planning_brief(high_pressure=False),
-        final_plan_text="""
-        ## PHASE 1: GPP
-        ### Week 1
-        - Active high weight cut pressure this week, so we will trim accessories.
-        """,
-    )
-
-    warnings = report["warnings"]
-    warning_codes = [warning["code"] for warning in warnings]
-    assert "weight_cut_state_contradiction" in warning_codes
-    contradiction = next(w for w in warnings if w["code"] == "weight_cut_state_contradiction")
-    assert contradiction["expected_band"] == "moderate"
-    assert contradiction["stated_band"] == "high"
-
-
 # ---------------------------------------------------------------------------
 # Late-fight dosage ceiling tests
 # ---------------------------------------------------------------------------

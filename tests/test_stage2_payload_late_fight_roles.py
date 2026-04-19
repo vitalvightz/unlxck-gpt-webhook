@@ -16,7 +16,7 @@ _MINIMAL_ATHLETE = {
     "camp_length_weeks": 6,
     "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
     "hard_sparring_days": ["tuesday", "thursday"],
-        "support_work_days": ["friday"],
+    "technical_skill_days": ["friday"],
     "fatigue": "moderate",
     "fatigue_level": "moderate",
     "weight_cut_risk": False,

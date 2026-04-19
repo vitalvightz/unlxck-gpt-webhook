@@ -14,8 +14,6 @@ export type HardSparringWarning = {
   requiresAcknowledgement: boolean;
 };
 
-const HARD_SPARRING_DAY_CAP = 4;
-
 function getSortedUniqueDays(days: string[]): string[] {
   return [...new Set(days)].sort((left, right) => left.localeCompare(right));
 }
@@ -52,16 +50,8 @@ export function getAvailabilityConsistency(
 export function getSparringConsistency(
   trainingAvailability: string[],
   hardSparringDays: string[],
-  supportWorkDays: string[],
+  technicalSkillDays: string[],
 ): SparringConsistency {
-  const normalizedHardSparringDays = getSortedUniqueDays(hardSparringDays);
-  if (normalizedHardSparringDays.length > HARD_SPARRING_DAY_CAP) {
-    return {
-      hardError: `Hard sparring days cap is ${HARD_SPARRING_DAY_CAP}; reduce to ${HARD_SPARRING_DAY_CAP} or fewer to continue.`,
-      softWarning: null,
-    };
-  }
-
   const available = new Set(trainingAvailability);
   const invalidHard = hardSparringDays.filter((day) => !available.has(day));
   if (invalidHard.length) {
@@ -71,26 +61,26 @@ export function getSparringConsistency(
     };
   }
 
-  const invalidSupport = supportWorkDays.filter((day) => !available.has(day));
-  if (invalidSupport.length) {
+  const invalidTechnical = technicalSkillDays.filter((day) => !available.has(day));
+  if (invalidTechnical.length) {
     return {
-      hardError: `Support Work Days (non-hard training / S&C-compatible slots) must also be selected as available days: ${invalidSupport.join(", ")}.`,
+      hardError: `Technical / lighter skill days must also be selected as available days: ${invalidTechnical.join(", ")}.`,
       softWarning: null,
     };
   }
 
-  const overlap = hardSparringDays.filter((day) => supportWorkDays.includes(day));
+  const overlap = hardSparringDays.filter((day) => technicalSkillDays.includes(day));
   if (overlap.length) {
     return {
-      hardError: `A day cannot be both hard sparring and Support Work (non-hard training): ${overlap.join(", ")}.`,
+      hardError: `A day cannot be both hard sparring and technical / lighter skill: ${overlap.join(", ")}.`,
       softWarning: null,
     };
   }
 
-  if (!hardSparringDays.length && supportWorkDays.length) {
+  if (!hardSparringDays.length && technicalSkillDays.length) {
     return {
       hardError: null,
-      softWarning: "Non-hard training days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
+      softWarning: "Technical / lighter skill days are set, but hard sparring days are blank. That's fine if sparring is light or not fixed yet.",
     };
   }
 

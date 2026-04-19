@@ -12,8 +12,6 @@ export type AppetiteStatus = "normal" | "low" | "high";
 export type FoundationStatus = "incomplete" | "sufficient" | "complete";
 export type NutritionWorkspaceSource = "default" | "draft" | "intake";
 export type FightWeekOverrideBand = "none" | "final_day_protocol" | "micro_taper_protocol" | "mini_taper_protocol";
-// NOTE: "technical" is a legacy internal token kept for saved-draft/API compatibility.
-// It represents support_work_days (non-hard training / S&C-compatible slots).
 export type SessionDayType = "hard_spar" | "technical" | "strength" | "conditioning" | "recovery" | "off";
 
 export type GenerationJobStatus = "queued" | "running" | "completed" | "review_required" | "failed";
@@ -107,7 +105,7 @@ export type NutritionSharedCampContext = {
   weekly_training_frequency?: number | null;
   training_availability: string[];
   hard_sparring_days: string[];
-  support_work_days: string[];
+  technical_skill_days: string[];
   session_types_by_day: Record<string, SessionDayType>;
   injuries?: string;
   guided_injury?: GuidedInjuryInput | null;
@@ -154,7 +152,7 @@ export type PlanRequest = {
   equipment_access: string[];
   training_availability: string[];
   hard_sparring_days: string[];
-  support_work_days: string[];
+  technical_skill_days: string[];
   injuries?: string;
   guided_injury?: GuidedInjuryInput | null;
   guided_injuries?: GuidedInjuryInput[] | null;

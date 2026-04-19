@@ -5,7 +5,7 @@ from typing import Any
 
 from .injury_formatting import parse_injury_entry
 from .sparring_dose_planner import compute_hard_sparring_plan, effective_hard_day_count
-from .weight_cut import compute_cut_severity_score, compute_weight_cut_pct, cut_severity_bucket
+from .weight_cut import compute_weight_cut_pct
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
 
 _ORDERED_WEEKDAYS = (
@@ -153,21 +153,15 @@ def _fatigue_score(athlete_snapshot: dict[str, Any]) -> tuple[int, str | None]:
 
 
 def _cut_score(athlete_snapshot: dict[str, Any], *, cut_pct: float) -> tuple[int, str | None]:
-    bucket = str(athlete_snapshot.get("cut_severity_bucket") or "").strip().lower()
-    if not bucket:
-        bucket = cut_severity_bucket(
-            compute_cut_severity_score(
-                cut_pct,
-                athlete_snapshot.get("days_until_fight"),
-            )
-        )
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
+    has_active_cut_flag = "active_weight_cut" in readiness_flags
 
-    if bucket in {"critical", "extreme"}:
-        return 2, f"cut pressure is severe at about {cut_pct:.1f}%"
-    if bucket == "high":
+    if cut_pct >= 5.0:
         return 2, f"cut pressure is meaningful at about {cut_pct:.1f}%"
-    if bucket == "moderate":
+    if cut_pct >= 3.0:
         return 1, f"an active cut is still in play at about {cut_pct:.1f}%"
+    if has_active_cut_flag:
+        return 1, "an active cut is already in play"
     return 0, None
 
 
@@ -427,14 +421,10 @@ def _future_state_label(
     elif fatigue == "moderate":
         parts.append("elevated fatigue")
 
-    cut_bucket = str(athlete_snapshot.get("cut_severity_bucket") or "").strip().lower()
-    if not cut_bucket:
-        cut_bucket = cut_severity_bucket(
-            compute_cut_severity_score(cut_pct, athlete_snapshot.get("days_until_fight"))
-        )
-    if cut_bucket in {"high", "critical", "extreme"}:
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
+    if cut_pct >= 5.0:
         parts.append("an aggressive cut")
-    elif cut_bucket == "moderate":
+    elif cut_pct >= 3.0 or "active_weight_cut" in readiness_flags:
         parts.append("an active cut")
 
     injury_label = _injury_label(highest_injury)
