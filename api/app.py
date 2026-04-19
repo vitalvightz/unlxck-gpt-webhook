@@ -279,11 +279,14 @@ def _default_planner(payload: dict[str, Any]) -> dict[str, Any]:
     return runtime_default_planner(payload)
 
 
-def _health_payload(*, mode_label: str) -> dict[str, str | bool]:
+def _health_payload(*, mode_label: str, enable_in_process_generation: bool) -> dict[str, str | bool]:
+    generation_runner_mode = "in_process" if enable_in_process_generation else "external_worker_required"
     return {
         "ok": True,
         "app": "unlxck-fight-camp-api",
         "mode": mode_label,
+        "generation_runner_mode": generation_runner_mode,
+        "enable_in_process_generation": enable_in_process_generation,
     }
 
 
@@ -818,7 +821,10 @@ def create_app(
 
     @app.get("/", include_in_schema=False)
     def root(request: Request) -> dict[str, str | bool]:
-        return _health_payload(mode_label=str(request.app.state.mode_label))
+        return _health_payload(
+            mode_label=str(request.app.state.mode_label),
+            enable_in_process_generation=bool(request.app.state.enable_in_process_generation),
+        )
 
     @app.head("/", include_in_schema=False)
     def root_head() -> None:
@@ -826,7 +832,10 @@ def create_app(
 
     @app.get("/health")
     def health(request: Request) -> dict[str, str | bool]:
-        return _health_payload(mode_label=str(request.app.state.mode_label))
+        return _health_payload(
+            mode_label=str(request.app.state.mode_label),
+            enable_in_process_generation=bool(request.app.state.enable_in_process_generation),
+        )
 
     @app.get("/api/me", response_model=MeResponse)
     def get_me(
@@ -1378,6 +1387,11 @@ def create_app(
 
 def _build_runtime_app() -> FastAPI:
     enable_in_process_generation = os.getenv("UNLXCK_ENABLE_IN_PROCESS_GENERATION", "0").strip() == "1"
+    if not enable_in_process_generation:
+        logger.warning(
+            "[app] generation_runner_mode=external_worker_required; set UNLXCK_ENABLE_IN_PROCESS_GENERATION=1 "
+            "or run `python -m api.worker` so queued jobs are executed"
+        )
     logger.info(
         "[app] build_runtime_app:start demo_mode=%s has_supabase_url=%s has_service_role_key=%s in_process_generation=%s",
         os.getenv("UNLXCK_DEMO_MODE"),

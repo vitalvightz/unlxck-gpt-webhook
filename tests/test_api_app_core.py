@@ -55,6 +55,33 @@ def test_root_and_health_return_ok_for_render_probes():
         "ok": True,
         "app": "unlxck-fight-camp-api",
         "mode": "test",
+        "generation_runner_mode": "in_process",
+        "enable_in_process_generation": True,
+    }
+    assert health_response.status_code == 200
+    assert health_response.json() == root_response.json()
+
+
+def test_root_and_health_surface_external_worker_requirement_when_in_process_runner_is_disabled():
+    app = create_app(
+        store=FakeStore(),
+        auth_service=FakeAuthService({}),
+        stage2_automator=FakeStage2Automator(),
+        mode_label="test",
+        enable_in_process_generation=False,
+    )
+
+    with TestClient(app) as client:
+        root_response = client.get("/")
+        health_response = client.get("/health")
+
+    assert root_response.status_code == 200
+    assert root_response.json() == {
+        "ok": True,
+        "app": "unlxck-fight-camp-api",
+        "mode": "test",
+        "generation_runner_mode": "external_worker_required",
+        "enable_in_process_generation": False,
     }
     assert health_response.status_code == 200
     assert health_response.json() == root_response.json()
