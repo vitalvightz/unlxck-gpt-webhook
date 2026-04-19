@@ -251,6 +251,11 @@ def main():
     )
     args = parser.parse_args()
 
+    if not os.path.exists(args.input):
+        raise FileNotFoundError(
+            f"Input JSON not found: {args.input}. Provide an app-native plan request fixture or generated planner payload."
+        )
+
     with open(args.input, "r", encoding="utf-8") as f:
         data = json.load(f)
     result = generate_plan_sync(data)
