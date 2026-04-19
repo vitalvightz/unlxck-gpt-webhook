@@ -644,7 +644,7 @@ def test_multi_card_high_improving_does_not_shadow_moderate_worsening_gate():
     assert "combo_gate:moderate_worsening" in triage.routing_reasons
 
 
-def test_multi_card_high_severity_without_trend_is_still_considered_for_risk_signals():
+def test_multi_card_high_severity_without_trend_routes_to_needs_review():
     payload = _payload_with_injury("")
     payload["guided_injuries"] = [
         {
@@ -666,8 +666,25 @@ def test_multi_card_high_severity_without_trend_is_still_considered_for_risk_sig
     triage = triage_injuries(PlanInput.from_payload(payload))
 
     assert "guided_injury:high_severity" in triage.routing_reasons
-    assert triage.mode == FULL_PLAN
-    assert triage.should_block_stage2 is False
+    assert "combo_gate:high_trend_missing" in triage.routing_reasons
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+
+
+def test_high_severity_missing_trend_with_function_loss_routes_to_restricted_rehab_only():
+    payload = _payload_with_injury("left knee is locked")
+    payload["guided_injury"] = {
+        "area": "left knee",
+        "severity": "high",
+        "trend": "",
+        "notes": "locked knee",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert "combo_gate:high_trend_missing" in triage.routing_reasons
+    assert triage.mode == RESTRICTED_REHAB_ONLY
+    assert triage.should_block_stage2 is True
 
 
 def test_second_guided_card_notes_feed_breathing_red_flag_logic():
