@@ -392,7 +392,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             sparring_risk_band=highest_band,
         )
 
-    if guided_combos.intersection({("high", "stable"), ("severe", "stable")}):
+    if ("high", "stable") in guided_combos:
         routing_reasons.add("combo_gate:high_stable")
         routing_reasons_sorted = sorted(routing_reasons)
         if (
