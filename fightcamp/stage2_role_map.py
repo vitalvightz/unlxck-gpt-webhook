@@ -1594,8 +1594,8 @@ def _build_weekly_role_map(
                 "phase_week_total": week_entry.get("phase_week_total"),
                 "declared_training_days": declared_training_days,
                 "active_training_days": (
-                    [day for day in declared_training_days if day in allowed_training_days]
-                    if allowed_training_days
+                    [day for day in declared_training_days if day.title() in allowed_training_days]
+                    if week_calendar
                     else declared_training_days
                 ),
                 "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
