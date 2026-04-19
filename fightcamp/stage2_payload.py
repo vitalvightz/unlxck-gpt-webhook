@@ -210,6 +210,63 @@ _TEXT_DERIVED_RESTRICTIONS = {
     ],
 }
 
+_WEEKDAY_NAMES = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
+_WEEKDAY_ORDER = {name: idx for idx, name in enumerate(_WEEKDAY_NAMES)}
+
+
+def _week_calendar_window(
+    *,
+    plan_creation_weekday: str | None,
+    week_start_offset: int,
+    span_days: int,
+    days_until_fight: Any,
+) -> dict[str, Any]:
+    """Build deterministic calendar truth for a planned week window."""
+    weekday_key = str(plan_creation_weekday or "").strip().lower()
+    base_index = _WEEKDAY_ORDER.get(weekday_key)
+    if base_index is None:
+        return {}
+
+    span = max(0, int(span_days or 0))
+    if span <= 0:
+        return {}
+
+    start_index = (base_index + week_start_offset) % 7
+    active_weekdays = [
+        _WEEKDAY_NAMES[(start_index + day_offset) % 7].title()
+        for day_offset in range(span)
+    ]
+
+    fight_offset: int | None = None
+    if isinstance(days_until_fight, int):
+        if week_start_offset <= days_until_fight < week_start_offset + span:
+            fight_offset = days_until_fight - week_start_offset
+
+    fight_weekday = active_weekdays[fight_offset] if isinstance(fight_offset, int) else None
+    allowed_training_days = (
+        active_weekdays[:fight_offset]
+        if isinstance(fight_offset, int)
+        else list(active_weekdays)
+    )
+
+    return {
+        "week_start_weekday": active_weekdays[0],
+        "week_end_weekday": active_weekdays[-1],
+        "active_weekdays": active_weekdays,
+        "fight_day_week": isinstance(fight_offset, int),
+        "fight_day_weekday": fight_weekday,
+        "fight_day_blocks_from_weekday": fight_weekday,
+        "allowed_training_days": allowed_training_days,
+    }
+
 
 def _slugify(value: str) -> str:
     cleaned = re.sub(r"[^a-z0-9]+", "_", (value or "").strip().lower())
@@ -3653,6 +3710,9 @@ def _build_weekly_role_map(
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
+    days_until_fight = athlete_model.get("days_until_fight")
+    plan_creation_weekday = athlete_model.get("plan_creation_weekday")
+    week_start_offset = 0
 
     for week_entry in week_by_week_progression.get("weeks", []):
         session_counts = dict(week_entry.get("session_counts") or {})
@@ -3852,17 +3912,32 @@ def _build_weekly_role_map(
             )
         for role in session_roles:
             _apply_day_identity_governance(role, crowded_week_active=crowded_week_active)
+        week_calendar = _week_calendar_window(
+            plan_creation_weekday=plan_creation_weekday,
+            week_start_offset=week_start_offset,
+            span_days=int(week_entry.get("span_days") or 0),
+            days_until_fight=days_until_fight,
+        )
+        declared_training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
+        allowed_training_days = set(_ordered_weekdays(_clean_list(week_calendar.get("allowed_training_days", []))))
 
         weeks.append(
             {
                 "week_index": week_entry.get("week_index"),
                 "phase": week_entry.get("phase"),
                 "stage_key": week_entry.get("stage_key"),
+                "span_days": week_entry.get("span_days"),
                 "phase_week_index": week_entry.get("phase_week_index"),
                 "phase_week_total": week_entry.get("phase_week_total"),
-                "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
+                "declared_training_days": declared_training_days,
+                "active_training_days": (
+                    [day for day in declared_training_days if day in allowed_training_days]
+                    if allowed_training_days
+                    else declared_training_days
+                ),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_support_work_days": _ordered_weekdays(_clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
+                "week_calendar": week_calendar,
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
                 "coach_note_flags": _dedupe_clean_strings(_clean_list(week_entry.get("coach_note_flags", []))),
@@ -3872,6 +3947,7 @@ def _build_weekly_role_map(
                 "suppressed_roles": suppressed_roles,
             }
         )
+        week_start_offset += int(week_entry.get("span_days") or 0)
 
     # Legacy fight_week_override compatibility (acts as further filter if still active)
     if fight_week_override and fight_week_override.get("active"):
@@ -4614,6 +4690,8 @@ def build_stage2_payload(
             "If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.",
             "If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, then one anchor, then at most one low-load support day.",
             "In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.",
+            "Use weekly_role_map.active_training_days as the only legal training days for that week; if it is present, do not schedule sessions outside that list.",
+            "If weekly_role_map.week_calendar.fight_day_week is true, do not schedule training on or after weekly_role_map.week_calendar.fight_day_weekday.",
             "In camps with 7 days or less to fight, only the compressed week-level priorities may drive standalone session purposes; keep all other selections as support, maintenance, or deferred notes only.",
             "When fight_week_override.active is true, treat it as mandatory. For 0-1 days, output readiness protocol notes only with no training week. For 2-3 days, output micro-taper only (one short primer max + one light recovery session). For 4-6 days, output mini taper only (freshness-first, minimal volume).",
             "If active weight cut is present, explicitly acknowledge that cut stress changes recovery and training tolerance in the athlete-facing plan.",
@@ -4728,6 +4806,8 @@ Keep every active week present and structurally complete, including late-camp we
 If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve one anchor if available, and allow at most one low-load support day.
 In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.
+Use weekly_role_map.active_training_days as the legal day set for each week when present; do not schedule sessions outside it.
+If weekly_role_map.week_calendar.fight_day_week is true, do not schedule training on or after weekly_role_map.week_calendar.fight_day_weekday.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
 If fatigue is high or fight-week pressure is active, reduce optionality and make the safest performance-preserving call plainly.

@@ -1108,6 +1108,56 @@ def test_build_planning_brief_adds_weekly_role_map_from_progression():
     assert first_week_roles[3]["anchor"] == "highest_neural_day"
 
 
+def test_weekly_role_map_trims_active_training_days_after_fight_day():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 3,
+            "days_until_fight": 17,
+            "plan_creation_weekday": "monday",
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            "training_frequency": 6,
+            "hard_sparring_days": ["Tuesday", "Thursday"],
+            "support_work_days": [],
+            "technical_skill_days": [],
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": [],
+            "equipment": ["air_bike"],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+        },
+        {
+            "SPP": {
+                "objective": "increase fight-specific repeatability and power transfer",
+                "emphasize": ["sport speed", "fight-pace transfer"],
+                "deprioritize": ["non-specific volume"],
+                "risk_flags": ["manage accumulated fatigue"],
+                "session_counts": {"strength": 2, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic", "rehab"],
+                    "conditioning_drop_order_if_thin": ["glycolytic"],
+                },
+                "weeks": 3,
+                "days": 21,
+            },
+        },
+    )
+
+    week_three = brief["weekly_role_map"]["weeks"][2]
+    assert week_three["week_calendar"]["fight_day_week"] is True
+    assert week_three["week_calendar"]["fight_day_weekday"] == "Thursday"
+    assert week_three["active_training_days"] == ["Monday", "Tuesday", "Wednesday"]
+    assert "Thursday" not in week_three["active_training_days"]
+
 
 def test_weekly_role_map_compresses_to_sharpness_and_freshness_for_short_notice():
     brief = _build_progression_brief(
