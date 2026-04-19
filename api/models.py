@@ -525,6 +525,31 @@ class PlanRequest(BaseModel):
             raise ValueError(f"hard sparring days cap is {_HARD_SPARRING_DAY_CAP}; reduce to {_HARD_SPARRING_DAY_CAP} or fewer to generate a plan")
         return value
 
+    @model_validator(mode="after")
+    def validate_schedule_days(self) -> "PlanRequest":
+        normalized_training_days = {day.strip().lower() for day in self.training_availability if str(day).strip()}
+
+        invalid_hard_days = [day for day in self.hard_sparring_days if str(day).strip().lower() not in normalized_training_days]
+        if invalid_hard_days:
+            raise ValueError(
+                f"hard_sparring_days must be included in training_availability: {', '.join(invalid_hard_days)}"
+            )
+
+        invalid_support_days = [day for day in self.support_work_days if str(day).strip().lower() not in normalized_training_days]
+        if invalid_support_days:
+            raise ValueError(
+                f"support_work_days must be included in training_availability: {', '.join(invalid_support_days)}"
+            )
+
+        support_day_set = {day.strip().lower() for day in self.support_work_days if str(day).strip()}
+        overlap_days = [day for day in self.hard_sparring_days if str(day).strip().lower() in support_day_set]
+        if overlap_days:
+            raise ValueError(
+                f"hard_sparring_days and support_work_days must not overlap: {', '.join(overlap_days)}"
+            )
+
+        return self
+
     def to_payload(self) -> dict[str, Any]:
         athlete = self.athlete
         fields = [
