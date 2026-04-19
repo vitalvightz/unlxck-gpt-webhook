@@ -1,5 +1,4 @@
 import asyncio
-import json
 import re
 import sys
 from pathlib import Path
@@ -14,6 +13,7 @@ from fightcamp.injury_formatting import (
 from fightcamp.injury_synonyms import split_injury_text
 from fightcamp.main import generate_plan
 from fightcamp.rehab_protocols import format_injury_guardrails
+from support import _build_request
 
 
 def test_format_injury_summary_basics():
@@ -57,8 +57,7 @@ def test_format_injury_summary_prefers_display_location():
 
 
 def test_plan_output_has_no_region_wrappers():
-    data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text(encoding="utf-8"))
+    data = _build_request().to_payload()
     data["random_seed"] = 7
     result = asyncio.run(generate_plan(data))
     plan_text = result.get("plan_text", "")

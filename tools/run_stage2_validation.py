@@ -15,7 +15,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate Stage 1 output, write the Stage 2 handoff, and optionally validate a Stage 2 final plan.",
     )
-    parser.add_argument("--input", default="test_data.json", help="Path to Stage 1 input JSON.")
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Path to Stage 1 input JSON. Provide an app-native plan request fixture or generated planner payload.",
+    )
     parser.add_argument("--handoff", default="stage2_handoff.txt", help="Path to write the external AI handoff text.")
     parser.add_argument("--final", default="final_plan.txt", help="Path to the external AI final plan text.")
     parser.add_argument("--retry", default="stage2_retry.txt", help="Path to write the repair prompt when validation needs a retry.")
@@ -31,7 +35,9 @@ async def main() -> int:
     retry_path = Path(args.retry)
 
     if not input_path.exists():
-        raise FileNotFoundError(f"Input JSON not found: {input_path}")
+        raise FileNotFoundError(
+            f"Input JSON not found: {input_path}. Provide an app-native plan request fixture or generated planner payload."
+        )
 
     data = json.loads(input_path.read_text(encoding="utf-8"))
     stage1 = await generate_plan(data)

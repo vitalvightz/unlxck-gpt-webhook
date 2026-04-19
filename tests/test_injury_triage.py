@@ -1,5 +1,3 @@
-import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -13,10 +11,11 @@ from fightcamp.injury_triage import (
 )
 from fightcamp.input_parsing import PlanInput
 from fightcamp.main import generate_plan_sync
+from support import _build_request
 
 
 def _base_payload() -> dict:
-    return json.loads((Path(__file__).resolve().parents[1] / "test_data.json").read_text(encoding="utf-8"))
+    return _build_request().to_payload()
 
 
 def _payload_with_injury(injury_text: str) -> dict:

@@ -12,19 +12,15 @@ from __future__ import annotations
 
 import asyncio
 import importlib
-import json
-from pathlib import Path
 
 import fightcamp.plan_pipeline as plan_pipeline
 import fightcamp.plan_pipeline_rendering as _rendering_module
 from fightcamp import main as main_module
 from fightcamp.main import generate_plan
-
-_DATA_PATH = Path(__file__).resolve().parents[1] / "test_data.json"
-
+from support import _build_request
 
 def _load_data() -> dict:
-    return json.loads(_DATA_PATH.read_text(encoding="utf-8"))
+    return _build_request().to_payload()
 
 
 # ---------------------------------------------------------------------------
