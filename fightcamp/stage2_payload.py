@@ -227,7 +227,7 @@ def _week_calendar_window(
     plan_creation_weekday: str | None,
     week_start_offset: int,
     span_days: int,
-    days_until_fight: Any,
+    days_until_fight: int | None,
 ) -> dict[str, Any]:
     """Build deterministic calendar truth for a planned week window."""
     weekday_key = str(plan_creation_weekday or "").strip().lower()
