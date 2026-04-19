@@ -71,6 +71,56 @@ _TRAUMA_CONTEXT_PATTERNS = (
 _NEURO_CONTEXT_PATTERN = r"\bneurolog(?:ic|ical)\b|\bnerve\b"
 
 
+_GUIDED_SEVERITY_RANK = {
+    "": 0,
+    "low": 1,
+    "mild": 1,
+    "moderate": 2,
+    "high": 3,
+    "severe": 3,
+}
+_GUIDED_TREND_RANK = {
+    "": 0,
+    "improving": 1,
+    "stable": 2,
+    "worse": 3,
+    "worsened": 3,
+    "worsening": 3,
+    "regressing": 3,
+}
+
+
+def _derive_highest_guided_combo(plan_input: PlanInput) -> tuple[str, str]:
+    guided_candidates: list[tuple[str, str]] = []
+    if plan_input.guided_injury is not None:
+        guided_candidates.append(
+            (
+                str(plan_input.guided_injury.severity or "").strip().lower(),
+                str(plan_input.guided_injury.trend or "").strip().lower(),
+            )
+        )
+
+    for item in plan_input.parsed_injuries or []:
+        if not isinstance(item, dict):
+            continue
+        trend = str(item.get("trend") or "").strip().lower()
+        if not trend:
+            continue
+        severity = str(item.get("severity") or "").strip().lower()
+        guided_candidates.append((severity, trend))
+
+    if not guided_candidates:
+        return "", ""
+
+    return max(
+        guided_candidates,
+        key=lambda combo: (
+            _GUIDED_SEVERITY_RANK.get(combo[0], 0),
+            _GUIDED_TREND_RANK.get(combo[1], 0),
+        ),
+    )
+
+
 @dataclass(frozen=True)
 class InjuryTriageResult:
     mode: str
@@ -118,8 +168,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         routing_reasons.add("urgent_flag:urgent_nerve")
 
     guided = plan_input.guided_injury
-    guided_severity = str((guided.severity if guided else "") or "").strip().lower()
-    guided_trend = str((guided.trend if guided else "") or "").strip().lower()
+    guided_severity, guided_trend = _derive_highest_guided_combo(plan_input)
     guided_avoid = str((guided.avoid if guided else "") or "").strip().lower()
     guided_notes = str((guided.notes if guided else "") or "").strip().lower()
 

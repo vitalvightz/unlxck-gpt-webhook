@@ -573,3 +573,45 @@ def test_moderate_stable_mild_non_structural_case_can_reach_full_plan():
 
     assert triage.mode == FULL_PLAN
     assert triage.should_block_stage2 is False
+
+
+def test_moderate_improving_guided_injury_does_not_block_planning():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "Right knee",
+        "severity": "moderate",
+        "trend": "improving",
+        "avoid": "",
+        "notes": "",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+
+
+def test_second_guided_injury_card_can_trigger_high_worsening_triage_gate():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "",
+        },
+        {
+            "area": "Left knee",
+            "severity": "high",
+            "trend": "worsening",
+            "avoid": "",
+            "notes": "",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+    assert "combo_gate:high_worsening" in triage.routing_reasons

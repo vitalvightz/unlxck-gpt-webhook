@@ -294,6 +294,61 @@ def test_guided_injuries_payload_parses_multiple_cards_and_preserves_notes():
     assert parsed.restrictions[0]["region"] == "hip"
 
 
+@pytest.mark.parametrize(
+    ("body_map_area", "expected_canonical"),
+    [
+        ("Head / Neck", "neck"),
+        ("Upper back", "upper back"),
+        ("Lower back", "lower back"),
+        ("Left glute", "glutes"),
+        ("Right quad", "quads"),
+        ("Core", "core"),
+    ],
+)
+def test_body_map_area_labels_map_to_backend_canonical_locations(body_map_area: str, expected_canonical: str):
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": body_map_area,
+        "severity": "moderate",
+        "trend": "stable",
+        "avoid": "",
+        "notes": "",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert parsed.parsed_injuries[0]["canonical_location"] == expected_canonical
+
+
+def test_guided_avoid_field_is_parsed_into_restriction_with_attached_region():
+    payload = _payload(
+        [
+            {"label": "Full name", "value": "Test Athlete"},
+            {"label": "Fighting Style (Technical)", "value": "Boxing"},
+            {"label": "Any injuries or areas you need to work around?", "value": ""},
+        ]
+    )
+    payload["guided_injury"] = {
+        "area": "Left shoulder",
+        "severity": "moderate",
+        "trend": "stable",
+        "avoid": "heavy overhead pressing",
+        "notes": "",
+    }
+
+    parsed = PlanInput.from_payload(payload)
+
+    assert len(parsed.restrictions) == 1
+    assert parsed.restrictions[0]["restriction"] == "heavy_overhead_pressing"
+    assert parsed.restrictions[0]["region"] == "shoulder"
+
+
 def test_guided_injuries_override_conflicting_guided_injury_for_consistency():
     payload = _payload(
         [
