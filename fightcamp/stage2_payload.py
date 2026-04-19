@@ -105,6 +105,9 @@ from .stage2_role_map import (  # noqa: F401
     _role_governance,
     _role_selection_rule,
     _split_phase_days,
+    _WEEKDAY_NAMES,
+    _WEEKDAY_ORDER,
+    _week_calendar_window,
 )
 
 
@@ -209,64 +212,6 @@ _TEXT_DERIVED_RESTRICTIONS = {
         "sprawl",
     ],
 }
-
-_WEEKDAY_NAMES = [
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-    "sunday",
-]
-_WEEKDAY_ORDER = {name: idx for idx, name in enumerate(_WEEKDAY_NAMES)}
-
-
-def _week_calendar_window(
-    *,
-    plan_creation_weekday: str | None,
-    week_start_offset: int,
-    span_days: int,
-    days_until_fight: int | None,
-) -> dict[str, Any]:
-    """Build deterministic calendar truth for a planned week window."""
-    weekday_key = str(plan_creation_weekday or "").strip().lower()
-    base_index = _WEEKDAY_ORDER.get(weekday_key)
-    if base_index is None:
-        return {}
-
-    span = max(0, int(span_days or 0))
-    if span <= 0:
-        return {}
-
-    start_index = (base_index + week_start_offset) % 7
-    active_weekdays = [
-        _WEEKDAY_NAMES[(start_index + day_offset) % 7].title()
-        for day_offset in range(span)
-    ]
-
-    fight_offset: int | None = None
-    if isinstance(days_until_fight, int):
-        if week_start_offset <= days_until_fight < week_start_offset + span:
-            fight_offset = days_until_fight - week_start_offset
-
-    fight_weekday = active_weekdays[fight_offset] if isinstance(fight_offset, int) else None
-    allowed_training_days = (
-        active_weekdays[:fight_offset]
-        if isinstance(fight_offset, int)
-        else list(active_weekdays)
-    )
-
-    return {
-        "week_start_weekday": active_weekdays[0],
-        "week_end_weekday": active_weekdays[-1],
-        "active_weekdays": active_weekdays,
-        "fight_day_week": isinstance(fight_offset, int),
-        "fight_day_weekday": fight_weekday,
-        "fight_day_blocks_from_weekday": fight_weekday,
-        "allowed_training_days": allowed_training_days,
-    }
-
 
 def _slugify(value: str) -> str:
     cleaned = re.sub(r"[^a-z0-9]+", "_", (value or "").strip().lower())
@@ -1925,17 +1870,6 @@ _CROWDED_SUPPORT_FORBIDDEN_TOKENS = [
     "sharpness_touch",
     "hard_sparring",
 ]
-_WEEKDAY_ORDER = {
-    "monday": 0,
-    "tuesday": 1,
-    "wednesday": 2,
-    "thursday": 3,
-    "friday": 4,
-    "saturday": 5,
-    "sunday": 6,
-}
-
-
 def _athlete_sport_key(athlete_model: dict) -> str:
     return str(athlete_model.get("sport") or "").strip().lower().replace(" ", "_")
 
