@@ -166,7 +166,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     guided_avoid = " | ".join(card["avoid"] for card in guided_cards if card["avoid"])
 
     has_guided_high_severity = any(
-        card["severity"] in {"high", "severe"} for card in guided_cards
+        card["severity"] == "high" for card in guided_cards
     )
     has_guided_worsening = any(
         card["trend"] in {"worse", "worsening", "regressing", "worsened"} for card in guided_cards
