@@ -126,7 +126,7 @@ def _is_stale_job(job: dict[str, Any], *, stale_after_seconds: int = 90) -> bool
 
 def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
     latest_intake = store.get_latest_intake(profile.athlete_id)
-    plans = _visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))
+    plans = store.list_user_plans(profile.athlete_id)
     latest_plan = _map_plan_summary(plans[0]) if plans else None
     return MeResponse(
         profile=profile,
@@ -139,7 +139,7 @@ def _build_me_response(profile: ProfileRecord, store: AppStore) -> MeResponse:
 def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateRequest) -> None:
     training_days = {day.strip().lower() for day in workspace.shared_camp_context.training_availability if str(day).strip()}
     hard_days = {day.strip().lower() for day in workspace.shared_camp_context.hard_sparring_days if str(day).strip()}
-    support_days = {day.strip().lower() for day in workspace.shared_camp_context.support_work_days if str(day).strip()}
+    technical_days = {day.strip().lower() for day in workspace.shared_camp_context.technical_skill_days if str(day).strip()}
 
     for day, session_type in workspace.shared_camp_context.session_types_by_day.items():
         normalized_day = str(day or "").strip().lower()
@@ -148,10 +148,10 @@ def _validate_session_type_consistency(workspace: NutritionWorkspaceUpdateReques
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"session_types_by_day.{day} must also be included in hard_sparring_days",
             )
-        if session_type == "technical" and normalized_day not in support_days:
+        if session_type == "technical" and normalized_day not in technical_days:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=f"session_types_by_day.{day} must also be included in support_work_days",
+                detail=f"session_types_by_day.{day} must also be included in technical_skill_days",
             )
         if session_type != "off" and normalized_day not in training_days:
             raise HTTPException(
@@ -177,24 +177,27 @@ def _validate_schedule_consistency(workspace: NutritionWorkspaceUpdateRequest) -
             detail=f"hard_sparring_days must be included in training_availability: {', '.join(invalid_hard_days)}",
         )
 
-    invalid_support_days = [day for day in shared.support_work_days if str(day).strip().lower() not in normalized_training_days]
-    if invalid_support_days:
+    invalid_technical_days = [day for day in shared.technical_skill_days if str(day).strip().lower() not in normalized_training_days]
+    if invalid_technical_days:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"support_work_days must be included in training_availability: {', '.join(invalid_support_days)}",
+            detail=f"technical_skill_days must be included in training_availability: {', '.join(invalid_technical_days)}",
         )
 
+    technical_days_set = {
+        day.strip().lower() for day in shared.technical_skill_days if str(day).strip()
+    }
     overlap = sorted(
         {
             hard_day
             for hard_day in shared.hard_sparring_days
-            if str(hard_day).strip().lower() in {day.strip().lower() for day in shared.support_work_days if str(day).strip()}
+            if str(hard_day).strip().lower() in technical_days_set
         }
     )
     if overlap:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"A day cannot be both hard_sparring and support_work: {', '.join(overlap)}",
+            detail=f"A day cannot be both hard_sparring and technical_skill: {', '.join(overlap)}",
         )
 
 
@@ -342,16 +345,6 @@ def _map_plan_summary(row: dict[str, Any]) -> PlanSummary:
         status=str(row.get("status") or "generated"),
         pdf_url=row.get("pdf_url"),
     )
-
-
-def _is_archived_plan(row: dict[str, Any] | None) -> bool:
-    if not isinstance(row, dict):
-        return False
-    return str(row.get("status") or "").strip().lower() == "archived"
-
-
-def _visible_plans_for_athlete(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [row for row in rows if not _is_archived_plan(row)]
 
 
 def _admin_draft_text(row: dict[str, Any]) -> str:
@@ -594,21 +587,6 @@ def _admin_rejected_result(plan_row: dict[str, Any]) -> dict[str, Any]:
         "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
         "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
         "stage2_status": "admin_review_rejected",
-        "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
-    }
-
-
-def _admin_archived_result(plan_row: dict[str, Any]) -> dict[str, Any]:
-    archived_text = str(plan_row.get("final_plan_text") or plan_row.get("draft_plan_text") or plan_row.get("plan_text") or "").strip()
-    return {
-        "status": "archived",
-        "plan_text": "",
-        "draft_plan_text": str(plan_row.get("draft_plan_text") or plan_row.get("plan_text") or ""),
-        "final_plan_text": archived_text,
-        "pdf_url": None,
-        "stage2_retry_text": str(plan_row.get("stage2_retry_text") or ""),
-        "stage2_validator_report": plan_row.get("stage2_validator_report") or {},
-        "stage2_status": "admin_archived",
         "stage2_attempt_count": int(plan_row.get("stage2_attempt_count") or 0),
     }
 
@@ -993,10 +971,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        plan_row = next(
-            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
-            None,
-        )
+        plan_row = store.get_latest_plan(profile.athlete_id)
         if not plan_row:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
@@ -1006,10 +981,7 @@ def create_app(
         profile: ProfileRecord = Depends(require_profile),
         store: AppStore = Depends(get_store),
     ) -> list[PlanSummary]:
-        rows = store.list_user_plans(profile.athlete_id)
-        if profile.role != "admin":
-            rows = _visible_plans_for_athlete(rows)
-        return [_map_plan_summary(row) for row in rows]
+        return [_map_plan_summary(row) for row in store.list_user_plans(profile.athlete_id)]
 
     @app.get("/api/plans/{plan_id}", response_model=PlanDetail)
     def get_plan(
@@ -1022,12 +994,9 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if profile.role != "admin" and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
 
     @app.patch("/api/plans/{plan_id}", response_model=PlanDetail)
-    @app.patch("/api/plans/{plan_id}/name", response_model=PlanDetail)
     def rename_plan(
         plan_id: str,
         update: PlanRenameRequest,
@@ -1195,22 +1164,6 @@ def create_app(
         updated = store.update_plan_stage2(
             plan_id,
             _admin_rejected_result(plan_row),
-        )
-        return _map_plan_detail(updated, include_admin=True)
-
-    @app.post("/api/admin/plans/{plan_id}/archive", response_model=PlanDetail)
-    def archive_plan(
-        plan_id: str,
-        _: ProfileRecord = Depends(require_admin),
-        store: AppStore = Depends(get_store),
-    ) -> PlanDetail:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-
-        updated = store.update_plan_stage2(
-            plan_id,
-            _admin_archived_result(plan_row),
         )
         return _map_plan_detail(updated, include_admin=True)
 
