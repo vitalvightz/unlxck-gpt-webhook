@@ -4,7 +4,6 @@ from typing import Any
 
 from .injury_formatting import parse_injury_entry
 from .normalization import clean_list, ordered_weekdays as _ordered_weekdays
-from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 _ORDERED_WEEKDAYS = (
     "Monday",
@@ -38,17 +37,16 @@ def _fatigue_level(athlete_snapshot: dict[str, Any]) -> str:
 
 
 def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
-    cut_bucket = str(athlete_snapshot.get("cut_severity_bucket") or "").strip().lower()
-    if not cut_bucket:
-        cut_bucket = cut_severity_bucket(
-            compute_cut_severity_score(
-                athlete_snapshot.get("weight_cut_pct"),
-                athlete_snapshot.get("days_until_fight"),
-            )
-        )
-    if cut_bucket in {"high", "critical", "extreme"}:
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
+    cut_pct = athlete_snapshot.get("weight_cut_pct")
+    try:
+        cut_value = float(cut_pct or 0.0)
+    except (TypeError, ValueError):
+        cut_value = 0.0
+
+    if "aggressive_weight_cut" in readiness_flags or cut_value >= 5.0:
         return "high"
-    if cut_bucket == "moderate":
+    if athlete_snapshot.get("weight_cut_risk") or "active_weight_cut" in readiness_flags or cut_value >= 3.0:
         return "moderate"
     return "none"
 
@@ -216,27 +214,14 @@ def _decide_action(
     if injury.get("worsening") and week_press == "high":
         return "convert"
 
-    # High-pressure environment with any active injury overrides readiness ordering.
-    if week_press == "high" and injury.get("severity") == "moderate" and hard_day_count >= 1:
-        return "deload"
-    # Four or more hard days in a single week exceeds safe density regardless of readiness signals.
-    if hard_day_count >= 4:
-        return "deload"
-    # Three hard days with two or more amber readiness signals: the "well-spaced, ready" allowance
-    # does not hold — deload one.
-    if hard_day_count >= 3:
-        amber_signals = sum(
-            1 for signal in (fatigue, cut, week_press) if signal in {"moderate", "high"}
-        )
-        if amber_signals >= 2:
-            return "deload"
-
     # --- Readiness-based deload ---
     if fatigue == "high" and hard_day_count >= 2:
         return "deload"
     if cut == "high" and hard_day_count >= 2:
         return "deload"
     if fatigue == "high" and cut in {"moderate", "high"} and hard_day_count >= 1:
+        return "deload"
+    if week_press == "high" and injury.get("severity") == "moderate" and hard_day_count >= 1:
         return "deload"
     if week_press == "high" and hard_day_count >= 2:
         return "deload"
@@ -310,154 +295,7 @@ def _reason_codes(
         codes.append("daily_symptoms")
     if hard_day_count >= 2:
         codes.append("two_hard_days")
-    if hard_day_count >= 4:
-        codes.append("four_hard_days")
     return codes
-
-
-def _hard_day_class(
-    entry: dict[str, Any],
-    *,
-    protected_day: str,
-    hard_days: list[str],
-) -> str:
-    if entry.get("effective_load") != "hard":
-        return "managed_hard"
-    day = entry["day"]
-    if protected_day:
-        return "primary_hard" if day == protected_day else "secondary_hard"
-    if hard_days and day == hard_days[0]:
-        return "primary_hard"
-    return "secondary_hard"
-
-
-def _annotate_hard_day_classes(
-    plan: list[dict[str, Any]],
-    *,
-    protected_day: str,
-    hard_days: list[str],
-) -> list[dict[str, Any]]:
-    return [
-        {**e, "hard_day_class": _hard_day_class(e, protected_day=protected_day, hard_days=hard_days)}
-        for e in plan
-    ]
-
-
-def _consecutive_hard_day_pairs(hard_days: list[str]) -> list[tuple[str, str]]:
-    """Return (earlier, later) pairs of hard days that are calendar-adjacent."""
-    order = {k.lower(): v for k, v in _WEEKDAY_ORDER.items()}
-    pairs = []
-    for i in range(len(hard_days) - 1):
-        idx_a = order.get(hard_days[i].lower(), -1)
-        idx_b = order.get(hard_days[i + 1].lower(), -1)
-        if idx_b - idx_a == 1:
-            pairs.append((hard_days[i], hard_days[i + 1]))
-    return pairs
-
-
-def sandwiched_training_days(
-    training_days: list[str],
-    effective_hard_days_set: set[str],
-) -> set[str]:
-    """Non-spar training days that fall between two effective hard spar days in the week."""
-    if len(effective_hard_days_set) < 2:
-        return set()
-    order = {k.lower(): v for k, v in _WEEKDAY_ORDER.items()}
-    hard_indices = sorted([order[d.lower()] for d in effective_hard_days_set if d.lower() in order])
-    if len(hard_indices) < 2:
-        return set()
-
-    min_idx, max_idx = hard_indices[0], hard_indices[-1]
-    result: set[str] = set()
-    for day in training_days:
-        if day in effective_hard_days_set:
-            continue
-        idx = order.get(day.lower(), -1)
-        if min_idx < idx < max_idx:
-            result.add(day)
-    return result
-
-
-def _apply_consecutive_deloads(
-    plan: list[dict[str, Any]],
-    *,
-    hard_days: list[str],
-    protected_day: str,
-) -> list[dict[str, Any]]:
-    """Deload the later day of any still-hard consecutive pair (earlier if later is protected)."""
-    plan_by_day = {e["day"]: dict(e) for e in plan}
-    for earlier, later in _consecutive_hard_day_pairs(hard_days):
-        if (
-            plan_by_day.get(earlier, {}).get("effective_load") != "hard"
-            or plan_by_day.get(later, {}).get("effective_load") != "hard"
-        ):
-            continue
-        target = later if later != protected_day else earlier
-        entry = plan_by_day[target]
-        codes = list(entry.get("reason_codes") or [])
-        if "consecutive_hard_days" not in codes:
-            codes.append("consecutive_hard_days")
-        plan_by_day[target] = {
-            **entry,
-            "status": "deload_suggested",
-            "effective_load": "reduced",
-            "reason_codes": codes,
-            "reason": entry.get("reason") or "consecutive_hard_days",
-        }
-    return [plan_by_day[d] for d in hard_days]
-
-
-def _apply_hard_day_cap(
-    plan: list[dict[str, Any]],
-    *,
-    hard_days: list[str],
-    protected_day: str,
-    cap: int = 2,
-) -> list[dict[str, Any]]:
-    """Reduce effective hard days to at most cap, targeting least-protected days first."""
-    plan_by_day = {e["day"]: dict(e) for e in plan}
-    while True:
-        effective = [d for d in hard_days if plan_by_day[d].get("effective_load") == "hard"]
-        if len(effective) <= cap:
-            break
-        target = next((d for d in reversed(effective) if d != protected_day), effective[-1])
-        entry = plan_by_day[target]
-        codes = list(entry.get("reason_codes") or [])
-        if "hard_day_cap" not in codes:
-            codes.append("hard_day_cap")
-        existing_reason = entry.get("reason") or ""
-        cap_note = (
-            "Four or more hard sparring sessions were declared this week. "
-            "This session is preserved in the schedule as a managed/deloaded exposure "
-            "to protect load quality across the full week — the slot is not removed."
-        )
-        new_reason = f"{existing_reason}; {cap_note}".lstrip("; ") if existing_reason else cap_note
-        plan_by_day[target] = {
-            **entry,
-            "status": "deload_suggested",
-            "effective_load": "reduced",
-            "reason_codes": codes,
-            "reason": new_reason,
-        }
-    return [plan_by_day[d] for d in hard_days]
-
-
-def _finalize_plan(
-    plan: list[dict[str, Any]],
-    *,
-    hard_days: list[str],
-    protected_day: str,
-) -> list[dict[str, Any]]:
-    """Run the post-processing pipeline: consecutive-pair deload, 4+ day cap, classification.
-
-    Centralizes invariants so every return path in ``compute_hard_sparring_plan``
-    is guaranteed to pass through the same rules regardless of which branch produced
-    the plan. Consecutive and cap passes are no-ops when no eligible pairs remain.
-    """
-    plan = _apply_consecutive_deloads(plan, hard_days=hard_days, protected_day=protected_day)
-    if len(hard_days) >= 4:
-        plan = _apply_hard_day_cap(plan, hard_days=hard_days, protected_day=protected_day)
-    return _annotate_hard_day_classes(plan, protected_day=protected_day, hard_days=hard_days)
 
 
 def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> list[dict[str, Any]]:
@@ -473,7 +311,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     week_press = _week_pressure(week, athlete_snapshot)
     injury = _injury_assessment(athlete_snapshot)
     days_until_fight = athlete_snapshot.get("days_until_fight")
-    protected_day = _pick_protected_hard_day(hard_days, week=week)
 
     action = _decide_action(
         hard_day_count=len(hard_days),
@@ -484,7 +321,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         days_until_fight=days_until_fight,
     )
     if action is None:
-        plan: list[dict[str, Any]] = [
+        return [
             {
                 "day": day,
                 "status": "hard_as_planned",
@@ -494,7 +331,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
             for day in hard_days
         ]
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
     reason_codes_list = _reason_codes(
         fatigue=fatigue,
@@ -514,7 +350,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         if "fight_week_taper" not in countdown_codes:
             countdown_codes.insert(0, "fight_week_taper")
         countdown_reason = ", ".join(countdown_codes)
-        plan = [
+        return [
             {
                 "day": day,
                 "status": target_status,
@@ -525,10 +361,10 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
             }
             for day in hard_days
         ]
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
     # --- D-7 countdown cap: keep only one hard day and downgrade the rest ---
     if countdown_override == "cap_one":
+        protected_day = _pick_protected_hard_day(hard_days, week=week)
         countdown_codes = list(reason_codes_list)
         if "fight_week_taper" not in countdown_codes:
             countdown_codes.insert(0, "fight_week_taper")
@@ -557,7 +393,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                     "coach_note": _sparring_override_coach_note(days_until_fight, action),
                 }
             )
-        return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
+        return plan
 
     # --- Single-target downgrade (readiness-based only) ---
     target_day = _pick_downgrade_target(hard_days, week=week)
@@ -565,15 +401,16 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     plan: list[dict[str, Any]] = []
     for day in hard_days:
         if day == target_day:
-            plan.append(
-                {
-                    "day": day,
-                    "status": target_status,
-                    "effective_load": target_load,
-                    "reason_codes": list(reason_codes_list),
-                    "reason": target_reason,
-                }
-            )
+            entry: dict[str, Any] = {
+                "day": day,
+                "status": target_status,
+                "effective_load": target_load,
+                "reason_codes": list(reason_codes_list),
+                "reason": target_reason,
+            }
+            if countdown_override == "cap_one":
+                entry["coach_note"] = _sparring_override_coach_note(days_until_fight, action)
+            plan.append(entry)
             continue
         plan.append(
             {
@@ -584,7 +421,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "reason": "",
             }
         )
-    return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
+    return plan
 
 
 _COUNTDOWN_COACH_NOTES: dict[int, str] = {

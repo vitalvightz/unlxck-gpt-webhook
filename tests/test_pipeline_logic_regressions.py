@@ -28,7 +28,7 @@ class _ContextStub:
         self.sanitize_labels = ()
         self.plan_input = SimpleNamespace(
             hard_sparring_days=[],
-            support_work_days=[],
+            technical_skill_days=[],
         )
 
     def phase_active(self, phase: str) -> bool:
@@ -116,15 +116,14 @@ def test_sparring_adjustment_lines_use_declared_days_when_present():
     context = _ContextStub()
     context.plan_input = SimpleNamespace(
         hard_sparring_days=["Tuesday", "Saturday"],
-        support_work_days=["Monday"],
+        technical_skill_days=["Monday"],
     )
 
     lines = _sparring_adjustment_lines(context)
     nutrition_lines = _sparring_nutrition_lines(context)
 
     assert "Tuesday, Saturday" in "\n".join(lines)
-    assert "s&c-compatible slots" in "\n".join(lines).lower()
-    assert "technical skill days" not in "\n".join(lines).lower()
+    assert "technical / lighter skill days" in "\n".join(lines).lower()
     assert "Tuesday, Saturday" in "\n".join(nutrition_lines)
 
 

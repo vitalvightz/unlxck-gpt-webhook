@@ -58,7 +58,7 @@ const SLEEP_OPTIONS = [
 const WEIGHT_SOURCE_OPTIONS = ["", "manual", "latest_bodyweight_log", "imported"];
 const DAY_TYPE_OPTIONS: Array<{ value: Extract<SessionDayType, "hard_spar" | "technical" | "conditioning" | "recovery">; label: string }> = [
   { value: "hard_spar", label: "Hard sparring" },
-  { value: "technical", label: "Support work (non-hard)" },
+  { value: "technical", label: "Light technical" },
   { value: "conditioning", label: "Conditioning" },
   { value: "recovery", label: "Recovery" },
 ];
@@ -96,7 +96,7 @@ function normalizeTrainingSelections(
       nextSessionTypes[day] = "hard_spar";
       continue;
     }
-    if (request.shared_camp_context.support_work_days.includes(day)) {
+    if (request.shared_camp_context.technical_skill_days.includes(day)) {
       nextSessionTypes[day] = "technical";
     }
   }
@@ -107,7 +107,7 @@ function normalizeTrainingSelections(
       .filter(([, value]) => value === "hard_spar")
       .map(([day]) => day),
   );
-  const supportWorkDays = sortTrainingDays(
+  const technicalSkillDays = sortTrainingDays(
     Object.entries(nextSessionTypes)
       .filter(([, value]) => value === "technical")
       .map(([day]) => day),
@@ -118,7 +118,7 @@ function normalizeTrainingSelections(
     shared_camp_context: {
       ...request.shared_camp_context,
       hard_sparring_days: hardSparringDays,
-      support_work_days: supportWorkDays,
+      technical_skill_days: technicalSkillDays,
       training_availability: trainingAvailability,
       session_types_by_day: nextSessionTypes,
     },
@@ -521,7 +521,7 @@ export function NutritionWorkspaceScreen() {
                       </div>
                     ))}
                   </div>
-                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and Support Work Days (non-hard training / S&C-compatible slots) still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
+                  <p className="muted">Pick the day type directly for each weekday. Hard sparring and light technical still feed the saved planning fields automatically, while conditioning and recovery stay available here too.</p>
                 </article>
 
                 <article className="step-card nutrition-section">

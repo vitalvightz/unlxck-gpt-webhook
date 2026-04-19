@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from api.models import NutritionSharedCampContext, PlanRequest
+from api.models import PlanRequest
 from support import _build_request
 
 
@@ -29,7 +29,7 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
         equipment_access=[],
         training_availability=[],
         hard_sparring_days=[],
-        support_work_days=[],
+        technical_skill_days=[],
         key_goals=[],
         weak_areas=[],
     ).to_payload()
@@ -39,45 +39,9 @@ def test_plan_request_to_payload_keeps_list_backed_fields_as_lists_when_empty():
     assert fields["Equipment Access"] == []
     assert fields["Training Availability"] == []
     assert fields["Hard Sparring Days"] == []
-    assert fields["Support Work Days"] == []
+    assert fields["Technical Skill Days"] == []
     assert fields["What are your key performance goals?"] == []
     assert fields["Where do you feel weakest right now?"] == []
-
-
-def test_plan_request_rejects_more_than_four_hard_sparring_days():
-    with pytest.raises(ValidationError, match="hard sparring days cap is 4"):
-        PlanRequest(
-            athlete={
-                "full_name": "Ari Mensah",
-                "technical_style": ["boxing"],
-            },
-            fight_date="2026-04-18",
-            hard_sparring_days=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-        )
-
-
-def test_plan_request_migrates_legacy_technical_skill_days_to_support_work_days():
-    request = PlanRequest(
-        athlete={
-            "full_name": "Ari Mensah",
-            "technical_style": ["boxing"],
-        },
-        fight_date="2026-04-18",
-        technical_skill_days=["Tuesday", "Friday"],
-    )
-
-    assert request.support_work_days == ["Tuesday", "Friday"]
-
-
-def test_nutrition_shared_context_migrates_legacy_technical_skill_days_to_support_work_days():
-    shared = NutritionSharedCampContext.model_validate(
-        {
-            "training_availability": ["Tuesday", "Friday"],
-            "technical_skill_days": ["Tuesday", "Friday"],
-        }
-    )
-
-    assert shared.support_work_days == ["Tuesday", "Friday"]
 
 
 def test_plan_request_to_payload_includes_guided_injury_when_present():
