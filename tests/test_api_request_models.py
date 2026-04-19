@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
 from pydantic import ValidationError
 
 from api.models import NutritionSharedCampContext, PlanRequest
 from fightcamp.input_parsing import PlanInput
+from fightcamp.plan_pipeline_runtime import build_runtime_context
 from support import _build_request
 
 
@@ -57,6 +60,46 @@ def test_plan_request_rejects_more_than_four_hard_sparring_days():
         )
 
 
+def test_plan_request_rejects_hard_sparring_day_outside_training_availability():
+    with pytest.raises(ValidationError, match="hard_sparring_days must be included in training_availability"):
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+            },
+            fight_date="2026-04-18",
+            training_availability=["Monday", "Wednesday"],
+            hard_sparring_days=["Tuesday"],
+        )
+
+
+def test_plan_request_rejects_support_work_day_outside_training_availability():
+    with pytest.raises(ValidationError, match="support_work_days must be included in training_availability"):
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+            },
+            fight_date="2026-04-18",
+            training_availability=["Monday", "Wednesday"],
+            support_work_days=["Friday"],
+        )
+
+
+def test_plan_request_rejects_overlap_between_hard_sparring_and_support_work_days():
+    with pytest.raises(ValidationError, match="hard_sparring_days and support_work_days must not overlap"):
+        PlanRequest(
+            athlete={
+                "full_name": "Ari Mensah",
+                "technical_style": ["boxing"],
+            },
+            fight_date="2026-04-18",
+            training_availability=["Tuesday", "Thursday"],
+            hard_sparring_days=["Tuesday"],
+            support_work_days=["Tuesday"],
+        )
+
+
 def test_plan_request_migrates_legacy_technical_skill_days_to_support_work_days():
     request = PlanRequest(
         athlete={
@@ -64,10 +107,37 @@ def test_plan_request_migrates_legacy_technical_skill_days_to_support_work_days(
             "technical_style": ["boxing"],
         },
         fight_date="2026-04-18",
+        training_availability=["Tuesday", "Friday"],
         technical_skill_days=["Tuesday", "Friday"],
     )
 
     assert request.support_work_days == ["Tuesday", "Friday"]
+
+
+def test_plan_request_payload_round_trip_normalizes_real_app_goal_and_weakness_labels():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["Counter Striker"],
+        },
+        fight_date="2026-08-30",
+        training_availability=["Monday", "Tuesday", "Thursday", "Saturday"],
+        hard_sparring_days=["Tuesday", "Saturday"],
+        support_work_days=["Monday"],
+        key_goals=["Power & Explosiveness", "Speed / Reaction"],
+        weak_areas=["Coordination / Proprioception"],
+    )
+
+    parsed = PlanInput.from_payload(request.to_payload())
+    context = build_runtime_context(
+        plan_input=parsed,
+        random_seed=1,
+        logger=logging.getLogger(__name__),
+    )
+
+    assert context.training_context.key_goals == ["explosive", "reactive"]
+    assert context.training_context.weaknesses == ["coordination"]
 
 
 def test_nutrition_shared_context_migrates_legacy_technical_skill_days_to_support_work_days():
