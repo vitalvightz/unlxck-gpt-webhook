@@ -1888,7 +1888,7 @@ def _ordered_weekdays(values: list[str]) -> list[str]:
 
 
 def _declared_day_sets(athlete_model: dict) -> tuple[list[str], set[str], set[str]]:
-    training_days = _ordered_weekdays(_clean_list(athlete_model.get("training_days", [])))
+    training_days = _ordered_weekdays(clean_list(athlete_model.get("training_days", [])))
     hard_sparring = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))) if day in training_days}
     technical_skill = {day for day in _ordered_weekdays(_clean_list(athlete_model.get("technical_skill_days", []))) if day in training_days}
     return training_days, hard_sparring, technical_skill
