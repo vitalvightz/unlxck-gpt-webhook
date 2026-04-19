@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from api.models import NutritionSharedCampContext, PlanRequest
+from fightcamp.input_parsing import PlanInput
 from support import _build_request
 
 
@@ -126,6 +127,42 @@ def test_plan_request_to_payload_includes_guided_injuries_and_mirrors_first_card
     assert payload["guided_injury"]["area"] == "hip flexor"
     assert payload["guided_injuries"][0]["area"] == "hip flexor"
     assert payload["guided_injuries"][1]["area"] == "right heel"
+
+
+def test_plan_request_payload_round_trip_into_plan_input():
+    request = PlanRequest(
+        athlete={
+            "full_name": "Ari Mensah",
+            "technical_style": ["boxing"],
+            "tactical_style": ["pressure_fighter"],
+        },
+        fight_date="2026-08-30",
+        training_availability=["Monday", "Tuesday", "Thursday", "Saturday"],
+        hard_sparring_days=["Tuesday", "Saturday"],
+        support_work_days=["Monday"],
+        equipment_access=["barbell", "heavy_bag"],
+        key_goals=["power", "conditioning"],
+        weak_areas=["gas_tank", "defense"],
+        guided_injury={
+            "area": "left rib",
+            "severity": "high",
+            "trend": "worsening",
+            "avoid": "contact and hard sparring",
+            "notes": "pain breathing deeply after body shot",
+        },
+    )
+
+    parsed = PlanInput.from_payload(request.to_payload())
+
+    assert parsed.next_fight_date == "2026-08-30"
+    assert parsed.training_days == ["Monday", "Tuesday", "Thursday", "Saturday"]
+    assert parsed.hard_sparring_days == ["Tuesday", "Saturday"]
+    assert parsed.support_work_days == ["Monday"]
+    assert parsed.equipment_access == "barbell, heavy_bag"
+    assert parsed.key_goals == "power, conditioning"
+    assert parsed.weak_areas == "gas_tank, defense"
+    assert parsed.guided_injury is not None
+    assert parsed.guided_injury.area == "left rib"
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,6 @@
 import json
 import logging
 import os
-from pathlib import Path
 from time import perf_counter
 
 from .input_parsing import PlanInput
@@ -107,7 +106,7 @@ def generate_plan_sync(data: dict, *, generate_pdf: bool | None = None):
     Parameters
     ----------
     data:
-        Raw webhook / form payload.
+        Raw planner bridge payload.
     generate_pdf:
         Whether to render and upload a PDF.  When *None* (the default) the
         value of the ``UNLXCK_ENABLE_PLAN_PDF`` environment variable is used
@@ -240,10 +239,24 @@ async def generate_plan(data: dict, *, generate_pdf: bool | None = None):
 
 
 def main():
-    data_file = Path("test_data.json").resolve()
-    if not data_file.exists():
-        raise FileNotFoundError(f"Test data file not found: {data_file}")
-    with open(data_file, "r", encoding="utf-8") as f:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Developer CLI: generate a plan from a planner bridge payload JSON file.",
+    )
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Path to planner bridge payload JSON generated from app-native PlanRequest.",
+    )
+    args = parser.parse_args()
+
+    if not os.path.exists(args.input):
+        raise FileNotFoundError(
+            f"Input JSON not found: {args.input}. Provide an app-native plan request fixture or generated planner payload."
+        )
+
+    with open(args.input, "r", encoding="utf-8") as f:
         data = json.load(f)
     result = generate_plan_sync(data)
     print(f"::notice title=Plan PDF::{result.get('pdf_url')}")

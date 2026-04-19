@@ -12,20 +12,16 @@ Covers:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from pathlib import Path
 from unittest.mock import patch
 
 
 import fightcamp.plan_pipeline_runtime as _runtime
 from fightcamp.main import generate_plan
-
-_DATA_PATH = Path(__file__).resolve().parents[1] / "test_data.json"
-
+from support import _build_request
 
 def _load_data() -> dict:
-    return json.loads(_DATA_PATH.read_text(encoding="utf-8"))
+    return _build_request().to_payload()
 
 
 # ---------------------------------------------------------------------------

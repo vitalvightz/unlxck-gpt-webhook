@@ -1,17 +1,15 @@
 import asyncio
-import json
-from pathlib import Path
 
 from fightcamp.conditioning import _glycolytic_fallback, format_drill_block, render_conditioning_block
 from fightcamp.diagnostics import _late_fight_lever, _short_notice_lever, format_missing_system_block
 from fightcamp.main import generate_plan
 from fightcamp.stage2_payload import build_planning_brief, build_stage2_payload
 from fightcamp.training_context import TrainingContext
+from support import _build_request
 
 
 def test_plan_missing_system_messaging():
-    data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text(encoding="utf-8"))
+    data = _build_request().to_payload()
     result = asyncio.run(generate_plan(data))
     plan_text = result["plan_text"]
     forbidden_phrases = [
@@ -25,8 +23,7 @@ def test_plan_missing_system_messaging():
 
 
 def test_plan_text_has_no_mojibake_or_duplicate_time_short_prefix():
-    data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text(encoding="utf-8"))
+    data = _build_request().to_payload()
     result = asyncio.run(generate_plan(data))
     plan_text = result["plan_text"]
 
@@ -290,8 +287,7 @@ def test_generate_plan_rejects_missing_generation_requirements():
 
 
 def test_generate_plan_returns_stage2_payload():
-    data_path = Path(__file__).resolve().parents[1] / "test_data.json"
-    data = json.loads(data_path.read_text(encoding="utf-8"))
+    data = _build_request().to_payload()
     result = asyncio.run(generate_plan(data))
 
     payload = result.get("stage2_payload")
