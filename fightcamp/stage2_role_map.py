@@ -14,6 +14,7 @@ from .sparring_dose_planner import (
     compute_hard_sparring_plan,
     effective_hard_day_count,
     effective_hard_days,
+    sandwiched_training_days,
 )
 from .stage2_payload_late_fight import (
     _build_late_fight_week_by_week_progression,
@@ -361,6 +362,9 @@ def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) ->
 
 def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
+    hard_sparring_class = str((plan_entry or {}).get("hard_day_class") or "").strip() or (
+        "managed_hard" if status != "hard_as_planned" else "primary_hard"
+    )
     reason_codes = list((plan_entry or {}).get("reason_codes") or [])
     coach_note_flags = _hard_sparring_coach_note_flags(plan_entry)
     role: dict[str, Any] = {
@@ -394,6 +398,7 @@ def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] |
         "scheduled_day_hint": day,
         "day_assignment_reason": "Declared hard sparring day is fixed in the weekly role map.",
         "hard_sparring_status": status,
+        "hard_sparring_class": hard_sparring_class,
         "hard_sparring_reason_codes": reason_codes,
         "hard_sparring_reason": str((plan_entry or {}).get("reason") or ""),
         "coach_note_flags": coach_note_flags,
@@ -1047,6 +1052,33 @@ def _apply_high_fatigue_week_compression(
             hard_sparring_plan=hard_sparring_plan,
         )
 
+    # Structural rule: suppress glycolytic on days sandwiched between two effective hard spar days.
+    # This fires unconditionally — it is not gated on fatigue or compression signals.
+    _effective_spar_days = set(effective_hard_days(hard_sparring_plan or []))
+    if len(_effective_spar_days) >= 2:
+        _resolved = dict(week_entry.get("resolved_rule_state") or {})
+        _must_keep_early = set(clean_list(_resolved.get("must_keep", week_entry.get("must_keep", []))))
+        _sandwiched = sandwiched_training_days(training_days, _effective_spar_days)
+        if _sandwiched:
+            _kept: list[dict] = []
+            for _role in session_roles:
+                if (
+                    _role.get("category") == "conditioning"
+                    and _role.get("preferred_system") == "glycolytic"
+                    and _role.get("preferred_system") not in _must_keep_early
+                    and str(_role.get("scheduled_day_hint") or "").strip() in _sandwiched
+                ):
+                    suppressed_roles = list(suppressed_roles) + [
+                        _make_compression_suppression(
+                            _role,
+                            ["sandwiched_hard_days"],
+                            "Glycolytic session falls between two hard sparring days — suppressed to protect recovery between hard contacts.",
+                        )
+                    ]
+                else:
+                    _kept.append(_role)
+            session_roles = _kept
+
     # Step 1: Count sparring against the weekly cap
     hard_sparring_days_set = set(_ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))))
     sessions_per_week = int(athlete_model.get("training_frequency") or len(training_days))
@@ -1187,6 +1219,7 @@ def _apply_legacy_high_fatigue_compression(
     if has_downgraded_declared_day:
         _append_week_coach_note_flag(week_entry, "deload hard sparring")
 
+    sandwiched_days = sandwiched_training_days(training_days, effective_days)
     removable_role: dict[str, Any] | None = None
     glycolytic_role = next(
         (
@@ -1195,9 +1228,11 @@ def _apply_legacy_high_fatigue_compression(
         ),
         None,
     )
-    if glycolytic_role is not None and has_downgraded_declared_day:
+    if glycolytic_role is not None and glycolytic_role.get("preferred_system") not in must_keep:
         glycolytic_day = str(glycolytic_role.get("scheduled_day_hint") or "").strip()
-        if glycolytic_day in blocked_follow_on_days and glycolytic_role.get("preferred_system") not in must_keep:
+        on_follow_on = glycolytic_day in blocked_follow_on_days and has_downgraded_declared_day
+        on_sandwiched = glycolytic_day in sandwiched_days
+        if on_follow_on or on_sandwiched:
             removable_role = glycolytic_role
 
     if removable_role is None:
