@@ -672,16 +672,17 @@ def test_multi_card_high_severity_without_trend_routes_to_needs_review():
 
 
 def test_high_severity_missing_trend_with_function_loss_routes_to_restricted_rehab_only():
-    payload = _payload_with_injury("left ankle pain and cannot bear weight")
+    payload = _payload_with_injury("left knee is locked")
     payload["guided_injury"] = {
-        "area": "left ankle",
+        "area": "left knee",
         "severity": "high",
         "trend": "",
-        "notes": "",
+        "notes": "locked knee",
     }
 
     triage = triage_injuries(PlanInput.from_payload(payload))
 
+    assert "combo_gate:high_trend_missing" in triage.routing_reasons
     assert triage.mode == RESTRICTED_REHAB_ONLY
     assert triage.should_block_stage2 is True
 
