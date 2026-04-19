@@ -401,7 +401,7 @@ def _athlete_snapshot(planning_brief: dict) -> dict:
     return {}
 
 
-def _weight_cut_context(planning_brief: dict) -> dict[str, bool]:
+def _weight_cut_context(planning_brief: dict) -> dict[str, Any]:
     athlete = _athlete_snapshot(planning_brief)
     readiness_flags = set(clean_list(athlete.get("readiness_flags", [])))
     active = bool(
@@ -420,7 +420,38 @@ def _weight_cut_context(planning_brief: dict) -> dict[str, bool]:
             )
         )
     )
-    return {"active": active, "high_pressure": high_pressure}
+    pressure_band = "none"
+    if active:
+        pressure_band = "high" if high_pressure else "moderate"
+    return {"active": active, "high_pressure": high_pressure, "pressure_band": pressure_band}
+
+
+_WEIGHT_CUT_BAND_CANONICAL_MAP = {
+    "none": "none",
+    "low": "low",
+    "light": "low",
+    "mild": "low",
+    "moderate": "moderate",
+    "high": "high",
+    "severe": "high",
+    "aggressive": "high",
+    "critical": "high",
+    "extreme": "high",
+}
+_WEIGHT_CUT_BAND_PATTERN = re.compile(
+    r"\b(none|low|light|mild|moderate|high|severe|aggressive|critical|extreme)\b",
+    re.IGNORECASE,
+)
+
+
+def _line_weight_cut_band(line: str) -> str | None:
+    if not _line_mentions_weight_cut(line):
+        return None
+    for match in _WEIGHT_CUT_BAND_PATTERN.finditer(line):
+        normalized = _WEIGHT_CUT_BAND_CANONICAL_MAP.get(match.group(1).strip().lower())
+        if normalized:
+            return normalized
+    return None
 
 
 def _risk_tone_context(planning_brief: dict) -> dict[str, bool]:
@@ -1124,6 +1155,38 @@ def _weight_cut_contradiction_warnings(planning_brief: dict, final_plan_text: st
     context = _weight_cut_context(planning_brief)
     if not context["active"]:
         return []
+
+    expected_band = str(context.get("pressure_band") or "")
+    if expected_band:
+        band_mismatch_lines: list[tuple[str, str]] = []
+        for line in _extract_plan_lines(final_plan_text):
+            stated_band = _line_weight_cut_band(line)
+            if not stated_band or stated_band == expected_band:
+                continue
+            band_mismatch_lines.append((line, stated_band))
+        if band_mismatch_lines:
+            line, stated_band = band_mismatch_lines[0]
+            if context["high_pressure"] and stated_band in {"low", "moderate"}:
+                return [
+                    {
+                        "code": "high_pressure_weight_cut_underaddressed",
+                        "message": "Plan downplays cut stress as moderate/mild even though high-pressure cut context is present.",
+                        "line": line,
+                        "high_pressure": True,
+                        "expected_band": expected_band,
+                        "stated_band": stated_band,
+                    }
+                ]
+            return [
+                {
+                    "code": "weight_cut_state_contradiction",
+                    "message": "Plan labels weight cut pressure in a different band than the planning context.",
+                    "line": line,
+                    "high_pressure": context["high_pressure"],
+                    "expected_band": expected_band,
+                    "stated_band": stated_band,
+                }
+            ]
 
     contradictory_lines = [
         line
