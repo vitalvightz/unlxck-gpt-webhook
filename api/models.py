@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 UserRole = Literal["athlete", "admin"]
 GuidedInjurySeverity = Literal["", "low", "moderate", "high"]
@@ -20,8 +20,6 @@ AppetiteStatus = Literal["normal", "low", "high"]
 FoundationStatus = Literal["incomplete", "sufficient", "complete"]
 NutritionWorkspaceSource = Literal["default", "draft", "intake"]
 FightWeekOverrideBand = Literal["none", "final_day_protocol", "micro_taper_protocol", "mini_taper_protocol"]
-# NOTE: "technical" is a legacy internal enum token retained for stored drafts and API compatibility.
-# It maps to support_work_days (non-hard training / S&C-compatible slots) in planner and UI flows.
 SessionDayType = Literal["hard_spar", "technical", "strength", "conditioning", "recovery", "off"]
 
 
@@ -38,7 +36,6 @@ _GUIDED_INJURY_SEVERITY_ALIASES = {
     "high": "high",
     "severe": "high",
 }
-_HARD_SPARRING_DAY_CAP = 4
 
 
 def _clean_list(values: list[str] | None) -> list[str]:
@@ -296,25 +293,16 @@ class NutritionSharedCampContext(BaseModel):
     weekly_training_frequency: int | None = None
     training_availability: list[str] = Field(default_factory=list)
     hard_sparring_days: list[str] = Field(default_factory=list)
-    support_work_days: list[str] = Field(default_factory=list)
+    technical_skill_days: list[str] = Field(default_factory=list)
     session_types_by_day: dict[str, SessionDayType] = Field(default_factory=dict)
     injuries: str = ""
     guided_injury: GuidedInjuryInput | None = None
     training_restriction_level: TrainingRestrictionLevel | None = None
 
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_support_work_days(cls, value: Any) -> Any:
-        if isinstance(value, dict) and "support_work_days" not in value and "technical_skill_days" in value:
-            updated = dict(value)
-            updated["support_work_days"] = updated.get("technical_skill_days")
-            return updated
-        return value
-
     @field_validator(
         "training_availability",
         "hard_sparring_days",
-        "support_work_days",
+        "technical_skill_days",
         mode="before",
     )
     @classmethod
@@ -465,7 +453,7 @@ class PlanRequest(BaseModel):
     equipment_access: list[str] = Field(default_factory=list)
     training_availability: list[str] = Field(default_factory=list)
     hard_sparring_days: list[str] = Field(default_factory=list)
-    support_work_days: list[str] = Field(default_factory=list)
+    technical_skill_days: list[str] = Field(default_factory=list)
     injuries: str = ""
     guided_injury: GuidedInjuryInput | None = None
     guided_injuries: list[GuidedInjuryInput] | None = None
@@ -475,15 +463,6 @@ class PlanRequest(BaseModel):
     mindset_challenges: str = ""
     notes: str = ""
     random_seed: int | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_support_work_days(cls, value: Any) -> Any:
-        if isinstance(value, dict) and "support_work_days" not in value and "technical_skill_days" in value:
-            updated = dict(value)
-            updated["support_work_days"] = updated.get("technical_skill_days")
-            return updated
-        return value
 
     @field_validator("weekly_training_frequency", mode="before")
     @classmethod
@@ -507,24 +486,6 @@ class PlanRequest(BaseModel):
     def validate_rounds_format(cls, value: str) -> str:
         return _validate_rounds_format(value)
 
-    @field_validator("training_availability", "hard_sparring_days", "support_work_days", mode="before")
-    @classmethod
-    def clean_day_arrays(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        if isinstance(value, str):
-            return _clean_list([part.strip() for part in value.split(",")])
-        if isinstance(value, list):
-            return _clean_list(value)
-        return _clean_list([value])
-
-    @field_validator("hard_sparring_days")
-    @classmethod
-    def validate_hard_sparring_days_cap(cls, value: list[str]) -> list[str]:
-        if len(value) > _HARD_SPARRING_DAY_CAP:
-            raise ValueError(f"hard sparring days cap is {_HARD_SPARRING_DAY_CAP}; reduce to {_HARD_SPARRING_DAY_CAP} or fewer to generate a plan")
-        return value
-
     def to_payload(self) -> dict[str, Any]:
         athlete = self.athlete
         fields = [
@@ -547,7 +508,7 @@ class PlanRequest(BaseModel):
             _field("Equipment Access", self.equipment_access),
             _field("Training Availability", self.training_availability),
             _field("Hard Sparring Days", self.hard_sparring_days),
-            _field("Support Work Days", self.support_work_days),
+            _field("Technical Skill Days", self.technical_skill_days),
             _field("Any injuries or areas you need to work around?", self.injuries),
             _field("What are your key performance goals?", self.key_goals),
             _field("Where do you feel weakest right now?", self.weak_areas),
