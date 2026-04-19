@@ -7,6 +7,7 @@ from fightcamp.injury_triage import (
     MEDICAL_HOLD,
     NEEDS_REVIEW,
     RESTRICTED_REHAB_ONLY,
+    _collect_guided_card_evidence,
     triage_injuries,
 )
 from fightcamp.input_parsing import PlanInput
@@ -573,3 +574,199 @@ def test_moderate_stable_mild_non_structural_case_can_reach_full_plan():
 
     assert triage.mode == FULL_PLAN
     assert triage.should_block_stage2 is False
+
+
+def test_moderate_improving_guided_injury_does_not_block_planning():
+    payload = _payload_with_injury("")
+    payload["guided_injury"] = {
+        "area": "Right knee",
+        "severity": "moderate",
+        "trend": "improving",
+        "avoid": "",
+        "notes": "",
+    }
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+
+
+def test_second_guided_injury_card_can_trigger_high_worsening_triage_gate():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "",
+        },
+        {
+            "area": "Left knee",
+            "severity": "high",
+            "trend": "worsening",
+            "avoid": "",
+            "notes": "",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+    assert "combo_gate:high_worsening" in triage.routing_reasons
+
+
+def test_multi_card_high_improving_does_not_shadow_moderate_worsening_gate():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right shoulder",
+            "severity": "high",
+            "trend": "improving",
+            "avoid": "",
+            "notes": "",
+        },
+        {
+            "area": "Left knee",
+            "severity": "moderate",
+            "trend": "worsening",
+            "avoid": "",
+            "notes": "",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert triage.should_block_stage2 is True
+    assert "combo_gate:moderate_worsening" in triage.routing_reasons
+
+
+def test_multi_card_high_severity_without_trend_is_still_considered_for_risk_signals():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "",
+        },
+        {
+            "area": "Left knee",
+            "severity": "high",
+            "trend": "",
+            "avoid": "",
+            "notes": "",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert "guided_injury:high_severity" in triage.routing_reasons
+    assert triage.mode == FULL_PLAN
+    assert triage.should_block_stage2 is False
+
+
+def test_second_guided_card_notes_feed_breathing_red_flag_logic():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "",
+        },
+        {
+            "area": "Left rib",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "pain when breathing deeply after impact",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.should_block_stage2 is True
+    assert "breathing_pain" in triage.red_flags
+    assert "guided_injury:breathing_symptoms" in triage.routing_reasons
+
+
+def test_second_guided_card_avoid_high_load_signal_is_seen():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "",
+        },
+        {
+            "area": "Left shoulder",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "contact sparring",
+            "notes": "",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert "guided_injury:avoid_high_load" in triage.routing_reasons
+
+
+def test_collect_guided_card_evidence_uses_parsed_entries_without_duplicating_first_card():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "first",
+        },
+        {
+            "area": "Left knee",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "contact",
+            "notes": "second",
+        },
+    ]
+
+    parsed = PlanInput.from_payload(payload)
+    cards = _collect_guided_card_evidence(parsed)
+
+    assert len(cards) == 2
+    assert cards[0] == {"severity": "low", "trend": "stable", "avoid": "", "notes": "first"}
+    assert cards[1] == {"severity": "moderate", "trend": "stable", "avoid": "contact", "notes": "second"}
+
+
+def test_uncertainty_note_word_count_uses_per_card_words_not_separator_tokens():
+    payload = _payload_with_injury("")
+    payload["guided_injuries"] = [
+        {
+            "area": "Left shoulder",
+            "severity": "moderate",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "ok",
+        },
+        {
+            "area": "Right wrist",
+            "severity": "low",
+            "trend": "stable",
+            "avoid": "",
+            "notes": "fine",
+        },
+    ]
+
+    triage = triage_injuries(PlanInput.from_payload(payload))
+
+    assert triage.mode == NEEDS_REVIEW
+    assert "combo_gate:moderate_stable_blocked" in triage.routing_reasons
