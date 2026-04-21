@@ -367,6 +367,65 @@ def _hard_sparring_coach_note_flags(plan_entry: dict[str, Any] | None = None) ->
     return ["deload hard sparring"] if status != "hard_as_planned" else []
 
 
+def _is_final_week_capped_sparring_entry(plan_entry: dict[str, Any] | None = None) -> bool:
+    if not isinstance(plan_entry, dict):
+        return False
+    reason_codes = {str(code).strip() for code in clean_list(plan_entry.get("reason_codes")) if str(code).strip()}
+    status = str(plan_entry.get("status") or "").strip()
+    return "final_week_sparring_cap" in reason_codes and status != "hard_as_planned"
+
+
+def _make_final_week_sparring_cap_suppression(
+    day: str,
+    plan_entry: dict[str, Any] | None = None,
+    replaced_role: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    reason = str((plan_entry or {}).get("reason") or "").strip()
+    if not reason:
+        reason = (
+            "Final taper week sparring cap allows only one effective hard sparring day; "
+            "this declared hard day must not render as sparring."
+        )
+    return {
+        "category": "sparring",
+        "role_key": "hard_sparring_day",
+        "preferred_pool": "declared_hard_sparring_days",
+        "reasons": [reason],
+        "governance": dict((replaced_role or {}).get("governance", {})),
+        "locked_day": day,
+        "scheduled_day_hint": day,
+        "replacement_role_key": "no_hard_sparring_day",
+        "downgraded_from_role_key": "hard_sparring_day",
+        "hard_sparring_status": str((plan_entry or {}).get("status") or "deload_suggested"),
+        "hard_sparring_reason_codes": clean_list((plan_entry or {}).get("reason_codes")),
+        "hard_sparring_reason": reason,
+        "coach_note": str((plan_entry or {}).get("coach_note") or ""),
+    }
+
+
+def _final_week_sparring_cap_summary(
+    hard_sparring_plan: list[dict] | None,
+    effective_days: list[str],
+) -> dict[str, Any]:
+    capped_days = [
+        str(entry.get("day") or "").strip()
+        for entry in (hard_sparring_plan or [])
+        if _is_final_week_capped_sparring_entry(entry) and str(entry.get("day") or "").strip()
+    ]
+    return {
+        "active": bool(capped_days),
+        "max_effective_hard_sparring_days": 1 if capped_days else None,
+        "effective_hard_sparring_days": list(effective_days),
+        "capped_declared_hard_sparring_days": capped_days,
+        "instruction": (
+            "Final taper week cap overrides declared hard sparring days: render at most one "
+            "effective hard sparring day and do not present capped days as sparring."
+            if capped_days
+            else ""
+        ),
+    }
+
+
 def _hard_sparring_role(week_entry: dict, day: str, plan_entry: dict[str, Any] | None = None) -> dict[str, Any]:
     status = str((plan_entry or {}).get("status") or "hard_as_planned").strip() or "hard_as_planned"
     hard_sparring_class = str((plan_entry or {}).get("hard_day_class") or "").strip() or (
@@ -468,6 +527,28 @@ def _lock_declared_hard_sparring_roles(
     used_indices: set[int] = set()
 
     for day in declared_hard_days:
+        plan_entry = plan_by_day.get(day)
+        if _is_final_week_capped_sparring_entry(plan_entry):
+            existing_idx = next(
+                (
+                    idx for idx, role in enumerate(updated_roles)
+                    if role.get("role_key") == "hard_sparring_day" and str(role.get("scheduled_day_hint") or "").strip() == day
+                ),
+                None,
+            )
+            replaced_role = None
+            if existing_idx is not None:
+                replaced_role = updated_roles.pop(existing_idx)
+                used_indices = {idx - 1 if idx > existing_idx else idx for idx in used_indices if idx != existing_idx}
+            if not any(
+                item.get("locked_day") == day
+                and "final_week_sparring_cap" in clean_list(item.get("hard_sparring_reason_codes"))
+                for item in updated_suppressed
+            ):
+                updated_suppressed.append(_make_final_week_sparring_cap_suppression(day, plan_entry, replaced_role))
+            _append_week_coach_note_flag(week_entry, "final week sparring cap")
+            continue
+
         replacement = _hard_sparring_role(week_entry, day, plan_by_day.get(day))
         existing_idx = next(
             (
@@ -1528,6 +1609,7 @@ def _build_weekly_role_map(
                 "declared_technical_skill_days": _ordered_weekdays(clean_list(athlete_model.get("technical_skill_days", []))),
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
+                "final_week_sparring_cap": _final_week_sparring_cap_summary(hard_sparring_plan, list(effective_days)),
                 "coach_note_flags": _dedupe_clean_strings(clean_list(week_entry.get("coach_note_flags", []))),
                 "intentional_compression": dict(week_entry.get("intentional_compression") or _intentional_compression_stub()),
                 "intentionally_unused_days": list(week_entry.get("intentionally_unused_days") or []),

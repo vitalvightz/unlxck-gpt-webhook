@@ -10,7 +10,6 @@ const CLASS_LABELS: Record<SparringDayClass, string> = {
   primary_hard: "Primary hard",
   secondary_hard: "Secondary hard",
   managed_hard: "Managed hard",
-  support_work: "Support work",
   none: "None",
 };
 
@@ -197,7 +196,7 @@ export function WeeklySparringView({ planId }: { planId: string }) {
           <div className="weekly-sparring-detail-grid">
             <div>
               <p className="weekly-sparring-detail-label">Status</p>
-              <p>{formatToken(selectedDay.status) || "No assigned sparring/support work"}</p>
+              <p>{formatToken(selectedDay.status) || "No assigned sparring"}</p>
             </div>
             <div>
               <p className="weekly-sparring-detail-label">Effective load</p>

@@ -2532,13 +2532,6 @@ button.mobile-step-rail-item {
   color: #ffe5a3;
 }
 
-.weekly-sparring-tile-support_work,
-.weekly-sparring-badge-support_work {
-  border-color: rgba(86, 163, 255, 0.34);
-  background: rgba(86, 163, 255, 0.14);
-  color: #cfe6ff;
-}
-
 .weekly-sparring-tile-none,
 .weekly-sparring-badge-none {
   border-color: rgba(255, 255, 255, 0.07);

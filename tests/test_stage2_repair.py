@@ -138,7 +138,7 @@ def test_build_stage2_repair_prompt_requests_athlete_facing_output_only():
     assert "make one clear coaching call" in prompt
     assert "Replace generic motivation, scripted empathy, and empty safety language" in prompt
     assert "Do not open corrective lines with generic openers such as 'focus on', 'ensure', 'make sure', or 'it's important to'" in prompt
-    assert "immutable hard_sparring_day slots" in prompt
+    assert "final_week_sparring_cap overrides the coach-declared hard-day lock" in prompt
     assert "If fatigue is high or fight-week pressure is active, reduce optionality" in prompt
     assert "If injury management is active, lead with constraints, substitutions, or stop rules" in prompt
     assert "Do not prescribe exercises the plan already marks as avoid/contraindicated" in prompt

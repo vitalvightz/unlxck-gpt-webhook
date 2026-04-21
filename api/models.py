@@ -23,7 +23,7 @@ FightWeekOverrideBand = Literal["none", "final_day_protocol", "micro_taper_proto
 # NOTE: "technical" is a legacy internal enum token retained for stored drafts and API compatibility.
 # It maps to support_work_days (non-hard training / S&C-compatible slots) in planner and UI flows.
 SessionDayType = Literal["hard_spar", "technical", "strength", "conditioning", "recovery", "off"]
-SparringDayClass = Literal["primary_hard", "secondary_hard", "managed_hard", "support_work", "none"]
+SparringDayClass = Literal["primary_hard", "secondary_hard", "managed_hard", "none"]
 EffectiveLoad = Literal["hard", "technical", "reduced", "none"]
 
 

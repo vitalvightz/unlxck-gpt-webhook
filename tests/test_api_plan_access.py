@@ -97,7 +97,7 @@ def test_athlete_can_read_weekly_schedule_for_their_plan_and_latest_plan():
     assert body["phase"] == "SPP"
     assert [day["weekday"] for day in body["days"]] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     assert body["days"][0]["sparring_day_class"] == "primary_hard"
-    assert body["days"][1]["sparring_day_class"] == "support_work"
+    assert body["days"][1]["sparring_day_class"] == "none"
     assert body["days"][2]["sparring_day_class"] == "managed_hard"
     assert body["days"][2]["coach_note"] == "Keep the rounds controlled."
     assert latest_response.json() == body

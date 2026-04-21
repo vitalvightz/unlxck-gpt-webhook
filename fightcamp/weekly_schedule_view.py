@@ -26,7 +26,7 @@ _WEEKDAY_ALIASES = {
     "sun": "Sun",
     "sunday": "Sun",
 }
-_SPARRING_DAY_CLASSES = {"primary_hard", "secondary_hard", "managed_hard", "support_work", "none"}
+_SPARRING_DAY_CLASSES = {"primary_hard", "secondary_hard", "managed_hard", "none"}
 _EFFECTIVE_LOADS = {"hard", "technical", "reduced", "none"}
 
 
@@ -70,14 +70,18 @@ def _coerce_effective_load(entry: dict[str, Any]) -> str:
 
 
 def _fill_hard_day(day: dict[str, Any], entry: dict[str, Any]) -> None:
+    reason_codes = _clean_list(entry.get("reason_codes"))
+    is_final_week_capped = "final_week_sparring_cap" in reason_codes and str(entry.get("effective_load") or "").strip() != "hard"
+    sparring_day_class = "none" if is_final_week_capped else _coerce_hard_day_class(entry)
+    effective_load = "none" if is_final_week_capped else _coerce_effective_load(entry)
     day.update(
         {
-            "sparring_day_class": _coerce_hard_day_class(entry),
-            "effective_load": _coerce_effective_load(entry),
+            "sparring_day_class": sparring_day_class,
+            "effective_load": effective_load,
             "status": str(entry.get("status") or "").strip(),
             "reason": str(entry.get("reason") or "").strip(),
             "coach_note": str(entry.get("coach_note") or "").strip(),
-            "reason_codes": _clean_list(entry.get("reason_codes")),
+            "reason_codes": reason_codes,
         }
     )
 
@@ -88,16 +92,6 @@ def _fill_legacy_hard_day(day: dict[str, Any]) -> None:
             "sparring_day_class": "primary_hard",
             "effective_load": "hard",
             "status": "hard_as_planned",
-        }
-    )
-
-
-def _fill_support_day(day: dict[str, Any]) -> None:
-    day.update(
-        {
-            "sparring_day_class": "support_work",
-            "effective_load": "technical",
-            "status": "support_work_day",
         }
     )
 
@@ -133,14 +127,6 @@ def extract_weekly_schedule(planning_brief: Any, *, week_index: int = 0) -> dict
             weekday = _normalize_weekday(day_name)
             if weekday and weekday in days_by_weekday:
                 _fill_legacy_hard_day(days_by_weekday[weekday])
-
-    support_days = week.get("declared_support_work_days")
-    if support_days is None:
-        support_days = week.get("declared_technical_skill_days")
-    for day_name in _clean_list(support_days):
-        weekday = _normalize_weekday(day_name)
-        if weekday and weekday in days_by_weekday and days_by_weekday[weekday]["sparring_day_class"] == "none":
-            _fill_support_day(days_by_weekday[weekday])
 
     return {
         "week_index": week_index,

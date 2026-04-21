@@ -1838,6 +1838,63 @@ def test_high_fatigue_compression_uses_declared_spar_count_for_cap_and_priority(
     ) == ["high_fatigue"]
 
 
+def test_taper_final_week_cap_overrides_declared_hard_sparring_role_locks():
+    brief = _build_progression_brief(
+        {
+            "sport": "boxing",
+            "status": "amateur",
+            "rounds_format": "3x3",
+            "camp_length_weeks": 3,
+            "days_until_fight": 18,
+            "short_notice": False,
+            "fatigue": "low",
+            "training_preference": "balanced",
+            "technical_styles": ["boxing"],
+            "tactical_styles": ["pressure_fighter"],
+            "key_goals": ["conditioning"],
+            "weaknesses": [],
+            "equipment": ["air_bike"],
+            "training_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+            "training_frequency": 5,
+            "hard_sparring_days": ["Monday", "Wednesday", "Friday"],
+            "support_work_days": [],
+            "injuries": [],
+            "weight_cut_risk": False,
+            "weight_cut_pct": 0.0,
+            "readiness_flags": [],
+        },
+        {
+            "TAPER": {
+                "objective": "maintain sharpness and freshness",
+                "emphasize": ["alactic sharpness", "confidence"],
+                "deprioritize": ["new drills", "high lactate exposure"],
+                "risk_flags": [],
+                "session_counts": {"strength": 1, "conditioning": 2, "recovery": 1},
+                "selection_guardrails": {
+                    "must_keep_if_present": ["alactic"],
+                    "conditioning_drop_order_if_thin": ["glycolytic", "aerobic"],
+                },
+                "weeks": 1,
+                "days": 7,
+            },
+        },
+    )
+
+    week = brief["weekly_role_map"]["weeks"][0]
+    spar_roles = [role for role in week["session_roles"] if role["role_key"] == "hard_sparring_day"]
+    capped_suppressed = [
+        item for item in week["suppressed_roles"]
+        if "final_week_sparring_cap" in item.get("hard_sparring_reason_codes", [])
+    ]
+
+    assert [role["scheduled_day_hint"] for role in spar_roles] == ["Monday"]
+    assert week["effective_hard_sparring_days"] == ["Monday"]
+    assert week["final_week_sparring_cap"]["active"] is True
+    assert week["final_week_sparring_cap"]["max_effective_hard_sparring_days"] == 1
+    assert week["final_week_sparring_cap"]["capped_declared_hard_sparring_days"] == ["Wednesday", "Friday"]
+    assert [item["locked_day"] for item in capped_suppressed] == ["Wednesday", "Friday"]
+
+
 def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downgrade():
     brief = _build_progression_brief(
         {
