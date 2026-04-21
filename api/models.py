@@ -23,6 +23,8 @@ FightWeekOverrideBand = Literal["none", "final_day_protocol", "micro_taper_proto
 # NOTE: "technical" is a legacy internal enum token retained for stored drafts and API compatibility.
 # It maps to support_work_days (non-hard training / S&C-compatible slots) in planner and UI flows.
 SessionDayType = Literal["hard_spar", "technical", "strength", "conditioning", "recovery", "off"]
+SparringDayClass = Literal["primary_hard", "secondary_hard", "managed_hard", "support_work", "none"]
+EffectiveLoad = Literal["hard", "technical", "reduced", "none"]
 
 
 GenerationJobStatus = Literal["queued", "running", "completed", "review_required", "failed"]
@@ -718,6 +720,24 @@ class PlanAdvisory(BaseModel):
     suggestion: str
     replacement: str | None = None
     disclaimer: str
+
+
+class WeeklyDayEntry(BaseModel):
+    weekday: Literal["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    sparring_day_class: SparringDayClass = "none"
+    effective_load: EffectiveLoad = "none"
+    status: str = ""
+    reason: str = ""
+    coach_note: str = ""
+    reason_codes: list[str] = Field(default_factory=list)
+
+
+class WeeklySchedule(BaseModel):
+    plan_id: str
+    week_index: int
+    week_count: int
+    phase: str = ""
+    days: list[WeeklyDayEntry]
 
 
 class AdminPlanOutputs(BaseModel):

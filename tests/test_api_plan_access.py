@@ -5,6 +5,40 @@ from api.models import PlanRenameRequest
 from support import advisory_planning_brief, _build_client, _build_request, _start_generation, finalized_result, stage1_result
 
 
+def _weekly_schedule_planning_brief() -> dict:
+    return {
+        "schema_version": "planning_brief.v1",
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "phase": "SPP",
+                    "declared_hard_sparring_days": ["Monday", "Wednesday"],
+                    "declared_support_work_days": ["Tuesday"],
+                    "hard_sparring_plan": [
+                        {
+                            "day": "Monday",
+                            "hard_day_class": "primary_hard",
+                            "effective_load": "hard",
+                            "status": "hard_as_planned",
+                            "reason": "",
+                            "reason_codes": [],
+                        },
+                        {
+                            "day": "Wednesday",
+                            "hard_day_class": "managed_hard",
+                            "effective_load": "reduced",
+                            "status": "deload_suggested",
+                            "reason": "high fatigue",
+                            "reason_codes": ["high_fatigue"],
+                            "coach_note": "Keep the rounds controlled.",
+                        },
+                    ],
+                }
+            ]
+        },
+    }
+
+
 def test_athlete_cannot_read_another_athlete_plan():
     client, store, _ = _build_client()
     other_user = AuthenticatedUser(
@@ -27,6 +61,130 @@ def test_athlete_cannot_read_another_athlete_plan():
     )
 
     assert response.status_code == 403
+
+
+def test_athlete_can_read_weekly_schedule_for_their_plan_and_latest_plan():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(planning_brief=_weekly_schedule_planning_brief()),
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}/weekly-schedule",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+    latest_response = client.get(
+        "/api/plans/latest/weekly-schedule",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 200
+    assert latest_response.status_code == 200
+    body = response.json()
+    assert body["plan_id"] == plan["id"]
+    assert body["week_index"] == 0
+    assert body["week_count"] == 1
+    assert body["phase"] == "SPP"
+    assert [day["weekday"] for day in body["days"]] == ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    assert body["days"][0]["sparring_day_class"] == "primary_hard"
+    assert body["days"][1]["sparring_day_class"] == "support_work"
+    assert body["days"][2]["sparring_day_class"] == "managed_hard"
+    assert body["days"][2]["coach_note"] == "Keep the rounds controlled."
+    assert latest_response.json() == body
+
+
+def test_athlete_cannot_read_another_athlete_weekly_schedule():
+    client, store, _ = _build_client()
+    owner = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    other_user = AuthenticatedUser(
+        user_id="athlete-2",
+        email="other@example.com",
+        full_name="Other Athlete",
+        metadata={},
+    )
+    store.ensure_profile(owner)
+    store.ensure_profile(other_user)
+    client.app.state.auth_service.users_by_token["other-token"] = other_user
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(planning_brief=_weekly_schedule_planning_brief()),
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}/weekly-schedule",
+        headers={"Authorization": "Bearer other-token"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_weekly_schedule_returns_404_for_plan_without_weekly_role_map():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(planning_brief={"schema_version": "planning_brief.v1"}),
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}/weekly-schedule",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_archived_plan_weekly_schedule_is_hidden_from_athlete():
+    client, store, _ = _build_client()
+    athlete = AuthenticatedUser(
+        user_id="athlete-1",
+        email="ari@example.com",
+        full_name="Ari Mensah",
+        metadata={},
+    )
+    store.ensure_profile(athlete)
+    plan = store.create_plan(
+        athlete_id="athlete-1",
+        intake_id="intake_x",
+        request=_build_request(),
+        result=finalized_result(
+            status="archived",
+            stage2_status="admin_archived",
+            planning_brief=_weekly_schedule_planning_brief(),
+        ),
+    )
+
+    response = client.get(
+        f"/api/plans/{plan['id']}/weekly-schedule",
+        headers={"Authorization": "Bearer athlete-token"},
+    )
+
+    assert response.status_code == 404
 
 
 def test_admin_can_view_internal_plan_outputs():
