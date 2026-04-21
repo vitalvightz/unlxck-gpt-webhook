@@ -826,6 +826,20 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="admin access required")
         return profile
 
+    def require_plan_row(
+        plan_id: str,
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> dict[str, Any]:
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if profile.role != "admin" and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return plan_row
+
     @app.get("/", include_in_schema=False)
     def root(request: Request) -> dict[str, str | bool]:
         return _health_payload(mode_label=str(request.app.state.mode_label))
@@ -1037,33 +1051,16 @@ def create_app(
 
     @app.get("/api/plans/{plan_id}", response_model=PlanDetail)
     def get_plan(
-        plan_id: str,
+        plan_row: dict[str, Any] = Depends(require_plan_row),
         profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
     ) -> PlanDetail:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if profile.role != "admin" and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
 
     @app.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
     def get_plan_weekly_schedule(
-        plan_id: str,
         week_index: int = Query(0, ge=0),
-        profile: ProfileRecord = Depends(require_profile),
-        store: AppStore = Depends(get_store),
+        plan_row: dict[str, Any] = Depends(require_plan_row),
     ) -> WeeklySchedule:
-        plan_row = store.get_plan(plan_id)
-        if not plan_row:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
-        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
-        if profile.role != "admin" and _is_archived_plan(plan_row):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_weekly_schedule(plan_row, week_index=week_index)
 
     @app.patch("/api/plans/{plan_id}", response_model=PlanDetail)

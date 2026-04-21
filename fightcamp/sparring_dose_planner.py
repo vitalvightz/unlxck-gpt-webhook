@@ -53,19 +53,17 @@ def _cut_pressure(athlete_snapshot: dict[str, Any]) -> str:
     return "none"
 
 
-def _week_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> str:
-    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
-    phase = str(week.get("phase") or "").strip().upper()
-    stage_key = str(week.get("stage_key") or "").strip().lower()
-    days_until_fight = athlete_snapshot.get("days_until_fight")
+def _days_until_fight_int(athlete_snapshot: dict[str, Any]) -> int | None:
     try:
-        day_value = int(days_until_fight)
+        return int(athlete_snapshot.get("days_until_fight"))
     except (TypeError, ValueError):
-        day_value = None
+        return None
 
-    if phase == "TAPER" or "fight_week" in readiness_flags or "fight_week" in stage_key:
-        return "high"
-    if day_value is not None and day_value <= 7:
+
+def _week_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> str:
+    day_value = _days_until_fight_int(athlete_snapshot)
+
+    if _is_final_week_sparring_cap_active(week, athlete_snapshot):
         return "high"
     if athlete_snapshot.get("short_notice") or (day_value is not None and day_value <= 14):
         return "moderate"
@@ -76,11 +74,7 @@ def _is_final_week_sparring_cap_active(week: dict[str, Any], athlete_snapshot: d
     readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
     phase = str(week.get("phase") or "").strip().upper()
     stage_key = str(week.get("stage_key") or "").strip().lower()
-    days_until_fight = athlete_snapshot.get("days_until_fight")
-    try:
-        day_value = int(days_until_fight)
-    except (TypeError, ValueError):
-        day_value = None
+    day_value = _days_until_fight_int(athlete_snapshot)
     return (
         phase == "TAPER"
         or "fight_week" in readiness_flags

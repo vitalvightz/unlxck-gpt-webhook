@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from .normalization import clean_list as _clean_list
+
 WEEKDAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 _WEEKDAY_ALIASES = {
@@ -26,17 +28,6 @@ _WEEKDAY_ALIASES = {
 }
 _SPARRING_DAY_CLASSES = {"primary_hard", "secondary_hard", "managed_hard", "support_work", "none"}
 _EFFECTIVE_LOADS = {"hard", "technical", "reduced", "none"}
-
-
-def _clean_list(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, str):
-        return [part.strip() for part in value.split(",") if part.strip()]
-    if isinstance(value, (list, tuple, set)):
-        return [str(item).strip() for item in value if str(item).strip()]
-    normalized = str(value).strip()
-    return [normalized] if normalized else []
 
 
 def _normalize_weekday(value: Any) -> str | None:
