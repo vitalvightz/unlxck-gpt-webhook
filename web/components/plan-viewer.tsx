@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { getOptionLabels, TECHNICAL_STYLE_OPTIONS } from "@/lib/intake-options";
+import { WeeklySparringView } from "@/components/weekly-sparring-view";
 import {
   approveAndResumeGeneration,
   approvePlanForRelease,
@@ -1309,6 +1310,7 @@ export function PlanViewer({
                   </button>
                 ) : null}
               </div>
+              <WeeklySparringView planId={plan.plan_id} />
               <pre className="plan-text-block">{athletePlanText}</pre>
               {rejectMessage ? <div className="success-banner">{rejectMessage}</div> : null}
               {rejectError ? <div className="error-banner">{rejectError}</div> : null}

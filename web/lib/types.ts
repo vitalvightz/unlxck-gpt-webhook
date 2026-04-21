@@ -15,6 +15,8 @@ export type FightWeekOverrideBand = "none" | "final_day_protocol" | "micro_taper
 // NOTE: "technical" is a legacy internal token kept for saved-draft/API compatibility.
 // It represents support_work_days (non-hard training / S&C-compatible slots).
 export type SessionDayType = "hard_spar" | "technical" | "strength" | "conditioning" | "recovery" | "off";
+export type SparringDayClass = "primary_hard" | "secondary_hard" | "managed_hard" | "support_work" | "none";
+export type EffectiveLoad = "hard" | "technical" | "reduced" | "none";
 
 export type GenerationJobStatus = "queued" | "running" | "completed" | "review_required" | "failed";
 
@@ -244,6 +246,24 @@ export type PlanAdvisory = {
   suggestion: string;
   replacement?: string | null;
   disclaimer: string;
+};
+
+export type WeeklyDayEntry = {
+  weekday: "Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun";
+  sparring_day_class: SparringDayClass;
+  effective_load: EffectiveLoad;
+  status: string;
+  reason: string;
+  coach_note: string;
+  reason_codes: string[];
+};
+
+export type WeeklySchedule = {
+  plan_id: string;
+  week_index: number;
+  week_count: number;
+  phase: string;
+  days: WeeklyDayEntry[];
 };
 
 export type AdminPlanOutputs = {

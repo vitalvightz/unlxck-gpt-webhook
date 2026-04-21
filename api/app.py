@@ -24,6 +24,7 @@ from fightcamp.logging_utils import bind_log_context, clear_log_context, configu
 from fightcamp.plan_pipeline import prime_plan_banks
 from fightcamp.sparring_advisories import build_plan_advisories
 from fightcamp.stage2_pipeline import build_stage2_retry, review_stage2_output
+from fightcamp.weekly_schedule_view import extract_weekly_schedule
 
 from .auth import AuthService, AuthenticatedUser, SupabaseAuthService
 from .demo import DemoAuthService, get_demo_store
@@ -45,6 +46,7 @@ from .models import (
     PlanSummary,
     ProfileRecord,
     ProfileUpdateRequest,
+    WeeklySchedule,
 )
 from .nutrition_workspace import (
     build_nutrition_workspace,
@@ -485,6 +487,14 @@ def _map_plan_detail(row: dict[str, Any], *, include_admin: bool) -> PlanDetail:
             else None
         ),
     )
+
+
+def _map_weekly_schedule(row: dict[str, Any], *, week_index: int) -> WeeklySchedule:
+    planning_brief = _decode_structured_text(row.get("planning_brief"))
+    schedule = extract_weekly_schedule(planning_brief, week_index=week_index)
+    if schedule is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="weekly schedule not found")
+    return WeeklySchedule(plan_id=str(row["id"]), **schedule)
 
 
 def _map_admin_plan_summary(row: dict[str, Any]) -> AdminPlanSummary:
@@ -1001,6 +1011,20 @@ def create_app(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
 
+    @app.get("/api/plans/latest/weekly-schedule", response_model=WeeklySchedule)
+    def get_latest_weekly_schedule(
+        week_index: int = Query(0, ge=0),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> WeeklySchedule:
+        plan_row = next(
+            iter(_visible_plans_for_athlete(store.list_user_plans(profile.athlete_id))),
+            None,
+        )
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return _map_weekly_schedule(plan_row, week_index=week_index)
+
     @app.get("/api/plans", response_model=list[PlanSummary])
     def list_plans(
         profile: ProfileRecord = Depends(require_profile),
@@ -1025,6 +1049,22 @@ def create_app(
         if profile.role != "admin" and _is_archived_plan(plan_row):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
         return _map_plan_detail(plan_row, include_admin=profile.role == "admin")
+
+    @app.get("/api/plans/{plan_id}/weekly-schedule", response_model=WeeklySchedule)
+    def get_plan_weekly_schedule(
+        plan_id: str,
+        week_index: int = Query(0, ge=0),
+        profile: ProfileRecord = Depends(require_profile),
+        store: AppStore = Depends(get_store),
+    ) -> WeeklySchedule:
+        plan_row = store.get_plan(plan_id)
+        if not plan_row:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        if profile.role != "admin" and str(plan_row["athlete_id"]) != profile.athlete_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="not allowed")
+        if profile.role != "admin" and _is_archived_plan(plan_row):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="plan not found")
+        return _map_weekly_schedule(plan_row, week_index=week_index)
 
     @app.patch("/api/plans/{plan_id}", response_model=PlanDetail)
     @app.patch("/api/plans/{plan_id}/name", response_model=PlanDetail)
