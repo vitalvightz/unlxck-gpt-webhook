@@ -110,6 +110,8 @@ def test_deload_advisory_requires_real_hard_sparring_collision_in_taper_week():
     assert advisory["phase"] == "TAPER"
     assert advisory["days"] == ["Tuesday", "Thursday"]
     assert "fight-week pressure is active" in advisory["reason"]
+    assert "only one effective hard sparring day" in advisory["reason"]
+    assert advisory["suggestion"].startswith("Keep only one effective hard sparring day")
     assert advisory["title"] == "Coach note"
     assert advisory["disclaimer"] == "Treat this as a flag, not an automatic change to your saved plan."
 

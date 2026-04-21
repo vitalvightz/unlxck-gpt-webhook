@@ -119,6 +119,41 @@ def test_d7_caps_three_declared_hard_days_to_one_actual_hard_day():
     assert [entry["status"] for entry in plan].count("hard_as_planned") == 1
     assert [entry["status"] for entry in plan].count("deload_suggested") == 2
     assert all(entry.get("coach_note") for entry in plan if entry["status"] == "deload_suggested")
+    assert all("final_week_sparring_cap" in entry.get("reason_codes", []) for entry in plan if entry["status"] == "deload_suggested")
+
+
+def test_taper_week_caps_multiple_declared_hard_days_to_one_without_countdown():
+    plan = compute_hard_sparring_plan(
+        week=_week(phase="TAPER", stage_key="taper_sharpen", hard_days=["Monday", "Wednesday"]),
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Monday", "Wednesday"]),
+    )
+
+    hard_entries = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+    downgraded = [entry for entry in plan if entry["status"] != "hard_as_planned"]
+    assert [entry["day"] for entry in hard_entries] == ["Monday"]
+    assert [entry["day"] for entry in downgraded] == ["Wednesday"]
+    assert downgraded[0]["status"] == "deload_suggested"
+    assert "final_week_sparring_cap" in downgraded[0]["reason_codes"]
+    assert "Final taper week" in downgraded[0]["coach_note"]
+
+
+def test_taper_week_respects_collision_owner_but_still_caps_extra_coach_days():
+    plan = compute_hard_sparring_plan(
+        week=_week(
+            phase="TAPER",
+            stage_key="taper_sharpen",
+            hard_days=["Monday", "Thursday"],
+            session_roles=[{"role_key": "fight_pace_repeatability_day", "collision_owner_day": "Thursday"}],
+        ),
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Monday", "Thursday"]),
+    )
+
+    by_day = {entry["day"]: entry for entry in plan}
+    assert by_day["Thursday"]["status"] == "hard_as_planned"
+    assert by_day["Thursday"]["hard_day_class"] == "primary_hard"
+    assert by_day["Monday"]["status"] == "deload_suggested"
+    assert by_day["Monday"]["hard_day_class"] == "managed_hard"
+    assert "final_week_sparring_cap" in by_day["Monday"]["reason_codes"]
 
 
 def test_instability_or_daily_symptoms_convert():
