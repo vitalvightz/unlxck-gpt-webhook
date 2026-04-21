@@ -72,6 +72,23 @@ def _week_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> st
     return "none"
 
 
+def _is_final_week_sparring_cap_active(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> bool:
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
+    phase = str(week.get("phase") or "").strip().upper()
+    stage_key = str(week.get("stage_key") or "").strip().lower()
+    days_until_fight = athlete_snapshot.get("days_until_fight")
+    try:
+        day_value = int(days_until_fight)
+    except (TypeError, ValueError):
+        day_value = None
+    return (
+        phase == "TAPER"
+        or "fight_week" in readiness_flags
+        or "fight_week" in stage_key
+        or (day_value is not None and 0 <= day_value <= 7)
+    )
+
+
 def _injury_severity(lowered: str) -> str:
     if any(token in lowered for token in ("severe", "major", "significant", "grade 3", "grade iii")):
         return "high"
@@ -315,6 +332,25 @@ def _reason_codes(
     return codes
 
 
+def _with_final_week_cap_reason(codes: list[str]) -> list[str]:
+    updated = list(codes)
+    if "fight_week_taper" not in updated:
+        updated.insert(0, "fight_week_taper")
+    if "final_week_sparring_cap" not in updated:
+        updated.append("final_week_sparring_cap")
+    return updated
+
+
+def _final_week_cap_reason(codes: list[str]) -> str:
+    reason = ", ".join(codes)
+    cap_note = (
+        "Final taper week cap: keep at most one effective hard sparring day, even when the "
+        "declared coach schedule includes more. Extra declared hard days should become managed "
+        "technical or reduced-contact work to protect freshness."
+    )
+    return f"{reason}; {cap_note}" if reason else cap_note
+
+
 def _hard_day_class(
     entry: dict[str, Any],
     *,
@@ -510,9 +546,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
     countdown_override = _countdown_sparring_override(days_until_fight)
     if countdown_override in {"convert_all", "deload_all"}:
-        countdown_codes = list(reason_codes_list)
-        if "fight_week_taper" not in countdown_codes:
-            countdown_codes.insert(0, "fight_week_taper")
+        countdown_codes = _with_final_week_cap_reason(reason_codes_list)
         countdown_reason = ", ".join(countdown_codes)
         plan = [
             {
@@ -527,12 +561,12 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         ]
         return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
-    # --- D-7 countdown cap: keep only one hard day and downgrade the rest ---
-    if countdown_override == "cap_one":
-        countdown_codes = list(reason_codes_list)
-        if "fight_week_taper" not in countdown_codes:
-            countdown_codes.insert(0, "fight_week_taper")
-        countdown_reason = ", ".join(countdown_codes)
+    # --- Final-week cap: keep only one hard day and downgrade the rest ---
+    if countdown_override == "cap_one" or (
+        len(hard_days) >= 2 and _is_final_week_sparring_cap_active(week, athlete_snapshot)
+    ):
+        countdown_codes = _with_final_week_cap_reason(reason_codes_list)
+        countdown_reason = _final_week_cap_reason(countdown_codes)
 
         plan: list[dict[str, Any]] = []
         for day in hard_days:
@@ -554,7 +588,8 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                     "effective_load": target_load,
                     "reason_codes": list(countdown_codes),
                     "reason": countdown_reason,
-                    "coach_note": _sparring_override_coach_note(days_until_fight, action),
+                    "coach_note": _sparring_override_coach_note(days_until_fight, action)
+                    or _final_week_sparring_cap_coach_note(),
                 }
             )
         return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
@@ -629,6 +664,14 @@ def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
             "reduced intensity to protect the cumulative load going into fight week."
         )
     return ""
+
+
+def _final_week_sparring_cap_coach_note() -> str:
+    return (
+        "Final taper week: keep only one effective hard sparring day. If the declared coach "
+        "schedule has more, keep the priority collision day and make the rest reduced-contact "
+        "or technical so freshness wins over extra damage."
+    )
 
 
 def effective_hard_days(plan: list[dict[str, Any]]) -> list[str]:
