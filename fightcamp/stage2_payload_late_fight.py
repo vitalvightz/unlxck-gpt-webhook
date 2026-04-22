@@ -119,8 +119,10 @@ def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
-    if 14 <= days <= 21:
+    if 18 <= days <= 21:
         return 1
+    if 14 <= days <= 17:
+        return 0
     if 8 <= days <= 13:
         return 2
     if days == 7:
@@ -173,9 +175,11 @@ def _future_declared_weekdays_with_countdown(
 
 
 def _hard_spar_status_for_countdown_offset(offset: int) -> str:
-    if 17 <= offset <= 21:
+    if 18 <= offset <= 21:
         return "hard_allowed"
-    if 14 <= offset <= 16:
+    if 16 <= offset <= 17:
+        return "downgrade"
+    if 14 <= offset <= 15:
         # D-16 cutoff: bridge sub-band D-15 to D-14 converts declared hard days
         # to technical / rhythm per the evidence review.
         return "downgrade"
