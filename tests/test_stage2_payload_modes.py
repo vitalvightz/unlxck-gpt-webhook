@@ -13,7 +13,7 @@ from fightcamp.stage2_payload import (
     build_stage2_handoff_text,
     build_stage2_payload,
 )
-from fightcamp.stage2_payload_late_fight import _late_fight_stage_label
+from fightcamp.stage2_payload_late_fight import _late_fight_legal_offsets, _late_fight_stage_label
 from fightcamp.training_context import TrainingContext
 
 
@@ -162,6 +162,9 @@ class TestPayloadModeClassification:
         assert _days_out_payload_mode("3") == "late_fight_session_payload"
         assert _days_out_payload_mode("0") == "fight_day_protocol_payload"
 
+    def test_bridge_legal_offsets_stay_inside_bridge_window(self):
+        assert _late_fight_legal_offsets(16) == [16, 15, 14]
+
 
 class TestDaysOutPayloadBlock:
     def test_camp_block_uses_camp_bucket(self):
@@ -215,7 +218,7 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["allow_full_weekly_structure"] is False
         assert permissions["allow_development_language"] is False
         assert permissions["allow_glycolytic_build"] is False
-        assert permissions["max_active_roles"] == 2
+        assert permissions["max_active_roles"] == 3
         assert permissions["max_meaningful_stress_exposures"] == 3
         assert permissions["hard_sparring_cap"] == 1
         assert permissions["freshness_mandatory"] is True
