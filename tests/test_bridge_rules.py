@@ -69,7 +69,7 @@ class TestSpecUnitCases:
             hard_sparring_days_declared=0,
         )
         assert result["timing_state"] == TIMING_STATE_BRIDGE
-        assert result["max_active_roles"] == 2
+        assert result["max_active_roles"] == 3
         assert result["max_meaningful_stress_exposures"] == 3
         assert result["hard_sparring_cap"] == 1
         assert result["strength_touch_max"] == 1
@@ -116,6 +116,28 @@ class TestSpecUnitCases:
         assert result["block_full_plan"] is False
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
+
+    def test_bridge_d16_high_cut_forces_one_active_role(self):
+        result = compute_bridge_rules(
+            days_until_fight=16,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="high",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+        )
+        assert result["max_active_roles"] == 1
+
+    def test_bridge_d20_high_fatigue_forces_one_active_role(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="high",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+        )
+        assert result["max_active_roles"] == 1
 
     def test_bridge_mma_with_moderate_fatigue(self):
         # Moderate fatigue alone in D-21..D-18 does NOT zero hard sparring —
@@ -483,7 +505,7 @@ class TestBridgeCapTransitions:
         )
         assert result["hard_sparring_cap"] == 1
         assert result["remaining_hard_spar_slots"] == 1
-        assert result["max_active_roles"] == 2
+        assert result["max_active_roles"] == 3
         assert result["max_meaningful_stress_exposures"] == 3
         assert result["block_full_plan"] is False
 
