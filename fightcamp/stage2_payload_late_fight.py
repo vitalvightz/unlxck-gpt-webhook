@@ -744,7 +744,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
 
 
 def _bridge_target_active_roles(
-    bridge_rules: dict[str, Any], athlete_model: dict[str, Any] | None = None
+    bridge_rules: dict[str, Any]
 ) -> int:
     days = _coerce_days(bridge_rules.get("days_until_fight"), 0) or 0
     fatigue = str(bridge_rules.get("fatigue") or "").strip().lower()
