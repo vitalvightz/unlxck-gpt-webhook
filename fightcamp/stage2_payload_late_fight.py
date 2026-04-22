@@ -694,10 +694,14 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
         }
     if state == TIMING_STATE_BRIDGE:
         sub = bridge_sub_band(days_until_fight)
+        # D-21 to D-18 allow one hard sparring exposure for clean/low-risk
+        # athletes; D-17 to D-14 always zero (latest hard spar lives in the
+        # D-21 to D-18 sub-slice per the evidence review).
+        hard_spar_default = 1 if (days is not None and 18 <= days <= 21) else 0
         return {
             "max_active_roles": 2,
             "max_meaningful_stress_exposures": 3,
-            "hard_sparring_cap_default": 1,
+            "hard_sparring_cap_default": hard_spar_default,
             "strength_touch_max": 1,
             "glycolytic_touch_max": 1 if sub == "d21_to_d19" else 0,
             "max_consecutive_hard_days": 1,
@@ -815,9 +819,48 @@ def _bridge_apply_fatigue(rules: dict[str, Any], fatigue: str) -> dict[str, Any]
     return rules
 
 
+def _resolve_bridge_cut_bucket(athlete_model: dict[str, Any]) -> str:
+    """Return the cut severity bucket for bridge permissions.
+
+    Prefers an explicit ``cut_severity_bucket`` on the athlete model; when
+    that is absent, derives it from ``weight_cut_pct`` and
+    ``days_until_fight`` via the shared severity scorer so the bridge
+    payload agrees with ``sparring_dose_planner._cut_pressure``.
+    """
+    from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+
+    explicit = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
+    if explicit:
+        return explicit
+    score = compute_cut_severity_score(
+        athlete_model.get("weight_cut_pct"),
+        athlete_model.get("days_until_fight"),
+    )
+    return cut_severity_bucket(score)
+
+
+def _bridge_is_contact_sport(sport: str, styles: list[str]) -> bool:
+    """Contact/combat-sport gate for moderate-cut hard-sparring suppression."""
+    if sport in _BRIDGE_STRIKING_SPORTS | _BRIDGE_MMA_SPORTS:
+        return True
+    # Grappler styles or explicit grappling sports still involve live contact
+    # load (wrestling / BJJ live rolls) and should be treated as contact sport.
+    if any(style in _BRIDGE_GRAPPLER_STYLES for style in styles):
+        return True
+    if sport in {"grappler", "wrestling", "bjj", "judo"}:
+        return True
+    return False
+
+
 def _bridge_apply_weight_cut(
-    rules: dict[str, Any], bucket: str, unsafe: bool
+    rules: dict[str, Any],
+    bucket: str,
+    unsafe: bool,
+    *,
+    sport: str = "",
+    styles: list[str] | None = None,
 ) -> dict[str, Any]:
+    styles = styles or []
     if unsafe:
         if rules.get("plan_mode") in (None, "", "full_plan"):
             rules["plan_mode"] = "needs_review"
@@ -843,6 +886,18 @@ def _bridge_apply_weight_cut(
         )
         rules["double_stress_day_allowed"] = False
         rules["reason_codes"].append("weight_cut_moderate_trim_stress")
+        # Moderate cut in the bridge window for combat / contact sports zeros
+        # hard sparring and standalone glycolytic density. The plan itself is
+        # NOT blocked — technical / rhythm / strength-touch work remains.
+        if (
+            rules.get("timing_state") == TIMING_STATE_BRIDGE
+            and _bridge_is_contact_sport(sport, styles)
+        ):
+            rules["hard_sparring_cap"] = 0
+            rules["glycolytic_touch_max"] = 0
+            rules["reason_codes"].append(
+                "weight_cut_moderate_bridge_contact_sport_zero_hard_spar"
+            )
     return rules
 
 
@@ -976,7 +1031,9 @@ def compute_bridge_rules(
 
     rules = _bridge_apply_injury(rules, injury_norm)
     rules = _bridge_apply_fatigue(rules, fatigue_norm)
-    rules = _bridge_apply_weight_cut(rules, bucket_norm, unsafe)
+    rules = _bridge_apply_weight_cut(
+        rules, bucket_norm, unsafe, sport=sport_norm, styles=styles
+    )
     rules = _bridge_apply_sport_style(rules, sport_norm, styles)
 
     # Sport/style must never raise caps above the phase baseline.
@@ -1381,7 +1438,7 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             sport=athlete_model.get("sport"),
             style=athlete_model.get("tactical_style") or athlete_model.get("style"),
             fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level"),
-            weight_cut_bucket=athlete_model.get("cut_severity_bucket"),
+            weight_cut_bucket=_resolve_bridge_cut_bucket(athlete_model),
             injury_mode=athlete_model.get("injury_mode"),
             hard_sparring_days_declared=len(
                 clean_list(athlete_model.get("hard_sparring_days", []))

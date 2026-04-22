@@ -201,6 +201,34 @@ def _countdown_sparring_override(days_until_fight: Any) -> str | None:
     return "cap_one"
 
 
+_BRIDGE_CONTACT_SPORTS = {
+    "boxing",
+    "kickboxing",
+    "muay_thai",
+    "muay thai",
+    "mma",
+    "grappler",
+    "wrestling",
+    "bjj",
+    "judo",
+}
+_BRIDGE_GRAPPLER_STYLE_TOKENS = {"grappler", "grappler-heavy", "wrestler", "bjj"}
+
+
+def _bridge_is_contact_sport(athlete_snapshot: dict[str, Any]) -> bool:
+    sport = str(athlete_snapshot.get("sport") or "").strip().lower()
+    if sport in _BRIDGE_CONTACT_SPORTS:
+        return True
+    styles: list[str] = []
+    for key in ("tactical_style", "tactical_styles", "technical_style", "technical_styles", "style"):
+        value = athlete_snapshot.get(key)
+        if isinstance(value, str):
+            styles.extend(item.strip().lower() for item in value.split(",") if item.strip())
+        elif isinstance(value, list):
+            styles.extend(str(item).strip().lower() for item in value if str(item).strip())
+    return any(style in _BRIDGE_GRAPPLER_STYLE_TOKENS for style in styles)
+
+
 def _bridge_window_sparring_override(
     week: dict[str, Any], athlete_snapshot: dict[str, Any]
 ) -> str | None:
@@ -211,6 +239,14 @@ def _bridge_window_sparring_override(
     it as the current bridge compression window. Future-planning weeks at
     the same days_until_fight value stay untouched so advisories can still
     use their "if the current picture carries forward" conditional wording.
+
+    Return values reflect the evidence review:
+      D-21 to D-18 (clean / low-risk)   → cap_one
+      D-21 to D-18 (fatigue high, cut
+        high, or moderate cut in a
+        contact sport)                  → deload_all
+      D-17 to D-16                      → deload_all
+      D-15 to D-14                      → convert_all
     """
     days = _days_until_fight_int(athlete_snapshot)
     if days is None or not (14 <= days <= 21):
@@ -233,9 +269,21 @@ def _bridge_window_sparring_override(
 
     if 14 <= days <= 15:
         return "convert_all"
-    if days == 16:
+    if 16 <= days <= 17:
         return "deload_all"
-    return "cap_one"  # 17 <= days <= 21
+
+    # 18 <= days <= 21: cap_one is the clean-athlete default, but high-fatigue
+    # or any meaningful cut pressure on a contact-sport athlete forces zero
+    # hard sparring via deload_all.
+    fatigue = _fatigue_level(athlete_snapshot)
+    cut = _cut_pressure(athlete_snapshot)
+    if fatigue == "high":
+        return "deload_all"
+    if cut == "high":
+        return "deload_all"
+    if cut == "moderate" and _bridge_is_contact_sport(athlete_snapshot):
+        return "deload_all"
+    return "cap_one"
 
 
 def _decide_action(

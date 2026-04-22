@@ -630,10 +630,42 @@ def test_bridge_d17_with_moderate_cut_zeros_hard_sparring():
             hard_days=["Tuesday", "Thursday"],
         ),
     )
-    # cap_one + moderate cut should still keep at most one hard day;
-    # the spec's stricter expectation (zero) is enforced at the payload layer.
+    # D-17 inside the bridge window always zeros hard sparring — the cap is
+    # 0 from D-17 downward regardless of cut/fatigue state.
     effective = [e for e in plan if e["status"] == "hard_as_planned"]
-    assert len(effective) <= 1
+    assert len(effective) == 0
+
+
+def test_bridge_d17_clean_boxer_zeros_hard_sparring():
+    # Even a clean, low-risk athlete loses all hard sparring exposures from
+    # D-17 downward. Bridge cap transitions from 1 (D-21..D-18) to 0 (D-17..D-14).
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=17,
+            fatigue="low",
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d20_moderate_cut_contact_sport_zeros_hard_sparring():
+    # D-20 boxer with a real cut (~5%) falls into moderate bucket within the
+    # bridge window — moderate cut on a contact sport must zero hard sparring.
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=20,
+            fatigue="low",
+            weight_cut_pct=5.0,
+            weight_cut_risk=True,
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
 
 
 def test_bridge_d16_downgrades_all_declared_hard_days():

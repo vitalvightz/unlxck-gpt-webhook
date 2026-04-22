@@ -75,7 +75,10 @@ class TestSpecUnitCases:
         assert result["glycolytic_touch_max"] == 1
         assert result["remaining_hard_spar_slots"] == 1
 
-    def test_bridge_boxer_with_moderate_cut(self):
+    def test_bridge_boxer_with_moderate_cut_at_d17(self):
+        # D-17 inside the bridge window always zeros hard sparring regardless
+        # of other inputs. Moderate cut still blocks hard sparring but the
+        # full plan remains allowed (technical / rhythm / strength touch).
         result = compute_bridge_rules(
             days_until_fight=17,
             sport="boxing",
@@ -86,16 +89,35 @@ class TestSpecUnitCases:
         )
         assert result["max_active_roles"] == 2
         assert result["max_meaningful_stress_exposures"] == 2
-        # glycolytic touches are 0 in d18-d16 regardless of cut
         assert result["glycolytic_touch_max"] == 0
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
-        # Moderate cut by itself does not force hard_sparring_cap to 0 (the spec
-        # only says "no stacked hard days" and "-1 stress exposure").
-        assert result["hard_sparring_cap"] == 1
+        assert result["hard_sparring_cap"] == 0
+        assert result["block_full_plan"] is False
         assert result["double_stress_day_allowed"] is False
 
+    def test_bridge_d20_boxer_with_moderate_cut(self):
+        # D-20 is inside D-21..D-18 sub-slice where the clean default is
+        # cap=1, but moderate cut on a contact sport must zero hard sparring
+        # and suppress optional glycolytic density — WITHOUT blocking the
+        # full plan.
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="moderate",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+        )
+        assert result["hard_sparring_cap"] == 0
+        assert result["glycolytic_touch_max"] == 0
+        assert result["block_full_plan"] is False
+        assert result["strength_touch_max"] == 1
+        assert result["freshness_mandatory"] is True
+
     def test_bridge_mma_with_moderate_fatigue(self):
+        # Moderate fatigue alone in D-21..D-18 does NOT zero hard sparring —
+        # it trims stress exposure and forbids stacked hard days only.
         result = compute_bridge_rules(
             days_until_fight=19,
             sport="mma",
@@ -106,8 +128,6 @@ class TestSpecUnitCases:
         )
         assert result["max_active_roles"] == 2
         assert result["max_meaningful_stress_exposures"] == 2
-        # Moderate fatigue does not zero out hard sparring, but forces freshness
-        # and no stacked hard days.
         assert result["hard_sparring_cap"] == 1
         assert result["strength_touch_max"] == 1
         assert result["freshness_mandatory"] is True
@@ -431,3 +451,216 @@ class TestUnsafeWeightHeuristic:
         )
         assert result["unsafe_weight_flag"] is False
         assert result["block_full_plan"] is False
+
+
+class TestBridgeCapTransitions:
+    """D-21..D-18 keeps cap=1 for clean athletes; D-17..D-14 always zero."""
+
+    def test_d20_clean_boxer_keeps_cap_one(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+        )
+        assert result["hard_sparring_cap"] == 1
+        assert result["remaining_hard_spar_slots"] == 1
+        assert result["max_active_roles"] == 2
+        assert result["max_meaningful_stress_exposures"] == 3
+        assert result["block_full_plan"] is False
+
+    def test_d18_clean_boxer_keeps_cap_one(self):
+        result = compute_bridge_rules(
+            days_until_fight=18,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+        )
+        assert result["hard_sparring_cap"] == 1
+        assert result["remaining_hard_spar_slots"] == 1
+
+    def test_d17_clean_boxer_zero_hard_spar(self):
+        result = compute_bridge_rules(
+            days_until_fight=17,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+            hard_sparring_days_declared=0,
+        )
+        assert result["hard_sparring_cap"] == 0
+        assert result["remaining_hard_spar_slots"] == 0
+
+    def test_d16_clean_boxer_zero_hard_spar(self):
+        result = compute_bridge_rules(
+            days_until_fight=16,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        assert result["hard_sparring_cap"] == 0
+
+    def test_d15_and_d14_zero_hard_spar(self):
+        for day in (15, 14):
+            result = compute_bridge_rules(
+                days_until_fight=day,
+                sport="boxing",
+                fatigue="low",
+                weight_cut_bucket="low",
+                injury_mode="full_plan",
+            )
+            assert result["hard_sparring_cap"] == 0
+            assert result["glycolytic_touch_max"] == 0
+            assert result["freshness_mandatory"] is True
+            assert result.get("no_hard_sparring_after_d16") is True
+
+
+class TestBridgeModerateCutContactSports:
+    """Moderate cut zeros hard spar and optional density for contact sports."""
+
+    def test_moderate_cut_boxing_zeros_hard_sparring(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            weight_cut_bucket="moderate",
+            fatigue="low",
+            injury_mode="full_plan",
+        )
+        assert result["hard_sparring_cap"] == 0
+        assert result["glycolytic_touch_max"] == 0
+        assert result["block_full_plan"] is False
+        assert "weight_cut_moderate_bridge_contact_sport_zero_hard_spar" in result["reason_codes"]
+
+    def test_moderate_cut_mma_zeros_hard_sparring(self):
+        result = compute_bridge_rules(
+            days_until_fight=19,
+            sport="mma",
+            weight_cut_bucket="moderate",
+            fatigue="low",
+            injury_mode="full_plan",
+        )
+        assert result["hard_sparring_cap"] == 0
+        assert result["glycolytic_touch_max"] == 0
+        assert result["block_full_plan"] is False
+
+    def test_moderate_cut_grappler_zeros_hard_sparring(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="wrestling",
+            weight_cut_bucket="moderate",
+            fatigue="low",
+            injury_mode="full_plan",
+        )
+        assert result["hard_sparring_cap"] == 0
+        assert result["block_full_plan"] is False
+
+    def test_moderate_cut_grappler_style_zeros_hard_sparring(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="mma",
+            style=["grappler"],
+            weight_cut_bucket="moderate",
+            fatigue="low",
+            injury_mode="full_plan",
+        )
+        assert result["hard_sparring_cap"] == 0
+
+
+class TestBridgeGlycolyticRules:
+    """D-21..D-19 may allow one short glycolytic touch; moderate cut suppresses."""
+
+    def test_d20_clean_allows_one_glycolytic_touch(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        assert result["glycolytic_touch_max"] == 1
+
+    def test_d18_suppresses_glycolytic(self):
+        result = compute_bridge_rules(
+            days_until_fight=18,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        assert result["glycolytic_touch_max"] == 0
+
+    def test_moderate_cut_suppresses_glycolytic_in_d21_to_d19(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="moderate",
+            injury_mode="full_plan",
+        )
+        assert result["glycolytic_touch_max"] == 0
+
+
+class TestBridgeStyleCannotRaiseCaps:
+    """Sport/style may reallocate emphasis but never raise total caps."""
+
+    def test_pressure_fighter_cannot_raise_stress_cap(self):
+        baseline = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        pressure = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            style=["pressure"],
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        # Caps identical — style only reallocates content inside them.
+        assert pressure["max_meaningful_stress_exposures"] <= baseline["max_meaningful_stress_exposures"]
+        assert pressure["hard_sparring_cap"] <= baseline["hard_sparring_cap"]
+        assert pressure["strength_touch_max"] <= baseline["strength_touch_max"]
+        assert pressure["max_active_roles"] <= baseline["max_active_roles"]
+
+    def test_counter_style_cannot_raise_caps(self):
+        baseline = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        counter = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            style=["counter"],
+            fatigue="low",
+            weight_cut_bucket="low",
+            injury_mode="full_plan",
+        )
+        assert counter["max_meaningful_stress_exposures"] <= baseline["max_meaningful_stress_exposures"]
+        assert counter["hard_sparring_cap"] <= baseline["hard_sparring_cap"]
+
+
+class TestBridgeHighCut:
+    def test_high_cut_zeros_density_and_keeps_freshness(self):
+        result = compute_bridge_rules(
+            days_until_fight=20,
+            sport="boxing",
+            weight_cut_bucket="high",
+            fatigue="low",
+            injury_mode="full_plan",
+        )
+        assert result["hard_sparring_cap"] == 0
+        assert result["glycolytic_touch_max"] == 0
+        assert result["freshness_mandatory"] is True
+        # High cut does not auto-block the full plan unless unsafe_weight_flag
+        # also fires (existing escalation preserved).
