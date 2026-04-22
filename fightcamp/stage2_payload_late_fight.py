@@ -1169,7 +1169,7 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
             "stacked_hard_day_pair",
             "double_stress_day",
         ]
-        if not (19 <= days <= 21):
+        if days < 19:
             forbidden.append("standalone_glycolytic")
         return forbidden
     if 8 <= days <= 13:
