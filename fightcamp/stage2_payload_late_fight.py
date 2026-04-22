@@ -177,10 +177,8 @@ def _future_declared_weekdays_with_countdown(
 def _hard_spar_status_for_countdown_offset(offset: int) -> str:
     if 18 <= offset <= 21:
         return "hard_allowed"
-    if 16 <= offset <= 17:
-        return "downgrade"
-    if 14 <= offset <= 15:
-        # D-16 cutoff: bridge sub-band D-15 to D-14 converts declared hard days
+    if 14 <= offset <= 17:
+        # D-18 cutoff: bridge range D-17 to D-14 converts declared hard days
         # to technical / rhythm per the evidence review.
         return "downgrade"
     if 8 <= offset <= 13:
