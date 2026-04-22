@@ -594,3 +594,121 @@ def test_finalize_plan_never_exceeds_cap_on_any_path():
         )
         effective = [e for e in plan if e["status"] == "hard_as_planned"]
         assert len(effective) <= 3, f"{scenario} yielded {len(effective)} effective hard days"
+
+
+# ── Bridge window (D-21 to D-14) sparring caps ────────────────────────────────
+
+
+def _bridge_week(*, phase: str = "TAPER", stage_key: str = "d21_to_d14", hard_days: list[str] | None = None) -> dict:
+    return {
+        "phase": phase,
+        "stage_key": stage_key,
+        "week_index": 1,
+        "phase_week_index": 1,
+        "phase_week_total": 1,
+        "declared_hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
+        "session_roles": [],
+    }
+
+
+def test_bridge_d20_caps_hard_sparring_to_one():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=20, hard_days=["Tuesday", "Thursday"]),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 1
+
+
+def test_bridge_d17_with_moderate_cut_zeros_hard_sparring():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=17,
+            weight_cut_pct=4.0,
+            weight_cut_risk=True,
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    # D-17 inside the bridge window always zeros hard sparring — the cap is
+    # 0 from D-17 downward regardless of cut/fatigue state.
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d17_clean_boxer_zeros_hard_sparring():
+    # Even a clean, low-risk athlete loses all hard sparring exposures from
+    # D-17 downward. Bridge cap transitions from 1 (D-21..D-18) to 0 (D-17..D-14).
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=17,
+            fatigue="low",
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d20_moderate_cut_contact_sport_zeros_hard_sparring():
+    # D-20 boxer with a real cut (~5%) falls into moderate bucket within the
+    # bridge window — moderate cut on a contact sport must zero hard sparring.
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(
+            days_until_fight=20,
+            fatigue="low",
+            weight_cut_pct=5.0,
+            weight_cut_risk=True,
+            hard_days=["Tuesday", "Thursday"],
+        ),
+    )
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 0
+
+
+def test_bridge_d16_downgrades_all_declared_hard_days():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=16, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_bridge_d15_converts_to_technical_only():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=15, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+
+
+def test_bridge_d14_converts_to_technical_only():
+    plan = compute_hard_sparring_plan(
+        week=_bridge_week(hard_days=["Tuesday", "Thursday"]),
+        athlete_snapshot=_athlete(days_until_fight=14, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+
+
+def test_bridge_override_does_not_fire_for_future_planning_week():
+    # Future SPP week at D-18: advisory engine must not see cap_one wording here;
+    # the bridge override is scoped to the imminent bridge week only.
+    future_week = {
+        "phase": "SPP",
+        "stage_key": "late_spp",
+        "week_index": 1,
+        "phase_week_index": 3,
+        "phase_week_total": 4,
+        "declared_hard_sparring_days": ["Tuesday", "Thursday"],
+        "session_roles": [],
+    }
+    plan = compute_hard_sparring_plan(
+        week=future_week,
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Tuesday", "Thursday"]),
+    )
+    # With no bridge override firing and no late-fight pressure, both hard days
+    # remain at their declared load.
+    effective = [e for e in plan if e["status"] == "hard_as_planned"]
+    assert len(effective) == 2
