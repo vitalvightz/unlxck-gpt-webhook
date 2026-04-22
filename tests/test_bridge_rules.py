@@ -12,6 +12,8 @@ from fightcamp.stage2_payload_late_fight import (
     TIMING_STATE_BRIDGE,
     TIMING_STATE_LATE_TAPER,
     TIMING_STATE_NORMAL,
+    _declared_hard_spar_cap,
+    _hard_spar_status_for_countdown_offset,
     bridge_sub_band,
     compute_bridge_rules,
     timing_state,
@@ -242,6 +244,20 @@ class TestSpecUnitCases:
         assert result["max_meaningful_stress_exposures"] == 3
         assert result["allow_pace_specific_interval_swap"] is True
         assert result["pressure_style_stress_cap_unchanged"] is True
+
+
+class TestBridgeHelperConsistency:
+    def test_declared_hard_spar_cap_bridge_boundaries(self):
+        assert _declared_hard_spar_cap(21) == 1
+        assert _declared_hard_spar_cap(18) == 1
+        assert _declared_hard_spar_cap(17) == 0
+        assert _declared_hard_spar_cap(14) == 0
+
+    def test_hard_spar_status_bridge_boundaries(self):
+        assert _hard_spar_status_for_countdown_offset(21) == "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(18) == "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(17) != "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(14) != "hard_allowed"
 
 
 class TestModifierOrdering:
