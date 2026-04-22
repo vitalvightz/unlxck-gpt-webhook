@@ -389,14 +389,17 @@ def _countdown_offset(label: str) -> int | None:
 
 
 def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return []
     if days < 0:
         return []
     if days == 0:
         return [0]
+    mode = _days_out_payload_mode(days)
+    if mode == "bridge_compression_payload":
+        # Bridge allocations must stay inside D-21..D-14.
+        return [offset for offset in range(days, 13, -1)]
     return list(range(min(days, 21), 0, -1))
 
 
@@ -701,7 +704,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
         # D-21 to D-18 sub-slice per the evidence review).
         hard_spar_default = 1 if (days is not None and 18 <= days <= 21) else 0
         return {
-            "max_active_roles": 2,
+            "max_active_roles": 3,
             "max_meaningful_stress_exposures": 3,
             "hard_sparring_cap_default": hard_spar_default,
             "strength_touch_max": 1,
@@ -738,6 +741,28 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
         "double_stress_day_allowed": False,
         "freshness_mandatory": True,
     }
+
+
+def _bridge_target_active_roles(
+    bridge_rules: dict[str, Any], athlete_model: dict[str, Any] | None = None
+) -> int:
+    days = _coerce_days(bridge_rules.get("days_until_fight"), 0) or 0
+    fatigue = str(bridge_rules.get("fatigue") or "").strip().lower()
+    cut = str(bridge_rules.get("weight_cut_bucket") or "").strip().lower()
+    hard_cap = _coerce_days(bridge_rules.get("hard_sparring_cap"), 0) or 0
+    glycolytic_max = _coerce_days(bridge_rules.get("glycolytic_touch_max"), 0) or 0
+
+    if 19 <= days <= 21:
+        if fatigue in {"none", "low"} and cut in {"none", "low"} and glycolytic_max >= 1:
+            return 3
+        return 2
+    if 16 <= days <= 18:
+        if fatigue in {"none", "low"} and cut in {"none", "low"} and hard_cap >= 1:
+            return 3
+        return 2
+    if cut in {"high", "critical", "extreme"} or fatigue in {"high", "critical", "extreme"}:
+        return 1
+    return 2
 
 
 def _bridge_unsafe_weight(
@@ -1058,6 +1083,11 @@ def compute_bridge_rules(
         _coerce_days(hard_sparring_days_declared, 0) or 0,
         permissive=permissive_mode,
     )
+    if rules.get("timing_state") == TIMING_STATE_BRIDGE:
+        rules["max_active_roles"] = min(
+            rules["max_active_roles"],
+            _bridge_target_active_roles(rules, {}),
+        )
 
     if rules["block_full_plan"]:
         rules["max_active_roles"] = 0

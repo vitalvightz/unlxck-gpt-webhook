@@ -69,7 +69,7 @@ class TestSpecUnitCases:
             hard_sparring_days_declared=0,
         )
         assert result["timing_state"] == TIMING_STATE_BRIDGE
-        assert result["max_active_roles"] == 2
+        assert result["max_active_roles"] == 3
         assert result["max_meaningful_stress_exposures"] == 3
         assert result["hard_sparring_cap"] == 1
         assert result["strength_touch_max"] == 1
@@ -483,7 +483,7 @@ class TestBridgeCapTransitions:
         )
         assert result["hard_sparring_cap"] == 1
         assert result["remaining_hard_spar_slots"] == 1
-        assert result["max_active_roles"] == 2
+        assert result["max_active_roles"] == 3
         assert result["max_meaningful_stress_exposures"] == 3
         assert result["block_full_plan"] is False
 
