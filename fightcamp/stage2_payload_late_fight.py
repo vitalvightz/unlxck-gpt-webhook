@@ -1104,15 +1104,7 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     )
 
     allowed_role_keys: list[str] = []
-    if mode == "bridge_compression_payload":
-        allowed_role_keys = [
-            "hard_sparring_day",
-            "strength_touch_day",
-            "light_fight_pace_touch_day",
-            "technical_touch_day",
-            "fight_week_freshness_day",
-        ]
-    elif mode == "pre_fight_compressed_payload":
+    if mode in {"bridge_compression_payload", "pre_fight_compressed_payload"}:
         allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_week_payload":
         allowed_role_keys = ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
