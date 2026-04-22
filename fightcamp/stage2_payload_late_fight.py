@@ -746,11 +746,11 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
 def _bridge_target_active_roles(
     bridge_rules: dict[str, Any]
 ) -> int:
-    days = _coerce_days(bridge_rules.get("days_until_fight"), 0) or 0
+    days = bridge_rules.get("days_until_fight") or 0
     fatigue = str(bridge_rules.get("fatigue") or "").strip().lower()
     cut = str(bridge_rules.get("weight_cut_bucket") or "").strip().lower()
-    hard_cap = _coerce_days(bridge_rules.get("hard_sparring_cap"), 0) or 0
-    glycolytic_max = _coerce_days(bridge_rules.get("glycolytic_touch_max"), 0) or 0
+    hard_cap = bridge_rules.get("hard_sparring_cap") or 0
+    glycolytic_max = bridge_rules.get("glycolytic_touch_max") or 0
 
     if cut in {"high", "critical", "extreme"} or fatigue in {"high", "critical", "extreme"}:
         return 1
