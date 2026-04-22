@@ -4875,6 +4875,31 @@ def build_stage2_handoff_text(
 
     # ── Payload-mode-sensitive hard instructions ──────────────────
     mode_instructions = _handoff_mode_instructions(payload_mode)
+    continuation_map: list[dict] = []
+    if isinstance(planning_brief, dict):
+        continuation_map = list(
+            (
+                planning_brief.get("late_fight_plan_spec", {}) or {}
+            ).get("countdown_mode_sequence", [])
+        )
+        if not continuation_map:
+            continuation_map = list((planning_brief.get("days_out_payload", {}) or {}).get("countdown_mode_sequence", []))
+    if payload_mode == "bridge_compression_payload" and continuation_map:
+        continuation_lines = [
+            "COUNTDOWN CONTINUATION MAP",
+            "Bridge segment is front-only. Continue mode takeover from D-13 to D-0 exactly as mapped below.",
+        ]
+        for segment in continuation_map:
+            stage_key = str(segment.get("stage_key") or "").strip()
+            segment_mode = str(segment.get("payload_mode") or "").strip()
+            start_day = segment.get("start_day")
+            end_day = segment.get("end_day")
+            if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
+                continuation_lines.append(
+                    f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
+                )
+        if len(continuation_lines) > 2:
+            mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),

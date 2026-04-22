@@ -342,6 +342,52 @@ class TestPlanningBriefBranching:
         assert brief["payload_variant"] == "late_fight_stage2_payload"
         assert brief["days_out_payload"]["payload_mode"] == "bridge_compression_payload"
 
+    def test_bridge_d16_includes_bridge_and_late_stage_continuation(self):
+        brief = _build_brief_for(16)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        spans = [week.get("countdown_span") for week in weeks]
+        modes = [week.get("payload_mode") for week in weeks]
+
+        assert spans[0] == {"start_day": 16, "end_day": 14}
+        assert spans[1:] == [
+            {"start_day": 13, "end_day": 8},
+            {"start_day": 7, "end_day": 7},
+            {"start_day": 6, "end_day": 5},
+            {"start_day": 4, "end_day": 2},
+            {"start_day": 1, "end_day": 1},
+            {"start_day": 0, "end_day": 0},
+        ]
+        assert modes == [
+            "bridge_compression_payload",
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        ]
+
+    def test_bridge_d21_includes_bridge_and_late_stage_continuation(self):
+        brief = _build_brief_for(21)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert weeks[0]["countdown_span"] == {"start_day": 21, "end_day": 14}
+        assert [week["payload_mode"] for week in weeks[1:]] == [
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        ]
+
+    def test_bridge_d14_includes_single_bridge_day_then_late_stage_continuation(self):
+        brief = _build_brief_for(14)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert weeks[0]["countdown_span"] == {"start_day": 14, "end_day": 14}
+        assert weeks[0]["payload_mode"] == "bridge_compression_payload"
+        assert weeks[1]["countdown_span"] == {"start_day": 13, "end_day": 8}
+        assert weeks[-1]["countdown_span"] == {"start_day": 0, "end_day": 0}
+
     def test_pre_fight_window_uses_dedicated_planning_brief(self):
         brief = _build_brief_for(10)
 
@@ -386,6 +432,37 @@ class TestPlanningBriefBranching:
         assert week["stage_label"] == "Sharpness Week"
         assert "power touch" in week["stage_objective"].lower()
         assert "freshness" in week["stage_objective"].lower()
+
+    def test_d13_planning_brief_remains_single_stage_pre_fight_logic(self):
+        brief = _build_brief_for(13)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert len(weeks) == 1
+        assert weeks[0]["stage_key"] == "d13_to_d8"
+        assert weeks[0]["stage_label"] == "Compressed Pre-Fight Week"
+
+    def test_guardrail_bridge_mode_does_not_suppress_downstream_late_stage_takeover(self):
+        brief = _build_brief_for(16)
+        stage_keys = [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]]
+        assert stage_keys == [
+            "d21_to_d14",
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+
+    def test_bridge_continuation_keeps_d1_d0_as_day_specific_modes_not_development_weeks(self):
+        brief = _build_brief_for(16)
+        weeks_by_key = {
+            week["stage_key"]: week
+            for week in brief["week_by_week_progression"]["weeks"]
+        }
+        assert weeks_by_key["d1"]["payload_mode"] == "pre_fight_day_payload"
+        assert weeks_by_key["d1"]["stage_label"] == "Primer Day"
+        assert weeks_by_key["d0"]["payload_mode"] == "fight_day_protocol_payload"
+        assert weeks_by_key["d0"]["stage_label"] == "Fight-Day Protocol"
 
 
 class TestStage2PayloadBranching:
@@ -551,6 +628,16 @@ class TestHandoffText:
             coach_notes="",
         )
 
+    def _build_handoff_with_brief(self, days):
+        payload = _build_stage2(days)
+        brief = _build_brief_for(days)
+        return build_stage2_handoff_text(
+            stage2_payload=payload,
+            plan_text="Draft plan text.",
+            coach_notes="",
+            planning_brief=brief,
+        )
+
     def test_camp_handoff_has_no_payload_mode_section(self):
         text = self._build_handoff(28)
         assert "PAYLOAD MODE INSTRUCTIONS" not in text
@@ -654,3 +741,30 @@ class TestHandoffText:
         assert "surviving_hard_spar_days" in text or "hard_spar" in text, (
             "Handoff should reference hard spar day accounting"
         )
+
+    def test_d16_handoff_includes_full_bridge_to_d0_mode_continuation(self):
+        text = self._build_handoff_with_brief(16)
+        for stage_key in ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]:
+            assert stage_key in text
+
+    def test_d16_handoff_does_not_limit_countdown_to_bridge_only(self):
+        text = self._build_handoff_with_brief(16)
+        assert "Bridge segment is front-only" in text
+        assert "Continue mode takeover from D-13 to D-0" in text
+
+    def test_d14_handoff_includes_bridge_day_plus_downstream_continuation(self):
+        text = self._build_handoff_with_brief(14)
+        assert "- d21_to_d14: bridge_compression_payload (D-14 to D-14)" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
+
+    def test_d21_handoff_includes_full_bridge_and_downstream_continuation(self):
+        text = self._build_handoff_with_brief(21)
+        assert "- d21_to_d14: bridge_compression_payload (D-21 to D-14)" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
+
+    def test_d13_handoff_remains_single_stage_pre_fight_logic(self):
+        text = self._build_handoff_with_brief(13)
+        assert "COUNTDOWN CONTINUATION MAP" not in text
+        assert "COMPRESSED PRE-FIGHT WEEK" in text
