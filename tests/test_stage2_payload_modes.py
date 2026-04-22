@@ -342,6 +342,52 @@ class TestPlanningBriefBranching:
         assert brief["payload_variant"] == "late_fight_stage2_payload"
         assert brief["days_out_payload"]["payload_mode"] == "bridge_compression_payload"
 
+    def test_bridge_d16_includes_bridge_and_late_stage_continuation(self):
+        brief = _build_brief_for(16)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        spans = [week.get("countdown_span") for week in weeks]
+        modes = [week.get("payload_mode") for week in weeks]
+
+        assert spans[0] == {"start_day": 16, "end_day": 14}
+        assert spans[1:] == [
+            {"start_day": 13, "end_day": 8},
+            {"start_day": 7, "end_day": 7},
+            {"start_day": 6, "end_day": 5},
+            {"start_day": 4, "end_day": 2},
+            {"start_day": 1, "end_day": 1},
+            {"start_day": 0, "end_day": 0},
+        ]
+        assert modes == [
+            "bridge_compression_payload",
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        ]
+
+    def test_bridge_d21_includes_bridge_and_late_stage_continuation(self):
+        brief = _build_brief_for(21)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert weeks[0]["countdown_span"] == {"start_day": 21, "end_day": 14}
+        assert [week["payload_mode"] for week in weeks[1:]] == [
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        ]
+
+    def test_bridge_d14_includes_single_bridge_day_then_late_stage_continuation(self):
+        brief = _build_brief_for(14)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert weeks[0]["countdown_span"] == {"start_day": 14, "end_day": 14}
+        assert weeks[0]["payload_mode"] == "bridge_compression_payload"
+        assert weeks[1]["countdown_span"] == {"start_day": 13, "end_day": 8}
+        assert weeks[-1]["countdown_span"] == {"start_day": 0, "end_day": 0}
+
     def test_pre_fight_window_uses_dedicated_planning_brief(self):
         brief = _build_brief_for(10)
 
@@ -386,6 +432,26 @@ class TestPlanningBriefBranching:
         assert week["stage_label"] == "Sharpness Week"
         assert "power touch" in week["stage_objective"].lower()
         assert "freshness" in week["stage_objective"].lower()
+
+    def test_d13_planning_brief_remains_single_stage_pre_fight_logic(self):
+        brief = _build_brief_for(13)
+        weeks = brief["week_by_week_progression"]["weeks"]
+        assert len(weeks) == 1
+        assert weeks[0]["stage_key"] == "d13_to_d8"
+        assert weeks[0]["stage_label"] == "Compressed Pre-Fight Week"
+
+    def test_guardrail_bridge_mode_does_not_suppress_downstream_late_stage_takeover(self):
+        brief = _build_brief_for(16)
+        stage_keys = [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]]
+        assert stage_keys == [
+            "d21_to_d14",
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
 
 
 class TestStage2PayloadBranching:

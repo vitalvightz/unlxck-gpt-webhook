@@ -2653,6 +2653,9 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
         "late_fight_transition_payload",
     }:
         return {"weeks": []}
+    days = _coerce_days(days_until_fight)
+    if isinstance(days, int) and 14 <= days <= 21:
+        return {"weeks": _build_bridge_then_late_countdown_weeks(days_until_fight, athlete_model, phase_briefs)}
     phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
     allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
     roles = allocation.get("session_roles", [])
@@ -2687,6 +2690,64 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
             }
         ]
     }
+
+
+def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> list[dict[str, Any]]:
+    days = _coerce_days(days_until_fight)
+    if not isinstance(days, int) or days < 14 or days > 21:
+        return []
+    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+
+    segment_days: list[tuple[int, int]] = [
+        (days, 14),
+        (13, 8),
+        (7, 7),
+        (6, 5),
+        (4, 2),
+        (1, 1),
+        (0, 0),
+    ]
+    weeks: list[dict[str, Any]] = []
+    for week_index, (start_day, end_day) in enumerate(segment_days, start=1):
+        segment_mode = _days_out_payload_mode(start_day)
+        segment_allocation = _late_fight_allocation_plan(start_day, athlete_model)
+        segment_roles = segment_allocation.get("session_roles", [])
+        session_counts = {
+            "strength": sum(1 for role in segment_roles if role.get("category") == "strength"),
+            "conditioning": sum(1 for role in segment_roles if role.get("category") == "conditioning"),
+            "recovery": sum(1 for role in segment_roles if role.get("category") == "recovery"),
+        }
+        technical_count = sum(1 for role in segment_roles if role.get("category") == "technical")
+        if technical_count:
+            session_counts["technical"] = technical_count
+        conditioning_sequence = [
+            role.get("preferred_system")
+            for role in segment_roles
+            if role.get("category") == "conditioning" and role.get("preferred_system")
+        ]
+        weeks.append(
+            {
+                "week_index": week_index,
+                "phase": phase,
+                "stage_key": _late_fight_window(start_day),
+                "stage_label": _late_fight_stage_label(start_day),
+                "stage_objective": _late_fight_summary(start_day),
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "countdown_span": {"start_day": start_day, "end_day": end_day},
+                "payload_mode": segment_mode,
+                "session_counts": session_counts,
+                "conditioning_sequence": conditioning_sequence or ["alactic"],
+                "role_budget": segment_allocation.get("role_budget", {}),
+                "intentional_compression": {
+                    "active": True,
+                    "reason_codes": [segment_mode],
+                    "reason": segment_mode,
+                    "summary": _late_fight_summary(start_day),
+                },
+            }
+        )
+    return weeks
 
 
 def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
