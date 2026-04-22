@@ -1087,7 +1087,7 @@ def compute_bridge_rules(
     if rules.get("timing_state") == TIMING_STATE_BRIDGE:
         rules["max_active_roles"] = min(
             rules["max_active_roles"],
-            _bridge_target_active_roles(rules, {}),
+            _bridge_target_active_roles(rules),
         )
 
     if rules["block_full_plan"]:
