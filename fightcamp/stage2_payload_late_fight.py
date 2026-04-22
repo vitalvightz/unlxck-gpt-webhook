@@ -399,7 +399,7 @@ def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
     mode = _days_out_payload_mode(days)
     if mode == "bridge_compression_payload":
         # Bridge allocations must stay inside D-21..D-14.
-        return [offset for offset in range(days, 13, -1)]
+        return list(range(days, 13, -1))
     return list(range(min(days, 21), 0, -1))
 
 
