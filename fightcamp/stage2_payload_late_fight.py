@@ -20,6 +20,14 @@ _PAYLOAD_MODE_MAP = {
     11: "pre_fight_compressed_payload",
     12: "pre_fight_compressed_payload",
     13: "pre_fight_compressed_payload",
+    14: "bridge_compression_payload",
+    15: "bridge_compression_payload",
+    16: "bridge_compression_payload",
+    17: "bridge_compression_payload",
+    18: "bridge_compression_payload",
+    19: "bridge_compression_payload",
+    20: "bridge_compression_payload",
+    21: "bridge_compression_payload",
 }
 
 _MAX_BLOCKS_PER_SESSION = {
@@ -29,6 +37,7 @@ _MAX_BLOCKS_PER_SESSION = {
     "late_fight_transition_payload": 4,
     "late_fight_week_payload": 5,
     "pre_fight_compressed_payload": 5,
+    "bridge_compression_payload": 5,
     "camp_payload": None,
 }
 
@@ -60,6 +69,7 @@ _WEEKDAY_NAMES = [
 ]
 
 _LATE_FIGHT_WINDOW_BOUNDS = {
+    "bridge_compression_payload": (14, 21),
     "pre_fight_compressed_payload": (8, 13),
     "late_fight_week_payload": (7, 7),
     "late_fight_transition_payload": (5, 6),
@@ -109,6 +119,8 @@ def _declared_hard_spar_cap(days_until_fight: Any) -> int | None:
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
+    if 14 <= days <= 21:
+        return 1
     if 8 <= days <= 13:
         return 2
     if days == 7:
@@ -161,6 +173,12 @@ def _future_declared_weekdays_with_countdown(
 
 
 def _hard_spar_status_for_countdown_offset(offset: int) -> str:
+    if 17 <= offset <= 21:
+        return "hard_allowed"
+    if 14 <= offset <= 16:
+        # D-16 cutoff: bridge sub-band D-15 to D-14 converts declared hard days
+        # to technical / rhythm per the evidence review.
+        return "downgrade"
     if 8 <= offset <= 13:
         return "hard_allowed"
     if offset == 7:
@@ -377,7 +395,7 @@ def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
         return []
     if days == 0:
         return [0]
-    return list(range(min(days, 13), 0, -1))
+    return list(range(min(days, 21), 0, -1))
 
 
 def _late_fight_legal_countdown_labels(days_until_fight: Any) -> list[str]:
@@ -542,6 +560,8 @@ def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | 
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
+    if 14 <= days <= 21:
+        return 3
     if 8 <= days <= 13:
         return 3
     if days == 7:
@@ -557,6 +577,8 @@ def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
     days = _coerce_days(days_until_fight)
     if days is None:
         return None
+    if 14 <= days <= 21:
+        return 2
     if 8 <= days <= 13:
         return 4
     if days == 7:
@@ -575,6 +597,8 @@ def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
         days = int(days_until_fight)
     except (TypeError, ValueError):
         return None
+    if 14 <= days <= 21:
+        return 2
     if 8 <= days <= 13:
         return 2
     if 3 <= days <= 7:
@@ -1080,7 +1104,15 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
     )
 
     allowed_role_keys: list[str] = []
-    if mode == "pre_fight_compressed_payload":
+    if mode == "bridge_compression_payload":
+        allowed_role_keys = [
+            "hard_sparring_day",
+            "strength_touch_day",
+            "light_fight_pace_touch_day",
+            "technical_touch_day",
+            "fight_week_freshness_day",
+        ]
+    elif mode == "pre_fight_compressed_payload":
         allowed_role_keys = ["hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day", "technical_touch_day", "fight_week_freshness_day"]
     elif mode == "late_fight_week_payload":
         allowed_role_keys = ["hard_sparring_day", "neural_primer_day", "alactic_sharpness_day", "technical_touch_day", "fight_week_freshness_day"]
@@ -1139,6 +1171,15 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
     days = _coerce_days(days_until_fight)
     if days is None:
         return []
+    if 14 <= days <= 21:
+        forbidden = [
+            "multiple_hard_sparring_exposures",
+            "stacked_hard_day_pair",
+            "double_stress_day",
+        ]
+        if not (19 <= days <= 21):
+            forbidden.append("standalone_glycolytic")
+        return forbidden
     if 8 <= days <= 13:
         return ["multiple_hard_sparring_exposures", "standalone_glycolytic", "primary_strength_anchor"]
     if days == 7:
@@ -1264,13 +1305,15 @@ def _days_out_bucket(days_until_fight: Any) -> str:
     days = _coerce_days(days_until_fight)
     if days is None:
         return "CAMP"
-    if days < 0 or days > 13:
+    if days < 0 or days > 21:
         return "CAMP"
     return f"D-{days}"
 
 
 def _late_fight_window(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "bridge_compression_payload":
+        return "d21_to_d14"
     if mode == "pre_fight_compressed_payload":
         return "d13_to_d8"
     if mode == "late_fight_week_payload":
@@ -1288,6 +1331,16 @@ def _late_fight_window(days_until_fight: Any) -> str:
 
 def _late_fight_session_type_rules(days_until_fight: Any) -> tuple[list[str], list[str]]:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "bridge_compression_payload":
+        return (
+            ["sparring", "technical", "strength", "sharpness", "recovery"],
+            [
+                "multiple_hard_sparring_exposures",
+                "stacked_hard_day_pair",
+                "double_stress_day",
+                "broad_development_week",
+            ],
+        )
     if mode == "pre_fight_compressed_payload":
         return (
             ["sparring", "technical", "strength", "sharpness", "recovery"],
@@ -1329,6 +1382,50 @@ def _late_fight_permissions(days_until_fight: Any, athlete_model: dict) -> dict:
             "allow_weekly_frequency_reasoning": True,
             "allow_multi_session_stress": True,
             "sparring_role": "full_collision_owner",
+        }
+    if mode == "bridge_compression_payload":
+        bridge_rules = compute_bridge_rules(
+            days_until_fight=days_until_fight,
+            sport=athlete_model.get("sport"),
+            style=athlete_model.get("tactical_style") or athlete_model.get("style"),
+            fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level"),
+            weight_cut_bucket=athlete_model.get("cut_severity_bucket"),
+            injury_mode=athlete_model.get("injury_mode"),
+            hard_sparring_days_declared=len(
+                clean_list(athlete_model.get("hard_sparring_days", []))
+            ),
+        )
+        return {
+            "mode": mode,
+            "allow_full_weekly_structure": False,
+            "allow_compressed_weekly_structure": True,
+            "allow_normal_session_roles": True,
+            "allow_anchor_wording": False,
+            "allow_development_language": False,
+            "allow_glycolytic_build": False,
+            "allow_broad_weakness_building": False,
+            "max_meaningful_strength_anchors": bridge_rules["strength_touch_max"],
+            "max_meaningful_conditioning_stressors": bridge_rules["glycolytic_touch_max"],
+            "max_meaningful_stress_exposures": bridge_rules["max_meaningful_stress_exposures"],
+            "max_active_roles": bridge_rules["max_active_roles"],
+            "hard_sparring_cap": bridge_rules["hard_sparring_cap"],
+            "remaining_hard_spar_slots": bridge_rules["remaining_hard_spar_slots"],
+            "freshness_mandatory": bridge_rules["freshness_mandatory"],
+            "max_consecutive_hard_days": bridge_rules["max_consecutive_hard_days"],
+            "double_stress_day_allowed": bridge_rules["double_stress_day_allowed"],
+            "no_hard_sparring_after_d16": bridge_rules.get("no_hard_sparring_after_d16", False),
+            "bridge_sub_band": bridge_rules.get("bridge_sub_band"),
+            "allow_hard_sparring_influence": True,
+            "allow_weekly_frequency_reasoning": True,
+            "allow_multi_session_stress": False,
+            "sparring_role": "bridge_collision_owner_capped",
+            "forbid": [
+                "more than 1 hard sparring exposure",
+                "hard sparring after D-16",
+                "stacked hard days",
+                "double-stress day",
+                "broad development language",
+            ],
         }
     if mode == "pre_fight_compressed_payload":
         return {
@@ -1530,6 +1627,33 @@ def _late_fight_rendering_rules(days_until_fight: Any) -> dict:
     mode = _days_out_payload_mode(days_until_fight)
     if mode == "camp_payload":
         return {"mode": mode, "rules": []}
+    if mode == "bridge_compression_payload":
+        return {
+            "mode": mode,
+            "framing": "bridge_compression_week",
+            "rules": [
+                "Bridge compression week: taper-on-ramp framing, not full camp.",
+                "5 blocks per session max. 3 meaningful stress exposures max per rolling 7-day block.",
+                "At most 1 hard sparring exposure. No hard sparring after D-16.",
+                "One freshness / mobility session is mandatory. No double-stress days.",
+            ],
+            "preferred_terms": [
+                "bridge week",
+                "taper on-ramp",
+                "technical rhythm",
+                "sharpness",
+                "strength touch",
+                "freshness",
+                "mobility / reset",
+            ],
+            "forbidden_terms": [
+                "development block",
+                "conditioning build",
+                "secondary anchor",
+                "extra density push",
+                "back-to-back hard days",
+            ],
+        }
     if mode == "pre_fight_compressed_payload":
         return {
             "mode": mode,
@@ -1838,6 +1962,50 @@ def _late_fight_candidate_roles(
 
     preserved_hard_days = permission_policy.get("preserved_hard_days", [])
     has_downgraded_hard_days = bool(permission_policy.get("downgraded_hard_days", []))
+
+    if mode == "bridge_compression_payload":
+        days = _coerce_days(days_until_fight)
+        sub_band = bridge_sub_band(days_until_fight)
+        candidates.append(
+            _late_fight_role_entry(
+                category="strength",
+                role_key="strength_touch_day",
+                preferred_pool="strength_slots",
+                selection_rule="Use one meaningful strength or power touch only (bridge-window taper-on-ramp).",
+                placement_rule="Keep clear of hard sparring and never stack on another hard day.",
+                selection_priority=108,
+                required=True,
+                legal_countdown_labels=legal_countdown_labels,
+            )
+        )
+        if sub_band == "d21_to_d19" and not preserved_hard_days and not _suppress_standalone_glycolytic(
+            preserved_hard_days, athlete_model
+        ):
+            candidates.append(
+                _late_fight_role_entry(
+                    category="conditioning",
+                    role_key="light_fight_pace_touch_day",
+                    preferred_pool="conditioning_slots",
+                    preferred_system="glycolytic",
+                    selection_rule="D-21 to D-19 only: one short specific-interval touch is allowed when sparring is not owning the window.",
+                    placement_rule="Keep it light. Do not describe it as a conditioning build and do not place between hard days.",
+                    selection_priority=96 if has_downgraded_hard_days else 100,
+                    legal_countdown_labels=legal_countdown_labels,
+                )
+            )
+        candidates.append(
+            _late_fight_role_entry(
+                category="recovery",
+                role_key="fight_week_freshness_day",
+                preferred_pool="rehab_slots_or_recovery_only",
+                selection_rule="Freshness/mobility/reset is mandatory in the bridge window.",
+                placement_rule="Lowest-load day. Preserve readiness over extra development.",
+                selection_priority=104,
+                required=True,
+                legal_countdown_labels=legal_countdown_labels,
+            )
+        )
+        return candidates
 
     if mode == "pre_fight_compressed_payload":
         strength_selection_rule = "Use one meaningful strength or power touch only."
@@ -2350,6 +2518,8 @@ def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dic
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "bridge_compression_payload":
+        return "Bridge Compression Week"
     if mode == "pre_fight_compressed_payload":
         return "Compressed Pre-Fight Week"
     if mode == "late_fight_week_payload":
@@ -2367,6 +2537,13 @@ def _late_fight_stage_label(days_until_fight: Any) -> str:
 
 def _late_fight_summary(days_until_fight: Any) -> str:
     mode = _days_out_payload_mode(days_until_fight)
+    if mode == "bridge_compression_payload":
+        return (
+            "Use a bridge compression week: taper-on-ramp rather than full camp. "
+            "Keep at most one hard sparring exposure (latest D-16), one meaningful strength touch, "
+            "one freshness/mobility reset, and only one short glycolytic touch in D-21 to D-19. "
+            "No stacked hard days. No double-stress days."
+        )
     if mode == "pre_fight_compressed_payload":
         return (
             "Use a compressed pre-fight week. Keep no more than two hard sparring exposures, one meaningful "
@@ -2586,6 +2763,15 @@ def _handoff_mode_instructions(payload_mode: str) -> str:
             "4 blocks max. Output: neural primer · technical touch · activation · mobility/reset · pre-fight notes.\n"
             "Banned: strength, conditioning, anchor, block, glycolytic, development, fight-pace density.\n"
             "No weekly architecture. No hard sparring. No suppressed role restoration.\n\n"
+            + _CONTRACT
+        )
+    if payload_mode == "bridge_compression_payload":
+        return (
+            "BRIDGE COMPRESSION WEEK (D-21 to D-14)\n"
+            "Taper-on-ramp, not full camp. 5 blocks per session max.\n"
+            "Meaningful stress cap: 3 per rolling 7 days. Hard sparring: 1 max, latest D-16.\n"
+            "Strength/power: 1 touch max. Glycolytic touch: at most 1 in D-21 to D-19, else 0.\n"
+            "One freshness/mobility reset is mandatory. No stacked hard days. No double-stress day.\n\n"
             + _CONTRACT
         )
     if payload_mode == "pre_fight_compressed_payload":

@@ -181,6 +181,11 @@ def _countdown_sparring_override(days_until_fight: Any) -> str | None:
         ``"convert_all"`` – convert every declared hard day to technical/rhythm
         ``"deload_all"`` – deload every declared hard day
         ``"cap_one"`` – keep at most one hard day, deload the rest
+
+    Scope: only fires for the final fight week (days <= 7). The bridge window
+    (D-14 to D-21) is enforced through ``_bridge_window_sparring_override``
+    which is week-aware — otherwise this override would leak into future-
+    planning-week advisories.
     """
     try:
         days = int(days_until_fight)
@@ -196,6 +201,43 @@ def _countdown_sparring_override(days_until_fight: Any) -> str | None:
     return "cap_one"
 
 
+def _bridge_window_sparring_override(
+    week: dict[str, Any], athlete_snapshot: dict[str, Any]
+) -> str | None:
+    """Week-aware bridge-window (D-21 to D-14) sparring override.
+
+    Only fires when the week being evaluated is the imminent bridge week —
+    i.e. ``phase == "TAPER"`` or the week's stage_key / readiness_flags mark
+    it as the current bridge compression window. Future-planning weeks at
+    the same days_until_fight value stay untouched so advisories can still
+    use their "if the current picture carries forward" conditional wording.
+    """
+    days = _days_until_fight_int(athlete_snapshot)
+    if days is None or not (14 <= days <= 21):
+        return None
+
+    phase = str(week.get("phase") or "").strip().upper()
+    stage_key = str(week.get("stage_key") or "").strip().lower()
+    readiness_flags = {flag.lower() for flag in clean_list(athlete_snapshot.get("readiness_flags", []))}
+    phase_week_index = week.get("phase_week_index")
+
+    is_imminent = (
+        phase == "TAPER"
+        or "bridge" in stage_key
+        or "taper" in stage_key
+        or "fight_week" in readiness_flags
+        or (isinstance(phase_week_index, int) and phase_week_index <= 1)
+    )
+    if not is_imminent:
+        return None
+
+    if 14 <= days <= 15:
+        return "convert_all"
+    if days == 16:
+        return "deload_all"
+    return "cap_one"  # 17 <= days <= 21
+
+
 def _decide_action(
     *,
     hard_day_count: int,
@@ -204,12 +246,13 @@ def _decide_action(
     week_press: str,
     injury: dict[str, Any],
     days_until_fight: Any = None,
+    bridge_override: str | None = None,
 ) -> str | None:
     if hard_day_count <= 0:
         return None
 
     # --- Countdown-graduated override (deterministic, fires first) ---
-    countdown_override = _countdown_sparring_override(days_until_fight)
+    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
     if countdown_override == "convert_all":
         return "convert"
     if countdown_override == "deload_all":
@@ -504,6 +547,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     injury = _injury_assessment(athlete_snapshot)
     days_until_fight = athlete_snapshot.get("days_until_fight")
     protected_day = _pick_protected_hard_day(hard_days, week=week)
+    bridge_override = _bridge_window_sparring_override(week, athlete_snapshot)
 
     action = _decide_action(
         hard_day_count=len(hard_days),
@@ -512,6 +556,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
         week_press=week_press,
         injury=injury,
         days_until_fight=days_until_fight,
+        bridge_override=bridge_override,
     )
     if action is None:
         plan: list[dict[str, Any]] = [
@@ -538,7 +583,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     target_reason = ", ".join(reason_codes_list)
 
     # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
-    countdown_override = _countdown_sparring_override(days_until_fight)
+    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
     if countdown_override in {"convert_all", "deload_all"}:
         countdown_codes = _with_final_week_cap_reason(reason_codes_list)
         countdown_reason = ", ".join(countdown_codes)
@@ -640,6 +685,18 @@ _COUNTDOWN_COACH_NOTES: dict[int, str] = {
     6: (
         "Six days out. Pull the intensity back on sparring "
         "— keep rounds lighter and stay focused on timing over damage."
+    ),
+    14: (
+        "Two weeks out. You're in the bridge window — no hard sparring from here; "
+        "keep rounds technical and rhythm-first to protect freshness into fight week."
+    ),
+    15: (
+        "Fifteen days out. Bridge window means technical and rhythm only "
+        "— no hard sparring in the final bridge sub-band."
+    ),
+    16: (
+        "Sixteen days out. Last allowed hard-spar day if already declared; "
+        "otherwise downgrade to technical rhythm and protect freshness."
     ),
 }
 
