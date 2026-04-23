@@ -1825,6 +1825,7 @@ def _days_out_payload_block(days_until_fight: Any, athlete_model: dict) -> dict:
         "rendering_rules": rendering_rules,
         "forbidden_blocks": _late_fight_forbidden_blocks(days_until_fight),
         "max_blocks_per_session": max_blocks,
+        "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),
     }
 
 
@@ -2653,6 +2654,9 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
         "late_fight_transition_payload",
     }:
         return {"weeks": []}
+    days = _coerce_days(days_until_fight)
+    if isinstance(days, int) and 14 <= days <= 21:
+        return {"weeks": _build_bridge_then_late_countdown_weeks(days_until_fight, athlete_model, phase_briefs)}
     phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
     allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
     roles = allocation.get("session_roles", [])
@@ -2687,6 +2691,65 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
             }
         ]
     }
+
+
+def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> list[dict[str, Any]]:
+    days = _coerce_days(days_until_fight)
+    if not isinstance(days, int) or days < 14 or days > 21:
+        return []
+    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+
+    segment_days = [
+        (int(segment["start_day"]), int(segment["end_day"]))
+        for segment in _countdown_mode_sequence(days_until_fight)
+        if isinstance(segment.get("start_day"), int) and isinstance(segment.get("end_day"), int)
+    ]
+    weeks: list[dict[str, Any]] = []
+    for week_index, (start_day, end_day) in enumerate(segment_days, start=1):
+        segment_mode = _days_out_payload_mode(start_day)
+        segment_allocation = _late_fight_allocation_plan(start_day, athlete_model)
+        segment_roles = [
+            role
+            for role in segment_allocation.get("session_roles", [])
+            if isinstance(role.get("countdown_offset"), int)
+            and end_day <= role["countdown_offset"] <= start_day
+        ]
+        session_counts = {
+            "strength": sum(1 for role in segment_roles if role.get("category") == "strength"),
+            "conditioning": sum(1 for role in segment_roles if role.get("category") == "conditioning"),
+            "recovery": sum(1 for role in segment_roles if role.get("category") == "recovery"),
+        }
+        technical_count = sum(1 for role in segment_roles if role.get("category") == "technical")
+        if technical_count:
+            session_counts["technical"] = technical_count
+        conditioning_sequence = [
+            role.get("preferred_system")
+            for role in segment_roles
+            if role.get("category") == "conditioning" and role.get("preferred_system")
+        ]
+        weeks.append(
+            {
+                "week_index": week_index,
+                "phase": phase,
+                "stage_key": _late_fight_window(start_day),
+                "stage_label": _late_fight_stage_label(start_day),
+                "stage_objective": _late_fight_summary(start_day),
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "countdown_span": {"start_day": start_day, "end_day": end_day},
+                "payload_mode": segment_mode,
+                "session_counts": session_counts,
+                "conditioning_sequence": conditioning_sequence or ["alactic"],
+                "role_budget": segment_allocation.get("role_budget", {}),
+                "intentional_compression": {
+                    "active": True,
+                    "reason_codes": [segment_mode],
+                    "reason": segment_mode,
+                    "summary": _late_fight_summary(start_day),
+                },
+            }
+        )
+    return weeks
 
 
 def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -2806,6 +2869,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "allocator": allocation.get("allocator", {}),
         "suppressed_roles": allocation.get("suppressed_roles", []),
         "permission_policy": allocation.get("permission_policy", {}),
+        "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),
     }
     if max_blocks is not None:
         spec["max_blocks_per_session"] = max_blocks
@@ -2813,6 +2877,33 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
     if hard_sparring_context:
         spec.update(hard_sparring_context)
     return spec
+
+
+def _countdown_mode_sequence(days_until_fight: Any) -> list[dict[str, Any]]:
+    days = _coerce_days(days_until_fight)
+    if not isinstance(days, int) or days < 0:
+        return []
+    if 14 <= days <= 21:
+        return [
+            {"stage_key": "d21_to_d14", "payload_mode": "bridge_compression_payload", "start_day": days, "end_day": 14},
+            {"stage_key": "d13_to_d8", "payload_mode": "pre_fight_compressed_payload", "start_day": 13, "end_day": 8},
+            {"stage_key": "d7", "payload_mode": "late_fight_week_payload", "start_day": 7, "end_day": 7},
+            {"stage_key": "d6_to_d5", "payload_mode": "late_fight_transition_payload", "start_day": 6, "end_day": 5},
+            {"stage_key": "d4_to_d2", "payload_mode": "late_fight_session_payload", "start_day": 4, "end_day": 2},
+            {"stage_key": "d1", "payload_mode": "pre_fight_day_payload", "start_day": 1, "end_day": 1},
+            {"stage_key": "d0", "payload_mode": "fight_day_protocol_payload", "start_day": 0, "end_day": 0},
+        ]
+    mode = _days_out_payload_mode(days)
+    if mode == "camp_payload":
+        return []
+    return [
+        {
+            "stage_key": _late_fight_window(days),
+            "payload_mode": mode,
+            "start_day": days,
+            "end_day": days,
+        }
+    ]
 
 
 def _handoff_mode_instructions(payload_mode: str) -> str:
