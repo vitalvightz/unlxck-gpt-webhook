@@ -3192,21 +3192,24 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
             segment_end = segment.get("end_day")
             if not isinstance(segment_start, int) or not isinstance(segment_end, int):
                 continue
-            segment_allocation = _late_fight_practical_allocation_plan(segment_start, athlete_model)
             segment_roles = [
                 role
-                for role in segment_allocation.get("session_roles", [])
-                if isinstance(role.get("countdown_offset"), int)
-                and segment_end <= role["countdown_offset"] <= segment_start
+                for role in roles
+                if int(role.get("composite_segment_index") or 0) == week_index
+            ]
+            segment_suppressed_roles = [
+                role
+                for role in suppressed_roles
+                if int(role.get("composite_segment_index") or 0) == week_index
             ]
             weeks.append(
                 _late_fight_week_entry(
                     week_index=week_index,
                     days_until_fight=segment_start,
                     athlete_model=athlete_model,
-                    allocation=segment_allocation,
+                    allocation=allocation,
                     roles=segment_roles,
-                    suppressed_roles=list(segment_allocation.get("suppressed_roles", [])),
+                    suppressed_roles=segment_suppressed_roles,
                     countdown_span={"start_day": segment_start, "end_day": segment_end},
                 )
             )
