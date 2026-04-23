@@ -3070,25 +3070,56 @@ def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model
     return weeks
 
 
-def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
-    allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
-    mode = allocation.get("mode", _days_out_payload_mode(days_until_fight))
-    roles = allocation.get("session_roles", [])
-    suppressed_roles = list(allocation.get("suppressed_roles", []))
-    resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
+def _hard_sparring_plan_from_late_roles(roles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    plan: list[dict[str, Any]] = []
+    hard_index = 0
+    for role in roles:
+        role_key = str(role.get("role_key") or "").strip()
+        day = str(role.get("scheduled_day_hint") or role.get("real_weekday") or role.get("locked_day") or "").strip()
+        if not day:
+            continue
+        if role_key == "hard_sparring_day":
+            hard_index += 1
+            plan.append(
+                {
+                    "day": day,
+                    "status": "hard_as_planned",
+                    "effective_load": "hard",
+                    "hard_day_class": "primary_hard" if hard_index == 1 else "secondary_hard",
+                    "reason_codes": [],
+                    "reason": "",
+                    "coach_note": "",
+                }
+            )
+        elif role_key == "technical_touch_day" and role.get("downgraded_from_role_key") == "hard_sparring_day":
+            plan.append(
+                {
+                    "day": day,
+                    "status": "convert_to_technical_suggested",
+                    "effective_load": "technical",
+                    "hard_day_class": "technical",
+                    "reason_codes": ["late_fight_sparring_conversion"],
+                    "reason": "Late-fight protected week converts declared hard sparring to technical rhythm.",
+                    "coach_note": "Keep this technical/rhythm only; no hard contact.",
+                }
+            )
+    return plan
+
+
+def _late_fight_week_context(days_until_fight: Any, athlete_model: dict, allocation: dict[str, Any]) -> dict[str, Any]:
     plan_weekday = athlete_model.get("plan_creation_weekday")
-    if mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload", "late_fight_transition_payload"}:
-        weeks: list[dict[str, Any]] = []
-    else:
-        filtered_training = _filter_past_weekdays(
+    return {
+        "declared_training_days": _filter_past_weekdays(
             _ordered_weekdays(clean_list(athlete_model.get("training_days", []))),
-            plan_weekday, days_until_fight,
-        )
-        filtered_sparring = _filter_past_weekdays(
+            plan_weekday,
+            days_until_fight,
+        ),
+        "declared_hard_sparring_days": _filter_past_weekdays(
             _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
-            plan_weekday, days_until_fight,
-        )
-        filtered_technical = _filter_past_weekdays(
+            plan_weekday,
+            days_until_fight,
+        ),
+        "declared_support_work_days": _filter_past_weekdays(
             _ordered_weekdays(
                 clean_list(
                     athlete_model.get(
@@ -3099,43 +3130,106 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
             ),
             plan_weekday,
             days_until_fight,
-        )
+        ),
+        "countdown_weekday_map": dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {})),
+        "allocator": allocation.get("allocator", {}),
+        "role_budget": allocation.get("role_budget", {}),
+    }
+
+
+def _late_fight_week_entry(
+    *,
+    week_index: int,
+    days_until_fight: Any,
+    athlete_model: dict,
+    allocation: dict[str, Any],
+    roles: list[dict[str, Any]],
+    suppressed_roles: list[dict[str, Any]],
+    countdown_span: dict[str, int] | None = None,
+) -> dict[str, Any]:
+    mode = allocation.get("mode", _days_out_payload_mode(days_until_fight))
+    hard_sparring_plan = _hard_sparring_plan_from_late_roles(roles)
+    return {
+        "week_index": week_index,
+        "phase": "TAPER",
+        "stage_key": _late_fight_window(days_until_fight),
+        "phase_week_index": 1,
+        "phase_week_total": 1,
+        **({"countdown_span": countdown_span} if countdown_span else {}),
+        "payload_mode": mode,
+        **_late_fight_week_context(days_until_fight, athlete_model, allocation),
+        "hard_sparring_plan": hard_sparring_plan,
+        "effective_hard_sparring_days": [
+            entry.get("day")
+            for entry in hard_sparring_plan
+            if entry.get("effective_load") == "hard" and entry.get("day")
+        ],
+        "coach_note_flags": [_late_fight_stage_label(days_until_fight)],
+        "intentional_compression": {
+            "active": True,
+            "reason_codes": [mode],
+            "reason": mode,
+            "summary": _late_fight_summary(days_until_fight),
+        },
+        "intentionally_unused_days": [],
+        "session_roles": roles,
+        "suppressed_roles": suppressed_roles,
+    }
+
+
+def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
+    allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
+    mode = allocation.get("mode", _days_out_payload_mode(days_until_fight))
+    roles = allocation.get("session_roles", [])
+    suppressed_roles = list(allocation.get("suppressed_roles", []))
+    resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
+    if mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload", "late_fight_transition_payload"}:
+        weeks: list[dict[str, Any]] = []
+    elif mode == "bridge_compression_payload":
+        weeks = []
+        for week_index, segment in enumerate(_countdown_mode_sequence(days_until_fight), start=1):
+            segment_start = segment.get("start_day")
+            segment_end = segment.get("end_day")
+            if not isinstance(segment_start, int) or not isinstance(segment_end, int):
+                continue
+            segment_roles = [
+                role
+                for role in roles
+                if int(role.get("composite_segment_index") or 0) == week_index
+            ]
+            segment_suppressed_roles = [
+                role
+                for role in suppressed_roles
+                if int(role.get("composite_segment_index") or 0) == week_index
+            ]
+            weeks.append(
+                _late_fight_week_entry(
+                    week_index=week_index,
+                    days_until_fight=segment_start,
+                    athlete_model=athlete_model,
+                    allocation=allocation,
+                    roles=segment_roles,
+                    suppressed_roles=segment_suppressed_roles,
+                    countdown_span={"start_day": segment_start, "end_day": segment_end},
+                )
+            )
+    else:
         weeks = [
-            {
-                "week_index": 1,
-                "phase": "TAPER",
-                "stage_key": _late_fight_window(days_until_fight),
-                "phase_week_index": 1,
-                "phase_week_total": 1,
-                "declared_training_days": filtered_training,
-                "declared_hard_sparring_days": filtered_sparring,
-                "declared_support_work_days": filtered_technical,
-                "hard_sparring_plan": [],
-                "effective_hard_sparring_days": [
-                    role.get("scheduled_day_hint")
-                    for role in roles
-                    if role.get("role_key") == "hard_sparring_day" and role.get("scheduled_day_hint")
-                ],
-                "coach_note_flags": [_late_fight_stage_label(days_until_fight)],
-                "intentional_compression": {
-                    "active": True,
-                    "reason_codes": [mode],
-                    "reason": mode,
-                    "summary": _late_fight_summary(days_until_fight),
-                },
-                "intentionally_unused_days": [],
-                "session_roles": roles,
-                "suppressed_roles": suppressed_roles + [
+            _late_fight_week_entry(
+                week_index=1,
+                days_until_fight=days_until_fight,
+                athlete_model=athlete_model,
+                allocation=allocation,
+                roles=roles,
+                suppressed_roles=suppressed_roles
+                + [
                     {
                         "category": "plan",
                         "role_key": "normal_stage2_payload",
                         "reasons": ["late_fight_stage2_payload: bypassed normal camp-style stage2 payload assumptions"],
                     }
                 ],
-                "countdown_weekday_map": resolved_countdown_map,
-                "allocator": allocation.get("allocator", {}),
-                "role_budget": allocation.get("role_budget", {}),
-            }
+            )
         ]
     return {
         "model": "late_fight_role_overlay.v1",
