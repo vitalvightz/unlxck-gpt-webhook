@@ -15,7 +15,7 @@ export type FightWeekOverrideBand = "none" | "final_day_protocol" | "micro_taper
 // NOTE: "technical" is a legacy internal token kept for saved-draft/API compatibility.
 // It represents support_work_days (non-hard training / S&C-compatible slots).
 export type SessionDayType = "hard_spar" | "technical" | "strength" | "conditioning" | "recovery" | "off";
-export type SparringDayClass = "primary_hard" | "secondary_hard" | "managed_hard" | "technical" | "none";
+export type SparringDayClass = "primary_hard" | "secondary_hard" | "managed_hard" | "none";
 export type EffectiveLoad = "hard" | "technical" | "reduced" | "none";
 
 export type GenerationJobStatus = "queued" | "running" | "completed" | "review_required" | "failed";

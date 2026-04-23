@@ -442,8 +442,6 @@ def _hard_day_class(
     protected_day: str,
     hard_days: list[str],
 ) -> str:
-    if entry.get("effective_load") == "technical":
-        return "technical"
     if entry.get("effective_load") != "hard":
         return "managed_hard"
     day = entry["day"]
