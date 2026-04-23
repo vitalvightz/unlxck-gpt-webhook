@@ -10,6 +10,7 @@ const CLASS_LABELS: Record<SparringDayClass, string> = {
   primary_hard: "Primary hard",
   secondary_hard: "Secondary hard",
   managed_hard: "Managed hard",
+  technical: "Technical / rhythm",
   none: "None",
 };
 

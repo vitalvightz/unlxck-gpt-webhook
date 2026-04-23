@@ -1618,42 +1618,41 @@ def _build_weekly_role_map(
             }
         )
 
-    # Legacy fight_week_override compatibility (acts as further filter if still active)
+    # Legacy fight_week_override compatibility (acts as a relevant-week filter if still active)
     if fight_week_override and fight_week_override.get("active"):
         band = str(fight_week_override.get("band") or "")
-        if band == "final_day_protocol":
-            weeks = []
-        else:
+        target_index = next(
+            (index for index in range(len(weeks) - 1, -1, -1) if str(weeks[index].get("phase") or "").upper() == "TAPER"),
+            len(weeks) - 1,
+        )
+        if target_index >= 0:
+            week = dict(weeks[target_index])
             allowed_roles = set(clean_list(fight_week_override.get("allowed_session_roles", [])))
             max_sessions = int(fight_week_override.get("max_sessions") or 0)
-            trimmed_weeks: list[dict] = []
-            if weeks:
-                week = dict(weeks[0])
-                roles = list(week.get("session_roles") or [])
-                filtered_roles = [role for role in roles if role.get("role_key") in allowed_roles]
-                if max_sessions > 0:
-                    filtered_roles = filtered_roles[:max_sessions]
-                week["session_roles"] = filtered_roles
-                suppressed_roles = list(week.get("suppressed_roles") or [])
-                suppressed_roles.append(
-                    {
-                        "category": "plan",
-                        "role_key": "fight_week_override",
-                        "reasons": [str(fight_week_override.get("coach_note") or "fight-week override active")],
-                    }
-                )
-                week["suppressed_roles"] = suppressed_roles
-                week["coach_note_flags"] = _dedupe_clean_strings(
-                    clean_list(week.get("coach_note_flags", [])) + ["fight-week override active"]
-                )
-                week["intentional_compression"] = {
-                    "active": True,
-                    "reason_codes": ["fight_week_override"],
-                    "reason": "fight_week_override",
-                    "summary": str(fight_week_override.get("coach_note") or "fight-week override active"),
+            roles = list(week.get("session_roles") or [])
+            filtered_roles = [] if band == "final_day_protocol" else [role for role in roles if role.get("role_key") in allowed_roles]
+            if max_sessions > 0:
+                filtered_roles = filtered_roles[:max_sessions]
+            week["session_roles"] = filtered_roles
+            suppressed_roles = list(week.get("suppressed_roles") or [])
+            suppressed_roles.append(
+                {
+                    "category": "plan",
+                    "role_key": "fight_week_override",
+                    "reasons": [str(fight_week_override.get("coach_note") or "fight-week override active")],
                 }
-                trimmed_weeks = [week]
-            weeks = trimmed_weeks
+            )
+            week["suppressed_roles"] = suppressed_roles
+            week["coach_note_flags"] = _dedupe_clean_strings(
+                clean_list(week.get("coach_note_flags", [])) + ["fight-week override active"]
+            )
+            week["intentional_compression"] = {
+                "active": True,
+                "reason_codes": ["fight_week_override"],
+                "reason": "fight_week_override",
+                "summary": str(fight_week_override.get("coach_note") or "fight-week override active"),
+            }
+            weeks[target_index] = week
 
     return {
         "model": "session_role_overlay.v1",
