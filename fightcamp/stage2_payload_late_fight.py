@@ -2708,7 +2708,12 @@ def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model
     for week_index, (start_day, end_day) in enumerate(segment_days, start=1):
         segment_mode = _days_out_payload_mode(start_day)
         segment_allocation = _late_fight_allocation_plan(start_day, athlete_model)
-        segment_roles = segment_allocation.get("session_roles", [])
+        segment_roles = [
+            role
+            for role in segment_allocation.get("session_roles", [])
+            if isinstance(role.get("countdown_offset"), int)
+            and end_day <= role["countdown_offset"] <= start_day
+        ]
         session_counts = {
             "strength": sum(1 for role in segment_roles if role.get("category") == "strength"),
             "conditioning": sum(1 for role in segment_roles if role.get("category") == "conditioning"),
