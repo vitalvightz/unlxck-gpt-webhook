@@ -59,8 +59,8 @@ def _athlete(days_until_fight, **overrides):
     return athlete
 
 
-def _build_brief_for(days_until_fight, *, phase="SPP"):
-    athlete_model = _athlete(days_until_fight)
+def _build_brief_for(days_until_fight, *, phase="SPP", athlete_overrides=None):
+    athlete_model = _athlete(days_until_fight, **(athlete_overrides or {}))
     phase_briefs = {
         phase: {
             "objective": "fight readiness",
@@ -463,6 +463,100 @@ class TestPlanningBriefBranching:
         assert weeks_by_key["d1"]["stage_label"] == "Primer Day"
         assert weeks_by_key["d0"]["payload_mode"] == "fight_day_protocol_payload"
         assert weeks_by_key["d0"]["stage_label"] == "Fight-Day Protocol"
+
+    def test_bridge_d16_practical_spec_does_not_collapse_to_bridge_only(self):
+        brief = _build_brief_for(16)
+        spec = brief["late_fight_plan_spec"]
+        visible_offsets = [
+            entry.get("countdown_offset")
+            for entry in spec["visible_session_sequence"]
+        ]
+
+        assert spec["visible_session_cap"] > 2
+        assert spec["max_active_roles"] == spec["visible_session_cap"]
+        assert any(offset is not None and offset <= 13 for offset in visible_offsets)
+        assert {16, 14}.issubset(set(visible_offsets))
+
+    def test_bridge_d16_session_sequence_includes_downstream_practical_roles(self):
+        brief = _build_brief_for(16)
+        sequence = brief["late_fight_session_sequence"]
+        downstream_roles = [
+            entry
+            for entry in sequence
+            if isinstance(entry.get("countdown_offset"), int)
+            and entry["countdown_offset"] <= 13
+        ]
+
+        assert downstream_roles
+        assert any(entry.get("composite_segment_stage_key") == "d13_to_d8" for entry in downstream_roles)
+        assert any(entry.get("composite_segment_stage_key") == "d1" for entry in downstream_roles)
+
+    def test_bridge_d16_weekly_role_map_uses_practical_continuation_roles(self):
+        brief = _build_brief_for(16)
+        roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+        offsets = [
+            role.get("countdown_offset")
+            for role in roles
+            if isinstance(role.get("countdown_offset"), int)
+        ]
+
+        assert max(offsets) <= 16
+        assert min(offsets) == 1
+        assert any(offset <= 13 for offset in offsets)
+        assert brief["weekly_role_map"]["allocator"]["composite_practical_allocation"] is True
+
+    def test_bridge_d16_practical_spacing_avoids_adjacent_app_owned_sessions(self):
+        brief = _build_brief_for(
+            16,
+            athlete_overrides={
+                "plan_creation_weekday": "monday",
+                "hard_sparring_days": [],
+            },
+        )
+        visible_offsets = [
+            entry["countdown_offset"]
+            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
+            if isinstance(entry.get("countdown_offset"), int)
+        ]
+
+        assert all(
+            first - second > 1
+            for first, second in zip(visible_offsets, visible_offsets[1:])
+        )
+
+    def test_bridge_d16_avoids_meaningful_app_owned_work_on_declared_hard_days(self):
+        brief = _build_brief_for(
+            16,
+            athlete_overrides={
+                "plan_creation_weekday": "monday",
+                "training_days": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+                "hard_sparring_days": ["thursday"],
+            },
+        )
+        visible_sequence = brief["late_fight_plan_spec"]["visible_session_sequence"]
+        meaningful_app_roles = [
+            entry
+            for entry in visible_sequence
+            if entry.get("stress_class") == "meaningful_stress"
+        ]
+
+        assert meaningful_app_roles
+        assert all(
+            str(entry.get("scheduled_day_hint") or "").lower() != "thursday"
+            for entry in meaningful_app_roles
+        )
+
+    def test_d13_standalone_practical_behaviour_remains_unchanged(self):
+        spec = _build_late_fight_plan_spec(13, _athlete(13))
+
+        assert spec["payload_mode"] == "pre_fight_compressed_payload"
+        assert spec["visible_session_cap"] == 2
+        assert [entry.get("role_key") for entry in spec["visible_session_sequence"]] == [
+            "strength_touch_day",
+            "fight_week_freshness_day",
+        ]
+        assert [entry.get("countdown_offset") for entry in spec["visible_session_sequence"]] == [9, 1]
+        assert not spec["allocator"].get("composite_practical_allocation", False)
 
 
 class TestStage2PayloadBranching:
