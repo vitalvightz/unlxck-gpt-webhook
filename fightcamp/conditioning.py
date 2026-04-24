@@ -286,12 +286,15 @@ def _evaluate_conditioning_late_window(
     if developmental_taper:
         adjustment -= 0.8 * severity
         reason_codes.append("late_conditioning_penalty_developmental_taper")
+    bridge_allows_glycolytic = bool((bridge_rules or {}).get("glycolytic_touch_max", 0) > 0)
     if generic_glycolytic:
-        bridge_allows_glycolytic = bool((bridge_rules or {}).get("glycolytic_touch_max", 0) > 0)
         adjustment -= (0.8 if bridge_allows_glycolytic and window == "d21_to_d14" else 1.5) * severity
         reason_codes.append("late_conditioning_penalty_generic_glycolytic")
 
     block_codes: list[str] = []
+    if generic_glycolytic and not bridge_allows_glycolytic:
+        block_codes.append("late_conditioning_block_bridge_glycolytic_cap")
+
     if window in LATE_CONDITIONING_TIGHT_WINDOWS:
         if generic_glycolytic:
             block_codes.append("late_conditioning_block_generic_glycolytic")
@@ -1094,12 +1097,8 @@ def generate_conditioning_block(flags):
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
-    late_window = (
-        classify_late_selector_window(days_until_fight, include_control=True)
-        if phase.upper() == "TAPER"
-        else None
-    )
-    active_late_window = phase.upper() == "TAPER" and is_active_late_selector_window(late_window)
+    late_window = classify_late_selector_window(days_until_fight, include_control=True)
+    active_late_window = is_active_late_selector_window(late_window)
     # Normalize technical style(s)
     if isinstance(technical, str):
         tech_styles = [t.strip().lower() for t in technical.split(',') if t.strip()]
@@ -2293,10 +2292,7 @@ def generate_conditioning_block(flags):
         reason_lookup,
     )
 
-    _is_late_fight_taper = (
-        phase.upper() == "TAPER"
-        and active_late_window
-    )
+    _is_late_fight_taper = active_late_window
     if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic") and not _is_late_fight_taper:
         # Active late-window TAPER (D-21 to D-1) suppresses the generic
         # multi-round glycolytic fallback. Outside that countdown-specific

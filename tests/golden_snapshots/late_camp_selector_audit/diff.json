@@ -345,15 +345,19 @@
         "Band-Resisted Push Press",
         "Med Ball Scoop Toss",
         "Medicine-Ball Chest Toss",
-        "Anti-Rotation Med Ball Slam"
+        "Banded Lateral Walk"
       ],
       "added_winners": [
-        "Med Ball Scoop Toss"
+        "Med Ball Scoop Toss",
+        "Banded Lateral Walk"
       ],
       "removed_winners": [
+        "Anti-Rotation Med Ball Slam",
         "Band Face Pull"
       ],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Anti-Rotation Med Ball Slam"
+      ],
       "no_longer_blocked": []
     },
     "conditioning": {
