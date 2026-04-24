@@ -16,6 +16,62 @@ import { formatPlanFightDate, formatPlanTimestamp, getPlanDisplayName } from "@/
 import type { PlanSummary } from "@/lib/types";
 
 const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+const landingPreviewStages = [
+  {
+    label: "Onboarding",
+    title: "Guided athlete intake",
+    summary: "Capture profile, fight context, availability, and restrictions in one structured flow.",
+    highlights: ["Profile + camp setup", "Training + restrictions"],
+  },
+  {
+    label: "Nutrition",
+    title: "Readiness stays connected",
+    summary: "Weight setup, bodyweight logs, and nutrition readiness live beside the camp workflow.",
+    highlights: ["Weight targets", "Daily readiness"],
+  },
+  {
+    label: "Plans",
+    title: "The latest camp reopens fast",
+    summary: "Saved history, latest plan, and PDF export stay attached to the athlete account.",
+    highlights: ["Plan history", "PDF export"],
+  },
+] as const;
+
+const landingProofPoints = [
+  {
+    label: "Saved history",
+    title: "Every generated camp stays attached to the athlete account.",
+    body: "Reopen the latest version fast without rebuilding context from scratch.",
+  },
+  {
+    label: "Structured planning",
+    title: "The intake is organized enough to catch gaps before generation.",
+    body: "Fight context, training load, restrictions, and performance goals stay in one flow.",
+  },
+  {
+    label: "Built for return visits",
+    title: "The workspace makes it easy to resume, review, and export between sessions.",
+    body: "Mobile-friendly access means the product still works when athletes are away from a desk.",
+  },
+] as const;
+
+const landingWorkflowSteps = [
+  {
+    label: "Step 1",
+    title: "Set up the athlete profile",
+    body: "Create the account, capture the athlete profile, and save the draft as you go.",
+  },
+  {
+    label: "Step 2",
+    title: "Review readiness and restrictions",
+    body: "Keep nutrition, fight context, and safety signals connected before generation.",
+  },
+  {
+    label: "Step 3",
+    title: "Generate and reopen camps",
+    body: "Turn the intake into a saved camp plan, then return to the latest version any time.",
+  },
+] as const;
 
 function formatPlanCount(value: number): string {
   return `${value} saved plan${value === 1 ? "" : "s"}`;
@@ -325,49 +381,101 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="hero-panel">
-        <div className="hero-panel-copy">
-          <p className="eyebrow">Athlete-first beta</p>
-          <h1 className="hero-title">Get your fight camp on the web.</h1>
-          <p>UNLXCK brings onboarding, generation, history, and exports into one athlete workspace.</p>
-        </div>
-        <div className="hero-actions">
-          <Link href="/signup" className="cta">
-            Start free beta
-          </Link>
-          <Link href="/login" className="ghost-button">
-            Log in
-          </Link>
-          {demoMode ? (
-            <Link href="/login" className="ghost-button">
-              Try demo
-            </Link>
-          ) : null}
+      <section className="hero-panel public-hero-panel">
+        <div className="public-hero-grid">
+          <div className="hero-panel-copy public-hero-copy">
+            <p className="eyebrow">Athlete-first beta</p>
+            <h1 className="hero-title">See the camp workflow before you sign up.</h1>
+            <p className="public-hero-summary">UNLXCK brings onboarding, readiness, generation, saved history, and exports into one athlete workspace instead of scattering them across notes, forms, and PDFs.</p>
+            <div className="hero-actions">
+              <Link href="/signup" className="cta">
+                Start free beta
+              </Link>
+              <Link href="/login" className="ghost-button">
+                Log in
+              </Link>
+              {demoMode ? (
+                <Link href="/login" className="ghost-button">
+                  Try demo workspace
+                </Link>
+              ) : null}
+            </div>
+            <div className="public-proof-strip" aria-label="Product highlights">
+              <div className="public-proof-pill">
+                <span className="label">Structured onboarding</span>
+                <span className="public-proof-value">Profile, camp context, and restrictions in one flow</span>
+              </div>
+              <div className="public-proof-pill">
+                <span className="label">Saved plans</span>
+                <span className="public-proof-value">Latest camp, history, and PDF exports stay attached</span>
+              </div>
+              <div className="public-proof-pill">
+                <span className="label">Built to return to</span>
+                <span className="public-proof-value">Resume the next task fast on desktop or mobile</span>
+              </div>
+            </div>
+          </div>
+
+          <article className="support-panel public-preview-panel">
+            <div className="public-preview-header">
+              <div>
+                <p className="kicker">Product preview</p>
+                <h2 className="form-section-title">What the workspace actually looks like</h2>
+              </div>
+              <span className="badge status-badge-neutral">Live flow</span>
+            </div>
+            <div className="public-preview-window">
+              <div className="public-preview-toolbar">
+                <span className="public-preview-dot" aria-hidden="true" />
+                <span className="public-preview-dot" aria-hidden="true" />
+                <span className="public-preview-dot" aria-hidden="true" />
+                <span className="public-preview-toolbar-label">Athlete workspace</span>
+              </div>
+              <div className="public-preview-stack">
+                {landingPreviewStages.map((stage) => (
+                  <article key={stage.label} className="public-preview-card">
+                    <div className="public-preview-card-header">
+                      <div>
+                        <p className="label">{stage.label}</p>
+                        <h3 className="public-preview-card-title">{stage.title}</h3>
+                      </div>
+                    </div>
+                    <p className="muted">{stage.summary}</p>
+                    <div className="public-preview-chip-row">
+                      {stage.highlights.map((highlight) => (
+                        <span key={highlight} className="public-preview-chip">
+                          {highlight}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 
-      <section className="metric-grid">
-        <article className="support-panel">
-          <div className="form-section-header">
-            <p className="kicker">Step 1</p>
-            <h2 className="form-section-title">Sign up</h2>
-          </div>
-          <p className="muted">Create an athlete account and keep plan history in one place.</p>
-        </article>
-        <article className="support-panel">
-          <div className="form-section-header">
-            <p className="kicker">Step 2</p>
-            <h2 className="form-section-title">Onboard</h2>
-          </div>
-          <p className="muted">Complete the structured intake inside the product.</p>
-        </article>
-        <article className="support-panel">
-          <div className="form-section-header">
-            <p className="kicker">Step 3</p>
-            <h2 className="form-section-title">Generate</h2>
-          </div>
-          <p className="muted">Turn that intake into a saved fight camp plan.</p>
-        </article>
+      <section className="public-proof-grid" aria-label="Trust and proof points">
+        {landingProofPoints.map((point) => (
+          <article key={point.title} className="support-panel public-proof-card">
+            <p className="kicker">{point.label}</p>
+            <h2 className="form-section-title">{point.title}</h2>
+            <p className="muted">{point.body}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="metric-grid public-journey-grid">
+        {landingWorkflowSteps.map((step) => (
+          <article key={step.title} className="support-panel">
+            <div className="form-section-header">
+              <p className="kicker">{step.label}</p>
+              <h2 className="form-section-title">{step.title}</h2>
+            </div>
+            <p className="muted">{step.body}</p>
+          </article>
+        ))}
       </section>
     </>
   );
