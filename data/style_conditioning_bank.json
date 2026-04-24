@@ -6548,7 +6548,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "visual processing",
     "duration": "3min random ball toss → jab/parry response → x4 rounds",
     "intensity": "moderate",
@@ -6569,7 +6569,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "auditory reaction",
     "duration": "5min clinch pummeling → change direction on beep → x3 rounds",
     "intensity": "zone 2",
@@ -6591,7 +6591,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "decision fatigue",
     "duration": "3min live wrestling → 30s chess move → x5 rounds",
     "intensity": "zone 2",
@@ -6614,7 +6614,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "memory challenge",
     "duration": "3min execute kick combos from flashed cards → x4 rounds",
     "intensity": "low",
@@ -6638,7 +6638,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "choice reaction",
     "duration": "3min shot entries → cone color dictates finish (single/double) → x4 rounds",
     "intensity": "zone 2",
@@ -6660,7 +6660,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "pattern recognition",
     "duration": "3min mitt work → solve 3 puzzle pieces between rounds → x5 rounds",
     "intensity": "zone 2",
@@ -6682,7 +6682,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "dual-task loading",
     "duration": "3min footwork drills → solve math problem between combos → x4 rounds",
     "intensity": "zone 2",
@@ -6705,7 +6705,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "tactile sensitivity",
     "duration": "3min pummeling blindfolded → x4 rounds",
     "intensity": "low",
@@ -6727,7 +6727,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "audio distraction",
     "duration": "3min shadowboxing → answer riddle mid-round → x4 rounds",
     "intensity": "zone 2",
@@ -6750,7 +6750,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "Cognitive",
+    "system": "cognitive",
     "modality": "visual cueing",
     "duration": "3min light color dictates stance (red=orthodox/blue=southpaw) → x5 rounds",
     "intensity": "zone 2",

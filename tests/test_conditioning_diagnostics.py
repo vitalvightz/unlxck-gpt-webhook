@@ -306,9 +306,11 @@ def test_generate_plan_returns_stage2_payload():
     assert "global_priorities" in planning_brief
     assert "phase_strategy" in planning_brief
     assert "week_by_week_progression" in planning_brief
-    assert planning_brief["week_by_week_progression"]["weeks"]
+    # Late-fight payload (days_until_fight <= 13) uses session_sequence instead of
+    # week_by_week progression — weeks list is intentionally empty in that mode.
+    assert isinstance(planning_brief["week_by_week_progression"].get("weeks"), list)
     assert "weekly_role_map" in planning_brief
-    assert planning_brief["weekly_role_map"]["weeks"]
+    assert isinstance(planning_brief["weekly_role_map"].get("weeks"), list)
 
     handoff_text = result.get("stage2_handoff_text", "")
     assert "You are Stage 2 (planner/finalizer)." in handoff_text

@@ -1095,7 +1095,10 @@ def generate_conditioning_block(flags):
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
-    equipment_access_set = set(equipment_access)
+    # bodyweight is always available — every athlete can do bodyweight drills.
+    # Without this, bodyweight-tagged drills in style_taper_conditioning.json
+    # are silently excluded for any athlete whose intake omits "bodyweight".
+    equipment_access_set = set(equipment_access) | {"bodyweight"}
     days_until_fight = flags.get("days_until_fight")
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
     active_late_window = is_active_late_selector_window(late_window)
