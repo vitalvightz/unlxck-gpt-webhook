@@ -98,6 +98,11 @@ def _blocked_strength_names(result: dict) -> set[str]:
     }
 
 
+def _quality_passthrough(exercise, phase=None):
+    profile = strength.classify_strength_item(exercise)
+    return 0.0, profile
+
+
 def test_strength_late_window_keeps_crisp_overhead_when_low_dose(monkeypatch):
     exercise_bank = [
         {
@@ -277,6 +282,391 @@ def test_strength_late_window_blocks_known_offenders_and_logs_reason_codes(monke
     assert "late_strength_block_dense_emom" in blocked_by_name["EMOM: 5 Squat Cleans + 5 Burpees"]
     assert "Jumping Lunge" in blocked_by_name
     assert "late_strength_block_known_offender" in blocked_by_name["Jumping Lunge"]
+
+
+def test_post_selection_replacement_guard_keeps_late_safe_anchor_over_trap_bar(monkeypatch):
+    exercise_bank = [
+        {
+            "name": "Isometric Mid-Thigh Pull",
+            "phases": ["SPP"],
+            "movement": "isometric",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["bands"],
+            "tags": [
+                "late_safe_anchor",
+                "isometric",
+                "posterior_chain",
+                "late_strength_touch",
+                "low_impact",
+                "cns_freshness",
+            ],
+        },
+        {
+            "name": "Trap Bar Deadlift",
+            "phases": ["SPP"],
+            "movement": "hinge",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["trap_bar"],
+            "tags": ["legacy_loaded", "compound", "posterior_chain"],
+        },
+    ]
+    score_map = {
+        "late_safe_anchor": 10.0,
+        "legacy_loaded": 9.8,
+    }
+
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
+    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
+    monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(
+        strength,
+        "score_exercise",
+        lambda **kwargs: (
+            score_map[kwargs["exercise_tags"][0]],
+            {"final_score": score_map[kwargs["exercise_tags"][0]]},
+        ),
+    )
+    monkeypatch.setattr(strength, "strength_quality_adjustment", _quality_passthrough)
+
+    result = strength.generate_strength_block(
+        flags={
+            "phase": "SPP",
+            "fatigue": "moderate",
+            "fight_format": "boxing",
+            "sport": "boxing",
+            "equipment": ["bands", "trap_bar"],
+            "training_days": ["Mon", "Wed"],
+            "training_frequency": 2,
+            "days_available": 2,
+            "days_until_fight": 13,
+            "cut_severity_bucket": "high",
+            "weight_cut_pct": 6.0,
+            "weight_cut_risk": True,
+        }
+    )
+
+    selected_names = [entry["name"] for entry in result["why_log"]]
+
+    assert selected_names == ["Isometric Mid-Thigh Pull"]
+    assert "Trap Bar Deadlift" not in selected_names
+
+
+def test_base_category_promotion_prefers_late_safe_anchor_when_available(monkeypatch):
+    exercise_bank = [
+        {
+            "name": "Core Brace",
+            "phases": ["SPP"],
+            "movement": "core",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["bodyweight"],
+            "tags": ["support_core", "core", "stability"],
+        },
+        {
+            "name": "Trap-Bar Pin Pull Isometric",
+            "phases": ["SPP"],
+            "movement": "hinge",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["trap_bar"],
+            "tags": [
+                "late_safe_loaded",
+                "isometric",
+                "posterior_chain",
+                "late_strength_touch",
+                "low_impact",
+                "cns_freshness",
+            ],
+        },
+        {
+            "name": "Trap Bar Deadlift",
+            "phases": ["SPP"],
+            "movement": "hinge",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["trap_bar"],
+            "tags": ["legacy_loaded", "compound", "posterior_chain"],
+        },
+    ]
+    score_map = {
+        "support_core": 10.0,
+        "legacy_loaded": 9.9,
+        "late_safe_loaded": 9.8,
+    }
+
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
+    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
+    monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(
+        strength,
+        "score_exercise",
+        lambda **kwargs: (
+            score_map[kwargs["exercise_tags"][0]],
+            {"final_score": score_map[kwargs["exercise_tags"][0]]},
+        ),
+    )
+    monkeypatch.setattr(strength, "strength_quality_adjustment", _quality_passthrough)
+
+    result = strength.generate_strength_block(
+        flags={
+            "phase": "SPP",
+            "fatigue": "moderate",
+            "fight_format": "boxing",
+            "sport": "boxing",
+            "equipment": ["bodyweight", "trap_bar"],
+            "training_days": ["Mon", "Wed"],
+            "training_frequency": 2,
+            "days_available": 2,
+            "days_until_fight": 13,
+            "cut_severity_bucket": "critical",
+            "weight_cut_pct": 7.0,
+            "weight_cut_risk": True,
+        }
+    )
+
+    selected_names = [entry["name"] for entry in result["why_log"]]
+
+    assert selected_names == ["Trap-Bar Pin Pull Isometric"]
+    assert "Trap Bar Deadlift" not in selected_names
+
+
+def test_universal_gpp_insertion_respects_late_window_gate(monkeypatch):
+    exercise_bank = [
+        {
+            "name": "Core Brace",
+            "phases": ["GPP"],
+            "movement": "core",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["bodyweight"],
+            "tags": ["support_core", "core", "stability"],
+        }
+    ]
+    universal_bank = [
+        {
+            "name": "EMOM Trap Bar Circuit",
+            "phases": ["GPP"],
+            "movement": "hinge",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["trap_bar"],
+            "tags": ["blocked_universal", "compound", "posterior_chain", "eccentric"],
+            "notes": "EMOM 10min loaded hinge",
+        },
+        {
+            "name": "Trap-Bar Pin Pull Isometric",
+            "phases": ["GPP"],
+            "movement": "hinge",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["trap_bar"],
+            "tags": [
+                "safe_universal",
+                "isometric",
+                "posterior_chain",
+                "late_strength_touch",
+                "low_impact",
+                "cns_freshness",
+            ],
+        },
+    ]
+    score_map = {"support_core": 10.0}
+
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    monkeypatch.setattr(strength, "get_universal_strength", lambda: universal_bank)
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
+    monkeypatch.setattr(
+        strength,
+        "get_universal_strength_names",
+        lambda: {entry["name"] for entry in universal_bank},
+    )
+    monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 2})
+    monkeypatch.setattr(
+        strength,
+        "score_exercise",
+        lambda **kwargs: (
+            score_map[kwargs["exercise_tags"][0]],
+            {"final_score": score_map[kwargs["exercise_tags"][0]]},
+        ),
+    )
+    monkeypatch.setattr(strength, "strength_quality_adjustment", _quality_passthrough)
+
+    result = strength.generate_strength_block(
+        flags={
+            "phase": "GPP",
+            "fatigue": "moderate",
+            "fight_format": "boxing",
+            "sport": "boxing",
+            "equipment": ["bodyweight", "trap_bar"],
+            "training_days": ["Mon", "Wed", "Fri"],
+            "training_frequency": 3,
+            "days_available": 3,
+            "days_until_fight": 13,
+            "cut_severity_bucket": "high",
+            "weight_cut_pct": 6.0,
+            "weight_cut_risk": True,
+        }
+    )
+
+    selected_names = [entry["name"] for entry in result["why_log"]]
+
+    assert "Trap-Bar Pin Pull Isometric" in selected_names
+    assert "EMOM Trap Bar Circuit" not in selected_names
+
+
+def test_must_have_dampening_keeps_late_safe_touch_sticky_under_high_cut(monkeypatch):
+    exercise_bank = [
+        {
+            "name": "Legacy Trap Pull",
+            "phases": ["TAPER"],
+            "movement": "hinge",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["trap_bar"],
+            "tags": ["compound", "posterior_chain"],
+        },
+        {
+            "name": "Band-Resisted Jab-Cross Primer",
+            "phases": ["TAPER"],
+            "movement": "horizontal_push",
+            "method": "power",
+            "type": "bilateral",
+            "equipment": ["bands"],
+            "tags": [
+                "speed",
+                "reactive",
+                "neural_primer",
+                "late_strength_touch",
+                "low_impact",
+                "cns_freshness",
+            ],
+        },
+    ]
+
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: [])
+    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
+    monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(strength, "strength_quality_adjustment", _quality_passthrough)
+
+    result = strength.generate_strength_block(
+        flags={
+            "phase": "TAPER",
+            "fatigue": "low",
+            "fight_format": "boxing",
+            "sport": "boxing",
+            "equipment": ["bands", "trap_bar"],
+            "training_days": ["Mon", "Wed"],
+            "training_frequency": 2,
+            "days_available": 2,
+            "days_until_fight": 13,
+            "cut_severity_bucket": "critical",
+            "weight_cut_pct": 7.0,
+            "weight_cut_risk": True,
+            "key_goals": ["speed"],
+            "random_seed": 7,
+        }
+    )
+
+    selected_names = [entry["name"] for entry in result["why_log"]]
+    hinge_reservoir = result["candidate_reservoir"]["hinge"]
+    legacy_entry = next(entry for entry in hinge_reservoir if entry["exercise"]["name"] == "Legacy Trap Pull")
+
+    assert selected_names == ["Band-Resisted Jab-Cross Primer"]
+    assert legacy_entry["reasons"]["must_have_bonus"] == 0.18
+
+
+def test_protected_style_insert_still_requires_late_safe_and_equipment_validity(monkeypatch):
+    exercise_bank = [
+        {
+            "name": "Base Anchor",
+            "phases": ["TAPER"],
+            "movement": "pull",
+            "method": "power",
+            "type": "bilateral",
+            "equipment": ["bands"],
+            "tags": ["base_anchor", "explosive"],
+        },
+        {
+            "name": "Base Support",
+            "phases": ["TAPER"],
+            "movement": "core",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["bodyweight"],
+            "tags": ["base_support", "core", "stability"],
+        },
+    ]
+    style_bank = [
+        {
+            "name": "Counter Split-Line Iso",
+            "phases": ["TAPER"],
+            "movement": "horizontal_push",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["bands"],
+            "tags": [
+                "style_safe",
+                "counter_striker",
+                "isometric",
+                "push",
+                "late_strength_touch",
+                "low_impact",
+            ],
+        },
+        {
+            "name": "Counter Thruster",
+            "phases": ["TAPER"],
+            "movement": "squat",
+            "method": "strength",
+            "type": "bilateral",
+            "equipment": ["barbell"],
+            "tags": ["style_invalid", "counter_striker", "compound", "explosive"],
+        },
+    ]
+    score_map = {
+        "base_anchor": 9.0,
+        "base_support": 8.5,
+        "style_safe": 8.0,
+        "style_invalid": 10.0,
+    }
+
+    monkeypatch.setattr(strength, "get_exercise_bank", lambda: exercise_bank)
+    monkeypatch.setattr(strength, "get_style_exercises", lambda: style_bank)
+    monkeypatch.setattr(strength, "get_universal_strength_names", lambda: set())
+    monkeypatch.setattr(strength, "allocate_sessions", lambda *_args, **_kwargs: {"strength": 1})
+    monkeypatch.setattr(strength, "calculate_exercise_numbers", lambda *_args, **_kwargs: {"strength": 2})
+    monkeypatch.setattr(
+        strength,
+        "score_exercise",
+        lambda **kwargs: (
+            score_map[kwargs["exercise_tags"][0]],
+            {"final_score": score_map[kwargs["exercise_tags"][0]]},
+        ),
+    )
+    monkeypatch.setattr(strength, "strength_quality_adjustment", _quality_passthrough)
+
+    result = strength.generate_strength_block(
+        flags=_strength_flags(
+            7,
+            phase="TAPER",
+            style_tactical=["counter_striker"],
+            equipment=["bodyweight", "bands"],
+        )
+    )
+
+    selected_names = [entry["name"] for entry in result["why_log"]]
+
+    assert "Counter Split-Line Iso" in selected_names
+    assert "Counter Thruster" not in selected_names
 
 
 def test_strength_bridge_phase_activates_late_selector_without_taper_label(monkeypatch):

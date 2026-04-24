@@ -126,6 +126,13 @@ LATE_STRENGTH_SAFE_TAGS = {
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
 LATE_STRENGTH_TRUE_CLUSTER_BAND = 0.05
+LATE_SAFE_STRENGTH_FIELDS = {
+    "late_strength_touch",
+    "low_eccentric",
+    "low_impact",
+    "cns_freshness",
+}
+LATE_MUST_HAVE_BONUS_MULTIPLIER = 0.6
 VALID_CUT_BUCKETS = {"none", "low", "moderate", "high", "critical", "extreme"}
 LATE_STRENGTH_HIGH_CUT_BUCKETS = {"high", "critical", "extreme"}
 LATE_STRENGTH_CUT_BUCKET_MULTIPLIER = {
@@ -626,6 +633,7 @@ def score_exercise(
     available_equipment,
     required_equipment,
     is_rehab,
+    must_have_bonus_multiplier: float = 1.0,
     rng: random.Random | None = None,
 ):
     """Return a weighted score and breakdown for a candidate exercise."""
@@ -670,7 +678,7 @@ def score_exercise(
         score += must_have_matches * 0.35
     reasons["must_have_hits"] = must_have_matches
     must_have_bonus_tags = {"compound", "posterior_chain", "unilateral", "rate_of_force", "explosive"}
-    must_have_bonus = len(set(exercise_tags) & must_have_bonus_tags) * 0.15
+    must_have_bonus = len(set(exercise_tags) & must_have_bonus_tags) * 0.15 * must_have_bonus_multiplier
     score += must_have_bonus
     reasons["must_have_bonus"] = round(must_have_bonus, 2)
 
@@ -1083,6 +1091,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
     active_late_window = is_active_late_selector_window(late_window)
     cut_bucket = _resolved_cut_severity_bucket(flags)
+    high_pressure_late_cut = active_late_window and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
+    must_have_bonus_multiplier = (
+        LATE_MUST_HAVE_BONUS_MULTIPLIER if high_pressure_late_cut else 1.0
+    )
     legacy_taper_gate = phase == "TAPER" and late_window in {None, CONTROL_D28}
     taper_allowed = {"neural_primer", "speed", "cluster", "explosive", "low_impact", "reactive", "rehab_friendly"}
     taper_banned = {
@@ -1109,6 +1121,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     restriction_blocked_items: list[dict] = []
     late_window_blocked: list[dict] = []
     late_window_ambiguous: dict[str, dict] = {}
+    post_score_late_eval_cache: dict[str, dict] = {}
 
     def _record_late_block(exercise: dict, score: float, reason_codes: list[str]) -> None:
         if not active_late_window:
@@ -1128,6 +1141,116 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if not name:
             return
         late_window_ambiguous[name] = ambiguous_gap
+
+    def _late_eval_cache_key(exercise: dict) -> str:
+        name = str(exercise.get("name") or "").strip()
+        return name if name else f"anon:{id(exercise)}"
+
+    def _get_post_score_late_eval(
+        exercise: dict,
+        *,
+        fallback_score: float = 0.0,
+    ) -> dict:
+        if not active_late_window:
+            return {
+                "blocked": False,
+                "block_codes": [],
+                "reason_codes": [],
+                "adjustment": 0.0,
+                "ambiguous_gap": None,
+            }
+        cache_key = _late_eval_cache_key(exercise)
+        if cache_key not in post_score_late_eval_cache:
+            late_eval = _evaluate_strength_late_window(
+                exercise,
+                window=late_window,
+                cut_bucket=cut_bucket,
+            )
+            post_score_late_eval_cache[cache_key] = late_eval
+            _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+            if late_eval["blocked"]:
+                _record_late_block(exercise, fallback_score, late_eval["block_codes"])
+        return post_score_late_eval_cache[cache_key]
+
+    def _late_safe_marker_profile(
+        exercise: dict,
+        *,
+        profile: dict | None = None,
+        late_eval: dict | None = None,
+    ) -> dict:
+        tags = set(normalize_tags(exercise.get("tags", [])))
+        late_windows = _exercise_late_windows(exercise)
+        cut_buckets_allowed = _exercise_cut_buckets_allowed(exercise)
+        resolved_profile = profile or classify_strength_item(exercise)
+        markers: set[str] = set()
+
+        if "late_strength_touch" in tags or bool(exercise.get("late_strength_touch")):
+            markers.add("late_strength_touch")
+        if late_window and ("late_windows" in tags or late_window in late_windows or "all" in late_windows):
+            markers.add("late_windows")
+        if cut_bucket and (
+            "cut_buckets_allowed" in tags
+            or cut_bucket in cut_buckets_allowed
+            or "all" in cut_buckets_allowed
+        ):
+            markers.add("cut_buckets_allowed")
+        for field in LATE_SAFE_STRENGTH_FIELDS - {"late_strength_touch"}:
+            if field in tags or bool(exercise.get(field)):
+                markers.add(field)
+        if resolved_profile.get("quality_class") == "anchor_force_isometric":
+            markers.add("anchor_force_isometric")
+
+        return {
+            "explicit": bool(markers),
+            "markers": sorted(markers),
+            "marker_count": len(markers),
+        }
+
+    def _merge_post_score_reasons(
+        exercise: dict,
+        reasons: dict,
+        *,
+        profile: dict,
+        late_eval: dict,
+        late_safe_profile: dict,
+    ) -> dict:
+        merged = dict(reasons or {})
+        if late_eval.get("reason_codes"):
+            existing_codes = [str(code) for code in merged.get("reason_codes", []) if str(code).strip()]
+            merged["reason_codes"] = list(dict.fromkeys(existing_codes + list(late_eval["reason_codes"])))
+        if active_late_window:
+            merged.setdefault("late_window_adjustment", late_eval.get("adjustment", 0.0))
+        merged.setdefault("quality_class", profile.get("quality_class"))
+        merged.setdefault("anchor_capable", profile.get("anchor_capable"))
+        merged.setdefault("support_only", profile.get("support_only"))
+        merged.setdefault("base_categories", profile.get("base_categories"))
+        if late_safe_profile["markers"]:
+            merged.setdefault("late_safe_markers", list(late_safe_profile["markers"]))
+        return merged
+
+    def _generic_loaded_anchor(profile: dict, late_safe_profile: dict) -> bool:
+        return bool(
+            high_pressure_late_cut
+            and profile.get("loaded_pattern")
+            and not late_safe_profile["explicit"]
+        )
+
+    def _late_safe_candidate_priority(
+        cand_score: float,
+        *,
+        profile: dict,
+        late_safe_profile: dict,
+        order_idx: int,
+    ) -> tuple:
+        if not high_pressure_late_cut:
+            return (round(float(cand_score), 6), -order_idx)
+        return (
+            1 if late_safe_profile["explicit"] else 0,
+            1 if profile.get("force_isometric") else 0,
+            late_safe_profile["marker_count"],
+            round(float(cand_score), 6),
+            -order_idx,
+        )
 
     for ex in exercise_bank:
         tags = ex.get("tags", [])
@@ -1215,6 +1338,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=ex_equipment,
             is_rehab=method == "rehab",
+            must_have_bonus_multiplier=must_have_bonus_multiplier,
             rng=rng,
         )
         if score == -999:
@@ -1367,20 +1491,65 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     def _selected_names(exercises: list[dict]) -> set[str]:
         return {ex.get("name") for ex in exercises if ex.get("name")}
 
-    def _best_candidate(
+    def _matching_candidates(
         predicate,
         *,
         exclude_names: set[str] | None = None,
-    ) -> tuple[dict, float, dict, dict] | None:
+    ) -> list[tuple[int, dict, float, dict, dict, dict]]:
         blocked_names = set(exclude_names or set())
-        for cand, cand_score, cand_reasons in weighted_exercises:
+        matches: list[tuple[int, dict, float, dict, dict, dict]] = []
+        for order_idx, (cand, cand_score, cand_reasons) in enumerate(weighted_exercises):
             cand_name = cand.get("name")
             if not cand_name or cand_name in blocked_names:
                 continue
             profile = classify_strength_item(cand)
-            if predicate(cand, cand_score, cand_reasons, profile):
-                return cand, cand_score, cand_reasons, profile
-        return None
+            late_eval = _get_post_score_late_eval(cand, fallback_score=cand_score)
+            if active_late_window and late_eval["blocked"]:
+                continue
+            late_safe_profile = _late_safe_marker_profile(
+                cand,
+                profile=profile,
+                late_eval=late_eval,
+            )
+            merged_reasons = _merge_post_score_reasons(
+                cand,
+                cand_reasons,
+                profile=profile,
+                late_eval=late_eval,
+                late_safe_profile=late_safe_profile,
+            )
+            if predicate(cand, cand_score, merged_reasons, profile):
+                matches.append(
+                    (
+                        order_idx,
+                        cand,
+                        cand_score,
+                        merged_reasons,
+                        profile,
+                        late_safe_profile,
+                    )
+                )
+        return matches
+
+    def _best_candidate(
+        predicate,
+        *,
+        exclude_names: set[str] | None = None,
+    ) -> tuple[dict, float, dict, dict, dict] | None:
+        matches = _matching_candidates(predicate, exclude_names=exclude_names)
+        if not matches:
+            return None
+        order_idx, cand, cand_score, cand_reasons, profile, late_safe_profile = max(
+            matches,
+            key=lambda entry: _late_safe_candidate_priority(
+                entry[2],
+                profile=entry[4],
+                late_safe_profile=entry[5],
+                order_idx=entry[0],
+            ),
+        )
+        _ = order_idx
+        return cand, cand_score, cand_reasons, profile, late_safe_profile
 
     def _replace_exercise(
         exercises: list[dict],
@@ -1396,23 +1565,91 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             score_lookup[replacement_name] = replacement_score
             reason_lookup[replacement_name] = replacement_reasons
 
-    def _support_replacement_index(exercises: list[dict]) -> int | None:
+    def _support_replacement_index(
+        exercises: list[dict],
+        *,
+        replacement_profile: dict | None = None,
+        replacement_late_safe_profile: dict | None = None,
+    ) -> int | None:
         support_positions = [
             idx
             for idx, exercise in enumerate(exercises)
             if classify_strength_item(exercise)["support_only"]
         ]
-        if support_positions:
-            return min(
-                support_positions,
-                key=lambda idx: score_lookup.get(exercises[idx].get("name"), 0.0),
-            )
-        if not exercises:
+        candidate_indices = support_positions or list(range(len(exercises)))
+        if not candidate_indices:
             return None
+
+        if _generic_loaded_anchor(
+            replacement_profile or {},
+            replacement_late_safe_profile or {"explicit": False},
+        ):
+            non_explicit_late_safe_indices = [
+                idx
+                for idx in candidate_indices
+                if not _late_safe_marker_profile(exercises[idx])["explicit"]
+            ]
+            if non_explicit_late_safe_indices:
+                candidate_indices = non_explicit_late_safe_indices
+            else:
+                return None
+
         return min(
-            range(len(exercises)),
+            candidate_indices,
             key=lambda idx: score_lookup.get(exercises[idx].get("name"), 0.0),
         )
+
+    def _sorted_external_candidates(
+        candidates: list[dict],
+        *,
+        exclude_names: set[str] | None = None,
+        base_reasons: dict[str, dict] | None = None,
+    ) -> list[tuple[dict, dict, dict, dict]]:
+        blocked_names = set(exclude_names or set())
+        ordered_candidates: list[tuple[tuple, dict, dict, dict, dict]] = []
+        reasons_by_name = base_reasons or {}
+        for order_idx, cand in enumerate(candidates):
+            cand_name = cand.get("name")
+            if not cand_name or cand_name in blocked_names:
+                continue
+            profile = classify_strength_item(cand)
+            late_eval = _get_post_score_late_eval(
+                cand,
+                fallback_score=score_lookup.get(cand_name, 0.0),
+            )
+            if active_late_window and late_eval["blocked"]:
+                continue
+            late_safe_profile = _late_safe_marker_profile(
+                cand,
+                profile=profile,
+                late_eval=late_eval,
+            )
+            merged_reasons = _merge_post_score_reasons(
+                cand,
+                reasons_by_name.get(cand_name, {}),
+                profile=profile,
+                late_eval=late_eval,
+                late_safe_profile=late_safe_profile,
+            )
+            ordered_candidates.append(
+                (
+                    _late_safe_candidate_priority(
+                        score_lookup.get(cand_name, 0.0),
+                        profile=profile,
+                        late_safe_profile=late_safe_profile,
+                        order_idx=order_idx,
+                    ),
+                    cand,
+                    merged_reasons,
+                    profile,
+                    late_safe_profile,
+                )
+            )
+        ordered_candidates.sort(key=lambda entry: entry[0], reverse=True)
+        return [
+            (cand, merged_reasons, profile, late_safe_profile)
+            for _, cand, merged_reasons, profile, late_safe_profile in ordered_candidates
+        ]
 
     def _promote_base_categories(exercises: list[dict]) -> list[dict]:
         updated = list(exercises)
@@ -1425,10 +1662,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             )
             if not replacement_entry:
                 continue
-            replace_index = _support_replacement_index(updated)
+            replacement, replacement_score, replacement_reasons, replacement_profile, late_safe_profile = replacement_entry
+            replace_index = _support_replacement_index(
+                updated,
+                replacement_profile=replacement_profile,
+                replacement_late_safe_profile=late_safe_profile,
+            )
             if replace_index is None:
                 break
-            replacement, replacement_score, replacement_reasons, _profile = replacement_entry
             _replace_exercise(
                 updated,
                 index=replace_index,
@@ -1462,10 +1703,14 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
         if not replacement_entry:
             return exercises
-        replace_index = _support_replacement_index(exercises)
+        replacement, replacement_score, replacement_reasons, replacement_profile, late_safe_profile = replacement_entry
+        replace_index = _support_replacement_index(
+            exercises,
+            replacement_profile=replacement_profile,
+            replacement_late_safe_profile=late_safe_profile,
+        )
         if replace_index is None:
             return exercises
-        replacement, replacement_score, replacement_reasons, _profile = replacement_entry
         updated = list(exercises)
         _replace_exercise(
             updated,
@@ -1485,10 +1730,22 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 lambda cand, _score, _reasons, profile: profile["anchor_capable"],
                 exclude_names=selected_names,
             )
-            replace_index = _support_replacement_index(updated)
+            replacement = replacement_score = replacement_reasons = replacement_profile = late_safe_profile = None
+            if replacement_entry:
+                (
+                    replacement,
+                    replacement_score,
+                    replacement_reasons,
+                    replacement_profile,
+                    late_safe_profile,
+                ) = replacement_entry
+            replace_index = _support_replacement_index(
+                updated,
+                replacement_profile=replacement_profile,
+                replacement_late_safe_profile=late_safe_profile,
+            )
             if not replacement_entry or replace_index is None:
                 break
-            replacement, replacement_score, replacement_reasons, _profile = replacement_entry
             _replace_exercise(
                 updated,
                 index=replace_index,
@@ -1511,15 +1768,24 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     exclude_names=selected_names,
                 )
                 if replacement_entry:
-                    local_support = next(
-                        (
+                    replacement, replacement_score, replacement_reasons, replacement_profile, late_safe_profile = replacement_entry
+                    local_candidates = [
+                        idx
+                        for idx, exercise in enumerate(items)
+                        if classify_strength_item(exercise)["support_only"]
+                    ] or list(range(len(items)))
+                    if _generic_loaded_anchor(replacement_profile, late_safe_profile):
+                        local_candidates = [
                             idx
-                            for idx, exercise in enumerate(items)
-                            if classify_strength_item(exercise)["support_only"]
-                        ),
-                        len(items) - 1,
+                            for idx in local_candidates
+                            if not _late_safe_marker_profile(items[idx])["explicit"]
+                        ]
+                    if not local_candidates:
+                        continue
+                    local_support = min(
+                        local_candidates,
+                        key=lambda idx: score_lookup.get(items[idx].get("name"), 0.0),
                     )
-                    replacement, replacement_score, replacement_reasons, _profile = replacement_entry
                     _replace_exercise(
                         updated,
                         index=positions[local_support],
@@ -1575,16 +1841,21 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         for category in missing_base_categories(top_exercises):
             if inserted >= 2:
                 break
-            for drill in universal_strength:
+            for drill, drill_reasons, drill_profile, _late_safe_profile in _sorted_external_candidates(
+                universal_strength,
+                exclude_names=existing_names,
+            ):
                 drill_name = drill.get("name")
-                if not drill_name or drill_name in existing_names:
+                if not drill_name:
                     continue
                 if _guarded_injury_decision(drill).action == "exclude":
                     continue
-                if category not in classify_strength_item(drill)["base_categories"]:
+                if category not in drill_profile["base_categories"]:
                     continue
                 top_exercises.append(drill)
                 existing_names.add(drill_name)
+                reason_lookup[drill_name] = drill_reasons
+                score_lookup.setdefault(drill_name, 0.0)
                 inserted += 1
                 break
 
@@ -1638,6 +1909,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             available_equipment=equipment_access,
             required_equipment=normalize_equipment_list(ex.get("equipment", [])),
             is_rehab=ex.get("method", "").lower() == "rehab",
+            must_have_bonus_multiplier=must_have_bonus_multiplier,
             rng=rng,
         )
         if style_score == -999:
@@ -1756,17 +2028,24 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             capped.append(ex)
 
         if len(capped) < target_exercises:
-            for cand, _, cand_reasons in weighted_exercises:
-                if cand in capped:
-                    continue
+            while len(capped) < target_exercises:
+                selected_names = _selected_names(capped)
+                replacement_entry = _best_candidate(
+                    lambda cand, _score, _reasons, _profile: (
+                        normalize_exercise_movement(cand) == "unknown"
+                        or movement_counts.get(normalize_exercise_movement(cand), 0) < 2
+                    ),
+                    exclude_names=selected_names,
+                )
+                if not replacement_entry:
+                    break
+                cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
                 movement = normalize_exercise_movement(cand)
                 if movement != "unknown" and movement_counts.get(movement, 0) >= 2:
-                    continue
+                    break
                 movement_counts[movement] = movement_counts.get(movement, 0) + 1
                 capped.append(cand)
                 reason_lookup.setdefault(cand.get("name"), cand_reasons)
-                if len(capped) >= target_exercises:
-                    break
         return capped
 
     base_exercises = _ensure_protected_style_selection(base_exercises)
@@ -1793,16 +2072,19 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         for idx, ex in enumerate(ex_list):
             name_lower = ex.get("name", "").lower()
             if "heavy rdl" in name_lower or ("rdl" in name_lower and "heavy" in name_lower):
-                for cand, _, cand_reasons in weighted_exercises:
-                    cand_name = cand.get("name", "").lower()
-                    if cand_name == name_lower:
-                        continue
-                    cand_tags = set(normalize_tags(cand.get("tags", [])))
-                    cand_eq = normalize_equipment_list(cand.get("equipment", []))
-                    if (
-                        "medicine_ball" in cand_eq and "rotational" in cand_tags
-                    ) or ("rdl" in cand_name and "heavy" in cand_name):
-                        continue
+                replacement_entry = _best_candidate(
+                    lambda cand, _score, _reasons, _profile: (
+                        cand.get("name", "").lower() != name_lower
+                        and "heavy rdl" not in cand.get("name", "").lower()
+                        and not (
+                            "medicine_ball" in normalize_equipment_list(cand.get("equipment", []))
+                            and "rotational" in set(normalize_tags(cand.get("tags", [])))
+                        )
+                    ),
+                    exclude_names=_selected_names(ex_list) - {ex.get("name")},
+                )
+                if replacement_entry:
+                    cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
                     ex_list[idx] = cand
                     reason_lookup[cand.get("name")] = cand_reasons
                     return
@@ -1835,9 +2117,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             replacement_decision = None
             candidate_pool: list[dict] = []
             safe_reasons: dict[str, dict] = {}
-            for cand, _, cand_reasons in guard_pairs:
+            for cand, cand_reasons, _profile, _late_safe_profile in _sorted_external_candidates(
+                [cand for cand, _, _ in guard_pairs],
+                exclude_names=used_names,
+                base_reasons={cand.get("name"): cand_reasons for cand, _, cand_reasons in guard_pairs if cand.get("name")},
+            ):
                 cand_name = cand.get("name")
-                if not cand_name or cand_name in used_names:
+                if not cand_name:
                     continue
                 candidate_pool.append(cand)
                 safe_reasons[cand_name] = cand_reasons
@@ -1885,23 +2171,23 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated.append(ex)
                 continue
             replacement = None
-            for cand, _, cand_reasons in weighted_exercises:
-                cand_name = cand.get("name")
-                if not cand_name or cand_name in used_names:
-                    continue
-                if injury_match_details(
+            replacement_entry = _best_candidate(
+                lambda cand, _score, _reasons, _profile: not injury_match_details(
                     cand,
                     injuries,
                     fields=("name", "movement", "method"),
                     risk_levels=("exclude",),
-                ):
-                    continue
-                if _guarded_injury_decision(cand).action == "exclude":
-                    continue
-                reason_lookup[cand_name] = cand_reasons
+                )
+                and _guarded_injury_decision(cand).action != "exclude",
+                exclude_names=used_names,
+            )
+            if replacement_entry:
+                cand, _cand_score, cand_reasons, _profile, _late_safe_profile = replacement_entry
+                cand_name = cand.get("name")
+                if cand_name:
+                    reason_lookup[cand_name] = cand_reasons
+                    used_names.add(cand_name)
                 replacement = cand
-                used_names.add(cand_name)
-                break
             if replacement:
                 updated.append(replacement)
         return updated
