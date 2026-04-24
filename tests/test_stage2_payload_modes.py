@@ -481,6 +481,12 @@ class TestPlanningBriefBranching:
             "d0",
         ]
 
+    def test_bridge_d20_weekly_role_map_phase_matches_progression(self):
+        brief = _build_brief_for(20, phase="SPP")
+
+        assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
+        assert brief["week_by_week_progression"]["weeks"][0]["phase"] == brief["weekly_role_map"]["weeks"][0]["phase"]
+
     def test_bridge_continuation_keeps_d1_d0_as_day_specific_modes_not_development_weeks(self):
         brief = _build_brief_for(16)
         weeks_by_key = {
