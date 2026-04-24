@@ -177,11 +177,8 @@ def _future_declared_weekdays_with_countdown(
 def _hard_spar_status_for_countdown_offset(offset: int) -> str:
     if 18 <= offset <= 21:
         return "hard_allowed"
-    if 16 <= offset <= 17:
-        # D-17 and D-16 cap hard sparring at zero; declared days downgrade.
-        return "downgrade"
-    if 14 <= offset <= 15:
-        # Bridge sub-band D-15 to D-14: technical / rhythm only.
+    if 14 <= offset <= 17:
+        # D-17 to D-14 cap hard sparring at zero; declared days downgrade.
         return "downgrade"
     if 8 <= offset <= 13:
         return "hard_allowed"
