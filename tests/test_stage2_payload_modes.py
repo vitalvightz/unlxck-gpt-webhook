@@ -132,6 +132,14 @@ def _build_stage2(days):
     )
 
 
+def _composite_stage_keys(sequence):
+    return [
+        entry.get("composite_segment_stage_key")
+        for entry in sequence
+        if entry.get("composite_segment_stage_key")
+    ]
+
+
 class TestPayloadModeClassification:
     @pytest.mark.parametrize(
         "days, expected",
@@ -309,12 +317,12 @@ class TestLateFightRoleMap:
         role_map = _build_late_fight_weekly_role_map(5, _athlete(5))
         assert role_map["model"] == "late_fight_role_overlay.v1"
         assert role_map["payload_mode"] == "late_fight_transition_payload"
-        assert role_map["weeks"] == []
+        assert [week["stage_key"] for week in role_map["weeks"]] == ["d6_to_d5", "d4_to_d2", "d1", "d0"]
 
     def test_d3_role_map_is_session_list(self):
         role_map = _build_late_fight_weekly_role_map(3, _athlete(3))
         assert role_map["payload_mode"] == "late_fight_session_payload"
-        assert role_map["weeks"] == []
+        assert [week["stage_key"] for week in role_map["weeks"]] == ["d4_to_d2", "d1", "d0"]
 
     def test_d0_role_map_has_no_weeks(self):
         role_map = _build_late_fight_weekly_role_map(0, _athlete(0))
@@ -405,11 +413,19 @@ class TestPlanningBriefBranching:
         assert brief["days_out_payload"]["payload_mode"] == "late_fight_session_payload"
         assert brief["weekly_role_map"]["payload_mode"] == "late_fight_session_payload"
         assert brief["rendering_rules"]["mode"] == "late_fight_session_payload"
-        assert brief["week_by_week_progression"]["weeks"] == []
-        assert brief["weekly_role_map"]["weeks"] == []
+        assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == [
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+        assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == [
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
         assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
-            "alactic_sharpness_day",
             "fight_week_freshness_day",
+            "neural_primer_day",
         ]
 
     def test_d0_planning_brief_has_empty_progression(self):
@@ -433,12 +449,24 @@ class TestPlanningBriefBranching:
         assert "power touch" in week["stage_objective"].lower()
         assert "freshness" in week["stage_objective"].lower()
 
-    def test_d13_planning_brief_remains_single_stage_pre_fight_logic(self):
+    def test_d13_planning_brief_continues_through_d0(self):
         brief = _build_brief_for(13)
-        weeks = brief["week_by_week_progression"]["weeks"]
-        assert len(weeks) == 1
-        assert weeks[0]["stage_key"] == "d13_to_d8"
-        assert weeks[0]["stage_label"] == "Compressed Pre-Fight Week"
+        assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == [
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
+        assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == [
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
 
     def test_guardrail_bridge_mode_does_not_suppress_downstream_late_stage_takeover(self):
         brief = _build_brief_for(16)
@@ -488,12 +516,16 @@ class TestPlanningBriefBranching:
         ]
 
         assert downstream_roles
-        assert any(entry.get("composite_segment_stage_key") == "d13_to_d8" for entry in downstream_roles)
+        assert any(entry.get("composite_segment_stage_key") == "d7" for entry in downstream_roles)
         assert any(entry.get("composite_segment_stage_key") == "d1" for entry in downstream_roles)
 
     def test_bridge_d16_weekly_role_map_uses_practical_continuation_roles(self):
         brief = _build_brief_for(16)
-        roles = brief["weekly_role_map"]["weeks"][0]["session_roles"]
+        roles = [
+            role
+            for week in brief["weekly_role_map"]["weeks"]
+            for role in week["session_roles"]
+        ]
         offsets = [
             role.get("countdown_offset")
             for role in roles
@@ -546,17 +578,33 @@ class TestPlanningBriefBranching:
             for entry in meaningful_app_roles
         )
 
-    def test_d13_standalone_practical_behaviour_remains_unchanged(self):
+    def test_d13_practical_behaviour_uses_countdown_continuation_until_d1(self):
         spec = _build_late_fight_plan_spec(13, _athlete(13))
 
         assert spec["payload_mode"] == "pre_fight_compressed_payload"
-        assert spec["visible_session_cap"] == 2
+        assert spec["allocator"].get("composite_practical_allocation") is True
+        assert [segment["stage_key"] for segment in spec["countdown_mode_sequence"]] == [
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+            "d0",
+        ]
         assert [entry.get("role_key") for entry in spec["visible_session_sequence"]] == [
             "strength_touch_day",
+            "alactic_sharpness_day",
             "fight_week_freshness_day",
+            "neural_primer_day",
         ]
-        assert [entry.get("countdown_offset") for entry in spec["visible_session_sequence"]] == [9, 1]
-        assert not spec["allocator"].get("composite_practical_allocation", False)
+        assert _composite_stage_keys(spec["session_sequence"]) == [
+            "d13_to_d8",
+            "d13_to_d8",
+            "d7",
+            "d6_to_d5",
+            "d4_to_d2",
+            "d1",
+        ]
 
 
 class TestStage2PayloadBranching:
@@ -584,13 +632,14 @@ class TestStage2PayloadBranching:
         assert "late_fight_permissions" in payload
         assert "rendering_rules" in payload
 
-    def test_d3_payload_exposes_flat_session_sequence(self):
+    def test_d3_payload_exposes_continued_session_sequence(self):
         payload = _build_stage2(3)
         assert payload["payload_mode"] == "late_fight_session_payload"
         assert [entry["role_key"] for entry in payload["late_fight_session_sequence"]] == [
-            "alactic_sharpness_day",
             "fight_week_freshness_day",
+            "neural_primer_day",
         ]
+        assert _composite_stage_keys(payload["late_fight_session_sequence"]) == ["d4_to_d2", "d1"]
 
     def test_d2_payload_exposes_primer_only_sequence(self):
         payload = _build_stage2(2)
@@ -615,7 +664,7 @@ class TestStage2PayloadBranching:
     def test_plan_spec_exposes_allocator_metadata_and_source_of_truth_fields(self):
         spec = _build_late_fight_plan_spec(5, _athlete(5))
 
-        assert spec["allocator"]["legal_countdown_labels"] == ["D-5", "D-4", "D-3", "D-2", "D-1"]
+        assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2", "D-1"]
         assert spec["role_budget"]["selected_active_roles"] == len(spec["session_sequence"])
         assert all("scheduled_countdown_label" in role for role in spec["session_sequence"])
         assert all("placement_source" in role for role in spec["session_sequence"])
@@ -663,30 +712,41 @@ class TestStage2PayloadBranching:
         )
 
     @pytest.mark.parametrize(
-        "days,expected_visible",
+        "days,expected_stages",
         [
-            (13, 3),
-            (11, 3),
-            (9, 3),
-            (7, 2),
-            (5, 2),
-            (3, 2),
-            (1, 1),
+            (13, ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (10, ["d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (7, ["d7", "d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (5, ["d6_to_d5", "d4_to_d2", "d1", "d0"]),
+            (3, ["d4_to_d2", "d1", "d0"]),
         ],
     )
-    def test_late_fight_visible_session_count_varies_by_countdown_and_context(self, days, expected_visible):
-        athlete = _athlete(
-            days,
-            hard_sparring_days=["thursday"],
-            fatigue="moderate",
-            fatigue_level="moderate",
-            readiness_flags=["injury_management", "weight_cut_active"],
-            weekly_training_frequency=5,
-            weight_cut_risk=True,
-            weight_cut_pct=2.0,
+    def test_late_fight_continuation_builds_stage_windows_through_d1(self, days, expected_stages):
+        brief = _build_brief_for(days)
+        assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == expected_stages
+        assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == expected_stages
+        assert brief["late_fight_plan_spec"]["allocator"]["composite_practical_allocation"] is True
+        assert "d1" in _composite_stage_keys(brief["late_fight_session_sequence"])
+
+    def test_d13_downstream_stage_can_continue_with_zero_visible_app_owned_sessions(self):
+        brief = _build_brief_for(13)
+        weeks_by_key = {week["stage_key"]: week for week in brief["weekly_role_map"]["weeks"]}
+
+        assert any(role["role_key"] == "hard_sparring_day" for role in weeks_by_key["d7"]["session_roles"])
+        assert all(
+            entry.get("composite_segment_stage_key") != "d7"
+            for entry in brief["late_fight_plan_spec"]["visible_session_sequence"]
         )
-        spec = _build_late_fight_plan_spec(days, athlete)
-        assert spec["visible_session_cap"] == expected_visible
+
+    def test_d5_continuation_does_not_invent_filler_for_an_empty_window(self):
+        brief = _build_brief_for(5)
+        weeks_by_key = {week["stage_key"]: week for week in brief["weekly_role_map"]["weeks"]}
+
+        assert weeks_by_key["d6_to_d5"]["session_roles"] == []
+        assert all(
+            entry.get("composite_segment_stage_key") != "d6_to_d5"
+            for entry in brief["late_fight_session_sequence"]
+        )
 
     def test_raw_athlete_inputs_are_preserved_in_late_fight_payload(self):
         payload = _build_stage2(1)
@@ -858,7 +918,9 @@ class TestHandoffText:
         assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
         assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
 
-    def test_d13_handoff_remains_single_stage_pre_fight_logic(self):
+    def test_d13_handoff_includes_countdown_continuation_map(self):
         text = self._build_handoff_with_brief(13)
-        assert "COUNTDOWN CONTINUATION MAP" not in text
+        assert "COUNTDOWN CONTINUATION MAP" in text
         assert "COMPRESSED PRE-FIGHT WEEK" in text
+        assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
+        assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
