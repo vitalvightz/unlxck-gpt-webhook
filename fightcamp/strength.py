@@ -242,7 +242,7 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     ballistic = "mech_ballistic" in tags or "explosive" in tags
     dense_emom = _strength_dense_pattern(text)
     heavy_loaded_lower = lower_body and bool(equipment & {"barbell", "trap_bar"})
-    heavy_loaded_pattern = bool(re.search(r"@\s*(?:8[0-9]|9[0-9])", text)) or "heavy" in text
+    heavy_loaded_pattern = bool(re.search(r"@\s*(?:8[0-9]|9[0-9]|100)\b", text)) or "heavy" in text
     dense_ballistic = ballistic and (dense_emom or systemic_fatigue)
     trap_bar_jump = (
         ("trap bar" in text and "jump" in text)
