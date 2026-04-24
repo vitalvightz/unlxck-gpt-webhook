@@ -688,5 +688,5 @@ class TestHardSparStatusForCountdownOffset:
 
         assert _hard_spar_status_for_countdown_offset(21) == "hard_allowed"
         assert _hard_spar_status_for_countdown_offset(18) == "hard_allowed"
-        assert _hard_spar_status_for_countdown_offset(17) != "hard_allowed"
-        assert _hard_spar_status_for_countdown_offset(14) != "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(17) == "downgrade"
+        assert _hard_spar_status_for_countdown_offset(14) == "downgrade"
