@@ -1499,7 +1499,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Identity</p>
                   <h2 className="form-section-title">Core athlete details</h2>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
                     <input
@@ -1540,7 +1540,7 @@ export function PlanIntakeForm() {
                     <label htmlFor="heightCm">Height (cm)</label>
                     <input id="heightCm" type="number" min="0" step="1" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
-                  <div className="field">
+                  <div className="field field-span-full">
                     <label htmlFor="stance">Stance</label>
                     <CustomSelect
                       id="stance"
@@ -1559,7 +1559,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Competitive profile</p>
                   <h2 className="form-section-title">Style and status</h2>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="technicalStyle">Technical Style</label>
                     <CustomSelect
@@ -1638,7 +1638,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Fight context</p>
                   <h2 className="form-section-title">Camp timing and load</h2>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid onboarding-fight-grid">
                   <div className="field">
                     <label htmlFor="fightDate">Fight date</label>
                     <input id="fightDate" type="date" value={form.fight_date} onChange={(event) => updateField("fight_date", event.target.value)} />
@@ -1665,34 +1665,6 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateRoundsField("roundDuration", value)}
                     />
                   </div>
-                  {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
-                  <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
-                  </div>
-                  ) : (
-                  <div className="field" style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}>
-                    <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
-                    <input
-                      id="sessionsPerWeek"
-                      type="number"
-                      min="1"
-                      max="6"
-                      disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
-                      value={form.weekly_training_frequency ?? ""}
-                      onChange={(event) => {
-                        const nextValue = numberOrNull(event.target.value);
-                        updateField(
-                          "weekly_training_frequency",
-                          nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
-                        );
-                      }}
-                    />
-                    <p className="muted">
-                      {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                        "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
-                    </p>
-                  </div>
-                  )}
                   <div className="field">
                     <label htmlFor="fatigueLevel">Fatigue level</label>
                     <CustomSelect
@@ -1704,6 +1676,37 @@ export function PlanIntakeForm() {
                     />
                     <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>
                   </div>
+                  {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
+                    <div className="field field-span-full">
+                      <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
+                    </div>
+                  ) : (
+                    <div
+                      className="field field-span-full"
+                      style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}
+                    >
+                      <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
+                      <input
+                        id="sessionsPerWeek"
+                        type="number"
+                        min="1"
+                        max="6"
+                        disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
+                        value={form.weekly_training_frequency ?? ""}
+                        onChange={(event) => {
+                          const nextValue = numberOrNull(event.target.value);
+                          updateField(
+                            "weekly_training_frequency",
+                            nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
+                          );
+                        }}
+                      />
+                      <p className="muted">
+                        {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
+                          "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </article>
             </div>
@@ -2279,18 +2282,6 @@ export function PlanIntakeForm() {
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="status-card">
-                <p className="status-label">Ready to generate</p>
-                <h2 className="plan-summary-title">Final pre-check</h2>
-                <p className="muted">Review the saved inputs, then generate.</p>
-                <ul className="summary-list">
-                  {reviewChecklistItems.map((item) => (
-                    <li key={`${item.status}-${item.label}`} className="onboarding-validation-item" data-status={item.status}>
-                      {item.label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
               <div className="support-panel">
                 <p className="kicker">Restrictions</p>
                 <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
