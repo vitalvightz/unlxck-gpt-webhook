@@ -219,9 +219,9 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
 
     work_values: list[float] = []
     rest_values: list[float] = []
-    for clause in re.split(r"[;,/]", " ".join(filter(None, [drill.get("timing", ""), drill.get("duration", "")]))):
+    raw_text = " ; ".join(filter(None, [drill.get("timing", ""), drill.get("duration", "")]))
+    for clause in re.split(r"[;,/]", raw_text):
         is_rest = any(k in clause.lower() for k in ("rest", "off", "recovery", "recover", "between"))
-        (rest_values if is_rest else work_values).extend(_extract_time_values(clause))
     if drill.get("rest"):
         rest_values.extend(_extract_time_values(drill.get("rest") or ""))
 
