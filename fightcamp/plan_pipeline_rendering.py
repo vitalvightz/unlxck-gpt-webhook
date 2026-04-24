@@ -11,7 +11,6 @@ from .build_block import (
     html_to_pdf,
     upload_to_supabase,
 )
-from .late_selector_windows import classify_late_selector_window, is_active_late_selector_window
 from .plan_pipeline_runtime import (
     PHASES,
     PHASE_PLAN_TITLES,
@@ -145,15 +144,9 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         else f"- Weeks Out: {context.plan_input.weeks_out}"
     )
 
-    late_window = classify_late_selector_window(context.plan_input.days_until_fight)
-    late_fight_active = is_active_late_selector_window(late_window)
-
     phase_num = 1
-    fight_plan_lines = ["# LATE-FIGHT COUNTDOWN" if late_fight_active else "# FIGHT CAMP PLAN"]
+    fight_plan_lines = ["# FIGHT CAMP PLAN"]
     phase_models: dict[str, PhaseBlock] = {}
-
-    if late_fight_active:
-        fight_plan_lines += ["## Countdown Sessions", ""]
 
     for phase in PHASES:
         if not context.phase_active(phase):
@@ -173,28 +166,21 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         )
         guardrails = blocks.guardrails.get(phase, "") if blocks.has_injuries else ""
 
-        if late_fight_active:
-            for body in (mindset, strength, conditioning):
-                if body:
-                    fight_plan_lines += [body, ""]
-            if blocks.has_injuries and guardrails:
-                fight_plan_lines += [guardrails, ""]
-        else:
-            fight_plan_lines += [
-                f"## {phase_name}",
-                "",
-                "### Mindset Focus",
-                mindset,
-                "",
-                "### Strength & Power",
-                strength,
-                "",
-                "### Conditioning",
-                conditioning,
-                "",
-            ]
-            if blocks.has_injuries:
-                fight_plan_lines += ["### Injury Guardrails", f"Phase: {phase}", guardrails, ""]
+        fight_plan_lines += [
+            f"## {phase_name}",
+            "",
+            "### Mindset Focus",
+            mindset,
+            "",
+            "### Strength & Power",
+            strength,
+            "",
+            "### Conditioning",
+            conditioning,
+            "",
+        ]
+        if blocks.has_injuries:
+            fight_plan_lines += ["### Injury Guardrails", f"Phase: {phase}", guardrails, ""]
 
         phase_models[phase] = _build_phase_model(
             phase_name,
@@ -228,14 +214,6 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
     if rehab_sections:
         fight_plan_lines += rehab_sections
 
-    phase_breakdown_lines = (
-        []
-        if late_fight_active
-        else [
-            f"- Phase Weeks: {phase_week_summary}",
-            f"- Phase Days: {phase_day_summary}",
-        ]
-    )
     fight_plan_lines += [
         "",
         "## Mindset Overview",
@@ -259,7 +237,8 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Fight Format: {context.plan_input.rounds_format}",
         f"- Fight Date: {context.plan_input.next_fight_date}",
         days_out_line,
-        *phase_breakdown_lines,
+        f"- Phase Weeks: {phase_week_summary}",
+        f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {context.plan_input.fatigue}",
         f"- Injuries: {context.injuries_display}",
         f"- Training Availability: {context.plan_input.available_days}",
@@ -298,7 +277,8 @@ def render_plan_bundle(*, context: PlanRuntimeContext, blocks: PlanBlocksBundle,
         f"- Fight Format: {context.plan_input.rounds_format}",
         f"- Fight Date: {context.plan_input.next_fight_date}",
         days_out_line,
-        *phase_breakdown_lines,
+        f"- Phase Weeks: {phase_week_summary}",
+        f"- Phase Days: {phase_day_summary}",
         f"- Fatigue Level: {context.plan_input.fatigue}",
         f"- Injuries: {context.injuries_display}",
         f"- Training Availability: {context.plan_input.available_days}",

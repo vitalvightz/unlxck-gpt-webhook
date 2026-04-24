@@ -196,87 +196,6 @@ def _conditioning_generic_glycolytic(system: str, tags: set[str]) -> bool:
     return not bool(tags & {"skill_refinement", "cns_freshness", "sharpness", "low_impact", "reactive"})
 
 
-_ATHLETE_LABEL_BLOCKED_GLYCOLYTIC_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
-
-
-def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) -> str:
-    """Coach-voiced conditioning label based on prescribed dose.
-
-    Internal system fields (``glycolytic``, ``alactic``, ``aerobic``) leak coach
-    jargon into athlete-facing output. This helper translates them using the
-    drill's actual work/rest prescription so the label matches what the session
-    feels like in practice.
-
-    ``late_window`` is the resolved late-fight window
-    (``classify_late_selector_window``); when D-7 or tighter, ``glycolytic``
-    is never returned even if the dose qualifies — fight-week output must not
-    frame sessions around lactate stress.
-    """
-
-    system = str(drill.get("system") or "").strip().lower()
-    tags = set(normalize_tags(drill.get("tags", [])))
-    text = _conditioning_text_blob(drill)
-
-    work_values: list[float] = []
-    rest_values: list[float] = []
-    raw_text = " ; ".join(filter(None, [drill.get("timing", ""), drill.get("duration", "")]))
-    for clause in re.split(r"[;,/]", raw_text):
-        is_rest = any(k in clause.lower() for k in ("rest", "off", "recovery", "recover", "between"))
-    if drill.get("rest"):
-        rest_values.extend(_extract_time_values(drill.get("rest") or ""))
-
-    work_max = max(work_values) if work_values else None
-    rest_max = max(rest_values) if rest_values else None
-    multi_round = _conditioning_multi_round_pattern(text)
-    fight_pace = _conditioning_fight_pace_pattern(text, tags)
-
-    # Dose is the primary decider. A "fight-pace" tag on a short-work + full-rest
-    # drill does not earn the "glycolytic" label — the prescription has to
-    # actually create lactate stress.
-    base_glycolytic_dose = (
-        work_max is not None
-        and rest_max is not None
-        and work_max >= 45
-        and rest_max <= 60
-        and multi_round
-    )
-    fight_pace_glycolytic_dose = (
-        fight_pace
-        and work_max is not None
-        and rest_max is not None
-        and work_max >= 45
-        and rest_max <= 90
-        and multi_round
-    )
-    glycolytic_dose = base_glycolytic_dose or fight_pace_glycolytic_dose
-
-    short_work_full_rest = (
-        work_max is not None
-        and rest_max is not None
-        and work_max <= 30
-        and rest_max >= 60
-    )
-
-    if glycolytic_dose and late_window not in _ATHLETE_LABEL_BLOCKED_GLYCOLYTIC_WINDOWS:
-        return "glycolytic"
-
-    if "coordination" in tags:
-        return "coordination conditioning"
-    if "reactive" in tags:
-        return "reactive footwork"
-    if short_work_full_rest and tags & {"sharpness", "skill_refinement"}:
-        return "technical rhythm"
-    if short_work_full_rest:
-        return "footwork speed repeatability"
-
-    if late_window in _ATHLETE_LABEL_BLOCKED_GLYCOLYTIC_WINDOWS and system == "glycolytic":
-        if tags & {"sharpness", "skill_refinement", "cns_freshness"}:
-            return "technical rhythm"
-        return "coordination conditioning"
-
-    return system or "conditioning"
-
-
 def _conditioning_resolve_bridge_rules(
     *,
     flags: dict,
@@ -325,7 +244,6 @@ def _evaluate_conditioning_late_window(
     tags = set(normalize_tags(drill.get("tags", [])))
     text = _conditioning_text_blob(drill)
     severity = _conditioning_window_severity(window)
-    late_windows = {str(w).strip().lower() for w in (drill.get("late_windows") or []) if str(w).strip()}
     dense = _conditioning_dense_pattern(text)
     multi_round = _conditioning_multi_round_pattern(text)
     fight_pace = _conditioning_fight_pace_pattern(text, tags)
@@ -377,15 +295,6 @@ def _evaluate_conditioning_late_window(
     block_codes: list[str] = []
     if generic_glycolytic and not bridge_allows_glycolytic:
         block_codes.append("late_conditioning_block_bridge_glycolytic_cap")
-
-    if late_windows:
-        if window in late_windows:
-            adjustment += 0.8 + (0.15 * severity)
-            reason_codes.append("late_conditioning_boost_window_fit")
-        else:
-            adjustment -= 0.85
-            reason_codes.append("late_conditioning_penalty_outside_window")
-            block_codes.append("late_conditioning_block_window_mismatch")
 
     if window in LATE_CONDITIONING_TIGHT_WINDOWS:
         if generic_glycolytic:
