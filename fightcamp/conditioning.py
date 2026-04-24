@@ -230,13 +230,25 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     multi_round = _conditioning_multi_round_pattern(text)
     fight_pace = _conditioning_fight_pace_pattern(text, tags)
 
-    glycolytic_dose = (
+    # Dose is the primary decider. A "fight-pace" tag on a short-work + full-rest
+    # drill does not earn the "glycolytic" label — the prescription has to
+    # actually create lactate stress.
+    base_glycolytic_dose = (
         work_max is not None
         and rest_max is not None
         and work_max >= 45
         and rest_max <= 60
         and multi_round
-    ) or fight_pace
+    )
+    fight_pace_glycolytic_dose = (
+        fight_pace
+        and work_max is not None
+        and rest_max is not None
+        and work_max >= 45
+        and rest_max <= 90
+        and multi_round
+    )
+    glycolytic_dose = base_glycolytic_dose or fight_pace_glycolytic_dose
 
     short_work_full_rest = (
         work_max is not None
