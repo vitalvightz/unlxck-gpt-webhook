@@ -3,6 +3,7 @@
 import fightcamp.stage2_planning_brief as stage2_planning_brief_module
 from fightcamp.stage2_payload import (
     _apply_high_fatigue_week_compression,
+    _build_weekly_role_map,
     _boxing_day_identity_and_spacing_pass,
     _compute_readiness_compression,
     _compression_floor_value,
@@ -1106,6 +1107,81 @@ def test_build_planning_brief_adds_weekly_role_map_from_progression():
     ]
     assert first_week_roles[2]["category"] == "recovery"
     assert first_week_roles[3]["anchor"] == "highest_neural_day"
+
+
+def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "days_until_fight": 20,
+        "short_notice": False,
+        "fatigue": "low",
+        "training_preference": "balanced",
+        "technical_styles": ["boxing"],
+        "tactical_styles": ["pressure_fighter"],
+        "key_goals": ["conditioning"],
+        "weaknesses": ["conditioning"],
+        "equipment": ["air_bike"],
+        "injuries": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "readiness_flags": [],
+        "training_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        "hard_sparring_days": ["Mon", "Thu"],
+        "support_work_days": ["Tue"],
+    }
+    week_by_week_progression = {
+        "weeks": [
+            {
+                "week_index": 0,
+                "phase": "GPP",
+                "stage_key": "foundation_restore",
+                "phase_week_index": 0,
+                "phase_week_total": 1,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            },
+            {
+                "week_index": 1,
+                "phase": "SPP",
+                "stage_key": "specific_density_build",
+                "phase_week_index": 0,
+                "phase_week_total": 1,
+                "session_counts": {"strength": 1, "conditioning": 2, "recovery": 1},
+            },
+            {
+                "week_index": 2,
+                "phase": "TAPER",
+                "stage_key": "fight_week_survival_rhythm",
+                "phase_week_index": 0,
+                "phase_week_total": 1,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            },
+        ]
+    }
+    limiter_profile = {"key": "boxing_quality_under_load"}
+
+    baseline = _build_weekly_role_map(athlete_model, week_by_week_progression, limiter_profile)
+    overridden = _build_weekly_role_map(
+        athlete_model,
+        week_by_week_progression,
+        limiter_profile,
+        fight_week_override={
+            "active": True,
+            "band": "mini_taper_protocol",
+            "allowed_session_roles": ["fight_week_freshness_day"],
+            "max_sessions": 1,
+            "coach_note": "fight-week override active",
+        },
+    )
+
+    assert len(baseline["weeks"]) == 3
+    assert len(overridden["weeks"]) == 3
+    assert baseline["weeks"][0]["session_roles"] == overridden["weeks"][0]["session_roles"]
+    assert baseline["weeks"][1]["session_roles"] == overridden["weeks"][1]["session_roles"]
+    assert overridden["weeks"][2]["phase"] == "TAPER"
+    assert len(overridden["weeks"][2]["session_roles"]) <= 1
+    assert overridden["weeks"][2]["intentional_compression"]["reason"] == "fight_week_override"
 
 
 
