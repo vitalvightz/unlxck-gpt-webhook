@@ -9,11 +9,23 @@ from fightcamp.sparring_dose_planner import (
 # ── Hard day classification ───────────────────────────────────────────────────
 
 
-def _week(*, phase: str = "SPP", stage_key: str = "specific_density_build", hard_days: list[str] | None = None, session_roles: list[dict] | None = None) -> dict:
+def _week(
+    *,
+    phase: str = "SPP",
+    stage_key: str = "specific_density_build",
+    hard_days: list[str] | None = None,
+    session_roles: list[dict] | None = None,
+    phase_week_index: int | None = None,
+    phase_week_total: int | None = None,
+    projected_days_until_fight_start: int | None = None,
+) -> dict:
     return {
         "phase": phase,
         "stage_key": stage_key,
         "week_index": 1,
+        "phase_week_index": phase_week_index,
+        "phase_week_total": phase_week_total,
+        "projected_days_until_fight_start": projected_days_until_fight_start,
         "declared_hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
         "session_roles": session_roles or [],
     }
@@ -712,3 +724,81 @@ def test_bridge_override_does_not_fire_for_future_planning_week():
     # remain at their declared load.
     effective = [e for e in plan if e["status"] == "hard_as_planned"]
     assert len(effective) == 2
+
+
+def test_standard_camp_final_two_taper_weeks_have_no_hard_sparring():
+    week = _week(
+        phase="TAPER",
+        stage_key="taper_freshness",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=2,
+        phase_week_total=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_standard_camp_final_week_has_no_hard_sparring_when_taper_has_two_slots():
+    week = _week(
+        phase="TAPER",
+        stage_key="fight_week_survival_rhythm",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=3,
+        phase_week_total=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_standard_camp_taper_week_outside_two_weeks_keeps_default_logic():
+    week = _week(
+        phase="TAPER",
+        stage_key="taper_freshness",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=1,
+        phase_week_total=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    effective = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+    assert len(effective) == 1
+
+
+def test_standard_camp_uses_projected_days_fallback_when_taper_week_position_missing():
+    week = _week(
+        phase="TAPER",
+        stage_key="taper_freshness",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=10,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_standard_camp_override_does_not_change_d_window_stage_behavior():
+    for stage_key in ("d13_to_d8", "d7", "d1", "d0"):
+        week = _week(
+            phase="TAPER",
+            stage_key=stage_key,
+            hard_days=["Tuesday", "Thursday"],
+            phase_week_index=3,
+            phase_week_total=3,
+            projected_days_until_fight_start=7,
+        )
+        plan = compute_hard_sparring_plan(
+            week=week,
+            athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
+        )
+        effective = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+        assert len(effective) == 1
