@@ -3103,7 +3103,7 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
         "late_fight_transition_payload",
     }:
         return {"weeks": []}
-    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+    phase = _resolve_late_fight_phase(phase_briefs)
     allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
     roles = allocation.get("session_roles", [])
     session_counts = {
@@ -3143,7 +3143,7 @@ def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model
     days = _coerce_days(days_until_fight)
     if not _is_countdown_continuation_start(days):
         return []
-    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+    phase = _resolve_late_fight_phase(phase_briefs)
 
     segment_days = [
         (int(segment["start_day"]), int(segment["end_day"]))
@@ -3199,7 +3199,16 @@ def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model
     return weeks
 
 
-def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
+def _resolve_late_fight_phase(phase_briefs: dict[str, dict]) -> str:
+    return next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+
+
+def _build_late_fight_weekly_role_map(
+    days_until_fight: Any,
+    athlete_model: dict,
+    fight_week_override: dict[str, Any] | None = None,
+    phase: str = "TAPER",
+) -> dict[str, Any]:
     allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     mode = allocation.get("mode", _days_out_payload_mode(days_until_fight))
     roles = allocation.get("session_roles", [])
@@ -3253,7 +3262,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
             weeks.append(
                 {
                     "week_index": week_index,
-                    "phase": "TAPER",
+                    "phase": phase,
                     "stage_key": stage_key,
                     "stage_label": _late_fight_stage_label(start_day),
                     "payload_mode": segment_mode,
@@ -3310,7 +3319,7 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
         weeks = [
             {
                 "week_index": 1,
-                "phase": "TAPER",
+                "phase": phase,
                 "stage_key": _late_fight_window(days_until_fight),
                 "phase_week_index": 1,
                 "phase_week_total": 1,
