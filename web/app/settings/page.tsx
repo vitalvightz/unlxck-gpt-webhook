@@ -115,6 +115,25 @@ export default function SettingsPage() {
     };
   }, [previewAppearanceMode]);
 
+  async function saveAppearanceMode(nextMode: AppearanceMode) {
+    if (!session?.access_token) {
+      return;
+    }
+
+    setError(null);
+    setMessage(null);
+
+    try {
+      const updatedMe = await updateMe(session.access_token, {
+        appearance_mode: nextMode,
+      });
+      replaceMe(updatedMe);
+      setMessage("Background updated.");
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to update settings.");
+    }
+  }
+
   function handleSave() {
     if (!session?.access_token) {
       return;
@@ -203,7 +222,7 @@ export default function SettingsPage() {
               <div className="form-section-header">
                 <p className="kicker">Appearance</p>
                 <h2 className="form-section-title">Workspace theme</h2>
-                <p className="muted">Preview applies immediately. Save to sync it across your account.</p>
+                <p className="muted">Preview applies immediately and saves as soon as you pick a background.</p>
               </div>
 
               <div className="appearance-mode-grid" role="radiogroup" aria-label="Workspace theme">
@@ -216,9 +235,13 @@ export default function SettingsPage() {
                       role="radio"
                       aria-checked={isSelected}
                       className={`appearance-mode-card ${isSelected ? "appearance-mode-card-active" : ""}`.trim()}
-                      onClick={() => {
+                      onClick={async () => {
+                        if (appearanceMode === option.value || isPending) {
+                          return;
+                        }
                         setAppearanceMode(option.value);
                         previewAppearanceMode(option.value);
+                        await saveAppearanceMode(option.value);
                       }}
                     >
                       <span
@@ -481,6 +504,12 @@ export default function SettingsPage() {
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
+        <div className="form-actions settings-mobile-save athlete-motion-slot athlete-motion-rail">
+          <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
+            {isPending ? "Saving..." : "Save settings"}
+          </button>
+        </div>
+
         <div className="form-actions athlete-motion-slot athlete-motion-rail">
           <button type="button" className="cta" onClick={handleSave} disabled={isPending}>
             {isPending ? "Saving..." : "Save settings"}
@@ -490,4 +519,3 @@ export default function SettingsPage() {
     </RequireAuth>
   );
 }
-
