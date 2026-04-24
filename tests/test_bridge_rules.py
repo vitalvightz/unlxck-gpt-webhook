@@ -702,3 +702,29 @@ class TestBridgeHighCut:
         assert result["freshness_mandatory"] is True
         # High cut does not auto-block the full plan unless unsafe_weight_flag
         # also fires (existing escalation preserved).
+
+
+class TestDeclaredHardSparCapHelper:
+    """Keeps `_declared_hard_spar_cap` in agreement with the main bridge rules."""
+
+    def test_cap_transitions_through_bridge_window(self):
+        from fightcamp.stage2_payload_late_fight import _declared_hard_spar_cap
+
+        assert _declared_hard_spar_cap(21) == 1
+        assert _declared_hard_spar_cap(18) == 1
+        assert _declared_hard_spar_cap(17) == 0
+        assert _declared_hard_spar_cap(14) == 0
+
+
+class TestHardSparStatusForCountdownOffset:
+    """D-17 and below must not be described as hard-allowed anywhere."""
+
+    def test_bridge_offset_statuses(self):
+        from fightcamp.stage2_payload_late_fight import (
+            _hard_spar_status_for_countdown_offset,
+        )
+
+        assert _hard_spar_status_for_countdown_offset(21) == "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(18) == "hard_allowed"
+        assert _hard_spar_status_for_countdown_offset(17) == "downgrade"
+        assert _hard_spar_status_for_countdown_offset(14) == "downgrade"

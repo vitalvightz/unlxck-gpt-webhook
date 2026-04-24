@@ -6,6 +6,8 @@ import { useEffect, useState, useTransition, type FormEvent } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { getMe } from "@/lib/api";
+import { getAuthenticatedLandingHref } from "@/lib/auth-routing";
 import { evaluatePasswordStrength } from "@/lib/password-strength";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 
@@ -30,10 +32,10 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     if (!isReady) {
       return;
     }
-    if (session && (demoMode || me)) {
-      router.replace("/plans");
+    if (session && me) {
+      router.replace(getAuthenticatedLandingHref(me));
     }
-  }, [demoMode, isReady, me, router, session]);
+  }, [isReady, me, router, session]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,19 +78,27 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           return;
         }
         if (data.session) {
-          router.push("/onboarding");
+          router.replace("/onboarding");
           return;
         }
         setMessage("Check your email to confirm your account, then log in.");
         return;
       }
 
-      const { error: loginError } = await client.auth.signInWithPassword({ email, password });
+      const { data, error: loginError } = await client.auth.signInWithPassword({ email, password });
       if (loginError) {
         setError(loginError.message);
         return;
       }
-      router.push("/plans");
+
+      const accessToken = data.session?.access_token ?? null;
+      if (!accessToken) {
+        router.replace("/plans");
+        return;
+      }
+
+      const nextMe = await getMe(accessToken).catch(() => null);
+      router.replace(nextMe ? getAuthenticatedLandingHref(nextMe) : "/plans");
     });
   }
 
@@ -120,6 +130,34 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
             <li>Resume the onboarding draft whenever you return.</li>
             <li>Generate and reopen saved plans from the same workspace.</li>
           </ol>
+        </div>
+        <div className="support-panel auth-preview-panel">
+          <div className="form-section-header">
+            <p className="kicker">Inside the workspace</p>
+            <h2 className="form-section-title">Pick up where you left off</h2>
+          </div>
+          <div className="auth-preview-stack">
+            <div className="auth-preview-item">
+              <span className="label">Onboarding</span>
+              <p className="muted">Draft steps stay attached to your athlete profile, so you can resume instead of restarting.</p>
+            </div>
+            <div className="auth-preview-item">
+              <span className="label">Saved plans</span>
+              <p className="muted">The latest camp reopens fast, with history and PDF exports still in reach.</p>
+            </div>
+            <div className="auth-preview-item">
+              <span className="label">Nutrition</span>
+              <p className="muted">Readiness, weight setup, and plan history stay connected in one workflow.</p>
+            </div>
+          </div>
+        </div>
+        <div className="support-panel">
+          <p className="kicker">Why athletes keep using it</p>
+          <ul className="summary-list">
+            <li>Every generated camp stays saved to the athlete account.</li>
+            <li>The same workspace holds onboarding, nutrition, and plan history.</li>
+            <li>Mobile-friendly access makes it easier to reopen camps between sessions.</li>
+          </ul>
         </div>
         {demoMode ? (
           <div className="support-panel">

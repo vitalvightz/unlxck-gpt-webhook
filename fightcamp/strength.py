@@ -5,12 +5,13 @@ import random
 import re
 from collections import defaultdict
 from .training_context import (
+    normalize_athlete_equipment_list,
     normalize_equipment_list,
     allocate_sessions,
     calculate_exercise_numbers,
 )
 from .bank_schema import validate_training_item
-from .tagging import normalize_item_tags, normalize_tags
+from .tagging import normalize_item_tags, normalize_tag, normalize_tags
 from .tag_maps import GOAL_TAG_MAP, STYLE_TAG_MAP
 # Refactored: Import centralized constants from config
 from .config import PHASE_EQUIPMENT_BOOST, PHASE_TAG_BOOST, DATA_DIR, INJURY_GUARD_SHORTLIST
@@ -36,6 +37,8 @@ from .strength_session_quality import (
 from .session_restraint import NEAR_EQUAL_SCORE_BAND, sort_weighted_candidates
 from .late_selector_windows import (
     CONTROL_D28,
+    D21_TO_D14,
+    D13_TO_D8,
     D1,
     D4_TO_D2,
     D6_TO_D5,
@@ -80,7 +83,9 @@ def normalize_style_tags(tags):
     """Return canonical tactical style tags without ``style_`` prefixes."""
     normalized = set()
     for tag in tags:
-        t = tag.lower().replace(" ", "_")
+        t = normalize_tag(str(tag or ""))
+        if not t:
+            continue
         if t.startswith("style_"):
             t = t[6:]
         if t in CANONICAL_STYLE_TAGS:
@@ -110,13 +115,17 @@ LATE_STRENGTH_SAFE_TAGS = {
     "speed",
     "reactive",
     "low_impact",
+    "low_eccentric",
     "rehab_friendly",
     "cns_freshness",
     "sharpness",
+    "ballistic_low_volume",
+    "sport_specific",
+    "late_strength_touch",
+    "maximal_strength_maintenance",
 }
 LATE_STRENGTH_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
 LATE_STRENGTH_TRUE_CLUSTER_BAND = 0.05
-HIGH_PRESSURE_CUT_BUCKETS = {"high", "critical", "extreme"}
 LATE_SAFE_STRENGTH_FIELDS = {
     "late_strength_touch",
     "low_eccentric",
@@ -124,6 +133,16 @@ LATE_SAFE_STRENGTH_FIELDS = {
     "cns_freshness",
 }
 LATE_MUST_HAVE_BONUS_MULTIPLIER = 0.6
+VALID_CUT_BUCKETS = {"none", "low", "moderate", "high", "critical", "extreme"}
+LATE_STRENGTH_HIGH_CUT_BUCKETS = {"high", "critical", "extreme"}
+LATE_STRENGTH_CUT_BUCKET_MULTIPLIER = {
+    "none": 0.0,
+    "low": 0.0,
+    "moderate": 0.35,
+    "high": 1.0,
+    "critical": 1.2,
+    "extreme": 1.4,
+}
 
 
 def _exercise_fatigue_cost(exercise: dict, quality_profile: dict) -> float:
@@ -159,6 +178,52 @@ def _strength_late_window_severity(window: str | None) -> float:
     }.get(window, 0.0)
 
 
+def _normalized_metadata_list(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raw_values = [part for part in re.split(r"[,\s]+", value) if part]
+    elif isinstance(value, (list, tuple, set)):
+        raw_values = [str(part) for part in value if str(part).strip()]
+    else:
+        raw_values = [str(value)]
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for raw in raw_values:
+        canonical = normalize_tag(raw)
+        if not canonical:
+            continue
+        if canonical in seen:
+            continue
+        normalized.append(canonical)
+        seen.add(canonical)
+    return normalized
+
+
+def _exercise_late_windows(exercise: dict) -> set[str]:
+    return set(_normalized_metadata_list(exercise.get("late_windows")))
+
+
+def _exercise_cut_buckets_allowed(exercise: dict) -> set[str]:
+    return {
+        bucket
+        for bucket in _normalized_metadata_list(exercise.get("cut_buckets_allowed"))
+        if bucket in VALID_CUT_BUCKETS
+    }
+
+
+def _exercise_profile_flag(exercise: dict, tags: set[str], field_name: str, *, tag_name: str | None = None) -> bool:
+    if exercise.get(field_name) is True:
+        return True
+    return (tag_name or field_name) in tags
+
+
+def _exercise_profile_level(exercise: dict, field_name: str) -> str:
+    value = exercise.get(field_name)
+    return str(value or "").strip().lower()
+
+
 def _strength_text_blob(exercise: dict) -> str:
     fields = (
         exercise.get("name", ""),
@@ -170,6 +235,26 @@ def _strength_text_blob(exercise: dict) -> str:
         exercise.get("timing", ""),
     )
     return " ".join(str(field or "") for field in fields).strip().lower()
+
+
+def _resolved_cut_severity_bucket(flags: dict) -> str:
+    explicit_bucket = str(flags.get("cut_severity_bucket") or "").strip().lower()
+    if explicit_bucket in VALID_CUT_BUCKETS:
+        return explicit_bucket
+
+    try:
+        cut_score = float(flags.get("cut_severity_score"))
+    except (TypeError, ValueError):
+        cut_score = None
+    if cut_score is not None:
+        return cut_severity_bucket(cut_score)
+
+    return cut_severity_bucket(
+        compute_cut_severity_score(
+            flags.get("weight_cut_pct"),
+            flags.get("days_until_fight"),
+        )
+    )
 
 
 def _strength_is_lower_body(exercise: dict, tags: set[str]) -> bool:
@@ -219,6 +304,17 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     ballistic = "mech_ballistic" in tags or "explosive" in tags
     dense_emom = _strength_dense_pattern(text)
     heavy_loaded_lower = lower_body and bool(equipment & {"barbell", "trap_bar"})
+    heavy_loaded_pattern = bool(re.search(r"@\s*(?:8[0-9]|9[0-9]|100)\b", text)) or "heavy" in text
+    dense_ballistic = ballistic and (dense_emom or systemic_fatigue)
+    trap_bar_jump = (
+        ("trap bar" in text and "jump" in text)
+        or ("trap_bar" in equipment and "mech_lower_jump" in tags and landing_impact)
+    )
+    aggressive_med_ball_slam = (
+        "medicine_ball" in equipment
+        and "slam" in text
+        and bool(tags & {"mech_ballistic", "mech_trunk_rotation", "anti_rotation"})
+    )
 
     penalties: list[str] = []
     blocks: list[str] = []
@@ -250,14 +346,25 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     return penalties, blocks, {
         "tags": tags,
         "text": text,
+        "lower_body": lower_body,
+        "loaded_lower": heavy_loaded_lower,
+        "heavy_loaded_pattern": heavy_loaded_pattern,
         "landing_impact": landing_impact,
         "overhead": overhead,
         "systemic_fatigue": systemic_fatigue,
         "ballistic": ballistic,
+        "dense_ballistic": dense_ballistic,
+        "trap_bar_jump": trap_bar_jump,
+        "aggressive_med_ball_slam": aggressive_med_ball_slam,
     }
 
 
-def _evaluate_strength_late_window(exercise: dict, *, window: str | None) -> dict:
+def _evaluate_strength_late_window(
+    exercise: dict,
+    *,
+    window: str | None,
+    cut_bucket: str = "none",
+) -> dict:
     if not is_active_late_selector_window(window):
         return {
             "blocked": False,
@@ -269,12 +376,77 @@ def _evaluate_strength_late_window(exercise: dict, *, window: str | None) -> dic
 
     penalties, blocks, profile = _strength_contextual_risk_patterns(exercise)
     tags = profile["tags"]
+    late_windows = _exercise_late_windows(exercise)
+    cut_buckets_allowed = _exercise_cut_buckets_allowed(exercise)
+    phase_role = normalize_tag(str(exercise.get("phase_role") or ""))
+    subfamily = normalize_tag(str(exercise.get("subfamily") or ""))
+    soreness_risk = _exercise_profile_level(exercise, "soreness_risk")
+    eccentric_cost = _exercise_profile_level(exercise, "eccentric_cost")
+    landing_cost = _exercise_profile_level(exercise, "landing_cost")
+    cns_load = _exercise_profile_level(exercise, "cns_load")
+    low_impact = _exercise_profile_flag(exercise, tags, "low_impact")
+    low_eccentric = _exercise_profile_flag(exercise, tags, "low_eccentric")
+    neural_primer = _exercise_profile_flag(exercise, tags, "neural_primer")
+    cns_freshness = _exercise_profile_flag(exercise, tags, "cns_freshness")
+    ballistic_low_volume = _exercise_profile_flag(exercise, tags, "ballistic_low_volume")
+    sport_specific = _exercise_profile_flag(exercise, tags, "sport_specific")
+    explicit_late_touch = "late_strength_touch" in tags or phase_role == "late_strength_touch"
+    explicit_metadata = bool(
+        late_windows
+        or cut_buckets_allowed
+        or phase_role
+        or subfamily
+        or any(
+            exercise.get(field_name) is not None
+            for field_name in ("soreness_risk", "eccentric_cost", "landing_cost", "cns_load")
+        )
+    )
     safe_tags = sorted(tags & LATE_STRENGTH_SAFE_TAGS)
     severity = _strength_late_window_severity(window)
     reason_codes: list[str] = []
     adjustment = 0.0
+    cut_multiplier = LATE_STRENGTH_CUT_BUCKET_MULTIPLIER.get(cut_bucket, 0.0)
+    high_cut_window = window in {D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
 
-    if "neural_primer" in tags:
+    if late_windows:
+        if window in late_windows:
+            adjustment += 0.8 + (0.15 * severity)
+            reason_codes.append("late_strength_boost_window_fit")
+        else:
+            adjustment -= 0.85
+            reason_codes.append("late_strength_penalty_outside_window")
+            blocks.append("late_strength_block_window_mismatch")
+
+    if cut_buckets_allowed:
+        if cut_bucket in cut_buckets_allowed:
+            adjustment += 0.2 + (0.15 * cut_multiplier)
+            reason_codes.append("late_strength_boost_cut_survivable")
+        elif cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS:
+            blocks.append("late_strength_block_cut_bucket_mismatch")
+
+    if explicit_late_touch:
+        adjustment += 0.45
+        reason_codes.append("late_strength_boost_explicit_late_touch")
+    if low_eccentric or eccentric_cost in {"none", "low"}:
+        adjustment += 0.3
+        reason_codes.append("late_strength_boost_low_eccentric")
+    if low_impact or landing_cost in {"none", "low"}:
+        adjustment += 0.25
+        reason_codes.append("late_strength_boost_low_impact")
+    if cns_freshness or cns_load == "low":
+        adjustment += 0.25
+        reason_codes.append("late_strength_boost_cns_freshness")
+    if ballistic_low_volume and not profile["landing_impact"]:
+        adjustment += 0.25
+        reason_codes.append("late_strength_boost_ballistic_low_volume")
+    if sport_specific:
+        adjustment += 0.2
+        reason_codes.append("late_strength_boost_sport_specific")
+    if soreness_risk == "low":
+        adjustment += 0.2
+        reason_codes.append("late_strength_boost_low_soreness")
+
+    if neural_primer:
         adjustment += 0.7 + (0.1 * severity)
         reason_codes.append("late_strength_boost_neural_primer")
     if "speed" in tags:
@@ -311,12 +483,56 @@ def _evaluate_strength_late_window(exercise: dict, *, window: str | None) -> dic
             adjustment -= 0.75 * severity
         reason_codes.append(code)
 
+    if high_cut_window:
+        if profile["loaded_lower"] and (
+            profile["heavy_loaded_pattern"]
+            or profile["systemic_fatigue"]
+            or "cluster" in tags
+            or "mech_cns_high" in tags
+        ):
+            adjustment -= 0.95 * severity * cut_multiplier
+            reason_codes.append("late_strength_penalty_cut_pressure_loaded_lower")
+        if profile["landing_impact"] and profile["lower_body"]:
+            adjustment -= 0.85 * severity * cut_multiplier
+            reason_codes.append("late_strength_penalty_cut_pressure_landing_impact")
+        if profile["dense_ballistic"]:
+            adjustment -= 0.75 * severity * cut_multiplier
+            reason_codes.append("late_strength_penalty_cut_pressure_dense_ballistic")
+
+    if window in {D7, D6_TO_D5, D4_TO_D2, D1} and profile["aggressive_med_ball_slam"]:
+        adjustment -= 1.05 * severity
+        reason_codes.append("late_strength_penalty_aggressive_med_ball_slam")
+    if window in {D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and profile["trap_bar_jump"]:
+        adjustment -= 1.0 * severity
+        reason_codes.append("late_strength_penalty_jump_landing")
+    if window in {D4_TO_D2, D1} and profile["loaded_lower"] and not explicit_metadata and (
+        profile["systemic_fatigue"] or "cluster" in tags or "mech_cns_high" in tags
+    ):
+        blocks.append("late_strength_block_loaded_lower_noise")
+    if window == D1 and profile["overhead"] and not explicit_metadata and not (low_impact and cns_freshness):
+        blocks.append("late_strength_block_overhead_noise")
+    if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_metadata:
+        blocks.append("late_strength_block_nonexplicit_ballistic_med_ball")
+
     block_codes = sorted(set(blocks)) if window in LATE_STRENGTH_TIGHT_WINDOWS else []
+    if window in LATE_STRENGTH_TIGHT_WINDOWS and high_cut_window:
+        if profile["loaded_lower"] and (
+            profile["heavy_loaded_pattern"]
+            or profile["dense_ballistic"]
+            or profile["landing_impact"]
+        ):
+            block_codes.append("late_strength_block_high_cut_loaded_lower")
+    if window in {D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and profile["trap_bar_jump"]:
+        block_codes.append("late_strength_block_trap_bar_jump")
+    if window == D1 and profile["aggressive_med_ball_slam"]:
+        block_codes.append("late_strength_block_aggressive_med_ball_slam")
+    block_codes = sorted(set(block_codes))
 
     ambiguous_gap = None
     if (
         not block_codes
         and not safe_tags
+        and not explicit_metadata
         and (profile["ballistic"] or profile["overhead"] or "mech_reactive" in tags)
         and not profile["landing_impact"]
         and not profile["systemic_fatigue"]
@@ -340,6 +556,9 @@ def _evaluate_strength_late_window(exercise: dict, *, window: str | None) -> dic
 
 
 def _late_strength_family(exercise: dict) -> str:
+    subfamily = normalize_tag(str(exercise.get("subfamily") or ""))
+    if subfamily:
+        return subfamily
     equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
     if "medicine_ball" in equipment:
         return "medicine_ball"
@@ -384,34 +603,9 @@ def _apply_late_strength_diversity_dampener(
     return reordered
 
 
-def _normalize_selector_list(raw: object) -> set[str]:
-    if raw is None:
-        return set()
-    if isinstance(raw, str):
-        values = [raw]
-    elif isinstance(raw, (list, tuple, set)):
-        values = list(raw)
-    else:
-        values = [raw]
-    return {
-        str(value).strip().lower().replace(" ", "_")
-        for value in values
-        if str(value).strip()
-    }
-
-
-def _resolve_cut_severity_bucket(flags: dict, *, days_until_fight: int | None) -> str:
-    explicit_bucket = str(flags.get("cut_severity_bucket") or "").strip().lower()
-    if explicit_bucket in {"none", "low", "moderate", "high", "critical", "extreme"}:
-        return explicit_bucket
-    return cut_severity_bucket(
-        compute_cut_severity_score(flags.get("weight_cut_pct"), days_until_fight)
-    )
-
-
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = normalize_equipment_list(entry_equip)
-    user_equipment = normalize_equipment_list(user_equipment)
+    user_equipment = normalize_athlete_equipment_list(user_equipment)
     known_equipment = [e.lower() for e in known_equipment]
 
     if not entry_equip_list or "bodyweight" in entry_equip_list:
@@ -849,17 +1043,22 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     fatigue = flags.get("fatigue", "low")
-    equipment_access = normalize_equipment_list(flags.get("equipment", []))
+    equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     tested_1rm_available = bool(flags.get("tested_1rm_available", False))
     has_isometric_setup = _has_isometric_setup_equipment(equipment_access)
     fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
     style_input = flags.get("style_tactical", [])
     if isinstance(style_input, str):
-        style_list = [style_input.lower()]
+        raw_style_list = [style_input]
     elif isinstance(style_input, list):
-        style_list = [s.lower() for s in style_input]
+        raw_style_list = list(style_input)
     else:
-        style_list = []
+        raw_style_list = []
+    style_list = [
+        canonical
+        for style in raw_style_list
+        if (canonical := normalize_tag(str(style or "")))
+    ]
     goals = flags.get("key_goals", [])
     training_days = flags.get("training_days", [])
     training_frequency = flags.get(
@@ -890,11 +1089,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
 
     weighted_exercises = []
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
-    selector_late_window = late_window if phase == "TAPER" else None
     active_late_window = is_active_late_selector_window(late_window)
-    selector_late_window_active = phase == "TAPER" and active_late_window
-    cut_bucket = _resolve_cut_severity_bucket(flags, days_until_fight=days_until_fight)
-    high_pressure_late_cut = active_late_window and cut_bucket in HIGH_PRESSURE_CUT_BUCKETS
+    cut_bucket = _resolved_cut_severity_bucket(flags)
+    high_pressure_late_cut = active_late_window and cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS
     must_have_bonus_multiplier = (
         LATE_MUST_HAVE_BONUS_MULTIPLIER if high_pressure_late_cut else 1.0
     )
@@ -927,7 +1124,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     post_score_late_eval_cache: dict[str, dict] = {}
 
     def _record_late_block(exercise: dict, score: float, reason_codes: list[str]) -> None:
-        if not selector_late_window_active:
+        if not active_late_window:
             return
         late_window_blocked.append(
             {
@@ -938,7 +1135,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         )
 
     def _record_ambiguous_gap(ambiguous_gap: dict | None) -> None:
-        if not selector_late_window_active or not ambiguous_gap:
+        if not active_late_window or not ambiguous_gap:
             return
         name = str(ambiguous_gap.get("name") or "").strip()
         if not name:
@@ -964,7 +1161,11 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             }
         cache_key = _late_eval_cache_key(exercise)
         if cache_key not in post_score_late_eval_cache:
-            late_eval = _evaluate_strength_late_window(exercise, window=late_window)
+            late_eval = _evaluate_strength_late_window(
+                exercise,
+                window=late_window,
+                cut_bucket=cut_bucket,
+            )
             post_score_late_eval_cache[cache_key] = late_eval
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
@@ -978,8 +1179,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         late_eval: dict | None = None,
     ) -> dict:
         tags = set(normalize_tags(exercise.get("tags", [])))
-        late_windows = _normalize_selector_list(exercise.get("late_windows"))
-        cut_buckets_allowed = _normalize_selector_list(exercise.get("cut_buckets_allowed"))
+        late_windows = _exercise_late_windows(exercise)
+        cut_buckets_allowed = _exercise_cut_buckets_allowed(exercise)
         resolved_profile = profile or classify_strength_item(exercise)
         markers: set[str] = set()
 
@@ -1054,6 +1255,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in exercise_bank:
         tags = ex.get("tags", [])
         tags_lower = set(normalize_tags(tags))
+        if _exercise_late_windows(ex) and not active_late_window:
+            continue
         details = " ".join(
             [
                 ex.get("notes", ""),
@@ -1153,7 +1356,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
             breakdown["restriction_hits"] = len(matched_restrictions)
-        late_eval = _evaluate_strength_late_window(ex, window=selector_late_window)
+        late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(ex, score, late_eval["block_codes"])
@@ -1174,7 +1377,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     for term in cornerstone_terms
                 )
                 or (
-                    phase == "TAPER" and tags_lower & {"neural_primer", "speed"}
+                    active_late_window and tags_lower & {"neural_primer", "speed", "late_strength_touch", "maximal_strength_maintenance"}
                 )
             ):
                 continue
@@ -1204,7 +1407,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ]
     weighted_exercises = _apply_late_strength_diversity_dampener(
         weighted_exercises,
-        window=selector_late_window,
+        window=late_window,
     )
     days_count = len(training_days) if isinstance(training_days, list) else training_days
     if not isinstance(days_count, int):
@@ -1215,6 +1418,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         fallback_exercises = []
         for ex in exercise_bank:
             if ex in [we[0] for we in weighted_exercises]:
+                continue
+            if _exercise_late_windows(ex) and not active_late_window:
                 continue
             if phase not in ex.get("phases", []):
                 continue
@@ -1244,7 +1449,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                         for term in cornerstone_terms
                     )
                     or (
-                        phase == "TAPER" and tags_lower & {"neural_primer", "speed"}
+                        active_late_window and tags_lower & {"neural_primer", "speed", "late_strength_touch", "maximal_strength_maintenance"}
                     )
                 ):
                     continue
@@ -1253,7 +1458,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                     continue
                 if not any(t in taper_allowed for t in tags_lower):
                     continue
-            late_eval = _evaluate_strength_late_window(ex, window=selector_late_window)
+            late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
             _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
             if late_eval["blocked"]:
                 _record_late_block(ex, 0.0, late_eval["block_codes"])
@@ -1678,6 +1883,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     for ex in style_exercises:
         if phase not in ex.get("phases", []):
             continue
+        if _exercise_late_windows(ex) and not active_late_window:
+            continue
         if _guarded_injury_decision(ex).action == "exclude":
             continue
         ex_tags = set(ex.get("tags", []))
@@ -1712,7 +1919,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         style_reasons["quality_class"] = quality_profile["quality_class"]
         style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
         style_reasons["reason_codes"] = []
-        late_eval = _evaluate_strength_late_window(ex, window=selector_late_window)
+        late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
             _record_late_block(ex, style_score, late_eval["block_codes"])
@@ -2073,7 +2280,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
 
 
 

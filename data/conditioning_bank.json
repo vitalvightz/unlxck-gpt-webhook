@@ -3582,7 +3582,7 @@
     ],
     "phases": [
       "SPP",
-      "Taper"
+      "TAPER"
     ],
     "system": "alactic",
     "modality": "durability",

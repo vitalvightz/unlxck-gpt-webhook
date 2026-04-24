@@ -46,7 +46,16 @@ def normalize_equipment_list(raw):
         if key:
             normalized.append(key)
     return normalized
-    
+
+
+def normalize_athlete_equipment_list(raw):
+    """Return athlete equipment access with implicit bodyweight availability."""
+    normalized = normalize_equipment_list(raw)
+    if "bodyweight" not in normalized:
+        normalized.append("bodyweight")
+    return normalized
+
+
 # ✅ Correct constant definition (not a function)
 known_equipment = [
     "barbell", "dumbbell", "dumbbells", "kettlebell", "sled", "medicine_ball",

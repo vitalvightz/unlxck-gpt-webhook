@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from fightcamp.training_context import normalize_equipment_list
+from fightcamp.training_context import normalize_athlete_equipment_list, normalize_equipment_list
 from fightcamp.strength import normalize_exercise_movement, normalize_style_tags, generate_strength_block
 
 
@@ -15,6 +15,14 @@ def test_style_tag_mapping():
 def test_equipment_alias_split():
     assert set(normalize_equipment_list("Med Balls / Bands")) == {"medicine_ball", "bands"}
     assert set(normalize_equipment_list(["Med Balls / Bands"])) == {"medicine_ball", "bands"}
+
+
+def test_normalize_equipment_list_does_not_inject_bodyweight():
+    assert normalize_equipment_list(["medicine_ball"]) == ["medicine_ball"]
+
+
+def test_normalize_athlete_equipment_list_injects_bodyweight():
+    assert normalize_athlete_equipment_list([]) == ["bodyweight"]
 
 
 def test_normalize_exercise_movement_fallback():
