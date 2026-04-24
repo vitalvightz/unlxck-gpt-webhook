@@ -56,6 +56,9 @@ _exercise_bank_cache = None
 _universal_strength_cache = None
 _universal_strength_names_cache = None
 
+# Keep the mini randomizer path in place but disabled for deterministic planner output.
+ENABLE_SCORE_RANDOMIZER = False
+
 
 def get_style_exercises() -> list[dict]:
     global _style_exercises_cache
@@ -716,7 +719,7 @@ def score_exercise(
     reasons["penalties"] = rehab_penalty
 
     noise_source = rng if rng else random
-    noise = noise_source.uniform(-0.15, 0.15)
+    noise = noise_source.uniform(-0.15, 0.15) if ENABLE_SCORE_RANDOMIZER else 0.0
     score += noise
     reasons["randomness"] = round(noise, 4)
     reasons["final_score"] = round(score, 4)
@@ -2235,6 +2238,13 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             dict(restriction_warning_counts),
         )
 
+    base_exercises = sorted(
+        base_exercises,
+        key=lambda exercise: (
+            -float(score_lookup.get(exercise.get("name"), 0.0)),
+            str(exercise.get("name") or ""),
+        ),
+    )
     used_days = training_days[:num_strength_sessions]
 
     strength_output = format_strength_block(phase, fatigue, base_exercises)
@@ -2273,13 +2283,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     return {
         "block": strength_output,
         "num_sessions": len(used_days),
-        "preferred_tags": list(set(all_tags)),
+        "preferred_tags": sorted(set(all_tags)),
         "exercises": base_exercises,
         "why_log": why_log,
         "candidate_reservoir": candidate_reservoir,
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
-
-

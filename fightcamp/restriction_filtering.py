@@ -170,11 +170,11 @@ def _restriction_match_detail(
         stopwords = _RESTRICTION_SPECIFIC_STOPWORDS.get(restriction_key, set())
         keywords = [kw for kw in keywords if kw not in stopwords]
         if restriction_key == "high_impact_upper":
-            keywords = list(set(keywords) | _HIGH_IMPACT_UPPER_KEYWORDS)
+            keywords = sorted(set(keywords) | _HIGH_IMPACT_UPPER_KEYWORDS)
         elif restriction_key == "high_impact_global":
-            keywords = list(set(keywords) | _HIGH_IMPACT_LOWER_KEYWORDS | _HIGH_IMPACT_UPPER_KEYWORDS)
+            keywords = sorted(set(keywords) | _HIGH_IMPACT_LOWER_KEYWORDS | _HIGH_IMPACT_UPPER_KEYWORDS)
         else:
-            keywords = list(set(keywords) | _HIGH_IMPACT_LOWER_KEYWORDS)
+            keywords = sorted(set(keywords) | _HIGH_IMPACT_LOWER_KEYWORDS)
     normalized_text = text.lower()
     tag_matches = []
     text_matches = []
