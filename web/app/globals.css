@@ -2793,6 +2793,10 @@ button.mobile-step-rail-item {
   gap: 8px;
 }
 
+.settings-mobile-save {
+  display: none;
+}
+
 .auth-rail {
   display: grid;
   gap: 24px;
@@ -6316,6 +6320,64 @@ html[data-theme="light"] .appearance-mode-state {
   color: var(--brand-red);
 }
 
+html[data-theme="light"] .weekly-sparring-tile {
+  border-color: rgba(88, 62, 58, 0.16);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+html[data-theme="light"] .weekly-sparring-tile-selected {
+  box-shadow: 0 0 0 1px rgba(146, 43, 45, 0.28), 0 10px 18px rgba(88, 56, 48, 0.12);
+}
+
+html[data-theme="light"] .weekly-sparring-tile-primary_hard,
+html[data-theme="light"] .weekly-sparring-badge-primary_hard {
+  border-color: rgba(146, 43, 45, 0.3);
+  background: rgba(146, 43, 45, 0.16);
+  color: #5f1f22;
+}
+
+html[data-theme="light"] .weekly-sparring-tile-secondary_hard,
+html[data-theme="light"] .weekly-sparring-badge-secondary_hard {
+  border-color: rgba(173, 115, 23, 0.34);
+  background: rgba(173, 115, 23, 0.16);
+  color: #6b4410;
+}
+
+html[data-theme="light"] .weekly-sparring-tile-managed_hard,
+html[data-theme="light"] .weekly-sparring-badge-managed_hard {
+  border-color: rgba(140, 114, 24, 0.34);
+  background: rgba(140, 114, 24, 0.16);
+  color: #5f4c11;
+}
+
+html[data-theme="light"] .weekly-sparring-tile-none,
+html[data-theme="light"] .weekly-sparring-badge-none {
+  border-color: rgba(88, 62, 58, 0.14);
+  background: rgba(88, 62, 58, 0.08);
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .plan-inline-rename {
+  border-color: rgba(88, 62, 58, 0.12);
+  background: linear-gradient(180deg, rgba(255, 251, 247, 0.96), rgba(253, 244, 238, 0.96));
+}
+
+html[data-theme="light"] .plan-inline-rename-input {
+  border-color: rgba(88, 62, 58, 0.18);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .plan-dialog-backdrop {
+  background: rgba(45, 33, 30, 0.26);
+}
+
+html[data-theme="light"] .plan-dialog {
+  border-color: rgba(88, 62, 58, 0.16);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.98), rgba(250, 241, 236, 0.98));
+  box-shadow: 0 24px 54px rgba(88, 56, 48, 0.18);
+}
+
 /* Light theme refinement: calmer editorial paper treatment with restrained accents. */
 .appearance-mode-preview-light {
   background:
@@ -7533,6 +7595,23 @@ html[data-app-surface="workspace"][data-theme="dark"] .desktop-nav-toggle {
 @media (max-width: 720px) {
   .public-preview-toolbar-label {
     display: none;
+  }
+
+  .settings-mobile-save {
+    position: sticky;
+    top: calc(var(--safe-area-top) + 10px);
+    z-index: 30;
+    display: flex;
+    margin-bottom: 12px;
+    padding: 8px;
+    border-radius: 14px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-panel);
+    backdrop-filter: blur(10px);
+  }
+
+  .settings-mobile-save .cta {
+    width: 100%;
   }
 
   .plan-inline-rename-row,
