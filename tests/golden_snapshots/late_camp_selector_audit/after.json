@@ -208,9 +208,10 @@
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 1.4453,
+          "score": 0.3953,
           "reason_codes": [
-            "late_strength_boost_neural_primer"
+            "late_strength_boost_neural_primer",
+            "late_strength_penalty_aggressive_med_ball_slam"
           ]
         }
       ],
@@ -279,9 +280,10 @@
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 1.4603,
+          "score": 0.2528,
           "reason_codes": [
-            "late_strength_boost_neural_primer"
+            "late_strength_boost_neural_primer",
+            "late_strength_penalty_aggressive_med_ball_slam"
           ]
         }
       ],
@@ -350,9 +352,10 @@
         },
         {
           "name": "Anti-Rotation Med Ball Slam",
-          "score": 1.4703,
+          "score": 0.1578,
           "reason_codes": [
-            "late_strength_boost_neural_primer"
+            "late_strength_boost_neural_primer",
+            "late_strength_penalty_aggressive_med_ball_slam"
           ]
         }
       ],
@@ -420,14 +423,20 @@
           "reason_codes": []
         },
         {
-          "name": "Anti-Rotation Med Ball Slam",
-          "score": 1.4803,
-          "reason_codes": [
-            "late_strength_boost_neural_primer"
-          ]
+          "name": "Banded Lateral Walk",
+          "score": 0.0,
+          "reason_codes": []
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.0,
+          "reason_codes": [
+            "late_strength_block_aggressive_med_ball_slam"
+          ]
+        }
+      ]
     },
     "conditioning": {
       "winners": [
