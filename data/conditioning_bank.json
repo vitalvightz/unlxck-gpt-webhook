@@ -3533,6 +3533,7 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
     "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed."
   },
   {
