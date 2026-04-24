@@ -188,8 +188,8 @@ def _hard_spar_status_for_countdown_offset(offset: int) -> str:
     if 18 <= offset <= 21:
         return "hard_allowed"
     if 14 <= offset <= 17:
-        # D-18 cutoff: bridge range D-17 to D-14 converts declared hard days
-        # to technical / rhythm per the evidence review.
+        # D-17 to D-14 cap hard sparring at zero, so declared hard days
+        # downgrade to technical / rhythm instead of staying hard-allowed.
         return "downgrade"
     if 8 <= offset <= 13:
         return "hard_allowed"
