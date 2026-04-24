@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/auth-provider";
 import { listPlans } from "@/lib/api";
@@ -86,6 +86,34 @@ function OverviewDetailGrid({
   );
 }
 
+function OverviewDisclosure({
+  title,
+  summary,
+  badge,
+  children,
+}: {
+  title: string;
+  summary: string;
+  badge?: string;
+  children: ReactNode;
+}) {
+  return (
+    <details className="overview-disclosure">
+      <summary className="overview-disclosure-summary">
+        <div className="overview-disclosure-copy">
+          <p className="kicker">{title}</p>
+          <p className="overview-disclosure-title">{summary}</p>
+        </div>
+        <div className="overview-disclosure-meta">
+          {badge ? <span className="overview-inline-badge">{badge}</span> : null}
+          <span className="overview-disclosure-chevron" aria-hidden="true" />
+        </div>
+      </summary>
+      <div className="overview-disclosure-body">{children}</div>
+    </details>
+  );
+}
+
 export default function HomePage() {
   const { isReady, session, me } = useAppSession();
   const [recentPlans, setRecentPlans] = useState<PlanSummary[]>([]);
@@ -160,10 +188,21 @@ export default function HomePage() {
       : draft
         ? `Draft is parked on step ${nextStepNumber} of 6.`
         : "Profile is ready for the first intake.";
+    const primaryActionHref = latestPlan ? `/plans/${latestPlan.plan_id}` : "/onboarding";
+    const primaryActionLabel = latestPlan ? "Open latest plan" : draft ? "Resume onboarding" : "Start onboarding";
+    const primaryActionTitle = latestPlan ? "Open current plan" : draft ? "Finish onboarding" : "Start onboarding";
     const operationalItems = [
       { label: "Latest update", value: latestPlan ? formatPlanTimestamp(latestPlan.created_at) : formatPlanTimestamp(me.profile.updated_at) },
       { label: "Fight date", value: formatPlanFightDate(fightDate) },
-      { label: "History", value: formatPlanCount(me.plan_count) },
+      { label: "Primary style", value: primaryStyle },
+    ];
+    const decisionItems = [
+      {
+        label: "Onboarding",
+        value: draft ? `Step ${nextStepNumber} of ${totalOnboardingSteps}` : "Not started",
+      },
+      { label: "Saved plans", value: formatPlanCount(me.plan_count) },
+      { label: "Fight date", value: formatPlanFightDate(fightDate) },
     ];
     const profileStateItems = [
       { label: "Full name", value: me.profile.full_name || "Not provided" },
@@ -192,8 +231,8 @@ export default function HomePage() {
           <div className="overview-command-grid">
             <div className="hero-panel-copy overview-command-copy">
               <p className="eyebrow">Overview</p>
-              <h1 className="hero-title">Control the full camp from one athlete workspace.</h1>
-              <p className="overview-command-summary">Resume onboarding, generate a plan, and reopen past camps in one place.</p>
+              <h1 className="hero-title">One workspace, one clear next step.</h1>
+              <p className="overview-command-summary">Pick up the latest camp action first, then open profile detail and history only when you need them.</p>
               <div className="overview-operational-strip" aria-label="Workspace status">
                 {operationalItems.map((item) => (
                   <div key={item.label} className="overview-operational-item">
@@ -203,51 +242,35 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <div className="status-card overview-next-action">
+            <div className="status-card overview-next-action overview-decision-card">
               <p className="status-label">Next action</p>
-              <h2 className="plan-summary-title">{latestPlan ? "Open current plan" : "Finish onboarding"}</h2>
+              <h2 className="plan-summary-title">{primaryActionTitle}</h2>
               <div className="overview-next-action-state">
                 <span className={latestPlan ? "badge" : "badge status-badge-neutral"}>{latestPlan ? latestPlan.status : "Onboarding"}</span>
                 <p className="muted">{nextActionSummary}</p>
               </div>
+              <div className="overview-decision-strip" aria-label="Next step details">
+                {decisionItems.map((item) => (
+                  <div key={item.label} className="overview-decision-item">
+                    <span className="overview-operational-label">{item.label}</span>
+                    <span className="overview-operational-value">{item.value}</span>
+                  </div>
+                ))}
+              </div>
               <div className="plan-summary-actions">
-                <Link href={latestPlan ? `/plans/${latestPlan.plan_id}` : "/onboarding"} className="cta overview-primary-action">
-                  {latestPlan ? "Open latest plan" : "Resume onboarding"}
-                </Link>
-                <Link href="/plans" className="ghost-button overview-secondary-action">
-                  View history
+                <Link href={primaryActionHref} className="cta overview-primary-action">
+                  {primaryActionLabel}
                 </Link>
               </div>
             </div>
           </div>
 
-          <div className="overview-snapshot-strip athlete-motion-slot athlete-motion-status">
-            <article className="overview-snapshot-item">
-              <p className="kicker">Saved plans</p>
-              <p className="overview-snapshot-value">{me.plan_count}</p>
-              <p className="muted">All generations stay in history.</p>
-            </article>
-            <article className="overview-snapshot-item">
-              <p className="kicker">Combat sport</p>
-              <p className="overview-snapshot-value">{primaryStyle}</p>
-              <p className="muted">Pulled from the athlete profile.</p>
-            </article>
-            <article className="overview-snapshot-item">
-              <p className="kicker">Fight date</p>
-              <p className="overview-snapshot-value">{formatPlanFightDate(fightDate)}</p>
-              <p className="muted">Using the latest saved intake.</p>
-            </article>
-          </div>
-        </section>
-
-        <section className="overview-grid overview-dashboard-grid">
-          <article className="list-card overview-card athlete-motion-slot athlete-motion-main">
-            <div className="overview-card-header">
-              <p className="kicker">Onboarding</p>
-              <h2>Current profile state</h2>
-              <p className="muted">Plan-facing fields currently saved to this athlete profile.</p>
-            </div>
-            <div className="overview-card-body">
+          <div className="overview-disclosure-stack athlete-motion-slot athlete-motion-status">
+            <OverviewDisclosure
+              title="Profile snapshot"
+              summary={draft ? `Onboarding is ${remainingSteps === 0 ? "ready for review" : `still ${remainingSteps} step${remainingSteps === 1 ? "" : "s"} away`}.` : "Profile fields currently saved for the next plan."}
+              badge={readinessBadge}
+            >
               <OverviewDetailGrid items={profileStateItems} />
               <div className="plan-card-actions overview-card-actions">
                 <Link href="/onboarding" className="secondary-button">
@@ -257,16 +280,13 @@ export default function HomePage() {
                   Update settings
                 </Link>
               </div>
-            </div>
-          </article>
+            </OverviewDisclosure>
 
-          <article className="list-card overview-card athlete-motion-slot athlete-motion-rail">
-            <div className="overview-card-header">
-              <p className="kicker">History</p>
-              <h2>Recent plans</h2>
-              <p className="muted">Latest saved camps ready to reopen fast.</p>
-            </div>
-            <div className="overview-card-body">
+            <OverviewDisclosure
+              title="Recent plans"
+              summary={displayedPlans.length ? `${displayedPlans.length === 1 ? "1 saved plan is ready to reopen." : `${displayedPlans.length} recent plans are ready to reopen.`}` : "No plans yet. Finish onboarding to create the first one."}
+              badge={formatPlanCount(me.plan_count)}
+            >
               {displayedPlans.length ? (
                 <div className="plan-history-list">
                   {displayedPlans.map((plan, index) => (
@@ -284,25 +304,20 @@ export default function HomePage() {
                       </div>
                     </article>
                   ))}
-                  {me.plan_count > displayedPlans.length ? (
-                    <p className="muted">
-                      + {me.plan_count - displayedPlans.length} earlier saved plan{me.plan_count - displayedPlans.length === 1 ? "" : "s"} in history.
-                    </p>
-                  ) : null}
+                  <div className="plan-card-actions overview-card-actions">
+                    <Link href="/plans" className="ghost-button">
+                      View full history
+                    </Link>
+                  </div>
                 </div>
               ) : (
                 <div className="support-panel">
                   <p className="kicker">No plans yet</p>
                   <p className="muted">Finish onboarding to create your first saved fight camp.</p>
-                  <div className="plan-card-actions">
-                    <Link href="/onboarding" className="cta inline-cta">
-                      Start onboarding
-                    </Link>
-                  </div>
                 </div>
               )}
-            </div>
-          </article>
+            </OverviewDisclosure>
+          </div>
         </section>
       </>
     );
