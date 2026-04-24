@@ -1414,8 +1414,14 @@ def _build_weekly_role_map(
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
+    progression_weeks = list(week_by_week_progression.get("weeks", []))
+    projected_days_until_fight_start: list[int] = [0] * len(progression_weeks)
+    running_days = 0
+    for idx in range(len(progression_weeks) - 1, -1, -1):
+        running_days += max(0, int(progression_weeks[idx].get("span_days") or 0))
+        projected_days_until_fight_start[idx] = running_days
 
-    for week_entry in week_by_week_progression.get("weeks", []):
+    for week_idx, week_entry in enumerate(progression_weeks):
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
         sport_key = _athlete_sport_key(athlete_model)
@@ -1545,6 +1551,9 @@ def _build_weekly_role_map(
                 "phase": week_entry.get("phase"),
                 "stage_key": week_entry.get("stage_key"),
                 "week_index": week_entry.get("week_index"),
+                "phase_week_index": week_entry.get("phase_week_index"),
+                "phase_week_total": week_entry.get("phase_week_total"),
+                "projected_days_until_fight_start": projected_days_until_fight_start[week_idx],
                 "declared_hard_sparring_days": _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", []))),
                 "session_roles": session_roles,
             },
