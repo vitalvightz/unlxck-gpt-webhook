@@ -4899,6 +4899,22 @@ def build_stage2_handoff_text(
                 )
         if len(continuation_lines) > 2:
             mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
+    elif continuation_map and len(continuation_map) > 1:
+        continuation_lines = [
+            "COUNTDOWN CONTINUATION MAP",
+            "Continue the active late-fight countdown from this start window through D-0 exactly as mapped below.",
+        ]
+        for segment in continuation_map:
+            stage_key = str(segment.get("stage_key") or "").strip()
+            segment_mode = str(segment.get("payload_mode") or "").strip()
+            start_day = segment.get("start_day")
+            end_day = segment.get("end_day")
+            if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
+                continuation_lines.append(
+                    f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
+                )
+        if len(continuation_lines) > 2:
+            mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
