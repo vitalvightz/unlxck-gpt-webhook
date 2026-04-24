@@ -50,6 +50,26 @@ AUDIT_FLAGS = {
     "random_seed": 7,
 }
 
+LATE_STRENGTH_AUDIT_OVERRIDES = {
+    "style_tactical": ["counter_striker"],
+    "style_technical": ["boxing"],
+    "equipment": [
+        "bodyweight",
+        "bands",
+        "medicine_ball",
+        "heavy_bag",
+        "pullup_bar",
+        "towel",
+        "trap_bar",
+        "pins",
+    ],
+    "key_goals": ["power", "maximal_strength_maintenance", "skill_refinement"],
+    "weaknesses": ["posterior_chain", "coordination", "balance"],
+    "training_days": ["monday", "tuesday", "thursday", "saturday"],
+    "training_frequency": 4,
+    "days_available": 4,
+}
+
 
 def _reason_codes(entry: dict) -> list[str]:
     reasons = entry.get("reasons") or {}
@@ -100,9 +120,13 @@ def build_snapshot() -> dict:
     snapshot: dict[str, dict] = {}
     for window in LATE_SELECTOR_AUDIT_WINDOWS:
         days_until_fight = WINDOW_DAY_MAP[window]
-        flags = {**AUDIT_FLAGS, "days_until_fight": days_until_fight}
+        conditioning_flags = {**AUDIT_FLAGS, "days_until_fight": days_until_fight}
+        strength_flags = dict(conditioning_flags)
+        if window != "control_d28":
+            strength_flags.update(LATE_STRENGTH_AUDIT_OVERRIDES)
+            strength_flags["phase"] = "SPP" if days_until_fight >= 8 else "TAPER"
 
-        strength_block = generate_strength_block(flags=flags)
+        strength_block = generate_strength_block(flags=strength_flags)
         (
             _conditioning_text,
             _conditioning_names,
@@ -110,7 +134,7 @@ def build_snapshot() -> dict:
             _grouped_drills,
             _missing_systems,
             conditioning_reservoir,
-        ) = generate_conditioning_block(flags)
+        ) = generate_conditioning_block(conditioning_flags)
 
         strength_diag = (strength_block.get("candidate_reservoir") or {}).get("__late_window__", {})
         conditioning_diag = conditioning_reservoir.get("__late_window__", {})

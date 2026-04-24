@@ -8,6 +8,19 @@ from tools.late_camp_selector_audit import build_diff, build_snapshot
 
 
 SNAPSHOT_DIR = Path("tests/golden_snapshots/late_camp_selector_audit")
+NEW_LATE_STRENGTH_FAMILY_NAMES = {
+    "Isometric Mid-Thigh Pull",
+    "Trap-Bar Pin Pull Isometric",
+    "Punch-Specific Max Isometric Hold",
+    "Overcoming Split-Squat Isometric",
+    "Staggered-Stance Medicine-Ball Punch Throw",
+    "Towel/Gi Row Isometric Hold",
+    "Band-Resisted Jab-Cross Primer",
+    "Adductor Squeeze Isometric",
+    "Counter-Striker Split-Line Punch Isometric Hold",
+    "Pressure-Fighter Staggered Body-Shot Med-Ball Throw",
+    "Clinch Towel/Gi Row Isometric Hold",
+}
 
 
 def _strength_flags(days_until_fight: int, **overrides) -> dict:
@@ -48,6 +61,41 @@ def _conditioning_flags(days_until_fight: int, **overrides) -> dict:
         "days_until_fight": days_until_fight,
     }
     return {**base, **overrides}
+
+
+def _expanded_late_strength_flags(days_until_fight: int, **overrides) -> dict:
+    phase = "SPP" if days_until_fight >= 8 else "TAPER"
+    base = _strength_flags(
+        days_until_fight,
+        phase=phase,
+        equipment=[
+            "bodyweight",
+            "bands",
+            "medicine_ball",
+            "heavy_bag",
+            "pullup_bar",
+            "towel",
+            "trap_bar",
+            "pins",
+        ],
+        training_days=["Mon", "Tue", "Thu", "Sat"],
+        training_frequency=4,
+        days_available=4,
+        key_goals=["power", "maximal_strength_maintenance", "skill_refinement"],
+        style_tactical=["counter_striker"],
+    )
+    return {**base, **overrides}
+
+
+def _selected_strength_names(result: dict) -> list[str]:
+    return [entry["name"] for entry in result["why_log"]]
+
+
+def _blocked_strength_names(result: dict) -> set[str]:
+    return {
+        entry["name"]
+        for entry in result["candidate_reservoir"]["__late_window__"]["blocked"]
+    }
 
 
 def test_strength_late_window_keeps_crisp_overhead_when_low_dose(monkeypatch):
@@ -490,6 +538,97 @@ def test_strength_d1_blocks_trap_bar_jump_and_aggressive_med_ball_slam(monkeypat
     assert [entry["name"] for entry in result["why_log"]] == ["Band Snap Punch"]
     assert "late_strength_block_trap_bar_jump" in blocked_by_name["Trap Bar Jump (Light)"]
     assert "late_strength_block_aggressive_med_ball_slam" in blocked_by_name["Anti-Rotation Med Ball Slam"]
+
+
+def test_actual_bank_d21_surfaces_multiple_late_strength_touch_families():
+    result = strength.generate_strength_block(
+        flags=_expanded_late_strength_flags(21),
+        weaknesses=["posterior_chain", "coordination", "balance"],
+    )
+
+    names = _selected_strength_names(result)
+    late_touch_hits = set(names) & NEW_LATE_STRENGTH_FAMILY_NAMES
+
+    assert len(late_touch_hits) >= 2
+    assert any(name in late_touch_hits for name in {"Isometric Mid-Thigh Pull", "Trap-Bar Pin Pull Isometric"})
+    assert any(
+        name in late_touch_hits
+        for name in {
+            "Punch-Specific Max Isometric Hold",
+            "Counter-Striker Split-Line Punch Isometric Hold",
+            "Band-Resisted Jab-Cross Primer",
+            "Staggered-Stance Medicine-Ball Punch Throw",
+        }
+    )
+
+
+def test_actual_bank_d13_high_cut_prefers_late_safe_strength_touch_over_legacy_taper_noise():
+    result = strength.generate_strength_block(
+        flags=_expanded_late_strength_flags(
+            13,
+            phase="TAPER",
+            cut_severity_bucket="critical",
+        ),
+        weaknesses=["posterior_chain", "coordination"],
+    )
+
+    names = _selected_strength_names(result)
+
+    assert set(names) & NEW_LATE_STRENGTH_FAMILY_NAMES
+    assert "Cluster Set Trap Bar Deadlift" not in names
+    assert "Trap Bar Jump (Light)" not in names
+    assert "Jump Lunge (Alternating)" not in names
+
+
+def test_actual_bank_d7_keeps_crisp_low_soreness_primers_and_blocks_aggressive_slam():
+    result = strength.generate_strength_block(
+        flags=_expanded_late_strength_flags(7),
+        weaknesses=["coordination", "balance"],
+    )
+
+    names = _selected_strength_names(result)
+    assert any(
+        name in names
+        for name in {
+            "Band-Resisted Jab-Cross Primer",
+            "Counter-Striker Split-Line Punch Isometric Hold",
+            "Punch-Specific Max Isometric Hold",
+            "Staggered-Stance Medicine-Ball Punch Throw",
+        }
+    )
+    assert "Anti-Rotation Med Ball Slam" not in names
+
+
+def test_actual_bank_d1_keeps_only_ultra_safe_micro_dose_strength_options():
+    result = strength.generate_strength_block(
+        flags=_expanded_late_strength_flags(1),
+        weaknesses=["coordination", "balance"],
+    )
+
+    names = _selected_strength_names(result)
+    blocked = _blocked_strength_names(result)
+    allowed_names = {
+        "Band-Resisted Jab-Cross Primer",
+        "Punch-Specific Max Isometric Hold",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Towel/Gi Row Isometric Hold",
+        "Clinch Towel/Gi Row Isometric Hold",
+        "Adductor Squeeze Isometric",
+        "Band Face Pull",
+        "Banded Lateral Walk",
+        "Hollow-Body Hold",
+        "Isometric Pallof Hold",
+        "Single-Leg Balance (Eyes Closed)",
+        "TRX Row",
+    }
+
+    assert set(names).issubset(allowed_names)
+    assert "Trap Bar Jump (Light)" not in names
+    assert "Jump Lunge (Alternating)" not in names
+    assert "Anti-Rotation Med Ball Slam" not in names
+    assert "Trap Bar Jump (Light)" in blocked
+    assert "Anti-Rotation Med Ball Slam" in blocked
+    assert "Cluster Set Trap Bar Deadlift" in blocked
 
 
 def test_conditioning_late_window_keeps_reactive_option_without_generic_glycolytic_leak(monkeypatch):
