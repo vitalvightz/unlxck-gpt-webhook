@@ -10,9 +10,18 @@ type MobileNavState = "closed" | "opening" | "open" | "closing";
 
 const MOBILE_NAV_CLOSE_MS = 240;
 const MOBILE_NAV_MEDIA_QUERY = "(max-width: 960px)";
+const BRAND_SURFACE_ROUTES = new Set(["/", "/login", "/signup", "/forgot-password", "/reset-password"]);
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function getShellSurface(pathname: string, hasSession: boolean): "brand" | "workspace" {
+  if (hasSession) {
+    return "workspace";
+  }
+
+  return BRAND_SURFACE_ROUTES.has(pathname) ? "brand" : "workspace";
 }
 
 function getInitials(name: string): string {
@@ -48,6 +57,7 @@ export function AppNav() {
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const desktopNavToggleRef = useRef<HTMLButtonElement | null>(null);
+  const shellSurface = getShellSurface(pathname, Boolean(session));
 
   const isMobileDrawerVisible = mobileNavState !== "closed";
 
@@ -183,6 +193,14 @@ export function AppNav() {
 
     closeMobileDrawer();
   }, [pathname, session]);
+
+  useEffect(() => {
+    document.documentElement.dataset.appSurface = shellSurface;
+
+    return () => {
+      delete document.documentElement.dataset.appSurface;
+    };
+  }, [shellSurface]);
 
   async function handleSignOut() {
     closeMobileDrawer();

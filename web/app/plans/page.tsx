@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
@@ -16,6 +17,10 @@ import {
   getPlanStyleSummary,
 } from "@/lib/plan-format";
 import type { PlanSummary } from "@/lib/types";
+
+function getRenameDraftValue(plan: PlanSummary): string {
+  return plan.plan_name?.trim() || plan.fight_date || "";
+}
 
 function PlanCard({
   plan,
@@ -33,50 +38,80 @@ function PlanCard({
   const [pendingAction, setPendingAction] = useState<"rename" | "delete" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [renameDraft, setRenameDraft] = useState(() => getRenameDraftValue(plan));
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
   const planTitle = getPlanDisplayName(plan);
   const featuredTitle = getFeaturedPlanTitle(plan);
   const fightDateLabel = formatPlanFightDate(plan.fight_date);
   const createdLabel = formatPlanTimestamp(plan.created_at);
   const styleSummary = getPlanStyleSummary(plan);
   const statusLabel = formatPlanStatus(plan.status);
+  const isActionPending = pendingAction !== null;
+  const renameInputId = `rename-plan-${plan.plan_id}`;
 
-  const actionButtons = (
-    <>
-      <Link href={`/plans/${plan.plan_id}`} className={variant === "featured" ? "cta plans-featured-primary-action" : "ghost-button"}>
-        Open plan
-      </Link>
-      <button type="button" className="ghost-button" onClick={handleRename} disabled={pendingAction !== null}>
-        {pendingAction === "rename" ? "Renaming..." : "Rename"}
-      </button>
-      <button type="button" className="ghost-button danger-button" onClick={handleDelete} disabled={pendingAction !== null}>
-        {pendingAction === "delete" ? "Deleting..." : "Delete"}
-      </button>
-      {plan.pdf_url ? (
-        <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
-          Open PDF
-        </Link>
-      ) : null}
-    </>
-  );
+  useEffect(() => {
+    if (!isRenaming) {
+      setRenameDraft(getRenameDraftValue(plan));
+      return;
+    }
 
-  async function handleRename() {
+    renameInputRef.current?.focus();
+    renameInputRef.current?.select();
+  }, [isRenaming, plan.fight_date, plan.plan_name]);
+
+  useEffect(() => {
+    if (!isDeleteConfirmOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && pendingAction !== "delete") {
+        setIsDeleteConfirmOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDeleteConfirmOpen, pendingAction]);
+
+  function handleRenameStart() {
+    setMessage(null);
+    setError(null);
+    setRenameDraft(getRenameDraftValue(plan));
+    setIsRenaming(true);
+  }
+
+  function handleRenameCancel() {
+    if (isActionPending) {
+      return;
+    }
+
+    setError(null);
+    setRenameDraft(getRenameDraftValue(plan));
+    setIsRenaming(false);
+  }
+
+  async function handleRenameSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
     if (!accessToken) {
       setError("Session missing. Please sign in again.");
       return;
     }
 
     const currentName = plan.plan_name?.trim() || "";
-    const nextName = window.prompt("Rename this plan", currentName || plan.fight_date || "");
-    if (nextName == null) {
-      return;
-    }
-
-    const normalizedName = nextName.trim();
+    const normalizedName = renameDraft.trim();
     if (!normalizedName) {
       setError("Plan name cannot be empty.");
       return;
     }
     if (normalizedName === currentName) {
+      setError(null);
+      setIsRenaming(false);
       return;
     }
 
@@ -87,9 +122,9 @@ function PlanCard({
       const updatedPlan = await renamePlan(accessToken, plan.plan_id, normalizedName);
       onPlanRenamed(updatedPlan);
       setMessage("Plan renamed.");
+      setIsRenaming(false);
     } catch (renameError) {
       const errorMessage = renameError instanceof Error ? renameError.message : "Unable to rename this plan.";
-      // Provide more helpful error message for retryable failures
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
         setError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
       } else {
@@ -100,13 +135,23 @@ function PlanCard({
     }
   }
 
-  async function handleDelete() {
-    if (!accessToken) {
-      setError("Session missing. Please sign in again.");
+  function handleDeleteRequest() {
+    setMessage(null);
+    setError(null);
+    setIsDeleteConfirmOpen(true);
+  }
+
+  function handleDeleteDismiss() {
+    if (pendingAction === "delete") {
       return;
     }
-    const confirmed = window.confirm(`Delete "${getPlanDisplayName(plan)}"? This cannot be undone.`);
-    if (!confirmed) {
+
+    setIsDeleteConfirmOpen(false);
+  }
+
+  async function handleDeleteConfirm() {
+    if (!accessToken) {
+      setError("Session missing. Please sign in again.");
       return;
     }
 
@@ -115,10 +160,10 @@ function PlanCard({
     setMessage(null);
     try {
       await deletePlan(accessToken, plan.plan_id);
+      setIsDeleteConfirmOpen(false);
       onPlanDeleted(plan.plan_id);
     } catch (deleteError) {
       const errorMessage = deleteError instanceof Error ? deleteError.message : "Unable to delete this plan.";
-      // Provide more helpful error message for retryable failures
       if (errorMessage.includes("Unable to reach the server") || errorMessage.includes("502") || errorMessage.includes("503") || errorMessage.includes("504")) {
         setError("Connection issue - the operation will retry automatically. If it continues to fail, please check your internet connection and try again.");
       } else {
@@ -129,79 +174,168 @@ function PlanCard({
     }
   }
 
+  const actionButtons = (
+    <>
+      <Link href={`/plans/${plan.plan_id}`} className={variant === "featured" ? "cta plans-featured-primary-action" : "ghost-button"}>
+        Open plan
+      </Link>
+      <button type="button" className="ghost-button" onClick={handleRenameStart} disabled={isActionPending || isRenaming}>
+        {pendingAction === "rename" ? "Saving..." : isRenaming ? "Editing name" : "Rename"}
+      </button>
+      <button type="button" className="ghost-button danger-button" onClick={handleDeleteRequest} disabled={isActionPending || isRenaming}>
+        {pendingAction === "delete" ? "Deleting..." : "Delete"}
+      </button>
+      {plan.pdf_url ? (
+        <Link href={plan.pdf_url} target="_blank" rel="noreferrer" className="secondary-button">
+          Open PDF
+        </Link>
+      ) : null}
+    </>
+  );
+
+  const inlineRenameForm = isRenaming ? (
+    <form className="plan-inline-rename" onSubmit={handleRenameSubmit}>
+      <label className="plan-inline-rename-label" htmlFor={renameInputId}>
+        Rename plan
+      </label>
+      <div className="plan-inline-rename-row">
+        <input
+          ref={renameInputRef}
+          id={renameInputId}
+          value={renameDraft}
+          onChange={(event) => setRenameDraft(event.target.value)}
+          className="plan-inline-rename-input"
+          disabled={isActionPending}
+          maxLength={120}
+        />
+        <div className="plan-inline-rename-actions">
+          <button type="submit" className="secondary-button" disabled={isActionPending}>
+            {pendingAction === "rename" ? "Saving..." : "Save"}
+          </button>
+          <button type="button" className="ghost-button" onClick={handleRenameCancel} disabled={isActionPending}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </form>
+  ) : null;
+
+  const deleteConfirmationModal = isDeleteConfirmOpen && typeof document !== "undefined"
+    ? createPortal(
+      <div className="plan-dialog-backdrop" role="presentation" onClick={handleDeleteDismiss}>
+        <div
+          className="plan-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`delete-plan-title-${plan.plan_id}`}
+          aria-describedby={`delete-plan-body-${plan.plan_id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="plan-dialog-header">
+            <p className="kicker">Delete plan</p>
+            <h2 id={`delete-plan-title-${plan.plan_id}`} className="plan-dialog-title">
+              Remove {getPlanDisplayName(plan)}?
+            </h2>
+          </div>
+          <p id={`delete-plan-body-${plan.plan_id}`} className="muted">
+            This deletes the saved plan and its export links from your account. This action cannot be undone.
+          </p>
+          {error ? <div className="error-banner">{error}</div> : null}
+          <div className="plan-dialog-actions">
+            <button type="button" className="ghost-button" onClick={handleDeleteDismiss} disabled={pendingAction === "delete"}>
+              Cancel
+            </button>
+            <button type="button" className="secondary-button danger-button" onClick={handleDeleteConfirm} disabled={pendingAction === "delete"}>
+              {pendingAction === "delete" ? "Deleting..." : "Delete plan"}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    )
+    : null;
+
   if (variant === "featured") {
     return (
-      <article className="list-card plan-card plans-featured-card">
-        <div className="plans-featured-topline">
-          <div className="plans-featured-kicker">
-            <p className="kicker">Latest saved plan</p>
-            <p className="muted">Created {createdLabel}</p>
+      <>
+        <article className="list-card plan-card plans-featured-card">
+          <div className="plans-featured-topline">
+            <div className="plans-featured-kicker">
+              <p className="kicker">Latest saved plan</p>
+              <p className="muted">Created {createdLabel}</p>
+            </div>
+            <span className="badge">{statusLabel}</span>
           </div>
-          <span className="badge">{statusLabel}</span>
-        </div>
-        <div className="plans-featured-main">
-          <div className="plans-featured-copy">
-            <p className="label">Fight date</p>
-            <p className="plans-featured-fight-date">{fightDateLabel}</p>
-            <Link href={`/plans/${plan.plan_id}`}>
-              <h2 className="plan-card-title plans-featured-title">{featuredTitle}</h2>
-            </Link>
-            <p className="muted plans-featured-summary">Reopen, export, or refine the latest camp without digging through the archive.</p>
-            <div className="plans-featured-footer">
-              <div className="plans-featured-accent" aria-hidden="true">
-                <span />
+          <div className="plans-featured-main">
+            <div className="plans-featured-copy">
+              <p className="label">Fight date</p>
+              <p className="plans-featured-fight-date">{fightDateLabel}</p>
+              <Link href={`/plans/${plan.plan_id}`}>
+                <h2 className="plan-card-title plans-featured-title">{featuredTitle}</h2>
+              </Link>
+              <p className="muted plans-featured-summary">Reopen, export, or refine the latest camp without digging through the archive.</p>
+              {inlineRenameForm}
+              <div className="plans-featured-footer">
+                <div className="plans-featured-accent" aria-hidden="true">
+                  <span />
+                </div>
+                <div className="plan-card-actions plans-featured-actions">{actionButtons}</div>
               </div>
-              <div className="plan-card-actions plans-featured-actions">{actionButtons}</div>
+            </div>
+            <div className="plans-featured-meta">
+              <div className="plans-featured-meta-chip">
+                <span className="label">Athlete</span>
+                <span className="plans-featured-meta-value">{plan.full_name || "Athlete profile"}</span>
+              </div>
+              <div className="plans-featured-meta-chip plans-featured-meta-chip-accent">
+                <span className="label">Style</span>
+                <span className="plans-featured-meta-value">{styleSummary}</span>
+              </div>
+              <div className="plans-featured-meta-chip">
+                <span className="label">Status</span>
+                <span className="plans-featured-meta-value">{statusLabel}</span>
+              </div>
+              <div className="plans-featured-meta-chip">
+                <span className="label">PDF</span>
+                <span className="plans-featured-meta-value">{plan.pdf_url ? "Ready to open" : "Not available yet"}</span>
+              </div>
             </div>
           </div>
-          <div className="plans-featured-meta">
-            <div className="plans-featured-meta-chip">
-              <span className="label">Athlete</span>
-              <span className="plans-featured-meta-value">{plan.full_name || "Athlete profile"}</span>
-            </div>
-            <div className="plans-featured-meta-chip plans-featured-meta-chip-accent">
-              <span className="label">Style</span>
-              <span className="plans-featured-meta-value">{styleSummary}</span>
-            </div>
-            <div className="plans-featured-meta-chip">
-              <span className="label">Status</span>
-              <span className="plans-featured-meta-value">{statusLabel}</span>
-            </div>
-            <div className="plans-featured-meta-chip">
-              <span className="label">PDF</span>
-              <span className="plans-featured-meta-value">{plan.pdf_url ? "Ready to open" : "Not available yet"}</span>
-            </div>
-          </div>
-        </div>
-        {message ? <div className="success-banner">{message}</div> : null}
-        {error ? <div className="error-banner">{error}</div> : null}
-      </article>
+          {message ? <div className="success-banner">{message}</div> : null}
+          {error && !isDeleteConfirmOpen ? <div className="error-banner">{error}</div> : null}
+        </article>
+        {deleteConfirmationModal}
+      </>
     );
   }
 
   return (
-    <article className="plan-history-row plan-history-row-card">
-      <div className="plan-history-copy">
-        <p className="label">{fightDateLabel}</p>
-        <Link href={`/plans/${plan.plan_id}`}>
-          <h2 className="plan-card-title">{planTitle}</h2>
-        </Link>
-        <div className="plan-card-meta">
-          <span className="muted">{styleSummary}</span>
-          <span className="muted">Created {createdLabel}</span>
+    <>
+      <article className="plan-history-row plan-history-row-card">
+        <div className="plan-history-copy">
+          <p className="label">{fightDateLabel}</p>
+          <Link href={`/plans/${plan.plan_id}`}>
+            <h2 className="plan-card-title">{planTitle}</h2>
+          </Link>
+          {inlineRenameForm}
+          <div className="plan-card-meta">
+            <span className="muted">{styleSummary}</span>
+            <span className="muted">Created {createdLabel}</span>
+          </div>
         </div>
-      </div>
-      <div className="plan-history-meta">
-        <span className="badge">{statusLabel}</span>
-        <div className="plan-card-actions plans-history-actions">{actionButtons}</div>
-      </div>
-      {message || error ? (
-        <div className="plan-history-feedback">
-          {message ? <div className="success-banner">{message}</div> : null}
-          {error ? <div className="error-banner">{error}</div> : null}
+        <div className="plan-history-meta">
+          <span className="badge">{statusLabel}</span>
+          <div className="plan-card-actions plans-history-actions">{actionButtons}</div>
         </div>
-      ) : null}
-    </article>
+        {message || (error && !isDeleteConfirmOpen) ? (
+          <div className="plan-history-feedback">
+            {message ? <div className="success-banner">{message}</div> : null}
+            {error ? <div className="error-banner">{error}</div> : null}
+          </div>
+        ) : null}
+      </article>
+      {deleteConfirmationModal}
+    </>
   );
 }
 
@@ -251,7 +385,7 @@ export default function PlansPage() {
   function handlePlanDeleted(planId: string) {
     setLocalPlans((current) => {
       const source = current ?? plans;
-      return source.filter((plan) => plan.plan_id !== planId);
+      return source.filter((currentPlan) => currentPlan.plan_id !== planId);
     });
     router.refresh();
   }
@@ -259,7 +393,7 @@ export default function PlansPage() {
   function handlePlanRenamed(updatedPlan: PlanSummary) {
     setLocalPlans((current) => {
       const source = current ?? plans;
-      return source.map((plan) => (plan.plan_id === updatedPlan.plan_id ? { ...plan, ...updatedPlan } : plan));
+      return source.map((currentPlan) => (currentPlan.plan_id === updatedPlan.plan_id ? { ...currentPlan, ...updatedPlan } : currentPlan));
     });
     router.refresh();
   }
