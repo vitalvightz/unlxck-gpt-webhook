@@ -1608,7 +1608,8 @@
     "name": "Band-Resisted Punch",
     "category": "combat",
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "power",
     "movement": "horizontal_push",
@@ -1617,7 +1618,8 @@
       "explosive",
       "rate_of_force"
     ],
-    "equipment": "bands"
+    "equipment": "bands",
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
     "name": "Medicine-Ball Chest Toss",
@@ -2322,7 +2324,8 @@
     "name": "Band-Resisted Straight Punch",
     "category": "boxing",
     "phases": [
-      "SPP"
+      "SPP",
+      "TAPER"
     ],
     "method": "power",
     "movement": "horizontal_push",
@@ -2331,7 +2334,8 @@
       "rate_of_force",
       "explosive"
     ],
-    "equipment": "bands"
+    "equipment": "bands",
+    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
   },
   {
     "name": "Medicine Ball Hook Throw",

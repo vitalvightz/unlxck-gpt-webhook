@@ -112,8 +112,11 @@
     "universal_gpp_strength:Push-Up or Bench Press"
   ],
   "elbow": [
+    "conditioning_bank:Band-Resisted Straight Punch Release",
     "conditioning_bank:Neck Harness Flexion/Extension",
     "exercise_bank:Band-Resisted Neck Extension",
+    "exercise_bank:Band-Resisted Punch",
+    "exercise_bank:Band-Resisted Straight Punch",
     "exercise_bank:Close-Grip Bench Isometric (120% 1RM @ mid-range)",
     "exercise_bank:Foam Roller Thoracic Extension",
     "exercise_bank:Reverse Hyperextension",
@@ -128,12 +131,15 @@
     "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)"
   ],
   "forearm": [
+    "conditioning_bank:Band-Resisted Straight Punch Release",
     "conditioning_bank:Farmers Walk (Light)",
     "conditioning_bank:Rope Climb Sprints",
     "conditioning_bank:Rope Climb Sprints (ATP-PCr)",
     "conditioning_bank:Towel Pull-Up Sprints",
     "coordination_bank:Towel Snap Reflex",
     "coordination_bank:Towel Tug Stance Hops",
+    "exercise_bank:Band-Resisted Punch",
+    "exercise_bank:Band-Resisted Straight Punch",
     "exercise_bank:Dead Hang",
     "exercise_bank:Farmers Walk (Fat Grip)",
     "exercise_bank:Plate Pinch Carry",
@@ -434,8 +440,11 @@
     "universal_gpp_strength:Trap Bar Deadlift"
   ],
   "neck": [
+    "conditioning_bank:Band-Resisted Straight Punch Release",
     "conditioning_bank:Neck Harness Flexion/Extension",
     "exercise_bank:Band-Resisted Neck Extension",
+    "exercise_bank:Band-Resisted Punch",
+    "exercise_bank:Band-Resisted Straight Punch",
     "exercise_bank:Grappler\u2019s Bridge (Weighted)",
     "exercise_bank:Neck Harness Flexion",
     "exercise_bank:Neck Harness Lateral Flexion",
@@ -471,6 +480,7 @@
     "universal_gpp_conditioning:Jump Rope Endurance (Footwork Conditioning)"
   ],
   "shoulder": [
+    "conditioning_bank:Band-Resisted Straight Punch Release",
     "conditioning_bank:Kettlebell Snatch Complex",
     "conditioning_bank:Kettlebell Snatch Test",
     "conditioning_bank:Overhead Carry Complex",
@@ -481,7 +491,9 @@
     "conditioning_bank:Wall Ball Shot (Max Height)",
     "conditioning_bank:Wall Ball Shot Intervals (Glycolytic)",
     "exercise_bank:Anti-Rotation Press",
+    "exercise_bank:Band-Resisted Punch",
     "exercise_bank:Band-Resisted Push Press",
+    "exercise_bank:Band-Resisted Straight Punch",
     "exercise_bank:Barbell Overhead Press",
     "exercise_bank:Bench Isometric (110% 1RM @ 90\u00b0 Elbow)",
     "exercise_bank:Bench Isometric (130% 1RM @ mid-range)",
@@ -585,6 +597,7 @@
     "universal_gpp_strength:Trap Bar Deadlift"
   ],
   "wrist": [
+    "conditioning_bank:Band-Resisted Straight Punch Release",
     "conditioning_bank:Clap Push-Up Sprints (ATP-PCr)",
     "conditioning_bank:Kettlebell Snatch Complex",
     "conditioning_bank:Kettlebell Snatch Test",
@@ -597,6 +610,8 @@
     "coordination_bank:Clap Push-Up to Guard",
     "coordination_bank:Plyo Push-Up to Cross",
     "exercise_bank:5-10-15 Ladder (Box Jumps/Push-Ups/KB Swings)",
+    "exercise_bank:Band-Resisted Punch",
+    "exercise_bank:Band-Resisted Straight Punch",
     "exercise_bank:Clap Push-Up",
     "exercise_bank:DB Bench Press \u2192 Plyo Push-Up",
     "exercise_bank:DB Clean & Press",
