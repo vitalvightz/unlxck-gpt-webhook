@@ -3955,42 +3955,41 @@ def _build_weekly_role_map(
             }
         )
 
-    # Legacy fight_week_override compatibility (acts as further filter if still active)
-    if fight_week_override and fight_week_override.get("active"):
+    # Legacy fight_week_override compatibility now patches the relevant late week
+    # instead of replacing the whole multi-week map.
+    if fight_week_override and fight_week_override.get("active") and weeks:
         band = str(fight_week_override.get("band") or "")
+        target_index = len(weeks) - 1
+        week = dict(weeks[target_index])
         if band == "final_day_protocol":
-            weeks = []
+            filtered_roles = []
         else:
             allowed_roles = set(_clean_list(fight_week_override.get("allowed_session_roles", [])))
             max_sessions = int(fight_week_override.get("max_sessions") or 0)
-            trimmed_weeks: list[dict] = []
-            if weeks:
-                week = dict(weeks[0])
-                roles = list(week.get("session_roles") or [])
-                filtered_roles = [role for role in roles if role.get("role_key") in allowed_roles]
-                if max_sessions > 0:
-                    filtered_roles = filtered_roles[:max_sessions]
-                week["session_roles"] = filtered_roles
-                suppressed_roles = list(week.get("suppressed_roles") or [])
-                suppressed_roles.append(
-                    {
-                        "category": "plan",
-                        "role_key": "fight_week_override",
-                        "reasons": [str(fight_week_override.get("coach_note") or "fight-week override active")],
-                    }
-                )
-                week["suppressed_roles"] = suppressed_roles
-                week["coach_note_flags"] = _dedupe_clean_strings(
-                    _clean_list(week.get("coach_note_flags", [])) + ["fight-week override active"]
-                )
-                week["intentional_compression"] = {
-                    "active": True,
-                    "reason_codes": ["fight_week_override"],
-                    "reason": "fight_week_override",
-                    "summary": str(fight_week_override.get("coach_note") or "fight-week override active"),
-                }
-                trimmed_weeks = [week]
-            weeks = trimmed_weeks
+            roles = list(week.get("session_roles") or [])
+            filtered_roles = [role for role in roles if role.get("role_key") in allowed_roles]
+            if max_sessions > 0:
+                filtered_roles = filtered_roles[:max_sessions]
+        week["session_roles"] = filtered_roles
+        suppressed_roles = list(week.get("suppressed_roles") or [])
+        suppressed_roles.append(
+            {
+                "category": "plan",
+                "role_key": "fight_week_override",
+                "reasons": [str(fight_week_override.get("coach_note") or "fight-week override active")],
+            }
+        )
+        week["suppressed_roles"] = suppressed_roles
+        week["coach_note_flags"] = _dedupe_clean_strings(
+            _clean_list(week.get("coach_note_flags", [])) + ["fight-week override active"]
+        )
+        week["intentional_compression"] = {
+            "active": True,
+            "reason_codes": ["fight_week_override"],
+            "reason": "fight_week_override",
+            "summary": str(fight_week_override.get("coach_note") or "fight-week override active"),
+        }
+        weeks[target_index] = week
 
     return {
         "model": "session_role_overlay.v1",
@@ -4875,6 +4874,47 @@ def build_stage2_handoff_text(
 
     # ── Payload-mode-sensitive hard instructions ──────────────────
     mode_instructions = _handoff_mode_instructions(payload_mode)
+    continuation_map: list[dict] = []
+    if isinstance(planning_brief, dict):
+        continuation_map = list(
+            (
+                planning_brief.get("late_fight_plan_spec", {}) or {}
+            ).get("countdown_mode_sequence", [])
+        )
+        if not continuation_map:
+            continuation_map = list((planning_brief.get("days_out_payload", {}) or {}).get("countdown_mode_sequence", []))
+    if payload_mode == "bridge_compression_payload" and continuation_map:
+        continuation_lines = [
+            "COUNTDOWN CONTINUATION MAP",
+            "Bridge segment is front-only. Continue mode takeover from D-13 to D-0 exactly as mapped below.",
+        ]
+        for segment in continuation_map:
+            stage_key = str(segment.get("stage_key") or "").strip()
+            segment_mode = str(segment.get("payload_mode") or "").strip()
+            start_day = segment.get("start_day")
+            end_day = segment.get("end_day")
+            if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
+                continuation_lines.append(
+                    f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
+                )
+        if len(continuation_lines) > 2:
+            mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
+    elif continuation_map and len(continuation_map) > 1:
+        continuation_lines = [
+            "COUNTDOWN CONTINUATION MAP",
+            "Continue the active late-fight countdown from this start window through D-0 exactly as mapped below.",
+        ]
+        for segment in continuation_map:
+            stage_key = str(segment.get("stage_key") or "").strip()
+            segment_mode = str(segment.get("payload_mode") or "").strip()
+            start_day = segment.get("start_day")
+            end_day = segment.get("end_day")
+            if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
+                continuation_lines.append(
+                    f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
+                )
+        if len(continuation_lines) > 2:
+            mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),

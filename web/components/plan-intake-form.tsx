@@ -83,6 +83,13 @@ type DraftMetadata = {
   guided_injuries?: Array<Partial<GuidedInjuryState> | null> | null;
 };
 
+type StepValidationStatus = "done" | "pending" | "warning";
+
+type StepValidationCheck = {
+  label: string;
+  status: StepValidationStatus;
+};
+
 function numberOrNull(value: string): number | null {
   if (!value.trim()) {
     return null;
@@ -460,6 +467,48 @@ function ReviewDetailList({ items }: { items: Array<{ label: string; value: stri
   );
 }
 
+function StepValidationPanel({
+  stepLabel,
+  title,
+  description,
+  checks,
+}: {
+  stepLabel: string;
+  title: string;
+  description: string;
+  checks: StepValidationCheck[];
+}) {
+  const unresolvedChecks = checks.filter((check) => check.status !== "done");
+
+  return (
+    <div
+      className={`support-panel onboarding-validation-panel ${unresolvedChecks.length ? "onboarding-validation-panel-attention" : "onboarding-validation-panel-ready"}`.trim()}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="onboarding-validation-header">
+        <div className="onboarding-validation-copy">
+          <p className="kicker">{stepLabel} check</p>
+          <h2 className="form-section-title">{title}</h2>
+          <p className="muted">{description}</p>
+        </div>
+        <span
+          className={`onboarding-validation-badge ${unresolvedChecks.length ? "" : "onboarding-validation-badge-ready"}`.trim()}
+        >
+          {unresolvedChecks.length ? `${unresolvedChecks.length} left` : "Ready"}
+        </span>
+      </div>
+      <ul className="summary-list onboarding-validation-list">
+        {checks.map((check) => (
+          <li key={`${check.status}-${check.label}`} className="onboarding-validation-item" data-status={check.status}>
+            {check.label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function getReviewStepBlockingIssue(
   nextForm: PlanRequest,
   options: {
@@ -518,7 +567,7 @@ export function PlanIntakeForm() {
   const router = useRouter();
   const { me, replaceMe, session } = useAppSession();
   const [currentStep, setCurrentStep] = useState(0);
-  const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(true);
+  const [isMobileProgressOpen, setIsMobileProgressOpen] = useState(false);
   const [form, setForm] = useState<PlanRequest>(emptyPlanRequest());
   const [guidedInjuries, setGuidedInjuries] = useState<GuidedInjuryState[]>([]);
   const [activeGuidedInjuryIndex, setActiveGuidedInjuryIndex] = useState<number | null>(null);
@@ -992,6 +1041,7 @@ export function PlanIntakeForm() {
         return;
       }
       setCurrentStep(nextStep);
+      setIsMobileProgressOpen(false);
       try {
         await persistDraft(nextStep);
       } catch {
@@ -1002,6 +1052,7 @@ export function PlanIntakeForm() {
 
   function handleBack() {
     setCurrentStep((step) => Math.max(step - 1, 0));
+    setIsMobileProgressOpen(false);
   }
 
   function handleStepSelect(targetStep: number) {
@@ -1034,6 +1085,7 @@ export function PlanIntakeForm() {
       return;
     }
     setCurrentStep(targetStep);
+    setIsMobileProgressOpen(false);
 
     if (!session?.access_token || !isValidRecordFormat(getNextForm().athlete.record ?? "")) {
       return;
@@ -1202,6 +1254,206 @@ export function PlanIntakeForm() {
     ...(notesText ? [{ label: "Anything else we should know?", value: notesText }] : []),
     ...(!hasExtraPerformanceNotes ? [{ label: "Extra context", value: "No extra context provided." }] : []),
   ];
+  const reviewChecklistItems: StepValidationCheck[] = [
+    {
+      label: form.athlete.technical_style.length ? "Technical style is selected." : "Technical style must be selected before generation.",
+      status: form.athlete.technical_style.length ? "done" : "pending",
+    },
+    {
+      label: form.fight_date ? "Fight date is set." : "Fight date must be set before generation.",
+      status: form.fight_date ? "done" : "pending",
+    },
+    {
+      label: form.training_availability.length
+        ? "Training availability is saved."
+        : "Training availability needs at least one selected option.",
+      status: form.training_availability.length ? "done" : "pending",
+    },
+    {
+      label:
+        form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+          ? "Planned sessions per week are in range."
+          : "Planned sessions per week must stay between 1 and 6.",
+      status:
+        form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+          ? "done"
+          : "pending",
+    },
+    {
+      label:
+        parsedRounds.roundCount && parsedRounds.roundDuration
+          ? "Round count and duration are complete."
+          : "Choose both round count and round duration before generation.",
+      status: parsedRounds.roundCount && parsedRounds.roundDuration ? "done" : "pending",
+    },
+    ...(availabilityConsistency.hardError
+      ? [{ label: availabilityConsistency.hardError, status: "warning" as const }]
+      : [{ label: "Training availability can support the selected session count.", status: "done" as const }]),
+    ...(sparringConsistency.hardError
+      ? [{ label: sparringConsistency.hardError, status: "warning" as const }]
+      : [{ label: "Hard sparring and support days fit the current availability.", status: "done" as const }]),
+    ...(hardSparringWarning.message
+      ? [{
+          label: hardSparringWarningAcknowledged
+            ? `${hardSparringWarning.message} Acknowledged in Training.`
+            : `${hardSparringWarning.message} Return to Training to acknowledge it.`,
+          status: hardSparringWarningAcknowledged ? "done" : "warning",
+        } as const]
+      : []),
+    ...(injuryMismatchExists
+      ? [{
+          label: injuryOverwriteAcknowledged
+            ? "Restriction overwrite warning acknowledged."
+            : "Acknowledge the injury note overwrite warning before generation.",
+          status: injuryOverwriteAcknowledged ? "done" : "warning",
+        } as const]
+      : []),
+  ];
+  const currentStepValidation = (() => {
+    switch (currentStep) {
+      case 0:
+        return {
+          title: "Profile essentials",
+          description: "Save the athlete identity fields that power the rest of the intake.",
+          checks: [
+            {
+              label: form.athlete.full_name.trim() ? "Full name is saved." : "Add the athlete's full name.",
+              status: form.athlete.full_name.trim() ? "done" : "pending",
+            },
+            {
+              label: recordHasError ? "Record must use x-x or x-x-x format." : "Record format is valid.",
+              status: recordHasError ? "pending" : "done",
+            },
+            {
+              label: form.athlete.technical_style.length ? "Technical style is selected." : "Select at least one technical style.",
+              status: form.athlete.technical_style.length ? "done" : "pending",
+            },
+          ] satisfies StepValidationCheck[],
+        };
+      case 1:
+        return {
+          title: "Camp setup",
+          description: "Lock in the timing and round structure so the plan can scale to the fight window.",
+          checks: [
+            {
+              label: form.fight_date ? "Fight date is set." : "Choose the fight date.",
+              status: form.fight_date ? "done" : "pending",
+            },
+            {
+              label:
+                parsedRounds.roundCount && parsedRounds.roundDuration
+                  ? "Round count and duration are complete."
+                  : "Choose both round count and round duration.",
+              status: parsedRounds.roundCount && parsedRounds.roundDuration ? "done" : "pending",
+            },
+            {
+              label:
+                form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+                  ? "Planned sessions per week are in range."
+                  : "Keep planned sessions per week between 1 and 6.",
+              status:
+                form.weekly_training_frequency && form.weekly_training_frequency >= 1 && form.weekly_training_frequency <= 6
+                  ? "done"
+                  : "pending",
+            },
+          ] satisfies StepValidationCheck[],
+        };
+      case 2:
+        return {
+          title: "Training schedule",
+          description: "Make sure availability and sparring rules fit together before moving on.",
+          checks: [
+            {
+              label: form.training_availability.length
+                ? "Training availability has at least one selected day."
+                : "Pick at least one training availability option.",
+              status: form.training_availability.length ? "done" : "pending",
+            },
+            {
+              label: availabilityConsistency.hardError
+                ? availabilityConsistency.hardError
+                : "Availability supports the planned sessions per week.",
+              status: availabilityConsistency.hardError ? "warning" : "done",
+            },
+            {
+              label: sparringConsistency.hardError
+                ? sparringConsistency.hardError
+                : "Hard sparring and support work sit on valid days.",
+              status: sparringConsistency.hardError ? "warning" : "done",
+            },
+            ...(hardSparringWarning.message
+              ? [{
+                  label: hardSparringWarningAcknowledged
+                    ? `${hardSparringWarning.message} Acknowledged.`
+                    : `${hardSparringWarning.message} Acknowledge it before continuing.`,
+                  status: hardSparringWarningAcknowledged ? "done" : "warning",
+                } as const]
+              : []),
+          ] satisfies StepValidationCheck[],
+        };
+      case 3: {
+        const guidedAreaMismatch = (form.guided_injuries ?? []).some((injury) => hasGuidedInjuryDescriptorWithoutArea(injury));
+        return {
+          title: "Restrictions and recovery",
+          description: "Confirm injury detail is specific enough for safe loading decisions.",
+          checks: [
+            {
+              label: noRestrictions || !guidedAreaMismatch
+                ? "Restriction entries are specific enough to save."
+                : "Add a pain area or body part before choosing severity or trend.",
+              status: noRestrictions || !guidedAreaMismatch ? "done" : "pending",
+            },
+            {
+              label: injuryMismatchExists
+                ? injuryOverwriteAcknowledged
+                  ? "Injury note overwrite warning acknowledged."
+                  : "Acknowledge the injury note overwrite warning."
+                : "Restriction notes are aligned with the saved draft.",
+              status: injuryMismatchExists ? (injuryOverwriteAcknowledged ? "done" : "warning") : "done",
+            },
+          ] satisfies StepValidationCheck[],
+        };
+      }
+      case PERFORMANCE_STEP_INDEX:
+        return {
+          title: "Performance focus",
+          description: "Keep goals and weak areas inside the camp-specific focus cap.",
+          checks: [
+            {
+              label: form.fight_date
+                ? `Fight date is set, so the focus cap for ${performanceFocusWindowLabel} is active.`
+                : "Set the fight date to activate the focus cap guidance.",
+              status: form.fight_date ? "done" : "pending",
+            },
+            {
+              label: performanceFocusCapExceeded
+                ? performanceFocusValidation.errorMessage ?? "Reduce your goals and weak areas to get back under the cap."
+                : performanceFocusCapTitle,
+              status: performanceFocusCapExceeded ? "warning" : "done",
+            },
+            {
+              label: performanceFocusCapDetail,
+              status: performanceFocusCapExceeded ? "warning" : "done",
+            },
+          ] satisfies StepValidationCheck[],
+        };
+      default:
+        return {
+          title: "Final pre-check",
+          description: "Review the saved inputs, fix anything still open, then generate the plan.",
+          checks: reviewChecklistItems,
+        };
+    }
+  })();
+  const unresolvedCurrentChecks = currentStepValidation.checks.filter((check) => check.status !== "done");
+  const actionBarTitle = currentStep === steps.length - 1 ? "Generate plan" : `Step ${currentStep + 1}: ${steps[currentStep]}`;
+  const actionBarSummary = unresolvedCurrentChecks.length
+    ? currentStep === steps.length - 1
+      ? `${unresolvedCurrentChecks.length} check${unresolvedCurrentChecks.length === 1 ? "" : "s"} still need attention before generation.`
+      : `${unresolvedCurrentChecks.length} check${unresolvedCurrentChecks.length === 1 ? "" : "s"} left before you continue.`
+    : currentStep === steps.length - 1
+      ? "All required inputs are ready to generate."
+      : "This step is ready to continue.";
 
   return (
     <RequireAuth>
@@ -1232,6 +1484,13 @@ export function PlanIntakeForm() {
           </div>
         ) : null}
 
+        <StepValidationPanel
+          stepLabel={steps[currentStep]}
+          title={currentStepValidation.title}
+          description={currentStepValidation.description}
+          checks={currentStepValidation.checks}
+        />
+
         {currentStep === 0 ? (
           <div className="step-layout onboarding-step-layout">
             <div className="step-main athlete-motion-slot athlete-motion-main onboarding-step-main">
@@ -1240,7 +1499,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Identity</p>
                   <h2 className="form-section-title">Core athlete details</h2>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="fullName">Full name</label>
                     <input
@@ -1281,7 +1540,7 @@ export function PlanIntakeForm() {
                     <label htmlFor="heightCm">Height (cm)</label>
                     <input id="heightCm" type="number" min="0" step="1" value={form.athlete.height_cm ?? ""} onChange={(event) => updateAthlete("height_cm", integerOrNull(event.target.value))} />
                   </div>
-                  <div className="field">
+                  <div className="field field-span-full">
                     <label htmlFor="stance">Stance</label>
                     <CustomSelect
                       id="stance"
@@ -1300,7 +1559,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Competitive profile</p>
                   <h2 className="form-section-title">Style and status</h2>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid onboarding-profile-grid">
                   <div className="field">
                     <label htmlFor="technicalStyle">Technical Style</label>
                     <CustomSelect
@@ -1379,7 +1638,7 @@ export function PlanIntakeForm() {
                   <p className="kicker">Fight context</p>
                   <h2 className="form-section-title">Camp timing and load</h2>
                 </div>
-                <div className="form-grid">
+                <div className="form-grid onboarding-fight-grid">
                   <div className="field">
                     <label htmlFor="fightDate">Fight date</label>
                     <input id="fightDate" type="date" value={form.fight_date} onChange={(event) => updateField("fight_date", event.target.value)} />
@@ -1406,34 +1665,6 @@ export function PlanIntakeForm() {
                       onChange={(value) => updateRoundsField("roundDuration", value)}
                     />
                   </div>
-                  {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
-                  <div className="field">
-                    <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
-                  </div>
-                  ) : (
-                  <div className="field" style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}>
-                    <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
-                    <input
-                      id="sessionsPerWeek"
-                      type="number"
-                      min="1"
-                      max="6"
-                      disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
-                      value={form.weekly_training_frequency ?? ""}
-                      onChange={(event) => {
-                        const nextValue = numberOrNull(event.target.value);
-                        updateField(
-                          "weekly_training_frequency",
-                          nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
-                        );
-                      }}
-                    />
-                    <p className="muted">
-                      {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
-                        "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
-                    </p>
-                  </div>
-                  )}
                   <div className="field">
                     <label htmlFor="fatigueLevel">Fatigue level</label>
                     <CustomSelect
@@ -1445,6 +1676,37 @@ export function PlanIntakeForm() {
                     />
                     <p className="muted">Low = fresh, Moderate = carrying normal fatigue, High = noticeably run down.</p>
                   </div>
+                  {shouldHideField(daysOutCtx, "weekly_training_frequency") ? (
+                    <div className="field field-span-full">
+                      <p className="muted" style={{ opacity: 0.5 }}>Weekly session count is not used for planning at this stage.</p>
+                    </div>
+                  ) : (
+                    <div
+                      className="field field-span-full"
+                      style={shouldDeEmphasizeField(daysOutCtx, "weekly_training_frequency") ? { opacity: 0.55 } : undefined}
+                    >
+                      <label htmlFor="sessionsPerWeek">Planned sessions per week</label>
+                      <input
+                        id="sessionsPerWeek"
+                        type="number"
+                        min="1"
+                        max="6"
+                        disabled={shouldDisableField(daysOutCtx, "weekly_training_frequency")}
+                        value={form.weekly_training_frequency ?? ""}
+                        onChange={(event) => {
+                          const nextValue = numberOrNull(event.target.value);
+                          updateField(
+                            "weekly_training_frequency",
+                            nextValue === null ? null : Math.min(Math.max(nextValue, 1), 6),
+                          );
+                        }}
+                      />
+                      <p className="muted">
+                        {getFieldHelperText(daysOutCtx, "weekly_training_frequency") ||
+                          "Count the total training sessions the week should carry. Hard sparring days and non-hard training days are labels inside that weekly total, not extra sessions on top."}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </article>
             </div>
@@ -2020,25 +2282,6 @@ export function PlanIntakeForm() {
             </div>
 
             <aside className="step-aside athlete-motion-slot athlete-motion-rail onboarding-step-aside">
-              <div className="status-card">
-                <p className="status-label">Ready to generate</p>
-                <h2 className="plan-summary-title">Final pre-check</h2>
-                <p className="muted">Review the saved inputs, then generate.</p>
-                <ul className="summary-list">
-                  <li>Technical Style must be selected.</li>
-                  <li>Fight date must be set.</li>
-                  <li>Training Availability needs at least one selected option.</li>
-                  <li>Planned sessions per week must be at least 1.</li>
-                  {availabilityConsistency.hardError ? <li>{availabilityConsistency.hardError}</li> : null}
-                  {sparringConsistency.hardError ? <li>{sparringConsistency.hardError}</li> : null}
-                  {hardSparringWarning.message ? (
-                    <li>
-                      {hardSparringWarning.message}
-                      {hardSparringWarningAcknowledged ? " Acknowledged in Training." : " Return to Training to acknowledge it."}
-                    </li>
-                  ) : null}
-                </ul>
-              </div>
               <div className="support-panel">
                 <p className="kicker">Restrictions</p>
                 <p className="muted">Injuries or restrictions: {restrictionSummary}</p>
@@ -2059,29 +2302,30 @@ export function PlanIntakeForm() {
         {message ? <div className="success-banner athlete-motion-slot athlete-motion-status">{message}</div> : null}
         {error ? <div className="error-banner athlete-motion-slot athlete-motion-status">{error}</div> : null}
 
-        <div className="form-actions athlete-motion-slot athlete-motion-rail">
-          <button type="button" className="ghost-button" onClick={handleSaveDraft} disabled={isPending}>
-            {isPending ? "Saving..." : "Save draft"}
-          </button>
-          {currentStep > 0 ? (
-            <button type="button" className="ghost-button" onClick={handleBack}>
-              Back
+        <div className="form-actions onboarding-action-bar athlete-motion-slot athlete-motion-rail">
+          <div className="onboarding-action-bar-copy">
+            <p className="kicker">{actionBarTitle}</p>
+            <p className="muted">{actionBarSummary}</p>
+          </div>
+          <div className="onboarding-action-buttons">
+            <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleSaveDraft} disabled={isPending}>
+              {isPending ? "Saving..." : "Save draft"}
             </button>
-          ) : null}
-          {currentStep < steps.length - 1 ? (
-            <button type="button" className="cta" onClick={handleNext} disabled={isPending}>
-              Continue
-            </button>
-          ) : (
-            <>
-              <button type="button" className="cta" onClick={handleGenerate} disabled={isPending}>
+            {currentStep > 0 ? (
+              <button type="button" className="ghost-button onboarding-action-secondary" onClick={handleBack}>
+                Back
+              </button>
+            ) : null}
+            {currentStep < steps.length - 1 ? (
+              <button type="button" className="cta onboarding-action-primary" onClick={handleNext} disabled={isPending}>
+                Continue
+              </button>
+            ) : (
+              <button type="button" className="cta onboarding-action-primary" onClick={handleGenerate} disabled={isPending}>
                 Generate plan
               </button>
-              <Link href="/plans" className="ghost-button">
-                View plan history
-              </Link>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </section>
     </RequireAuth>

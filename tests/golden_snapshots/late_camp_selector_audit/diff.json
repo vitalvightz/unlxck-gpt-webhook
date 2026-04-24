@@ -1,0 +1,601 @@
+{
+  "control_d28": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Push Press",
+        "Anti-Rotation Med Ball Slam",
+        "Medicine-Ball Chest Toss",
+        "Band Face Pull"
+      ],
+      "added_winners": [],
+      "removed_winners": [],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "added_winners": [],
+      "removed_winners": [],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [],
+    "ambiguous_tag_gaps_removed": []
+  },
+  "d21_to_d14": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Isometric Mid-Thigh Pull",
+        "Overcoming Split-Squat Isometric",
+        "Trap Bar Deadlift"
+      ],
+      "added_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Isometric Mid-Thigh Pull",
+        "Overcoming Split-Squat Isometric",
+        "Trap Bar Deadlift"
+      ],
+      "removed_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "newly_blocked": [
+        "Trap Bar Jump Squat"
+      ],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "added_winners": [],
+      "removed_winners": [],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "strength",
+        "name": "Band-Resisted Punch",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Band-Resisted Straight Punch",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Banded Row (Speed Focus)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Cossack Squat (Dynamic)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Cross-Step Lunge",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Judo Throw Simulation (Band-Resisted)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Lateral Med Ball Slam",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic",
+          "mech_reactive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Med-Ball Rotational Slam",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine Ball Hook Throw",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Overhead Slam (Rotational)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic",
+          "mech_shoulder_overhead"
+        ]
+      }
+    ],
+    "ambiguous_tag_gaps_removed": []
+  },
+  "d13_to_d8": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Isometric Mid-Thigh Pull",
+        "Overcoming Split-Squat Isometric",
+        "Trap Bar Deadlift"
+      ],
+      "added_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Isometric Mid-Thigh Pull",
+        "Overcoming Split-Squat Isometric",
+        "Trap Bar Deadlift"
+      ],
+      "removed_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "newly_blocked": [
+        "Trap Bar Jump Squat"
+      ],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "added_winners": [
+        "Ankle Snap Bounce"
+      ],
+      "removed_winners": [
+        "Shadowboxing Intervals",
+        "Explosive Boxing Burst Intervals"
+      ],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Band-Resisted Punch",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Band-Resisted Straight Punch",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Banded Row (Speed Focus)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Cossack Squat (Dynamic)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Cross-Step Lunge",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_reactive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Judo Throw Simulation (Band-Resisted)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Lateral Med Ball Slam",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic",
+          "mech_reactive"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Med-Ball Rotational Slam",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine Ball Hook Throw",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Overhead Slam (Rotational)",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "mech_ballistic",
+          "mech_shoulder_overhead"
+        ]
+      }
+    ],
+    "ambiguous_tag_gaps_removed": []
+  },
+  "d7": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Overcoming Split-Squat Isometric"
+      ],
+      "added_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Overcoming Split-Squat Isometric"
+      ],
+      "removed_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "newly_blocked": [
+        "Trap Bar Jump (Light)"
+      ],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
+        "Ankle Snap Bounce"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "added_winners": [],
+      "removed_winners": [
+        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
+      ],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ],
+    "ambiguous_tag_gaps_removed": []
+  },
+  "d6_to_d5": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Overcoming Split-Squat Isometric"
+      ],
+      "added_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Overcoming Split-Squat Isometric"
+      ],
+      "removed_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "newly_blocked": [
+        "Trap Bar Jump (Light)"
+      ],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
+        "Ankle Snap Bounce"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "added_winners": [],
+      "removed_winners": [
+        "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
+      ],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ],
+    "ambiguous_tag_gaps_removed": []
+  },
+  "d4_to_d2": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Overcoming Split-Squat Isometric"
+      ],
+      "added_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Overcoming Split-Squat Isometric"
+      ],
+      "removed_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "newly_blocked": [
+        "Cluster Set Trap Bar Deadlift",
+        "Isometric Mid-Thigh Pull",
+        "Trap Bar Jump (Light)",
+        "Trap-Bar Pin Pull Isometric"
+      ],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "added_winners": [],
+      "removed_winners": [],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ],
+    "ambiguous_tag_gaps_removed": []
+  },
+  "d1": {
+    "strength": {
+      "before_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "after_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Towel/Gi Row Isometric Hold",
+        "Banded Lateral Walk"
+      ],
+      "added_winners": [
+        "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
+        "Towel/Gi Row Isometric Hold",
+        "Banded Lateral Walk"
+      ],
+      "removed_winners": [
+        "Band-Resisted Push Press",
+        "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
+        "Band Face Pull"
+      ],
+      "newly_blocked": [
+        "Anti-Rotation Med Ball Slam",
+        "Band-Resisted Push Press",
+        "Cluster Set Trap Bar Deadlift",
+        "Isometric Mid-Thigh Pull",
+        "Med Ball Scoop Toss",
+        "Medicine-Ball Chest Toss",
+        "Overcoming Split-Squat Isometric",
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Trap Bar Jump (Light)",
+        "Trap-Bar Pin Pull Isometric"
+      ],
+      "no_longer_blocked": []
+    },
+    "conditioning": {
+      "before_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "after_winners": [
+        "Easy Bike",
+        "Ankle Snap Bounce"
+      ],
+      "added_winners": [],
+      "removed_winners": [],
+      "newly_blocked": [],
+      "no_longer_blocked": []
+    },
+    "ambiguous_tag_gaps_added": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      }
+    ],
+    "ambiguous_tag_gaps_removed": []
+  }
+}

@@ -98,6 +98,16 @@ _LATE_FIGHT_ROLE_STRESS_CLASS = {
     "fight_week_freshness_day": "support",
 }
 
+_LATE_FIGHT_ROLE_SELECTION_PRIORITY = {
+    "hard_sparring_day": 120,
+    "neural_primer_day": 110,
+    "strength_touch_day": 108,
+    "alactic_sharpness_day": 106,
+    "fight_week_freshness_day": 104,
+    "light_fight_pace_touch_day": 100,
+    "technical_touch_day": -10,
+}
+
 
 def _coerce_days(days_until_fight: Any, default: int | None = None) -> int | None:
     """Coerce days_until_fight to int, returning *default* on failure.
@@ -178,7 +188,8 @@ def _hard_spar_status_for_countdown_offset(offset: int) -> str:
     if 18 <= offset <= 21:
         return "hard_allowed"
     if 14 <= offset <= 17:
-        # D-17 to D-14 cap hard sparring at zero; declared days downgrade.
+        # D-17 to D-14 cap hard sparring at zero, so declared hard days
+        # downgrade to technical / rhythm instead of staying hard-allowed.
         return "downgrade"
     if 8 <= offset <= 13:
         return "hard_allowed"
@@ -388,14 +399,17 @@ def _countdown_offset(label: str) -> int | None:
 
 
 def _late_fight_legal_offsets(days_until_fight: Any) -> list[int]:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
+    days = _coerce_days(days_until_fight)
+    if days is None:
         return []
     if days < 0:
         return []
     if days == 0:
         return [0]
+    mode = _days_out_payload_mode(days)
+    if mode == "bridge_compression_payload":
+        # Bridge allocations must stay inside D-21..D-14.
+        return list(range(days, 13, -1))
     return list(range(min(days, 21), 0, -1))
 
 
@@ -700,7 +714,7 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
         # D-21 to D-18 sub-slice per the evidence review).
         hard_spar_default = 1 if (days is not None and 18 <= days <= 21) else 0
         return {
-            "max_active_roles": 2,
+            "max_active_roles": 3,
             "max_meaningful_stress_exposures": 3,
             "hard_sparring_cap_default": hard_spar_default,
             "strength_touch_max": 1,
@@ -737,6 +751,29 @@ def _bridge_baseline(state: str, days_until_fight: Any) -> dict[str, Any]:
         "double_stress_day_allowed": False,
         "freshness_mandatory": True,
     }
+
+
+def _bridge_target_active_roles(
+    bridge_rules: dict[str, Any]
+) -> int:
+    days = bridge_rules.get("days_until_fight") or 0
+    fatigue = str(bridge_rules.get("fatigue") or "").strip().lower()
+    cut = str(bridge_rules.get("weight_cut_bucket") or "").strip().lower()
+    hard_cap = bridge_rules.get("hard_sparring_cap") or 0
+    glycolytic_max = bridge_rules.get("glycolytic_touch_max") or 0
+
+    if cut in {"high", "critical", "extreme"} or fatigue in {"high", "critical", "extreme"}:
+        return 1
+
+    if 19 <= days <= 21:
+        if fatigue in {"none", "low"} and cut in {"none", "low"} and glycolytic_max >= 1:
+            return 3
+        return 2
+    if 16 <= days <= 18:
+        if fatigue in {"none", "low"} and cut in {"none", "low"} and hard_cap >= 1:
+            return 3
+        return 2
+    return 2
 
 
 def _bridge_unsafe_weight(
@@ -1057,6 +1094,11 @@ def compute_bridge_rules(
         _coerce_days(hard_sparring_days_declared, 0) or 0,
         permissive=permissive_mode,
     )
+    if rules.get("timing_state") == TIMING_STATE_BRIDGE:
+        rules["max_active_roles"] = min(
+            rules["max_active_roles"],
+            _bridge_target_active_roles(rules),
+        )
 
     if rules["block_full_plan"]:
         rules["max_active_roles"] = 0
@@ -1793,6 +1835,7 @@ def _days_out_payload_block(days_until_fight: Any, athlete_model: dict) -> dict:
         "rendering_rules": rendering_rules,
         "forbidden_blocks": _late_fight_forbidden_blocks(days_until_fight),
         "max_blocks_per_session": max_blocks,
+        "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),
     }
 
 
@@ -2563,7 +2606,443 @@ def _late_fight_session_roles(days_until_fight: Any, athlete_model: dict) -> lis
 
 
 def _build_late_fight_session_sequence(days_until_fight: Any, athlete_model: dict) -> list[dict[str, Any]]:
-    return list(_late_fight_allocation_plan(days_until_fight, athlete_model).get("session_roles", []))
+    return list(_late_fight_practical_allocation_plan(days_until_fight, athlete_model).get("session_roles", []))
+
+
+def _is_bridge_countdown(days_until_fight: Any) -> bool:
+    days = _coerce_days(days_until_fight)
+    return isinstance(days, int) and 14 <= days <= 21
+
+
+def _is_countdown_continuation_start(days_until_fight: Any) -> bool:
+    days = _coerce_days(days_until_fight)
+    return isinstance(days, int) and 3 <= days <= 21
+
+
+def _shifted_segment_athlete_model(
+    days_until_fight: Any,
+    segment_start_day: int,
+    athlete_model: dict[str, Any],
+) -> dict[str, Any]:
+    segment_athlete = dict(athlete_model)
+    segment_athlete["days_until_fight"] = segment_start_day
+    days = _coerce_days(days_until_fight)
+    plan_weekday = str(athlete_model.get("plan_creation_weekday") or "").strip().lower()
+    plan_index = _WEEKDAY_ORDER.get(plan_weekday)
+    if isinstance(days, int) and plan_index is not None and segment_start_day <= days:
+        segment_athlete["plan_creation_weekday"] = _WEEKDAY_NAMES[(plan_index + (days - segment_start_day)) % 7]
+    return segment_athlete
+
+
+def _segment_legal_countdown_labels(role: dict[str, Any], start_day: int, end_day: int) -> list[str]:
+    labels = [
+        str(label)
+        for label in role.get("legal_countdown_labels", [])
+        if (offset := _countdown_offset(str(label))) is not None
+        and offset > 0
+        and end_day <= offset <= start_day
+    ]
+    if labels:
+        return labels
+    return [f"D-{offset}" for offset in range(start_day, end_day - 1, -1) if offset > 0]
+
+
+def _copy_composite_segment_role(
+    role: dict[str, Any],
+    *,
+    segment: dict[str, Any],
+    segment_index: int,
+) -> dict[str, Any]:
+    start_day = int(segment["start_day"])
+    end_day = int(segment["end_day"])
+    role_copy = dict(role)
+    role_copy["legal_countdown_labels"] = _segment_legal_countdown_labels(role, start_day, end_day)
+    role_copy["composite_source"] = "bridge_countdown_practical_allocation"
+    role_copy["composite_segment_index"] = segment_index
+    role_copy["composite_segment_stage_key"] = segment.get("stage_key")
+    role_copy["composite_segment_payload_mode"] = segment.get("payload_mode")
+    role_copy["countdown_span"] = {"start_day": start_day, "end_day": end_day}
+    role_copy["_original_countdown_label"] = role.get("scheduled_countdown_label") or role.get("countdown_label")
+    return role_copy
+
+
+def _full_countdown_weekday_map(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, str]:
+    countdown_map = _countdown_weekday_map(athlete_model.get("plan_creation_weekday"), days_until_fight)
+    return _resolve_countdown_weekday_with_availability(
+        countdown_map,
+        clean_list(athlete_model.get("training_days", [])),
+    )
+
+
+def _declared_hard_weekdays(athlete_model: dict[str, Any]) -> set[str]:
+    return {
+        str(day).strip().lower()
+        for day in _ordered_weekdays(clean_list(athlete_model.get("hard_sparring_days", [])))
+        if str(day).strip()
+    }
+
+
+def _meaningful_app_owned_role(role: dict[str, Any]) -> bool:
+    return (
+        _is_app_owned_visible_role(role.get("role_key"))
+        and str(role.get("stress_class") or "").strip() == "meaningful_stress"
+    )
+
+
+def _role_has_non_hard_weekday_option(
+    role: dict[str, Any],
+    label_to_weekday: dict[str, str],
+    hard_weekdays: set[str],
+) -> bool:
+    return any(
+        str(label_to_weekday.get(str(label)) or "").strip().lower() not in hard_weekdays
+        for label in role.get("legal_countdown_labels", [])
+    )
+
+
+def _assign_role_to_countdown_label(
+    role: dict[str, Any],
+    label: str,
+    label_to_weekday: dict[str, str],
+) -> dict[str, Any]:
+    role_copy = dict(role)
+    role_copy["scheduled_countdown_label"] = label
+    role_copy["countdown_label"] = label
+    offset = _countdown_offset(label)
+    if offset is not None:
+        role_copy["countdown_offset"] = offset
+    weekday = str(label_to_weekday.get(label) or "").strip()
+    if weekday:
+        role_copy["scheduled_day_hint"] = weekday
+        role_copy["real_weekday"] = weekday
+        role_copy["countdown_display_label"] = _countdown_display_label(label, weekday)
+    else:
+        role_copy.pop("scheduled_day_hint", None)
+        role_copy.pop("real_weekday", None)
+        role_copy["countdown_display_label"] = label
+    role_copy["day_assignment_reason"] = _late_fight_assignment_reason(role_copy)
+    return role_copy
+
+
+def _composite_role_selection_priority(role: dict[str, Any]) -> int:
+    return int(
+        role.get("_selection_priority")
+        or _LATE_FIGHT_ROLE_SELECTION_PRIORITY.get(str(role.get("role_key") or ""), 0)
+    )
+
+
+def _composite_role_selection_score(selected_roles: list[dict[str, Any]], days_until_fight: Any) -> int:
+    score = 0
+    role_key_counts: dict[str, int] = {}
+    stage_keys: set[str] = set()
+    for role in selected_roles:
+        role_key = str(role.get("role_key") or "")
+        role_key_counts[role_key] = role_key_counts.get(role_key, 0) + 1
+        priority = _composite_role_selection_priority(role)
+        segment_index = int(role.get("composite_segment_index") or 0)
+        offset = int(role.get("countdown_offset") or 0)
+        score += priority * 1000
+        score += segment_index * 600
+        if _is_app_owned_visible_role(role_key):
+            score += 3500
+        if offset:
+            score += max(0, 25 - offset) * 10
+        stage_key = str(role.get("composite_segment_stage_key") or "").strip()
+        if stage_key:
+            stage_keys.add(stage_key)
+        if _is_bridge_countdown(days_until_fight) and stage_key == "d21_to_d14":
+            score += 6000
+
+    for count in role_key_counts.values():
+        if count > 1:
+            score -= (count - 1) * 1200
+
+    if "d1" in stage_keys:
+        score += 1500
+    if _is_bridge_countdown(days_until_fight) and "d21_to_d14" in stage_keys:
+        score += 2500
+    score += len(stage_keys) * 250
+    return score
+
+
+def _composite_role_key_cap(role_key: str, days_until_fight: Any) -> int | None:
+    if role_key == "hard_sparring_day":
+        return _declared_hard_spar_cap(days_until_fight)
+    if _is_bridge_countdown(days_until_fight):
+        return None
+    if role_key in {
+        "strength_touch_day",
+        "neural_primer_day",
+        "alactic_sharpness_day",
+        "light_fight_pace_touch_day",
+        "fight_week_freshness_day",
+    }:
+        return 1
+    return None
+
+
+def _score_composite_practical_assignment(
+    assigned_roles: list[dict[str, Any]],
+    label_to_weekday: dict[str, str],
+    hard_weekdays: set[str],
+) -> int:
+    score = 0
+    visible_roles = [
+        role
+        for role in assigned_roles
+        if _is_app_owned_visible_role(role.get("role_key"))
+        and isinstance(role.get("countdown_offset"), int)
+    ]
+    for role in assigned_roles:
+        offset = int(role.get("countdown_offset") or 0)
+        original_offset = _countdown_offset(str(role.get("_original_countdown_label") or ""))
+        cost_class = str(role.get("cost_class") or "")
+        if cost_class in {"high", "medium"}:
+            score += offset * 40
+        if role.get("role_key") == "fight_week_freshness_day":
+            legal_offsets = [
+                _countdown_offset(str(label))
+                for label in role.get("legal_countdown_labels", [])
+                if _countdown_offset(str(label)) is not None
+            ]
+            if legal_offsets:
+                score -= abs(offset - min(legal_offsets)) * 45
+        if original_offset is not None:
+            score -= abs(offset - original_offset) * 8
+        if _meaningful_app_owned_role(role):
+            weekday = str(label_to_weekday.get(str(role.get("scheduled_countdown_label") or "")) or "").strip().lower()
+            if weekday in hard_weekdays and _role_has_non_hard_weekday_option(role, label_to_weekday, hard_weekdays):
+                score -= 8000
+
+    ordered_visible = sorted(visible_roles, key=lambda role: int(role.get("countdown_offset") or 0), reverse=True)
+    for first_role, second_role in zip(ordered_visible, ordered_visible[1:]):
+        first_offset = int(first_role.get("countdown_offset") or 0)
+        second_offset = int(second_role.get("countdown_offset") or 0)
+        gap = first_offset - second_offset
+        score += gap * 20
+        if gap == 1:
+            score -= 10000
+            if (
+                first_role.get("stress_class") == "meaningful_stress"
+                or second_role.get("stress_class") == "meaningful_stress"
+            ):
+                score -= 3000
+    return score
+
+
+def _space_bridge_countdown_roles(
+    roles: list[dict[str, Any]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> list[dict[str, Any]]:
+    if not roles:
+        return []
+    role_budget = _late_fight_role_budget(days_until_fight, athlete_model)
+    max_meaningful_stress_exposures = role_budget.get("max_meaningful_stress_exposures")
+    max_support_roles = role_budget.get("max_support_roles")
+    max_visible_roles = None
+    if isinstance(max_meaningful_stress_exposures, int) and isinstance(max_support_roles, int):
+        max_visible_roles = max_meaningful_stress_exposures + max_support_roles
+    hard_spar_cap = _declared_hard_spar_cap(days_until_fight)
+    label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    hard_weekdays = _declared_hard_weekdays(athlete_model)
+    ordered_roles = sorted(
+        roles,
+        key=lambda role: (
+            int(role.get("composite_segment_index") or 0),
+            -int(role.get("countdown_offset") or 0),
+            -_composite_role_selection_priority(role),
+            str(role.get("role_key") or ""),
+        ),
+    )
+
+    best_score: int | None = None
+    best_roles: list[dict[str, Any]] | None = None
+
+    def _search(
+        index: int,
+        occupied_labels: set[str],
+        assigned: list[dict[str, Any]],
+        visible_active_count: int,
+        visible_meaningful_count: int,
+        visible_support_count: int,
+        hard_spar_count: int,
+        role_key_counts: dict[str, int],
+    ) -> None:
+        nonlocal best_score, best_roles
+        if isinstance(max_visible_roles, int) and visible_active_count > max_visible_roles:
+            return
+        if isinstance(max_meaningful_stress_exposures, int) and visible_meaningful_count > max_meaningful_stress_exposures:
+            return
+        if isinstance(max_support_roles, int) and visible_support_count > max_support_roles:
+            return
+        if isinstance(hard_spar_cap, int) and hard_spar_count > hard_spar_cap:
+            return
+        if index >= len(ordered_roles):
+            score = _score_composite_practical_assignment(assigned, label_to_weekday, hard_weekdays)
+            score += _composite_role_selection_score(assigned, days_until_fight)
+            if best_score is None or score > best_score:
+                best_score = score
+                best_roles = list(assigned)
+            return
+
+        role = ordered_roles[index]
+        role_is_meaningful = str(role.get("stress_class") or "").strip() == "meaningful_stress"
+        role_is_support = str(role.get("stress_class") or "").strip() == "support"
+        role_key = str(role.get("role_key") or "")
+        role_is_visible = _is_app_owned_visible_role(role_key)
+        role_is_hard_spar = role_key == "hard_sparring_day"
+
+        _search(
+            index + 1,
+            occupied_labels,
+            assigned,
+            visible_active_count,
+            visible_meaningful_count,
+            visible_support_count,
+            hard_spar_count,
+            role_key_counts,
+        )
+
+        labels = [
+            str(label)
+            for label in role.get("legal_countdown_labels", [])
+            if str(label).strip() and _countdown_offset(str(label)) is not None
+        ]
+        if not labels:
+            existing = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+            labels = [existing] if existing else []
+        locked_label = _late_fight_locked_label(role, label_to_weekday)
+        if locked_label:
+            labels = [locked_label]
+
+        next_role_key_counts = dict(role_key_counts)
+        next_role_key_counts[role_key] = next_role_key_counts.get(role_key, 0) + 1
+        role_key_cap = _composite_role_key_cap(role_key, days_until_fight)
+        if isinstance(role_key_cap, int) and next_role_key_counts[role_key] > role_key_cap:
+            return
+
+        for label in labels:
+            if label in occupied_labels:
+                continue
+            assigned_role = _assign_role_to_countdown_label(role, label, label_to_weekday)
+            _search(
+                index + 1,
+                occupied_labels | {label},
+                assigned + [assigned_role],
+                visible_active_count + (1 if role_is_visible else 0),
+                visible_meaningful_count + (1 if role_is_visible and role_is_meaningful else 0),
+                visible_support_count + (1 if role_is_visible and role_is_support else 0),
+                hard_spar_count + (1 if role_is_hard_spar else 0),
+                next_role_key_counts,
+            )
+
+    _search(0, set(), [], 0, 0, 0, 0, {})
+    final_roles = best_roles or roles
+    final_roles = sorted(
+        final_roles,
+        key=lambda role: int(role.get("countdown_offset") or 0),
+        reverse=True,
+    )
+    public_roles: list[dict[str, Any]] = []
+    for session_index, role in enumerate(final_roles, start=1):
+        role_copy = dict(role)
+        role_copy["session_index"] = session_index
+        public_roles.append(_late_fight_public_role(role_copy))
+    return public_roles
+
+
+def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+    mode = _days_out_payload_mode(days_until_fight)
+    roles: list[dict[str, Any]] = []
+    suppressed_roles: list[dict[str, Any]] = []
+    segment_allocations: list[dict[str, Any]] = []
+
+    for segment_index, segment in enumerate(_countdown_mode_sequence(days_until_fight), start=1):
+        start_day = segment.get("start_day")
+        end_day = segment.get("end_day")
+        if not isinstance(start_day, int) or not isinstance(end_day, int) or start_day <= 0:
+            continue
+        segment_athlete = _shifted_segment_athlete_model(days_until_fight, start_day, athlete_model)
+        allocation = _late_fight_allocation_plan(start_day, segment_athlete)
+        segment_roles = [
+            _copy_composite_segment_role(role, segment=segment, segment_index=segment_index)
+            for role in allocation.get("session_roles", [])
+            if isinstance(role.get("countdown_offset"), int)
+            and role["countdown_offset"] > 0
+        ]
+        roles.extend(segment_roles)
+        for role in allocation.get("suppressed_roles", []):
+            suppressed = dict(role)
+            suppressed["composite_segment_index"] = segment_index
+            suppressed["composite_segment_stage_key"] = segment.get("stage_key")
+            suppressed["composite_segment_payload_mode"] = segment.get("payload_mode")
+            suppressed_roles.append(suppressed)
+        segment_allocations.append(
+            {
+                "segment_index": segment_index,
+                "stage_key": segment.get("stage_key"),
+                "payload_mode": segment.get("payload_mode"),
+                "countdown_span": {"start_day": start_day, "end_day": end_day},
+                "selected_roles": len(segment_roles),
+                "role_budget": allocation.get("role_budget", {}),
+            }
+        )
+
+    public_roles = _space_bridge_countdown_roles(
+        roles,
+        days_until_fight=days_until_fight,
+        athlete_model=athlete_model,
+    )
+    visible_roles = _visible_insert_session_sequence(public_roles)
+    label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    top_level_budget = _late_fight_role_budget(days_until_fight, athlete_model)
+    legal_labels = dedupe_preserve_order(
+        str(label)
+        for role in public_roles
+        for label in role.get("legal_countdown_labels", [])
+        if str(label).strip()
+    )
+    role_budget = {
+        "mode": mode,
+        "composite_practical_allocation": True,
+        "max_active_roles": len(visible_roles),
+        "max_meaningful_stress_exposures": top_level_budget.get("max_meaningful_stress_exposures"),
+        "max_support_roles": top_level_budget.get("max_support_roles"),
+        "selected_active_roles": len(public_roles),
+        "selected_visible_roles": len(visible_roles),
+        "selected_meaningful_stress_exposures": _late_fight_meaningful_stress_count(public_roles),
+        "selected_support_roles": _late_fight_support_role_count(public_roles),
+        "legal_countdown_labels": legal_labels,
+    }
+    return {
+        "mode": mode,
+        "permission_policy": _late_fight_permission_policy(days_until_fight, athlete_model),
+        "role_budget": role_budget,
+        "session_roles": public_roles,
+        "suppressed_roles": suppressed_roles,
+        "allocator": {
+            "composite_practical_allocation": True,
+            "legal_countdown_labels": legal_labels,
+            "locked_days": [role.get("locked_day") for role in public_roles if role.get("locked_day")],
+            "blocked_days": [],
+            "countdown_weekday_map": {
+                label: label_to_weekday.get(label)
+                for label in legal_labels
+                if label_to_weekday.get(label)
+            },
+            "availability_adjustments": [],
+            "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),
+            "segment_allocations": segment_allocations,
+        },
+    }
+
+
+def _late_fight_practical_allocation_plan(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+    if _is_countdown_continuation_start(days_until_fight):
+        return _bridge_countdown_practical_allocation_plan(days_until_fight, athlete_model)
+    return _late_fight_allocation_plan(days_until_fight, athlete_model)
 
 
 def _late_fight_stage_label(days_until_fight: Any) -> str:
@@ -2614,6 +3093,9 @@ def _late_fight_summary(days_until_fight: Any) -> str:
 
 
 def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> dict[str, Any]:
+    days = _coerce_days(days_until_fight)
+    if _is_countdown_continuation_start(days_until_fight):
+        return {"weeks": _build_bridge_then_late_countdown_weeks(days_until_fight, athlete_model, phase_briefs)}
     if _days_out_payload_mode(days_until_fight) in {
         "fight_day_protocol_payload",
         "pre_fight_day_payload",
@@ -2657,14 +3139,152 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
     }
 
 
+def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> list[dict[str, Any]]:
+    days = _coerce_days(days_until_fight)
+    if not _is_countdown_continuation_start(days):
+        return []
+    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+
+    segment_days = [
+        (int(segment["start_day"]), int(segment["end_day"]))
+        for segment in _countdown_mode_sequence(days_until_fight)
+        if isinstance(segment.get("start_day"), int) and isinstance(segment.get("end_day"), int)
+    ]
+    weeks: list[dict[str, Any]] = []
+    for week_index, (start_day, end_day) in enumerate(segment_days, start=1):
+        segment_mode = _days_out_payload_mode(start_day)
+        segment_athlete = _shifted_segment_athlete_model(days_until_fight, start_day, athlete_model)
+        segment_allocation = _late_fight_allocation_plan(start_day, segment_athlete)
+        segment_roles = [
+            _copy_composite_segment_role(role, segment={"start_day": start_day, "end_day": end_day}, segment_index=week_index)
+            for role in segment_allocation.get("session_roles", [])
+            if isinstance(role.get("countdown_offset"), int)
+            and role["countdown_offset"] > 0
+        ]
+        session_counts = {
+            "strength": sum(1 for role in segment_roles if role.get("category") == "strength"),
+            "conditioning": sum(1 for role in segment_roles if role.get("category") == "conditioning"),
+            "recovery": sum(1 for role in segment_roles if role.get("category") == "recovery"),
+        }
+        technical_count = sum(1 for role in segment_roles if role.get("category") == "technical")
+        if technical_count:
+            session_counts["technical"] = technical_count
+        conditioning_sequence = [
+            role.get("preferred_system")
+            for role in segment_roles
+            if role.get("category") == "conditioning" and role.get("preferred_system")
+        ]
+        weeks.append(
+            {
+                "week_index": week_index,
+                "phase": phase,
+                "stage_key": _late_fight_window(start_day),
+                "stage_label": _late_fight_stage_label(start_day),
+                "stage_objective": _late_fight_summary(start_day),
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "countdown_span": {"start_day": start_day, "end_day": end_day},
+                "payload_mode": segment_mode,
+                "session_counts": session_counts,
+                "conditioning_sequence": conditioning_sequence or ["alactic"],
+                "role_budget": segment_allocation.get("role_budget", {}),
+                "intentional_compression": {
+                    "active": True,
+                    "reason_codes": [segment_mode],
+                    "reason": segment_mode,
+                    "summary": _late_fight_summary(start_day),
+                },
+            }
+        )
+    return weeks
+
+
 def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
-    allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
+    allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     mode = allocation.get("mode", _days_out_payload_mode(days_until_fight))
     roles = allocation.get("session_roles", [])
     suppressed_roles = list(allocation.get("suppressed_roles", []))
     resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
     plan_weekday = athlete_model.get("plan_creation_weekday")
-    if mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload", "late_fight_transition_payload"}:
+    composite_allocation = bool((allocation.get("allocator", {}) or {}).get("composite_practical_allocation"))
+    if composite_allocation:
+        weeks = []
+        for week_index, segment in enumerate(_countdown_mode_sequence(days_until_fight), start=1):
+            start_day = segment.get("start_day")
+            end_day = segment.get("end_day")
+            if not isinstance(start_day, int) or not isinstance(end_day, int):
+                continue
+            stage_key = str(segment.get("stage_key") or "")
+            segment_mode = str(segment.get("payload_mode") or _days_out_payload_mode(start_day))
+            segment_athlete = _shifted_segment_athlete_model(days_until_fight, start_day, athlete_model)
+            segment_plan_weekday = segment_athlete.get("plan_creation_weekday")
+            filtered_training = _filter_past_weekdays(
+                _ordered_weekdays(clean_list(segment_athlete.get("training_days", []))),
+                segment_plan_weekday,
+                start_day,
+            )
+            filtered_sparring = _filter_past_weekdays(
+                _ordered_weekdays(clean_list(segment_athlete.get("hard_sparring_days", []))),
+                segment_plan_weekday,
+                start_day,
+            )
+            filtered_technical = _filter_past_weekdays(
+                _ordered_weekdays(
+                    clean_list(
+                        segment_athlete.get(
+                            "support_work_days",
+                            segment_athlete.get("technical_skill_days", []),
+                        )
+                    )
+                ),
+                segment_plan_weekday,
+                start_day,
+            )
+            segment_roles = [
+                role
+                for role in roles
+                if str(role.get("composite_segment_stage_key") or "") == stage_key
+            ]
+            segment_suppressed_roles = [
+                role
+                for role in suppressed_roles
+                if str(role.get("composite_segment_stage_key") or "") == stage_key
+            ]
+            weeks.append(
+                {
+                    "week_index": week_index,
+                    "phase": "TAPER",
+                    "stage_key": stage_key,
+                    "stage_label": _late_fight_stage_label(start_day),
+                    "payload_mode": segment_mode,
+                    "phase_week_index": 1,
+                    "phase_week_total": 1,
+                    "countdown_span": {"start_day": start_day, "end_day": end_day},
+                    "declared_training_days": filtered_training,
+                    "declared_hard_sparring_days": filtered_sparring,
+                    "declared_support_work_days": filtered_technical,
+                    "hard_sparring_plan": [],
+                    "effective_hard_sparring_days": [
+                        role.get("scheduled_day_hint")
+                        for role in segment_roles
+                        if role.get("role_key") == "hard_sparring_day" and role.get("scheduled_day_hint")
+                    ],
+                    "coach_note_flags": [_late_fight_stage_label(start_day)],
+                    "intentional_compression": {
+                        "active": True,
+                        "reason_codes": [segment_mode],
+                        "reason": segment_mode,
+                        "summary": _late_fight_summary(start_day),
+                    },
+                    "intentionally_unused_days": [],
+                    "session_roles": segment_roles,
+                    "suppressed_roles": segment_suppressed_roles,
+                    "countdown_weekday_map": resolved_countdown_map,
+                    "allocator": allocation.get("allocator", {}),
+                    "role_budget": allocation.get("role_budget", {}),
+                }
+            )
+    elif mode in {"fight_day_protocol_payload", "pre_fight_day_payload", "late_fight_session_payload", "late_fight_transition_payload"}:
         weeks: list[dict[str, Any]] = []
     else:
         filtered_training = _filter_past_weekdays(
@@ -2743,13 +3363,14 @@ def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict
 
 def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> dict[str, Any]:
     payload_block = _days_out_payload_block(days_until_fight, athlete_model)
-    allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
+    allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     roles = list(allocation.get("session_roles", []))
     session_sequence = list(roles)
     visible_session_sequence = _visible_insert_session_sequence(session_sequence)
     mode = payload_block["payload_mode"]
     max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
     resolved_countdown_map = dict((allocation.get("allocator", {}) or {}).get("countdown_weekday_map", {}))
+    role_budget = dict(allocation.get("role_budget", {}) or {})
     spec: dict[str, Any] = {
         "payload_variant": "late_fight_stage2_payload",
         "payload_mode": mode,
@@ -2770,17 +3391,78 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
         "countdown_weekday_map": resolved_countdown_map,
-        "role_budget": allocation.get("role_budget", {}),
+        "role_budget": role_budget,
         "allocator": allocation.get("allocator", {}),
         "suppressed_roles": allocation.get("suppressed_roles", []),
         "permission_policy": allocation.get("permission_policy", {}),
+        "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),
     }
+    if isinstance(role_budget.get("max_meaningful_stress_exposures"), int):
+        spec["max_meaningful_stress_exposures"] = role_budget["max_meaningful_stress_exposures"]
+    if isinstance(role_budget.get("max_active_roles"), int):
+        spec["max_active_roles"] = role_budget["max_active_roles"]
+    if isinstance(role_budget.get("max_support_roles"), int):
+        spec["max_support_roles"] = role_budget["max_support_roles"]
     if max_blocks is not None:
         spec["max_blocks_per_session"] = max_blocks
     hard_sparring_context = _hard_sparring_window_context(days_until_fight, athlete_model)
     if hard_sparring_context:
         spec.update(hard_sparring_context)
     return spec
+
+
+def _countdown_mode_sequence(days_until_fight: Any) -> list[dict[str, Any]]:
+    days = _coerce_days(days_until_fight)
+    if not isinstance(days, int) or days < 0:
+        return []
+    if _is_countdown_continuation_start(days_until_fight):
+        windows = [
+            {"stage_key": "d21_to_d14", "payload_mode": "bridge_compression_payload", "window_start": 21, "window_end": 14},
+            {"stage_key": "d13_to_d8", "payload_mode": "pre_fight_compressed_payload", "window_start": 13, "window_end": 8},
+            {"stage_key": "d7", "payload_mode": "late_fight_week_payload", "window_start": 7, "window_end": 7},
+            {"stage_key": "d6_to_d5", "payload_mode": "late_fight_transition_payload", "window_start": 6, "window_end": 5},
+            {"stage_key": "d4_to_d2", "payload_mode": "late_fight_session_payload", "window_start": 4, "window_end": 2},
+            {"stage_key": "d1", "payload_mode": "pre_fight_day_payload", "window_start": 1, "window_end": 1},
+            {"stage_key": "d0", "payload_mode": "fight_day_protocol_payload", "window_start": 0, "window_end": 0},
+        ]
+        started = False
+        sequence: list[dict[str, Any]] = []
+        for window in windows:
+            window_start = int(window["window_start"])
+            window_end = int(window["window_end"])
+            if not started:
+                if not (window_end <= days <= window_start):
+                    continue
+                started = True
+                sequence.append(
+                    {
+                        "stage_key": window["stage_key"],
+                        "payload_mode": window["payload_mode"],
+                        "start_day": days,
+                        "end_day": window_end,
+                    }
+                )
+                continue
+            sequence.append(
+                {
+                    "stage_key": window["stage_key"],
+                    "payload_mode": window["payload_mode"],
+                    "start_day": window_start,
+                    "end_day": window_end,
+                }
+            )
+        return sequence
+    mode = _days_out_payload_mode(days)
+    if mode == "camp_payload":
+        return []
+    return [
+        {
+            "stage_key": _late_fight_window(days),
+            "payload_mode": mode,
+            "start_day": days,
+            "end_day": days,
+        }
+    ]
 
 
 def _handoff_mode_instructions(payload_mode: str) -> str:
