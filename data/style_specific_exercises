@@ -22,7 +22,7 @@
   {
     "name": "Barbell Thruster",
     "category": "full_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": ["SPP"],
     "method": "strength",
     "movement": "squat_to_press",
     "type": "bilateral",

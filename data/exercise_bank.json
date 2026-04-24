@@ -996,6 +996,7 @@
     "type": "bilateral",
     "tags": [
       "explosive",
+      "neural_primer",
       "shoulders",
       "mech_upper_press",
       "mech_shoulder_overhead"
@@ -1893,7 +1894,7 @@
     "name": "EMOM: 5 Squat Cleans + 5 Burpees",
     "category": "finishers",
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "method": "conditioning",
     "movement": "compound",

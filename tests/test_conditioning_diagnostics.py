@@ -689,7 +689,7 @@ def test_build_planning_brief_elevates_stage2_payload_into_coaching_brief():
     assert brief["phase_strategy"]["SPP"]["must_keep"] == ["rehab", "glycolytic", "alactic"]
     assert brief["phase_strategy"]["SPP"]["slot_counts"]["conditioning"] == 2
     assert brief["week_by_week_progression"]["weeks"][0]["phase"] == "SPP"
-    assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "specific_density_to_peak"
+    assert brief["week_by_week_progression"]["weeks"][0]["stage_key"] == "d21_to_d14"
 
 
 def test_short_notice_false_for_past_date():

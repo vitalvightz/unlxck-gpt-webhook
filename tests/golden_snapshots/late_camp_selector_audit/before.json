@@ -1,0 +1,328 @@
+{
+  "control_d28": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Explosive Boxing Burst Intervals",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d21_to_d14": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Explosive Boxing Burst Intervals",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d13_to_d8": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Explosive Boxing Burst Intervals",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d7": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
+          "score": 0.0,
+          "reason_codes": []
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d6_to_d5": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)",
+          "score": 0.0,
+          "reason_codes": []
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d4_to_d2": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d1": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 1.6453,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  }
+}

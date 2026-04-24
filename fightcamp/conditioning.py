@@ -26,6 +26,16 @@ from .config import (
     INJURY_GUARD_SHORTLIST,
     trim_to_injury_guard_shortlist,
 )
+from .late_selector_windows import (
+    D1,
+    D4_TO_D2,
+    D6_TO_D5,
+    D7,
+    classify_late_selector_window,
+    is_active_late_selector_window,
+)
+from .stage2_payload_late_fight import compute_bridge_rules
+from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 TAPER_AVOID_TAGS = {
     "contrast_pairing",
@@ -45,6 +55,17 @@ logger = logging.getLogger(__name__)
 
 ALACTIC_MAX_WORK_SEC = 12
 ALACTIC_MIN_REST_SEC = 60
+LATE_CONDITIONING_SAFE_TAGS = {
+    "low_impact",
+    "zero_impact",
+    "cns_freshness",
+    "sharpness",
+    "recovery",
+    "skill_refinement",
+    "coordination",
+    "reactive",
+}
+LATE_CONDITIONING_TIGHT_WINDOWS = {D7, D6_TO_D5, D4_TO_D2, D1}
 
 from .conditioning_boxing import (
     BOXING_NAME_MAP,
@@ -117,6 +138,192 @@ def _alactic_structure_ok(drill: dict) -> bool:
     work_seconds = max(work_candidates)
     rest_seconds = max(rest_candidates)
     return work_seconds <= ALACTIC_MAX_WORK_SEC and rest_seconds >= ALACTIC_MIN_REST_SEC
+
+
+def _conditioning_window_severity(window: str | None) -> float:
+    return {
+        "d21_to_d14": 0.55,
+        "d13_to_d8": 0.9,
+        D7: 1.05,
+        D6_TO_D5: 1.15,
+        D4_TO_D2: 1.25,
+        D1: 1.35,
+    }.get(window, 0.0)
+
+
+def _conditioning_text_blob(drill: dict) -> str:
+    fields = (
+        drill.get("name", ""),
+        drill.get("duration", ""),
+        drill.get("timing", ""),
+        drill.get("rest", ""),
+        drill.get("notes", ""),
+        drill.get("modality", ""),
+        drill.get("equipment_note", ""),
+    )
+    return " ".join(str(field or "") for field in fields).strip().lower()
+
+
+def _conditioning_dense_pattern(text: str) -> bool:
+    return any(keyword in text for keyword in ("emom", "tabata", "amrap", "for time"))
+
+
+def _conditioning_multi_round_pattern(text: str) -> bool:
+    time_values = _extract_time_values(text)
+    if "round" in text and any(value >= 120 for value in time_values):
+        return True
+    if re.search(r"\b\d+\s*x\s*\d+", text) and ("rest" in text or len(time_values) >= 2):
+        return True
+    if "interval" in text and ("rest" in text or len(time_values) >= 2):
+        return True
+    return False
+
+
+def _conditioning_fight_pace_pattern(text: str, tags: set[str]) -> bool:
+    if "fight-pace" in text or "fight pace" in text:
+        return True
+    return (
+        "round" in text
+        and any(value >= 120 for value in _extract_time_values(text))
+        and bool(tags & {"conditioning", "glycolytic", "work_capacity"})
+    )
+
+
+def _conditioning_generic_glycolytic(system: str, tags: set[str]) -> bool:
+    if system != "glycolytic":
+        return False
+    return not bool(tags & {"skill_refinement", "cns_freshness", "sharpness", "low_impact", "reactive"})
+
+
+def _conditioning_resolve_bridge_rules(
+    *,
+    flags: dict,
+    days_until_fight: int | None,
+    sport: str,
+    style_names: list[str],
+    tech_style_tags: list[str],
+    fatigue: str,
+) -> dict:
+    triage_summary = flags.get("triage_summary") or {}
+    injury_mode = str(triage_summary.get("mode") or "full_plan").strip().lower() or "full_plan"
+    cut_bucket = str(flags.get("cut_severity_bucket") or "").strip().lower()
+    if not cut_bucket:
+        cut_bucket = cut_severity_bucket(
+            compute_cut_severity_score(flags.get("weight_cut_pct"), days_until_fight)
+        )
+    return compute_bridge_rules(
+        days_until_fight=days_until_fight,
+        sport=sport,
+        style=style_names or tech_style_tags,
+        fatigue=fatigue,
+        weight_cut_bucket=cut_bucket,
+        injury_mode=injury_mode,
+        hard_sparring_days_declared=len(flags.get("hard_sparring_days") or []),
+        athlete_pct_above_class=flags.get("weight_cut_pct"),
+        hours_to_recovery_after_weigh_in=flags.get("hours_to_recovery_after_weigh_in"),
+    )
+
+
+def _evaluate_conditioning_late_window(
+    drill: dict,
+    *,
+    system: str,
+    window: str | None,
+    bridge_rules: dict | None,
+) -> dict:
+    if not is_active_late_selector_window(window):
+        return {
+            "blocked": False,
+            "block_codes": [],
+            "reason_codes": [],
+            "adjustment": 0.0,
+            "ambiguous_gap": None,
+        }
+
+    tags = set(normalize_tags(drill.get("tags", [])))
+    text = _conditioning_text_blob(drill)
+    severity = _conditioning_window_severity(window)
+    dense = _conditioning_dense_pattern(text)
+    multi_round = _conditioning_multi_round_pattern(text)
+    fight_pace = _conditioning_fight_pace_pattern(text, tags)
+    generic_glycolytic = _conditioning_generic_glycolytic(system, tags)
+    low_noise_sharpness = (
+        system == "alactic"
+        and not dense
+        and (tags & LATE_CONDITIONING_SAFE_TAGS or _alactic_structure_ok(drill))
+    )
+    aerobic_rhythm = (
+        system == "aerobic"
+        and not dense
+        and bool(tags & {"low_impact", "cns_freshness", "recovery", "skill_refinement", "coordination"})
+    )
+    developmental_taper = (dense or multi_round or fight_pace) and bool(
+        tags & {"conditioning", "glycolytic", "work_capacity", "mech_systemic_fatigue"}
+    )
+
+    reason_codes: list[str] = []
+    adjustment = 0.0
+
+    if low_noise_sharpness:
+        adjustment += 0.75
+        reason_codes.append("late_conditioning_boost_alactic_sharpness")
+    elif aerobic_rhythm:
+        adjustment += 0.5
+        reason_codes.append("late_conditioning_boost_aerobic_rhythm")
+    elif tags & {"cns_freshness", "sharpness", "skill_refinement"}:
+        adjustment += 0.35
+        reason_codes.append("late_conditioning_boost_freshness")
+
+    if dense and multi_round:
+        adjustment -= 0.7 * severity
+        reason_codes.append("late_conditioning_penalty_dense_multi_round")
+    if fight_pace:
+        adjustment -= 0.9 * severity
+        reason_codes.append("late_conditioning_penalty_fight_pace_leak")
+    if "high_impact_lower" in tags or ("mech_landing_impact" in tags and system == "alactic"):
+        adjustment -= 0.4 * severity
+        reason_codes.append("late_conditioning_penalty_impact_noise")
+    if developmental_taper:
+        adjustment -= 0.8 * severity
+        reason_codes.append("late_conditioning_penalty_developmental_taper")
+    if generic_glycolytic:
+        bridge_allows_glycolytic = bool((bridge_rules or {}).get("glycolytic_touch_max", 0) > 0)
+        adjustment -= (0.8 if bridge_allows_glycolytic and window == "d21_to_d14" else 1.5) * severity
+        reason_codes.append("late_conditioning_penalty_generic_glycolytic")
+
+    block_codes: list[str] = []
+    if window in LATE_CONDITIONING_TIGHT_WINDOWS:
+        if generic_glycolytic:
+            block_codes.append("late_conditioning_block_generic_glycolytic")
+        if dense and multi_round:
+            block_codes.append("late_conditioning_block_dense_multi_round")
+        if fight_pace or developmental_taper:
+            block_codes.append("late_conditioning_block_density_leakage")
+
+    ambiguous_gap = None
+    if (
+        not block_codes
+        and not (tags & LATE_CONDITIONING_SAFE_TAGS)
+        and bool(tags & {"plyometric", "mech_ballistic", "mech_reactive", "mech_shoulder_overhead"})
+        and not dense
+        and system == "alactic"
+    ):
+        ambiguous_gap = {
+            "name": drill.get("name", "<unnamed>"),
+            "issue": "late_safe_intent_not_explicit",
+            "signals": sorted(
+                signal
+                for signal in {"plyometric", "mech_ballistic", "mech_reactive", "mech_shoulder_overhead"} & tags
+            ),
+        }
+
+    return {
+        "blocked": bool(block_codes),
+        "block_codes": sorted(set(block_codes)),
+        "reason_codes": reason_codes,
+        "adjustment": round(adjustment, 4),
+        "ambiguous_gap": ambiguous_gap,
+    }
 
 
 def normalize_system(raw_system: str | None, *, source: str) -> str:
@@ -887,6 +1094,12 @@ def generate_conditioning_block(flags):
     equipment_access = normalize_equipment_list(flags.get("equipment", []))
     equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
+    late_window = (
+        classify_late_selector_window(days_until_fight, include_control=True)
+        if phase.upper() == "TAPER"
+        else None
+    )
+    active_late_window = phase.upper() == "TAPER" and is_active_late_selector_window(late_window)
     # Normalize technical style(s)
     if isinstance(technical, str):
         tech_styles = [t.strip().lower() for t in technical.split(',') if t.strip()]
@@ -936,6 +1149,18 @@ def generate_conditioning_block(flags):
     fight_format = style_map.get(primary_tech, "mma")
     selection_format = _normalize_fight_format(fight_format)
     energy_weights = get_format_weights().get(selection_format, {})
+    bridge_rules = (
+        _conditioning_resolve_bridge_rules(
+            flags=flags,
+            days_until_fight=days_until_fight,
+            sport=flags.get("sport") or selection_format,
+            style_names=style_names,
+            tech_style_tags=tech_style_tags,
+            fatigue=fatigue,
+        )
+        if active_late_window
+        else {}
+    )
 
     rename_map = BOXING_NAME_MAP if selection_format == "boxing" else {}
 
@@ -967,6 +1192,27 @@ def generate_conditioning_block(flags):
     restriction_reason_counts: dict[str, int] = defaultdict(int)
     restriction_warning_counts: dict[str, int] = defaultdict(int)
     restriction_blocked_items: list[dict] = []
+    late_window_blocked: list[dict] = []
+    late_window_ambiguous: dict[str, dict] = {}
+
+    def _record_late_block(drill: dict, score: float, reason_codes: list[str]) -> None:
+        if not active_late_window:
+            return
+        late_window_blocked.append(
+            {
+                "name": drill.get("name", "<unnamed>"),
+                "score": round(float(score), 4),
+                "reason_codes": list(reason_codes),
+            }
+        )
+
+    def _record_ambiguous_gap(ambiguous_gap: dict | None) -> None:
+        if not active_late_window or not ambiguous_gap:
+            return
+        name = str(ambiguous_gap.get("name") or "").strip()
+        if not name:
+            return
+        late_window_ambiguous[name] = ambiguous_gap
 
     for drill in get_conditioning_bank():
         d = drill.copy()
@@ -1122,6 +1368,18 @@ def generate_conditioning_block(flags):
         if not ignore_restrictions and restriction_penalty:
             total_score += restriction_penalty
             penalty += restriction_penalty
+        late_eval = _evaluate_conditioning_late_window(
+            d,
+            system=system,
+            window=late_window,
+            bridge_rules=bridge_rules,
+        )
+        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+        if late_eval["blocked"]:
+            _record_late_block(d, total_score, late_eval["block_codes"])
+            continue
+        if late_eval["adjustment"]:
+            total_score += late_eval["adjustment"]
 
         reasons = {
             "weakness_hits": num_weak,
@@ -1133,6 +1391,8 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "reason_codes": list(late_eval["reason_codes"]),
+            "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(total_score, 4),
         }
 
@@ -1294,6 +1554,18 @@ def generate_conditioning_block(flags):
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             penalty += restriction_penalty
+        late_eval = _evaluate_conditioning_late_window(
+            d,
+            system=system,
+            window=late_window,
+            bridge_rules=bridge_rules,
+        )
+        _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+        if late_eval["blocked"]:
+            _record_late_block(d, score, late_eval["block_codes"])
+            continue
+        if late_eval["adjustment"]:
+            score += late_eval["adjustment"]
         reasons = {
             "weakness_hits": weak_matches,
             "goal_hits": goal_matches,
@@ -1304,6 +1576,8 @@ def generate_conditioning_block(flags):
             "penalties": penalty,
             "restriction_hits": len(matched_restrictions),
             "boxing_aerobic_preference": round(boxer_aerobic_adjustment, 4),
+            "reason_codes": list(late_eval["reason_codes"]),
+            "late_window_adjustment": late_eval["adjustment"],
             "final_score": round(score, 4),
         }
 
@@ -1509,12 +1783,19 @@ def generate_conditioning_block(flags):
         lactic_goal_tags = {"glycolytic", "anaerobic_lactic", "lactic"}
         has_conditioning_goal = any(g in {"conditioning", "endurance"} for g in goal_list)
         has_lactic_goal = bool(set(goal_tags) & lactic_goal_tags)
-        allow_glycolytic = (
-            fatigue == "low"
-            and (has_conditioning_goal or has_lactic_goal)
-            and isinstance(days_until_fight, int)
-            and days_until_fight > 7
-        )
+        if active_late_window:
+            allow_glycolytic = (
+                fatigue == "low"
+                and (has_conditioning_goal or has_lactic_goal)
+                and (bridge_rules.get("glycolytic_touch_max", 0) > 0)
+            )
+        else:
+            allow_glycolytic = (
+                fatigue == "low"
+                and (has_conditioning_goal or has_lactic_goal)
+                and isinstance(days_until_fight, int)
+                and days_until_fight > 7
+            )
 
     def _allow_system_insert(system: str) -> bool:
         if phase.upper() != "TAPER" or system != "glycolytic":
@@ -1721,6 +2002,16 @@ def generate_conditioning_block(flags):
                     continue
                 system = get_system_or_warn(drill, source="style_taper_conditioning.json")
                 if system is not None:
+                    late_eval = _evaluate_conditioning_late_window(
+                        drill,
+                        system=system,
+                        window=late_window,
+                        bridge_rules=bridge_rules,
+                    )
+                    _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+                    if late_eval["blocked"]:
+                        _record_late_block(drill, 0.0, late_eval["block_codes"])
+                        continue
                     _append_drill(system, drill, {
                         "goal_hits": 0,
                         "weakness_hits": 0,
@@ -1729,7 +2020,9 @@ def generate_conditioning_block(flags):
                         "load_adjustments": 0,
                         "equipment_boost": 0,
                         "penalties": 0,
-                        "final_score": 0,
+                        "reason_codes": list(late_eval["reason_codes"]),
+                        "late_window_adjustment": late_eval["adjustment"],
+                        "final_score": round(late_eval["adjustment"], 4),
                     })
                     break
 
@@ -1758,6 +2051,16 @@ def generate_conditioning_block(flags):
                     continue
                 system = get_system_or_warn(drill, source="conditioning_taper_plyo")
                 if system is not None:
+                    late_eval = _evaluate_conditioning_late_window(
+                        drill,
+                        system=system,
+                        window=late_window,
+                        bridge_rules=bridge_rules,
+                    )
+                    _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
+                    if late_eval["blocked"]:
+                        _record_late_block(drill, 0.0, late_eval["block_codes"])
+                        continue
                     _append_drill(system, drill, {
                         "goal_hits": 0,
                         "weakness_hits": 0,
@@ -1766,7 +2069,9 @@ def generate_conditioning_block(flags):
                         "load_adjustments": 0,
                         "equipment_boost": 0,
                         "penalties": 0,
-                        "final_score": 0,
+                        "reason_codes": list(late_eval["reason_codes"]),
+                        "late_window_adjustment": late_eval["adjustment"],
+                        "final_score": round(late_eval["adjustment"], 4),
                     })
                     break
 
@@ -1990,13 +2295,12 @@ def generate_conditioning_block(flags):
 
     _is_late_fight_taper = (
         phase.upper() == "TAPER"
-        and isinstance(days_until_fight, int)
-        and days_until_fight <= 5
+        and active_late_window
     )
     if phase.upper() in {"SPP", "TAPER"} and not grouped_drills.get("glycolytic") and not _is_late_fight_taper:
-        # Late-fight TAPER (D-0 to D-5): late-fight dosage caps explicitly prohibit
-        # generic multi-round glycolytic structures. Suppress the fallback entirely;
-        # the countdown caps already govern what conditioning is permitted.
+        # Active late-window TAPER (D-21 to D-1) suppresses the generic
+        # multi-round glycolytic fallback. Outside that countdown-specific
+        # window, keep the legacy helper behavior.
         fallback = _glycolytic_fallback(phase)
         grouped_drills["glycolytic"] = [fallback]
         selected_drill_names.append(fallback["name"])
@@ -2060,6 +2364,29 @@ def generate_conditioning_block(flags):
         grouped_drills,
         reason_lookup,
     )
+    deduped_late_blocks = {
+        (
+            entry.get("name", ""),
+            tuple(entry.get("reason_codes", [])),
+        ): entry
+        for entry in late_window_blocked
+    }
+    candidate_reservoir["__late_window__"] = {
+        "window": late_window,
+        "blocked": sorted(
+            deduped_late_blocks.values(),
+            key=lambda entry: (entry.get("name", ""), entry.get("score", 0.0)),
+        ),
+        "ambiguous_tag_gaps": [
+            late_window_ambiguous[name]
+            for name in sorted(late_window_ambiguous)
+        ],
+        "bridge_rules": {
+            "glycolytic_touch_max": bridge_rules.get("glycolytic_touch_max"),
+            "strength_touch_max": bridge_rules.get("strength_touch_max"),
+            "reason_codes": list(bridge_rules.get("reason_codes", [])),
+        } if bridge_rules else {},
+    }
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles

@@ -1,0 +1,471 @@
+{
+  "control_d28": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 2.3953,
+          "reason_codes": []
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.6174,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 0.6971,
+          "reason_codes": []
+        },
+        {
+          "name": "Band Face Pull",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Explosive Boxing Burst Intervals",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": []
+  },
+  "d21_to_d14": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 3.1267,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.8521,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.7301,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 1.4003,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.65,
+          "reason_codes": [
+            "late_conditioning_boost_aerobic_rhythm"
+          ]
+        },
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.15,
+          "reason_codes": []
+        },
+        {
+          "name": "Explosive Boxing Burst Intervals",
+          "score": 0.0,
+          "reason_codes": []
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ]
+  },
+  "d13_to_d8": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 3.1517,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.8771,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.7301,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 1.4253,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.65,
+          "reason_codes": [
+            "late_conditioning_boost_aerobic_rhythm"
+          ]
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": -0.36,
+          "reason_codes": [
+            "late_conditioning_penalty_impact_noise"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ]
+  },
+  "d7": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 3.1717,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.8971,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.7301,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 1.4453,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.65,
+          "reason_codes": [
+            "late_conditioning_boost_aerobic_rhythm"
+          ]
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": -0.42,
+          "reason_codes": [
+            "late_conditioning_penalty_impact_noise"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ]
+  },
+  "d6_to_d5": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 3.1867,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.9121,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.7301,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 1.4603,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.65,
+          "reason_codes": [
+            "late_conditioning_boost_aerobic_rhythm"
+          ]
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": -0.46,
+          "reason_codes": [
+            "late_conditioning_penalty_impact_noise"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ]
+  },
+  "d4_to_d2": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 3.1967,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.9221,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.7301,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 1.4703,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.65,
+          "reason_codes": [
+            "late_conditioning_boost_aerobic_rhythm"
+          ]
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": -0.5,
+          "reason_codes": [
+            "late_conditioning_penalty_impact_noise"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ]
+  },
+  "d1": {
+    "strength": {
+      "winners": [
+        {
+          "name": "Band-Resisted Push Press",
+          "score": 3.2067,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Med Ball Scoop Toss",
+          "score": 2.9321,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        },
+        {
+          "name": "Medicine-Ball Chest Toss",
+          "score": 1.7301,
+          "reason_codes": []
+        },
+        {
+          "name": "Anti-Rotation Med Ball Slam",
+          "score": 1.4803,
+          "reason_codes": [
+            "late_strength_boost_neural_primer"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "conditioning": {
+      "winners": [
+        {
+          "name": "Easy Bike",
+          "score": 2.65,
+          "reason_codes": [
+            "late_conditioning_boost_aerobic_rhythm"
+          ]
+        },
+        {
+          "name": "Ankle Snap Bounce",
+          "score": -0.54,
+          "reason_codes": [
+            "late_conditioning_penalty_impact_noise"
+          ]
+        }
+      ],
+      "blocked": []
+    },
+    "ambiguous_tag_gaps": [
+      {
+        "selector": "conditioning",
+        "name": "Ankle Snap Bounce",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "plyometric"
+        ]
+      },
+      {
+        "selector": "strength",
+        "name": "Medicine-Ball Chest Toss",
+        "issue": "late_safe_intent_not_explicit",
+        "signals": [
+          "explosive",
+          "mech_ballistic"
+        ]
+      }
+    ]
+  }
+}
