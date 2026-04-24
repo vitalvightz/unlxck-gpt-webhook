@@ -120,18 +120,18 @@ export default function SettingsPage() {
       return;
     }
 
-    setError(null);
-    setMessage(null);
-
-    try {
-      const updatedMe = await updateMe(session.access_token, {
-        appearance_mode: nextMode,
-      });
-      replaceMe(updatedMe);
-      setMessage("Background updated.");
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to update settings.");
-    }
+    startTransition(async () => {
+      try {
+        const updatedMe = await updateMe(session.access_token, {
+          appearance_mode: nextMode,
+        });
+        replaceMe(updatedMe);
+        setMessage("Background updated.");
+      } catch (saveError) {
+        setAppearanceMode(me?.profile.appearance_mode ?? "dark");
+        setError(saveError instanceof Error ? saveError.message : "Unable to update settings.");
+      }
+    });
   }
 
   function handleSave() {
