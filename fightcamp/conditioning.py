@@ -9,6 +9,7 @@ from typing import Callable, Iterable
 from collections import defaultdict
 from .training_context import (
     allocate_sessions,
+    normalize_athlete_equipment_list,
     normalize_equipment_list,
     calculate_exercise_numbers,
 )
@@ -754,7 +755,7 @@ def select_coordination_drill(flags, existing_names: set[str], injuries: list[st
         return None
 
     phase = flags.get("phase", "GPP").upper()
-    equipment_access = set(normalize_equipment_list(flags.get("equipment", [])))
+    equipment_access = set(normalize_athlete_equipment_list(flags.get("equipment", [])))
     candidates = []
     for drill in get_coordination_bank():
         if phase not in [p.upper() for p in drill.get("phases", [])]:
@@ -1094,11 +1095,8 @@ def generate_conditioning_block(flags):
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     training_frequency = flags.get("training_frequency", flags.get("days_available", 3))
-    equipment_access = normalize_equipment_list(flags.get("equipment", []))
-    # bodyweight is always available — every athlete can do bodyweight drills.
-    # Without this, bodyweight-tagged drills in style_taper_conditioning.json
-    # are silently excluded for any athlete whose intake omits "bodyweight".
-    equipment_access_set = set(equipment_access) | {"bodyweight"}
+    equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
+    equipment_access_set = set(equipment_access)
     days_until_fight = flags.get("days_until_fight")
     late_window = classify_late_selector_window(days_until_fight, include_control=True)
     active_late_window = is_active_late_selector_window(late_window)
@@ -2389,5 +2387,4 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
-
 

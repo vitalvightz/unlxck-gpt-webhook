@@ -5,6 +5,7 @@ import random
 import re
 from collections import defaultdict
 from .training_context import (
+    normalize_athlete_equipment_list,
     normalize_equipment_list,
     allocate_sessions,
     calculate_exercise_numbers,
@@ -597,7 +598,7 @@ def _apply_late_strength_diversity_dampener(
 
 def equipment_score_adjust(entry_equip, user_equipment, known_equipment):
     entry_equip_list = normalize_equipment_list(entry_equip)
-    user_equipment = normalize_equipment_list(user_equipment)
+    user_equipment = normalize_athlete_equipment_list(user_equipment)
     known_equipment = [e.lower() for e in known_equipment]
 
     if not entry_equip_list or "bodyweight" in entry_equip_list:
@@ -1034,7 +1035,7 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
     ignore_restrictions = bool(flags.get("ignore_restrictions", False))
     injury_trace = os.environ.get("INJURY_TRACE", "0") == "1"
     fatigue = flags.get("fatigue", "low")
-    equipment_access = normalize_equipment_list(flags.get("equipment", []))
+    equipment_access = normalize_athlete_equipment_list(flags.get("equipment", []))
     tested_1rm_available = bool(flags.get("tested_1rm_available", False))
     has_isometric_setup = _has_isometric_setup_equipment(equipment_access)
     fight_format = _normalize_fight_format(flags.get("fight_format", "mma"))
@@ -1993,7 +1994,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
 
 
 
