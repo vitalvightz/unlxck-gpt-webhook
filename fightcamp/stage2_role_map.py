@@ -1421,7 +1421,7 @@ def _build_weekly_role_map(
         running_days += max(0, int(progression_weeks[idx].get("span_days") or 0))
         projected_days_until_fight_start[idx] = running_days
 
-    for idx, week_entry in enumerate(progression_weeks):
+    for week_idx, week_entry in enumerate(progression_weeks):
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
         sport_key = _athlete_sport_key(athlete_model)
