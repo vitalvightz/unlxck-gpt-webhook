@@ -391,6 +391,25 @@ def _build_request(overrides: dict | None = None) -> PlanRequest:
         if athlete_overrides:
             payload["athlete"].update(athlete_overrides)
         payload.update(merged)
+        availability_override = merged.get("training_availability")
+        if isinstance(availability_override, list):
+            normalized_days = {
+                str(day).strip().lower()
+                for day in availability_override
+                if str(day).strip()
+            }
+            if "hard_sparring_days" not in merged:
+                payload["hard_sparring_days"] = [
+                    day
+                    for day in payload.get("hard_sparring_days", [])
+                    if str(day).strip().lower() in normalized_days
+                ]
+            if "support_work_days" not in merged and "technical_skill_days" not in merged:
+                payload["technical_skill_days"] = [
+                    day
+                    for day in payload.get("technical_skill_days", [])
+                    if str(day).strip().lower() in normalized_days
+                ]
     return PlanRequest.model_validate(payload)
 
 

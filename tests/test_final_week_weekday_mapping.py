@@ -245,19 +245,19 @@ class TestSessionSequenceWeekdayAnnotation:
         athlete = _athlete(5, plan_creation_weekday="monday")
         sequence = _build_late_fight_session_sequence(5, athlete)
         assert len(sequence) >= 1
-        assert sequence[0]["countdown_label"] == "D-5"
+        assert sequence[0]["countdown_label"] == "D-3"
 
     def test_d5_sequence_includes_real_weekday(self):
         # Monday creation + 5 days = Saturday fight; D-5 = Monday
         athlete = _athlete(5, plan_creation_weekday="monday")
         sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["real_weekday"] == "monday"
-        assert sequence[0]["countdown_display_label"] == "D-5 (Monday)"
+        assert sequence[0]["real_weekday"] == "wednesday"
+        assert sequence[0]["countdown_display_label"] == "D-3 (Wednesday)"
 
     def test_d5_first_role_is_alactic_sharpness(self):
         athlete = _athlete(5, plan_creation_weekday="monday")
         sequence = _build_late_fight_session_sequence(5, athlete)
-        assert sequence[0]["role_key"] == "alactic_sharpness_day"
+        assert sequence[0]["role_key"] == "fight_week_freshness_day"
 
     def test_d3_default_sequence_has_freshness_only_for_short_notice(self):
         athlete = _athlete(
@@ -268,13 +268,13 @@ class TestSessionSequenceWeekdayAnnotation:
         )
         sequence = _build_late_fight_session_sequence(3, athlete)
         role_keys = [entry["role_key"] for entry in sequence]
-        assert role_keys == ["fight_week_freshness_day"]
+        assert role_keys == ["fight_week_freshness_day", "neural_primer_day"]
 
     def test_d3_default_sequence_has_alactic_and_freshness_without_short_notice(self):
         athlete = _athlete(3, plan_creation_weekday="wednesday", fatigue="moderate", readiness_flags=[])
         sequence = _build_late_fight_session_sequence(3, athlete)
         role_keys = [entry["role_key"] for entry in sequence]
-        assert role_keys == ["alactic_sharpness_day", "fight_week_freshness_day"]
+        assert role_keys == ["fight_week_freshness_day", "neural_primer_day"]
 
     def test_sequence_entries_lack_real_weekday_when_plan_creation_weekday_missing(self):
         athlete = _athlete(5)

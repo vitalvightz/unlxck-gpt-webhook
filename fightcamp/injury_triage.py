@@ -69,6 +69,7 @@ _TRAUMA_CONTEXT_PATTERNS = (
 )
 
 _NEURO_CONTEXT_PATTERN = r"\bneurolog(?:ic|ical)\b|\bnerve\b"
+_WORSENING_TRENDS = {"worse", "worsening", "regressing", "worsened"}
 
 
 def _normalize_guided_severity_token(value: str) -> str:
@@ -168,9 +169,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     has_guided_high_severity = any(
         card["severity"] == "high" for card in guided_cards
     )
-    has_guided_worsening = any(
-        card["trend"] in {"worse", "worsening", "regressing", "worsened"} for card in guided_cards
-    )
+    has_guided_worsening = any(card["trend"] in _WORSENING_TRENDS for card in guided_cards)
 
     if has_guided_high_severity:
         routing_reasons.add("guided_injury:high_severity")
@@ -279,6 +278,17 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     elif highest_band == "red" and restricted_rehab:
         routing_reasons.add("sparring_red_risk")
 
+    if any(("high", trend) in guided_combos for trend in _WORSENING_TRENDS):
+        routing_reasons.add("combo_gate:high_worsening")
+    if ("high", "") in guided_combos:
+        routing_reasons.add("combo_gate:high_trend_missing")
+    if ("high", "stable") in guided_combos:
+        routing_reasons.add("combo_gate:high_stable")
+    if any(("moderate", trend) in guided_combos for trend in _WORSENING_TRENDS):
+        routing_reasons.add("combo_gate:moderate_worsening")
+    if any(("low", trend) in guided_combos for trend in _WORSENING_TRENDS):
+        routing_reasons.add("combo_gate:low_worsening")
+
     matched_categories_sorted = sorted(matched_categories)
     routing_reasons_sorted = sorted(routing_reasons)
 
@@ -352,14 +362,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
         )
     ) and sum(len(card["notes"].split()) for card in guided_cards) < 3
 
-    if guided_combos.intersection(
-        {
-            ("high", "worse"),
-            ("high", "worsening"),
-            ("high", "regressing"),
-            ("high", "worsened"),
-        }
-    ):
+    if any(("high", trend) in guided_combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:high_worsening")
         routing_reasons_sorted = sorted(routing_reasons)
         if has_dangerous_red_flags or has_chest_or_neuro_combo or has_mapped_medical_hold:
@@ -468,9 +471,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             sparring_risk_band=highest_band,
         )
 
-    if guided_combos.intersection(
-        {("moderate", "worse"), ("moderate", "worsening"), ("moderate", "regressing"), ("moderate", "worsened")}
-    ):
+    if any(("moderate", trend) in guided_combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:moderate_worsening")
         routing_reasons_sorted = sorted(routing_reasons)
         if has_dangerous_red_flags or has_mapped_medical_hold:
@@ -503,7 +504,7 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
             sparring_risk_band=highest_band,
         )
 
-    if guided_combos.intersection({("low", "worse"), ("low", "worsening"), ("low", "regressing"), ("low", "worsened")}):
+    if any(("low", trend) in guided_combos for trend in _WORSENING_TRENDS):
         routing_reasons.add("combo_gate:low_worsening")
         routing_reasons_sorted = sorted(routing_reasons)
         return InjuryTriageResult(
