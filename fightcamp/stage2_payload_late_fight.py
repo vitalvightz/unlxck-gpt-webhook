@@ -2526,9 +2526,9 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         if str(permission_policy.get("countdown_weekday_map", {}).get(label) or "").strip()
     }
     label_to_display_weekday = {
-        label: str(permission_policy.get("raw_countdown_weekday_map", {}).get(label) or "").strip().lower()
+        label: str(day).strip()
         for label in legal_countdown_labels
-        if str(permission_policy.get("raw_countdown_weekday_map", {}).get(label) or "").strip()
+        if (day := permission_policy.get("raw_countdown_weekday_map", {}).get(label)) and str(day).strip()
     }
 
     invalid_locked_roles: list[dict[str, Any]] = []
