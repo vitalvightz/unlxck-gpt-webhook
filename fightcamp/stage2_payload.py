@@ -26,8 +26,11 @@ from .stage2_payload_late_fight import (
     _handoff_mode_instructions,
     _late_fight_permissions,
     _late_fight_rendering_rules,
+    _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
 )
+from .conditioning import athlete_facing_system_label
+from .late_selector_windows import classify_late_selector_window
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
@@ -4161,8 +4164,14 @@ def build_planning_brief(
     if _uses_late_fight_stage2_payload(days_until_fight):
         fight_week_override = _fight_week_override_payload(days_until_fight)
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
+        late_fight_phase = _resolve_late_fight_phase(phase_briefs)
         late_fight_progression = _build_late_fight_week_by_week_progression(days_until_fight, athlete_model, phase_briefs)
-        weekly_role_map = _build_late_fight_weekly_role_map(days_until_fight, athlete_model, fight_week_override)
+        weekly_role_map = _build_late_fight_weekly_role_map(
+            days_until_fight,
+            athlete_model,
+            fight_week_override,
+            phase=late_fight_phase,
+        )
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         return {
             "schema_version": "planning_brief.v1",
@@ -4262,7 +4271,7 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
     }
 
 
-def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
+def _serialize_conditioning_option(drill: dict, system: str, why: str, *, late_window: str | None = None) -> dict:
     tags = clean_list(drill.get("tags", []))
     required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
     return {
@@ -4280,6 +4289,7 @@ def _serialize_conditioning_option(drill: dict, system: str, why: str) -> dict:
         "generic_fallback": bool(drill.get("generic_fallback")),
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
+        "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
     }
 
 
@@ -4334,6 +4344,7 @@ def _build_conditioning_alternates(
     system: str,
     selected_names: set[str],
     current_name: str,
+    late_window: str | None = None,
 ) -> list[dict]:
     alternates: list[dict] = []
     seen: set[str] = set()
@@ -4347,6 +4358,7 @@ def _build_conditioning_alternates(
                 drill,
                 system,
                 candidate.get("explanation", "balanced selection"),
+                late_window=late_window,
             )
         )
         seen.add(name)
@@ -4435,7 +4447,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
     return slots
 
 
-def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict]:
+def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_window: str | None = None) -> list[dict]:
     if not phase_block:
         return []
     reason_lookup = {
@@ -4465,12 +4477,14 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str) -> list[dict
                         drill,
                         system,
                         reasons.get("explanation", "balanced selection"),
+                        late_window=late_window,
                     ),
                     "alternates": _build_conditioning_alternates(
                         phase_block,
                         system=system,
                         selected_names=selected_names,
                         current_name=name,
+                        late_window=late_window,
                     ),
                     "replace_with_same_role": True,
                     "priority": _conditioning_slot_priority(phase, system, idx),
@@ -4627,13 +4641,16 @@ def build_stage2_payload(
     conditioning_blocks: dict[str, dict],
     rehab_blocks: dict[str, str],
 ) -> dict:
+    late_window = classify_late_selector_window(training_context.days_until_fight)
     candidate_pools: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
         candidate_pools[phase] = {
             "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
-            "conditioning_slots": _build_conditioning_slots(conditioning_blocks.get(phase), phase),
+            "conditioning_slots": _build_conditioning_slots(
+                conditioning_blocks.get(phase), phase, late_window=late_window
+            ),
             "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase),
         }
 
@@ -4834,6 +4851,25 @@ Render every rehab item as:
     Why today: [why this day type — pre-sparring activation / post-strength reset / aerobic tolerance / etc.]
 
 If a drill repeats across sessions, the Why today must make the changed role explicit. Use precise mechanism wording — not vague body-part labels. Before keeping any rehab item: confirm it solves a specific issue, belongs on this day, and does not duplicate a same-role drill already used this week. Drop it if it fails two of three.
+
+RULE 13 — LATE-FIGHT LABEL DISCIPLINE
+Applies when payload_mode is bridge_compression_payload, pre_fight_compressed_payload, late_fight_week_payload, late_fight_transition_payload, late_fight_session_payload, pre_fight_day_payload, or fight_day_protocol_payload.
+
+Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
+
+Do not expose internal role keys or internal system labels as session titles. Translate role keys into coach-voiced names from the intent, drills selected, and countdown day. Canonical mapping:
+  strength_touch_day         -> "Power Transfer Touch"
+  alactic_sharpness_day      -> "Fight-Speed Primer"
+  neural_primer_day          -> "Final Neural Cue"
+  fight_week_freshness_day   -> "Freshness Reset"
+  light_fight_pace_touch_day -> "Technical Rhythm Touch"
+  technical_touch_day        -> "Technical Touch"
+  hard_sparring_day          -> keep as hard sparring (gym/coach owns the day; do not rename)
+Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glycolytic", "Alactic", "Aerobic" as an athlete-facing session title.
+
+For conditioning drill system labels, use candidate_pools[phase].conditioning_slots[*].selected.athlete_facing_system_label (set by the dose-aware relabel helper). Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
+
+Cut fluff: one sentence of "why today" per session maximum, no repeated explanations, no "phase preserved" menus. Coach calls only.
 """
 
 
