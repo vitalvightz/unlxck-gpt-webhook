@@ -2,18 +2,16 @@
 Tests for deterministic seeding in plan generation.
 Verifies that:
 1. Same seed produces identical plans
-2. Different seeds produce different plans (only when the score randomizer is on)
+2. Different seeds produce different plans
 3. No global random state leakage
 """
 import sys
 import asyncio
-import pytest
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from fightcamp.main import generate_plan
-from fightcamp.strength import ENABLE_SCORE_RANDOMIZER
 
 
 def get_test_data(seed=None):
@@ -68,39 +66,19 @@ def test_same_seed_produces_same_plan():
     assert text1 == text2, "Same seed should produce identical plans"
 
 
-@pytest.mark.skipif(
-    not ENABLE_SCORE_RANDOMIZER,
-    reason="Score randomizer is disabled — planner is fully deterministic and ignores the seed.",
-)
 def test_different_seeds_produce_different_plans():
-    """Different seeds produce different plans only when ENABLE_SCORE_RANDOMIZER is on."""
+    """Test that different seeds produce different plans."""
     data1 = get_test_data(seed=42)
     data2 = get_test_data(seed=99)
-
+    
     result1 = asyncio.run(generate_plan(data1))
     result2 = asyncio.run(generate_plan(data2))
-
+    
     text1 = result1["plan_text"]
     text2 = result2["plan_text"]
-
+    
     # Plans should differ
     assert text1 != text2, "Different seeds should produce different plans"
-
-
-def test_different_seeds_produce_identical_plans_when_randomizer_off():
-    """Determinism contract: with the randomizer off, the seed is a no-op."""
-    if ENABLE_SCORE_RANDOMIZER:
-        pytest.skip("Randomizer on — different seeds are expected to produce different plans.")
-
-    data1 = get_test_data(seed=42)
-    data2 = get_test_data(seed=99)
-
-    result1 = asyncio.run(generate_plan(data1))
-    result2 = asyncio.run(generate_plan(data2))
-
-    assert result1["plan_text"] == result2["plan_text"], (
-        "Determinism regression — different seeds produced different plans with the score randomizer off"
-    )
 
 
 def test_unseeded_plans_can_differ():
