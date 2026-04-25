@@ -1,6 +1,6 @@
-# Runtime dependencies (production)
-fastapi==0.115.12
-uvicorn==0.34.2
+# Runtime dependencies production)
+fastapi==0.136.1
+uvicorn==0.46.0
 google-api-python-client==2.194.0
 google-auth==2.49.2
 google-auth-httplib2==0.2.0
