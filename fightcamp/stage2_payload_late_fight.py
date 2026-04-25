@@ -2406,6 +2406,7 @@ def _late_fight_best_assignment(
     selected_roles: list[dict[str, Any]],
     legal_countdown_labels: list[str],
     label_to_weekday: dict[str, str],
+    label_to_display_weekday: dict[str, str] | None = None,
 ) -> tuple[int, list[dict[str, Any]]] | None:
     locked_labels: dict[int, str] = {}
     occupied_labels: set[str] = set()
@@ -2445,10 +2446,15 @@ def _late_fight_best_assignment(
             if offset is not None:
                 role_copy["countdown_offset"] = offset
             real_weekday = str(label_to_weekday.get(assigned_label) or "").strip()
+            display_weekday = str(
+                (label_to_display_weekday or {}).get(assigned_label) or real_weekday
+            ).strip()
             if real_weekday:
                 role_copy["scheduled_day_hint"] = real_weekday
                 role_copy["real_weekday"] = real_weekday
-                role_copy["countdown_display_label"] = _countdown_display_label(assigned_label, real_weekday)
+            if display_weekday:
+                role_copy["countdown_weekday"] = display_weekday
+                role_copy["countdown_display_label"] = _countdown_display_label(assigned_label, display_weekday)
             elif assigned_label:
                 role_copy["countdown_display_label"] = assigned_label
             if role_copy.get("locked_day"):
@@ -2519,6 +2525,11 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         for label in legal_countdown_labels
         if str(permission_policy.get("countdown_weekday_map", {}).get(label) or "").strip()
     }
+    label_to_display_weekday = {
+        label: str(permission_policy.get("raw_countdown_weekday_map", {}).get(label) or "").strip().lower()
+        for label in legal_countdown_labels
+        if str(permission_policy.get("raw_countdown_weekday_map", {}).get(label) or "").strip()
+    }
 
     invalid_locked_roles: list[dict[str, Any]] = []
     eligible_candidates: list[dict[str, Any]] = []
@@ -2551,7 +2562,12 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
                 continue
             if isinstance(max_support_roles, int) and _late_fight_support_role_count(selected_roles) > max_support_roles:
                 continue
-            assignment = _late_fight_best_assignment(selected_roles, legal_countdown_labels, label_to_weekday)
+            assignment = _late_fight_best_assignment(
+                selected_roles,
+                legal_countdown_labels,
+                label_to_weekday,
+                label_to_display_weekday,
+            )
             if assignment is None:
                 continue
             score, assigned_roles = assignment
@@ -2599,9 +2615,9 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
             "locked_days": [role.get("locked_day") for role in public_roles if role.get("locked_day")],
             "blocked_days": [],
             "countdown_weekday_map": {
-                label: permission_policy.get("countdown_weekday_map", {}).get(label)
+                label: permission_policy.get("raw_countdown_weekday_map", {}).get(label)
                 for label in legal_countdown_labels
-                if permission_policy.get("countdown_weekday_map", {}).get(label)
+                if permission_policy.get("raw_countdown_weekday_map", {}).get(label)
             },
             "availability_adjustments": list(permission_policy.get("availability_adjustments", [])),
         },
@@ -2711,6 +2727,7 @@ def _assign_role_to_countdown_label(
     role: dict[str, Any],
     label: str,
     label_to_weekday: dict[str, str],
+    label_to_display_weekday: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     role_copy = dict(role)
     role_copy["scheduled_countdown_label"] = label
@@ -2719,10 +2736,13 @@ def _assign_role_to_countdown_label(
     if offset is not None:
         role_copy["countdown_offset"] = offset
     weekday = str(label_to_weekday.get(label) or "").strip()
+    display_weekday = str((label_to_display_weekday or {}).get(label) or weekday).strip()
     if weekday:
         role_copy["scheduled_day_hint"] = weekday
         role_copy["real_weekday"] = weekday
-        role_copy["countdown_display_label"] = _countdown_display_label(label, weekday)
+    if display_weekday:
+        role_copy["countdown_weekday"] = display_weekday
+        role_copy["countdown_display_label"] = _countdown_display_label(label, display_weekday)
     else:
         role_copy.pop("scheduled_day_hint", None)
         role_copy.pop("real_weekday", None)
@@ -2853,6 +2873,10 @@ def _space_bridge_countdown_roles(
         max_visible_roles = max_meaningful_stress_exposures + max_support_roles
     hard_spar_cap = _declared_hard_spar_cap(days_until_fight)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    label_to_display_weekday = _countdown_weekday_map(
+        athlete_model.get("plan_creation_weekday"),
+        days_until_fight,
+    )
     hard_weekdays = _declared_hard_weekdays(athlete_model)
     ordered_roles = sorted(
         roles,
@@ -2933,7 +2957,12 @@ def _space_bridge_countdown_roles(
         for label in labels:
             if label in occupied_labels:
                 continue
-            assigned_role = _assign_role_to_countdown_label(role, label, label_to_weekday)
+            assigned_role = _assign_role_to_countdown_label(
+                role,
+                label,
+                label_to_weekday,
+                label_to_display_weekday,
+            )
             _search(
                 index + 1,
                 occupied_labels | {label},
@@ -3004,6 +3033,10 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
     )
     visible_roles = _visible_insert_session_sequence(public_roles)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
+    label_to_display_weekday = _countdown_weekday_map(
+        athlete_model.get("plan_creation_weekday"),
+        days_until_fight,
+    )
     top_level_budget = _late_fight_role_budget(days_until_fight, athlete_model)
     legal_labels = dedupe_preserve_order(
         str(label)
@@ -3035,9 +3068,9 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
             "locked_days": [role.get("locked_day") for role in public_roles if role.get("locked_day")],
             "blocked_days": [],
             "countdown_weekday_map": {
-                label: label_to_weekday.get(label)
+                label: label_to_display_weekday.get(label) or label_to_weekday.get(label)
                 for label in legal_labels
-                if label_to_weekday.get(label)
+                if label_to_display_weekday.get(label) or label_to_weekday.get(label)
             },
             "availability_adjustments": [],
             "countdown_mode_sequence": _countdown_mode_sequence(days_until_fight),

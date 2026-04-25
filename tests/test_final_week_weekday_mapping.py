@@ -152,6 +152,17 @@ class TestCountdownWeekdayMap:
         assert set(result.keys()) == {f"D-{n}" for n in range(0, 11)}
         assert result["D-10"] == "monday"
 
+    def test_2026_05_09_countdown_anchor_weekdays(self):
+        # Fight date Saturday 2026-05-09; D-14 is Saturday 2026-04-25.
+        result = _countdown_weekday_map("saturday", 14)
+        assert result["D-14"] == "saturday"
+        assert result["D-13"] == "sunday"
+        assert result["D-7"] == "saturday"
+        assert result["D-5"] == "monday"
+        assert result["D-3"] == "wednesday"
+        assert result["D-1"] == "friday"
+        assert result["D-0"] == "saturday"
+
 
 # ---------------------------------------------------------------------------
 # _nearest_available_day
