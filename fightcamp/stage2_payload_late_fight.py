@@ -2301,7 +2301,7 @@ def _late_fight_locked_label(role: dict[str, Any], label_to_weekday: dict[str, s
         for label in role.get("legal_countdown_labels", [])
         if str(label).strip() and _countdown_offset(str(label)) is not None
     ]
-    legal_labels.sort(key=lambda label: int(_countdown_offset(label) or 0), reverse=True)
+    legal_labels.sort(key=lambda label: int(_countdown_offset(label) or 0))
     for label in legal_labels:
         weekday = label_to_weekday.get(label)
         if str(weekday or "").strip().lower() == locked_day:
