@@ -650,25 +650,55 @@ class SupabaseAppStore:
             ) from exc
 
     def list_user_plans(self, athlete_id: str) -> list[dict[str, Any]]:
-        response = (
-            self.client.table("plans")
-            .select(PLAN_SUMMARY_SELECT)
-            .eq("athlete_id", athlete_id)
-            .order("created_at", desc=True)
-            .execute()
-        )
-        return getattr(response, "data", None) or []
+        try:
+            response = self._run_with_transient_retry(
+                operation="list_user_plans",
+                fn=lambda: (
+                    self.client.table("plans")
+                    .select(PLAN_SUMMARY_SELECT)
+                    .eq("athlete_id", athlete_id)
+                    .order("created_at", desc=True)
+                    .execute()
+                ),
+            )
+            return getattr(response, "data", None) or []
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation="list_user_plans",
+                detail="failed to list plans",
+                exc=exc,
+            )
 
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
-        return self._select_first(self.client.table("plans").select("*").eq("id", plan_id))
+        try:
+            return self._run_with_transient_retry(
+                operation=f"get_plan plan_id={plan_id}",
+                fn=lambda: self._select_first(self.client.table("plans").select("*").eq("id", plan_id)),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"get_plan plan_id={plan_id}",
+                detail="failed to read plan",
+                exc=exc,
+            )
 
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
-        return self._select_first(
-            self.client.table("plans")
-            .select("*")
-            .eq("athlete_id", athlete_id)
-            .order("created_at", desc=True)
-        )
+        try:
+            return self._run_with_transient_retry(
+                operation=f"get_latest_plan athlete_id={athlete_id}",
+                fn=lambda: self._select_first(
+                    self.client.table("plans")
+                    .select("*")
+                    .eq("athlete_id", athlete_id)
+                    .order("created_at", desc=True)
+                ),
+            )
+        except _STORE_CLIENT_ERRORS as exc:
+            self._raise_operation_http_error(
+                operation=f"get_latest_plan athlete_id={athlete_id}",
+                detail="failed to read latest plan",
+                exc=exc,
+            )
 
     def create_or_get_generation_job(
         self,
