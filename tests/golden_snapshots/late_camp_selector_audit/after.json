@@ -52,7 +52,7 @@
       "winners": [
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 11.7,
+          "score": 11.5951,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -69,7 +69,7 @@
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 11.3598,
+          "score": 11.2607,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -117,9 +117,9 @@
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 8.2057,
+          "score": 7.1097,
           "reason_codes": [
-            "late_strength_boost_window_fit",
+            "late_strength_penalty_outside_window",
             "late_strength_boost_explicit_late_touch",
             "late_strength_boost_low_eccentric",
             "late_strength_boost_low_impact",
@@ -164,7 +164,15 @@
           "reason_codes": []
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Mobility Reset: Breathing + T-Spine + Ankle Flow",
+          "score": 0.65,
+          "reason_codes": [
+            "late_conditioning_block_window_mismatch"
+          ]
+        }
+      ]
     },
     "ambiguous_tag_gaps": [
       {
@@ -241,7 +249,7 @@
       "winners": [
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 11.7625,
+          "score": 11.6576,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -258,7 +266,7 @@
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 11.4223,
+          "score": 11.3232,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -306,7 +314,7 @@
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 8.2432,
+          "score": 8.8797,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -434,41 +442,6 @@
     "strength": {
       "winners": [
         {
-          "name": "Band-Resisted Jab-Cross Primer",
-          "score": 11.9353,
-          "reason_codes": [
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_ballistic_low_volume",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
-          "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 11.7369,
-          "reason_codes": [
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_ballistic_low_volume",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
-          ]
-        },
-        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 10.2925,
           "reason_codes": [
@@ -485,8 +458,43 @@
           ]
         },
         {
+          "name": "Band-Resisted Jab-Cross Primer",
+          "score": 11.9433,
+          "reason_codes": [
+            "late_strength_boost_window_fit",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
+          "name": "Staggered-Stance Medicine-Ball Punch Throw",
+          "score": 11.9075,
+          "reason_codes": [
+            "late_strength_boost_window_fit",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness",
+            "late_strength_boost_crisp_ballistic"
+          ]
+        },
+        {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 7.5575,
+          "score": 7.814,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -552,7 +560,7 @@
       "winners": [
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 11.9728,
+          "score": 11.9808,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -569,7 +577,7 @@
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 11.7744,
+          "score": 11.945,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -583,6 +591,14 @@
             "late_strength_boost_speed",
             "late_strength_boost_freshness",
             "late_strength_boost_crisp_ballistic"
+          ]
+        },
+        {
+          "name": "Cluster Set Trap Bar Deadlift",
+          "score": 2.4328,
+          "reason_codes": [
+            "late_strength_boost_neural_primer",
+            "late_strength_penalty_loaded_lower_fatigue"
           ]
         },
         {
@@ -600,22 +616,30 @@
             "late_strength_boost_speed",
             "late_strength_boost_freshness"
           ]
-        },
-        {
-          "name": "Overcoming Split-Squat Isometric",
-          "score": 7.58,
-          "reason_codes": [
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_freshness"
-          ]
         }
       ],
       "blocked": [
+        {
+          "name": "Overcoming Split-Squat Isometric",
+          "score": 5.064,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Punch-Specific Max Isometric Hold",
+          "score": 7.6929,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Seated Medicine-Ball Punch Throw",
+          "score": 5.1353,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
         {
           "name": "Trap Bar Jump (Light)",
           "score": 2.4471,
@@ -668,41 +692,6 @@
     "strength": {
       "winners": [
         {
-          "name": "Band-Resisted Jab-Cross Primer",
-          "score": 11.9978,
-          "reason_codes": [
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_ballistic_low_volume",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness"
-          ]
-        },
-        {
-          "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 11.7994,
-          "reason_codes": [
-            "late_strength_boost_window_fit",
-            "late_strength_boost_explicit_late_touch",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_impact",
-            "late_strength_boost_cns_freshness",
-            "late_strength_boost_ballistic_low_volume",
-            "late_strength_boost_sport_specific",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_neural_primer",
-            "late_strength_boost_speed",
-            "late_strength_boost_freshness",
-            "late_strength_boost_crisp_ballistic"
-          ]
-        },
-        {
           "name": "Counter-Striker Split-Line Punch Isometric Hold",
           "score": 10.355,
           "reason_codes": [
@@ -719,8 +708,43 @@
           ]
         },
         {
+          "name": "Band-Resisted Jab-Cross Primer",
+          "score": 12.0058,
+          "reason_codes": [
+            "late_strength_boost_window_fit",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness"
+          ]
+        },
+        {
+          "name": "Staggered-Stance Medicine-Ball Punch Throw",
+          "score": 11.97,
+          "reason_codes": [
+            "late_strength_boost_window_fit",
+            "late_strength_boost_explicit_late_touch",
+            "late_strength_boost_low_eccentric",
+            "late_strength_boost_low_impact",
+            "late_strength_boost_cns_freshness",
+            "late_strength_boost_ballistic_low_volume",
+            "late_strength_boost_sport_specific",
+            "late_strength_boost_low_soreness",
+            "late_strength_boost_neural_primer",
+            "late_strength_boost_speed",
+            "late_strength_boost_freshness",
+            "late_strength_boost_crisp_ballistic"
+          ]
+        },
+        {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 7.595,
+          "score": 7.8515,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -767,13 +791,6 @@
           "reason_codes": [
             "late_strength_block_loaded_lower_noise",
             "late_strength_block_trap_bar_jump"
-          ]
-        },
-        {
-          "name": "Trap-Bar Pin Pull Isometric",
-          "score": 5.7929,
-          "reason_codes": [
-            "late_strength_block_window_mismatch"
           ]
         }
       ]
@@ -822,7 +839,7 @@
       "winners": [
         {
           "name": "Band-Resisted Jab-Cross Primer",
-          "score": 12.0228,
+          "score": 12.0308,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -855,7 +872,7 @@
         },
         {
           "name": "Towel/Gi Row Isometric Hold",
-          "score": 6.4958,
+          "score": 6.5394,
           "reason_codes": [
             "late_strength_boost_window_fit",
             "late_strength_boost_explicit_late_touch",
@@ -935,14 +952,21 @@
         },
         {
           "name": "Overcoming Split-Squat Isometric",
-          "score": 4.8075,
+          "score": 5.064,
+          "reason_codes": [
+            "late_strength_block_window_mismatch"
+          ]
+        },
+        {
+          "name": "Seated Medicine-Ball Punch Throw",
+          "score": 5.1353,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
         },
         {
           "name": "Staggered-Stance Medicine-Ball Punch Throw",
-          "score": 7.0369,
+          "score": 7.2075,
           "reason_codes": [
             "late_strength_block_window_mismatch"
           ]
@@ -953,13 +977,6 @@
           "reason_codes": [
             "late_strength_block_loaded_lower_noise",
             "late_strength_block_trap_bar_jump"
-          ]
-        },
-        {
-          "name": "Trap-Bar Pin Pull Isometric",
-          "score": 5.7929,
-          "reason_codes": [
-            "late_strength_block_window_mismatch"
           ]
         }
       ]

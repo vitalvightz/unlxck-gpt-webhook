@@ -1619,7 +1619,12 @@
       "rate_of_force"
     ],
     "equipment": "bands",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Medicine-Ball Chest Toss",
@@ -2335,7 +2340,12 @@
       "explosive"
     ],
     "equipment": "bands",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"]
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ]
   },
   {
     "name": "Medicine Ball Hook Throw",
@@ -5170,7 +5180,10 @@
   {
     "name": "Isometric Mid-Thigh Pull",
     "category": "lower_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
@@ -5193,11 +5206,31 @@
     "equipment": "trap_bar,pins",
     "phase_role": "late_strength_touch",
     "subfamily": "isometric_mid_thigh_pull",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
-    "cut_buckets_allowed": ["high", "critical"],
-    "goals": ["power", "maximal_strength_maintenance"],
-    "weaknesses": ["posterior_chain", "grip_strength", "cns_fatigue"],
-    "tactical_styles": ["pressure_fighter", "counter_striker", "distance_striker", "scrambler"],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical"
+    ],
+    "goals": [
+      "power",
+      "maximal_strength_maintenance"
+    ],
+    "weaknesses": [
+      "posterior_chain",
+      "grip_strength",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "scrambler"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5208,13 +5241,19 @@
     "cns_freshness": true,
     "ballistic_low_volume": false,
     "sport_specific": false,
-    "contraindications": ["skip when pins or trap bar are unavailable", "avoid if maximal pulling intent irritates the low back"],
+    "contraindications": [
+      "skip when pins or trap bar are unavailable",
+      "avoid if maximal pulling intent irritates the low back"
+    ],
     "notes": "Late-camp force-preservation pull from a fixed mid-thigh position. Keep total volume tiny and intent maximal."
   },
   {
     "name": "Trap-Bar Pin Pull Isometric",
     "category": "lower_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
@@ -5232,16 +5271,39 @@
       "mech_hinge_isometric",
       "mech_lower_hip_hinge",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "clinch_fighter",
+      "grappler",
+      "wrestler",
+      "boxer"
     ],
     "equipment": "trap_bar,pins",
     "phase_role": "late_strength_touch",
     "subfamily": "trap_bar_pin_pull_isometric",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
-    "cut_buckets_allowed": ["high", "critical"],
-    "goals": ["power", "maximal_strength_maintenance"],
-    "weaknesses": ["posterior_chain", "grip_strength", "cns_fatigue"],
-    "tactical_styles": ["pressure_fighter", "counter_striker", "distance_striker", "scrambler"],
+    "late_windows": [
+      "d13_to_d8",
+      "d7"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical"
+    ],
+    "goals": [
+      "power",
+      "maximal_strength_maintenance"
+    ],
+    "weaknesses": [
+      "posterior_chain",
+      "grip_strength",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "clinch_fighter",
+      "grappler",
+      "wrestler",
+      "boxer"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5252,13 +5314,19 @@
     "cns_freshness": true,
     "ballistic_low_volume": false,
     "sport_specific": false,
-    "contraindications": ["skip when pins or trap bar are unavailable", "avoid if aggressive brace work spikes blood pressure during the cut"],
-    "notes": "Overcoming hinge isometric against pins. Useful as a low-soreness posterior-chain touch when load expression still matters."
+    "contraindications": [
+      "skip when pins or trap bar are unavailable",
+      "avoid if aggressive brace work spikes blood pressure during the cut"
+    ],
+    "notes": "2-3 x 4-6s, full setup and full rest. Prioritise D-13; only use on D-7 if dose stays very low. Not for D-3 or D-1."
   },
   {
     "name": "Punch-Specific Max Isometric Hold",
     "category": "striking",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
@@ -5282,16 +5350,46 @@
       "mech_trunk_rotation",
       "mech_trunk_stability",
       "anti_rotation",
-      "push"
+      "push",
+      "boxer",
+      "kickboxing",
+      "mma",
+      "kicker"
     ],
     "equipment": "bands,heavy_bag",
     "phase_role": "late_strength_touch",
     "subfamily": "punch_specific_max_isometric_hold",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"],
-    "cut_buckets_allowed": ["high", "critical", "extreme"],
-    "goals": ["speed", "power", "maximal_strength_maintenance", "coordination", "skill_refinement"],
-    "weaknesses": ["coordination_proprioception", "balance", "cns_fatigue"],
-    "tactical_styles": ["pressure_fighter", "counter_striker", "distance_striker"],
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "maximal_strength_maintenance",
+      "coordination",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "coordination_proprioception",
+      "balance",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "boxer",
+      "kickboxing",
+      "mma"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5302,13 +5400,18 @@
     "cns_freshness": true,
     "ballistic_low_volume": false,
     "sport_specific": true,
-    "contraindications": ["avoid if shoulder or wrist pain spikes when bracing against the bag"],
-    "notes": "Split-stance punch hold against a band or fixed bag with 3-5 second maximal intent. Use tiny doses to preserve punch-specific force."
+    "contraindications": [
+      "avoid if shoulder or wrist pain spikes when bracing against the bag"
+    ],
+    "notes": "D-7/D-3: 2-3 x 3-5s per side with full rest. D-1: 1-2 x 3-5s per side with clean submax to max intent only."
   },
   {
     "name": "Overcoming Split-Squat Isometric",
     "category": "lower_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
@@ -5324,19 +5427,41 @@
       "cns_freshness",
       "pressure_fighter",
       "kicker",
-      "scrambler",
       "mech_lower_lunge",
       "mech_trunk_stability",
-      "unilateral"
+      "unilateral",
+      "counter_striker",
+      "distance_striker"
     ],
     "equipment": "bodyweight,bands",
     "phase_role": "late_strength_touch",
     "subfamily": "overcoming_split_squat_isometric",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "cut_buckets_allowed": ["high", "critical"],
-    "goals": ["maximal_strength_maintenance", "coordination", "injury_prevention"],
-    "weaknesses": ["posterior_chain", "balance", "lateral_movement"],
-    "tactical_styles": ["pressure_fighter", "kicker", "scrambler"],
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "maximal_strength_maintenance",
+      "coordination",
+      "injury_prevention"
+    ],
+    "weaknesses": [
+      "posterior_chain",
+      "balance",
+      "lateral_movement"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "kicker"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5347,13 +5472,18 @@
     "cns_freshness": true,
     "ballistic_low_volume": false,
     "sport_specific": false,
-    "contraindications": ["skip if front-knee irritation increases with split-stance pressure"],
-    "notes": "Front-foot loaded split-squat push into an immovable strap or rack. Keeps force without the soreness of loaded unilateral work."
+    "contraindications": [
+      "skip if front-knee irritation increases with split-stance pressure"
+    ],
+    "notes": "2-3 x 5-10s per leg with full rest. Use D-3 only as a tiny exposure when needed; avoid D-1 unless very light."
   },
   {
     "name": "Staggered-Stance Medicine-Ball Punch Throw",
     "category": "striking",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "power",
     "movement": "rotational",
     "type": "unilateral",
@@ -5380,11 +5510,33 @@
     "equipment": "medicine_ball",
     "phase_role": "late_strength_touch",
     "subfamily": "staggered_stance_medicine_ball_punch_throw",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2"],
-    "cut_buckets_allowed": ["high", "critical"],
-    "goals": ["speed", "power", "coordination", "skill_refinement"],
-    "weaknesses": ["coordination_proprioception", "balance", "cns_fatigue"],
-    "tactical_styles": ["pressure_fighter", "counter_striker", "distance_striker"],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "coordination",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "coordination_proprioception",
+      "balance",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5395,13 +5547,18 @@
     "cns_freshness": true,
     "ballistic_low_volume": true,
     "sport_specific": true,
-    "contraindications": ["skip if trunk rotation is currently symptom-limited"],
+    "contraindications": [
+      "skip if trunk rotation is currently symptom-limited"
+    ],
     "notes": "Low-volume punch throw from a fight stance. Keep it crisp, chest-height, and never chase fatigue."
   },
   {
     "name": "Towel/Gi Row Isometric Hold",
     "category": "grip",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "unilateral",
@@ -5426,11 +5583,34 @@
     "equipment": "towel,pullup_bar",
     "phase_role": "late_strength_touch",
     "subfamily": "towel_gi_row_isometric_hold",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"],
-    "cut_buckets_allowed": ["high", "critical", "extreme"],
-    "goals": ["maximal_strength_maintenance", "coordination", "injury_prevention"],
-    "weaknesses": ["grip_strength", "posterior_chain", "cns_fatigue"],
-    "tactical_styles": ["clinch_fighter", "kicker", "scrambler"],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "maximal_strength_maintenance",
+      "coordination",
+      "injury_prevention"
+    ],
+    "weaknesses": [
+      "grip_strength",
+      "posterior_chain",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "clinch_fighter",
+      "kicker",
+      "scrambler"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5441,13 +5621,18 @@
     "cns_freshness": true,
     "ballistic_low_volume": false,
     "sport_specific": true,
-    "contraindications": ["skip if elbow tendons are already flared by heavy gripping"],
+    "contraindications": [
+      "skip if elbow tendons are already flared by heavy gripping"
+    ],
     "notes": "Short-duration towel or gi row hold for grip and upper-back tension with almost no soreness cost."
   },
   {
     "name": "Band-Resisted Jab-Cross Primer",
     "category": "striking",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "power",
     "movement": "horizontal_push",
     "type": "bilateral",
@@ -5475,11 +5660,34 @@
     "equipment": "bands",
     "phase_role": "late_strength_touch",
     "subfamily": "band_resisted_jab_cross_primer",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"],
-    "cut_buckets_allowed": ["high", "critical", "extreme"],
-    "goals": ["speed", "power", "coordination", "skill_refinement"],
-    "weaknesses": ["coordination_proprioception", "cns_fatigue"],
-    "tactical_styles": ["pressure_fighter", "counter_striker", "distance_striker"],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "coordination",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "coordination_proprioception",
+      "cns_fatigue"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5490,13 +5698,18 @@
     "cns_freshness": true,
     "ballistic_low_volume": true,
     "sport_specific": true,
-    "contraindications": ["skip if shoulder speed drops or punching mechanics feel noisy"],
+    "contraindications": [
+      "skip if shoulder speed drops or punching mechanics feel noisy"
+    ],
     "notes": "Micro-dose band primer for crisp jab-cross sequencing. Keep reps low, fast, and fully recovered."
   },
   {
     "name": "Adductor Squeeze Isometric",
     "category": "lower_body",
-    "phases": ["SPP", "TAPER"],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
     "method": "strength",
     "movement": "isometric",
     "type": "bilateral",
@@ -5516,11 +5729,32 @@
     "equipment": "bodyweight,pad",
     "phase_role": "late_strength_touch",
     "subfamily": "adductor_squeeze_isometric",
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"],
-    "cut_buckets_allowed": ["high", "critical", "extreme"],
-    "goals": ["injury_prevention", "coordination"],
-    "weaknesses": ["adductor_groin", "lateral_movement", "balance"],
-    "tactical_styles": ["kicker", "scrambler"],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "injury_prevention",
+      "coordination"
+    ],
+    "weaknesses": [
+      "adductor_groin",
+      "lateral_movement",
+      "balance"
+    ],
+    "tactical_styles": [
+      "kicker",
+      "scrambler"
+    ],
     "soreness_risk": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
@@ -5531,7 +5765,284 @@
     "cns_freshness": true,
     "ballistic_low_volume": false,
     "sport_specific": false,
-    "contraindications": ["skip if adductor squeeze increases groin pain beyond a mild awareness"],
+    "contraindications": [
+      "skip if adductor squeeze increases groin pain beyond a mild awareness"
+    ],
     "notes": "Gentle but high-value groin and pelvis tension touch that survives hard cuts and the final days before fighting."
+  },
+  {
+    "name": "Split-Stance Wall-Drive Isometric",
+    "category": "lower_body",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "primer",
+    "movement": "isometric",
+    "type": "unilateral",
+    "tags": [
+      "neural_primer",
+      "late_strength_touch",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "isometric",
+      "posterior_chain",
+      "balance",
+      "coordination",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "kicker",
+      "mech_hinge_isometric",
+      "mech_trunk_stability"
+    ],
+    "equipment": "wall",
+    "phase_role": "late_strength_touch",
+    "subfamily": "split_stance_wall_drive_isometric",
+    "late_windows": [
+      "d7",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "coordination",
+      "injury_prevention"
+    ],
+    "weaknesses": [
+      "acceleration",
+      "posterior_chain",
+      "balance",
+      "footwork"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "kicker"
+    ],
+    "soreness_risk": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "neural_primer": true,
+    "cns_freshness": true,
+    "ballistic_low_volume": false,
+    "sport_specific": false,
+    "notes": "2-3 x 5-8s per side with full reset. On D-1 keep to tiny clean exposures only."
+  },
+  {
+    "name": "Half-Kneeling Medicine-Ball Punch Throw",
+    "category": "striking",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "power",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": [
+      "late_strength_touch",
+      "neural_primer",
+      "low_eccentric",
+      "low_impact",
+      "speed",
+      "power",
+      "coordination",
+      "skill_refinement",
+      "sport_specific",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "equipment": "medicine_ball",
+    "phase_role": "late_strength_touch",
+    "subfamily": "half_kneeling_medicine_ball_punch_throw",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "power",
+      "speed",
+      "coordination",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "core_stability",
+      "coordination_proprioception",
+      "balance"
+    ],
+    "tactical_styles": [
+      "counter_striker",
+      "distance_striker",
+      "pressure_fighter"
+    ],
+    "soreness_risk": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "neural_primer": true,
+    "cns_freshness": true,
+    "ballistic_low_volume": true,
+    "sport_specific": true,
+    "notes": "2-3 x 3 per side with full rest. Use D-3 only as micro-dose."
+  },
+  {
+    "name": "Seated Medicine-Ball Punch Throw",
+    "category": "striking",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "power",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": [
+      "late_strength_touch",
+      "neural_primer",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "speed",
+      "power",
+      "coordination",
+      "sport_specific",
+      "boxer",
+      "counter_striker",
+      "distance_striker",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_stability"
+    ],
+    "equipment": "medicine_ball",
+    "phase_role": "late_strength_touch",
+    "subfamily": "seated_medicine_ball_punch_throw",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "coordination"
+    ],
+    "weaknesses": [
+      "coordination_proprioception",
+      "cns_fatigue",
+      "balance"
+    ],
+    "tactical_styles": [
+      "boxer",
+      "counter_striker",
+      "distance_striker"
+    ],
+    "soreness_risk": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "low_impact": true,
+    "low_eccentric": true,
+    "neural_primer": true,
+    "cns_freshness": true,
+    "ballistic_low_volume": true,
+    "sport_specific": true,
+    "notes": "2-3 x 3 throws with full rest. D-1 only as tiny familiar primer if coach confirms readiness."
+  },
+  {
+    "name": "Landmine Split-Stance Punch Press",
+    "category": "striking",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "power",
+    "movement": "rotational",
+    "type": "unilateral",
+    "tags": [
+      "late_strength_touch",
+      "low_eccentric",
+      "power",
+      "speed",
+      "coordination",
+      "sport_specific",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "mech_ballistic",
+      "mech_upper_press",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "equipment": [
+      "barbell",
+      "landmine"
+    ],
+    "phase_role": "late_strength_touch",
+    "subfamily": "landmine_split_stance_punch_press",
+    "late_windows": [
+      "d13_to_d8",
+      "d7"
+    ],
+    "cut_buckets_allowed": [
+      "high",
+      "critical"
+    ],
+    "goals": [
+      "power",
+      "speed",
+      "coordination"
+    ],
+    "weaknesses": [
+      "coordination_proprioception",
+      "balance",
+      "posterior_chain"
+    ],
+    "tactical_styles": [
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker"
+    ],
+    "soreness_risk": "moderate",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "low_impact": true,
+    "low_eccentric": true,
+    "neural_primer": false,
+    "cns_freshness": false,
+    "ballistic_low_volume": true,
+    "sport_specific": true,
+    "contraindications": [
+      "avoid if shoulder symptoms are active"
+    ],
+    "notes": "2-3 x 3 per side with full rest. Keep very light and avoid final-day use."
   }
 ]
