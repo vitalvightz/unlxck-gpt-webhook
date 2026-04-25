@@ -85,6 +85,7 @@ def discover_banks() -> List[Path]:
     - bank_inferred_tags.json (metadata file)
     - format_* (configuration files)
     - injury_exclusion_map.json (configuration file)
+    - regex_patterns.json (parser config, not a training bank)
     """
     print(f"Discovering banks in {DATA_DIR}...")
     
@@ -100,6 +101,7 @@ def discover_banks() -> List[Path]:
             or filename == "bank_inferred_tags.json"
             or filename.startswith("format_")
             or filename == "injury_exclusion_map.json"
+            or filename == "regex_patterns.json"
         ):
             continue
         

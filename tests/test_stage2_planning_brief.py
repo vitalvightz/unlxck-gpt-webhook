@@ -1287,15 +1287,20 @@ def test_short_camp_weekly_role_map_only_keeps_roles_that_map_to_compressed_prio
 
     assert brief["payload_variant"] == "late_fight_stage2_payload"
     assert brief["days_out_payload"]["payload_mode"] == "late_fight_transition_payload"
-    assert brief["weekly_role_map"]["weeks"] == []
+    assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == [
+        "d6_to_d5",
+        "d4_to_d2",
+        "d1",
+        "d0",
+    ]
     roles_from_seq = [entry["role_key"] for entry in brief["late_fight_session_sequence"]]
     assert roles_from_seq == [
-        "alactic_sharpness_day",
         "fight_week_freshness_day",
+        "neural_primer_day",
     ]
     assert brief["late_fight_plan_spec"]["session_roles"] == [
-        "alactic_sharpness_day",
         "fight_week_freshness_day",
+        "neural_primer_day",
     ]
     assert brief["late_fight_plan_spec"]["session_cap"] == 2
     assert brief["late_fight_plan_spec"]["rendering_rules"]["framing"] == "session_by_session"
@@ -1385,15 +1390,25 @@ def test_fight_week_override_2_to_3_days_limits_to_micro_taper_roles():
 
     assert brief["fight_week_override"]["active"] is True
     assert brief["fight_week_override"]["band"] == "micro_taper_protocol"
-    assert brief["weekly_role_map"]["weeks"] == []
-    assert brief["week_by_week_progression"]["weeks"] == []
+    assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == [
+        "d4_to_d2",
+        "d1",
+        "d0",
+    ]
+    assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == [
+        "d4_to_d2",
+        "d1",
+        "d0",
+    ]
     assert [entry["role_key"] for entry in brief["late_fight_session_sequence"]] == [
         "fight_week_freshness_day",
+        "neural_primer_day",
     ]
     assert brief["late_fight_plan_spec"]["session_roles"] == [
         "fight_week_freshness_day",
+        "neural_primer_day",
     ]
-    assert brief["late_fight_plan_spec"]["session_cap"] == 1
+    assert brief["late_fight_plan_spec"]["session_cap"] == 2
 
 
 def test_phase_strategy_keeps_plain_spp_framing_for_true_multiweek_spp():
