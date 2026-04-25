@@ -1587,12 +1587,12 @@ def generate_conditioning_block(flags):
                 style_drills_by_style[st][system].append((d, score, reasons))
 
     for drills in system_drills.values():
-        drills.sort(key=lambda x: (-x[1], str(x[0].get("name") or "")))
+        drills.sort(key=lambda x: x[1], reverse=True)
     for drills in style_system_drills.values():
-        drills.sort(key=lambda x: (-x[1], str(x[0].get("name") or "")))
+        drills.sort(key=lambda x: x[1], reverse=True)
     for style_lists in style_drills_by_style.values():
         for drills in style_lists.values():
-            drills.sort(key=lambda x: (-x[1], str(x[0].get("name") or "")))
+            drills.sort(key=lambda x: x[1], reverse=True)
 
     if selection_format == "boxing":
         def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float]:
