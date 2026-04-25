@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from .injury_formatting import parse_injury_entry
@@ -285,42 +284,6 @@ def _bridge_window_sparring_override(
     if cut == "moderate" and _bridge_is_contact_sport(athlete_snapshot):
         return "deload_all"
     return "cap_one"
-
-
-def _is_d_window_stage(stage_key: Any) -> bool:
-    stage = str(stage_key or "").strip().lower()
-    if not stage:
-        return False
-    if re.fullmatch(r"d\d+", stage):
-        return True
-    return re.fullmatch(r"d\d+_to_d\d+", stage) is not None
-
-
-def _standard_camp_final_two_weeks_override(week: dict[str, Any]) -> str | None:
-    """For regular (non D-window) camps, suppress hard sparring in final taper week(s)."""
-    phase = str(week.get("phase") or "").strip().upper()
-    if phase != "TAPER":
-        return None
-
-    if _is_d_window_stage(week.get("stage_key")):
-        return None
-
-    phase_week_index = week.get("phase_week_index")
-    phase_week_total = week.get("phase_week_total")
-    if isinstance(phase_week_index, int) and isinstance(phase_week_total, int) and phase_week_total >= 1:
-        if phase_week_index >= max(1, phase_week_total - 1):
-            return "deload_all"
-        return None
-
-    # Fallback when week-position metadata is unavailable.
-    projected_days = week.get("projected_days_until_fight_start")
-    if not isinstance(projected_days, int):
-        return None
-    if projected_days < 0:
-        return None
-    if projected_days > 14:
-        return None
-    return "deload_all"
 
 
 def _decide_action(
@@ -633,8 +596,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     days_until_fight = athlete_snapshot.get("days_until_fight")
     protected_day = _pick_protected_hard_day(hard_days, week=week)
     bridge_override = _bridge_window_sparring_override(week, athlete_snapshot)
-    if bridge_override is None:
-        bridge_override = _standard_camp_final_two_weeks_override(week)
 
     action = _decide_action(
         hard_day_count=len(hard_days),

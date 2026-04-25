@@ -1587,15 +1587,15 @@ def generate_conditioning_block(flags):
                 style_drills_by_style[st][system].append((d, score, reasons))
 
     for drills in system_drills.values():
-        drills.sort(key=lambda x: (-x[1], str(x[0].get("name") or "")))
+        drills.sort(key=lambda x: x[1], reverse=True)
     for drills in style_system_drills.values():
-        drills.sort(key=lambda x: (-x[1], str(x[0].get("name") or "")))
+        drills.sort(key=lambda x: x[1], reverse=True)
     for style_lists in style_drills_by_style.values():
         for drills in style_lists.values():
-            drills.sort(key=lambda x: (-x[1], str(x[0].get("name") or "")))
+            drills.sort(key=lambda x: x[1], reverse=True)
 
     if selection_format == "boxing":
-        def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float, str]:
+        def _boxing_sort_key(item: tuple[dict, float, dict]) -> tuple[int, float]:
             drill, score, _ = item
             return (
                 _boxing_aerobic_preference_rank(
@@ -1607,7 +1607,6 @@ def generate_conditioning_block(flags):
                     equipment_access_set=equipment_access_set,
                 ),
                 -score,
-                str(drill.get("name") or ""),
             )
 
         system_drills["aerobic"].sort(key=_boxing_sort_key)
@@ -2388,3 +2387,4 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
+
