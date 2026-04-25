@@ -930,3 +930,35 @@ class TestHandoffText:
         assert "COMPRESSED PRE-FIGHT WEEK" in text
         assert "- d13_to_d8: pre_fight_compressed_payload (D-13 to D-8)" in text
         assert "- d0: fight_day_protocol_payload (D-0 to D-0)" in text
+
+
+class TestLateFightCountdownWeekdayLabels:
+    def test_d14_d13_countdown_labels_follow_real_calendar_weekdays(self):
+        athlete = _athlete(
+            14,
+            plan_creation_weekday="saturday",
+            fight_date="2026-05-09",
+            training_days=["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        )
+
+        spec = _build_late_fight_plan_spec(14, athlete)
+        raw_map = spec["permission_policy"]["raw_countdown_weekday_map"]
+
+        assert raw_map["D-14"] == "saturday"
+        assert raw_map["D-13"] == "sunday"
+        assert raw_map["D-7"] == "saturday"
+        assert raw_map["D-5"] == "monday"
+        assert raw_map["D-3"] == "wednesday"
+        assert raw_map["D-1"] == "friday"
+        assert raw_map["D-0"] == "saturday"
+
+        visible_labels = {
+            entry.get("countdown_label"): entry.get("countdown_display_label")
+            for entry in spec.get("visible_session_sequence", [])
+            if entry.get("countdown_label") and entry.get("countdown_display_label")
+        }
+        if "D-14" in visible_labels and "D-13" in visible_labels:
+            assert not (
+                visible_labels["D-14"].endswith("(Saturday)")
+                and visible_labels["D-13"].endswith("(Saturday)")
+            )
