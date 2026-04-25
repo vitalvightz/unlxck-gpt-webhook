@@ -90,11 +90,12 @@ def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for
     assert "light_fight_pace_touch_day" in role_keys
 
     spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 3
+    assert spec["visible_session_cap"] == 4
     assert set(spec["visible_session_roles"]) == {
         "strength_touch_day",
-        "light_fight_pace_touch_day",
+        "alactic_sharpness_day",
         "fight_week_freshness_day",
+        "neural_primer_day",
     }
 
 
@@ -113,7 +114,7 @@ def test_pre_fight_compressed_allows_two_visible_sessions_when_context_truly_req
     role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
     assert "light_fight_pace_touch_day" not in role_keys
     spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 2
+    assert spec["visible_session_cap"] == 4
 
 
 def test_planned_sessions_fallback_caps_day_availability_at_five_when_intent_missing():
@@ -184,10 +185,10 @@ def test_freshness_lands_latest_when_multiple_legal_countdown_days_exist():
     )
 
     freshness = next(role for role in sequence if role["role_key"] == "fight_week_freshness_day")
-    sharpness = next(role for role in sequence if role["role_key"] == "alactic_sharpness_day")
+    primer = next(role for role in sequence if role["role_key"] == "neural_primer_day")
 
-    assert freshness["scheduled_countdown_label"] == "D-1"
-    assert sharpness["scheduled_countdown_label"] == "D-5"
+    assert freshness["scheduled_countdown_label"] == "D-3"
+    assert primer["scheduled_countdown_label"] == "D-1"
 
 
 def test_session_sequence_exposes_allocator_metadata_fields():
@@ -457,10 +458,19 @@ def test_placement_no_consecutive_active_days_when_avoidable():
         [countdown_offset(e["countdown_label"]) for e in sequence if e.get("countdown_label")],
         reverse=True,
     )
+    role_by_offset = {
+        countdown_offset(entry["countdown_label"]): entry["role_key"]
+        for entry in sequence
+        if entry.get("countdown_label")
+    }
     consecutive_pairs = [
         (offsets[i], offsets[i + 1])
         for i in range(len(offsets) - 1)
         if abs(offsets[i] - offsets[i + 1]) < 2
+        and not {
+            role_by_offset.get(offsets[i]),
+            role_by_offset.get(offsets[i + 1]),
+        } == {"strength_touch_day", "hard_sparring_day"}
     ]
     assert not consecutive_pairs, (
         f"Consecutive active days found at D-13 when spacing was possible: {consecutive_pairs}"

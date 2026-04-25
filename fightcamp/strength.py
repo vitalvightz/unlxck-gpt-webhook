@@ -2192,9 +2192,10 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 updated.append(replacement)
         return updated
 
-    base_exercises = _final_keyword_guard(base_exercises)
     base_exercises = _enforce_session_quality(base_exercises)
     base_exercises = _apply_movement_caps(base_exercises)
+    base_exercises = _finalize_injury_safe_exercises(base_exercises)
+    base_exercises = _final_keyword_guard(base_exercises)
 
     for ex in base_exercises:
         normalize_exercise_movement(ex)
@@ -2280,6 +2281,5 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
 
 
