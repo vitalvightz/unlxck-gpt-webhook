@@ -398,18 +398,13 @@ def _build_request(overrides: dict | None = None) -> PlanRequest:
                 for day in availability_override
                 if str(day).strip()
             }
-            if "hard_sparring_days" not in merged:
-                payload["hard_sparring_days"] = [
-                    day
-                    for day in payload.get("hard_sparring_days", [])
-                    if str(day).strip().lower() in normalized_days
-                ]
-            if "support_work_days" not in merged and "technical_skill_days" not in merged:
-                payload["technical_skill_days"] = [
-                    day
-                    for day in payload.get("technical_skill_days", [])
-                    if str(day).strip().lower() in normalized_days
-                ]
+            for key in ["hard_sparring_days", "technical_skill_days", "support_work_days"]:
+                if key not in merged and key in payload:
+                    payload[key] = [
+                        day
+                        for day in payload[key]
+                        if str(day).strip().lower() in normalized_days
+                    ]
     return PlanRequest.model_validate(payload)
 
 
