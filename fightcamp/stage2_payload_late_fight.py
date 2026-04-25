@@ -3092,6 +3092,19 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     return "Use the normal camp-stage payload."
 
 
+def _resolve_late_fight_phase(phase_briefs: dict[str, dict]) -> str:
+    """Pick the most-late phase present in ``phase_briefs``.
+
+    Late-fight progressions key into a single phase brief; prefer TAPER, then
+    SPP, then GPP. Falls back to whatever phase brief is first if none of the
+    canonical phases are present.
+    """
+    return next(
+        (phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs),
+        next(iter(phase_briefs), "TAPER"),
+    )
+
+
 def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> dict[str, Any]:
     days = _coerce_days(days_until_fight)
     if _is_countdown_continuation_start(days_until_fight):
@@ -3103,7 +3116,7 @@ def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_mo
         "late_fight_transition_payload",
     }:
         return {"weeks": []}
-    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+    phase = _resolve_late_fight_phase(phase_briefs)
     allocation = _late_fight_allocation_plan(days_until_fight, athlete_model)
     roles = allocation.get("session_roles", [])
     session_counts = {
@@ -3143,7 +3156,7 @@ def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model
     days = _coerce_days(days_until_fight)
     if not _is_countdown_continuation_start(days):
         return []
-    phase = next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
+    phase = _resolve_late_fight_phase(phase_briefs)
 
     segment_days = [
         (int(segment["start_day"]), int(segment["end_day"]))
