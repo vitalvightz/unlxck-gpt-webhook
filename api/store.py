@@ -672,12 +672,12 @@ class SupabaseAppStore:
     def get_plan(self, plan_id: str) -> dict[str, Any] | None:
         try:
             return self._run_with_transient_retry(
-                operation="get_plan",
+                operation=f"get_plan plan_id={plan_id}",
                 fn=lambda: self._select_first(self.client.table("plans").select("*").eq("id", plan_id)),
             )
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
-                operation="get_plan",
+                operation=f"get_plan plan_id={plan_id}",
                 detail="failed to read plan",
                 exc=exc,
             )
