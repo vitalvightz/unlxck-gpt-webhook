@@ -3092,6 +3092,19 @@ def _late_fight_summary(days_until_fight: Any) -> str:
     return "Use the normal camp-stage payload."
 
 
+def _resolve_late_fight_phase(phase_briefs: dict[str, dict]) -> str:
+    """Pick the most-late phase present in ``phase_briefs``.
+
+    Late-fight progressions key into a single phase brief; prefer TAPER, then
+    SPP, then GPP. Falls back to whatever phase brief is first if none of the
+    canonical phases are present.
+    """
+    return next(
+        (phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs),
+        next(iter(phase_briefs), "TAPER"),
+    )
+
+
 def _build_late_fight_week_by_week_progression(days_until_fight: Any, athlete_model: dict, phase_briefs: dict[str, dict]) -> dict[str, Any]:
     days = _coerce_days(days_until_fight)
     if _is_countdown_continuation_start(days_until_fight):
@@ -3199,16 +3212,7 @@ def _build_bridge_then_late_countdown_weeks(days_until_fight: Any, athlete_model
     return weeks
 
 
-def _resolve_late_fight_phase(phase_briefs: dict[str, dict]) -> str:
-    return next((phase_name for phase_name in ("TAPER", "SPP", "GPP") if phase_name in phase_briefs), next(iter(phase_briefs), "TAPER"))
-
-
-def _build_late_fight_weekly_role_map(
-    days_until_fight: Any,
-    athlete_model: dict,
-    fight_week_override: dict[str, Any] | None = None,
-    phase: str = "TAPER",
-) -> dict[str, Any]:
+def _build_late_fight_weekly_role_map(days_until_fight: Any, athlete_model: dict, fight_week_override: dict[str, Any] | None = None) -> dict[str, Any]:
     allocation = _late_fight_practical_allocation_plan(days_until_fight, athlete_model)
     mode = allocation.get("mode", _days_out_payload_mode(days_until_fight))
     roles = allocation.get("session_roles", [])
@@ -3262,7 +3266,7 @@ def _build_late_fight_weekly_role_map(
             weeks.append(
                 {
                     "week_index": week_index,
-                    "phase": phase,
+                    "phase": "TAPER",
                     "stage_key": stage_key,
                     "stage_label": _late_fight_stage_label(start_day),
                     "payload_mode": segment_mode,
@@ -3319,7 +3323,7 @@ def _build_late_fight_weekly_role_map(
         weeks = [
             {
                 "week_index": 1,
-                "phase": phase,
+                "phase": "TAPER",
                 "stage_key": _late_fight_window(days_until_fight),
                 "phase_week_index": 1,
                 "phase_week_total": 1,

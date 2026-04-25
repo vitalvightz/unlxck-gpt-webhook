@@ -2238,13 +2238,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             dict(restriction_warning_counts),
         )
 
-    base_exercises = sorted(
-        base_exercises,
-        key=lambda exercise: (
-            -float(score_lookup.get(exercise.get("name"), 0.0)),
-            str(exercise.get("name") or ""),
-        ),
-    )
     used_days = training_days[:num_strength_sessions]
 
     strength_output = format_strength_block(phase, fatigue, base_exercises)
@@ -2290,3 +2283,6 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
+
+
+

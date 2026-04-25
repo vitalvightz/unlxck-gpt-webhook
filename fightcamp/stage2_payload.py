@@ -26,7 +26,6 @@ from .stage2_payload_late_fight import (
     _handoff_mode_instructions,
     _late_fight_permissions,
     _late_fight_rendering_rules,
-    _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
 )
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
@@ -4162,14 +4161,8 @@ def build_planning_brief(
     if _uses_late_fight_stage2_payload(days_until_fight):
         fight_week_override = _fight_week_override_payload(days_until_fight)
         days_out_payload = _days_out_payload_block(days_until_fight, athlete_model)
-        late_fight_phase = _resolve_late_fight_phase(phase_briefs)
         late_fight_progression = _build_late_fight_week_by_week_progression(days_until_fight, athlete_model, phase_briefs)
-        weekly_role_map = _build_late_fight_weekly_role_map(
-            days_until_fight,
-            athlete_model,
-            fight_week_override,
-            phase=late_fight_phase,
-        )
+        weekly_role_map = _build_late_fight_weekly_role_map(days_until_fight, athlete_model, fight_week_override)
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         return {
             "schema_version": "planning_brief.v1",
