@@ -685,7 +685,7 @@ class SupabaseAppStore:
     def get_latest_plan(self, athlete_id: str) -> dict[str, Any] | None:
         try:
             return self._run_with_transient_retry(
-                operation="get_latest_plan",
+                operation=f"get_latest_plan athlete_id={athlete_id}",
                 fn=lambda: self._select_first(
                     self.client.table("plans")
                     .select("*")
@@ -695,7 +695,7 @@ class SupabaseAppStore:
             )
         except _STORE_CLIENT_ERRORS as exc:
             self._raise_operation_http_error(
-                operation="get_latest_plan",
+                operation=f"get_latest_plan athlete_id={athlete_id}",
                 detail="failed to read latest plan",
                 exc=exc,
             )
