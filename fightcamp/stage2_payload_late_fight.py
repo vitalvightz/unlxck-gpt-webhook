@@ -2296,7 +2296,14 @@ def _late_fight_locked_label(role: dict[str, Any], label_to_weekday: dict[str, s
     locked_day = str(role.get("locked_day") or "").strip().lower()
     if not locked_day:
         return None
-    for label, weekday in label_to_weekday.items():
+    legal_labels = [
+        str(label)
+        for label in role.get("legal_countdown_labels", [])
+        if str(label).strip() and _countdown_offset(str(label)) is not None
+    ]
+    legal_labels.sort(key=lambda label: int(_countdown_offset(label) or 0), reverse=True)
+    for label in legal_labels:
+        weekday = label_to_weekday.get(label)
         if str(weekday or "").strip().lower() == locked_day:
             return label
     return None
@@ -2746,7 +2753,7 @@ def _composite_role_selection_score(selected_roles: list[dict[str, Any]], days_u
         if _is_app_owned_visible_role(role_key):
             score += 3500
         if offset:
-            score += max(0, 25 - offset) * 10
+            score += offset * 10
         stage_key = str(role.get("composite_segment_stage_key") or "").strip()
         if stage_key:
             stage_keys.add(stage_key)

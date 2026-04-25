@@ -279,6 +279,17 @@ def triage_injuries(plan_input: PlanInput) -> InjuryTriageResult:
     elif highest_band == "red" and restricted_rehab:
         routing_reasons.add("sparring_red_risk")
 
+    if ("high", "worse") in guided_combos or ("high", "worsening") in guided_combos or ("high", "regressing") in guided_combos or ("high", "worsened") in guided_combos:
+        routing_reasons.add("combo_gate:high_worsening")
+    if ("high", "") in guided_combos:
+        routing_reasons.add("combo_gate:high_trend_missing")
+    if ("high", "stable") in guided_combos:
+        routing_reasons.add("combo_gate:high_stable")
+    if ("moderate", "worse") in guided_combos or ("moderate", "worsening") in guided_combos:
+        routing_reasons.add("combo_gate:moderate_worsening")
+    if ("low", "worse") in guided_combos or ("low", "worsening") in guided_combos:
+        routing_reasons.add("combo_gate:low_worsening")
+
     matched_categories_sorted = sorted(matched_categories)
     routing_reasons_sorted = sorted(routing_reasons)
 

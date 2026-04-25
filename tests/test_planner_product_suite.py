@@ -463,7 +463,11 @@ def test_output_quality_taper_keeps_taper_identity():
         },
     )
 
-    role_keys = [role["role_key"] for role in brief["weekly_role_map"]["weeks"][0]["session_roles"]]
+    role_keys = [
+        role["role_key"]
+        for week in brief["weekly_role_map"]["weeks"]
+        for role in week.get("session_roles", [])
+    ]
 
     assert "fight_pace_repeatability_day" not in role_keys
     assert "controlled_repeatability_day" not in role_keys
