@@ -4607,7 +4607,7 @@ def _slot_is_sharpness_neural(slot: dict[str, Any]) -> bool:
 
 
 def _is_high_cut_bucket(athlete_model: dict[str, Any]) -> bool:
-    bucket = str(athlete_model.get("weight_cut_bucket") or "").strip().lower()
+    bucket = str(athlete_model.get("cut_severity_bucket") or "").strip().lower()
     if bucket in {"high", "critical", "extreme"}:
         return True
     pct = athlete_model.get("weight_cut_pct")
