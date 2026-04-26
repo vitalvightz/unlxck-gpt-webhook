@@ -276,7 +276,7 @@ def _render_guard_flags(
     *, athlete_model: dict, payload_mode: str = "", days_until_fight: int | None = None
 ) -> dict[str, Any]:
     late_fight_countdown = bool(
-        payload_mode
+        (payload_mode or "")
         in {
             "bridge_compression_payload",
             "pre_fight_compressed_payload",
