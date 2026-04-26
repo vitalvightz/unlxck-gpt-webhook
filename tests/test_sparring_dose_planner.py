@@ -18,6 +18,8 @@ def _week(
     phase_week_index: int | None = None,
     phase_week_total: int | None = None,
     projected_days_until_fight_start: int | None = None,
+    projected_days_until_fight_end: int | None = None,
+    span_days: int | None = None,
 ) -> dict:
     return {
         "phase": phase,
@@ -26,6 +28,8 @@ def _week(
         "phase_week_index": phase_week_index,
         "phase_week_total": phase_week_total,
         "projected_days_until_fight_start": projected_days_until_fight_start,
+        "projected_days_until_fight_end": projected_days_until_fight_end,
+        "span_days": span_days,
         "declared_hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
         "session_roles": session_roles or [],
     }
@@ -800,5 +804,102 @@ def test_standard_camp_override_does_not_change_d_window_stage_behavior():
             week=week,
             athlete_snapshot=_athlete(days_until_fight=42, hard_days=["Tuesday", "Thursday"]),
         )
-        effective = [entry for entry in plan if entry["status"] == "hard_as_planned"]
-        assert len(effective) == 1
+        assert all(entry["status"] != "hard_as_planned" for entry in plan)
+
+
+def test_projected_d14_to_d0_window_blocks_hard_sparring_even_when_snapshot_is_outside_window():
+    week = _week(
+        phase="SPP",
+        stage_key="specific_density_build",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=12,
+        projected_days_until_fight_end=6,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=35, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+    assert all("no_hard_sparring_d14_to_d0" in entry.get("reason_codes", []) for entry in plan)
+    assert all("no hard sparring" in str(entry.get("coach_note", "")).lower() for entry in plan)
+
+
+def test_projected_window_uses_span_days_fallback_and_blocks_d14_overlap():
+    week = _week(
+        phase="SPP",
+        stage_key="specific_density_build",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=16,
+        span_days=5,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=40, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+
+
+def test_projected_d21_to_d15_window_does_not_trigger_d14_ban():
+    week = _week(
+        phase="SPP",
+        stage_key="specific_density_build",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=21,
+        projected_days_until_fight_end=15,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=40, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert [entry["status"] for entry in plan] == ["hard_as_planned", "hard_as_planned"]
+
+
+def test_d14_window_overrides_cap_one_at_days_until_fight_seven():
+    # D-14 to D-0 must beat the ``cap_one`` countdown signal at days_until_fight == 7;
+    # no declared hard day may survive as ``hard_as_planned`` / ``effective_load == "hard"``.
+    week = _week(
+        phase="TAPER",
+        stage_key="fight_week_taper",
+        hard_days=["Monday", "Wednesday", "Friday"],
+        projected_days_until_fight_start=10,
+        projected_days_until_fight_end=4,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(
+            days_until_fight=7,
+            hard_days=["Monday", "Wednesday", "Friday"],
+        ),
+    )
+    assert plan
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert all(entry["effective_load"] != "hard" for entry in plan)
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+    assert all("no_hard_sparring_d14_to_d0" in entry.get("reason_codes", []) for entry in plan)
+    assert all("no hard sparring" in str(entry.get("coach_note", "")).lower() for entry in plan)
+
+
+def test_d14_window_overrides_deload_all_at_days_until_fight_six():
+    # At days_until_fight == 6 the countdown alone returns ``deload_all``; the D-14 window
+    # must upgrade that to a full ``convert_all`` so declared hard days become technical, not
+    # merely deloaded.
+    week = _week(
+        phase="TAPER",
+        stage_key="fight_week_taper",
+        hard_days=["Monday", "Wednesday"],
+        projected_days_until_fight_start=9,
+        projected_days_until_fight_end=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(
+            days_until_fight=6,
+            hard_days=["Monday", "Wednesday"],
+        ),
+    )
+    assert plan
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+    assert all("no_hard_sparring_d14_to_d0" in entry.get("reason_codes", []) for entry in plan)
+    assert all("no hard sparring" in str(entry.get("coach_note", "")).lower() for entry in plan)

@@ -237,6 +237,10 @@ def _strength_text_blob(exercise: dict) -> str:
     return " ".join(str(field or "") for field in fields).strip().lower()
 
 
+def _is_nordic_hamstring_curl(exercise: dict) -> bool:
+    return "nordic" in _strength_text_blob(exercise)
+
+
 def _resolved_cut_severity_bucket(flags: dict) -> str:
     explicit_bucket = str(flags.get("cut_severity_bucket") or "").strip().lower()
     if explicit_bucket in VALID_CUT_BUCKETS:
@@ -1282,6 +1286,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
                 continue
         if phase not in ex.get("phases", []):
             continue
+        if phase == "TAPER" and _is_nordic_hamstring_curl(ex):
+            continue
         if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
             continue
         if _is_supra_max_isometric(ex) and not (tested_1rm_available and has_isometric_setup):
@@ -1422,6 +1428,8 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
             if _exercise_late_windows(ex) and not active_late_window:
                 continue
             if phase not in ex.get("phases", []):
+                continue
+            if phase == "TAPER" and _is_nordic_hamstring_curl(ex):
                 continue
             if phase in {"SPP", "TAPER"} and _is_over_100_percent_isometric(ex):
                 continue
@@ -2281,5 +2289,4 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         "late_window_diagnostics": candidate_reservoir.get("__late_window__", {}),
     }
     
-
 
