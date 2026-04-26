@@ -26,7 +26,7 @@ def test_d6_high_cut_suppresses_neural_stacking_between_explosive_and_ankle():
     updated = _apply_late_fight_dose_caps(
         pools,
         days_until_fight=6,
-        athlete_model={"weight_cut_bucket": "high", "weight_cut_pct": 6.0},
+        athlete_model={"cut_severity_bucket": "high", "weight_cut_pct": 6.0},
     )
     names = [slot["selected"]["name"] for slot in updated["TAPER"]["conditioning_slots"]]
     assert not ({"Explosive Boxing Burst Intervals", "Ankle Snap Bounce"} <= set(names))
