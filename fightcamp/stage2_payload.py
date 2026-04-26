@@ -246,9 +246,9 @@ _NO_ACTIVE_INJURY_MARKERS = {
 def _meaningful_injury_values(values: Any) -> list[str]:
     cleaned = []
     for value in clean_list(values):
-        token = normalize_text(str(value)).replace("_", " ").strip()
+        token = re.sub(r"[^\w\s]", "", normalize_text(value)).replace("_", " ")
         if token and token not in _NO_ACTIVE_INJURY_MARKERS:
-            cleaned.append(str(value).strip())
+            cleaned.append(value)
     return cleaned
 
 
