@@ -4581,6 +4581,136 @@ def _build_rehab_slots(rehab_block: str, phase: str) -> list[dict]:
             )
     return slots
 
+
+def _slot_selected_name(slot: dict[str, Any]) -> str:
+    return str((slot.get("selected") or {}).get("name") or "").strip().lower()
+
+
+def _slot_is_sharpness_neural(slot: dict[str, Any]) -> bool:
+    name = _slot_selected_name(slot)
+    if not name:
+        return False
+    return any(
+        token in name
+        for token in (
+            "explosive boxing burst intervals",
+            "ankle snap bounce",
+            "ankle reactive bounce",
+            "band-resisted jab-cross",
+            "band resisted jab-cross",
+            "band resisted jab cross",
+            "medicine-ball punch throw",
+            "med-ball punch throw",
+            "punch-specific max isometric hold",
+        )
+    )
+
+
+def _is_high_cut_bucket(athlete_model: dict[str, Any]) -> bool:
+    bucket = str(athlete_model.get("weight_cut_bucket") or "").strip().lower()
+    if bucket in {"high", "critical", "extreme"}:
+        return True
+    pct = athlete_model.get("weight_cut_pct")
+    try:
+        return float(pct) >= 5.0
+    except (TypeError, ValueError):
+        return bool(athlete_model.get("weight_cut_risk"))
+
+
+def _apply_late_fight_dose_caps(
+    candidate_pools: dict[str, dict[str, list[dict[str, Any]]]],
+    *,
+    days_until_fight: Any,
+    athlete_model: dict[str, Any],
+) -> dict[str, dict[str, list[dict[str, Any]]]]:
+    window = classify_late_selector_window(days_until_fight)
+    if window not in {"d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"}:
+        return candidate_pools
+
+    for pool in candidate_pools.values():
+        strength_slots = list(pool.get("strength_slots", []) or [])
+        conditioning_slots = list(pool.get("conditioning_slots", []) or [])
+        rehab_slots = list(pool.get("rehab_slots", []) or [])
+        dropped_ids: set[str] = set()
+
+        def _drop_slot(slot: dict[str, Any], reason: str) -> None:
+            dropped_ids.add(str(slot.get("slot_id") or id(slot)))
+            selected = slot.get("selected")
+            if isinstance(selected, dict):
+                selected["dose_guard_reason"] = reason
+
+        primary_sharpness = [
+            slot for slot in [*strength_slots, *conditioning_slots] if _slot_is_sharpness_neural(slot)
+        ]
+
+        if window == "d13_to_d8":
+            if _is_high_cut_bucket(athlete_model) and len(primary_sharpness) > 1:
+                for slot in primary_sharpness[1:]:
+                    _drop_slot(slot, "high_cut_density_trimmed")
+
+        if window == "d7" and len(primary_sharpness) > 1:
+            for slot in primary_sharpness[1:]:
+                _drop_slot(slot, "neural_stacking_suppressed")
+
+        if window == "d6_to_d5":
+            is_high_cut = _is_high_cut_bucket(athlete_model)
+            if is_high_cut:
+                for slot in primary_sharpness:
+                    _drop_slot(slot, "high_cut_density_trimmed")
+                rehab_slots = rehab_slots[:1]
+            else:
+                for slot in primary_sharpness[1:]:
+                    _drop_slot(slot, "late_window_dose_cap")
+                if primary_sharpness:
+                    rehab_slots = []
+
+        if window in {"d4_to_d2", "d1"}:
+            for slot in primary_sharpness:
+                if window == "d1" and "punch-specific max isometric hold" in _slot_selected_name(slot):
+                    continue
+                _drop_slot(slot, "late_window_dose_cap")
+
+        if window == "d1":
+            kept_tiny_cue = False
+            for slot in strength_slots:
+                selected = slot.get("selected") or {}
+                name = str(selected.get("name") or "").strip().lower()
+                if "punch-specific max isometric hold" in name:
+                    if kept_tiny_cue:
+                        _drop_slot(slot, "d1_final_cue_cap")
+                        continue
+                    selected["prescription"] = "1–2 sets x 3–5s per side @ 6–7/10 effort, full rest"
+                    kept_tiny_cue = True
+                elif _slot_is_sharpness_neural(slot):
+                    _drop_slot(slot, "d1_final_cue_cap")
+            for slot in conditioning_slots:
+                if _slot_is_sharpness_neural(slot):
+                    _drop_slot(slot, "d1_final_cue_cap")
+            rehab_slots = rehab_slots[:1]
+
+        if window == "d7":
+            for slot in strength_slots:
+                selected = slot.get("selected") or {}
+                name = str(selected.get("name") or "").strip().lower()
+                if "band-resisted jab-cross" in name or "band resisted jab-cross" in name:
+                    selected["prescription"] = "2–3 sets x 3 reps, full rest"
+        if window == "d6_to_d5":
+            for slot in conditioning_slots:
+                selected = slot.get("selected") or {}
+                name = str(selected.get("name") or "").strip().lower()
+                if "explosive boxing burst intervals" in name:
+                    selected["prescription"] = "4–6 x 6s, full rest"
+
+        def _keep(slot: dict[str, Any]) -> bool:
+            return str(slot.get("slot_id") or id(slot)) not in dropped_ids
+
+        pool["strength_slots"] = [slot for slot in strength_slots if _keep(slot)]
+        pool["conditioning_slots"] = [slot for slot in conditioning_slots if _keep(slot)]
+        pool["rehab_slots"] = rehab_slots
+
+    return candidate_pools
+
+
 def _build_omission_ledger(
     *,
     strength_blocks: dict[str, dict | None],
@@ -4663,6 +4793,11 @@ def build_stage2_payload(
         short_notice=short_notice,
     )
     athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
+    candidate_pools = _apply_late_fight_dose_caps(
+        candidate_pools,
+        days_until_fight=training_context.days_until_fight,
+        athlete_model=athlete_model,
+    )
     injury_context = _build_injury_context(athlete_model=athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)

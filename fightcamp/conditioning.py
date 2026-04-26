@@ -222,6 +222,13 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     raw_text = " ; ".join(filter(None, [drill.get("timing", ""), drill.get("duration", "")]))
     for clause in re.split(r"[;,/]", raw_text):
         is_rest = any(k in clause.lower() for k in ("rest", "off", "recovery", "recover", "between"))
+        values = _extract_time_values(clause)
+        if not values:
+            continue
+        if is_rest:
+            rest_values.extend(values)
+        else:
+            work_values.extend(values)
     if drill.get("rest"):
         rest_values.extend(_extract_time_values(drill.get("rest") or ""))
 
@@ -253,8 +260,8 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     short_work_full_rest = (
         work_max is not None
         and rest_max is not None
-        and work_max <= 30
-        and rest_max >= 60
+        and 20 <= work_max <= 45
+        and rest_max >= 75
     )
 
     if glycolytic_dose and late_window not in _ATHLETE_LABEL_BLOCKED_GLYCOLYTIC_WINDOWS:
@@ -2478,4 +2485,3 @@ def generate_conditioning_block(flags):
 
     return output_lines, selected_drill_names, why_log, grouped_drills, missing_systems, candidate_reservoir
 # Map for tactical styles
-
