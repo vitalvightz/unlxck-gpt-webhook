@@ -852,3 +852,54 @@ def test_projected_d21_to_d15_window_does_not_trigger_d14_ban():
         athlete_snapshot=_athlete(days_until_fight=40, hard_days=["Tuesday", "Thursday"]),
     )
     assert [entry["status"] for entry in plan] == ["hard_as_planned", "hard_as_planned"]
+
+
+def test_d14_window_overrides_cap_one_at_days_until_fight_seven():
+    # D-14 to D-0 must beat the ``cap_one`` countdown signal at days_until_fight == 7;
+    # no declared hard day may survive as ``hard_as_planned`` / ``effective_load == "hard"``.
+    week = _week(
+        phase="TAPER",
+        stage_key="fight_week_taper",
+        hard_days=["Monday", "Wednesday", "Friday"],
+        projected_days_until_fight_start=10,
+        projected_days_until_fight_end=4,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(
+            days_until_fight=7,
+            hard_days=["Monday", "Wednesday", "Friday"],
+        ),
+    )
+    assert plan
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert all(entry["effective_load"] != "hard" for entry in plan)
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+    assert all("no_hard_sparring_d14_to_d0" in entry.get("reason_codes", []) for entry in plan)
+    assert all("no hard sparring" in str(entry.get("coach_note", "")).lower() for entry in plan)
+
+
+def test_d14_window_overrides_deload_all_at_days_until_fight_six():
+    # At days_until_fight == 6 the countdown alone returns ``deload_all``; the D-14 window
+    # must upgrade that to a full ``convert_all`` so declared hard days become technical, not
+    # merely deloaded.
+    week = _week(
+        phase="TAPER",
+        stage_key="fight_week_taper",
+        hard_days=["Monday", "Wednesday"],
+        projected_days_until_fight_start=9,
+        projected_days_until_fight_end=3,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(
+            days_until_fight=6,
+            hard_days=["Monday", "Wednesday"],
+        ),
+    )
+    assert plan
+    assert all(entry["status"] == "convert_to_technical_suggested" for entry in plan)
+    assert all(entry["effective_load"] == "technical" for entry in plan)
+    assert all("no_hard_sparring_d14_to_d0" in entry.get("reason_codes", []) for entry in plan)
+    assert all("no hard sparring" in str(entry.get("coach_note", "")).lower() for entry in plan)
