@@ -3880,6 +3880,8 @@ def _build_weekly_role_map(
                 "phase_week_index": week_entry.get("phase_week_index"),
                 "phase_week_total": week_entry.get("phase_week_total"),
                 "projected_days_until_fight_start": projected_start_days,
+                "projected_days_until_fight_end": projected_end_days,
+                "span_days": span_days,
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "session_roles": session_roles,
             },
