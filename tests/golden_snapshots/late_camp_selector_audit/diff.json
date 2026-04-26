@@ -85,7 +85,9 @@
       ],
       "added_winners": [],
       "removed_winners": [],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Mobility Reset: Breathing + T-Spine + Ankle Flow"
+      ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
@@ -302,15 +304,15 @@
         "Band Face Pull"
       ],
       "after_winners": [
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Overcoming Split-Squat Isometric"
       ],
       "added_winners": [
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Overcoming Split-Squat Isometric"
       ],
       "removed_winners": [
@@ -373,14 +375,14 @@
       "after_winners": [
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Overcoming Split-Squat Isometric"
+        "Cluster Set Trap Bar Deadlift",
+        "Counter-Striker Split-Line Punch Isometric Hold"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
-        "Overcoming Split-Squat Isometric"
+        "Cluster Set Trap Bar Deadlift",
+        "Counter-Striker Split-Line Punch Isometric Hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -389,6 +391,9 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
+        "Overcoming Split-Squat Isometric",
+        "Punch-Specific Max Isometric Hold",
+        "Seated Medicine-Ball Punch Throw",
         "Trap Bar Jump (Light)"
       ],
       "no_longer_blocked": []
@@ -440,15 +445,15 @@
         "Band Face Pull"
       ],
       "after_winners": [
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Overcoming Split-Squat Isometric"
       ],
       "added_winners": [
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Overcoming Split-Squat Isometric"
       ],
       "removed_winners": [
@@ -462,8 +467,7 @@
         "Band-Resisted Straight Punch",
         "Cluster Set Trap Bar Deadlift",
         "Isometric Mid-Thigh Pull",
-        "Trap Bar Jump (Light)",
-        "Trap-Bar Pin Pull Isometric"
+        "Trap Bar Jump (Light)"
       ],
       "no_longer_blocked": []
     },
@@ -538,9 +542,9 @@
         "Med Ball Scoop Toss",
         "Medicine-Ball Chest Toss",
         "Overcoming Split-Squat Isometric",
+        "Seated Medicine-Ball Punch Throw",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Trap Bar Jump (Light)",
-        "Trap-Bar Pin Pull Isometric"
+        "Trap Bar Jump (Light)"
       ],
       "no_longer_blocked": []
     },
