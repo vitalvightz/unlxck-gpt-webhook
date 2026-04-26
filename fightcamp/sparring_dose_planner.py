@@ -709,7 +709,7 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "effective_load": target_load,
                 "reason_codes": list(countdown_codes),
                 "reason": countdown_reason,
-                "coach_note": global_window_note or _sparring_override_coach_note(days_until_fight, action),
+                "coach_note": _sparring_override_coach_note(days_until_fight, action) or global_window_note,
             }
             for day in hard_days
         ]
