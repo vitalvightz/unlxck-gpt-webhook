@@ -335,7 +335,7 @@ export function getGenerationJob(token: string, jobId: string): Promise<Generati
 }
 
 export function listPlans(token: string): Promise<PlanSummary[]> {
-  return readJson<PlanSummary[]>("/api/plans", { token });
+  return withTransientRetries(() => readJson<PlanSummary[]>("/api/plans", { token }));
 }
 
 export function getPlan(token: string, planId: string): Promise<PlanDetail> {
