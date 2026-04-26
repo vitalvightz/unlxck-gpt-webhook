@@ -613,6 +613,98 @@ PLANNING_DECISION_HIERARCHY = [
     },
 ]
 
+
+
+_NO_ACTIVE_INJURY_MARKERS = {
+    "",
+    "none",
+    "no",
+    "no injury",
+    "no injuries",
+    "none reported",
+    "n/a",
+    "na",
+    "nil",
+    "nothing",
+    "all clear",
+}
+def _meaningful_injury_values(values: Any) -> list[str]:
+    cleaned = []
+    for value in clean_list(values):
+        token = normalize_text(str(value)).replace("_", " ").strip()
+        if token and token not in _NO_ACTIVE_INJURY_MARKERS:
+            cleaned.append(str(value).strip())
+    return cleaned
+def _has_active_injury_from_training_context(training_context: TrainingContext) -> bool:
+    return bool(
+        _meaningful_injury_values(getattr(training_context, "injuries", []))
+        or getattr(training_context, "parsed_injuries", None)
+        or getattr(training_context, "guided_injury", None)
+        or getattr(training_context, "injury_restrictions", None)
+    )
+def _has_active_injury_from_athlete_model(athlete_model: dict) -> bool:
+    if "has_active_injury" in athlete_model:
+        return bool(athlete_model.get("has_active_injury"))
+    return bool(
+        _meaningful_injury_values(athlete_model.get("injuries", []))
+        or athlete_model.get("parsed_injuries")
+        or athlete_model.get("guided_injury")
+        or athlete_model.get("injury_restrictions")
+    )
+def _render_guard_flags(*, athlete_model: dict, payload_mode: str = "", days_until_fight: int | None = None) -> dict[str, Any]:
+    late_fight_countdown = bool(
+        payload_mode in {
+            "bridge_compression_payload",
+            "pre_fight_compressed_payload",
+            "late_fight_week_payload",
+            "late_fight_transition_payload",
+            "late_fight_session_payload",
+            "pre_fight_day_payload",
+            "fight_day_protocol_payload",
+        }
+        or _uses_late_fight_stage2_payload(days_until_fight)
+    )
+    has_active_injury = _has_active_injury_from_athlete_model(athlete_model)
+    return {
+        "has_active_injury": has_active_injury,
+        "suppress_rehab_headings": not has_active_injury,
+        "suppress_phase_toolbox_sections": late_fight_countdown,
+        "render_mode": "late_fight_countdown_only" if late_fight_countdown else "camp_plan",
+    }
+def _append_render_guard_writing_rules(
+    rewrite_guidance: dict,
+    *,
+    athlete_model: dict,
+    payload_mode: str = "",
+    days_until_fight: int | None = None,
+) -> dict:
+    updated = dict(rewrite_guidance or {})
+    rules = list(updated.get("writing_rules") or [])
+    guards = _render_guard_flags(
+        athlete_model=athlete_model,
+        payload_mode=payload_mode,
+        days_until_fight=days_until_fight,
+    )
+    if guards["suppress_rehab_headings"]:
+        rules.extend(
+            [
+                "athlete_model.has_active_injury is false: do not render any section titled Rehab, Injury Rehab, Brief Rehab, Prehab, Prepare / brief rehab, or Rehab / Mobility.",
+                "When athlete_model.has_active_injury is false, general low-load support may appear only as Activation, Movement Prep, Mobility, Warm-up, or Reset work — never as rehab/prehab.",
+                "Do not turn generic trunk, glute, shoulder, or mobility prep into rehab unless athlete_model.has_active_injury is true.",
+            ]
+        )
+    if guards["suppress_phase_toolbox_sections"]:
+        rules.extend(
+            [
+                "Late-fight countdown mode is active: do not render standalone GPP, SPP, or TAPER toolbox/reference sections.",
+                "Candidate pools are internal selection data only. Do not output 'key drills to keep in your toolbox', 'available options', 'SPP tools', 'GPP tools', or phase reference menus.",
+                "In late-fight countdown mode, only render scheduled D-day prescriptions, coach-owned days, explicit transition windows, and fight-day protocol.",
+            ]
+        )
+    updated["writing_rules"] = dedupe_preserve_order(rules)
+    updated["render_guards"] = guards
+    return updated
+
 def _build_athlete_model(
     *,
     training_context: TrainingContext,
@@ -631,6 +723,7 @@ def _build_athlete_model(
         training_context.weight_cut_pct,
         training_context.days_until_fight,
     )
+    has_active_injury = _has_active_injury_from_training_context(training_context)
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -667,6 +760,7 @@ def _build_athlete_model(
         "parsed_injuries": [dict(item) for item in training_context.parsed_injuries],
         "guided_injury": dict(training_context.guided_injury) if training_context.guided_injury else None,
         "injury_restrictions": [dict(item) for item in training_context.injury_restrictions],
+        "has_active_injury": has_active_injury,
         "short_notice": short_notice,
         "plan_creation_weekday": plan_creation_dt.strftime("%A").lower(),
         "plan_creation_weekday_basis": "athlete_local_weekday",
@@ -831,19 +925,30 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         "embedded_support": embedded,
         "deferred": deferred,
     }
-
-
 def _build_phase_selection_guardrails(phase: str, training_context: TrainingContext) -> dict:
     guardrails = dict(PHASE_SELECTION_GUARDRAILS.get(phase, {}))
     guardrails["conditioning_minimums"] = dict(guardrails.get("conditioning_minimums", {}))
     guardrails["must_keep_if_present"] = list(guardrails.get("must_keep_if_present", []))
     guardrails["conditioning_drop_order_if_thin"] = list(guardrails.get("conditioning_drop_order_if_thin", []))
     guardrails["notes"] = list(guardrails.get("notes", []))
-    guardrails["must_keep_rehab_if_present"] = bool(training_context.injuries)
+    has_active_injury = _has_active_injury_from_training_context(training_context)
+    guardrails["must_keep_rehab_if_present"] = has_active_injury
+    if not has_active_injury:
+        guardrails["must_keep_if_present"] = [
+            item for item in guardrails["must_keep_if_present"]
+            if str(item).strip().lower() != "rehab"
+        ]
+        guardrails["notes"].append(
+            "No active injury is present: do not create rehab/prehab headings. General prep must be labelled activation, movement prep, mobility, warm-up, or reset."
+        )
     if training_context.weight_cut_risk and phase == "TAPER":
         guardrails["conditioning_drop_order_if_thin"] = _dedupe_preserve_order(
             ["glycolytic"] + guardrails.get("conditioning_drop_order_if_thin", [])
         )
+        guardrails["notes"].append(
+            "During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left."
+        )
+    return guardrails
         guardrails["notes"].append("During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
     return guardrails
 
@@ -1723,20 +1828,23 @@ def _conditioning_role_key(phase: str, system: str, limiter_key: str) -> str:
     if phase == "TAPER":
         return "alactic_sharpness_day"
     if phase == "SPP":
-        return "alactic_speed_day"
-    return "alactic_coordination_day" if limiter_key == "coordination" else "alactic_support_day"
-
-
-def _recovery_role_key(phase: str, stage_key: str, athlete_model: dict) -> str:
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    if phase == "TAPER" or stage_key == "fight_week_survival_rhythm" or "fight_week" in readiness_flags:
-        return "fight_week_freshness_day"
-    if athlete_model.get("injuries"):
-        return "tissue_recovery_day"
-    return "recovery_reset_day"
-
-
 def _role_selection_rule(role_key: str, category: str, system: str | None = None) -> str:
+    if category == "strength":
+        if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
+            return "Use the highest-priority compliant strength slot first."
+        return "Use a remaining compliant strength slot with lower interference cost than the main strength day."
+    if category == "technical":
+        return "Prefer technical rhythm touches that stay low-cost, non-fatiguing, and timing-led."
+    if category == "conditioning":
+        if system == "aerobic":
+            return "Prefer compliant aerobic or low-damage conditioning slots first."
+        if system == "glycolytic":
+            return "Prefer compliant glycolytic slots only when phase guardrails still allow density work."
+        return "Prefer compliant alactic slots that preserve speed and sharpness."
+    return (
+        "Use recovery, activation, mobility, or movement-prep support. "
+        "Use rehab slots only when athlete_model.has_active_injury is true."
+    )
     if category == "strength":
         if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
             return "Use the highest-priority compliant strength slot first."
@@ -3851,7 +3959,7 @@ def _build_weekly_role_map(
                     "session_index": session_index,
                     "category": "recovery",
                     "role_key": role_key,
-                    "preferred_pool": "rehab_slots_or_recovery_only",
+                    "preferred_pool": "rehab_slots" if athlete_model.get("has_active_injury") else "recovery_only",
                     "selection_rule": _role_selection_rule(role_key, "recovery"),
                     "anchor": anchor,
                     "placement_rule": _placement_rule_for_anchor(anchor, week_entry),
@@ -4210,7 +4318,7 @@ def build_planning_brief(
             "restrictions": restrictions,
             "candidate_pools": candidate_pools,
             "omission_ledger": omission_ledger,
-            "decision_rules": rewrite_guidance,
+            "decision_rules": _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=days_until_fight),
         }
 
     fight_week_override = _fight_week_override_payload(days_until_fight)
@@ -4248,7 +4356,7 @@ def build_planning_brief(
         "restrictions": restrictions,
         "candidate_pools": candidate_pools,
         "omission_ledger": omission_ledger,
-        "decision_rules": rewrite_guidance,
+        "decision_rules": _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=days_until_fight),
     }
 
 def _serialize_strength_option(exercise: dict, why: str) -> dict:
@@ -4647,6 +4755,19 @@ def build_stage2_payload(
 ) -> dict:
     late_window = classify_late_selector_window(training_context.days_until_fight)
     candidate_pools: dict[str, dict] = {}
+    late_window = classify_late_selector_window(training_context.days_until_fight)
+    athlete_model = _build_athlete_model(
+        training_context=training_context,
+        sport=mapped_format,
+        record=record,
+        rounds_format=rounds_format,
+        camp_length_weeks=camp_len,
+        short_notice=short_notice,
+    )
+    athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
+    has_active_injury = athlete_model.get("has_active_injury")
+
+    candidate_pools: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
             continue
@@ -4655,12 +4776,8 @@ def build_stage2_payload(
             "conditioning_slots": _build_conditioning_slots(
                 conditioning_blocks.get(phase), phase, late_window=late_window
             ),
-            "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase),
+            "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase) if has_active_injury else [],
         }
-
-    athlete_model = _build_athlete_model(
-        training_context=training_context,
-        sport=mapped_format,
         record=record,
         rounds_format=rounds_format,
         camp_length_weeks=camp_len,
@@ -4812,8 +4929,9 @@ RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
 If weekly_role_map.fight_day_override.active is true (or any week's fight_day_override.active is true), the day matching weekly_role_map.fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
 
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
+RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
-Active injury: lead with constraints, substitutions, and stop rules — not optional language.
+Active injury: If athlete_model.has_active_injury is true, lead with constraints, substitutions, and stop rules — not optional language. If athlete_model.has_active_injury is false, do not render rehab sections or prehab/injury-specific advice.
 Both flags narrow training tolerance and must shape the output structurally.
 When injury wording is vague or underspecified, use INJURY CONTEXT to infer the safest high-probability interpretation. Never override hard restrictions or triage blocks, and prefer conservative substitutions and wording when detail is incomplete.
 
@@ -4873,7 +4991,7 @@ Do not expose internal role keys or internal system labels as session titles. Tr
   fight_week_freshness_day   -> "Freshness Reset"
   light_fight_pace_touch_day -> "Technical Rhythm Touch"
   technical_touch_day        -> "Technical Touch"
-  hard_sparring_day          -> render minimally as "Coach-led boxing session" (or sport-equivalent: "Coach-led MMA session", "Coach-led Muay Thai session", "Coach-led kickboxing session"). The gym/coach owns the day; the app must not prescribe rounds, intensity, dose, work:rest, RPE, or any sparring template wording. After the label, emit exactly one short app-owned note: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Nothing else.
+  hard_sparring_day          -> render minimally as "Coach-led boxing session" (or sport-equivalent: "Coach-led MMA session", "Coach-led Muay Thai session", "Coach-led kickboxing session"). The gym/coach owns the day; the app must not prescribe rounds, intensity, dose, work:rest, RPE, or any sparring template wording. After the label, emit exactly one short app-owned note in this form: "No additional S&C today. Add 5 min breathing + shoulder mobility after." (Substituting sport-appropriate mobility where needed). Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume. Anything more than the label plus that one note is a violation.
 Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glycolytic", "Alactic", "Aerobic" as an athlete-facing session title.
 
 For conditioning drill system labels, use candidate_pools[phase].conditioning_slots[*].selected.athlete_facing_system_label (set by the dose-aware relabel helper). Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
@@ -4912,7 +5030,7 @@ def build_stage2_handoff_text(
         "phase_briefs": stage2_payload.get("phase_briefs", {}),
         "candidate_pools": stage2_payload.get("candidate_pools", {}),
         "omission_ledger": stage2_payload.get("omission_ledger", {}),
-        "decision_rules": stage2_payload.get("rewrite_guidance", {}),
+        "decision_rules": _append_render_guard_writing_rules(stage2_payload.get("rewrite_guidance", {}), athlete_model=stage2_payload.get("athlete_model", {}), payload_mode=stage2_payload.get("payload_mode", ""), days_until_fight=stage2_payload.get("athlete_model", {}).get("days_until_fight")),
     }
     athlete_profile = _athlete_profile_block(planning_brief, stage2_payload)
     payload_mode = stage2_payload.get("payload_mode") or stage2_payload.get("effective_stage2_mode") or "camp_payload"
