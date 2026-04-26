@@ -18,6 +18,8 @@ def _week(
     phase_week_index: int | None = None,
     phase_week_total: int | None = None,
     projected_days_until_fight_start: int | None = None,
+    projected_days_until_fight_end: int | None = None,
+    span_days: int | None = None,
 ) -> dict:
     return {
         "phase": phase,
@@ -26,6 +28,8 @@ def _week(
         "phase_week_index": phase_week_index,
         "phase_week_total": phase_week_total,
         "projected_days_until_fight_start": projected_days_until_fight_start,
+        "projected_days_until_fight_end": projected_days_until_fight_end,
+        "span_days": span_days,
         "declared_hard_sparring_days": hard_days or ["Tuesday", "Thursday"],
         "session_roles": session_roles or [],
     }
@@ -802,3 +806,61 @@ def test_standard_camp_override_does_not_change_d_window_stage_behavior():
         )
         effective = [entry for entry in plan if entry["status"] == "hard_as_planned"]
         assert len(effective) == 1
+
+
+def test_normal_four_week_camp_blocks_hard_sparring_in_final_14_days():
+    week = _week(
+        phase="SPP",
+        stage_key="specific_density_build",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=14,
+        projected_days_until_fight_end=8,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=28, hard_days=["Tuesday", "Thursday"]),
+    )
+    assert all(entry["status"] != "hard_as_planned" for entry in plan)
+    assert all("no_hard_sparring_d14_to_d0" in entry.get("reason_codes", []) for entry in plan)
+
+
+def test_three_week_camp_blocks_hard_sparring_in_d14_to_d8_and_d7_to_d1_weeks():
+    bridge_week = _week(
+        phase="SPP",
+        stage_key="specific_density_build",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=14,
+        projected_days_until_fight_end=8,
+    )
+    fight_week = _week(
+        phase="TAPER",
+        stage_key="fight_week_survival_rhythm",
+        hard_days=["Tuesday", "Thursday"],
+        projected_days_until_fight_start=7,
+        projected_days_until_fight_end=1,
+    )
+    athlete = _athlete(days_until_fight=21, hard_days=["Tuesday", "Thursday"])
+
+    bridge_plan = compute_hard_sparring_plan(week=bridge_week, athlete_snapshot=athlete)
+    fight_plan = compute_hard_sparring_plan(week=fight_week, athlete_snapshot=athlete)
+
+    assert all(entry["status"] != "hard_as_planned" for entry in bridge_plan)
+    assert all(entry["status"] != "hard_as_planned" for entry in fight_plan)
+
+
+def test_late_fight_bridge_outside_d14_window_keeps_existing_cap_one_behavior():
+    week = _week(
+        phase="TAPER",
+        stage_key="bridge_compression",
+        hard_days=["Tuesday", "Thursday"],
+        phase_week_index=1,
+        phase_week_total=2,
+        projected_days_until_fight_start=21,
+        projected_days_until_fight_end=15,
+    )
+    plan = compute_hard_sparring_plan(
+        week=week,
+        athlete_snapshot=_athlete(days_until_fight=18, hard_days=["Tuesday", "Thursday"]),
+    )
+    hard_days = [entry for entry in plan if entry["status"] == "hard_as_planned"]
+    assert len(hard_days) == 1
