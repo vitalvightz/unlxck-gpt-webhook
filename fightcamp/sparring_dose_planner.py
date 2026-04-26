@@ -61,43 +61,9 @@ def _days_until_fight_int(athlete_snapshot: dict[str, Any]) -> int | None:
         return None
 
 
-def _projected_week_fight_window(week: dict[str, Any]) -> tuple[int, int] | None:
-    try:
-        start = int(week.get("projected_days_until_fight_start"))
-    except (TypeError, ValueError):
-        return None
-
-    end_raw = week.get("projected_days_until_fight_end")
-    if end_raw is not None:
-        try:
-            end = int(end_raw)
-        except (TypeError, ValueError):
-            end = start
-    else:
-        try:
-            span_days = int(week.get("span_days"))
-        except (TypeError, ValueError):
-            span_days = None
-        if span_days and span_days > 0:
-            end = max(0, start - span_days + 1)
-        else:
-            end = start
-    return start, end
-
-
-def _week_overlaps_no_hard_spar_window(week: dict[str, Any]) -> bool:
-    projected_window = _projected_week_fight_window(week)
-    if projected_window is None:
-        return False
-    start, end = projected_window
-    return max(start, end) >= 0 and min(start, end) <= 14
-
-
 def _week_pressure(week: dict[str, Any], athlete_snapshot: dict[str, Any]) -> str:
     day_value = _days_until_fight_int(athlete_snapshot)
 
-    if _week_overlaps_no_hard_spar_window(week):
-        return "high"
     if _is_final_week_sparring_cap_active(week, athlete_snapshot):
         return "high"
     if athlete_snapshot.get("short_notice") or (day_value is not None and day_value <= 14):
@@ -371,12 +337,7 @@ def _decide_action(
         return None
 
     # --- Countdown-graduated override (deterministic, fires first) ---
-    # The D-14 to D-0 no-hard-sparring rule is strict and must beat any countdown
-    # signal that would otherwise allow a hard day (e.g. ``cap_one`` at days==7).
-    if bridge_override == "convert_all":
-        countdown_override: str | None = "convert_all"
-    else:
-        countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
+    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
     if countdown_override == "convert_all":
         return "convert"
     if countdown_override == "deload_all":
@@ -491,13 +452,6 @@ def _reason_codes(
     if hard_day_count >= 4:
         codes.append("four_hard_days")
     return codes
-
-
-def _with_no_hard_sparring_d14_reason(codes: list[str]) -> list[str]:
-    updated = list(codes)
-    if "no_hard_sparring_d14_to_d0" not in updated:
-        updated.insert(0, "no_hard_sparring_d14_to_d0")
-    return updated
 
 
 def _with_final_week_cap_reason(codes: list[str]) -> list[str]:
@@ -681,9 +635,6 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     bridge_override = _bridge_window_sparring_override(week, athlete_snapshot)
     if bridge_override is None:
         bridge_override = _standard_camp_final_two_weeks_override(week)
-    is_d14_window = _week_overlaps_no_hard_spar_window(week)
-    if is_d14_window:
-        bridge_override = "convert_all"
 
     action = _decide_action(
         hard_day_count=len(hard_days),
@@ -719,20 +670,10 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     target_reason = ", ".join(reason_codes_list)
 
     # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
-    # D-14 must force ``convert_all`` regardless of any softer countdown signal.
-    if is_d14_window:
-        countdown_override = "convert_all"
-    else:
-        countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
+    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
     if countdown_override in {"convert_all", "deload_all"}:
-        if is_d14_window:
-            countdown_codes = _with_no_hard_sparring_d14_reason(reason_codes_list)
-            countdown_reason = (
-                "D-14 to D-0: coach-led technical only / managed freshness only / no hard sparring."
-            )
-        else:
-            countdown_codes = _with_final_week_cap_reason(reason_codes_list)
-            countdown_reason = ", ".join(countdown_codes)
+        countdown_codes = _with_final_week_cap_reason(reason_codes_list)
+        countdown_reason = ", ".join(countdown_codes)
         plan = [
             {
                 "day": day,
@@ -740,21 +681,15 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
                 "effective_load": target_load,
                 "reason_codes": list(countdown_codes),
                 "reason": countdown_reason,
-                "coach_note": (
-                    _d14_to_d0_no_hard_sparring_coach_note()
-                    if is_d14_window
-                    else _sparring_override_coach_note(days_until_fight, action)
-                ),
+                "coach_note": _sparring_override_coach_note(days_until_fight, action),
             }
             for day in hard_days
         ]
         return _finalize_plan(plan, hard_days=hard_days, protected_day=protected_day)
 
     # --- Final-week cap: keep only one hard day and downgrade the rest ---
-    # The D-14 window is strictly handled above; never let cap_one preserve a hard day here.
-    if not is_d14_window and (
-        countdown_override == "cap_one"
-        or (len(hard_days) >= 2 and _is_final_week_sparring_cap_active(week, athlete_snapshot))
+    if countdown_override == "cap_one" or (
+        len(hard_days) >= 2 and _is_final_week_sparring_cap_active(week, athlete_snapshot)
     ):
         countdown_codes = _with_final_week_cap_reason(reason_codes_list)
         countdown_reason = _final_week_cap_reason(countdown_codes)
@@ -867,10 +802,6 @@ def _sparring_override_coach_note(days_until_fight: Any, action: str) -> str:
             "reduced intensity to protect the cumulative load going into fight week."
         )
     return ""
-
-
-def _d14_to_d0_no_hard_sparring_coach_note() -> str:
-    return "D-14 to D-0: coach-led technical only / managed freshness only / no hard sparring."
 
 
 def _final_week_sparring_cap_coach_note() -> str:
