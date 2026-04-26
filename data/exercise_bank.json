@@ -699,7 +699,7 @@
     "category": "lower_body",
     "phases": [
       "GPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "rehab",
     "movement": "hinge",

@@ -1978,12 +1978,12 @@ def test_taper_final_week_cap_overrides_declared_hard_sparring_role_locks():
         if "final_week_sparring_cap" in item.get("hard_sparring_reason_codes", [])
     ]
 
-    assert [role["scheduled_day_hint"] for role in spar_roles] == ["Monday"]
-    assert week["effective_hard_sparring_days"] == ["Monday"]
+    assert spar_roles == []
+    assert week["effective_hard_sparring_days"] == []
     assert week["final_week_sparring_cap"]["active"] is True
     assert week["final_week_sparring_cap"]["max_effective_hard_sparring_days"] == 1
-    assert week["final_week_sparring_cap"]["capped_declared_hard_sparring_days"] == ["Wednesday", "Friday"]
-    assert [item["locked_day"] for item in capped_suppressed] == ["Wednesday", "Friday"]
+    assert week["final_week_sparring_cap"]["capped_declared_hard_sparring_days"] == ["Monday", "Wednesday", "Friday"]
+    assert [item["locked_day"] for item in capped_suppressed] == ["Monday", "Wednesday", "Friday"]
 
 
 def test_high_fatigue_compression_keeps_one_real_conditioning_signal_after_downgrade():

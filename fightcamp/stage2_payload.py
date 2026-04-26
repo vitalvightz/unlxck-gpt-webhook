@@ -1601,6 +1601,8 @@ def _build_week_by_week_progression(
 ) -> dict:
     week_entries: list[dict] = []
     week_index = 1
+    total_phase_days = sum(int((phase_briefs.get(phase) or {}).get("days") or 0) for phase in ("GPP", "SPP", "TAPER"))
+    projected_days_until_fight = max(0, total_phase_days)
 
     for phase in ("GPP", "SPP", "TAPER"):
         brief = phase_briefs.get(phase)
@@ -1617,13 +1619,21 @@ def _build_week_by_week_progression(
         guardrails = brief.get("selection_guardrails") or {}
 
         for phase_week_index, stage in enumerate(stage_templates, start=1):
+            span_days = day_spans[phase_week_index - 1] if phase_week_index - 1 < len(day_spans) else 0
+            projected_start = projected_days_until_fight if projected_days_until_fight >= 0 else 0
+            if span_days > 0:
+                projected_end = max(0, projected_start - span_days + 1)
+            else:
+                projected_end = projected_start
             week_entries.append(
                 {
                     "week_index": week_index,
                     "phase": phase,
                     "phase_week_index": phase_week_index,
                     "phase_week_total": slot_count,
-                    "span_days": day_spans[phase_week_index - 1] if phase_week_index - 1 < len(day_spans) else 0,
+                    "span_days": span_days,
+                    "projected_days_until_fight_start": projected_start,
+                    "projected_days_until_fight_end": projected_end,
                     "stage_key": stage["key"],
                     "stage_label": stage["label"],
                     "stage_objective": stage["objective"],
@@ -1646,6 +1656,8 @@ def _build_week_by_week_progression(
                 }
             )
             week_index += 1
+            if span_days > 0:
+                projected_days_until_fight = max(0, projected_start - span_days)
 
     return {
         "model": "adaptive_phase_overlay.v1",
@@ -3868,6 +3880,10 @@ def _build_weekly_role_map(
                 "phase": week_entry.get("phase"),
                 "stage_key": week_entry.get("stage_key"),
                 "week_index": week_entry.get("week_index"),
+                "phase_week_index": week_entry.get("phase_week_index"),
+                "phase_week_total": week_entry.get("phase_week_total"),
+                "projected_days_until_fight_start": week_entry.get("projected_days_until_fight_start"),
+                "projected_days_until_fight_end": week_entry.get("projected_days_until_fight_end"),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "session_roles": session_roles,
             },

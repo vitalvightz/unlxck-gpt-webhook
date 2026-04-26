@@ -323,6 +323,26 @@ def _standard_camp_final_two_weeks_override(week: dict[str, Any]) -> str | None:
     return "deload_all"
 
 
+def _enforce_no_hard_sparring_last_14_days_override(
+    week: dict[str, Any], athlete_snapshot: dict[str, Any]
+) -> str | None:
+    """Global safety guard: no hard sparring in D-14..D-0."""
+    end_day = week.get("projected_days_until_fight_end")
+    start_day = week.get("projected_days_until_fight_start")
+
+    if isinstance(end_day, int):
+        if 0 <= end_day <= 14:
+            return "convert_all"
+    if isinstance(start_day, int):
+        if 0 <= start_day <= 14:
+            return "convert_all"
+
+    days_until_fight = _days_until_fight_int(athlete_snapshot)
+    if days_until_fight is not None and 0 <= days_until_fight <= 14:
+        return "convert_all"
+    return None
+
+
 def _decide_action(
     *,
     hard_day_count: int,
@@ -337,7 +357,11 @@ def _decide_action(
         return None
 
     # --- Countdown-graduated override (deterministic, fires first) ---
-    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
+    countdown_override = _countdown_sparring_override(days_until_fight)
+    if bridge_override == "convert_all":
+        countdown_override = "convert_all"
+    elif countdown_override is None:
+        countdown_override = bridge_override
     if countdown_override == "convert_all":
         return "convert"
     if countdown_override == "deload_all":
@@ -632,9 +656,12 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     injury = _injury_assessment(athlete_snapshot)
     days_until_fight = athlete_snapshot.get("days_until_fight")
     protected_day = _pick_protected_hard_day(hard_days, week=week)
+    final_14_override = _enforce_no_hard_sparring_last_14_days_override(week, athlete_snapshot)
     bridge_override = _bridge_window_sparring_override(week, athlete_snapshot)
     if bridge_override is None:
         bridge_override = _standard_camp_final_two_weeks_override(week)
+    if final_14_override is not None:
+        bridge_override = final_14_override
 
     action = _decide_action(
         hard_day_count=len(hard_days),
@@ -670,7 +697,11 @@ def compute_hard_sparring_plan(*, week: dict[str, Any], athlete_snapshot: dict[s
     target_reason = ", ".join(reason_codes_list)
 
     # --- Countdown-graduated: convert_all / deload_all apply to EVERY day ---
-    countdown_override = _countdown_sparring_override(days_until_fight) or bridge_override
+    countdown_override = _countdown_sparring_override(days_until_fight)
+    if bridge_override == "convert_all":
+        countdown_override = "convert_all"
+    elif countdown_override is None:
+        countdown_override = bridge_override
     if countdown_override in {"convert_all", "deload_all"}:
         countdown_codes = _with_final_week_cap_reason(reason_codes_list)
         countdown_reason = ", ".join(countdown_codes)
