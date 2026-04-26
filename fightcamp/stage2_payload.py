@@ -4662,7 +4662,7 @@ def _apply_late_fight_dose_caps(
                 for slot in primary_sharpness[1:]:
                     _drop_slot(slot, "late_window_dose_cap")
                 if primary_sharpness:
-                    rehab_slots = []
+                    rehab_slots = rehab_slots[:1]
 
         if window in {"d4_to_d2", "d1"}:
             for slot in primary_sharpness:
