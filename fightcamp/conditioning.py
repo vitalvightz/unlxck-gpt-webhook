@@ -260,7 +260,7 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     short_work_full_rest = (
         work_max is not None
         and rest_max is not None
-        and 20 <= work_max <= 45
+        and work_max <= 45
         and rest_max >= 75
     )
 
