@@ -33,7 +33,7 @@
     ],
     "system": "aerobic",
     "modality": "sled",
-    "duration": "25–30min continuous",
+    "duration": "25\u201330min continuous",
     "intensity": "low",
     "tags": [
       "aerobic",
@@ -77,7 +77,7 @@
     ],
     "system": "anaerobic_alactic",
     "modality": "reaction",
-    "duration": "5–10min",
+    "duration": "5\u201310min",
     "intensity": "low",
     "tags": [
       "coordination",
@@ -97,7 +97,7 @@
     ],
     "system": "aerobic",
     "modality": "run",
-    "duration": "30–40min",
+    "duration": "30\u201340min",
     "intensity": "zone 2",
     "tags": [
       "aerobic",
@@ -1718,7 +1718,7 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "ORDER: Boxing → Takedown → Ground strikes. REST: 1min between. NO HEAD IMPACT"
+    "notes": "ORDER: Boxing \u2192 Takedown \u2192 Ground strikes. REST: 1min between. NO HEAD IMPACT"
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
@@ -1769,7 +1769,7 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "TEMPERATURE: 90-95°F. HYDRATION: +20% fluid intake pre/post"
+    "notes": "TEMPERATURE: 90-95\u00b0F. HYDRATION: +20% fluid intake pre/post"
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -3204,7 +3204,7 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "BOX HEIGHT: 12–18”. Focus on snap-down and fast reset."
+    "notes": "BOX HEIGHT: 12\u201318\u201d. Focus on snap-down and fast reset."
   },
   {
     "name": "Pogo Jump Series (Mini Bounce)",
@@ -3279,7 +3279,7 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Fast taps over 4–6” hurdles. Emphasize light contacts."
+    "notes": "Fast taps over 4\u20136\u201d hurdles. Emphasize light contacts."
   },
   {
     "name": "Med Ball Drop Catch to Jump",
@@ -3300,7 +3300,7 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Partner drops ball → athlete catches + jumps. Use 2–4kg."
+    "notes": "Partner drops ball \u2192 athlete catches + jumps. Use 2\u20134kg."
   },
   {
     "name": "Mini Box Depth Drop",
@@ -3318,7 +3318,7 @@
       "mech_lower_jump",
       "mech_cns_high"
     ],
-    "notes": "Height = 6–12”. Cue soft land + quick reset. No rebound."
+    "notes": "Height = 6\u201312\u201d. Cue soft land + quick reset. No rebound."
   },
   {
     "name": "Band-Assisted Jump Reset",
@@ -3492,7 +3492,7 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "Partner gives unpredictable toss cue. Ball: 3–5kg. Emphasize snap."
+    "notes": "Partner gives unpredictable toss cue. Ball: 3\u20135kg. Emphasize snap."
   },
   {
     "name": "Plyo Push-Up on Knees",
@@ -3533,7 +3533,12 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "late_windows": ["d21_to_d14", "d13_to_d8", "d7", "d6_to_d5"],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5"
+    ],
     "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed."
   },
   {
@@ -3554,7 +3559,7 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "notes": "Use 2–4kg ball. Minimize effort, maximize intent and speed."
+    "notes": "Use 2\u20134kg ball. Minimize effort, maximize intent and speed."
   },
   {
     "name": "Seated Med Ball Chest Pop",
@@ -3585,7 +3590,7 @@
       "SPP",
       "TAPER"
     ],
-    "system": "alactic",
+    "system": "ATP-PCr",
     "modality": "durability",
     "duration": "4x30s (forward/side/back)",
     "intensity": "moderate",
@@ -4739,5 +4744,254 @@
       "cns_freshness"
     ],
     "notes": "Passive heat recovery tool"
+  },
+  {
+    "name": "Double-End Bag Snap Singles",
+    "equipment": [
+      "double_end_bag"
+    ],
+    "equipment_note": "Requires: Double-End Bag",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "bag_work",
+    "duration": "3\u20135x10\u201320s with 45\u201390s rest",
+    "intensity": "moderate",
+    "tags": [
+      "neural_primer",
+      "coordination",
+      "reaction",
+      "low_impact",
+      "cns_freshness",
+      "skill_refinement",
+      "striking",
+      "counter_striker",
+      "distance_striker",
+      "boxer"
+    ],
+    "notes": "Fast single shots only. Keep rhythm and accuracy high. Optional D-1 only if coach-led and very brief.",
+    "late_windows": [
+      "d7",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Coach-Led Unresisted Theme Shadow",
+    "equipment": [],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "shadow_boxing",
+    "duration": "1\u20132 x 20\u201345s with full reset",
+    "intensity": "low",
+    "tags": [
+      "coordination",
+      "skill_refinement",
+      "cns_freshness",
+      "low_impact",
+      "speed",
+      "striking",
+      "counter_striker",
+      "pressure_fighter",
+      "distance_striker",
+      "boxer",
+      "kickboxing",
+      "mma"
+    ],
+    "notes": "Coach-cued theme shadow at relaxed speed. Best D-1 fallback when no equipment is available.",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Heavy-Bag Single-Shot Clusters",
+    "equipment": [
+      "heavy_bag"
+    ],
+    "equipment_note": "Requires: Heavy Bag",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "bag_work",
+    "duration": "4\u20136 clusters of 1\u20132 punches with 45\u201390s reset",
+    "intensity": "moderate",
+    "tags": [
+      "skill_refinement",
+      "coordination",
+      "low_volume",
+      "low_impact",
+      "striking",
+      "pressure_fighter",
+      "counter_striker",
+      "mech_ballistic",
+      "mech_trunk_rotation"
+    ],
+    "notes": "Single clean shots then reset to guard. Use D-3 only if hands and wrists are healthy.",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d4_to_d2"
+    ],
+    "contraindications": [
+      "skip if hand, wrist, or shoulder symptoms are active"
+    ]
+  },
+  {
+    "name": "Split-Step Ankle Snap Pogo",
+    "equipment": [],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "footwork",
+    "duration": "2\u20134 x 5\u20138s or 6\u201310 contacts, full rest",
+    "intensity": "low",
+    "tags": [
+      "neural_primer",
+      "reactive",
+      "low_impact",
+      "footwork",
+      "coordination",
+      "distance_striker",
+      "counter_striker",
+      "kicker",
+      "boxer",
+      "mech_reactive_rebound",
+      "mech_lower_jump"
+    ],
+    "notes": "Low-amplitude ankle snaps for quickness. Keep contacts crisp and brief.",
+    "late_windows": [
+      "d7",
+      "d4_to_d2",
+      "d1"
+    ],
+    "contraindications": [
+      "skip if ankle, achilles, or foot symptoms are active"
+    ]
+  },
+  {
+    "name": "Double-End Bag Precision Rhythm",
+    "equipment": [
+      "double_end_bag"
+    ],
+    "equipment_note": "Requires: Double-End Bag",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "ATP-PCr",
+    "modality": "bag_work",
+    "duration": "2\u20134 x 20\u201330s with full rest",
+    "intensity": "low",
+    "tags": [
+      "coordination",
+      "reaction",
+      "skill_refinement",
+      "cns_freshness",
+      "low_impact",
+      "counter_striker",
+      "distance_striker",
+      "striking"
+    ],
+    "notes": "Rhythm and timing rounds with sharp exits and guard recovery.",
+    "late_windows": [
+      "d7",
+      "d4_to_d2"
+    ]
+  },
+  {
+    "name": "Mobility Reset: Breathing + T-Spine + Ankle Flow",
+    "equipment": [],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "mobility",
+    "duration": "1\u20132 rounds, 5\u201310 min total",
+    "intensity": "low",
+    "tags": [
+      "recovery",
+      "mobility",
+      "low_impact",
+      "rehab_friendly",
+      "cns_freshness"
+    ],
+    "notes": "Breathing-led reset with thoracic and ankle flow for late-fight freshness.",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Scapular Wall Slide + Band External Rotation Reset",
+    "equipment": [
+      "wall",
+      "bands"
+    ],
+    "equipment_note": "Requires: Wall + Bands",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "mobility",
+    "duration": "1-2 x 6-10 reps",
+    "intensity": "low",
+    "tags": [
+      "rehab_friendly",
+      "shoulders",
+      "recovery",
+      "low_impact",
+      "cns_freshness",
+      "coordination"
+    ],
+    "notes": "Keep ribs down and shoulder blade smooth. Use to keep shoulder rhythm fresh.",
+    "late_windows": [
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ]
+  },
+  {
+    "name": "Wrist/Finger Activation Micro-Reset",
+    "equipment": [],
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "system": "aerobic",
+    "modality": "mobility",
+    "duration": "1-2 x 10-12 light reps or 30-45s",
+    "intensity": "low",
+    "tags": [
+      "rehab_friendly",
+      "grip",
+      "recovery",
+      "low_impact",
+      "cns_freshness",
+      "boxer",
+      "kickboxing",
+      "mma"
+    ],
+    "notes": "Light hand and wrist activation only. No fatigue. Good for D-3 and D-1.",
+    "late_windows": [
+      "d4_to_d2",
+      "d1"
+    ]
   }
 ]
