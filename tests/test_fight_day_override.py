@@ -145,6 +145,40 @@ def test_override_drops_fight_day_from_effective_hard_sparring_days():
     assert "monday" in final_week["effective_hard_sparring_days"]
 
 
+def test_override_scrubs_fight_day_even_when_not_declared_hard_sparring():
+    """Metadata cleanup must be unconditional, not gated on declared spar days."""
+    weekly_role_map = _weekly_role_map_with(
+        [[{"role_key": "primary_strength_day", "scheduled_day_hint": "friday"}]]
+    )
+    final_week = weekly_role_map["weeks"][-1]
+    final_week["declared_hard_sparring_days"] = ["monday", "wednesday"]
+    final_week["effective_hard_sparring_days"] = ["monday", "wednesday", "friday"]
+
+    athlete_model = {"plan_creation_weekday": "sunday", "days_until_fight": 26}
+    result = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+
+    final_week = result["weeks"][-1]
+    assert "friday" not in final_week["effective_hard_sparring_days"]
+
+
+def test_override_filters_hard_sparring_plan_entries_for_fight_day():
+    weekly_role_map = _weekly_role_map_with(
+        [[{"role_key": "hard_sparring_day", "scheduled_day_hint": "friday"}]]
+    )
+    final_week = weekly_role_map["weeks"][-1]
+    final_week["hard_sparring_plan"] = [
+        {"day": "monday", "status": "hard_as_planned"},
+        {"day": "friday", "status": "hard_as_planned"},
+    ]
+    athlete_model = {"plan_creation_weekday": "sunday", "days_until_fight": 26}
+
+    result = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
+
+    final_week = result["weeks"][-1]
+    assert all(entry["day"] != "friday" for entry in final_week["hard_sparring_plan"])
+    assert any(entry["day"] == "monday" for entry in final_week["hard_sparring_plan"])
+
+
 def test_override_does_not_touch_earlier_weeks():
     """Anti-hardcode: same weekday in a prior week is not suppressed."""
     weekly_role_map = _weekly_role_map_with(

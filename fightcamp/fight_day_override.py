@@ -139,18 +139,23 @@ def apply_fight_day_override_to_weekly_role_map(
         if isinstance(role, dict):
             role["session_index"] = idx
 
-    capped_hard = [
+    # Scrub the fight weekday from sparring metadata unconditionally so the
+    # LLM and downstream consumers cannot see the fight day labelled as a
+    # sparring day anywhere on the final week.
+    final_week["effective_hard_sparring_days"] = [
         day
-        for day in (final_week.get("declared_hard_sparring_days") or [])
-        if isinstance(day, str) and day.strip().lower() == fight_weekday
+        for day in (final_week.get("effective_hard_sparring_days") or [])
+        if isinstance(day, str) and day.strip().lower() != fight_weekday
     ]
-    if capped_hard:
-        effective_days = [
-            day
-            for day in (final_week.get("effective_hard_sparring_days") or [])
-            if isinstance(day, str) and day.strip().lower() != fight_weekday
+    if "hard_sparring_plan" in final_week:
+        final_week["hard_sparring_plan"] = [
+            entry
+            for entry in (final_week.get("hard_sparring_plan") or [])
+            if not (
+                isinstance(entry, dict)
+                and str(entry.get("day") or "").strip().lower() == fight_weekday
+            )
         ]
-        final_week["effective_hard_sparring_days"] = effective_days
 
     final_week["session_roles"] = new_roles
     final_week["suppressed_roles"] = suppressed_roles
