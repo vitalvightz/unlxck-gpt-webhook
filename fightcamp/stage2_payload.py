@@ -30,6 +30,7 @@ from .stage2_payload_late_fight import (
     _uses_late_fight_stage2_payload,
 )
 from .conditioning import athlete_facing_system_label
+from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
@@ -4172,6 +4173,7 @@ def build_planning_brief(
             fight_week_override,
             phase=late_fight_phase,
         )
+        weekly_role_map = apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
         session_sequence = _build_late_fight_session_sequence(days_until_fight, athlete_model)
         return {
             "schema_version": "planning_brief.v1",
@@ -4803,6 +4805,9 @@ If planning_brief.fight_week_override.active is true:
 — 2–3 days: one short primer max + one light mobility/recovery session.
 — 4–6 days: freshness-first, reduced volume, 1–2 sharpness sessions.
 Never chase fitness in these windows.
+
+RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
+If weekly_role_map.fight_day_override.active is true (or any week's fight_day_override.active is true), the day matching weekly_role_map.fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
 
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.

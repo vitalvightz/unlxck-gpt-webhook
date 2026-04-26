@@ -11,6 +11,7 @@ from .build_block import (
     html_to_pdf,
     upload_to_supabase,
 )
+from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT, compute_fight_weekday
 from .late_selector_windows import classify_late_selector_window, is_active_late_selector_window
 from .plan_pipeline_runtime import (
     PHASES,
@@ -24,6 +25,27 @@ from .plan_pipeline_runtime import (
 )
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
 from .stage2_payload import build_planning_brief, build_stage2_handoff_text, build_stage2_payload
+
+
+def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
+    days_until_fight = getattr(context.plan_input, "days_until_fight", None)
+    if not isinstance(days_until_fight, int):
+        return None
+
+    from . import stage2_planning_brief as stage2_planning_brief_module
+
+    athlete_timezone = getattr(context.plan_input, "athlete_timezone", "") or ""
+    try:
+        plan_creation_dt = stage2_planning_brief_module._athlete_calendar_now(
+            athlete_timezone,
+            now_utc=stage2_planning_brief_module._utc_now(),
+        )
+        plan_creation_weekday = plan_creation_dt.strftime("%A").lower()
+    except Exception:
+        plan_creation_weekday = None
+    return compute_fight_weekday(
+        {"plan_creation_weekday": plan_creation_weekday, "days_until_fight": days_until_fight}
+    )
 
 
 def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
@@ -44,6 +66,13 @@ def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
         )
     if not hard_days:
         lines.append("- **If no sparring is fixed this week** -> Add one clear fight-pace conditioning exposure before extra lifting.")
+
+    fight_weekday = _resolve_fight_weekday(context)
+    if fight_weekday:
+        lines.append(
+            f"- **Fight day ({fight_weekday.title()}):** {FIGHT_DAY_PROTOCOL_TEXT} "
+            "This overrides every weekday role, including any declared hard sparring day that lands on the fight date."
+        )
     lines.append("")
     return lines
 
