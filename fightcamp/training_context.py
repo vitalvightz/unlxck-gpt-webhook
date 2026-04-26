@@ -99,6 +99,7 @@ class TrainingContext:
     support_work_days: list[str] = field(default_factory=list)
     technical_skill_days: list[str] = field(default_factory=list)  # legacy fallback
     athlete_timezone: str = ""
+    next_fight_date: str = ""
     injuries_raw_text: str = ""
     parsed_injuries: list[dict[str, Any]] = field(default_factory=list)
     guided_injury: dict[str, Any] | None = None

@@ -11,6 +11,8 @@ from .build_block import (
     html_to_pdf,
     upload_to_supabase,
 )
+from .fight_date_utils import resolve_fight_weekday
+from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .late_selector_windows import classify_late_selector_window, is_active_late_selector_window
 from .plan_pipeline_runtime import (
     PHASES,
@@ -24,6 +26,24 @@ from .plan_pipeline_runtime import (
 )
 from .plan_rendering_utils import sanitize_phase_text, sanitize_stage_output
 from .stage2_payload import build_planning_brief, build_stage2_handoff_text, build_stage2_payload
+
+
+def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
+    """Prefer the actual fight_date over runtime-clock weekday arithmetic.
+
+    The renderer must not derive the fight weekday from ``_utc_now()`` — that
+    drifts every time the plan is re-rendered after the original creation day.
+    ``plan_input.next_fight_date`` is the only stable input.
+    """
+    fight_date = getattr(context.plan_input, "next_fight_date", "") or ""
+    if fight_date:
+        weekday = resolve_fight_weekday(fight_date=fight_date)
+        if weekday is not None:
+            return weekday
+    # Conservative fallback: only attempt offset arithmetic when days are known.
+    # We deliberately do NOT call _utc_now(); without a stable plan-creation
+    # weekday we return None rather than risk a drifted answer.
+    return None
 
 
 def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
@@ -44,6 +64,13 @@ def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
         )
     if not hard_days:
         lines.append("- **If no sparring is fixed this week** -> Add one clear fight-pace conditioning exposure before extra lifting.")
+
+    fight_weekday = _resolve_fight_weekday(context)
+    if fight_weekday:
+        lines.append(
+            f"- **Fight day ({fight_weekday.title()}):** {FIGHT_DAY_PROTOCOL_TEXT} "
+            "This overrides every weekday role, including any declared hard sparring day that lands on the fight date."
+        )
     lines.append("")
     return lines
 

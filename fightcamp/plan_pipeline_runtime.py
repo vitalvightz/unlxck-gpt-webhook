@@ -318,6 +318,7 @@ def build_runtime_context(
         support_work_days=getattr(plan_input, "support_work_days", []) or getattr(plan_input, "technical_skill_days", []),
         technical_skill_days=getattr(plan_input, "technical_skill_days", []),
         athlete_timezone=plan_input.athlete_timezone,
+        next_fight_date=plan_input.next_fight_date or "",
         injuries_raw_text=plan_input.injuries,
         parsed_injuries=[dict(entry) for entry in plan_input.parsed_injuries],
         guided_injury=guided_injury_dict,

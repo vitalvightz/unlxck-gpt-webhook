@@ -40,6 +40,7 @@ from .stage2_planning_brief import (
     PLANNING_DECISION_HIERARCHY,
 )
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
+from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 
 def _phase_progression_slot_count(brief: dict) -> int:
     weeks = int(brief.get("weeks") or 0)
@@ -1663,7 +1664,7 @@ def _build_weekly_role_map(
         }
         weeks[target_index] = week
 
-    return {
+    weekly_role_map = {
         "model": "session_role_overlay.v1",
         "source_of_truth": [
             "Session roles inherit week-by-week progression rather than replacing phase logic.",
@@ -1674,3 +1675,4 @@ def _build_weekly_role_map(
         "fight_week_override": fight_week_override or {"active": False},
         "weeks": weeks,
     }
+    return apply_fight_day_override_to_weekly_role_map(weekly_role_map, athlete_model)
