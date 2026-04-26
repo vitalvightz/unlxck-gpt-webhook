@@ -2,18 +2,27 @@
 
 Covers:
 - The shared helper that clamps the final week of a weekly role map.
+- ``fight_date`` is the primary D-0 source; the offset fallback only fires
+  when no fight date is available.
 - Integration through the normal-camp ``_build_weekly_role_map`` so a declared
   hard-sparring weekday that lands on the fight date renders as the fight-day
   protocol, not as a coach-led boxing session.
 - Anti-hardcode regression: the same weekday one week earlier is NOT
   suppressed.
 - Multiple fight weekdays (Friday / Saturday / Wednesday) all clamp correctly.
+- Saturday hard-sparring collision: declared spar days include Saturday and
+  the fight is on Saturday.
+- Deterministic rendered text proves the fight-day line is emitted verbatim.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from fightcamp.fight_date_utils import (
+    fight_weekday_from_fight_date,
+    resolve_fight_weekday,
+)
 from fightcamp.fight_day_override import (
     FIGHT_DAY_PROTOCOL_TEXT,
     apply_fight_day_override_to_weekly_role_map,
@@ -355,6 +364,129 @@ def test_normal_camp_final_week_clamps_fight_day(
         and role.get("scheduled_day_hint") == fight_weekday
         for role in final_week["session_roles"]
     )
+
+
+def test_fight_date_overrides_offset_arithmetic_when_both_present():
+    """fight_date wins even if days_until_fight + plan_creation_weekday disagree."""
+    # Offset alone would say Wednesday (sunday + 24 days mod 7 = wednesday)
+    # but fight_date says Saturday — fight_date must win.
+    assert resolve_fight_weekday(
+        fight_date="2026-05-23",  # Saturday
+        plan_creation_weekday="sunday",
+        days_until_fight=24,
+    ) == "saturday"
+
+
+def test_compute_fight_weekday_prefers_fight_date_in_athlete_model():
+    athlete = {
+        "fight_date": "2026-05-23",  # Saturday
+        "plan_creation_weekday": "sunday",
+        "days_until_fight": 24,  # would yield wednesday under offset arithmetic
+    }
+    assert compute_fight_weekday(athlete) == "saturday"
+
+
+def test_compute_fight_weekday_accepts_next_fight_date_alias():
+    athlete = {"next_fight_date": "2026-05-22"}  # Friday
+    assert compute_fight_weekday(athlete) == "friday"
+
+
+def test_compute_fight_weekday_falls_back_when_fight_date_missing():
+    athlete = {"plan_creation_weekday": "sunday", "days_until_fight": 26}
+    assert compute_fight_weekday(athlete) == "friday"
+
+
+def test_fight_weekday_from_fight_date_handles_iso_strings_and_dates():
+    from datetime import date as _date, datetime as _datetime
+
+    assert fight_weekday_from_fight_date("2026-05-22") == "friday"
+    assert fight_weekday_from_fight_date(_date(2026, 5, 23)) == "saturday"
+    assert fight_weekday_from_fight_date(_datetime(2026, 4, 29, 12, 0)) == "wednesday"
+    assert fight_weekday_from_fight_date("not-a-date") is None
+    assert fight_weekday_from_fight_date(None) is None
+
+
+def test_saturday_hard_sparring_collision_is_clamped_to_protocol():
+    """Declared hard sparring on Saturday + fight on Saturday → protocol."""
+    from fightcamp.stage2_role_map import _build_weekly_role_map
+
+    athlete_model = _normal_camp_athlete_model(
+        plan_creation_weekday="sunday",
+        days_until_fight=27,  # Saturday
+        hard_sparring_days=["tuesday", "thursday", "saturday"],
+    )
+    athlete_model["training_days"] = [
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+    ]
+    athlete_model["fight_date"] = "2026-05-23"  # Saturday
+    progression = _minimal_progression(weeks=4)
+
+    weekly_role_map = _build_weekly_role_map(
+        athlete_model,
+        progression,
+        {"key": "general_fight_readiness"},
+        fight_week_override={"active": False},
+    )
+
+    final_week = weekly_role_map["weeks"][-1]
+    saturday_roles = [
+        role for role in final_week["session_roles"]
+        if role.get("scheduled_day_hint") == "saturday"
+    ]
+    assert saturday_roles, "Saturday must surface as a slot on the fight week"
+    assert all(role["role_key"] == "fight_day_protocol" for role in saturday_roles)
+    assert all(role["role_key"] != "hard_sparring_day" for role in saturday_roles)
+    # No Saturday hard sparring in metadata
+    assert "saturday" not in final_week["effective_hard_sparring_days"]
+
+
+def test_rendered_plan_text_contains_fight_day_protocol_line():
+    """Deterministic rendered-text proof: 'Fight day (Friday): ...protocol' appears."""
+    from types import SimpleNamespace
+
+    from fightcamp.plan_pipeline_rendering import _sparring_adjustment_lines
+
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            hard_sparring_days=["monday", "wednesday", "friday"],
+            support_work_days=["tuesday"],
+            next_fight_date="2026-05-22",  # Friday
+            days_until_fight=26,
+            athlete_timezone="UTC",
+        ),
+    )
+
+    lines = _sparring_adjustment_lines(context)
+    text = "\n".join(lines)
+
+    assert "Fight day (Friday)" in text
+    assert FIGHT_DAY_PROTOCOL_TEXT in text
+    # Sanity: the canonical "Coach-led boxing session" string must NOT appear
+    # next to the Friday tag in this athlete-facing summary.
+    assert "Friday — Coach-led boxing session" not in text
+
+
+def test_rendered_plan_text_omits_fight_day_line_when_date_unknown():
+    """Without a fight_date the renderer must NOT guess from the wall clock."""
+    from types import SimpleNamespace
+
+    from fightcamp.plan_pipeline_rendering import _sparring_adjustment_lines
+
+    context = SimpleNamespace(
+        plan_input=SimpleNamespace(
+            hard_sparring_days=["monday"],
+            support_work_days=[],
+            next_fight_date="",
+            days_until_fight=26,
+            athlete_timezone="UTC",
+        ),
+    )
+
+    lines = _sparring_adjustment_lines(context)
+    text = "\n".join(lines)
+
+    # No drift-prone fight-day line when fight_date is unavailable.
+    assert "Fight day" not in text
 
 
 def test_normal_camp_prior_week_keeps_hard_sparring_on_same_weekday():

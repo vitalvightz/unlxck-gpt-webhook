@@ -624,6 +624,8 @@ def _build_athlete_model(
         "rounds_format": rounds_format,
         "camp_length_weeks": camp_length_weeks,
         "days_until_fight": training_context.days_until_fight,
+        "fight_date": getattr(training_context, "next_fight_date", "") or "",
+        "next_fight_date": getattr(training_context, "next_fight_date", "") or "",
         "fatigue": training_context.fatigue,
         "age": training_context.age,
         "weight_cut_risk": training_context.weight_cut_risk,

@@ -5,13 +5,15 @@ week can lock the fight weekday as a declared ``hard_sparring_day`` slot. That
 caused the fight day to render as a coach-led boxing session rather than the
 fight-day protocol.
 
-This module provides the single authoritative D-0 override: given an athlete
-model that carries ``plan_creation_weekday`` and ``days_until_fight``, it
-computes the fight weekday and rewrites the matching session role on the final
-week of the weekly role map into a ``fight_day_protocol`` placeholder.
+This module provides the single authoritative D-0 override. The fight weekday
+is resolved with strict priority:
 
-The override is unconditional on D-0 — it suppresses any session role that
-falls on the fight weekday, regardless of role key, so future role types remain
+1. ``fight_date`` (the strongest signal — the actual calendar date).
+2. ``plan_creation_weekday + days_until_fight`` (legacy fallback only).
+
+Once resolved, the override rewrites the matching session role on the final
+week of the weekly role map into a ``fight_day_protocol`` placeholder. It is
+unconditional on D-0 — every role type is suppressed, so future role keys are
 covered without further changes.
 """
 
@@ -19,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .stage2_payload_late_fight import _fight_weekday_from_context
+from .fight_date_utils import resolve_fight_weekday
 
 
 FIGHT_DAY_PROTOCOL_TEXT = (
@@ -28,13 +30,30 @@ FIGHT_DAY_PROTOCOL_TEXT = (
 )
 
 
+_FIGHT_DATE_KEYS = ("fight_date", "next_fight_date")
+
+
+def _athlete_fight_date(athlete_model: dict) -> Any:
+    for key in _FIGHT_DATE_KEYS:
+        value = athlete_model.get(key)
+        if value:
+            return value
+    return None
+
+
 def compute_fight_weekday(athlete_model: dict | None) -> str | None:
-    """Return the lowercase fight weekday name, or None when undecidable."""
+    """Return the lowercase fight weekday name, or None when undecidable.
+
+    Always prefers ``fight_date`` (or ``next_fight_date``) when present.
+    Falls back to ``plan_creation_weekday + days_until_fight`` only when no
+    fight date is available.
+    """
     if not isinstance(athlete_model, dict):
         return None
-    return _fight_weekday_from_context(
-        athlete_model.get("plan_creation_weekday"),
-        athlete_model.get("days_until_fight"),
+    return resolve_fight_weekday(
+        fight_date=_athlete_fight_date(athlete_model),
+        plan_creation_weekday=athlete_model.get("plan_creation_weekday"),
+        days_until_fight=athlete_model.get("days_until_fight"),
     )
 
 

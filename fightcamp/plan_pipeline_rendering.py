@@ -11,7 +11,8 @@ from .build_block import (
     html_to_pdf,
     upload_to_supabase,
 )
-from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT, compute_fight_weekday
+from .fight_date_utils import resolve_fight_weekday
+from .fight_day_override import FIGHT_DAY_PROTOCOL_TEXT
 from .late_selector_windows import classify_late_selector_window, is_active_late_selector_window
 from .plan_pipeline_runtime import (
     PHASES,
@@ -28,24 +29,21 @@ from .stage2_payload import build_planning_brief, build_stage2_handoff_text, bui
 
 
 def _resolve_fight_weekday(context: PlanRuntimeContext) -> str | None:
-    days_until_fight = getattr(context.plan_input, "days_until_fight", None)
-    if not isinstance(days_until_fight, int):
-        return None
+    """Prefer the actual fight_date over runtime-clock weekday arithmetic.
 
-    from . import stage2_planning_brief as stage2_planning_brief_module
-
-    athlete_timezone = getattr(context.plan_input, "athlete_timezone", "") or ""
-    try:
-        plan_creation_dt = stage2_planning_brief_module._athlete_calendar_now(
-            athlete_timezone,
-            now_utc=stage2_planning_brief_module._utc_now(),
-        )
-        plan_creation_weekday = plan_creation_dt.strftime("%A").lower()
-    except Exception:
-        plan_creation_weekday = None
-    return compute_fight_weekday(
-        {"plan_creation_weekday": plan_creation_weekday, "days_until_fight": days_until_fight}
-    )
+    The renderer must not derive the fight weekday from ``_utc_now()`` — that
+    drifts every time the plan is re-rendered after the original creation day.
+    ``plan_input.next_fight_date`` is the only stable input.
+    """
+    fight_date = getattr(context.plan_input, "next_fight_date", "") or ""
+    if fight_date:
+        weekday = resolve_fight_weekday(fight_date=fight_date)
+        if weekday is not None:
+            return weekday
+    # Conservative fallback: only attempt offset arithmetic when days are known.
+    # We deliberately do NOT call _utc_now(); without a stable plan-creation
+    # weekday we return None rather than risk a drifted answer.
+    return None
 
 
 def _sparring_adjustment_lines(context: PlanRuntimeContext) -> list[str]:
