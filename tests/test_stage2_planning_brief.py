@@ -1185,6 +1185,69 @@ def test_weekly_role_map_fight_week_override_only_modifies_relevant_week():
 
 
 
+def test_weekly_role_map_carries_projected_days_until_fight_window():
+    athlete_model = {
+        "sport": "boxing",
+        "status": "amateur",
+        "rounds_format": "3x3",
+        "camp_length_weeks": 3,
+        "days_until_fight": 21,
+        "training_preference": "balanced",
+        "technical_styles": ["boxing"],
+        "tactical_styles": ["pressure_fighter"],
+        "key_goals": ["conditioning"],
+        "weaknesses": ["conditioning"],
+        "equipment": ["air_bike"],
+        "injuries": [],
+        "weight_cut_risk": False,
+        "weight_cut_pct": 0.0,
+        "readiness_flags": [],
+        "training_days": ["Mon", "Tue", "Wed", "Thu", "Fri"],
+        "hard_sparring_days": ["Mon", "Thu"],
+        "support_work_days": ["Tue"],
+    }
+    week_by_week_progression = {
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "GPP",
+                "stage_key": "foundation_restore",
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "span_days": 7,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            },
+            {
+                "week_index": 2,
+                "phase": "SPP",
+                "stage_key": "specific_density_build",
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "span_days": 7,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            },
+            {
+                "week_index": 3,
+                "phase": "TAPER",
+                "stage_key": "fight_week_survival_rhythm",
+                "phase_week_index": 1,
+                "phase_week_total": 1,
+                "span_days": 7,
+                "session_counts": {"strength": 1, "conditioning": 1, "recovery": 1},
+            },
+        ]
+    }
+    limiter_profile = {"key": "boxing_quality_under_load"}
+
+    mapped = _build_weekly_role_map(athlete_model, week_by_week_progression, limiter_profile)
+    windows = [
+        (week["projected_days_until_fight_start"], week["projected_days_until_fight_end"])
+        for week in mapped["weeks"]
+    ]
+
+    assert windows == [(21, 15), (14, 8), (7, 1)]
+
+
 def test_weekly_role_map_compresses_to_sharpness_and_freshness_for_short_notice():
     brief = _build_progression_brief(
         {

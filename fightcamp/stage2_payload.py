@@ -3737,8 +3737,17 @@ def _build_weekly_role_map(
 ) -> dict:
     weeks: list[dict] = []
     limiter_key = limiter_profile.get("key", "general_fight_readiness")
+    progression_weeks = list(week_by_week_progression.get("weeks", []))
+    projected_days_until_fight_start: list[int] = [0] * len(progression_weeks)
+    running_days = 0
+    for idx in range(len(progression_weeks) - 1, -1, -1):
+        running_days += max(0, int(progression_weeks[idx].get("span_days") or 0))
+        projected_days_until_fight_start[idx] = running_days
 
-    for week_entry in week_by_week_progression.get("weeks", []):
+    for week_idx, week_entry in enumerate(progression_weeks):
+        projected_start_days = int(projected_days_until_fight_start[week_idx] or 0)
+        span_days = max(0, int(week_entry.get("span_days") or 0))
+        projected_end_days = max(0, projected_start_days - span_days + 1) if span_days > 0 else projected_start_days
         session_counts = dict(week_entry.get("session_counts") or {})
         conditioning_sequence = list(week_entry.get("conditioning_sequence", [])) or ["aerobic", "glycolytic", "alactic"]
         sport_key = _athlete_sport_key(athlete_model)
@@ -3868,6 +3877,9 @@ def _build_weekly_role_map(
                 "phase": week_entry.get("phase"),
                 "stage_key": week_entry.get("stage_key"),
                 "week_index": week_entry.get("week_index"),
+                "phase_week_index": week_entry.get("phase_week_index"),
+                "phase_week_total": week_entry.get("phase_week_total"),
+                "projected_days_until_fight_start": projected_start_days,
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "session_roles": session_roles,
             },
@@ -3947,6 +3959,8 @@ def _build_weekly_role_map(
                 "declared_training_days": _ordered_weekdays(_clean_list(athlete_model.get("training_days", []))),
                 "declared_hard_sparring_days": _ordered_weekdays(_clean_list(athlete_model.get("hard_sparring_days", []))),
                 "declared_support_work_days": _ordered_weekdays(_clean_list(athlete_model.get("support_work_days", athlete_model.get("technical_skill_days", [])))),
+                "projected_days_until_fight_start": projected_start_days,
+                "projected_days_until_fight_end": projected_end_days,
                 "hard_sparring_plan": hard_sparring_plan,
                 "effective_hard_sparring_days": list(effective_days),
                 "final_week_sparring_cap": _final_week_sparring_cap_summary(hard_sparring_plan, list(effective_days)),
