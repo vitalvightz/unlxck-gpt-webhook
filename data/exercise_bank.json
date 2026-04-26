@@ -5299,6 +5299,9 @@
     ],
     "tactical_styles": [
       "pressure_fighter",
+      "counter_striker",
+      "distance_striker",
+      "scrambler",
       "clinch_fighter",
       "grappler",
       "wrestler",
