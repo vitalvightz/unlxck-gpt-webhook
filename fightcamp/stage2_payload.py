@@ -4250,6 +4250,7 @@ def build_planning_brief(
     rewrite_guidance: dict,
 ) -> dict:
     athlete_model = dict(athlete_model)
+    rewrite_guidance = _append_render_guard_writing_rules(rewrite_guidance, athlete_model=athlete_model, days_until_fight=athlete_model.get("days_until_fight"))
     athlete_model["compressed_priorities"] = athlete_model.get("compressed_priorities") or _compress_short_camp_priorities(
         athlete_model
     )
@@ -4926,10 +4927,10 @@ If weekly_role_map.fight_day_override.active is true (or any week's fight_day_ov
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
 Active injury: lead with constraints, substitutions, and stop rules — not optional language.
-* If athlete_model.has_active_injury is false, do not render rehab/prehab/injury-specific sections.
-* Generic prep must be labelled Activation, Movement Prep, Mobility, Warm-up, or Reset.
-* In late-fight countdown mode, do not output standalone GPP/SPP/TAPER toolbox/reference sections.
-* Candidate pools are internal and should not become athlete-facing menus.
+* If rewrite_guidance.render_guards.suppress_rehab_headings == true, do not render sections/headings titled: Rehab, Prehab, Brief Rehab, Injury Rehab, Prepare / brief rehab, or Rehab / Mobility.
+* If rewrite_guidance.render_guards.suppress_rehab_headings == true, generic low-load work may only be labelled: Activation, Movement Prep, Mobility, Warm-up, or Reset — never as rehab/prehab.
+* If rewrite_guidance.render_guards.suppress_phase_toolbox_sections == true, do not render standalone: GPP toolbox/reference sections, SPP toolbox/reference sections, TAPER toolbox/reference sections, “key drills to keep in your toolbox”, “available options”, “SPP tools”, “GPP tools”, or “phase reference menus”.
+* Candidate pools are internal selection data only and must not become athlete-facing menus.
 Both flags narrow training tolerance and must shape the output structurally.
 When injury wording is vague or underspecified, use INJURY CONTEXT to infer the safest high-probability interpretation. Never override hard restrictions or triage blocks, and prefer conservative substitutions and wording when detail is incomplete.
 
@@ -4978,7 +4979,7 @@ Render every rehab item as:
 If a drill repeats across sessions, the Why today must make the changed role explicit. Use precise mechanism wording — not vague body-part labels. Before keeping any rehab item: confirm it solves a specific issue, belongs on this day, and does not duplicate a same-role drill already used this week. Drop it if it fails two of three.
 
 RULE 13 — LATE-FIGHT LABEL DISCIPLINE
-Applies when payload_mode is bridge_compression_payload, pre_fight_compressed_payload, late_fight_week_payload, late_fight_transition_payload, late_fight_session_payload, pre_fight_day_payload, or fight_day_protocol_payload.
+Applies when rewrite_guidance.render_guards.suppress_phase_toolbox_sections == true.
 
 Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
 

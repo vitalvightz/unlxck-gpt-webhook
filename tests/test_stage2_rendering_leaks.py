@@ -69,3 +69,30 @@ def test_render_guard_flags_triggering():
     )
     assert guards["suppress_rehab_headings"] is False
     assert guards["suppress_phase_toolbox_sections"] is False
+
+def test_build_planning_brief_includes_render_guards():
+    from fightcamp.stage2_payload import build_planning_brief
+    
+    athlete_model = {
+        "has_active_injury": False,
+        "days_until_fight": 5  # Should trigger late fight guards
+    }
+    
+    brief = build_planning_brief(
+        athlete_model=athlete_model,
+        restrictions=[],
+        phase_briefs={},
+        candidate_pools={},
+        omission_ledger={},
+        rewrite_guidance={"writing_rules": []}
+    )
+    
+    decision_rules = brief.get("decision_rules", {})
+    assert "render_guards" in decision_rules
+    assert decision_rules["render_guards"]["suppress_rehab_headings"] is True
+    assert decision_rules["render_guards"]["suppress_phase_toolbox_sections"] is True
+    
+    # Verify writing rules were appended
+    writing_rules = decision_rules.get("writing_rules", [])
+    assert any("do not render any section titled Rehab" in r for r in writing_rules)
+    assert any("do not render standalone GPP, SPP, or TAPER toolbox" in r for r in writing_rules)
