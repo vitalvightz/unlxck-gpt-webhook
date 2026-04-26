@@ -949,9 +949,6 @@ def _build_phase_selection_guardrails(phase: str, training_context: TrainingCont
             "During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left."
         )
     return guardrails
-        guardrails["notes"].append("During active weight cut, treat glycolytic work as optional unless it is the only compliant fight-specific slot left.")
-    return guardrails
-
 
 def _priority_value(priority: str) -> int:
     return {"critical": 3, "high": 2, "medium": 1, "low": 0}.get(priority, 1)
@@ -1830,6 +1827,8 @@ def _conditioning_role_key(phase: str, system: str, limiter_key: str) -> str:
     if phase == "SPP":
 def _role_selection_rule(role_key: str, category: str, system: str | None = None) -> str:
     if category == "strength":
+def _role_selection_rule(role_key: str, category: str, system: str | None = None) -> str:
+    if category == "strength":
         if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
             return "Use the highest-priority compliant strength slot first."
         return "Use a remaining compliant strength slot with lower interference cost than the main strength day."
@@ -1845,40 +1844,6 @@ def _role_selection_rule(role_key: str, category: str, system: str | None = None
         "Use recovery, activation, mobility, or movement-prep support. "
         "Use rehab slots only when athlete_model.has_active_injury is true."
     )
-    if category == "strength":
-        if role_key in {"primary_strength_day", "structural_strength_day", "neural_plus_strength_day", "neural_primer_day"}:
-            return "Use the highest-priority compliant strength slot first."
-        return "Use a remaining compliant strength slot with lower interference cost than the main strength day."
-    if category == "technical":
-        return "Prefer technical rhythm touches that stay low-cost, non-fatiguing, and timing-led."
-    if category == "conditioning":
-        if system == "aerobic":
-            return "Prefer compliant aerobic or low-damage conditioning slots first."
-        if system == "glycolytic":
-            return "Prefer compliant glycolytic slots only when phase guardrails still allow density work."
-        return "Prefer compliant alactic slots that preserve speed and sharpness."
-    return "Use rehab slots first; if rehab is absent, keep this day recovery-only."
-
-
-def _role_governance(
-    week_entry: dict,
-    *,
-    category: str,
-    role_key: str,
-    athlete_model: dict,
-    system: str | None = None,
-    idx: int = 0,
-) -> dict:
-    phase = str(week_entry.get("phase", "")).upper()
-    resolved_rule_state = dict(week_entry.get("resolved_rule_state", {}))
-    must_keep = set(_clean_list(resolved_rule_state.get("must_keep", week_entry.get("must_keep", []))))
-    drop_order = _clean_list(resolved_rule_state.get("drop_order_if_thin", week_entry.get("drop_order_if_thin", [])))
-    cut_first_text = str(
-        resolved_rule_state.get("cut_first_when_collisions_rise", week_entry.get("cut_first_when_collisions_rise", ""))
-    ).lower()
-    highest_collision_load = str(week_entry.get("highest_collision_sport_load", "")).strip()
-    tissue_protection_priority = bool(resolved_rule_state.get("tissue_protection_priority"))
-    freshness_priority = bool(resolved_rule_state.get("freshness_priority"))
     sport_load_owns_density = bool(resolved_rule_state.get("sport_load_owns_density"))
 
     hard_suppression: list[str] = []
@@ -4754,8 +4719,6 @@ def build_stage2_payload(
     rehab_blocks: dict[str, str],
 ) -> dict:
     late_window = classify_late_selector_window(training_context.days_until_fight)
-    candidate_pools: dict[str, dict] = {}
-    late_window = classify_late_selector_window(training_context.days_until_fight)
     athlete_model = _build_athlete_model(
         training_context=training_context,
         sport=mapped_format,
@@ -4778,12 +4741,6 @@ def build_stage2_payload(
             ),
             "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase) if has_active_injury else [],
         }
-        record=record,
-        rounds_format=rounds_format,
-        camp_length_weeks=camp_len,
-        short_notice=short_notice,
-    )
-    athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
     injury_context = _build_injury_context(athlete_model=athlete_model)
     serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
@@ -4793,8 +4750,8 @@ def build_stage2_payload(
         phase_weeks=phase_weeks,
     )
     rewrite_guidance = {
-        "selection_rules": [
             "Prefer selected items first only if they remain strong and compliant.",
+        "selection_rules": [
             "If a selected item is removed, replace with the strongest compliant same-role option first.",
             "Do not let support drills take over anchor slots when stronger compliant options exist.",
             "Treat option mechanical_risk_tags plus restriction blocked_patterns/mechanical_equivalents as hard clues for mechanically equivalent matches.",
@@ -4929,7 +4886,6 @@ RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
 If weekly_role_map.fight_day_override.active is true (or any week's fight_day_override.active is true), the day matching weekly_role_map.fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
 
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
-RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
 Active injury: If athlete_model.has_active_injury is true, lead with constraints, substitutions, and stop rules — not optional language. If athlete_model.has_active_injury is false, do not render rehab sections or prehab/injury-specific advice.
 Both flags narrow training tolerance and must shape the output structurally.
@@ -4950,7 +4906,6 @@ Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_
 Hard sparring days are gym/coach-owned. The app must not prescribe or lead the sparring itself. Render the day minimally as "Coach-led boxing session" (or the equivalent sport-specific label such as "Coach-led MMA session" or "Coach-led Muay Thai session"). Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never "6-8 x 3-min rounds at coach-set intensity", "X rounds technical sparring", "live rounds at moderate intensity"). After the session label, emit exactly one short app-owned note in this form: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume — the coach owns those. Anything more than the label plus that one note is a violation of this rule.
 Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
 Keep every active week present and structurally complete, including late-camp weeks.
-If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
 If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve one anchor if available, and allow at most one low-load support day.
 In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
