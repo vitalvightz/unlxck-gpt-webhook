@@ -5428,6 +5428,7 @@
       "low_impact",
       "low_eccentric",
       "cns_freshness",
+      "scrambler",
       "pressure_fighter",
       "kicker",
       "mech_lower_lunge",
