@@ -234,8 +234,6 @@ _TEXT_DERIVED_RESTRICTIONS = {
 }
 
 
-
-
 def _restriction_item_text(item: dict) -> str:
     fields = [
         item.get("name", ""),
@@ -403,6 +401,7 @@ def _serialize_restrictions(restrictions: list[dict]) -> list[dict]:
         }
         serialized.append({key: value for key, value in row.items() if value not in (None, "", [])})
     return serialized
+
 
 def _derive_readiness_flags(
     *,
@@ -612,6 +611,15 @@ def _build_athlete_model(
         training_context.weight_cut_pct,
         training_context.days_until_fight,
     )
+    
+    # PATCH REQUIREMENT 1: active injury boolean
+    has_active_injury = bool(
+        training_context.injuries
+        or getattr(training_context, "parsed_injuries", None)
+        or getattr(training_context, "guided_injury", None)
+        or getattr(training_context, "injury_restrictions", None)
+    )
+
     athlete_model = {
         "sport": sport,
         "status": training_context.status,
@@ -649,6 +657,7 @@ def _build_athlete_model(
         "parsed_injuries": [dict(item) for item in training_context.parsed_injuries],
         "guided_injury": dict(training_context.guided_injury) if training_context.guided_injury else None,
         "injury_restrictions": [dict(item) for item in training_context.injury_restrictions],
+        "has_active_injury": has_active_injury,
         "short_notice": short_notice,
         "plan_creation_weekday": plan_creation_dt.strftime("%A").lower(),
         "plan_creation_weekday_basis": "athlete_local_weekday",
