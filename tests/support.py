@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -13,6 +14,8 @@ import api.app as app_module
 from api.app import create_app
 from api.auth import AuthenticatedUser
 from api.models import PlanRequest, ProfileUpdateRequest
+
+os.environ.setdefault("APP_GENERATION_SCHEDULER", "fastapi")
 
 
 def _now() -> str:
