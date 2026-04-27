@@ -16,6 +16,7 @@ import type {
 
 const EXPLICIT_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? null;
 const LOCAL_API_BASE_URL = "http://127.0.0.1:8000";
+const DEFAULT_API_REQUEST_TIMEOUT_MS = 60_000;
 
 function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
@@ -54,6 +55,19 @@ export class ApiError extends Error {
 const RETRYABLE_GATEWAY_STATUSES = new Set([502, 503, 504]);
 const RETRYABLE_NETWORK_MESSAGE = "Unable to reach the server. Please check your connection and try again.";
 const meRequestsByToken = new Map<string, Promise<MeResponse>>();
+const meUpdatesByToken = new Map<string, Promise<MeResponse>>();
+
+function getApiRequestTimeoutMs(): number {
+  const rawValue = process.env.NEXT_PUBLIC_API_REQUEST_TIMEOUT_MS?.trim();
+  if (!rawValue) {
+    return DEFAULT_API_REQUEST_TIMEOUT_MS;
+  }
+  const parsed = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_API_REQUEST_TIMEOUT_MS;
+  }
+  return Math.max(0, parsed);
+}
 
 function looksLikeHtmlErrorPage(contentType: string, body: string): boolean {
   return contentType.includes("text/html") || /^<!doctype html/i.test(body);
@@ -147,6 +161,16 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
   const method = init?.method ?? "GET";
   const url = `${getApiBaseUrl()}${path}`;
   const startedAt = Date.now();
+  const timeoutMs = getApiRequestTimeoutMs();
+  const abortController = new AbortController();
+  let timeoutId: ReturnType<typeof globalThis.setTimeout> | null = null;
+  const abortFromCaller = () => abortController.abort();
+
+  if (init?.signal?.aborted) {
+    abortController.abort();
+  } else {
+    init?.signal?.addEventListener("abort", abortFromCaller, { once: true });
+  }
 
   console.info("[api] request:start", {
     path,
@@ -159,10 +183,14 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 
   let response: Response;
   try {
+    if (timeoutMs > 0) {
+      timeoutId = globalThis.setTimeout(() => abortController.abort(), timeoutMs);
+    }
     response = await fetch(url, {
       ...init,
       cache: "no-store",
       headers,
+      signal: abortController.signal,
     });
   } catch (networkError) {
     const durationMs = Date.now() - startedAt;
@@ -180,6 +208,11 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
     throw new Error(RETRYABLE_NETWORK_MESSAGE, {
       cause: networkError,
     });
+  } finally {
+    if (timeoutId) {
+      globalThis.clearTimeout(timeoutId);
+    }
+    init?.signal?.removeEventListener("abort", abortFromCaller);
   }
 
   const durationMs = Date.now() - startedAt;
@@ -287,6 +320,11 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 }
 
 export function getMe(token: string): Promise<MeResponse> {
+  const activeUpdate = meUpdatesByToken.get(token);
+  if (activeUpdate) {
+    return activeUpdate;
+  }
+
   const activeRequest = meRequestsByToken.get(token);
   if (activeRequest) {
     return activeRequest;
@@ -303,11 +341,18 @@ export function getMe(token: string): Promise<MeResponse> {
 
 export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<MeResponse> {
   meRequestsByToken.delete(token);
-  return readJson<MeResponse>("/api/me", {
+  const request = readJson<MeResponse>("/api/me", {
     method: "PUT",
     token,
     body: JSON.stringify(payload),
+  }).finally(() => {
+    if (meUpdatesByToken.get(token) === request) {
+      meUpdatesByToken.delete(token);
+    }
+    meRequestsByToken.delete(token);
   });
+  meUpdatesByToken.set(token, request);
+  return request;
 }
 
 export function getNutritionCurrent(token: string): Promise<NutritionWorkspaceState> {
