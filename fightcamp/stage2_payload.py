@@ -4361,55 +4361,55 @@ def build_stage2_payload(
 
 STAGE2_FINALIZER_PROMPT = """You are Stage 2 (planner/finalizer).
 
-Input = PLANNING BRIEF + Stage 1 draft + athlete profile + restrictions + candidate pools.
+Input = FINALIZER PACKET + Stage 1 draft + athlete profile + optional injury context.
 
 AUTHORITY ORDER
-1. PLANNING BRIEF — primary authority for intent, phase strategy, priorities, and risks.
-2. Restrictions — hard constraints. Non-negotiable.
-3. Candidate pools — preferred exercise reservoir.
+1. FINALIZER PACKET — primary authority for selected sessions, render mode, countdown labels, restrictions, priorities, and risks.
+2. Render guards and restrictions — hard constraints. Non-negotiable.
+3. Selected plan / weekly role map — source of truth for visible sessions and day ownership.
 4. Stage 1 draft — raw material only. Not final authority.
 
 RULE 1 — HARD FILTER
 Remove every exercise, drill, or prescription that violates any restriction, including synonyms and mechanical equivalents. Apply to strength, conditioning, rehab, warm-ups, and finishers. Do not modify a violating item into compliance — replace or drop it.
 
 RULE 2 — PLAN THE CAMP, DON'T JUST EDIT
-Build the best final plan from the PLANNING BRIEF. Use week_by_week_progression and weekly_role_map to sequence the camp. Reorganise and tighten — coherence over inertia.
+Build the best final plan from the FINALIZER PACKET. Use selected_plan, weekly_role_map, session_sequence, week_by_week_progression, and render_guards to sequence the camp. Reorganise and tighten — coherence over inertia.
 
 RULE 3 — SELECTION ORDER
-Prefer strong compliant Stage 1 items first, then same-role pool alternates, then other compliant pool options. Never keep a weak Stage 1 choice because it already exists.
+Use selected_plan inside FINALIZER PACKET as the session source of truth. Keep strong compliant Stage 1 items only when they match the selected role and restrictions. If a Stage 1 item is weak, violating, or off-role, replace it only with a compliant selected/fallback item already present in the packet, or drop it. Do not create athlete-facing option menus.
 
 RULE 4 — ANCHOR STANDARD
-Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant option exists. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
+Every anchor session must contain at least one serious high-transfer strength or power exercise if a compliant option exists in selected_plan. Do not build anchors from bird dogs, dead bugs, planks, carries, or rehab-level work unless restrictions force it. Support work assists the anchor — it cannot become it.
 
 RULE 5 — SAFE STRONG, NOT SAFE SOFT
-In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists, prefer it over low-output filler for key slots.
+In GPP and SPP, choose the safest strong option, not the safest soft option. If a compliant loaded pattern exists in selected_plan, prefer it over low-output filler for key slots.
 
 RULE 6 — SPORT SPECIFICITY
 The plan must read as a real combat-sport camp for this athlete. Conditioning, power work, weekly rhythm, and taper choices must match the athlete's sport, style, fatigue, injury context, equipment, and phase.
 
 RULE 7 — SUPPORT WORK STAYS SUPPORT
-Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the brief requires a protection-first camp. When cutting volume, cut accessory work first.
+Rehab, carries, trunk stability, and mobility support the plan — they do not lead it unless the packet clearly requires a protection-first camp. When cutting volume, cut accessory work first.
 
 RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
-Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating items with stronger compliant options, not softer ones.
+Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating items with stronger compliant options from selected_plan, not softer invented options.
 
 RULE 9 — TAPER DISCIPLINE
 Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.
-If planning_brief.fight_week_override.active is true:
+If selected_plan.fight_week_override.active or selected_plan.weekly_role_map.fight_week_override.active is true:
 — 0–1 days: no training; coach note + readiness protocol only.
 — 2–3 days: one short primer max + one light mobility/recovery session.
 — 4–6 days: freshness-first, reduced volume, 1–2 sharpness sessions.
 Never chase fitness in these windows.
 
 RULE 9A — FIGHT-DAY (D-0) HARD OVERRIDE
-If weekly_role_map.fight_day_override.active is true (or any week's fight_day_override.active is true), the day matching weekly_role_map.fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
+If selected_plan.weekly_role_map.fight_day_override.active is true, or any week's fight_day_override.active is true, the day matching fight_day_override.fight_weekday is the athlete's fight day. Render that day exactly as: "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C." No S&C, no hard sparring, no coach-led boxing session, no training session of any kind. This override beats every declared hard sparring lock, every weekday role, and every phase rhythm. Even when the fight weekday is also a declared hard sparring day, it never renders as sparring on that date. Do not restore any suppressed role on that day.
 
 RULE 10 — WEIGHT CUT AND INJURY MANAGEMENT
 Active weight cut: state it plainly, keep output safety-first, one summary note + one support note — never buried in nutrition data.
 Active injury: lead with constraints, substitutions, and stop rules — not optional language.
-* If rewrite_guidance.render_guards.suppress_rehab_headings == true, do not render sections/headings titled: Rehab, Prehab, Brief Rehab, Injury Rehab, Prepare / brief rehab, or Rehab / Mobility.
-* If rewrite_guidance.render_guards.suppress_rehab_headings == true, generic low-load work may only be labelled: Activation, Movement Prep, Mobility, Warm-up, or Reset — never as rehab/prehab.
-* If rewrite_guidance.render_guards.suppress_phase_toolbox_sections == true, do not render standalone: GPP toolbox/reference sections, SPP toolbox/reference sections, TAPER toolbox/reference sections, “key drills to keep in your toolbox”, “available options”, “SPP tools”, “GPP tools”, or “phase reference menus”.
+* If render_guards.suppress_rehab_headings == true, do not render sections/headings titled: Rehab, Prehab, Brief Rehab, Injury Rehab, Prepare / brief rehab, or Rehab / Mobility.
+* If render_guards.suppress_rehab_headings == true, generic low-load work may only be labelled: Activation, Movement Prep, Mobility, Warm-up, or Reset — never as rehab/prehab.
+* If render_guards.suppress_phase_toolbox_sections == true, do not render standalone: GPP toolbox/reference sections, SPP toolbox/reference sections, TAPER toolbox/reference sections, “key drills to keep in your toolbox”, “available options”, “SPP tools”, “GPP tools”, or “phase reference menus”.
 * Candidate pools are internal selection data only and must not become athlete-facing menus.
 Both flags narrow training tolerance and must shape the output structurally.
 When injury wording is vague or underspecified, use INJURY CONTEXT to infer the safest high-probability interpretation. Never override hard restrictions or triage blocks, and prefer conservative substitutions and wording when detail is incomplete.
@@ -4425,12 +4425,12 @@ Do not aim critique at the athlete's character.
 Collapse templates into one final prescription whenever the athlete context already resolves the choice.
 Do not repeat Primary, Fallback, Drill, or menu-style labels across most session lines.
 Allow at most one explicit fallback in a session, and only when absolutely necessary.
-Treat declared hard sparring days in weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.
-Hard sparring days are gym/coach-owned. The app must not prescribe or lead the sparring itself. Render the day minimally as "Coach-led boxing session" (or the equivalent sport-specific label such as "Coach-led MMA session" or "Coach-led Muay Thai session"). Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording (e.g. never "6-8 x 3-min rounds at coach-set intensity", "X rounds technical sparring", "live rounds at moderate intensity"). After the session label, emit exactly one short app-owned note in this form: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume — the coach owns those. Anything more than the label plus that one note is a violation of this rule.
-Do not exceed the weekly session count implied by weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
+Treat declared hard sparring days in selected_plan.weekly_role_map as immutable hard_sparring_day slots except when final_week_sparring_cap.active is true. In final taper weeks, final_week_sparring_cap overrides the coach-declared hard-day lock: render at most one effective hard sparring day, and do not present capped_declared_hard_sparring_days as sparring.
+Hard sparring days are gym/coach-owned. The app must not prescribe or lead the sparring itself. Render the day minimally as "Coach-led boxing session" or the equivalent sport-specific label such as "Coach-led MMA session", "Coach-led Muay Thai session", or "Coach-led kickboxing session". Do not output round counts, time-x-rounds formulas, intensity targets, dose, RPE, work:rest, or any sparring template wording. After the session label, emit exactly one short app-owned note in this form: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Do not narrate intent, do not add a "why today" line, do not list focus areas, do not suggest pad/bag/clinch volume — the coach owns those. Anything more than the label plus that one note is a violation of this rule.
+Do not exceed the weekly session count implied by selected_plan.weekly_role_map. If the athlete has extra available days, leave them off or clearly optional instead of turning them into extra active sessions.
 Keep every active week present and structurally complete, including late-camp weeks.
-If weekly_role_map or week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
-If weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve one anchor if available, and allow at most one low-load support day.
+If selected_plan.weekly_role_map or selected_plan.week_by_week_progression marks intentional_compression.active, keep that smaller week on purpose and do not restore the suppressed standalone role.
+If selected_plan.weekly_role_map.intentional_compression.policy is boxing_crowded_week, keep hard sparring as the week owner, preserve one anchor if available, and allow at most one low-load support day.
 In boxing crowded weeks, do not turn anchor days or recovery/support days into multi-stressor sessions by adding glycolytic, transfer, or extra sharpness work.
 For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.
 Use simple session titles and coach-readable drill labels, but do not spend this pass flattening non-standard names if the drill description is already mechanically clear.
@@ -4440,12 +4440,12 @@ If active weight cut is present, say so plainly in the final plan and explain th
 Never write 'weight cut none active' or 'recovery tolerance is standard' when active weight-cut flags are present.
 If active weight cut is present, keep the wording shorter and safety-first rather than optimization-heavy.
 If the cut is high-pressure, include one short summary-level note plus one support-level note; do not bury it only in the athlete profile or raw nutrition numbers.
-In short camps, every rendered session must map to one compressed week-level priority from the planning brief. Do not create a standalone session purpose for embedded-support or deferred items.
+In short camps, every rendered session must map to one compressed week-level priority from the finalizer packet. Do not create a standalone session purpose for embedded-support or deferred items.
 Placement governs day assignment only; it does not change insert voice, ownership, or visible session count.
 
 RULE 12 — SURGICAL REHAB INTEGRATION
 Rehab must be intentional, not copy-pasted. Full authority to add, adjust, or remove any rehab item.
-Use the function_class tags (activation / control / isometric_analgesia / mobility / tendon_loading / recovery_downregulation) as scoring guidance — not hard constraints.
+Use the function_class tags when present as scoring guidance — not hard constraints.
 — Each session: 1–2 rehab functions, 5–10 minutes total.
 — Spar days: 1 drill max — activation or brief post-session reset only.
 — Strength/power days: prepare the specific risk point for the main lift.
@@ -4456,10 +4456,12 @@ Render every rehab item as:
     Purpose: [exact mechanism — the specific limitation, not just the body part]
     Why today: [why this day type — pre-sparring activation / post-strength reset / aerobic tolerance / etc.]
 
+If render_guards.suppress_rehab_headings == true, do not use this rehab format. Label generic low-load work as Activation, Movement Prep, Mobility, Warm-up, or Reset instead.
+
 If a drill repeats across sessions, the Why today must make the changed role explicit. Use precise mechanism wording — not vague body-part labels. Before keeping any rehab item: confirm it solves a specific issue, belongs on this day, and does not duplicate a same-role drill already used this week. Drop it if it fails two of three.
 
 RULE 13 — LATE-FIGHT LABEL DISCIPLINE
-Applies when rewrite_guidance.render_guards.suppress_phase_toolbox_sections == true.
+Applies when render_guards.suppress_phase_toolbox_sections == true.
 
 Output is countdown-led. Lead every active day with countdown_display_label (D-N (Weekday)). Do not emit phase scaffolding: no "Week 1/2/3", no "PHASE N: GPP/SPP/TAPER", no "Phase Weeks", no "Phase Days", no "Phase must-keep", no "TAPER phase guidance", no "SPP insert", no "Mindset Focus" / "Strength & Power" / "Conditioning" sub-headers framed by phase.
 
@@ -4470,14 +4472,13 @@ Do not expose internal role keys or internal system labels as session titles. Tr
   fight_week_freshness_day   -> "Freshness Reset"
   light_fight_pace_touch_day -> "Technical Rhythm Touch"
   technical_touch_day        -> "Technical Touch"
-  hard_sparring_day          -> render minimally as "Coach-led boxing session" (or sport-equivalent: "Coach-led MMA session", "Coach-led Muay Thai session", "Coach-led kickboxing session"). The gym/coach owns the day; the app must not prescribe rounds, intensity, dose, work:rest, RPE, or any sparring template wording. After the label, emit exactly one short app-owned note: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Nothing else.
-Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glycolytic", "Alactic", "Aerobic" as an athlete-facing session title.
+  hard_sparring_day          -> render minimally as "Coach-led boxing session" or sport-equivalent: "Coach-led MMA session", "Coach-led Muay Thai session", "Coach-led kickboxing session". The gym/coach owns the day; the app must not prescribe rounds, intensity, dose, work:rest, RPE, or any sparring template wording. After the label, emit exactly one short app-owned note: "No additional S&C today. Add 5 min breathing + shoulder mobility after." Nothing else.
+Never write "Strength touch", "Alactic sharpness", "Neural primer", "SPP", "Glycolytic", "Alactic", or "Aerobic" as an athlete-facing session title.
 
-For conditioning drill system labels, use candidate_pools[phase].conditioning_slots[*].selected.athlete_facing_system_label (set by the dose-aware relabel helper). Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
+For conditioning drill system labels, use selected_plan session fields such as athlete_facing_system_label when present. If absent, translate the drill intent into athlete-facing language. Never use the word "Glycolytic" in D-7 or tighter windows. When a drill carries short-work + full-rest prescription, call it "footwork speed repeatability", "coordination conditioning", "reactive footwork", or "technical rhythm" per its tags.
 
 Cut fluff: one sentence of "why today" per session maximum, no repeated explanations, no "phase preserved" menus. Coach calls only.
 """
-
 
 
 def _json_block(value: dict | list) -> str:
@@ -4496,6 +4497,75 @@ def _athlete_profile_block(planning_brief: dict | None, stage2_payload: dict) ->
     return athlete_model if isinstance(athlete_model, dict) else {}
 
 
+def _countdown_continuation_map_from_packet(
+    finalizer_packet: dict,
+    planning_brief: dict | None,
+) -> list[dict]:
+    selected_plan = finalizer_packet.get("selected_plan", {})
+    if isinstance(selected_plan, dict):
+        late_fight_plan_spec = selected_plan.get("late_fight_plan_spec", {}) or {}
+        if isinstance(late_fight_plan_spec, dict):
+            continuation_map = list(late_fight_plan_spec.get("countdown_mode_sequence", []) or [])
+            if continuation_map:
+                return continuation_map
+
+        days_out_payload = selected_plan.get("days_out_payload", {}) or {}
+        if isinstance(days_out_payload, dict):
+            continuation_map = list(days_out_payload.get("countdown_mode_sequence", []) or [])
+            if continuation_map:
+                return continuation_map
+
+    if isinstance(planning_brief, dict):
+        continuation_map = list(
+            (
+                planning_brief.get("late_fight_plan_spec", {}) or {}
+            ).get("countdown_mode_sequence", [])
+        )
+        if continuation_map:
+            return continuation_map
+        return list((planning_brief.get("days_out_payload", {}) or {}).get("countdown_mode_sequence", []))
+
+    return []
+
+
+def _append_countdown_continuation_instructions(
+    *,
+    mode_instructions: str,
+    payload_mode: str,
+    continuation_map: list[dict],
+) -> str:
+    if not continuation_map:
+        return mode_instructions
+
+    if payload_mode == "bridge_compression_payload":
+        continuation_lines = [
+            "COUNTDOWN CONTINUATION MAP",
+            "Bridge segment is front-only. Continue mode takeover from D-13 to D-0 exactly as mapped below.",
+        ]
+    elif len(continuation_map) > 1:
+        continuation_lines = [
+            "COUNTDOWN CONTINUATION MAP",
+            "Continue the active late-fight countdown from this start window through D-0 exactly as mapped below.",
+        ]
+    else:
+        return mode_instructions
+
+    for segment in continuation_map:
+        stage_key = str(segment.get("stage_key") or "").strip()
+        segment_mode = str(segment.get("payload_mode") or "").strip()
+        start_day = segment.get("start_day")
+        end_day = segment.get("end_day")
+        if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
+            continuation_lines.append(
+                f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
+            )
+
+    if len(continuation_lines) <= 2:
+        return mode_instructions
+
+    return mode_instructions + "\n\n" + "\n".join(continuation_lines)
+
+
 def build_stage2_handoff_text(
     *,
     stage2_payload: dict,
@@ -4503,73 +4573,51 @@ def build_stage2_handoff_text(
     coach_notes: str = "",
     planning_brief: dict | None = None,
 ) -> str:
-    context_block = planning_brief or {
-        "athlete_snapshot": stage2_payload.get("athlete_model", {}),
-        "restrictions": stage2_payload.get("restrictions", []),
-        "phase_briefs": stage2_payload.get("phase_briefs", {}),
-        "candidate_pools": stage2_payload.get("candidate_pools", {}),
-        "omission_ledger": stage2_payload.get("omission_ledger", {}),
-        "decision_rules": stage2_payload.get("rewrite_guidance", {}),
-    }
+    finalizer_packet = build_stage2_finalizer_packet(
+        stage2_payload=stage2_payload,
+        planning_brief=planning_brief,
+    )
+
     athlete_profile = _athlete_profile_block(planning_brief, stage2_payload)
-    payload_mode = stage2_payload.get("payload_mode") or stage2_payload.get("effective_stage2_mode") or "camp_payload"
+    render_mode = str(finalizer_packet.get("render_mode") or "").strip()
+    payload_mode = (
+        render_mode
+        or stage2_payload.get("payload_mode")
+        or stage2_payload.get("effective_stage2_mode")
+        or "camp_payload"
+    )
 
     # ── Payload-mode-sensitive hard instructions ──────────────────
     mode_instructions = _handoff_mode_instructions(payload_mode)
-    continuation_map: list[dict] = []
-    if isinstance(planning_brief, dict):
-        continuation_map = list(
-            (
-                planning_brief.get("late_fight_plan_spec", {}) or {}
-            ).get("countdown_mode_sequence", [])
-        )
-        if not continuation_map:
-            continuation_map = list((planning_brief.get("days_out_payload", {}) or {}).get("countdown_mode_sequence", []))
-    if payload_mode == "bridge_compression_payload" and continuation_map:
-        continuation_lines = [
-            "COUNTDOWN CONTINUATION MAP",
-            "Bridge segment is front-only. Continue mode takeover from D-13 to D-0 exactly as mapped below.",
-        ]
-        for segment in continuation_map:
-            stage_key = str(segment.get("stage_key") or "").strip()
-            segment_mode = str(segment.get("payload_mode") or "").strip()
-            start_day = segment.get("start_day")
-            end_day = segment.get("end_day")
-            if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
-                continuation_lines.append(
-                    f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
-                )
-        if len(continuation_lines) > 2:
-            mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
-    elif continuation_map and len(continuation_map) > 1:
-        continuation_lines = [
-            "COUNTDOWN CONTINUATION MAP",
-            "Continue the active late-fight countdown from this start window through D-0 exactly as mapped below.",
-        ]
-        for segment in continuation_map:
-            stage_key = str(segment.get("stage_key") or "").strip()
-            segment_mode = str(segment.get("payload_mode") or "").strip()
-            start_day = segment.get("start_day")
-            end_day = segment.get("end_day")
-            if stage_key and segment_mode and isinstance(start_day, int) and isinstance(end_day, int):
-                continuation_lines.append(
-                    f"- {stage_key}: {segment_mode} (D-{start_day} to D-{end_day})"
-                )
-        if len(continuation_lines) > 2:
-            mode_instructions = mode_instructions + "\n\n" + "\n".join(continuation_lines)
+
+    continuation_map = _countdown_continuation_map_from_packet(
+        finalizer_packet=finalizer_packet,
+        planning_brief=planning_brief,
+    )
+    mode_instructions = _append_countdown_continuation_instructions(
+        mode_instructions=mode_instructions,
+        payload_mode=payload_mode,
+        continuation_map=continuation_map,
+    )
 
     sections = [
         STAGE2_FINALIZER_PROMPT.strip(),
     ]
+
     if mode_instructions:
         sections.append("PAYLOAD MODE INSTRUCTIONS\n" + mode_instructions)
-    sections.append("PLANNING BRIEF\n" + _json_block(context_block))
+
+    sections.append("FINALIZER PACKET\n" + _json_block(finalizer_packet))
     sections.append("ATHLETE PROFILE\n" + _json_block(athlete_profile))
+
     injury_context = stage2_payload.get("injury_context")
     if isinstance(injury_context, dict):
         sections.append("INJURY CONTEXT\n" + _json_block(injury_context))
+
     cleaned_notes = (coach_notes or "").strip()
     if cleaned_notes:
         sections.append("COACH NOTES\n" + cleaned_notes)
+
     sections.append("STAGE 1 DRAFT PLAN\n" + (plan_text or "").strip())
+
     return "\n\n---\n\n".join(section for section in sections if section.strip())
