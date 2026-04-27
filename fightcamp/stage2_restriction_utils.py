@@ -353,7 +353,8 @@ def _derive_mechanical_risk_tags(item: dict) -> set[str]:
     if tags & upper_impact_hits or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["high_impact_upper"]):
         derived.update({"high_impact", "high_impact_upper"})
 
-    if "high_impact" in derived and not ({"high_impact_lower", "high_impact_upper"} & derived):
+    all_impact_tags = risk_tags | derived
+    if "high_impact" in all_impact_tags and not ({"high_impact_lower", "high_impact_upper"} & all_impact_tags):
         derived.add("high_impact_global")
 
     if tags & {"max_velocity", "mech_max_velocity"} or any(phrase_in_text(text, phrase) for phrase in _TEXT_DERIVED_RESTRICTIONS["max_velocity"]):
