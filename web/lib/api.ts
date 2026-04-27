@@ -53,6 +53,7 @@ export class ApiError extends Error {
 
 const RETRYABLE_GATEWAY_STATUSES = new Set([502, 503, 504]);
 const RETRYABLE_NETWORK_MESSAGE = "Unable to reach the server. Please check your connection and try again.";
+const meRequestsByToken = new Map<string, Promise<MeResponse>>();
 
 function looksLikeHtmlErrorPage(contentType: string, body: string): boolean {
   return contentType.includes("text/html") || /^<!doctype html/i.test(body);
@@ -286,10 +287,22 @@ async function readJson<T>(path: string, init?: ApiRequestInit): Promise<T> {
 }
 
 export function getMe(token: string): Promise<MeResponse> {
-  return readJson<MeResponse>("/api/me", { token });
+  const activeRequest = meRequestsByToken.get(token);
+  if (activeRequest) {
+    return activeRequest;
+  }
+
+  const request = readJson<MeResponse>("/api/me", { token }).finally(() => {
+    if (meRequestsByToken.get(token) === request) {
+      meRequestsByToken.delete(token);
+    }
+  });
+  meRequestsByToken.set(token, request);
+  return request;
 }
 
 export function updateMe(token: string, payload: ProfileUpdateRequest): Promise<MeResponse> {
+  meRequestsByToken.delete(token);
   return readJson<MeResponse>("/api/me", {
     method: "PUT",
     token,
@@ -471,7 +484,6 @@ export function approveAndResumeGeneration(
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
     method: "POST",
-    token,
   });
 }
 
