@@ -203,17 +203,63 @@ def _render_guards(stage2_payload: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def build_stage2_finalizer_packet(stage2_payload: dict[str, Any]) -> dict[str, Any]:
+def build_stage2_finalizer_packet(
+    *,
+    stage2_payload: dict[str, Any],
+    planning_brief: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Return the compact LLM-facing Stage 2 packet.
 
     This function must not mutate the original Stage 2 payload.
     It intentionally excludes full candidate pools and internal scoring data.
+
+    planning_brief is optional but preferred when available because it can carry
+    richer late-fight/session sequencing data than the raw Stage 2 payload.
     """
 
-    athlete_model = stage2_payload.get("athlete_model") or {}
-    rewrite_guidance = stage2_payload.get("rewrite_guidance") or {}
-    guards = _render_guards(stage2_payload)
+    source = planning_brief if isinstance(planning_brief, dict) else stage2_payload
+
+    athlete_model = (
+        source.get("athlete_snapshot")
+        or source.get("athlete_model")
+        or stage2_payload.get("athlete_model")
+        or {}
+    )
+    rewrite_guidance = (
+        source.get("decision_rules")
+        or source.get("rewrite_guidance")
+        or stage2_payload.get("rewrite_guidance")
+        or {}
+    )
+
+    guards = _render_guards(
+        {
+            **stage2_payload,
+            "athlete_model": athlete_model,
+            "rewrite_guidance": rewrite_guidance,
+            "payload_mode": (
+                source.get("payload_mode")
+                or source.get("effective_stage2_mode")
+                or stage2_payload.get("payload_mode")
+                or stage2_payload.get("effective_stage2_mode")
+                or ""
+            ),
+        }
+    )
     render_mode = guards.get("render_mode") or "camp_plan"
+
+    weekly_role_map = source.get("weekly_role_map") or stage2_payload.get("weekly_role_map")
+    late_fight_plan_spec = (
+        source.get("late_fight_plan_spec")
+        or stage2_payload.get("late_fight_plan_spec")
+        or {}
+    )
+
+    days_out_payload = (
+        source.get("days_out_payload")
+        or stage2_payload.get("days_out_payload")
+        or {}
+    )
 
     packet = {
         "packet_type": "stage2_finalizer_packet",
@@ -236,17 +282,35 @@ def build_stage2_finalizer_packet(stage2_payload: dict[str, Any]) -> dict[str, A
                 else []
             ),
         },
-        "restrictions": _compact_restrictions(stage2_payload.get("restrictions")),
+        "restrictions": _compact_restrictions(
+            source.get("restrictions") or stage2_payload.get("restrictions")
+        ),
         "selected_plan": {
-            "session_sequence": _compact_session_sequence(stage2_payload),
-            "weekly_role_map": _compact_weekly_role_map(stage2_payload.get("weekly_role_map")),
-            "late_fight_plan_spec": stage2_payload.get("late_fight_plan_spec") or {},
+            "session_sequence": _compact_session_sequence(source)
+            or _compact_session_sequence(stage2_payload),
+            "weekly_role_map": _compact_weekly_role_map(weekly_role_map),
+            "late_fight_plan_spec": late_fight_plan_spec,
+            "days_out_payload": days_out_payload,
+            "fight_week_override": (
+                source.get("fight_week_override")
+                or stage2_payload.get("fight_week_override")
+                or {}
+            ),
+            "week_by_week_progression": (
+                source.get("week_by_week_progression")
+                or stage2_payload.get("week_by_week_progression")
+                or {}
+            ),
         },
         "writing_rules": list((rewrite_guidance or {}).get("writing_rules") or []),
     }
 
     # Normal camp may still need compact phase context. Late-fight should not.
     if render_mode != "late_fight_countdown_only":
-        packet["phase_briefs"] = stage2_payload.get("phase_briefs") or {}
+        packet["phase_briefs"] = (
+            source.get("phase_briefs")
+            or stage2_payload.get("phase_briefs")
+            or {}
+        )
 
     return packet
