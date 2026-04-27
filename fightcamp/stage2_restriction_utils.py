@@ -410,5 +410,7 @@ def _serialize_restrictions(restrictions: list[dict]) -> list[dict]:
             "blocked_patterns": blocked_patterns,
             "mechanical_equivalents": blocked_patterns[:6],
         }
-        serialized.append({key: value for key, value in row.items() if value not in (None, "", [])})
+        row = {key: value for key, value in row.items() if value not in (None, "", [])}
+        if row:
+            serialized.append(row)
     return serialized
