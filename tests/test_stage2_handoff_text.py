@@ -1,14 +1,38 @@
 from fightcamp.stage2_payload import build_stage2_handoff_text
 
 
-def test_build_stage2_handoff_text_uses_planning_brief_as_single_structured_context():
+def test_build_stage2_handoff_text_uses_finalizer_packet_as_single_structured_context():
     planning_brief = {
         "athlete_snapshot": {"sport": "boxing", "status": "amateur"},
         "restrictions": [{"restriction": "heavy_overhead_pressing"}],
         "candidate_pools": {"SPP": {"strength_slots": [{"role": "primary_strength"}]}},
         "omission_ledger": {"SPP": {"removed": ["push press"]}},
-        "decision_rules": {"selection_rules": ["Prefer strong compliant same-role options first."]},
+        "decision_rules": {
+            "selection_rules": ["Prefer strong compliant same-role options first."],
+            "render_guards": {
+                "has_active_injury": False,
+                "suppress_rehab_headings": True,
+                "suppress_phase_toolbox_sections": False,
+                "render_mode": "camp_plan",
+            },
+        },
+        "weekly_role_map": {
+            "weeks": [
+                {
+                    "week_index": 1,
+                    "phase": "SPP",
+                    "session_roles": [
+                        {
+                            "role_key": "primary_strength_day",
+                            "category": "strength",
+                            "scheduled_day_hint": "tuesday",
+                        }
+                    ],
+                }
+            ]
+        },
     }
+
     handoff = build_stage2_handoff_text(
         stage2_payload={
             "athlete_model": {"sport": "boxing"},
@@ -16,35 +40,131 @@ def test_build_stage2_handoff_text_uses_planning_brief_as_single_structured_cont
             "phase_briefs": {"SPP": {"objective": "fight-specific power"}},
             "candidate_pools": {"SPP": {"strength_slots": [{"role": "primary_strength"}]}},
             "omission_ledger": {"SPP": {"removed": ["push press"]}},
-            "rewrite_guidance": {"selection_rules": ["Prefer strong compliant same-role options first."]},
+            "rewrite_guidance": {
+                "selection_rules": ["Prefer strong compliant same-role options first."],
+                "render_guards": {
+                    "has_active_injury": False,
+                    "suppress_rehab_headings": True,
+                    "suppress_phase_toolbox_sections": False,
+                    "render_mode": "camp_plan",
+                },
+            },
         },
         plan_text="Week 1\n- Landmine Press - 4x5",
         coach_notes="Keep this coach-facing note short.",
         planning_brief=planning_brief,
     )
-    json_block = handoff.split("PLANNING BRIEF\n", 1)[1].split("\n\n---\n\n", 1)[0]
-    json_body = json_block.removeprefix("```json\n").removesuffix("\n```")
+
+    packet_block = handoff.split("FINALIZER PACKET\n", 1)[1].split("\n\n---\n\n", 1)[0]
+    packet_body = packet_block.removeprefix("```json\n").removesuffix("\n```")
+
     athlete_profile_block = handoff.split("ATHLETE PROFILE\n", 1)[1].split("\n\n---\n\n", 1)[0]
     athlete_profile_body = athlete_profile_block.removeprefix("```json\n").removesuffix("\n```")
 
-    assert "PLANNING BRIEF" in handoff
+    assert "FINALIZER PACKET" in handoff
     assert "ATHLETE PROFILE" in handoff
-    assert '"athlete_snapshot"' in handoff
-    assert '"candidate_pools"' in handoff
+    assert '"packet_type":"stage2_finalizer_packet"' in handoff
+    assert '"render_mode":"camp_plan"' in handoff
+    assert '"restrictions":[{"restriction":"heavy_overhead_pressing"}]' in handoff
+
     assert "COACH NOTES\nKeep this coach-facing note short." in handoff
     assert "STAGE 1 DRAFT PLAN\nWeek 1\n- Landmine Press - 4x5" in handoff
-    assert json_block.startswith("```json\n")
-    assert json_block.endswith("\n```")
-    assert json_body.startswith('{"athlete_snapshot":{"sport":"boxing","status":"amateur"}')
+
+    assert packet_block.startswith("```json\n")
+    assert packet_block.endswith("\n```")
+    assert packet_body.startswith('{"packet_type":"stage2_finalizer_packet"')
+
     assert athlete_profile_block.startswith("```json\n")
     assert athlete_profile_block.endswith("\n```")
     assert athlete_profile_body == '{"sport":"boxing","status":"amateur"}'
-    assert '\n  "' not in json_body
+
+    # Compact JSON formatting only.
+    assert '\n  "' not in packet_body
+
+    # Old bloated handoff must be gone.
+    assert "PLANNING BRIEF" not in handoff
+    assert '"candidate_pools"' not in handoff
     assert "RESTRICTIONS\n[" not in handoff
     assert "PHASE BRIEFS" not in handoff
     assert "CANDIDATE POOLS\n{" not in handoff
     assert "OMISSION LEDGER\n{" not in handoff
     assert "REWRITE GUIDANCE" not in handoff
+
+
+def test_build_stage2_handoff_text_late_fight_excludes_candidate_pools_and_phase_briefs():
+    handoff = build_stage2_handoff_text(
+        stage2_payload={
+            "payload_mode": "bridge_compression_payload",
+            "athlete_model": {
+                "sport": "boxing",
+                "days_until_fight": 17,
+                "fight_date": "2026-05-13",
+                "has_active_injury": False,
+            },
+            "candidate_pools": {
+                "SPP": {"toolbox": ["Should not be exposed"]},
+                "GPP": {"toolbox": ["Should not be exposed"]},
+                "TAPER": {"toolbox": ["Should not be exposed"]},
+            },
+            "phase_briefs": {
+                "SPP": {"objective": "Should not be exposed in late-fight handoff"}
+            },
+            "rewrite_guidance": {
+                "render_guards": {
+                    "has_active_injury": False,
+                    "suppress_rehab_headings": True,
+                    "suppress_phase_toolbox_sections": True,
+                    "render_mode": "late_fight_countdown_only",
+                }
+            },
+        },
+        plan_text="D-0\n- Fight day protocol",
+        planning_brief={
+            "athlete_snapshot": {
+                "sport": "boxing",
+                "days_until_fight": 17,
+                "fight_date": "2026-05-13",
+                "has_active_injury": False,
+            },
+            "decision_rules": {
+                "render_guards": {
+                    "has_active_injury": False,
+                    "suppress_rehab_headings": True,
+                    "suppress_phase_toolbox_sections": True,
+                    "render_mode": "late_fight_countdown_only",
+                }
+            },
+            "weekly_role_map": {
+                "weeks": [
+                    {
+                        "week_index": 1,
+                        "phase": "TAPER",
+                        "session_roles": [
+                            {
+                                "role_key": "fight_day_protocol",
+                                "scheduled_day_hint": "wednesday",
+                                "display_text": "Fight day protocol — follow coach warm-up and fight protocol; no additional app S&C.",
+                            }
+                        ],
+                    }
+                ]
+            },
+        },
+    )
+
+    assert "FINALIZER PACKET" in handoff
+    assert '"render_mode":"late_fight_countdown_only"' in handoff
+    assert '"packet_type":"stage2_finalizer_packet"' in handoff
+
+    # The finalizer must not see internal menus.
+    assert '"candidate_pools"' not in handoff
+    assert '"phase_briefs"' not in handoff
+    assert "Should not be exposed" not in handoff
+    assert "SPP toolbox" in handoff  # allowed only as forbidden-output label
+    assert "key drills to keep in your toolbox" in handoff  # allowed only as forbidden-output label
+
+    # No old full planning brief section.
+    assert "PLANNING BRIEF" not in handoff
 
 
 def test_build_stage2_handoff_text_carries_surgical_voice_rules():
@@ -54,27 +174,21 @@ def test_build_stage2_handoff_text_carries_surgical_voice_rules():
         planning_brief={"athlete_snapshot": {"sport": "boxing"}},
     )
 
-    # Voice style is present (exact wording may evolve — check concepts)
     assert "decisive" in handoff.lower() or "gym-realistic" in handoff.lower(), (
         "Handoff should convey a decisive, gym-realistic coach voice"
     )
-    # Corrective call directive is present
     assert "make the call" in handoff or "corrective" in handoff.lower(), (
         "Handoff should instruct making a clear call on corrections"
     )
-    # Option discipline is present
     assert "practical options" in handoff or "two options" in handoff.lower(), (
         "Handoff should limit optionality for the model"
     )
-    # Anti-filler directives are present
     assert "focus on" in handoff or "ensure" in handoff or "motivation" in handoff.lower(), (
         "Handoff should contain anti-filler coaching voice directives"
     )
-    # Fatigue handling is present
     assert "fatigue" in handoff.lower() and "optionality" in handoff.lower(), (
         "Handoff should address fatigue → reduce optionality"
     )
-    # Injury management is present
     assert "injury" in handoff.lower() and ("constraints" in handoff.lower() or "stop rules" in handoff.lower()), (
         "Handoff should address injury → lead with constraints"
     )
