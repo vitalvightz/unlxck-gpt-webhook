@@ -1,26 +1,51 @@
 import pytest
-from fightcamp.stage2_payload import (
+from fightcamp.stage2_render_guards import (
     _meaningful_injury_values,
     _has_active_injury_from_athlete_model,
     _render_guard_flags,
 )
+
+
+def test_stage2_payload_reexports_render_guards():
+    """The render guard helpers must remain importable from stage2_payload for
+    callers that haven't migrated to the new module yet."""
+    from fightcamp import stage2_payload
+    from fightcamp import stage2_render_guards
+
+    for name in (
+        "_NO_ACTIVE_INJURY_MARKERS",
+        "_meaningful_injury_values",
+        "_has_active_injury_from_training_context",
+        "_has_active_injury_from_athlete_model",
+        "_render_guard_flags",
+        "_append_render_guard_writing_rules",
+    ):
+        assert getattr(stage2_payload, name) is getattr(stage2_render_guards, name)
+
 
 def test_injury_marker_normalization():
     # Empty/None
     assert _meaningful_injury_values(None) == []
     assert _meaningful_injury_values([]) == []
     assert _meaningful_injury_values("") == []
-    
+
     # Negative markers (should be filtered out)
     assert _meaningful_injury_values(["none"]) == []
     assert _meaningful_injury_values(["N/A"]) == []
     assert _meaningful_injury_values(["nil"]) == []
     assert _meaningful_injury_values(["no injuries"]) == []
     assert _meaningful_injury_values(["  none reported  "]) == []
-    
+
+    # Punctuation-tolerant negative markers
+    assert _meaningful_injury_values(["none."]) == []
+    assert _meaningful_injury_values(["n/a!"]) == []
+    assert _meaningful_injury_values(["nothing"]) == []
+    assert _meaningful_injury_values(["all clear"]) == []
+
     # Real injuries (should stay)
     assert _meaningful_injury_values(["left knee"]) == ["left knee"]
     assert _meaningful_injury_values(["none", "right shoulder"]) == ["right shoulder"]
+    assert _meaningful_injury_values(["none", "left shoulder"]) == ["left shoulder"]
     assert _meaningful_injury_values(["Grade 2 Hamstring"]) == ["Grade 2 Hamstring"]
 
 def test_has_active_injury_from_athlete_model():
@@ -42,7 +67,7 @@ def test_has_active_injury_from_athlete_model():
 def test_render_guard_flags_triggering():
     no_injury_athlete = {"has_active_injury": False}
     injured_athlete = {"has_active_injury": True}
-    
+
     # Scenario: Normal camp, no injury
     guards = _render_guard_flags(
         athlete_model=no_injury_athlete,
@@ -51,7 +76,8 @@ def test_render_guard_flags_triggering():
     )
     assert guards["suppress_rehab_headings"] is True
     assert guards["suppress_phase_toolbox_sections"] is False
-    
+    assert guards["render_mode"] == "camp_plan"
+
     # Scenario: Late fight, injured
     guards = _render_guard_flags(
         athlete_model=injured_athlete,
@@ -60,7 +86,8 @@ def test_render_guard_flags_triggering():
     )
     assert guards["suppress_rehab_headings"] is False
     assert guards["suppress_phase_toolbox_sections"] is True
-    
+    assert guards["render_mode"] == "late_fight_countdown_only"
+
     # Scenario: Normal camp, injured
     guards = _render_guard_flags(
         athlete_model=injured_athlete,
@@ -68,6 +95,16 @@ def test_render_guard_flags_triggering():
         days_until_fight=40
     )
     assert guards["suppress_rehab_headings"] is False
+    assert guards["suppress_phase_toolbox_sections"] is False
+    assert guards["render_mode"] == "camp_plan"
+
+    # Scenario: Normal camp mode does not suppress phase toolbox sections,
+    # regardless of injury state.
+    guards = _render_guard_flags(
+        athlete_model=no_injury_athlete,
+        payload_mode="camp_payload",
+        days_until_fight=42,
+    )
     assert guards["suppress_phase_toolbox_sections"] is False
 
 def test_build_planning_brief_includes_render_guards():
