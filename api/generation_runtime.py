@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import time
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -19,6 +20,7 @@ from .store import AppStore
 Planner = Callable[[dict[str, Any]], dict[str, Any]]
 logger = logging.getLogger(__name__)
 _TRIAGE_RESUME_OVERRIDE_KEY = "_triage_resume_override"
+_DETACHED_GENERATION_TASKS: set[asyncio.Task[None]] = set()
 
 
 def utc_now_iso() -> str:
@@ -64,8 +66,68 @@ def parse_plan_request(value: Any) -> PlanRequest:
     )
 
 
+def _stage2_finalize_timeout_seconds() -> float | None:
+    raw_value = os.getenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "300").strip()
+    if raw_value in {"", "0", "none", "None", "NONE"}:
+        return None
+    try:
+        return max(1.0, float(raw_value))
+    except ValueError:
+        logger.warning(
+            "[jobs] generation:invalid_stage2_timeout value=%r; falling back to 300s",
+            raw_value,
+        )
+        return 300.0
+
+
+def _use_fastapi_background_tasks() -> bool:
+    scheduler = os.getenv("APP_GENERATION_SCHEDULER", "detached").strip().lower()
+    return scheduler in {"fastapi", "background_tasks", "backgroundtasks"}
+
+
+def _cleanup_detached_generation_task(task: asyncio.Task[None]) -> None:
+    _DETACHED_GENERATION_TASKS.discard(task)
+    if task.cancelled():
+        return
+    with suppress(Exception):
+        task.result()
+
+
+def _schedule_detached_generation_task(
+    *,
+    job_id: str,
+    store: AppStore,
+    planner_fn: Planner,
+    stage2: Stage2Automator,
+    active_tasks: set[str],
+) -> None:
+    task = asyncio.create_task(
+        run_generation_job(
+            job_id=job_id,
+            store=store,
+            planner_fn=planner_fn,
+            stage2=stage2,
+            active_tasks=active_tasks,
+        )
+    )
+    _DETACHED_GENERATION_TASKS.add(task)
+    task.add_done_callback(_cleanup_detached_generation_task)
+
+
 async def run_stage1_planner(planner_fn: Planner, payload: dict[str, Any]) -> dict[str, Any]:
     return await asyncio.to_thread(planner_fn, payload)
+
+
+async def finalize_stage2_with_timeout(
+    *,
+    stage2: Stage2Automator,
+    stage1_result: dict[str, Any],
+) -> dict[str, Any]:
+    finalize = stage2.finalize(stage1_result=stage1_result)
+    timeout_seconds = _stage2_finalize_timeout_seconds()
+    if timeout_seconds is None:
+        return await finalize
+    return await asyncio.wait_for(finalize, timeout=timeout_seconds)
 
 
 def _is_truthy_flag(value: Any) -> bool:
@@ -202,7 +264,10 @@ async def run_generation_job(
             if should_skip_stage2(stage1_result):
                 final_result = {**stage1_result, "full_name": request_body.athlete.full_name}
             else:
-                finalized_result = await stage2.finalize(stage1_result=stage1_result)
+                finalized_result = await finalize_stage2_with_timeout(
+                    stage2=stage2,
+                    stage1_result=stage1_result,
+                )
                 final_result = {**finalized_result, "full_name": request_body.athlete.full_name}
             job = await asyncio.to_thread(
                 store.update_generation_job,
@@ -260,6 +325,17 @@ async def run_generation_job(
             final_status,
             round((time.perf_counter() - t_start) * 1000, 2),
         )
+    except asyncio.TimeoutError:
+        logger.exception("[jobs] generation:stage2_timeout athlete_id=%s job_id=%s", athlete_id, job_id)
+        with suppress(Exception):
+            await asyncio.to_thread(
+                store.update_generation_job,
+                job_id,
+                status="failed",
+                error="Stage 2 finalization timed out. Retry the job or run manual review.",
+                completed_at=utc_now_iso(),
+                heartbeat_at=utc_now_iso(),
+            )
     except Stage2AutomationUnavailableError as exc:
         logger.warning("[jobs] generation:stage2_unavailable athlete_id=%s job_id=%s detail=%s", athlete_id, job_id, exc)
         with suppress(Exception):
@@ -363,12 +439,25 @@ async def schedule_generation_job_if_needed(
         return refreshed or job
 
     active_tasks.add(job_id)
-    background_tasks.add_task(
-        run_generation_job,
-        job_id=job_id,
-        store=store,
-        planner_fn=planner_fn,
-        stage2=stage2,
-        active_tasks=active_tasks,
-    )
+    try:
+        if _use_fastapi_background_tasks():
+            background_tasks.add_task(
+                run_generation_job,
+                job_id=job_id,
+                store=store,
+                planner_fn=planner_fn,
+                stage2=stage2,
+                active_tasks=active_tasks,
+            )
+        else:
+            _schedule_detached_generation_task(
+                job_id=job_id,
+                store=store,
+                planner_fn=planner_fn,
+                stage2=stage2,
+                active_tasks=active_tasks,
+            )
+    except Exception:
+        active_tasks.discard(job_id)
+        raise
     return claimed
