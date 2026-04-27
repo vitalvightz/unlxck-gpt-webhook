@@ -67,7 +67,7 @@ def parse_plan_request(value: Any) -> PlanRequest:
 
 
 def _stage2_finalize_timeout_seconds() -> float | None:
-    raw_value = os.getenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "300").strip()
+    raw_value = os.getenv("APP_STAGE2_FINALIZE_TIMEOUT_SECONDS", "1000").strip()
     if raw_value in {"", "0", "none", "None", "NONE"}:
         return None
     try:
