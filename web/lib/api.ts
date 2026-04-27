@@ -484,6 +484,7 @@ export function approveAndResumeGeneration(
 export function rejectApprovedPlan(token: string, planId: string): Promise<PlanDetail> {
   return readJson<PlanDetail>(`/api/admin/plans/${planId}/reject`, {
     method: "POST",
+    token,
   });
 }
 
