@@ -101,7 +101,7 @@ def _is_high_pressure_weight_cut(*, athlete_model: dict) -> bool:
         return True
     if not (
         athlete_model.get("weight_cut_risk")
-        or readiness_flags & {"active_weight_cut", "aggressive_weight_cut"}
+        or "active_weight_cut" in readiness_flags
     ):
         return False
     fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
