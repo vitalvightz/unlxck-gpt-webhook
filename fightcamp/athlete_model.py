@@ -133,6 +133,12 @@ def _build_athlete_model(
         training_context.weight_cut_pct,
         training_context.days_until_fight,
     )
+    # If support_work_days isn't declared, fall back to legacy technical_skill_days
+    # so coach-led technical days are still preserved for downstream
+    # role-map/late-fight/finalizer consumers.
+    support_work_days = (
+        training_context.support_work_days or training_context.technical_skill_days
+    )
     has_active_injury = _has_active_injury_from_training_context(training_context)
     return {
         "has_active_injury": has_active_injury,
@@ -164,7 +170,8 @@ def _build_athlete_model(
         "training_frequency": training_context.training_frequency,
         "training_days": training_context.training_days,
         "hard_sparring_days": training_context.hard_sparring_days,
-        "support_work_days": training_context.support_work_days,
+        "support_work_days": support_work_days,
+        "technical_skill_days": training_context.technical_skill_days,
         "training_preference": training_context.training_preference,
         "injuries": training_context.injuries,
         "injuries_raw_text": training_context.injuries_raw_text,

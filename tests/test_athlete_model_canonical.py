@@ -16,7 +16,12 @@ from fightcamp import stage2_planning_brief
 from fightcamp.training_context import TrainingContext
 
 
-def _make_training_context(*, injuries: list[str]) -> TrainingContext:
+def _make_training_context(
+    *,
+    injuries: list[str],
+    support_work_days: list[str] | None = None,
+    technical_skill_days: list[str] | None = None,
+) -> TrainingContext:
     return TrainingContext(
         fatigue="low",
         training_frequency=3,
@@ -40,6 +45,8 @@ def _make_training_context(*, injuries: list[str]) -> TrainingContext:
         recent_exercises=[],
         phase_weeks={"GPP": 2, "SPP": 2, "TAPER": 1, "days": {"GPP": 0, "SPP": 0, "TAPER": 0}},
         days_until_fight=30,
+        support_work_days=support_work_days or [],
+        technical_skill_days=technical_skill_days or [],
     )
 
 
@@ -102,6 +109,31 @@ def test_no_injury_markers_do_not_flag_active_injury(marker):
 def test_real_injury_flags_active_injury():
     model = _build(_make_training_context(injuries=["left shoulder"]))
     assert model["has_active_injury"] is True
+
+
+def test_technical_skill_days_fallback_to_support_work_days():
+    """When an athlete declares only legacy technical_skill_days, those days
+    must still surface as support_work_days so coach-led day protection,
+    role-map placement, and finalizer wording continue to honour them."""
+    ctx = _make_training_context(
+        injuries=[],
+        support_work_days=[],
+        technical_skill_days=["Tuesday", "Thursday"],
+    )
+    model = _build(ctx)
+    assert model["support_work_days"] == ["Tuesday", "Thursday"]
+    assert model["technical_skill_days"] == ["Tuesday", "Thursday"]
+
+
+def test_explicit_support_work_days_take_precedence_over_legacy_field():
+    ctx = _make_training_context(
+        injuries=[],
+        support_work_days=["Wednesday"],
+        technical_skill_days=["Tuesday", "Thursday"],
+    )
+    model = _build(ctx)
+    assert model["support_work_days"] == ["Wednesday"]
+    assert model["technical_skill_days"] == ["Tuesday", "Thursday"]
 
 
 def test_empty_injuries_list_has_no_active_injury_and_no_injury_management_flag():
