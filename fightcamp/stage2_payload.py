@@ -14,6 +14,7 @@ import re
 from typing import Any
 
 from . import stage2_planning_brief as stage2_planning_brief_module
+from .stage2_finalizer_packet import build_stage2_finalizer_packet
 from . import stage2_role_map as stage2_role_map_module
 from .stage2_payload_late_fight import (
     _build_late_fight_plan_spec,
