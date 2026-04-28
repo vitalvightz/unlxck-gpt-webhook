@@ -40,6 +40,7 @@ type StartGenerationOptions = {
 const INITIAL_POLL_MS = 2_000;
 const MEDIUM_POLL_MS = 5_000;
 const LONG_POLL_MS = 15_000;
+const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -69,10 +70,31 @@ function getPendingGeneration(storageKey: string | null): PendingGenerationState
   }
 }
 
+function clearOtherPendingGenerations(activeStorageKey: string | null): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  Object.keys(window.sessionStorage)
+    .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX) && key !== activeStorageKey)
+    .forEach((key) => window.sessionStorage.removeItem(key));
+}
+
+function clearAllPendingGenerations(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  Object.keys(window.sessionStorage)
+    .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
+    .forEach((key) => window.sessionStorage.removeItem(key));
+}
+
 function savePendingGeneration(storageKey: string | null, pending: PendingGenerationState): void {
   if (!storageKey || typeof window === "undefined") {
     return;
   }
+  clearOtherPendingGenerations(storageKey);
   window.sessionStorage.setItem(storageKey, JSON.stringify(pending));
 }
 
@@ -205,10 +227,10 @@ export function useGenerationController({
           if (currentJob.status === "completed" || currentJob.status === "review_required") {
             const planId = currentJob.plan_id || currentJob.latest_plan_id;
             if (!planId) {
-              clearPendingGeneration(storageKey);
+              clearAllPendingGenerations();
               throw new Error("Generation finished, but no saved plan was returned.");
             }
-            clearPendingGeneration(storageKey);
+            clearAllPendingGenerations();
             setPhase("finalizing");
             setStatusMessage("Final checks passed. Opening your saved plan.");
             setIsGenerating(false);
@@ -222,7 +244,7 @@ export function useGenerationController({
           }
 
           if (currentJob.status === "failed") {
-            clearPendingGeneration(storageKey);
+            clearAllPendingGenerations();
             throw new Error(currentJob.error || "Plan generation failed.");
           }
 
@@ -231,6 +253,7 @@ export function useGenerationController({
           await sleep(getPollDelay(createdAtMs));
         }
       } catch (generationError) {
+        clearPendingGeneration(storageKey);
         setIsGenerating(false);
         setStatusMessage(null);
         setPhase("failed");
