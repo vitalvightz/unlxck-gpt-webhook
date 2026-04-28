@@ -715,10 +715,8 @@ def score_exercise(
         score += rehab_penalty
     reasons["penalties"] = rehab_penalty
 
-    noise_source = rng if rng else random
-    noise = noise_source.uniform(-0.15, 0.15)
-    score += noise
-    reasons["randomness"] = round(noise, 4)
+    reasons["randomness"] = 0.0
+    reasons["deterministic_scoring"] = True
     reasons["final_score"] = round(score, 4)
 
     return round(score, 4), reasons
