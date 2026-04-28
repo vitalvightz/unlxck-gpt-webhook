@@ -53,6 +53,11 @@ export class ApiError extends Error {
 }
 
 const RETRYABLE_GATEWAY_STATUSES = new Set([502, 503, 504]);
+const RETRYABLE_INTERNAL_ERROR_SNIPPETS = [
+  "failed to ensure profile",
+  "profile service temporarily unavailable",
+  "store service temporarily unavailable",
+];
 const RETRYABLE_NETWORK_MESSAGE = "Unable to reach the server. Please check your connection and try again.";
 const meRequestsByToken = new Map<string, Promise<MeResponse>>();
 const meUpdatesByToken = new Map<string, Promise<MeResponse>>();
@@ -106,7 +111,15 @@ function buildPlainTextErrorMessage(params: {
 
 export function isRetryableApiFailure(error: unknown): boolean {
   if (error instanceof ApiError) {
-    return RETRYABLE_GATEWAY_STATUSES.has(error.status);
+    if (RETRYABLE_GATEWAY_STATUSES.has(error.status)) {
+      return true;
+    }
+    return (
+      error.status >= 500 &&
+      RETRYABLE_INTERNAL_ERROR_SNIPPETS.some((snippet) =>
+        error.message.toLowerCase().includes(snippet),
+      )
+    );
   }
   return error instanceof Error && error.message === RETRYABLE_NETWORK_MESSAGE;
 }
