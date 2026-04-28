@@ -17,6 +17,8 @@ interface GenerationStatusContextValue {
 }
 
 const GenerationStatusContext = createContext<GenerationStatusContextValue | null>(null);
+const PENDING_GENERATION_PREFIX = "unlxck:pending-generation:";
+const GLOBAL_STATUS_POLL_MS = 15_000;
 
 interface PendingGenerationState {
   clientRequestId: string;
@@ -24,27 +26,65 @@ interface PendingGenerationState {
   createdAt: string;
 }
 
-function getPendingGeneration(): PendingGenerationState | null {
+type StoredPendingGenerationState = PendingGenerationState & {
+  storageKey: string;
+  createdAtMs: number;
+};
+
+function parsePendingGeneration(storageKey: string): StoredPendingGenerationState | null {
   if (typeof window === "undefined") return null;
 
-  const storageKeys = Object.keys(window.sessionStorage).filter((key) =>
-    key.startsWith("unlxck:pending-generation:")
-  );
+  const raw = window.sessionStorage.getItem(storageKey);
+  if (!raw) return null;
 
-  for (const key of storageKeys) {
-    const raw = window.sessionStorage.getItem(key);
-    if (raw) {
-      try {
-        const decoded = JSON.parse(raw) as PendingGenerationState;
-        if (decoded?.clientRequestId) {
-          return decoded;
-        }
-      } catch {
-        // Ignore parse errors
-      }
+  try {
+    const decoded = JSON.parse(raw) as PendingGenerationState;
+    if (!decoded?.clientRequestId) {
+      window.sessionStorage.removeItem(storageKey);
+      return null;
     }
+    const createdAtMs = Date.parse(decoded.createdAt || "");
+    return {
+      ...decoded,
+      storageKey,
+      createdAtMs: Number.isFinite(createdAtMs) ? createdAtMs : 0,
+    };
+  } catch {
+    window.sessionStorage.removeItem(storageKey);
+    return null;
   }
-  return null;
+}
+
+function listPendingGenerations(): StoredPendingGenerationState[] {
+  if (typeof window === "undefined") return [];
+
+  return Object.keys(window.sessionStorage)
+    .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
+    .map(parsePendingGeneration)
+    .filter((pending): pending is StoredPendingGenerationState => pending !== null)
+    .sort((a, b) => b.createdAtMs - a.createdAtMs);
+}
+
+function getPendingGeneration(): PendingGenerationState | null {
+  const [latest, ...duplicates] = listPendingGenerations();
+
+  duplicates.forEach((pending) => {
+    window.sessionStorage.removeItem(pending.storageKey);
+  });
+
+  return latest ?? null;
+}
+
+function clearPendingGenerations(): void {
+  if (typeof window === "undefined") return;
+
+  Object.keys(window.sessionStorage)
+    .filter((key) => key.startsWith(PENDING_GENERATION_PREFIX))
+    .forEach((key) => window.sessionStorage.removeItem(key));
+}
+
+function isTerminalStatus(status: GenerationJobStatus): boolean {
+  return status === "completed" || status === "review_required" || status === "failed";
 }
 
 function phaseFromStatus(status: GenerationJobStatus): GlobalGenerationPhase {
@@ -87,6 +127,7 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   // Track the clear timeout so we can cancel it on unmount — prevents
   // state updates on an unmounted component
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isCheckingRef = useRef(false);
 
   // Cancel any pending clear timer when the component unmounts
   useEffect(() => {
@@ -98,52 +139,66 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
   }, []);
 
   const checkStatus = useCallback(async () => {
-    const pending = getPendingGeneration();
-
-    if (!pending) {
-      setPhase(null);
-      setJobId(null);
-      setClientRequestId(null);
-      setStatusMessageText(null);
+    if (isCheckingRef.current) {
       return;
     }
 
-    setClientRequestId(pending.clientRequestId);
+    isCheckingRef.current = true;
 
-    if (pending.jobId && token) {
-      try {
-        const job = await getGenerationJob(token, pending.jobId);
-        const newPhase = phaseFromStatus(job.status);
-        setPhase(newPhase);
-        setJobId(pending.jobId);
-        setStatusMessageText(statusMessage(newPhase));
+    try {
+      const pending = getPendingGeneration();
 
-        if (job.status === "completed" || job.status === "review_required") {
-          setPlanId(job.plan_id || job.latest_plan_id || null);
-        }
-
-        // Schedule the status clear — cancel any previous pending clear first
-        if (job.status === "completed" || job.status === "review_required" || job.status === "failed") {
-          if (clearTimerRef.current !== null) {
-            clearTimeout(clearTimerRef.current);
-          }
-          const delay = job.status === "failed" ? 3000 : 5000;
-          clearTimerRef.current = setTimeout(() => {
-            clearTimerRef.current = null;
-            setPhase(null);
-            setJobId(null);
-            setClientRequestId(null);
-            setPlanId(null);
-          }, delay);
-        }
-      } catch {
-        // If we can't check status but have pending data, assume still running
-        setPhase("running");
-        setStatusMessageText("Generating plan...");
+      if (!pending) {
+        setPhase(null);
+        setJobId(null);
+        setClientRequestId(null);
+        setPlanId(null);
+        setStatusMessageText(null);
+        return;
       }
-    } else {
-      setPhase("queued");
-      setStatusMessageText("Plan request queued...");
+
+      setClientRequestId(pending.clientRequestId);
+
+      if (pending.jobId && token) {
+        try {
+          const job: GenerationJobResponse = await getGenerationJob(token, pending.jobId);
+          const newPhase = phaseFromStatus(job.status);
+          setPhase(newPhase);
+          setJobId(pending.jobId);
+          setStatusMessageText(statusMessage(newPhase));
+
+          if (job.status === "completed" || job.status === "review_required") {
+            setPlanId(job.plan_id || job.latest_plan_id || null);
+          }
+
+          if (isTerminalStatus(job.status)) {
+            clearPendingGenerations();
+
+            // Schedule the status clear — cancel any previous pending clear first
+            if (clearTimerRef.current !== null) {
+              clearTimeout(clearTimerRef.current);
+            }
+            const delay = job.status === "failed" ? 3000 : 5000;
+            clearTimerRef.current = setTimeout(() => {
+              clearTimerRef.current = null;
+              setPhase(null);
+              setJobId(null);
+              setClientRequestId(null);
+              setPlanId(null);
+              setStatusMessageText(null);
+            }, delay);
+          }
+        } catch {
+          // If we can't check status but have pending data, assume still running
+          setPhase("running");
+          setStatusMessageText("Generating plan...");
+        }
+      } else {
+        setPhase("queued");
+        setStatusMessageText("Plan request queued...");
+      }
+    } finally {
+      isCheckingRef.current = false;
     }
   }, [token]);
 
@@ -151,18 +206,28 @@ export function GenerationStatusProvider({ children, token }: GenerationStatusPr
     void checkStatus();
 
     const interval = setInterval(() => {
-      void checkStatus();
-    }, 3000);
+      if (getPendingGeneration()) {
+        void checkStatus();
+      }
+    }, GLOBAL_STATUS_POLL_MS);
 
     const handleStorageChange = () => {
       void checkStatus();
     };
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkStatus();
+      }
+    };
+
     window.addEventListener("storage", handleStorageChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener("storage", handleStorageChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [checkStatus]);
 
