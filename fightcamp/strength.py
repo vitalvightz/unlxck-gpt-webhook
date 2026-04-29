@@ -317,7 +317,8 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     unilateral_lower = _strength_is_unilateral_lower(exercise, tags)
     landing_impact = "mech_landing_impact" in tags or "high_impact_lower" in tags
     if _has_explicit_profile_level(exercise, "landing_cost") or _has_explicit_profile_level(exercise, "impact_cost"):
-        landing_impact = _high_cost_level(landing_cost) or _high_cost_level(impact_cost)
+        explicit_levels = [l for f, l in [("landing_cost", landing_cost), ("impact_cost", impact_cost)] if _has_explicit_profile_level(exercise, f)]
+        landing_impact = not all(_low_cost_level(l) for l in explicit_levels)
     overhead = _strength_overhead_signal(tags)
     systemic_fatigue = _strength_conditioning_density(text, tags)
     compound = normalize_exercise_movement(exercise) == "compound" or "compound" in tags
