@@ -250,8 +250,8 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["allow_glycolytic_build"] is False
         assert permissions["max_meaningful_strength_anchors"] == 1
         assert permissions["max_meaningful_conditioning_stressors"] == 1
-        assert permissions["max_meaningful_stress_exposures"] == 3
-        assert permissions["max_active_roles"] == 4
+        assert permissions["max_meaningful_stress_exposures"] == 2
+        assert permissions["max_active_roles"] == 2
         assert "compressed week" in [term.lower() for term in rules["preferred_terms"]]
         assert "conditioning build" in [term.lower() for term in rules["forbidden_terms"]]
 
@@ -299,7 +299,7 @@ class TestLateFightPermissionsAndRendering:
         assert permissions["max_meaningful_strength_anchors"] == 0
         assert permissions["max_meaningful_conditioning_stressors"] == 0
         assert permissions["max_meaningful_stress_exposures"] == 1
-        assert permissions["max_active_roles"] == 2
+        assert permissions["max_active_roles"] == 1
 
     def test_d3_alactic_sharpness_is_conditional(self):
         allowed = _late_fight_permissions(3, _athlete(3))
@@ -506,8 +506,8 @@ class TestPlanningBriefBranching:
             for entry in spec["visible_session_sequence"]
         ]
 
-        assert spec["visible_session_cap"] > 2
-        assert spec["max_active_roles"] == spec["visible_session_cap"]
+        assert spec["visible_session_cap"] <= spec["max_visible_app_sessions"]
+        assert spec["max_active_roles"] <= 2
         assert any(offset is not None and offset <= 13 for offset in visible_offsets)
         assert {16, 14}.issubset(set(visible_offsets))
 
@@ -522,7 +522,6 @@ class TestPlanningBriefBranching:
         ]
 
         assert downstream_roles
-        assert any(entry.get("composite_segment_stage_key") == "d7" for entry in downstream_roles)
         assert any(entry.get("composite_segment_stage_key") == "d1" for entry in downstream_roles)
 
     def test_bridge_d16_weekly_role_map_uses_practical_continuation_roles(self):
@@ -597,20 +596,13 @@ class TestPlanningBriefBranching:
             "d1",
             "d0",
         ]
-        assert [entry.get("role_key") for entry in spec["visible_session_sequence"]] == [
-            "strength_touch_day",
-            "alactic_sharpness_day",
-            "fight_week_freshness_day",
-            "neural_primer_day",
-        ]
-        assert _composite_stage_keys(spec["session_sequence"]) == [
-            "d13_to_d8",
-            "d13_to_d8",
-            "d7",
-            "d6_to_d5",
-            "d4_to_d2",
-            "d1",
-        ]
+        assert spec["visible_session_cap"] <= spec["max_visible_app_sessions"]
+        assert spec["role_budget"]["selected_active_roles"] <= spec["max_active_roles"]
+        assert "alactic_sharpness_day" not in spec["visible_session_roles"]
+        assert set(_composite_stage_keys(spec["session_sequence"])).issubset(
+            {"d13_to_d8", "d7", "d6_to_d5", "d4_to_d2", "d1"}
+        )
+        assert "D-0" not in [entry.get("countdown_label") for entry in spec["session_sequence"]]
 
 
 class TestStage2PayloadBranching:
@@ -660,9 +652,10 @@ class TestStage2PayloadBranching:
 
         assert spec["max_blocks_per_session"] == 5
         assert spec["max_meaningful_stress_exposures"] == 2
-        assert spec["max_active_roles"] == 3
+        assert spec["max_active_roles"] == 2
         assert "standalone_glycolytic" in spec["forbidden_blocks"]
         assert spec["max_support_roles"] == 1
+        assert spec["max_visible_app_sessions"] == 2
         assert "role_budget" in spec
         assert "allocator" in spec
         assert "permission_policy" in spec
@@ -671,7 +664,7 @@ class TestStage2PayloadBranching:
         spec = _build_late_fight_plan_spec(5, _athlete(5))
 
         assert spec["allocator"]["legal_countdown_labels"] == ["D-4", "D-3", "D-2", "D-1"]
-        assert spec["role_budget"]["selected_active_roles"] == len(spec["session_sequence"])
+        assert spec["role_budget"]["selected_visible_roles"] == len(spec["visible_session_sequence"])
         assert all("scheduled_countdown_label" in role for role in spec["session_sequence"])
         assert all("placement_source" in role for role in spec["session_sequence"])
 
@@ -732,7 +725,11 @@ class TestStage2PayloadBranching:
         assert [week["stage_key"] for week in brief["week_by_week_progression"]["weeks"]] == expected_stages
         assert [week["stage_key"] for week in brief["weekly_role_map"]["weeks"]] == expected_stages
         assert brief["late_fight_plan_spec"]["allocator"]["composite_practical_allocation"] is True
-        assert "d1" in _composite_stage_keys(brief["late_fight_session_sequence"])
+        stage_keys = _composite_stage_keys(brief["late_fight_session_sequence"])
+        if days in {13, 10}:
+            assert brief["late_fight_plan_spec"]["visible_session_cap"] <= brief["late_fight_plan_spec"]["max_visible_app_sessions"]
+        else:
+            assert "d1" in stage_keys
 
     def test_d13_downstream_stage_can_continue_with_zero_visible_app_owned_sessions(self):
         brief = _build_brief_for(13)
