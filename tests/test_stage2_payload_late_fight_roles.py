@@ -5,6 +5,7 @@ from fightcamp.stage2_payload_late_fight import (
     _late_fight_session_roles,
     _planned_sessions_per_week,
     _select_spaced_hard_days,
+    resolve_late_fight_caps,
 )
 
 
@@ -57,7 +58,7 @@ def test_pre_fight_compressed_suppresses_standalone_glycolytic_with_two_hard_day
     assert "light_fight_pace_touch_day" not in role_keys
 
 
-def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_one_hard_day():
+def test_pre_fight_compressed_caps_light_fight_rhythm_when_hard_and_strength_fill_active_budget():
     role_keys = [
         role["role_key"]
         for role in _late_fight_session_roles(
@@ -68,11 +69,11 @@ def test_pre_fight_compressed_allows_strength_touch_and_light_fight_rhythm_with_
 
     assert role_keys.count("hard_sparring_day") == 1
     assert role_keys.count("strength_touch_day") == 1
-    assert role_keys.count("light_fight_pace_touch_day") == 1
+    assert role_keys.count("light_fight_pace_touch_day") == 0
     assert role_keys.count("fight_week_freshness_day") == 1
 
 
-def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for_moderate_manageable_context():
+def test_pre_fight_compressed_uses_strict_visible_cap_for_moderate_manageable_context():
     athlete = _athlete(
         9,
         plan_creation_weekday="friday",
@@ -87,19 +88,15 @@ def test_pre_fight_compressed_does_not_auto_collapse_to_two_visible_sessions_for
 
     role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
     assert role_keys.count("hard_sparring_day") == 1
-    assert "light_fight_pace_touch_day" in role_keys
+    assert sum(1 for role in role_keys if role in {"hard_sparring_day", "strength_touch_day", "light_fight_pace_touch_day"}) <= 1
 
     spec = _build_late_fight_plan_spec(9, athlete)
-    assert spec["visible_session_cap"] == 4
-    assert set(spec["visible_session_roles"]) == {
-        "strength_touch_day",
-        "alactic_sharpness_day",
-        "fight_week_freshness_day",
-        "neural_primer_day",
-    }
+    assert spec["visible_session_cap"] <= spec["max_visible_app_sessions"] <= 2
+    assert spec["max_active_roles"] <= 1
+    assert "cap_injury_management" in spec["role_budget"]["reason_codes"]
 
 
-def test_pre_fight_compressed_suppresses_light_fight_pace_without_lowering_visible_cap():
+def test_pre_fight_compressed_high_pressure_lowers_visible_cap():
     athlete = _athlete(
         9,
         hard_sparring_days=["thursday"],
@@ -114,7 +111,139 @@ def test_pre_fight_compressed_suppresses_light_fight_pace_without_lowering_visib
     role_keys = [role["role_key"] for role in _late_fight_session_roles(9, athlete)]
     assert "light_fight_pace_touch_day" not in role_keys
     spec = _build_late_fight_plan_spec(9, athlete)
+    assert spec["visible_session_cap"] <= 2
+    assert spec["max_visible_app_sessions"] == 2
+    assert spec["max_active_roles"] == 1
+
+
+_ACTIVE_LATE_FIGHT_ROLES = {
+    "hard_sparring_day",
+    "strength_touch_day",
+    "neural_primer_day",
+    "alactic_sharpness_day",
+    "light_fight_pace_touch_day",
+}
+_SUPPORT_LATE_FIGHT_ROLES = {
+    "fight_week_freshness_day",
+    "technical_touch_day",
+}
+
+
+def _role_count(spec, role_keys):
+    return sum(1 for role in spec["session_sequence"] if role.get("role_key") in role_keys)
+
+
+def test_d14_moderate_fatigue_caps_visible_active_and_support_sessions():
+    spec = _build_late_fight_plan_spec(
+        14,
+        _athlete(14, fatigue="moderate", fatigue_level="moderate", hard_sparring_days=[]),
+    )
+
+    assert spec["visible_session_cap"] <= 3
+    assert _role_count(spec, _ACTIVE_LATE_FIGHT_ROLES) <= 2
+    assert _role_count(spec, _SUPPORT_LATE_FIGHT_ROLES) <= 1
+    assert "D-0" not in [role.get("countdown_label") for role in spec["session_sequence"]]
+
+
+def test_d14_high_fatigue_strictest_cap_wins():
+    spec = _build_late_fight_plan_spec(
+        14,
+        _athlete(14, fatigue="high", fatigue_level="high", hard_sparring_days=[]),
+    )
+
+    assert spec["visible_session_cap"] <= 2
+    assert _role_count(spec, _ACTIVE_LATE_FIGHT_ROLES) <= 1
+    assert "cap_high_fatigue" in spec["role_budget"]["reason_codes"]
+
+
+def test_d13_moderate_fatigue_does_not_keep_alactic_and_extra_freshness_when_capped():
+    spec = _build_late_fight_plan_spec(
+        13,
+        _athlete(13, fatigue="moderate", fatigue_level="moderate", hard_sparring_days=[]),
+    )
+    role_keys = spec["visible_session_roles"]
+
+    assert spec["visible_session_cap"] <= 3
+    assert _role_count(spec, _ACTIVE_LATE_FIGHT_ROLES) <= 2
+    assert not (
+        "alactic_sharpness_day" in role_keys
+        and role_keys.count("fight_week_freshness_day") > 0
+        and spec["visible_session_cap"] > spec["max_visible_app_sessions"]
+    )
+    assert role_keys.count("alactic_sharpness_day") == 0
+
+
+def test_d7_moderate_fatigue_caps_visible_sessions_and_meaningful_stress():
+    spec = _build_late_fight_plan_spec(
+        7,
+        _athlete(7, fatigue="moderate", fatigue_level="moderate", hard_sparring_days=[]),
+    )
+
+    assert spec["visible_session_cap"] <= 2
+    assert _role_count(spec, _ACTIVE_LATE_FIGHT_ROLES) <= 2
+    assert spec["role_budget"]["selected_meaningful_stress_exposures"] <= 2
+
+
+def test_d3_high_fatigue_suppresses_alactic_and_caps_to_one_visible_session():
+    spec = _build_late_fight_plan_spec(
+        3,
+        _athlete(3, fatigue="high", fatigue_level="high", readiness_flags=[]),
+    )
+
+    assert "alactic_sharpness_day" not in spec["visible_session_roles"]
+    assert spec["visible_session_cap"] <= 1
+
+
+def test_high_weight_cut_and_moderate_fatigue_apply_strictest_caps():
+    spec = _build_late_fight_plan_spec(
+        14,
+        _athlete(
+            14,
+            fatigue="moderate",
+            fatigue_level="moderate",
+            cut_severity_bucket="high",
+            hard_sparring_days=[],
+        ),
+    )
+
+    assert spec["max_active_roles"] == 1
+    assert spec["max_visible_app_sessions"] == 2
+    assert spec["visible_session_cap"] <= 2
+    assert "cap_weight_cut_high" in spec["role_budget"]["reason_codes"]
+
+
+def test_active_injury_and_moderate_fatigue_trim_extra_noise_roles():
+    spec = _build_late_fight_plan_spec(
+        14,
+        _athlete(
+            14,
+            fatigue="moderate",
+            fatigue_level="moderate",
+            has_active_injury=True,
+            readiness_flags=["injury_management"],
+            hard_sparring_days=[],
+        ),
+    )
+
+    assert spec["max_active_roles"] == 1
+    assert spec["visible_session_cap"] <= 2
+    assert "alactic_sharpness_day" not in spec["visible_session_roles"]
+    assert "technical_touch_day" not in spec["visible_session_roles"]
+    assert "cap_injury_management" in spec["role_budget"]["reason_codes"]
+
+
+def test_low_fatigue_low_cut_keeps_normal_late_fight_budget_room():
+    spec = _build_late_fight_plan_spec(
+        20,
+        _athlete(20, fatigue="low", fatigue_level="low", hard_sparring_days=[]),
+    )
+    caps = resolve_late_fight_caps(_athlete(20, fatigue="low", fatigue_level="low"), 20)
+
+    assert caps["max_visible_app_sessions"] == 4
     assert spec["visible_session_cap"] == 4
+    assert spec["max_active_roles"] == 3
+    assert "cap_high_fatigue" not in spec["role_budget"]["reason_codes"]
+    assert "cap_weight_cut_high" not in spec["role_budget"]["reason_codes"]
 
 
 def test_planned_sessions_fallback_caps_day_availability_at_five_when_intent_missing():
