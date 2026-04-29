@@ -578,13 +578,6 @@ class PlanInput:
                 parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
             else:
                 parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
-        if guided_injuries:
-            guided_injury = guided_injuries[0]
-            parsed_injuries, parsed_restrictions = _parse_guided_injuries(guided_injuries)
-        elif guided_injury is not None:
-            parsed_injuries, parsed_restrictions = _parse_guided_injury(guided_injury)
-        else:
-            parsed_injuries, parsed_restrictions = parse_injuries_and_restrictions(injuries or "")
 
         training_days = [d.strip() for d in raw_available_days.split(",") if d.strip()]
         hard_sparring_days = [
