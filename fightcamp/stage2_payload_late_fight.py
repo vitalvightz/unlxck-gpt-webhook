@@ -572,57 +572,198 @@ def _allow_late_fight_alactic_sharpness(athlete_model: dict[str, Any], days_unti
 
 
 def _late_fight_max_meaningful_stress_exposures(days_until_fight: Any) -> int | None:
-    days = _coerce_days(days_until_fight)
-    if days is None:
-        return None
-    if 14 <= days <= 21:
-        return 3
-    if 8 <= days <= 13:
-        return 3
-    if days == 7:
-        return 2
-    if 1 <= days <= 6:
-        return 1
-    if days == 0:
-        return 0
-    return None
+    return _late_fight_base_caps(days_until_fight).get("max_meaningful_stress_exposures")
 
 
 def _late_fight_max_active_roles(days_until_fight: Any) -> int | None:
-    days = _coerce_days(days_until_fight)
-    if days is None:
-        return None
-    if 14 <= days <= 21:
-        return 2
-    if 8 <= days <= 13:
-        return 4
-    if days == 7:
-        return 3
-    if 3 <= days <= 6:
-        return 2
-    if 1 <= days <= 2:
-        return 1
-    if days == 0:
-        return 0
-    return None
+    return _late_fight_base_caps(days_until_fight).get("max_active_roles")
 
 
 def _late_fight_max_support_roles(days_until_fight: Any) -> int | None:
-    try:
-        days = int(days_until_fight)
-    except (TypeError, ValueError):
-        return None
-    if 14 <= days <= 21:
-        return 2
+    return _late_fight_base_caps(days_until_fight).get("max_support_roles")
+
+
+def _late_fight_base_caps(days_until_fight: Any) -> dict[str, Any]:
+    days = _coerce_days(days_until_fight)
+    mode = _days_out_payload_mode(days_until_fight)
+    max_blocks = _MAX_BLOCKS_PER_SESSION.get(mode)
+    empty = {
+        "max_active_roles": None,
+        "max_meaningful_stress_exposures": None,
+        "max_support_roles": None,
+        "max_visible_app_sessions": None,
+        "max_blocks_per_session": max_blocks,
+    }
+    if days is None:
+        return empty
+    if 18 <= days <= 21:
+        return {
+            "max_active_roles": 3,
+            "max_meaningful_stress_exposures": 3,
+            "max_support_roles": 1,
+            "max_visible_app_sessions": 4,
+            "max_blocks_per_session": max_blocks,
+        }
+    if 14 <= days <= 17:
+        return {
+            "max_active_roles": 2,
+            "max_meaningful_stress_exposures": 2,
+            "max_support_roles": 1,
+            "max_visible_app_sessions": 3,
+            "max_blocks_per_session": max_blocks,
+        }
     if 8 <= days <= 13:
-        return 2
-    if 3 <= days <= 7:
-        return 1
+        return {
+            "max_active_roles": 2,
+            "max_meaningful_stress_exposures": 2,
+            "max_support_roles": 1,
+            "max_visible_app_sessions": 3,
+            "max_blocks_per_session": max_blocks,
+        }
+    if days == 7:
+        return {
+            "max_active_roles": 2,
+            "max_meaningful_stress_exposures": 2,
+            "max_support_roles": 1,
+            "max_visible_app_sessions": 3,
+            "max_blocks_per_session": max_blocks,
+        }
+    if 3 <= days <= 6:
+        return {
+            "max_active_roles": 1,
+            "max_meaningful_stress_exposures": 1,
+            "max_support_roles": 1,
+            "max_visible_app_sessions": 2,
+            "max_blocks_per_session": max_blocks,
+        }
     if 1 <= days <= 2:
-        return 0
+        return {
+            "max_active_roles": 1,
+            "max_meaningful_stress_exposures": 1,
+            "max_support_roles": 0,
+            "max_visible_app_sessions": 1,
+            "max_blocks_per_session": max_blocks,
+        }
     if days == 0:
-        return 0
-    return None
+        return {
+            "max_active_roles": 0,
+            "max_meaningful_stress_exposures": 0,
+            "max_support_roles": 0,
+            "max_visible_app_sessions": 0,
+            "max_blocks_per_session": max_blocks,
+        }
+    return empty
+
+
+def _cap_to(caps: dict[str, Any], key: str, value: int | None, reason_codes: list[str], reason: str) -> None:
+    if value is None:
+        return
+    current = caps.get(key)
+    if current is None or value < current:
+        caps[key] = value
+    if reason not in reason_codes:
+        reason_codes.append(reason)
+
+
+def _cap_has_injury_pressure(athlete_model: dict[str, Any], flags: set[str]) -> bool:
+    if bool(athlete_model.get("has_active_injury")):
+        return True
+    injury_mode = str(athlete_model.get("injury_mode") or "").strip().lower()
+    triage_summary = athlete_model.get("triage_summary") if isinstance(athlete_model.get("triage_summary"), dict) else {}
+    triage_mode = str((triage_summary or {}).get("mode") or "").strip().lower()
+    injury_flags = {
+        "injury_management",
+        "recent_pain",
+        "pain_recent",
+        "acute_flare",
+        "injury_watch",
+        "medical_review",
+        "needs_review",
+        "restricted_rehab_only",
+    }
+    return bool(flags & injury_flags or injury_mode in injury_flags or triage_mode in injury_flags)
+
+
+def _cap_is_medical_hold(athlete_model: dict[str, Any]) -> bool:
+    injury_mode = str(athlete_model.get("injury_mode") or "").strip().lower()
+    triage_summary = athlete_model.get("triage_summary") if isinstance(athlete_model.get("triage_summary"), dict) else {}
+    triage_mode = str((triage_summary or {}).get("mode") or "").strip().lower()
+    return injury_mode in {"medical_hold", "restricted_rehab_only"} or triage_mode in {"medical_hold", "restricted_rehab_only"}
+
+
+def resolve_late_fight_caps(athlete_model: dict, days_until_fight: Any) -> dict[str, Any]:
+    """Resolve late-fight role/session caps with the strictest constraint winning."""
+    athlete_model = athlete_model or {}
+    days = _coerce_days(days_until_fight)
+    caps = dict(_late_fight_base_caps(days_until_fight))
+    reason_codes = ["cap_days_window"] if days is not None and 0 <= days <= 21 else []
+
+    if caps.get("max_visible_app_sessions") is not None:
+        reason_codes.append("cap_visible_session_limit_applied")
+
+    mode = _days_out_payload_mode(days_until_fight)
+    if mode == "bridge_compression_payload":
+        bridge_rules = compute_bridge_rules(
+            days_until_fight=days_until_fight,
+            sport=athlete_model.get("sport"),
+            style=athlete_model.get("tactical_style") or athlete_model.get("style"),
+            fatigue=athlete_model.get("fatigue") or athlete_model.get("fatigue_level"),
+            weight_cut_bucket=_resolve_bridge_cut_bucket(athlete_model),
+            injury_mode=athlete_model.get("injury_mode"),
+            hard_sparring_days_declared=len(clean_list(athlete_model.get("hard_sparring_days", []))),
+        )
+        _cap_to(caps, "max_active_roles", bridge_rules.get("max_active_roles"), reason_codes, "cap_bridge_rules")
+        _cap_to(
+            caps,
+            "max_meaningful_stress_exposures",
+            bridge_rules.get("max_meaningful_stress_exposures"),
+            reason_codes,
+            "cap_bridge_rules",
+        )
+
+    fatigue = _normalized_fatigue(athlete_model)
+    flags = _readiness_flags(athlete_model)
+    if fatigue == "moderate":
+        _cap_to(caps, "max_active_roles", 2, reason_codes, "cap_moderate_fatigue")
+        _cap_to(caps, "max_meaningful_stress_exposures", 2, reason_codes, "cap_moderate_fatigue")
+        _cap_to(caps, "max_support_roles", 1, reason_codes, "cap_moderate_fatigue")
+        if days is not None and 8 <= days <= 17:
+            _cap_to(caps, "max_visible_app_sessions", 3, reason_codes, "cap_moderate_fatigue")
+        elif days is not None and 3 <= days <= 7:
+            _cap_to(caps, "max_visible_app_sessions", 2, reason_codes, "cap_moderate_fatigue")
+        elif days is not None and 1 <= days <= 2:
+            _cap_to(caps, "max_visible_app_sessions", 1, reason_codes, "cap_moderate_fatigue")
+    elif fatigue == "high":
+        _cap_to(caps, "max_active_roles", 1, reason_codes, "cap_high_fatigue")
+        _cap_to(caps, "max_meaningful_stress_exposures", 1, reason_codes, "cap_high_fatigue")
+        _cap_to(caps, "max_support_roles", 1, reason_codes, "cap_high_fatigue")
+        if days is not None and 8 <= days <= 17:
+            _cap_to(caps, "max_visible_app_sessions", 2, reason_codes, "cap_high_fatigue")
+        elif days is not None and 1 <= days <= 7:
+            _cap_to(caps, "max_visible_app_sessions", 1, reason_codes, "cap_high_fatigue")
+
+    if _cap_is_medical_hold(athlete_model):
+        for key in ("max_active_roles", "max_meaningful_stress_exposures", "max_support_roles", "max_visible_app_sessions"):
+            _cap_to(caps, key, 0, reason_codes, "cap_injury_medical_hold")
+    elif _cap_has_injury_pressure(athlete_model, flags):
+        _cap_to(caps, "max_active_roles", 1, reason_codes, "cap_injury_management")
+        _cap_to(caps, "max_meaningful_stress_exposures", 1, reason_codes, "cap_injury_management")
+        _cap_to(caps, "max_support_roles", 1, reason_codes, "cap_injury_management")
+        _cap_to(caps, "max_visible_app_sessions", 2, reason_codes, "cap_injury_management")
+
+    cut_bucket = _resolve_bridge_cut_bucket(athlete_model)
+    if cut_bucket == "moderate":
+        _cap_to(caps, "max_active_roles", 2, reason_codes, "cap_weight_cut_moderate")
+        _cap_to(caps, "max_meaningful_stress_exposures", 2, reason_codes, "cap_weight_cut_moderate")
+        _cap_to(caps, "max_support_roles", 1, reason_codes, "cap_weight_cut_moderate")
+    elif cut_bucket in {"high", "critical", "extreme"}:
+        _cap_to(caps, "max_active_roles", 1, reason_codes, "cap_weight_cut_high")
+        _cap_to(caps, "max_meaningful_stress_exposures", 1, reason_codes, "cap_weight_cut_high")
+        _cap_to(caps, "max_support_roles", 1, reason_codes, "cap_weight_cut_high")
+        _cap_to(caps, "max_visible_app_sessions", 2, reason_codes, "cap_weight_cut_high")
+
+    caps["reason_codes"] = dedupe_preserve_order(reason_codes)
+    return caps
 
 
 # --- Bridge window (D-21 to D-14) -------------------------------------------
@@ -1250,11 +1391,15 @@ def _late_fight_permission_policy(days_until_fight: Any, athlete_model: dict[str
 
 
 def _late_fight_role_budget(days_until_fight: Any, athlete_model: dict[str, Any]) -> dict[str, Any]:
+    caps = resolve_late_fight_caps(athlete_model, days_until_fight)
     return {
         "mode": _days_out_payload_mode(days_until_fight),
-        "max_active_roles": _late_fight_max_active_roles(days_until_fight),
-        "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
-        "max_support_roles": _late_fight_max_support_roles(days_until_fight),
+        "max_active_roles": caps.get("max_active_roles"),
+        "max_meaningful_stress_exposures": caps.get("max_meaningful_stress_exposures"),
+        "max_support_roles": caps.get("max_support_roles"),
+        "max_visible_app_sessions": caps.get("max_visible_app_sessions"),
+        "max_blocks_per_session": caps.get("max_blocks_per_session"),
+        "reason_codes": list(caps.get("reason_codes", [])),
         "legal_countdown_labels": _late_fight_legal_countdown_labels(days_until_fight),
     }
 
@@ -1856,6 +2001,8 @@ def _late_fight_role_entry(
     legal_countdown_labels: list[str] | None = None,
     downgraded_from_role_key: str | None = None,
     declared_day_order: int | None = None,
+    countdown_label: str | None = None,
+    countdown_offset: int | None = None,
     day_assignment_reason: str | None = None,
     coach_notes: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -1886,6 +2033,10 @@ def _late_fight_role_entry(
         entry["downgraded_from_role_key"] = downgraded_from_role_key
     if declared_day_order is not None:
         entry["_declared_day_order"] = declared_day_order
+    if countdown_label:
+        entry["countdown_label"] = countdown_label
+    if countdown_offset is not None:
+        entry["countdown_offset"] = countdown_offset
     if day_assignment_reason:
         entry["day_assignment_reason"] = day_assignment_reason
     if coach_notes:
@@ -2033,6 +2184,8 @@ def _late_fight_candidate_roles(
                     placement_source="declared_hard_day_lock",
                     legal_countdown_labels=legal_countdown_labels,
                     declared_day_order=day_order,
+                    countdown_label=item.get("countdown_label"),
+                    countdown_offset=item.get("countdown_offset"),
                     day_assignment_reason="Declared hard sparring day stays fixed inside the active late-fight window.",
                 )
             )
@@ -2296,6 +2449,9 @@ def _late_fight_locked_label(role: dict[str, Any], label_to_weekday: dict[str, s
     locked_day = str(role.get("locked_day") or "").strip().lower()
     if not locked_day:
         return None
+    current_label = str(role.get("scheduled_countdown_label") or role.get("countdown_label") or "").strip()
+    if current_label and str(label_to_weekday.get(current_label) or "").strip().lower() == locked_day:
+        return current_label
     legal_labels = [
         str(label)
         for label in role.get("legal_countdown_labels", [])
@@ -2547,20 +2703,26 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
     max_active_roles = role_budget.get("max_active_roles")
     max_meaningful_stress_exposures = role_budget.get("max_meaningful_stress_exposures")
     max_support_roles = role_budget.get("max_support_roles")
-
-    required_roles = [role for role in eligible_candidates if role.get("_required")]
-    optional_roles = [role for role in eligible_candidates if not role.get("_required")]
+    max_visible_app_sessions = role_budget.get("max_visible_app_sessions")
 
     best_roles: list[dict[str, Any]] = []
     best_score: int | None = None
-    for optional_count in range(len(optional_roles) + 1):
-        for optional_subset in combinations(optional_roles, optional_count):
-            selected_roles = required_roles + list(optional_subset)
-            if isinstance(max_active_roles, int) and len(selected_roles) > max_active_roles:
+    for role_count in range(len(eligible_candidates) + 1):
+        for selected_subset in combinations(eligible_candidates, role_count):
+            selected_roles = list(selected_subset)
+            active_count = _late_fight_meaningful_stress_count(selected_roles)
+            visible_count = sum(
+                1
+                for role in selected_roles
+                if _is_app_owned_visible_role(role.get("role_key"))
+            )
+            if isinstance(max_active_roles, int) and active_count > max_active_roles:
                 continue
-            if isinstance(max_meaningful_stress_exposures, int) and _late_fight_meaningful_stress_count(selected_roles) > max_meaningful_stress_exposures:
+            if isinstance(max_meaningful_stress_exposures, int) and active_count > max_meaningful_stress_exposures:
                 continue
             if isinstance(max_support_roles, int) and _late_fight_support_role_count(selected_roles) > max_support_roles:
+                continue
+            if isinstance(max_visible_app_sessions, int) and visible_count > max_visible_app_sessions:
                 continue
             assignment = _late_fight_best_assignment(
                 selected_roles,
@@ -2571,6 +2733,7 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
             if assignment is None:
                 continue
             score, assigned_roles = assignment
+            score += sum(50000 for role in assigned_roles if role.get("_required"))
             if best_score is None or score > best_score:
                 best_score = score
                 best_roles = assigned_roles
@@ -2604,7 +2767,8 @@ def _late_fight_allocation_plan(days_until_fight: Any, athlete_model: dict[str, 
         "permission_policy": permission_policy,
         "role_budget": {
             **role_budget,
-            "selected_active_roles": len(public_roles),
+            "selected_active_roles": _late_fight_meaningful_stress_count(public_roles),
+            "selected_visible_roles": len(_visible_insert_session_sequence(public_roles)),
             "selected_meaningful_stress_exposures": _late_fight_meaningful_stress_count(public_roles),
             "selected_support_roles": _late_fight_support_role_count(public_roles),
         },
@@ -2866,11 +3030,10 @@ def _space_bridge_countdown_roles(
     if not roles:
         return []
     role_budget = _late_fight_role_budget(days_until_fight, athlete_model)
+    max_active_roles = role_budget.get("max_active_roles")
     max_meaningful_stress_exposures = role_budget.get("max_meaningful_stress_exposures")
     max_support_roles = role_budget.get("max_support_roles")
-    max_visible_roles = None
-    if isinstance(max_meaningful_stress_exposures, int) and isinstance(max_support_roles, int):
-        max_visible_roles = max_meaningful_stress_exposures + max_support_roles
+    max_visible_app_sessions = role_budget.get("max_visible_app_sessions")
     hard_spar_cap = _declared_hard_spar_cap(days_until_fight)
     label_to_weekday = _full_countdown_weekday_map(days_until_fight, athlete_model)
     label_to_display_weekday = _countdown_weekday_map(
@@ -2895,16 +3058,19 @@ def _space_bridge_countdown_roles(
         index: int,
         occupied_labels: set[str],
         assigned: list[dict[str, Any]],
-        visible_active_count: int,
-        visible_meaningful_count: int,
+        visible_count: int,
+        active_count: int,
+        meaningful_count: int,
         visible_support_count: int,
         hard_spar_count: int,
         role_key_counts: dict[str, int],
     ) -> None:
         nonlocal best_score, best_roles
-        if isinstance(max_visible_roles, int) and visible_active_count > max_visible_roles:
+        if isinstance(max_visible_app_sessions, int) and visible_count > max_visible_app_sessions:
             return
-        if isinstance(max_meaningful_stress_exposures, int) and visible_meaningful_count > max_meaningful_stress_exposures:
+        if isinstance(max_active_roles, int) and active_count > max_active_roles:
+            return
+        if isinstance(max_meaningful_stress_exposures, int) and meaningful_count > max_meaningful_stress_exposures:
             return
         if isinstance(max_support_roles, int) and visible_support_count > max_support_roles:
             return
@@ -2929,8 +3095,9 @@ def _space_bridge_countdown_roles(
             index + 1,
             occupied_labels,
             assigned,
-            visible_active_count,
-            visible_meaningful_count,
+            visible_count,
+            active_count,
+            meaningful_count,
             visible_support_count,
             hard_spar_count,
             role_key_counts,
@@ -2967,14 +3134,15 @@ def _space_bridge_countdown_roles(
                 index + 1,
                 occupied_labels | {label},
                 assigned + [assigned_role],
-                visible_active_count + (1 if role_is_visible else 0),
-                visible_meaningful_count + (1 if role_is_visible and role_is_meaningful else 0),
+                visible_count + (1 if role_is_visible else 0),
+                active_count + (1 if role_is_meaningful else 0),
+                meaningful_count + (1 if role_is_meaningful else 0),
                 visible_support_count + (1 if role_is_visible and role_is_support else 0),
                 hard_spar_count + (1 if role_is_hard_spar else 0),
                 next_role_key_counts,
             )
 
-    _search(0, set(), [], 0, 0, 0, 0, {})
+    _search(0, set(), [], 0, 0, 0, 0, 0, {})
     final_roles = best_roles or roles
     final_roles = sorted(
         final_roles,
@@ -3047,10 +3215,13 @@ def _bridge_countdown_practical_allocation_plan(days_until_fight: Any, athlete_m
     role_budget = {
         "mode": mode,
         "composite_practical_allocation": True,
-        "max_active_roles": len(visible_roles),
+        "max_active_roles": top_level_budget.get("max_active_roles"),
         "max_meaningful_stress_exposures": top_level_budget.get("max_meaningful_stress_exposures"),
         "max_support_roles": top_level_budget.get("max_support_roles"),
-        "selected_active_roles": len(public_roles),
+        "max_visible_app_sessions": top_level_budget.get("max_visible_app_sessions"),
+        "max_blocks_per_session": top_level_budget.get("max_blocks_per_session"),
+        "reason_codes": list(top_level_budget.get("reason_codes", [])),
+        "selected_active_roles": _late_fight_meaningful_stress_count(public_roles),
         "selected_visible_roles": len(visible_roles),
         "selected_meaningful_stress_exposures": _late_fight_meaningful_stress_count(public_roles),
         "selected_support_roles": _late_fight_support_role_count(public_roles),
@@ -3439,6 +3610,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),
         "max_support_roles": _late_fight_max_support_roles(days_until_fight),
+        "max_visible_app_sessions": role_budget.get("max_visible_app_sessions"),
         "countdown_weekday_map": resolved_countdown_map,
         "role_budget": role_budget,
         "allocator": allocation.get("allocator", {}),
@@ -3452,6 +3624,8 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         spec["max_active_roles"] = role_budget["max_active_roles"]
     if isinstance(role_budget.get("max_support_roles"), int):
         spec["max_support_roles"] = role_budget["max_support_roles"]
+    if isinstance(role_budget.get("max_visible_app_sessions"), int):
+        spec["max_visible_app_sessions"] = role_budget["max_visible_app_sessions"]
     if max_blocks is not None:
         spec["max_blocks_per_session"] = max_blocks
     hard_sparring_context = _hard_sparring_window_context(days_until_fight, athlete_model)
