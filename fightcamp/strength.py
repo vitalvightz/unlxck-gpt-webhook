@@ -527,11 +527,13 @@ def _evaluate_strength_late_window(
         reason_codes.append("late_strength_boost_explicit_late_touch")
     if _has_explicit_profile_level(exercise, "eccentric_cost"):
         low_eccentric = _low_cost_level(eccentric_cost)
+    impact_cost = _exercise_profile_level(exercise, "impact_cost")
+    movement_cost = _exercise_profile_level(exercise, "movement_cost")
     explicit_impact_levels = [
         level
         for field_name, level in (
             ("landing_cost", landing_cost),
-            ("impact_cost", _exercise_profile_level(exercise, "impact_cost")),
+            ("impact_cost", impact_cost),
         )
         if _has_explicit_profile_level(exercise, field_name)
     ]
