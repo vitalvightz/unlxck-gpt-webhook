@@ -31,6 +31,7 @@ from .stage2_payload_late_fight import (
     _uses_late_fight_stage2_payload,
 )
 from .conditioning import athlete_facing_system_label
+from .conditioning_dosage import normalize_conditioning_dose
 from .fight_day_override import apply_fight_day_override_to_weekly_role_map
 from .late_selector_windows import classify_late_selector_window
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
@@ -3888,11 +3889,20 @@ def _serialize_conditioning_option(
     system: str,
     why: str,
     *,
+    phase: str = "",
     late_window: str | None = None,
+    dosage_context: dict | None = None,
     score_evidence: dict | None = None,
 ) -> dict:
     tags = clean_list(drill.get("tags", []))
     required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
+    prescribed_dose = normalize_conditioning_dose(
+        drill,
+        system=system,
+        phase=phase,
+        late_window=late_window,
+        **(dosage_context or {}),
+    )
     return _with_selection_evidence({
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
@@ -3909,6 +3919,8 @@ def _serialize_conditioning_option(
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
         "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
+        "prescribed_dose": prescribed_dose,
+        "renderable": prescribed_dose.get("status") != "blocked",
     }, drill, score_evidence)
 
 
@@ -3967,9 +3979,11 @@ def _build_conditioning_alternates(
     phase_block: dict,
     *,
     system: str,
+    phase: str,
     selected_names: set[str],
     current_name: str,
     late_window: str | None = None,
+    dosage_context: dict | None = None,
 ) -> list[dict]:
     alternates: list[dict] = []
     seen: set[str] = set()
@@ -3983,7 +3997,9 @@ def _build_conditioning_alternates(
                 drill,
                 system,
                 candidate.get("explanation", "balanced selection"),
+                phase=phase,
                 late_window=late_window,
+                dosage_context=dosage_context,
                 score_evidence=candidate.get("score_evidence")
                 or build_score_evidence(
                     score=candidate.get("score"),
@@ -3996,6 +4012,87 @@ def _build_conditioning_alternates(
         if len(alternates) >= 2:
             break
     return alternates
+
+
+def _conditioning_dosage_context(
+    athlete_model: dict | None,
+    restrictions: list[dict] | None,
+) -> dict:
+    athlete_model = athlete_model or {}
+    weight_cut_pct = athlete_model.get("weight_cut_pct")
+    days_until_fight = athlete_model.get("days_until_fight")
+    cut_bucket = cut_severity_bucket(compute_cut_severity_score(weight_cut_pct or 0, days_until_fight))
+    return {
+        "days_until_fight": days_until_fight,
+        "fatigue": athlete_model.get("fatigue"),
+        "injuries": athlete_model.get("injuries") or [],
+        "restrictions": restrictions or [],
+        "weight_cut_risk": athlete_model.get("weight_cut_risk"),
+        "weight_cut_pct": weight_cut_pct,
+        "cut_bucket": cut_bucket,
+        "training_frequency": athlete_model.get("training_frequency"),
+    }
+
+
+def _blocked_dose_omission(option: dict) -> dict:
+    return {
+        "name": option.get("name"),
+        "score": option.get("score"),
+        "reason": "dose_blocked",
+        "prescribed_dose": option.get("prescribed_dose"),
+    }
+
+
+def _with_promoted_dose_reason(option: dict) -> dict:
+    promoted = dict(option)
+    prescribed_dose = dict(promoted.get("prescribed_dose") or {})
+    reason_codes = list(prescribed_dose.get("dose_reason_codes") or [])
+    if "dose_promoted_safe_alternate" not in reason_codes:
+        reason_codes.append("dose_promoted_safe_alternate")
+    prescribed_dose["dose_reason_codes"] = reason_codes
+    promoted["prescribed_dose"] = prescribed_dose
+    promoted["renderable"] = prescribed_dose.get("status") != "blocked"
+    return promoted
+
+
+def _apply_conditioning_dose_rules(slot: dict) -> dict:
+    selected = slot.get("selected") or {}
+    alternates = list(slot.get("alternates") or [])
+    options = [selected, *alternates]
+    blocked = [
+        option for option in options
+        if (option.get("prescribed_dose") or {}).get("status") == "blocked"
+    ]
+    safe_alternates = [
+        option for option in alternates
+        if (option.get("prescribed_dose") or {}).get("status") != "blocked"
+    ]
+
+    if blocked:
+        slot["dose_omissions"] = [_blocked_dose_omission(option) for option in blocked]
+
+    selected_blocked = (selected.get("prescribed_dose") or {}).get("status") == "blocked"
+    if not selected_blocked:
+        slot["renderable"] = True
+        slot["alternates"] = safe_alternates
+        return slot
+
+    if safe_alternates:
+        promoted = _with_promoted_dose_reason(safe_alternates[0])
+        slot["selected"] = promoted
+        slot["alternates"] = safe_alternates[1:]
+        slot["renderable"] = True
+        slot["dose_replacement"] = {
+            "from": selected.get("name"),
+            "to": promoted.get("name"),
+            "reason": "selected_dose_blocked",
+        }
+        return slot
+
+    slot["renderable"] = False
+    slot["slot_omitted_by_dose"] = True
+    slot["alternates"] = []
+    return slot
 
 
 def _parse_rehab_groups(rehab_block: str) -> list[dict]:
@@ -4079,7 +4176,13 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
     return slots
 
 
-def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_window: str | None = None) -> list[dict]:
+def _build_conditioning_slots(
+    phase_block: dict | None,
+    phase: str,
+    *,
+    late_window: str | None = None,
+    dosage_context: dict | None = None,
+) -> list[dict]:
     if not phase_block:
         return []
     reason_lookup = {
@@ -4100,29 +4203,34 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_wind
             if not name:
                 continue
             reasons = reason_lookup.get(name, {})
+            slot = {
+                "slot_id": f"{phase.lower()}_{system}_{idx}_{slugify(name)}",
+                "role": system,
+                "purpose": CONDITIONING_ROLE_PURPOSES.get(system, reasons.get("explanation", "balanced selection")),
+                "selected": _serialize_conditioning_option(
+                    drill,
+                    system,
+                    reasons.get("explanation", "balanced selection"),
+                    phase=phase,
+                    late_window=late_window,
+                    dosage_context=dosage_context,
+                    score_evidence=_why_log_score_evidence(reasons),
+                ),
+                "alternates": _build_conditioning_alternates(
+                    phase_block,
+                    system=system,
+                    phase=phase,
+                    selected_names=selected_names,
+                    current_name=name,
+                    late_window=late_window,
+                    dosage_context=dosage_context,
+                ),
+                "replace_with_same_role": True,
+                "priority": _conditioning_slot_priority(phase, system, idx),
+                "session_index": int(drill.get("session_index", idx) or idx),
+            }
             slots.append(
-                {
-                    "slot_id": f"{phase.lower()}_{system}_{idx}_{slugify(name)}",
-                    "role": system,
-                    "purpose": CONDITIONING_ROLE_PURPOSES.get(system, reasons.get("explanation", "balanced selection")),
-                    "selected": _serialize_conditioning_option(
-                        drill,
-                        system,
-                        reasons.get("explanation", "balanced selection"),
-                        late_window=late_window,
-                        score_evidence=_why_log_score_evidence(reasons),
-                    ),
-                    "alternates": _build_conditioning_alternates(
-                        phase_block,
-                        system=system,
-                        selected_names=selected_names,
-                        current_name=name,
-                        late_window=late_window,
-                    ),
-                    "replace_with_same_role": True,
-                    "priority": _conditioning_slot_priority(phase, system, idx),
-                    "session_index": int(drill.get("session_index", idx) or idx),
-                }
+                _apply_conditioning_dose_rules(slot)
             )
     return slots
 
@@ -4285,6 +4393,8 @@ def build_stage2_payload(
         short_notice=short_notice,
     )
     has_active_injury = athlete_model.get("has_active_injury")
+    serialized_restrictions = _serialize_restrictions(restrictions)
+    dosage_context = _conditioning_dosage_context(athlete_model, serialized_restrictions)
     candidate_pools: dict[str, dict] = {}
     for phase in ("GPP", "SPP", "TAPER"):
         if phase_weeks.get(phase, 0) <= 0 and phase_weeks.get("days", {}).get(phase, 0) < 1:
@@ -4292,14 +4402,16 @@ def build_stage2_payload(
         candidate_pools[phase] = {
             "strength_slots": _build_strength_slots(strength_blocks.get(phase), phase),
             "conditioning_slots": _build_conditioning_slots(
-                conditioning_blocks.get(phase), phase, late_window=late_window
+                conditioning_blocks.get(phase),
+                phase,
+                late_window=late_window,
+                dosage_context=dosage_context,
             ),
             "rehab_slots": _build_rehab_slots(rehab_blocks.get(phase, ""), phase) if has_active_injury else [],
         }
 
     athlete_model["triage_summary"] = dict(training_context.triage_summary or {})
     injury_context = _build_injury_context(athlete_model=athlete_model)
-    serialized_restrictions = _serialize_restrictions(restrictions)
     phase_briefs = _build_phase_briefs(training_context, phase_weeks)
     omission_ledger = _build_omission_ledger(
         strength_blocks=strength_blocks,
@@ -4316,6 +4428,8 @@ def build_stage2_payload(
             "Keep every final primary drill, support drill, and fallback equipment-valid for the athlete profile.",
             "Only keep an explicit fallback when a real unresolved access or availability contingency still exists.",
             "If declared hard sparring days exist, treat them as fixed collision points when placing the main glycolytic stressor or primary neural strength session.",
+            "For conditioning slots, selected.prescribed_dose is authoritative. Use selected.prescribed_dose.display as the dose and do not invent rounds, RPE, work:rest, or total time.",
+            "Do not render conditioning options with prescribed_dose.status == 'blocked' or renderable == false. Treat dose_omissions as internal context only, never as an athlete-facing blocked-option menu.",
         ],
         "writing_rules": [
             "Keep the final plan athlete-facing and clean.",
@@ -4332,6 +4446,7 @@ def build_stage2_payload(
             "Aim critique at the plan, load, or execution issue, never at the athlete's character.",
             "Keep high-value isometrics when they fit, but do not let them default to anchor status if a stronger compliant loaded option exists.",
             "For conditioning, give one primary prescription and at most one explicit fallback.",
+            "For conditioning dose text, copy the intent of selected.prescribed_dose.display; do not add extra intervals, rounds, RPE, or total-time guesses.",
             "Collapse internal template/menu options into one final prescription whenever the athlete context already resolves the choice.",
             "Keep every active week present and structurally complete, including late-camp weeks.",
             "For boxer weeks, keep the default rhythm of support strength, low-damage conditioning, recovery, primary strength, then the main phase-specific conditioning stressor unless a stronger planning rule forces a change.",
@@ -4436,6 +4551,9 @@ Rehab, carries, trunk stability, and mobility support the plan — they do not l
 
 RULE 8 — EQUIPMENT AND REPLACEMENT QUALITY
 Every exercise must be valid for the athlete's declared equipment. If the profile resolves an access question, render the resolved option only — no unresolved branches. Replace weak or violating items with stronger compliant options from selected_plan, not softer invented options.
+
+RULE 8A — CONDITIONING DOSE AUTHORITY
+For conditioning, selected.prescribed_dose is the final dose authority. Use selected.prescribed_dose.display for work/rest/rounds/RPE/total-time wording. Do not invent, extend, or reinterpret conditioning loading. Do not render any conditioning option with prescribed_dose.status == "blocked" or renderable == false. If dose_omissions exists, treat it as internal safety context only; never expose blocked-option menus to the athlete.
 
 RULE 9 — TAPER DISCIPLINE
 Cut novelty, reduce accessory volume, avoid density. Keep only sharpness, rhythm, confidence, and freshness. One final prescription per session — no option menus.

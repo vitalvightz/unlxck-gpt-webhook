@@ -144,8 +144,115 @@ def test_stage2_slots_include_score_evidence_for_selected_items_and_alternates()
     assert strength_alternate["penalties"] == 1
     assert conditioning_selected["score"] == 6.0
     assert conditioning_selected["late_window_adjustment"] == -1
+    assert conditioning_selected["prescribed_dose"]["status"] in {"prescribed", "defaulted"}
+    assert conditioning_selected["prescribed_dose"]["display"]
     assert conditioning_alternate["score"] == 5.5
     assert "selection_metadata" in conditioning_alternate
+    assert conditioning_alternate["prescribed_dose"]["status"] in {"prescribed", "defaulted"}
+
+
+def test_conditioning_payload_promotes_safe_alternate_when_selected_dose_blocks():
+    conditioning_slots = _build_conditioning_slots(
+        {
+            "grouped_drills": {
+                "aerobic": [
+                    {
+                        "name": "Too Short Aerobic",
+                        "tags": ["aerobic"],
+                        "system": "aerobic",
+                        "work_sec": 60,
+                        "rest_sec": 60,
+                        "rounds": 2,
+                        "rpe": 5,
+                    }
+                ]
+            },
+            "why_log": [
+                {
+                    "name": "Too Short Aerobic",
+                    "explanation": "base aerobic",
+                    "reasons": {"final_score": 7.0, "reason_codes": ["system_quota"]},
+                }
+            ],
+            "candidate_reservoir": {
+                "aerobic": [
+                    {
+                        "drill": {
+                            "name": "Safe Aerobic Bike",
+                            "tags": ["aerobic"],
+                            "system": "aerobic",
+                            "total_minutes": 15,
+                            "rpe": 5,
+                        },
+                        "score": 6.5,
+                        "reasons": {"final_score": 6.5, "reason_codes": ["alternate"]},
+                        "explanation": "safe same system",
+                    }
+                ]
+            },
+        },
+        "SPP",
+    )
+
+    slot = conditioning_slots[0]
+
+    assert slot["renderable"] is True
+    assert slot["selected"]["name"] == "Safe Aerobic Bike"
+    assert "dose_promoted_safe_alternate" in slot["selected"]["prescribed_dose"]["dose_reason_codes"]
+    assert slot["dose_replacement"]["from"] == "Too Short Aerobic"
+    assert slot["dose_omissions"][0]["name"] == "Too Short Aerobic"
+
+
+def test_conditioning_payload_marks_slot_nonrenderable_when_all_doses_block():
+    conditioning_slots = _build_conditioning_slots(
+        {
+            "grouped_drills": {
+                "aerobic": [
+                    {
+                        "name": "Too Short Aerobic",
+                        "tags": ["aerobic"],
+                        "system": "aerobic",
+                        "work_sec": 60,
+                        "rest_sec": 60,
+                        "rounds": 2,
+                        "rpe": 5,
+                    }
+                ]
+            },
+            "why_log": [
+                {
+                    "name": "Too Short Aerobic",
+                    "explanation": "base aerobic",
+                    "reasons": {"final_score": 7.0, "reason_codes": ["system_quota"]},
+                }
+            ],
+            "candidate_reservoir": {
+                "aerobic": [
+                    {
+                        "drill": {
+                            "name": "Also Too Short",
+                            "tags": ["aerobic"],
+                            "system": "aerobic",
+                            "work_sec": 30,
+                            "rest_sec": 30,
+                            "rounds": 3,
+                            "rpe": 4,
+                        },
+                        "score": 6.5,
+                        "reasons": {"final_score": 6.5, "reason_codes": ["alternate"]},
+                        "explanation": "same system but too short",
+                    }
+                ]
+            },
+        },
+        "SPP",
+    )
+
+    slot = conditioning_slots[0]
+
+    assert slot["renderable"] is False
+    assert slot["slot_omitted_by_dose"] is True
+    assert {entry["name"] for entry in slot["dose_omissions"]} == {"Too Short Aerobic", "Also Too Short"}
 
 
 def test_validate_bank_discovery_excludes_parser_config_files():

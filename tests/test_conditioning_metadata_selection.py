@@ -215,8 +215,11 @@ def test_stage1_to_stage2_payload_carries_conditioning_metadata_scores_and_omiss
     assert slot["selected"]["score"] == 4.2
     assert slot["selected"]["selection_metadata"]["lactate_load"] == "low"
     assert slot["selected"]["selection_metadata"]["work_sec"] == 120
+    assert slot["selected"]["prescribed_dose"]["status"] != "blocked"
+    assert slot["selected"]["prescribed_dose"]["display"]
     assert slot["alternates"][0]["score"] == 3.8
     assert slot["alternates"][0]["selection_metadata"]["total_minutes"] == 12
+    assert slot["alternates"][0]["prescribed_dose"]["status"] != "blocked"
     assert payload["omission_ledger"]["GPP"]["conditioning"][0]["reason"] == "missing_system"
 
 
