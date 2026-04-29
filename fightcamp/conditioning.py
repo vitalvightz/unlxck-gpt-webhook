@@ -57,6 +57,16 @@ logger = logging.getLogger(__name__)
 
 ALACTIC_MAX_WORK_SEC = 12
 ALACTIC_MIN_REST_SEC = 60
+CONDITIONING_MULTI_ROUND_MIN_ROUNDS = 3
+GLYCOLYTIC_DENSE_MIN_WORK_SEC = 45
+GLYCOLYTIC_DENSE_MAX_REST_SEC = 90
+GLYCOLYTIC_SUSTAINED_MIN_TOTAL_MINUTES = 12
+GLYCOLYTIC_SUSTAINED_MIN_RPE = 7
+GLYCOLYTIC_LABEL_BASE_MAX_REST_SEC = 60
+SPEED_REPEATABILITY_MAX_WORK_SEC = 30
+SPEED_REPEATABILITY_MIN_REST_SEC = 60
+FRESHNESS_LACTATE_LEVELS = {"none", "low"}
+FRESHNESS_MAX_RPE = 6
 LATE_CONDITIONING_SAFE_TAGS = {
     "low_impact",
     "zero_impact",
@@ -138,6 +148,70 @@ def _high_level(level: str) -> bool:
     return level in {"high", "very_high", "max"}
 
 
+def _has_dense_glycolytic_interval(
+    *,
+    work_sec: float | None,
+    rest_sec: float | None,
+    rounds: float | None,
+) -> bool:
+    return bool(
+        work_sec is not None
+        and rest_sec is not None
+        and rounds is not None
+        and work_sec >= GLYCOLYTIC_DENSE_MIN_WORK_SEC
+        and rest_sec <= GLYCOLYTIC_DENSE_MAX_REST_SEC
+        and rounds >= CONDITIONING_MULTI_ROUND_MIN_ROUNDS
+    )
+
+
+def _has_sustained_high_rpe_dose(
+    *,
+    total_minutes: float | None,
+    rpe: float | None,
+) -> bool:
+    return bool(
+        total_minutes is not None
+        and total_minutes >= GLYCOLYTIC_SUSTAINED_MIN_TOTAL_MINUTES
+        and rpe is not None
+        and rpe >= GLYCOLYTIC_SUSTAINED_MIN_RPE
+    )
+
+
+def _has_structured_glycolytic_density(
+    *,
+    lactate_load: str,
+    work_sec: float | None,
+    rest_sec: float | None,
+    rounds: float | None,
+    total_minutes: float | None,
+    rpe: float | None,
+) -> bool:
+    return bool(
+        lactate_load == "high"
+        or _has_dense_glycolytic_interval(
+            work_sec=work_sec,
+            rest_sec=rest_sec,
+            rounds=rounds,
+        )
+        or _has_sustained_high_rpe_dose(total_minutes=total_minutes, rpe=rpe)
+    )
+
+
+def _has_freshness_profile(
+    *,
+    lactate_load: str,
+    impact_cost: str,
+    movement_cost: str,
+    rpe: float | None,
+) -> bool:
+    return bool(
+        lactate_load in FRESHNESS_LACTATE_LEVELS
+        and (not impact_cost or _low_level(impact_cost))
+        and (not movement_cost or _low_level(movement_cost))
+        and (rpe is None or rpe <= FRESHNESS_MAX_RPE)
+    )
+
+
 def _conditioning_structured_profile(drill: dict, *, system: str | None = None) -> dict:
     work_sec = _metadata_number(drill, "work_sec")
     rest_sec = _metadata_number(drill, "rest_sec")
@@ -151,18 +225,14 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
 
     has_dose_metadata = any(value is not None for value in (work_sec, rest_sec, rounds, total_minutes, rpe))
     has_cost_metadata = any(level for level in (impact_cost, lactate_load, movement_cost))
-    multi_round = bool(rounds is not None and rounds >= 3)
-    glycolytic_density = bool(
-        lactate_load == "high"
-        or (
-            work_sec is not None
-            and rest_sec is not None
-            and rounds is not None
-            and work_sec >= 45
-            and rest_sec <= 90
-            and rounds >= 3
-        )
-        or (total_minutes is not None and total_minutes >= 12 and rpe is not None and rpe >= 7)
+    multi_round = bool(rounds is not None and rounds >= CONDITIONING_MULTI_ROUND_MIN_ROUNDS)
+    glycolytic_density = _has_structured_glycolytic_density(
+        lactate_load=lactate_load,
+        work_sec=work_sec,
+        rest_sec=rest_sec,
+        rounds=rounds,
+        total_minutes=total_minutes,
+        rpe=rpe,
     )
     alactic_structure = bool(
         work_sec is not None
@@ -170,11 +240,11 @@ def _conditioning_structured_profile(drill: dict, *, system: str | None = None) 
         and work_sec <= ALACTIC_MAX_WORK_SEC
         and rest_sec >= ALACTIC_MIN_REST_SEC
     )
-    freshness = bool(
-        lactate_load in {"none", "low"}
-        and (not impact_cost or _low_level(impact_cost))
-        and (not movement_cost or _low_level(movement_cost))
-        and (rpe is None or rpe <= 6)
+    freshness = _has_freshness_profile(
+        lactate_load=lactate_load,
+        impact_cost=impact_cost,
+        movement_cost=movement_cost,
+        rpe=rpe,
     )
 
     return {
@@ -330,16 +400,16 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     base_glycolytic_dose = (
         work_max is not None
         and rest_max is not None
-        and work_max >= 45
-        and rest_max <= 60
+        and work_max >= GLYCOLYTIC_DENSE_MIN_WORK_SEC
+        and rest_max <= GLYCOLYTIC_LABEL_BASE_MAX_REST_SEC
         and multi_round
     )
     fight_pace_glycolytic_dose = (
         fight_pace
         and work_max is not None
         and rest_max is not None
-        and work_max >= 45
-        and rest_max <= 90
+        and work_max >= GLYCOLYTIC_DENSE_MIN_WORK_SEC
+        and rest_max <= GLYCOLYTIC_DENSE_MAX_REST_SEC
         and multi_round
     )
     glycolytic_dose = structured["glycolytic_density"] or base_glycolytic_dose or fight_pace_glycolytic_dose
@@ -347,8 +417,8 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     short_work_full_rest = (
         work_max is not None
         and rest_max is not None
-        and work_max <= 30
-        and rest_max >= 60
+        and work_max <= SPEED_REPEATABILITY_MAX_WORK_SEC
+        and rest_max >= SPEED_REPEATABILITY_MIN_REST_SEC
     )
 
     if glycolytic_dose and late_window not in _ATHLETE_LABEL_BLOCKED_GLYCOLYTIC_WINDOWS:
