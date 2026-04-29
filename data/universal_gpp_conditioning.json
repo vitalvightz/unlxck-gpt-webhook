@@ -5,9 +5,9 @@
     ],
     "name": "Steady-State Cardio (Run / Bike / Row)",
     "system": "aerobic",
-    "duration": "30–60 minutes",
-    "intensity": "60–70% max HR (Zone 2)",
-    "volume": "2–3x/week",
+    "duration": "30\u201360 minutes",
+    "intensity": "60\u201370% max HR (Zone 2)",
+    "volume": "2\u20133x/week",
     "equipment": [
       "road",
       "treadmill",
@@ -19,9 +19,24 @@
       "low_impact",
       "recovery",
       "conditioning",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge"
     ],
-    "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions."
+    "notes": "Builds aerobic base and supports recovery between rounds. Low joint stress. Ideal for morning or recovery sessions.",
+    "rest_sec": 3600,
+    "total_minutes": 60,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -29,9 +44,9 @@
     ],
     "name": "Jump Rope Endurance (Footwork Conditioning)",
     "system": "aerobic",
-    "duration": "3–5 rounds × 3–5 minutes",
+    "duration": "3\u20135 rounds \u00d7 3\u20135 minutes",
     "intensity": "Moderate steady pace",
-    "volume": "2–4x/week",
+    "volume": "2\u20134x/week",
     "equipment": [
       "jump rope"
     ],
@@ -42,9 +57,26 @@
       "footwork",
       "conditioning",
       "mech_reactive_rebound",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Improves foot speed, rhythm, and aerobic fitness. Versatile as warm-up or standalone."
+    "notes": "Improves foot speed, rhythm, and aerobic fitness. Versatile as warm-up or standalone.",
+    "total_minutes": 5,
+    "rpe": 7,
+    "impact_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_reactive_rebound",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -52,9 +84,9 @@
     ],
     "name": "Alactic Sprint Intervals (Hill / Flat / Sled)",
     "system": "glycolytic",
-    "duration": "6–8 × 20–30s max effort",
+    "duration": "6\u20138 \u00d7 20\u201330s max effort",
     "intensity": "Maximal sprint",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "track",
       "field",
@@ -71,9 +103,28 @@
       "mech_acceleration",
       "mech_max_velocity",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS."
+    "notes": "Develops takedown speed and fight-finishing bursts. Requires full recovery and fresh CNS.",
+    "rest_sec": 30,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -81,9 +132,9 @@
     ],
     "name": "Battle Rope Circuits",
     "system": "glycolytic",
-    "duration": "4–6 rounds × 30s work",
+    "duration": "4\u20136 rounds \u00d7 30s work",
     "intensity": "High effort",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "battle rope"
     ],
@@ -96,9 +147,24 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability",
       "mech_grip_intensive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "Builds shoulder endurance, core control, and lactic threshold. Safe option for upper-body dominant day."
+    "notes": "Builds shoulder endurance, core control, and lactic threshold. Safe option for upper-body dominant day.",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -106,9 +172,9 @@
     ],
     "name": "Bodyweight MetCon Circuit",
     "system": "glycolytic",
-    "duration": "3–4 rounds of 3–5 exercises × 30s each",
+    "duration": "3\u20134 rounds of 3\u20135 exercises \u00d7 30s each",
     "intensity": "High tempo",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "bodyweight"
     ],
@@ -121,7 +187,16 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "notes": "Full-body circuit mimicking MMA scramble effort. Effective as conditioning block or session finisher."
+    "notes": "Full-body circuit mimicking MMA scramble effort. Effective as conditioning block or session finisher.",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -129,9 +204,9 @@
     ],
     "name": "Explosive Medicine Ball Throws",
     "system": "alactic",
-    "duration": "5–8 sets × 3–5 throws",
+    "duration": "5\u20138 sets \u00d7 3\u20135 throws",
     "intensity": "Maximal power",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "medicine ball"
     ],
@@ -145,9 +220,23 @@
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
       "mech_upper_press",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Overhead slams/chest passes with full recovery (90–120s). Develops punching/takedown explosion. Pair with upper-body strength days."
+    "notes": "Overhead slams/chest passes with full recovery (90\u2013120s). Develops punching/takedown explosion. Pair with upper-body strength days.",
+    "rest_sec": 120,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "phases": [
@@ -155,7 +244,7 @@
     ],
     "name": "Plyometric Depth Jumps",
     "system": "alactic",
-    "duration": "6–10 × 3–5 jumps",
+    "duration": "6\u201310 \u00d7 3\u20135 jumps",
     "intensity": "Maximal rebound",
     "volume": "1x/week",
     "equipment": [
@@ -171,9 +260,28 @@
       "mech_reactive_rebound",
       "mech_landing_impact",
       "mech_lower_jump",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Drop-jump rebounds for ground reaction power. Critical for sprawls/shot defense. Rest 2min+ between sets."
+    "notes": "Drop-jump rebounds for ground reaction power. Critical for sprawls/shot defense. Rest 2min+ between sets.",
+    "rest_sec": 120,
+    "total_minutes": 2,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_reactive_rebound",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -181,9 +289,9 @@
     ],
     "name": "Band-Resisted Takedown Explosions",
     "system": "alactic",
-    "duration": "8–10 × 3–5s bursts",
+    "duration": "8\u201310 \u00d7 3\u20135s bursts",
     "intensity": "Max acceleration",
-    "volume": "1–2x/week",
+    "volume": "1\u20132x/week",
     "equipment": [
       "resistance band",
       "partner"
@@ -198,9 +306,27 @@
       "mech_lower_hip_hinge",
       "mech_lower_lunge",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
-    "notes": "Sport-specific shots against band resistance. <10s efforts w/ 1:5 work:rest ratio. Enhances first-step quickness."
+    "notes": "Sport-specific shots against band resistance. <10s efforts w/ 1:5 work:rest ratio. Enhances first-step quickness.",
+    "work_sec": 10,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -208,7 +334,7 @@
     ],
     "name": "Clap Push-Up Sprints",
     "system": "alactic",
-    "duration": "5–8 × 3–5 reps",
+    "duration": "5\u20138 \u00d7 3\u20135 reps",
     "intensity": "Max velocity",
     "volume": "1x/week",
     "equipment": [
@@ -224,9 +350,25 @@
       "mech_reactive",
       "mech_upper_press",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Explosive push-ups with flight phase. Builds punching/striking power. Rest 90s between sets."
+    "notes": "Explosive push-ups with flight phase. Builds punching/striking power. Rest 90s between sets.",
+    "rest_sec": 90,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "phases": [
@@ -247,9 +389,24 @@
       "zero_impact",
       "work_capacity",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Concentric-only sled work builds conditioning without joint stress. Ideal for recovery days or between high-intensity sessions."
+    "notes": "Concentric-only sled work builds conditioning without joint stress. Ideal for recovery days or between high-intensity sessions.",
+    "work_sec": 20,
+    "rounds": 5,
+    "total_minutes": 1.67,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -269,9 +426,23 @@
       "posterior_chain",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Backward sled drag emphasizes posterior chain with zero eccentric stress. Great for knee-friendly conditioning."
+    "notes": "Backward sled drag emphasizes posterior chain with zero eccentric stress. Great for knee-friendly conditioning.",
+    "work_sec": 25,
+    "rounds": 4,
+    "total_minutes": 1.67,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -291,9 +462,23 @@
       "lateral",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Lateral movement pattern with zero impact stress."
+    "notes": "Lateral movement pattern with zero impact stress.",
+    "work_sec": 15,
+    "rounds": 4,
+    "total_minutes": 1,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -315,9 +500,26 @@
       "low_impact",
       "zero_impact",
       "mech_upper_pull",
-      "mech_grip_support"
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
-    "notes": "Upper body pulling with sled eliminates lower body impact."
+    "notes": "Upper body pulling with sled eliminates lower body impact.",
+    "work_sec": 20,
+    "rounds": 5,
+    "total_minutes": 1.67,
+    "rpe": 7,
+    "impact_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_upper_pull"
+    ]
   },
   {
     "phases": [
@@ -337,9 +539,23 @@
       "low_impact",
       "zero_impact",
       "recovery",
-      "work_capacity"
+      "work_capacity",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Full-body aerobic work with zero joint impact. Can be used as active recovery or steady conditioning."
+    "notes": "Full-body aerobic work with zero joint impact. Can be used as active recovery or steady conditioning.",
+    "rest_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -347,7 +563,7 @@
     ],
     "name": "Stationary Bike Intervals",
     "system": "glycolytic",
-    "duration": "8-12 rounds × (45s work / 90s easy)",
+    "duration": "8-12 rounds \u00d7 (45s work / 90s easy)",
     "intensity": "80-85% max HR on work",
     "volume": "2-3x/week",
     "equipment": [
@@ -358,9 +574,22 @@
       "low_impact",
       "zero_impact",
       "work_capacity",
-      "glycolytic"
+      "glycolytic",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Interval work on bike provides high conditioning stimulus without impact stress."
+    "notes": "Interval work on bike provides high conditioning stimulus without impact stress.",
+    "work_sec": 90,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -382,9 +611,25 @@
       "low_impact",
       "zero_impact",
       "mech_upper_pull",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Full-body cardio with emphasis on posterior chain. Zero impact makes it ideal for recovery."
+    "notes": "Full-body cardio with emphasis on posterior chain. Zero impact makes it ideal for recovery.",
+    "rest_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "phases": [
@@ -392,7 +637,7 @@
     ],
     "name": "Rowing Intervals (2K Pace)",
     "system": "glycolytic",
-    "duration": "6-8 × 500m @ 2K pace (2min rest)",
+    "duration": "6-8 \u00d7 500m @ 2K pace (2min rest)",
     "intensity": "85-90% max HR",
     "volume": "2x/week",
     "equipment": [
@@ -405,9 +650,24 @@
       "low_impact",
       "zero_impact",
       "glycolytic",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "High-intensity rowing intervals build work capacity without joint stress."
+    "notes": "High-intensity rowing intervals build work capacity without joint stress.",
+    "rest_sec": 120,
+    "total_minutes": 2,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "phases": [
@@ -428,9 +688,21 @@
       "upper_body",
       "low_impact",
       "zero_impact",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Upper body focused cardio. Excellent for lower body injury management."
+    "notes": "Upper body focused cardio. Excellent for lower body injury management.",
+    "total_minutes": 20,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "phases": [
@@ -438,7 +710,7 @@
     ],
     "name": "Ski Erg Intervals",
     "system": "glycolytic",
-    "duration": "10 × (30s work / 90s rest)",
+    "duration": "10 \u00d7 (30s work / 90s rest)",
     "intensity": "85-90% max HR",
     "volume": "2x/week",
     "equipment": [
@@ -452,9 +724,22 @@
       "low_impact",
       "zero_impact",
       "glycolytic",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "High-intensity upper body conditioning without lower body involvement."
+    "notes": "High-intensity upper body conditioning without lower body involvement.",
+    "work_sec": 30,
+    "rest_sec": 90,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "phases": [
@@ -462,7 +747,7 @@
     ],
     "name": "Echo Bike HIIT",
     "system": "glycolytic",
-    "duration": "8-10 × (20s max / 100s easy)",
+    "duration": "8-10 \u00d7 (20s max / 100s easy)",
     "intensity": "Max effort on work intervals",
     "volume": "2x/week",
     "equipment": [
@@ -474,9 +759,22 @@
       "low_impact",
       "zero_impact",
       "glycolytic",
-      "explosive"
+      "explosive",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "High-intensity bike intervals for work capacity without impact."
+    "notes": "High-intensity bike intervals for work capacity without impact.",
+    "work_sec": 100,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -495,9 +793,22 @@
       "conditioning",
       "low_impact",
       "zero_impact",
-      "recovery"
+      "recovery",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Very low-impact alternative to running. Good for high-volume conditioning."
+    "notes": "Very low-impact alternative to running. Good for high-volume conditioning.",
+    "total_minutes": 40,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -517,9 +828,19 @@
       "upper_body",
       "low_impact",
       "zero_impact",
-      "recovery"
+      "recovery",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Any stroke. Zero-impact full-body conditioning ideal for injury management or recovery."
+    "notes": "Any stroke. Zero-impact full-body conditioning ideal for injury management or recovery.",
+    "rest_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -538,9 +859,23 @@
       "conditioning",
       "low_impact",
       "zero_impact",
-      "recovery"
+      "recovery",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
-    "notes": "Water resistance provides conditioning without any joint impact. Excellent for ankle/knee injuries."
+    "notes": "Water resistance provides conditioning without any joint impact. Excellent for ankle/knee injuries.",
+    "work_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -548,7 +883,7 @@
     ],
     "name": "Swimming Intervals",
     "system": "glycolytic",
-    "duration": "8-12 × 50m @ 80% (30s rest)",
+    "duration": "8-12 \u00d7 50m @ 80% (30s rest)",
     "intensity": "Hard effort",
     "volume": "2x/week",
     "equipment": [
@@ -560,9 +895,17 @@
       "upper_body",
       "low_impact",
       "zero_impact",
-      "glycolytic"
+      "glycolytic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "High-intensity swimming for conditioning without impact."
+    "notes": "High-intensity swimming for conditioning without impact.",
+    "rest_sec": 30,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -570,7 +913,7 @@
     ],
     "name": "Farmer Carry",
     "system": "aerobic",
-    "duration": "4-6 × 40m @ moderate load",
+    "duration": "4-6 \u00d7 40m @ moderate load",
     "intensity": "70-80% of max carry weight",
     "volume": "2x/week",
     "equipment": [
@@ -585,9 +928,22 @@
       "low_impact",
       "mech_loaded_carry",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Loaded carries build grip, core, and conditioning with minimal joint stress."
+    "notes": "Loaded carries build grip, core, and conditioning with minimal joint stress.",
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_loaded_carry",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -595,7 +951,7 @@
     ],
     "name": "Suitcase Carry",
     "system": "aerobic",
-    "duration": "4 × 30m each side",
+    "duration": "4 \u00d7 30m each side",
     "intensity": "Moderate to heavy",
     "volume": "2x/week",
     "equipment": [
@@ -611,9 +967,20 @@
       "low_impact",
       "mech_loaded_carry",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Single-side carry emphasizes anti-lateral flexion and core stability."
+    "notes": "Single-side carry emphasizes anti-lateral flexion and core stability.",
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_loaded_carry",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -621,7 +988,7 @@
     ],
     "name": "Waiter Walk",
     "system": "aerobic",
-    "duration": "3-4 × 20m each arm",
+    "duration": "3-4 \u00d7 20m each arm",
     "intensity": "Light to moderate",
     "volume": "2x/week",
     "equipment": [
@@ -633,9 +1000,20 @@
       "low_impact",
       "mech_loaded_carry",
       "mech_shoulder_overhead",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Overhead carry challenges shoulder stability and core control."
+    "notes": "Overhead carry challenges shoulder stability and core control.",
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_loaded_carry",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -643,7 +1021,7 @@
     ],
     "name": "Battle Ropes Intervals",
     "system": "glycolytic",
-    "duration": "8-10 × (20s work / 40s rest)",
+    "duration": "8-10 \u00d7 (20s work / 40s rest)",
     "intensity": "High intensity waves",
     "volume": "2x/week",
     "equipment": [
@@ -655,9 +1033,23 @@
       "upper_body",
       "low_impact",
       "zero_impact",
-      "glycolytic"
+      "glycolytic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Upper body conditioning without lower body involvement. Can do seated for complete lower body rest."
+    "notes": "Upper body conditioning without lower body involvement. Can do seated for complete lower body rest.",
+    "work_sec": 20,
+    "rest_sec": 40,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -665,7 +1057,7 @@
     ],
     "name": "Battle Ropes Steady",
     "system": "aerobic",
-    "duration": "3-5 rounds × 2 minutes (1min rest)",
+    "duration": "3-5 rounds \u00d7 2 minutes (1min rest)",
     "intensity": "Moderate wave amplitude",
     "volume": "2x/week",
     "equipment": [
@@ -677,9 +1069,23 @@
       "upper_body",
       "work_capacity",
       "low_impact",
-      "zero_impact"
+      "zero_impact",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Sustained upper body work for aerobic conditioning."
+    "notes": "Sustained upper body work for aerobic conditioning.",
+    "rest_sec": 120,
+    "total_minutes": 2,
+    "rpe": 7,
+    "impact_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -698,9 +1104,19 @@
       "conditioning",
       "low_impact",
       "recovery",
-      "posterior_chain"
+      "posterior_chain",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Incline walking builds aerobic capacity and posterior chain with low impact."
+    "notes": "Incline walking builds aerobic capacity and posterior chain with low impact.",
+    "work_sec": 2700,
+    "total_minutes": 45,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -718,9 +1134,19 @@
       "aerobic",
       "conditioning",
       "low_impact",
-      "work_capacity"
+      "work_capacity",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Added load increases conditioning stimulus while maintaining low impact."
+    "notes": "Added load increases conditioning stimulus while maintaining low impact.",
+    "work_sec": 2400,
+    "total_minutes": 40,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -740,9 +1166,21 @@
       "upper_body",
       "low_impact",
       "zero_impact",
-      "recovery"
+      "recovery",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Arm crank ergometer for pure upper body cardio. Zero lower body involvement."
+    "notes": "Arm crank ergometer for pure upper body cardio. Zero lower body involvement.",
+    "work_sec": 1500,
+    "total_minutes": 25,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -750,7 +1188,7 @@
     ],
     "name": "UBE Intervals",
     "system": "glycolytic",
-    "duration": "10 × (30s hard / 90s easy)",
+    "duration": "10 \u00d7 (30s hard / 90s easy)",
     "intensity": "85-90% max HR",
     "volume": "2x/week",
     "equipment": [
@@ -762,9 +1200,20 @@
       "upper_body",
       "low_impact",
       "zero_impact",
-      "glycolytic"
+      "glycolytic",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "High-intensity upper body intervals without lower body stress."
+    "notes": "High-intensity upper body intervals without lower body stress.",
+    "work_sec": 90,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -785,9 +1234,19 @@
       "work_capacity",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
-    "notes": "High-rep core circuit for conditioning and stability without spinal loading."
+    "notes": "High-rep core circuit for conditioning and stability without spinal loading.",
+    "work_sec": 45,
+    "rest_sec": 60,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "phases": [
@@ -807,9 +1266,23 @@
       "low_impact",
       "zero_impact",
       "recovery",
-      "parasympathetic"
+      "parasympathetic",
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Recumbent position provides maximal support. Excellent for injury recovery."
+    "notes": "Recumbent position provides maximal support. Excellent for injury recovery.",
+    "rest_sec": 2100,
+    "total_minutes": 35,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -827,9 +1300,21 @@
       "aerobic",
       "conditioning",
       "low_impact",
-      "recovery"
+      "recovery",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Self-powered curved treadmill allows natural walking mechanics with low impact."
+    "notes": "Self-powered curved treadmill allows natural walking mechanics with low impact.",
+    "work_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -849,9 +1334,18 @@
       "conditioning",
       "low_impact",
       "zero_impact",
-      "parasympathetic"
+      "parasympathetic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Dynamic mobility work doubles as light conditioning and recovery."
+    "notes": "Dynamic mobility work doubles as light conditioning and recovery.",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "phases": [
@@ -859,7 +1353,7 @@
     ],
     "name": "Prowler Push Light",
     "system": "aerobic",
-    "duration": "6 × 30m @ 60-70% effort (90s rest)",
+    "duration": "6 \u00d7 30m @ 60-70% effort (90s rest)",
     "intensity": "Moderate",
     "volume": "2x/week",
     "equipment": [
@@ -871,8 +1365,20 @@
       "low_impact",
       "zero_impact",
       "work_capacity",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Similar to sled push but with handles for different loading pattern."
+    "notes": "Similar to sled push but with handles for different loading pattern.",
+    "rest_sec": 90,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   }
 ]

@@ -112,7 +112,97 @@ def _extract_time_values(text: str) -> list[float]:
     return values
 
 
+def _metadata_number(drill: dict, field_name: str) -> float | None:
+    value = drill.get(field_name)
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
+def _metadata_level(drill: dict, field_name: str) -> str:
+    return str(drill.get(field_name) or "").strip().lower()
+
+
+def _low_level(level: str) -> bool:
+    return level in {"none", "low"}
+
+
+def _high_level(level: str) -> bool:
+    return level in {"high", "very_high", "max"}
+
+
+def _conditioning_structured_profile(drill: dict, *, system: str | None = None) -> dict:
+    work_sec = _metadata_number(drill, "work_sec")
+    rest_sec = _metadata_number(drill, "rest_sec")
+    rounds = _metadata_number(drill, "rounds")
+    total_minutes = _metadata_number(drill, "total_minutes")
+    rpe = _metadata_number(drill, "rpe")
+    impact_cost = _metadata_level(drill, "impact_cost")
+    lactate_load = _metadata_level(drill, "lactate_load")
+    movement_cost = _metadata_level(drill, "movement_cost")
+    system = str(system or drill.get("system") or "").strip().lower()
+
+    has_dose_metadata = any(value is not None for value in (work_sec, rest_sec, rounds, total_minutes, rpe))
+    has_cost_metadata = any(level for level in (impact_cost, lactate_load, movement_cost))
+    multi_round = bool(rounds is not None and rounds >= 3)
+    glycolytic_density = bool(
+        lactate_load == "high"
+        or (
+            work_sec is not None
+            and rest_sec is not None
+            and rounds is not None
+            and work_sec >= 45
+            and rest_sec <= 90
+            and rounds >= 3
+        )
+        or (total_minutes is not None and total_minutes >= 12 and rpe is not None and rpe >= 7)
+    )
+    alactic_structure = bool(
+        work_sec is not None
+        and rest_sec is not None
+        and work_sec <= ALACTIC_MAX_WORK_SEC
+        and rest_sec >= ALACTIC_MIN_REST_SEC
+    )
+    freshness = bool(
+        lactate_load in {"none", "low"}
+        and (not impact_cost or _low_level(impact_cost))
+        and (not movement_cost or _low_level(movement_cost))
+        and (rpe is None or rpe <= 6)
+    )
+
+    return {
+        "work_sec": work_sec,
+        "rest_sec": rest_sec,
+        "rounds": rounds,
+        "total_minutes": total_minutes,
+        "rpe": rpe,
+        "impact_cost": impact_cost,
+        "lactate_load": lactate_load,
+        "movement_cost": movement_cost,
+        "has_dose_metadata": has_dose_metadata,
+        "has_cost_metadata": has_cost_metadata,
+        "multi_round": multi_round,
+        "glycolytic_density": glycolytic_density,
+        "alactic_structure": alactic_structure,
+        "freshness": freshness,
+        "high_impact": _high_level(impact_cost),
+        "high_lactate": lactate_load == "high" or (system == "glycolytic" and glycolytic_density),
+        "high_movement_cost": _high_level(movement_cost),
+    }
+
+
 def _alactic_structure_ok(drill: dict) -> bool:
+    structured = _conditioning_structured_profile(drill)
+    if structured["has_dose_metadata"]:
+        return bool(structured["alactic_structure"])
+
     timing = drill.get("timing") or ""
     duration = drill.get("duration") or ""
     rest = drill.get("rest") or ""
@@ -217,19 +307,22 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
     system = str(drill.get("system") or "").strip().lower()
     tags = set(normalize_tags(drill.get("tags", [])))
     text = _conditioning_text_blob(drill)
+    structured = _conditioning_structured_profile(drill, system=system)
 
     work_values: list[float] = []
     rest_values: list[float] = []
     raw_text = " ; ".join(filter(None, [drill.get("timing", ""), drill.get("duration", "")]))
     for clause in re.split(r"[;,/]", raw_text):
         is_rest = any(k in clause.lower() for k in ("rest", "off", "recovery", "recover", "between"))
+        targets = rest_values if is_rest else work_values
+        targets.extend(_extract_time_values(clause))
     if drill.get("rest"):
         rest_values.extend(_extract_time_values(drill.get("rest") or ""))
 
-    work_max = max(work_values) if work_values else None
-    rest_max = max(rest_values) if rest_values else None
-    multi_round = _conditioning_multi_round_pattern(text)
-    fight_pace = _conditioning_fight_pace_pattern(text, tags)
+    work_max = structured["work_sec"] or (max(work_values) if work_values else None)
+    rest_max = structured["rest_sec"] or (max(rest_values) if rest_values else None)
+    multi_round = structured["multi_round"] or _conditioning_multi_round_pattern(text)
+    fight_pace = structured["high_lactate"] or _conditioning_fight_pace_pattern(text, tags)
 
     # Dose is the primary decider. A "fight-pace" tag on a short-work + full-rest
     # drill does not earn the "glycolytic" label — the prescription has to
@@ -249,7 +342,7 @@ def athlete_facing_system_label(drill: dict, *, late_window: str | None = None) 
         and rest_max <= 90
         and multi_round
     )
-    glycolytic_dose = base_glycolytic_dose or fight_pace_glycolytic_dose
+    glycolytic_dose = structured["glycolytic_density"] or base_glycolytic_dose or fight_pace_glycolytic_dose
 
     short_work_full_rest = (
         work_max is not None
@@ -327,22 +420,30 @@ def _evaluate_conditioning_late_window(
     text = _conditioning_text_blob(drill)
     severity = _conditioning_window_severity(window)
     late_windows = {str(w).strip().lower() for w in (drill.get("late_windows") or []) if str(w).strip()}
-    dense = _conditioning_dense_pattern(text)
-    multi_round = _conditioning_multi_round_pattern(text)
-    fight_pace = _conditioning_fight_pace_pattern(text, tags)
-    generic_glycolytic = _conditioning_generic_glycolytic(system, tags)
+    structured = _conditioning_structured_profile(drill, system=system)
+    dense = structured["glycolytic_density"] or _conditioning_dense_pattern(text)
+    multi_round = structured["multi_round"] or _conditioning_multi_round_pattern(text)
+    fight_pace = structured["high_lactate"] or _conditioning_fight_pace_pattern(text, tags)
+    generic_glycolytic = _conditioning_generic_glycolytic(system, tags) or (
+        system == "glycolytic" and structured["high_lactate"]
+    )
     low_noise_sharpness = (
         system == "alactic"
         and not dense
-        and (tags & LATE_CONDITIONING_SAFE_TAGS or _alactic_structure_ok(drill))
+        and (tags & LATE_CONDITIONING_SAFE_TAGS or structured["alactic_structure"] or _alactic_structure_ok(drill))
     )
     aerobic_rhythm = (
         system == "aerobic"
         and not dense
-        and bool(tags & {"low_impact", "cns_freshness", "recovery", "skill_refinement", "coordination"})
+        and (
+            structured["freshness"]
+            or bool(tags & {"low_impact", "cns_freshness", "recovery", "skill_refinement", "coordination"})
+        )
     )
-    developmental_taper = (dense or multi_round or fight_pace) and bool(
-        tags & {"conditioning", "glycolytic", "work_capacity", "mech_systemic_fatigue"}
+    developmental_taper = (
+        not structured["freshness"]
+        and (dense or multi_round or fight_pace or structured["high_lactate"])
+        and bool(tags & {"conditioning", "glycolytic", "work_capacity", "mech_systemic_fatigue"})
     )
 
     reason_codes: list[str] = []
@@ -364,9 +465,18 @@ def _evaluate_conditioning_late_window(
     if fight_pace:
         adjustment -= 0.9 * severity
         reason_codes.append("late_conditioning_penalty_fight_pace_leak")
-    if "high_impact_lower" in tags or ("mech_landing_impact" in tags and system == "alactic"):
+    if structured["high_lactate"]:
+        adjustment -= 0.9 * severity
+        reason_codes.append("late_conditioning_penalty_high_lactate_metadata")
+    if structured["high_impact"] or "high_impact_lower" in tags or ("mech_landing_impact" in tags and system == "alactic"):
         adjustment -= 0.4 * severity
         reason_codes.append("late_conditioning_penalty_impact_noise")
+    if structured["high_movement_cost"]:
+        adjustment -= 0.35 * severity
+        reason_codes.append("late_conditioning_penalty_high_movement_cost_metadata")
+    if structured["freshness"]:
+        adjustment += 0.25
+        reason_codes.append("late_conditioning_boost_structured_freshness")
     if developmental_taper:
         adjustment -= 0.8 * severity
         reason_codes.append("late_conditioning_penalty_developmental_taper")
@@ -389,6 +499,8 @@ def _evaluate_conditioning_late_window(
             block_codes.append("late_conditioning_block_window_mismatch")
 
     if window in LATE_CONDITIONING_TIGHT_WINDOWS:
+        if structured["high_lactate"] or structured["glycolytic_density"]:
+            block_codes.append("late_conditioning_block_structured_glycolytic_density")
         if generic_glycolytic:
             block_codes.append("late_conditioning_block_generic_glycolytic")
         if dense and multi_round:
