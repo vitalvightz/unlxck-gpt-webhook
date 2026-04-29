@@ -36,6 +36,7 @@ from .late_selector_windows import classify_late_selector_window
 from .normalization import clean_list, normalize_text, phrase_in_text, slugify, dedupe_preserve_order
 from .restriction_parsing import CANONICAL_RESTRICTIONS
 from .rehab_protocols import _rehab_drills_for_phase, classify_drill_function, _FUNCTION_LABELS
+from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .stage2_render_guards import (  # noqa: F401  (re-exported for backwards compatibility)
     _NO_ACTIVE_INJURY_MARKERS,
     _append_render_guard_writing_rules,
@@ -3836,13 +3837,35 @@ def build_planning_brief(
         "decision_rules": rewrite_guidance,
     }
 
-def _serialize_strength_option(exercise: dict, why: str) -> dict:
+def _with_selection_evidence(option: dict, item: dict, score_evidence: dict | None = None) -> dict:
+    evidence = build_score_evidence(score_evidence=score_evidence)
+    option.update(
+        {
+            "score": evidence["score"],
+            "reason_codes": evidence["reason_codes"],
+            "penalties": evidence["penalties"],
+            "restriction_hits": evidence["restriction_hits"],
+            "late_window_adjustment": evidence["late_window_adjustment"],
+            "score_evidence": evidence,
+            "selection_metadata": normalize_selection_metadata(item),
+        }
+    )
+    return option
+
+
+def _why_log_score_evidence(why_entry: dict) -> dict:
+    reasons = why_entry.get("reasons", {}) if isinstance(why_entry, dict) else {}
+    explanation = why_entry.get("explanation") if isinstance(why_entry, dict) else None
+    return build_score_evidence(reasons=reasons, explanation=explanation)
+
+
+def _serialize_strength_option(exercise: dict, why: str, score_evidence: dict | None = None) -> dict:
     movement = str(exercise.get("movement", "")).strip().lower().replace(" ", "_")
     movement_patterns = [movement] if movement else []
     movement_patterns.extend(clean_list(exercise.get("tags", [])))
     quality_profile = classify_strength_item(exercise)
     required_equipment = clean_list(exercise.get("required_equipment") or exercise.get("equipment", []))
-    return {
+    return _with_selection_evidence({
         "name": exercise.get("name", "Unnamed"),
         "source": "exercise_bank",
         "movement_patterns": dedupe_preserve_order(movement_patterns),
@@ -3857,13 +3880,20 @@ def _serialize_strength_option(exercise: dict, why: str) -> dict:
         "required_equipment": required_equipment,
         "universally_available": not required_equipment or set(required_equipment).issubset({"bodyweight"}),
         "generic_fallback": bool(exercise.get("generic_fallback")),
-    }
+    }, exercise, score_evidence)
 
 
-def _serialize_conditioning_option(drill: dict, system: str, why: str, *, late_window: str | None = None) -> dict:
+def _serialize_conditioning_option(
+    drill: dict,
+    system: str,
+    why: str,
+    *,
+    late_window: str | None = None,
+    score_evidence: dict | None = None,
+) -> dict:
     tags = clean_list(drill.get("tags", []))
     required_equipment = clean_list(drill.get("required_equipment") or drill.get("equipment", []))
-    return {
+    return _with_selection_evidence({
         "name": drill.get("name", "Unnamed"),
         "source": "conditioning_bank",
         "movement_patterns": dedupe_preserve_order([system] + tags),
@@ -3879,7 +3909,7 @@ def _serialize_conditioning_option(drill: dict, system: str, why: str, *, late_w
         "availability_contingency_reason": drill.get("availability_contingency_reason") or "",
         "session_index": drill.get("session_index"),
         "athlete_facing_system_label": athlete_facing_system_label(drill, late_window=late_window),
-    }
+    }, drill, score_evidence)
 
 
 def _serialize_rehab_option(prescription: str, *, role: str, source: str, why: str, function_class: str = "") -> dict:
@@ -3919,6 +3949,12 @@ def _build_strength_alternates(
             _serialize_strength_option(
                 exercise,
                 candidate.get("explanation", "balanced selection"),
+                candidate.get("score_evidence")
+                or build_score_evidence(
+                    score=candidate.get("score"),
+                    reasons=candidate.get("reasons") or {},
+                    explanation=candidate.get("explanation"),
+                ),
             )
         )
         seen.add(name)
@@ -3948,6 +3984,12 @@ def _build_conditioning_alternates(
                 system,
                 candidate.get("explanation", "balanced selection"),
                 late_window=late_window,
+                score_evidence=candidate.get("score_evidence")
+                or build_score_evidence(
+                    score=candidate.get("score"),
+                    reasons=candidate.get("reasons") or {},
+                    explanation=candidate.get("explanation"),
+                ),
             )
         )
         seen.add(name)
@@ -4017,6 +4059,7 @@ def _build_strength_slots(strength_block: dict | None, phase: str) -> list[dict]
                 "selected": _serialize_strength_option(
                     exercise,
                     reasons.get("explanation", "balanced selection"),
+                    _why_log_score_evidence(reasons),
                 ),
                 "alternates": _build_strength_alternates(
                     strength_block,
@@ -4067,6 +4110,7 @@ def _build_conditioning_slots(phase_block: dict | None, phase: str, *, late_wind
                         system,
                         reasons.get("explanation", "balanced selection"),
                         late_window=late_window,
+                        score_evidence=_why_log_score_evidence(reasons),
                     ),
                     "alternates": _build_conditioning_alternates(
                         phase_block,

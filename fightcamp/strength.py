@@ -47,6 +47,7 @@ from .late_selector_windows import (
     is_active_late_selector_window,
 )
 from .normalization import normalize_fight_format as _normalize_fight_format
+from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 logger = logging.getLogger(__name__)
@@ -965,6 +966,8 @@ def _build_strength_candidate_reservoir(
                 "score": score,
                 "reasons": (reasons or {}).copy(),
                 "explanation": _strength_explanation(reasons or {}),
+                "score_evidence": build_score_evidence(score=score, reasons=reasons or {}),
+                "metadata": normalize_selection_metadata(exercise_copy),
             }
         )
         seen_by_role[role].add(name)

@@ -76,6 +76,13 @@ DATA_DIR = REPO_ROOT / "data"
 TAG_VOCAB_FILE = DATA_DIR / "tag_vocabulary.json"
 
 
+def configure_utf8_output() -> None:
+    """Prefer UTF-8 console output when the host stream supports it."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
+
+
 def discover_banks() -> List[Path]:
     """
     Discover all *.json bank files in /data except those containing:
@@ -109,6 +116,28 @@ def discover_banks() -> List[Path]:
     
     print(f"Found {len(banks)} banks to validate.\n")
     return banks
+
+
+def duplicate_name_counts(entries: List[Dict]) -> Dict[str, int]:
+    """Return duplicate item names with occurrence counts."""
+    counts: dict[str, int] = defaultdict(int)
+    display_names: dict[str, str] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        raw_name = entry.get("name")
+        if not raw_name:
+            continue
+        key = str(raw_name).strip().casefold()
+        if not key:
+            continue
+        counts[key] += 1
+        display_names.setdefault(key, str(raw_name).strip())
+    return {
+        display_names[key]: count
+        for key, count in sorted(counts.items(), key=lambda item: display_names[item[0]].lower())
+        if count > 1
+    }
 
 
 def load_tag_vocabulary() -> Set[str]:
@@ -254,6 +283,17 @@ def validate_bank(bank_path: Path, tag_vocab: Set[str], injury_rules: Dict) -> T
     
     print()
     
+    duplicates = duplicate_name_counts(entries)
+    print("Duplicate name report:")
+    if duplicates:
+        print("  WARNING: duplicate names detected; disambiguate in bank metadata or naming when selectors depend on name keys.")
+        for name, count in duplicates.items():
+            print(f"    - {name} ({count} entries)")
+    else:
+        print("  OK: no duplicate names")
+
+    print()
+
     # Count safe/blocked by ban_tags for each injury region
     if not has_errors:
         print("Ban tag coverage by injury region:")
@@ -289,6 +329,8 @@ def validate_bank(bank_path: Path, tag_vocab: Set[str], injury_rules: Dict) -> T
 
 def main():
     """Main validation routine."""
+    configure_utf8_output()
+
     # Discover banks
     banks = discover_banks()
     

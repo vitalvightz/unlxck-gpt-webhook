@@ -36,6 +36,7 @@ from .late_selector_windows import (
     is_active_late_selector_window,
 )
 from .stage2_payload_late_fight import compute_bridge_rules
+from .selection_metadata import build_score_evidence, normalize_selection_metadata
 from .weight_cut import compute_cut_severity_score, cut_severity_bucket
 
 TAPER_AVOID_TAGS = {
@@ -1155,6 +1156,8 @@ def _build_conditioning_candidate_reservoir(
                 "score": score,
                 "reasons": (reasons or {}).copy(),
                 "explanation": _conditioning_explanation(reasons or {}),
+                "score_evidence": build_score_evidence(score=score, reasons=reasons or {}),
+                "metadata": normalize_selection_metadata(drill),
             }
         )
         seen_by_system[system].add(name)
