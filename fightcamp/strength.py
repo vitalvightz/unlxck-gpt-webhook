@@ -225,6 +225,19 @@ def _exercise_profile_level(exercise: dict, field_name: str) -> str:
     return str(value or "").strip().lower()
 
 
+def _has_explicit_profile_level(exercise: dict, field_name: str) -> bool:
+    value = exercise.get(field_name)
+    return value is not None and str(value).strip() != ""
+
+
+def _low_cost_level(level: str) -> bool:
+    return level in {"none", "low"}
+
+
+def _high_cost_level(level: str) -> bool:
+    return level in {"high", "very_high", "max"}
+
+
 def _strength_text_blob(exercise: dict) -> str:
     fields = (
         exercise.get("name", ""),
@@ -294,18 +307,31 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
     text = _strength_text_blob(exercise)
     name = str(exercise.get("name", "") or "")
     equipment = set(normalize_equipment_list(exercise.get("equipment", [])))
+    soreness_risk = _exercise_profile_level(exercise, "soreness_risk")
+    impact_cost = _exercise_profile_level(exercise, "impact_cost")
+    eccentric_cost = _exercise_profile_level(exercise, "eccentric_cost")
+    landing_cost = _exercise_profile_level(exercise, "landing_cost")
+    cns_load = _exercise_profile_level(exercise, "cns_load")
+    movement_cost = _exercise_profile_level(exercise, "movement_cost")
     lower_body = _strength_is_lower_body(exercise, tags)
     unilateral_lower = _strength_is_unilateral_lower(exercise, tags)
     landing_impact = "mech_landing_impact" in tags or "high_impact_lower" in tags
+    if _has_explicit_profile_level(exercise, "landing_cost") or _has_explicit_profile_level(exercise, "impact_cost"):
+        explicit_levels = [l for f, l in [("landing_cost", landing_cost), ("impact_cost", impact_cost)] if _has_explicit_profile_level(exercise, f)]
+        landing_impact = not all(_low_cost_level(l) for l in explicit_levels)
     overhead = _strength_overhead_signal(tags)
     systemic_fatigue = _strength_conditioning_density(text, tags)
     compound = normalize_exercise_movement(exercise) == "compound" or "compound" in tags
     eccentric = "eccentric" in tags
+    if _has_explicit_profile_level(exercise, "eccentric_cost"):
+        eccentric = not _low_cost_level(eccentric_cost)
     triple_extension = "triple_extension" in tags
     ballistic = "mech_ballistic" in tags or "explosive" in tags
     dense_emom = _strength_dense_pattern(text)
     heavy_loaded_lower = lower_body and bool(equipment & {"barbell", "trap_bar"})
     heavy_loaded_pattern = bool(re.search(r"@\s*(?:8[0-9]|9[0-9]|100)\b", text)) or "heavy" in text
+    if _high_cost_level(cns_load) and heavy_loaded_lower:
+        heavy_loaded_pattern = True
     dense_ballistic = ballistic and (dense_emom or systemic_fatigue)
     trap_bar_jump = (
         ("trap bar" in text and "jump" in text)
@@ -353,11 +379,81 @@ def _strength_contextual_risk_patterns(exercise: dict) -> tuple[list[str], list[
         "landing_impact": landing_impact,
         "overhead": overhead,
         "systemic_fatigue": systemic_fatigue,
+        "soreness_risk": soreness_risk,
+        "impact_cost": impact_cost,
+        "eccentric_cost": eccentric_cost,
+        "landing_cost": landing_cost,
+        "cns_load": cns_load,
+        "movement_cost": movement_cost,
         "ballistic": ballistic,
         "dense_ballistic": dense_ballistic,
         "trap_bar_jump": trap_bar_jump,
         "aggressive_med_ball_slam": aggressive_med_ball_slam,
     }
+
+
+def _strength_metadata_score_adjustment(
+    exercise: dict,
+    *,
+    fatigue: str,
+    cut_bucket: str,
+) -> tuple[float, list[str]]:
+    """Score explicit strength metadata before falling back to text/tag heuristics."""
+    soreness_risk = _exercise_profile_level(exercise, "soreness_risk")
+    impact_cost = _exercise_profile_level(exercise, "impact_cost")
+    eccentric_cost = _exercise_profile_level(exercise, "eccentric_cost")
+    landing_cost = _exercise_profile_level(exercise, "landing_cost")
+    cns_load = _exercise_profile_level(exercise, "cns_load")
+    movement_cost = _exercise_profile_level(exercise, "movement_cost")
+    cut_buckets_allowed = _exercise_cut_buckets_allowed(exercise)
+    explicit_fields = {
+        field
+        for field in (
+            "soreness_risk",
+            "impact_cost",
+            "eccentric_cost",
+            "landing_cost",
+            "cns_load",
+            "movement_cost",
+            "cut_buckets_allowed",
+        )
+        if exercise.get(field) not in (None, "", [], {})
+    }
+    if not explicit_fields:
+        return 0.0, []
+
+    adjustment = 0.0
+    reason_codes: list[str] = []
+    fatigue = str(fatigue or "").strip().lower()
+    if fatigue == "high":
+        if _high_cost_level(cns_load):
+            adjustment -= 1.1
+            reason_codes.append("strength_penalty_high_fatigue_high_cns_load")
+        elif cns_load == "moderate":
+            adjustment -= 0.35
+            reason_codes.append("strength_penalty_high_fatigue_moderate_cns_load")
+        if _high_cost_level(soreness_risk) or _high_cost_level(eccentric_cost):
+            adjustment -= 0.45
+            reason_codes.append("strength_penalty_high_fatigue_high_soreness_cost")
+
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS:
+        if cut_buckets_allowed and cut_bucket not in cut_buckets_allowed:
+            adjustment -= 1.35
+            reason_codes.append("strength_penalty_cut_bucket_mismatch")
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS:
+        if cut_buckets_allowed and cut_bucket not in cut_buckets_allowed:
+            adjustment -= 1.35
+            reason_codes.append("strength_penalty_cut_bucket_mismatch")
+        
+        cost_levels = [level for level in (impact_cost, eccentric_cost, landing_cost, soreness_risk, cns_load, movement_cost) if level]
+        if any(_high_cost_level(level) for level in cost_levels):
+            adjustment -= 0.75
+            reason_codes.append("strength_penalty_active_cut_high_cost_metadata")
+        elif cost_levels and all(_low_cost_level(level) for level in cost_levels):
+            adjustment += 0.25
+            reason_codes.append("strength_boost_active_cut_low_cost_metadata")
+
+    return round(adjustment, 4), reason_codes
 
 
 def _evaluate_strength_late_window(
@@ -392,7 +488,7 @@ def _evaluate_strength_late_window(
     ballistic_low_volume = _exercise_profile_flag(exercise, tags, "ballistic_low_volume")
     sport_specific = _exercise_profile_flag(exercise, tags, "sport_specific")
     explicit_late_touch = "late_strength_touch" in tags or phase_role == "late_strength_touch"
-    explicit_metadata = bool(
+    explicit_cost_metadata = bool(
         late_windows
         or cut_buckets_allowed
         or phase_role
@@ -402,6 +498,7 @@ def _evaluate_strength_late_window(
             for field_name in ("soreness_risk", "eccentric_cost", "landing_cost", "cns_load")
         )
     )
+    explicit_late_metadata = bool(late_windows or phase_role or subfamily or explicit_late_touch)
     safe_tags = sorted(tags & LATE_STRENGTH_SAFE_TAGS)
     severity = _strength_late_window_severity(window)
     reason_codes: list[str] = []
@@ -428,6 +525,23 @@ def _evaluate_strength_late_window(
     if explicit_late_touch:
         adjustment += 0.45
         reason_codes.append("late_strength_boost_explicit_late_touch")
+    if _has_explicit_profile_level(exercise, "eccentric_cost"):
+        low_eccentric = _low_cost_level(eccentric_cost)
+    impact_cost = _exercise_profile_level(exercise, "impact_cost")
+    movement_cost = _exercise_profile_level(exercise, "movement_cost")
+    explicit_impact_levels = [
+        level
+        for field_name, level in (
+            ("landing_cost", landing_cost),
+            ("impact_cost", impact_cost),
+        )
+        if _has_explicit_profile_level(exercise, field_name)
+    ]
+    if explicit_impact_levels:
+        low_impact = all(_low_cost_level(level) for level in explicit_impact_levels)
+    if _has_explicit_profile_level(exercise, "cns_load"):
+        cns_freshness = _low_cost_level(cns_load)
+
     if low_eccentric or eccentric_cost in {"none", "low"}:
         adjustment += 0.3
         reason_codes.append("late_strength_boost_low_eccentric")
@@ -485,6 +599,12 @@ def _evaluate_strength_late_window(
         reason_codes.append(code)
 
     if high_cut_window:
+        if any(
+            _high_cost_level(level)
+            for level in (soreness_risk, eccentric_cost, landing_cost, cns_load, _exercise_profile_level(exercise, "impact_cost"))
+        ):
+            adjustment -= 0.75 * severity * cut_multiplier
+            reason_codes.append("late_strength_penalty_cut_pressure_high_cost_metadata")
         if profile["loaded_lower"] and (
             profile["heavy_loaded_pattern"]
             or profile["systemic_fatigue"]
@@ -506,13 +626,13 @@ def _evaluate_strength_late_window(
     if window in {D21_TO_D14, D13_TO_D8, D7, D6_TO_D5, D4_TO_D2, D1} and profile["trap_bar_jump"]:
         adjustment -= 1.0 * severity
         reason_codes.append("late_strength_penalty_jump_landing")
-    if window in {D4_TO_D2, D1} and profile["loaded_lower"] and not explicit_metadata and (
+    if window in {D4_TO_D2, D1} and profile["loaded_lower"] and not explicit_late_metadata and (
         profile["systemic_fatigue"] or "cluster" in tags or "mech_cns_high" in tags
     ):
         blocks.append("late_strength_block_loaded_lower_noise")
-    if window == D1 and profile["overhead"] and not explicit_metadata and not (low_impact and cns_freshness):
+    if window == D1 and profile["overhead"] and not explicit_late_metadata and not (low_impact and cns_freshness):
         blocks.append("late_strength_block_overhead_noise")
-    if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_metadata:
+    if window == D1 and "medicine_ball" in set(normalize_equipment_list(exercise.get("equipment", []))) and not explicit_late_metadata:
         blocks.append("late_strength_block_nonexplicit_ballistic_med_ball")
 
     block_codes = sorted(set(blocks)) if window in LATE_STRENGTH_TIGHT_WINDOWS else []
@@ -533,7 +653,7 @@ def _evaluate_strength_late_window(
     if (
         not block_codes
         and not safe_tags
-        and not explicit_metadata
+        and not explicit_cost_metadata
         and (profile["ballistic"] or profile["overhead"] or "mech_reactive" in tags)
         and not profile["landing_impact"]
         and not profile["systemic_fatigue"]
@@ -1353,6 +1473,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         breakdown["base_categories"] = quality_profile["base_categories"]
         breakdown["fatigue_cost"] = _exercise_fatigue_cost(ex, quality_profile)
         breakdown["reason_codes"] = []
+        metadata_adjustment, metadata_reason_codes = _strength_metadata_score_adjustment(
+            ex,
+            fatigue=fatigue,
+            cut_bucket=cut_bucket,
+        )
+        if metadata_adjustment:
+            score += metadata_adjustment
+            breakdown["metadata_adjustment"] = metadata_adjustment
+        if metadata_reason_codes:
+            breakdown["reason_codes"] = list(metadata_reason_codes)
         if not ignore_restrictions and restriction_penalty:
             score += restriction_penalty
             breakdown["penalties"] = round(breakdown.get("penalties", 0.0) + restriction_penalty, 2)
@@ -1365,7 +1495,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if late_eval["adjustment"]:
             score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
-            breakdown["reason_codes"] = list(late_eval["reason_codes"])
+            breakdown["reason_codes"] = list(
+                dict.fromkeys(list(breakdown.get("reason_codes", [])) + list(late_eval["reason_codes"]))
+            )
         breakdown["late_window_adjustment"] = late_eval["adjustment"]
         breakdown["final_score"] = round(score, 4)
 
@@ -1920,6 +2052,16 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         style_reasons["quality_class"] = quality_profile["quality_class"]
         style_reasons["quality_adjustment"] = round(quality_adjustment, 2)
         style_reasons["reason_codes"] = []
+        metadata_adjustment, metadata_reason_codes = _strength_metadata_score_adjustment(
+            ex,
+            fatigue=fatigue,
+            cut_bucket=cut_bucket,
+        )
+        if metadata_adjustment:
+            style_score += metadata_adjustment
+            style_reasons["metadata_adjustment"] = metadata_adjustment
+        if metadata_reason_codes:
+            style_reasons["reason_codes"] = list(metadata_reason_codes)
         late_eval = _evaluate_strength_late_window(ex, window=late_window, cut_bucket=cut_bucket)
         _record_ambiguous_gap(late_eval.get("ambiguous_gap"))
         if late_eval["blocked"]:
@@ -1928,7 +2070,9 @@ def generate_strength_block(*, flags: dict, weaknesses=None, mindset_cue=None):
         if late_eval["adjustment"]:
             style_score += late_eval["adjustment"]
         if late_eval["reason_codes"]:
-            style_reasons["reason_codes"] = list(late_eval["reason_codes"])
+            style_reasons["reason_codes"] = list(
+                dict.fromkeys(list(style_reasons.get("reason_codes", [])) + list(late_eval["reason_codes"]))
+            )
         style_reasons["late_window_adjustment"] = late_eval["adjustment"]
         style_reasons["final_score"] = round(style_score, 4)
         if quality_profile["anchor_capable"] or style_score >= selected_cutoff - style_margin:

@@ -9,8 +9,8 @@
       ],
       "after_winners": [
         "Band-Resisted Push Press",
-        "Anti-Rotation Med Ball Slam",
         "Medicine-Ball Chest Toss",
+        "Anti-Rotation Med Ball Slam",
         "Band Face Pull"
       ],
       "added_winners": [],
@@ -51,7 +51,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Trap Bar Deadlift"
+        "Jump-in-Place (Max Frequency)"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
@@ -59,7 +59,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Trap Bar Deadlift"
+        "Jump-in-Place (Max Frequency)"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -90,75 +90,7 @@
       ],
       "no_longer_blocked": []
     },
-    "ambiguous_tag_gaps_added": [
-      {
-        "selector": "strength",
-        "name": "Banded Row (Speed Focus)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Cossack Squat (Dynamic)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_reactive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Cross-Step Lunge",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_reactive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Judo Throw Simulation (Band-Resisted)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Lateral Med Ball Slam",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic",
-          "mech_reactive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Med-Ball Rotational Slam",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive",
-          "mech_ballistic"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Medicine Ball Hook Throw",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Overhead Slam (Rotational)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic",
-          "mech_shoulder_overhead"
-        ]
-      }
-    ],
+    "ambiguous_tag_gaps_added": [],
     "ambiguous_tag_gaps_removed": []
   },
   "d13_to_d8": {
@@ -175,7 +107,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Trap Bar Deadlift"
+        "Jump-in-Place (Max Frequency)"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
@@ -183,7 +115,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Trap Bar Deadlift"
+        "Jump-in-Place (Max Frequency)"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -224,73 +156,6 @@
         "signals": [
           "plyometric"
         ]
-      },
-      {
-        "selector": "strength",
-        "name": "Banded Row (Speed Focus)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Cossack Squat (Dynamic)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_reactive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Cross-Step Lunge",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_reactive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Judo Throw Simulation (Band-Resisted)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Lateral Med Ball Slam",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic",
-          "mech_reactive"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Med-Ball Rotational Slam",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive",
-          "mech_ballistic"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Medicine Ball Hook Throw",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic"
-        ]
-      },
-      {
-        "selector": "strength",
-        "name": "Overhead Slam (Rotational)",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "mech_ballistic",
-          "mech_shoulder_overhead"
-        ]
       }
     ],
     "ambiguous_tag_gaps_removed": []
@@ -304,14 +169,14 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Overcoming Split-Squat Isometric"
       ],
       "added_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Overcoming Split-Squat Isometric"
       ],
@@ -322,6 +187,9 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
+        "Banded Hip Flexor Stretch",
+        "Banded Lateral Walk",
+        "Cluster Set Trap Bar Deadlift",
         "Trap Bar Jump (Light)"
       ],
       "no_longer_blocked": []
@@ -351,15 +219,6 @@
         "signals": [
           "plyometric"
         ]
-      },
-      {
-        "selector": "strength",
-        "name": "Medicine-Ball Chest Toss",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive",
-          "mech_ballistic"
-        ]
       }
     ],
     "ambiguous_tag_gaps_removed": []
@@ -375,13 +234,13 @@
       "after_winners": [
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Cluster Set Trap Bar Deadlift",
+        "Isometric Mid-Thigh Pull",
         "Counter-Striker Split-Line Punch Isometric Hold"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
         "Staggered-Stance Medicine-Ball Punch Throw",
-        "Cluster Set Trap Bar Deadlift",
+        "Isometric Mid-Thigh Pull",
         "Counter-Striker Split-Line Punch Isometric Hold"
       ],
       "removed_winners": [
@@ -391,6 +250,9 @@
         "Band Face Pull"
       ],
       "newly_blocked": [
+        "Banded Hip Flexor Stretch",
+        "Banded Lateral Walk",
+        "Cluster Set Trap Bar Deadlift",
         "Overcoming Split-Squat Isometric",
         "Punch-Specific Max Isometric Hold",
         "Seated Medicine-Ball Punch Throw",
@@ -423,15 +285,6 @@
         "signals": [
           "plyometric"
         ]
-      },
-      {
-        "selector": "strength",
-        "name": "Medicine-Ball Chest Toss",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive",
-          "mech_ballistic"
-        ]
       }
     ],
     "ambiguous_tag_gaps_removed": []
@@ -445,14 +298,14 @@
         "Band Face Pull"
       ],
       "after_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Overcoming Split-Squat Isometric"
       ],
       "added_winners": [
-        "Counter-Striker Split-Line Punch Isometric Hold",
         "Band-Resisted Jab-Cross Primer",
+        "Counter-Striker Split-Line Punch Isometric Hold",
         "Staggered-Stance Medicine-Ball Punch Throw",
         "Overcoming Split-Squat Isometric"
       ],
@@ -465,6 +318,8 @@
       "newly_blocked": [
         "Band-Resisted Punch",
         "Band-Resisted Straight Punch",
+        "Banded Hip Flexor Stretch",
+        "Banded Lateral Walk",
         "Cluster Set Trap Bar Deadlift",
         "Isometric Mid-Thigh Pull",
         "Trap Bar Jump (Light)"
@@ -493,15 +348,6 @@
         "signals": [
           "plyometric"
         ]
-      },
-      {
-        "selector": "strength",
-        "name": "Medicine-Ball Chest Toss",
-        "issue": "late_safe_intent_not_explicit",
-        "signals": [
-          "explosive",
-          "mech_ballistic"
-        ]
       }
     ],
     "ambiguous_tag_gaps_removed": []
@@ -518,13 +364,13 @@
         "Band-Resisted Jab-Cross Primer",
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Towel/Gi Row Isometric Hold",
-        "Banded Lateral Walk"
+        "Hollow-Body Hold"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Towel/Gi Row Isometric Hold",
-        "Banded Lateral Walk"
+        "Hollow-Body Hold"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -537,6 +383,8 @@
         "Band-Resisted Punch",
         "Band-Resisted Push Press",
         "Band-Resisted Straight Punch",
+        "Banded Hip Flexor Stretch",
+        "Banded Lateral Walk",
         "Cluster Set Trap Bar Deadlift",
         "Isometric Mid-Thigh Pull",
         "Med Ball Scoop Toss",

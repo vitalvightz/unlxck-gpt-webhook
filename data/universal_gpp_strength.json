@@ -11,8 +11,26 @@
       "mech_lower_squat",
       "mech_trunk_stability"
     ],
-    "prescription": "3x5 @ 75\u201385% 1RM",
-    "notes": "Foundational strength builder for lower body and trunk."
+    "prescription": "3x5 @ 75–85% 1RM",
+    "notes": "Foundational strength builder for lower body and trunk.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -28,8 +46,27 @@
       "mech_trunk_stability",
       "mech_grip_support"
     ],
-    "prescription": "3x5 @ 75\u201385% 1RM",
-    "notes": "Safe hinge pattern to develop full-body strength and grip."
+    "prescription": "3x5 @ 75–85% 1RM",
+    "notes": "Safe hinge pattern to develop full-body strength and grip.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -42,10 +79,30 @@
       "rate_of_force",
       "compound",
       "mech_upper_press",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic"
     ],
-    "prescription": "3x8\u201310 controlled tempo",
-    "notes": "Builds pressing strength and midline control."
+    "prescription": "3x8–10 controlled tempo",
+    "notes": "Builds pressing strength and midline control.",
+    "movement_cost": "moderate",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -61,8 +118,27 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability"
     ],
-    "prescription": "3x5 @ 70\u201385% 1RM",
-    "notes": "Improves posture, overhead strength, and core integration."
+    "prescription": "3x5 @ 70–85% 1RM",
+    "notes": "Improves posture, overhead strength, and core integration.",
+    "movement_cost": "moderate",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -74,10 +150,30 @@
       "posterior_chain",
       "balance",
       "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "prescription": "3x6/leg",
-    "notes": "Builds single-leg strength and knee stability."
+    "notes": "Builds single-leg strength and knee stability.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -92,8 +188,29 @@
       "mech_grip_support",
       "mech_trunk_stability"
     ],
-    "prescription": "3x5\u201310 controlled reps",
-    "notes": "Develops pulling strength, grip, and scapular control."
+    "prescription": "3x5–10 controlled reps",
+    "notes": "Develops pulling strength, grip, and scapular control.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -109,7 +226,26 @@
       "mech_systemic_fatigue"
     ],
     "prescription": "4x15m heavy, rest 90s",
-    "notes": "Concentric-only drill to build force output with low injury risk."
+    "notes": "Concentric-only drill to build force output with low injury risk.",
+    "movement_cost": "high",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -122,8 +258,28 @@
       "mech_grip_support",
       "mech_trunk_stability"
     ],
-    "prescription": "3x10\u201312 heavy",
-    "notes": "Reinforces shrug mechanics and neck support for impact sports."
+    "prescription": "3x10–12 heavy",
+    "notes": "Reinforces shrug mechanics and neck support for impact sports.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -137,7 +293,26 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x30s in each direction",
-    "notes": "Improves cervical strength and reduces concussion risk."
+    "notes": "Improves cervical strength and reduces concussion risk.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -152,7 +327,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8/side slow tempo",
-    "notes": "Develops rotational strength and trunk transfer efficiency."
+    "notes": "Develops rotational strength and trunk transfer efficiency.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -166,7 +359,24 @@
       "mech_trunk_stability"
     ],
     "prescription": "2x8/side, slow tempo",
-    "notes": "Improves glenohumeral rhythm and scapulohumeral coordination without load."
+    "notes": "Improves glenohumeral rhythm and scapulohumeral coordination without load.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -179,10 +389,30 @@
       "coordination",
       "mech_reactive",
       "mech_lower_jump",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_lower_hip_hinge"
     ],
     "prescription": "3x5 over low hurdles",
-    "notes": "Rebuilds bounce, rhythm, and landing coordination."
+    "notes": "Rebuilds bounce, rhythm, and landing coordination.",
+    "movement_cost": "low",
+    "impact_cost": "moderate",
+    "eccentric_cost": "high",
+    "landing_cost": "moderate",
+    "cns_load": "moderate",
+    "soreness_risk": "moderate",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_jump",
+      "mech_reactive"
+    ],
+    "low_impact": false,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ]
   },
   {
     "phases": [
@@ -198,7 +428,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x10-12 @ moderate load",
-    "notes": "Front-loaded squat pattern. KB/DB held at chest provides counterbalance and trunk activation."
+    "notes": "Front-loaded squat pattern. KB/DB held at chest provides counterbalance and trunk activation.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -214,7 +462,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "4x6 @ 70-80% 1RM",
-    "notes": "Box provides depth control and removes eccentric stress at bottom. Safer for knee/hip issues."
+    "notes": "Box provides depth control and removes eccentric stress at bottom. Safer for knee/hip issues.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -230,7 +496,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x6-8 @ 75-85% 1RM",
-    "notes": "Cambered bar reduces shoulder mobility requirements and shifts load slightly forward."
+    "notes": "Cambered bar reduces shoulder mobility requirements and shifts load slightly forward.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -246,7 +530,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x12-15 @ bodyweight",
-    "notes": "Straps provide balance assistance. Excellent for learning squat pattern or injury recovery."
+    "notes": "Straps provide balance assistance. Excellent for learning squat pattern or injury recovery.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -260,10 +562,30 @@
       "ballistic",
       "low_impact",
       "mech_lower_hip_hinge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic"
     ],
     "prescription": "4x12-15 @ moderate weight",
-    "notes": "Hip hinge power development. Keep load moderate to avoid excessive posterior chain stress."
+    "notes": "Hip hinge power development. Keep load moderate to avoid excessive posterior chain stress.",
+    "movement_cost": "moderate",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -279,7 +601,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x12-15",
-    "notes": "Hip hinge pattern with cable provides smooth resistance curve. Very knee-friendly."
+    "notes": "Hip hinge pattern with cable provides smooth resistance curve. Very knee-friendly.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -296,7 +636,24 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8-10/leg @ light load",
-    "notes": "Unilateral hinge builds balance and posterior chain. Keep load light for safety."
+    "notes": "Unilateral hinge builds balance and posterior chain. Keep load light for safety.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "high",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low"
+    ]
   },
   {
     "phases": [
@@ -312,7 +669,27 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x12-15 @ bodyweight or light load",
-    "notes": "Isolated posterior chain work. Less spinal loading than barbell variations."
+    "notes": "Isolated posterior chain work. Less spinal loading than barbell variations.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -328,7 +705,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8-10 @ 70-80% 1RM equivalent",
-    "notes": "Neutral grip reduces shoulder stress. DBs allow natural arm path."
+    "notes": "Neutral grip reduces shoulder stress. DBs allow natural arm path.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -344,7 +739,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8-10 each arm",
-    "notes": "Angled pressing path is more shoulder-friendly than vertical press."
+    "notes": "Angled pressing path is more shoulder-friendly than vertical press.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -359,7 +772,24 @@
       "mech_upper_press"
     ],
     "prescription": "3x6-8 @ 75-85% 1RM",
-    "notes": "Floor limits range of motion, reducing shoulder stress. Good for shoulder issues."
+    "notes": "Floor limits range of motion, reducing shoulder stress. Good for shoulder issues.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -375,7 +805,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8-10",
-    "notes": "Moderate incline reduces shoulder stress vs flat or steep angles."
+    "notes": "Moderate incline reduces shoulder stress vs flat or steep angles.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -391,7 +839,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x10-15",
-    "notes": "Instability adds core demand. Can adjust difficulty with body angle."
+    "notes": "Instability adds core demand. Can adjust difficulty with body angle.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -407,7 +873,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x10-12",
-    "notes": "Neutral grip reduces shoulder/elbow stress. Cable provides constant tension."
+    "notes": "Neutral grip reduces shoulder/elbow stress. Cable provides constant tension.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -422,7 +906,24 @@
       "mech_upper_pull"
     ],
     "prescription": "3x10-12",
-    "notes": "Chest support eliminates lower back involvement. Pure upper back work."
+    "notes": "Chest support eliminates lower back involvement. Pure upper back work.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -437,7 +938,24 @@
       "mech_upper_pull"
     ],
     "prescription": "3x8-10",
-    "notes": "Prone position removes all lower body and lower back stress."
+    "notes": "Prone position removes all lower body and lower back stress.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -452,7 +970,24 @@
       "mech_upper_pull"
     ],
     "prescription": "3x15-20",
-    "notes": "High-rep rear delt and upper back work. Excellent for shoulder health."
+    "notes": "High-rep rear delt and upper back work. Excellent for shoulder health.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -467,7 +1002,24 @@
       "mech_upper_pull"
     ],
     "prescription": "3x20-25",
-    "notes": "Simple shoulder health drill. Can be done daily."
+    "notes": "Simple shoulder health drill. Can be done daily.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -485,7 +1037,26 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x12-15",
-    "notes": "Bodyweight row with adjustable difficulty. Core stability component."
+    "notes": "Bodyweight row with adjustable difficulty. Core stability component.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -499,10 +1070,30 @@
       "balance",
       "low_impact",
       "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "prescription": "3x8-10/leg",
-    "notes": "Rear-foot-elevated split squat. Excellent for single-leg strength and balance."
+    "notes": "Rear-foot-elevated split squat. Excellent for single-leg strength and balance.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -519,7 +1110,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8-10/leg",
-    "notes": "Reverse step reduces deceleration stress vs forward lunge."
+    "notes": "Reverse step reduces deceleration stress vs forward lunge.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -534,7 +1143,24 @@
       "mech_lower_lunge"
     ],
     "prescription": "3x10-12/leg",
-    "notes": "Low box height (12-16 inches) minimizes knee stress while building strength."
+    "notes": "Low box height (12-16 inches) minimizes knee stress while building strength.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -551,7 +1177,25 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x6-8/leg",
-    "notes": "Box provides safety net. Advanced single-leg strength."
+    "notes": "Box provides safety net. Advanced single-leg strength.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "moderate",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": false,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -564,10 +1208,31 @@
       "stability",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
     "prescription": "3x10-12 each side",
-    "notes": "Anti-rotation core strength. Cable or band resistance."
+    "notes": "Anti-rotation core strength. Cable or band resistance.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -583,7 +1248,24 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x10-12 each side",
-    "notes": "Anti-extension pattern. Teaches core control."
+    "notes": "Anti-extension pattern. Teaches core control.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -600,7 +1282,24 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x8-10 each side",
-    "notes": "Anti-rotation and anti-extension. Excellent for spinal stability."
+    "notes": "Anti-rotation and anti-extension. Excellent for spinal stability.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -616,7 +1315,26 @@
       "mech_trunk_stability"
     ],
     "prescription": "3x15-20s each side",
-    "notes": "Adductor and lateral core strength. Important for groin health."
+    "notes": "Adductor and lateral core strength. Important for groin health.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -632,7 +1350,26 @@
       "mech_trunk_stability"
     ],
     "prescription": "4x20-30s",
-    "notes": "Anti-extension isometric. Foundational core strength."
+    "notes": "Anti-extension isometric. Foundational core strength.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -646,10 +1383,29 @@
       "work_capacity",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
     "prescription": "3 rounds: front plank 45s, side plank 30s/side",
-    "notes": "Multi-angle core isometric work."
+    "notes": "Multi-angle core isometric work.",
+    "movement_cost": "high",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "moderate",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -663,10 +1419,33 @@
       "low_impact",
       "mech_loaded_carry",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue",
+      "mech_upper_carry"
     ],
     "prescription": "4x40m @ 70-80% max",
-    "notes": "Bilateral carry for grip and core endurance."
+    "notes": "Bilateral carry for grip and core endurance.",
+    "movement_cost": "high",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "moderate",
+    "soreness_risk": "moderate",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_loaded_carry",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": false,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate"
+    ]
   },
   {
     "phases": [
@@ -681,10 +1460,33 @@
       "low_impact",
       "mech_loaded_carry",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "prescription": "3x30m each side",
-    "notes": "Unilateral carry challenges anti-lateral flexion."
+    "notes": "Unilateral carry challenges anti-lateral flexion.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_loaded_carry",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -696,10 +1498,32 @@
       "stability",
       "low_impact",
       "mech_loaded_carry",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_upper_carry"
     ],
     "prescription": "3x30m",
-    "notes": "Front rack position challenges thoracic and core stability."
+    "notes": "Front rack position challenges thoracic and core stability.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_loaded_carry",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -712,10 +1536,31 @@
       "quad_dominant",
       "low_impact",
       "zero_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "prescription": "4x30-45s",
-    "notes": "Isometric squat position. Builds leg endurance without dynamic stress."
+    "notes": "Isometric squat position. Builds leg endurance without dynamic stress.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -730,10 +1575,32 @@
       "low_impact",
       "zero_impact",
       "mech_lower_lunge",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_squat"
     ],
     "prescription": "3x20-30s each leg",
-    "notes": "Static lunge position builds isometric strength and balance."
+    "notes": "Static lunge position builds isometric strength and balance.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   },
   {
     "phases": [
@@ -748,6 +1615,23 @@
       "zero_impact"
     ],
     "prescription": "4x30-45s",
-    "notes": "Isometric hip extension. Glute activation without spinal loading."
+    "notes": "Isometric hip extension. Glute activation without spinal loading.",
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ]
   }
 ]
