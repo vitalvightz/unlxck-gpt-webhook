@@ -160,6 +160,8 @@ Each slot should expose:
 - the selected primary item
 - backup items already present in Stage 1
 - relevant movement and risk tags
+- score evidence from Stage 1 selection
+- normalized selection metadata with conservative defaults for unknown fields
 - a replacement hint that keeps Stage 2 inside the same role
 
 ```json
@@ -176,7 +178,27 @@ Each slot should expose:
           "movement_patterns": ["hinge", "bilateral", "axial_load"],
           "restriction_tags": ["hinge", "axial_load", "knee_friendly_partial_rom"],
           "prescription": "4x4-6 @ RPE 7-8",
-          "why": "high force, lower knee demand than deep squat"
+          "why": "high force, lower knee demand than deep squat",
+          "score": 8.4,
+          "reason_codes": ["goal_match", "phase_match"],
+          "penalties": 0,
+          "restriction_hits": 0,
+          "late_window_adjustment": 0,
+          "score_evidence": {
+            "score": 8.4,
+            "reason_codes": ["goal_match", "phase_match"],
+            "penalties": 0,
+            "restriction_hits": 0,
+            "late_window_adjustment": 0
+          },
+          "selection_metadata": {
+            "movement_cost": "moderate",
+            "impact_cost": "moderate",
+            "eccentric_cost": "moderate",
+            "cns_load": "moderate",
+            "soreness_risk": "moderate",
+            "late_windows": []
+          }
         },
         "alternates": [
           {
