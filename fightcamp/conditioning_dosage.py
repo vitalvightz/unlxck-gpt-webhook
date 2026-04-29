@@ -30,14 +30,11 @@ HIGH_RISK_CUT_BUCKETS = {"high", "critical", "extreme"}
 def _to_number(value: Any) -> float | int | None:
     if value is None or value == "" or isinstance(value, bool):
         return None
-    if isinstance(value, (int, float)):
-        return int(value) if float(value).is_integer() else float(value)
     try:
         parsed = float(value)
+        return int(parsed) if parsed.is_integer() else parsed
     except (TypeError, ValueError):
         return None
-    return int(parsed) if parsed.is_integer() else parsed
-
 
 def _to_int(value: Any) -> int | None:
     parsed = _to_number(value)
