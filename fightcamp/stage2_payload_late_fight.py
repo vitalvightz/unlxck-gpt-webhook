@@ -467,7 +467,18 @@ def _normalized_fatigue(athlete_model: dict[str, Any]) -> str:
         or athlete_model.get("fatigue_level")
         or ""
     ).strip().lower()
-    return fatigue if fatigue in {"low", "moderate", "high"} else "low"
+    if fatigue in {"low", "moderate", "high"}:
+        return fatigue
+    readiness_flags = {
+        flag.strip().lower()
+        for flag in clean_list(athlete_model.get("readiness_flags", []))
+        if flag.strip()
+    }
+    if "high_fatigue" in readiness_flags:
+        return "high"
+    if "moderate_fatigue" in readiness_flags:
+        return "moderate"
+    return "low"
 
 
 def _readiness_flags(athlete_model: dict[str, Any]) -> set[str]:

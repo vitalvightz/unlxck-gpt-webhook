@@ -27,6 +27,7 @@ from .stage2_payload_late_fight import (
     _handoff_mode_instructions,
     _late_fight_permissions,
     _late_fight_rendering_rules,
+    _normalized_fatigue as _normalized_fatigue_level,
     _resolve_late_fight_phase,
     _uses_late_fight_stage2_payload,
 )
@@ -1472,18 +1473,6 @@ _WEEKDAY_ORDER = {
 
 def _athlete_sport_key(athlete_model: dict) -> str:
     return str(athlete_model.get("sport") or "").strip().lower().replace(" ", "_")
-
-
-def _normalized_fatigue_level(athlete_model: dict) -> str:
-    fatigue = str(athlete_model.get("fatigue", "")).strip().lower()
-    readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
-    if fatigue in {"low", "moderate", "high"}:
-        return fatigue
-    if "high_fatigue" in readiness_flags:
-        return "high"
-    if "moderate_fatigue" in readiness_flags:
-        return "moderate"
-    return "low"
 
 
 def _ordered_weekdays(values: list[str]) -> list[str]:
