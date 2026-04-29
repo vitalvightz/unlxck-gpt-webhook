@@ -129,13 +129,12 @@
           ]
         },
         {
-          "name": "Jump-in-Place (Max Frequency)",
-          "score": 2.95,
+          "name": "Pivot-and-Strike (Rotation Focus)",
+          "score": 2.8,
           "reason_codes": [
             "late_strength_boost_cut_survivable",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_reactive"
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness"
           ]
         }
       ],
@@ -153,15 +152,23 @@
       "winners": [
         {
           "name": "Easy Bike",
-          "score": 2.65,
+          "score": 2.9,
           "reason_codes": [
-            "late_conditioning_boost_aerobic_rhythm"
+            "late_conditioning_boost_aerobic_rhythm",
+            "late_conditioning_boost_structured_freshness"
           ]
         },
         {
           "name": "Shadowboxing Intervals",
-          "score": 0.9,
-          "reason_codes": []
+          "score": -1.5475,
+          "reason_codes": [
+            "late_conditioning_penalty_dense_multi_round",
+            "late_conditioning_penalty_fight_pace_leak",
+            "late_conditioning_penalty_high_lactate_metadata",
+            "late_conditioning_penalty_high_movement_cost_metadata",
+            "late_conditioning_penalty_developmental_taper",
+            "late_conditioning_penalty_generic_glycolytic"
+          ]
         },
         {
           "name": "Explosive Boxing Burst Intervals",
@@ -263,13 +270,12 @@
           ]
         },
         {
-          "name": "Jump-in-Place (Max Frequency)",
-          "score": 2.95,
+          "name": "Pivot-and-Strike (Rotation Focus)",
+          "score": 2.8,
           "reason_codes": [
             "late_strength_boost_cut_survivable",
-            "late_strength_boost_low_eccentric",
-            "late_strength_boost_low_soreness",
-            "late_strength_boost_reactive"
+            "late_strength_boost_low_impact",
+            "late_strength_boost_low_soreness"
           ]
         }
       ],
@@ -287,9 +293,10 @@
       "winners": [
         {
           "name": "Easy Bike",
-          "score": 2.65,
+          "score": 2.9,
           "reason_codes": [
-            "late_conditioning_boost_aerobic_rhythm"
+            "late_conditioning_boost_aerobic_rhythm",
+            "late_conditioning_boost_structured_freshness"
           ]
         },
         {
@@ -300,7 +307,15 @@
           ]
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.9,
+          "reason_codes": [
+            "late_conditioning_block_bridge_glycolytic_cap"
+          ]
+        }
+      ]
     },
     "ambiguous_tag_gaps": [
       {
@@ -417,9 +432,10 @@
       "winners": [
         {
           "name": "Easy Bike",
-          "score": 2.65,
+          "score": 2.9,
           "reason_codes": [
-            "late_conditioning_boost_aerobic_rhythm"
+            "late_conditioning_boost_aerobic_rhythm",
+            "late_conditioning_boost_structured_freshness"
           ]
         },
         {
@@ -430,7 +446,28 @@
           ]
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.9,
+          "reason_codes": [
+            "late_conditioning_block_bridge_glycolytic_cap",
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_generic_glycolytic",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        },
+        {
+          "name": "Speed Bag Precision Drill",
+          "score": 2.15,
+          "reason_codes": [
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        }
+      ]
     },
     "ambiguous_tag_gaps": [
       {
@@ -569,9 +606,10 @@
       "winners": [
         {
           "name": "Easy Bike",
-          "score": 2.65,
+          "score": 2.9,
           "reason_codes": [
-            "late_conditioning_boost_aerobic_rhythm"
+            "late_conditioning_boost_aerobic_rhythm",
+            "late_conditioning_boost_structured_freshness"
           ]
         },
         {
@@ -582,7 +620,28 @@
           ]
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.9,
+          "reason_codes": [
+            "late_conditioning_block_bridge_glycolytic_cap",
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_generic_glycolytic",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        },
+        {
+          "name": "Speed Bag Precision Drill",
+          "score": 2.15,
+          "reason_codes": [
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        }
+      ]
     },
     "ambiguous_tag_gaps": [
       {
@@ -722,9 +781,10 @@
       "winners": [
         {
           "name": "Easy Bike",
-          "score": 2.65,
+          "score": 2.9,
           "reason_codes": [
-            "late_conditioning_boost_aerobic_rhythm"
+            "late_conditioning_boost_aerobic_rhythm",
+            "late_conditioning_boost_structured_freshness"
           ]
         },
         {
@@ -735,7 +795,28 @@
           ]
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.9,
+          "reason_codes": [
+            "late_conditioning_block_bridge_glycolytic_cap",
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_generic_glycolytic",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        },
+        {
+          "name": "Speed Bag Precision Drill",
+          "score": 2.15,
+          "reason_codes": [
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        }
+      ]
     },
     "ambiguous_tag_gaps": [
       {
@@ -920,9 +1001,10 @@
       "winners": [
         {
           "name": "Easy Bike",
-          "score": 2.65,
+          "score": 2.9,
           "reason_codes": [
-            "late_conditioning_boost_aerobic_rhythm"
+            "late_conditioning_boost_aerobic_rhythm",
+            "late_conditioning_boost_structured_freshness"
           ]
         },
         {
@@ -933,7 +1015,28 @@
           ]
         }
       ],
-      "blocked": []
+      "blocked": [
+        {
+          "name": "Shadowboxing Intervals",
+          "score": 0.9,
+          "reason_codes": [
+            "late_conditioning_block_bridge_glycolytic_cap",
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_generic_glycolytic",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        },
+        {
+          "name": "Speed Bag Precision Drill",
+          "score": 2.15,
+          "reason_codes": [
+            "late_conditioning_block_dense_multi_round",
+            "late_conditioning_block_density_leakage",
+            "late_conditioning_block_structured_glycolytic_density"
+          ]
+        }
+      ]
     },
     "ambiguous_tag_gaps": [
       {

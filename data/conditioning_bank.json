@@ -18,10 +18,26 @@
       "low_impact",
       "mech_cns_high",
       "mech_systemic_fatigue",
-      "mech_lower_hip_hinge"
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Good for posterior-chain drive without joint pounding (max effort)",
-    "equipment_note": "Requires: Assault Bike"
+    "equipment_note": "Requires: Assault Bike",
+    "work_sec": 10,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Aerobic power circuits",
@@ -44,7 +60,17 @@
       "mech_lower_hip_hinge"
     ],
     "notes": "Great for building base without CNS load",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "total_minutes": 30,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Pad EMOM (5x5 format)",
@@ -63,9 +89,24 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic"
     ],
-    "notes": "Simulates fight pacing under fatigue"
+    "notes": "Simulates fight pacing under fatigue",
+    "work_sec": 5,
+    "rounds": 5,
+    "total_minutes": 5,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Reaction Ball Drills",
@@ -84,9 +125,21 @@
       "cns_freshness",
       "sharpness",
       "mech_cns_high",
-      "mech_reactive"
+      "mech_reactive",
+      "mech_ballistic"
     ],
-    "notes": "Pre-fight CNS sharpening"
+    "notes": "Pre-fight CNS sharpening",
+    "work_sec": 600,
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Nasal Jog",
@@ -103,9 +156,18 @@
       "aerobic",
       "low_impact",
       "recovery",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Low load; good for mental reset and recovery flush (low (zone 2))"
+    "notes": "Low load; good for mental reset and recovery flush (low (zone 2))",
+    "total_minutes": 40,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Grapple Circuits (High Pace)",
@@ -123,9 +185,23 @@
       "conditioning",
       "mech_grip_intensive",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_grip_support"
     ],
-    "notes": "Grip-taxing & skill-based fatigue drill"
+    "notes": "Grip-taxing & skill-based fatigue drill",
+    "work_sec": 240,
+    "rounds": 5,
+    "total_minutes": 4,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Sled Sprint Repeats",
@@ -145,10 +221,26 @@
       "low_impact",
       "mech_acceleration",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Safe CNS explosive work when sprinting is contraindicated",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 10,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Jump Rope Conditioning",
@@ -166,9 +258,22 @@
       "light_impact",
       "aerobic",
       "mech_reactive_rebound",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive"
     ],
-    "notes": "Low barrier to entry; rhythm & footwork focused"
+    "notes": "Low barrier to entry; rhythm & footwork focused",
+    "total_minutes": 15,
+    "rpe": 7,
+    "impact_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Tempo Hill Runs",
@@ -186,9 +291,21 @@
       "intensity",
       "mech_acceleration",
       "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "High intensity, not ideal with hamstring injuries (hard)"
+    "notes": "High intensity, not ideal with hamstring injuries (hard)",
+    "work_sec": 20,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Shadowboxing Intervals",
@@ -207,9 +324,25 @@
       "conditioning",
       "mech_upper_press",
       "mech_trunk_rotation",
-      "mech_shoulder_overhead"
+      "mech_shoulder_overhead",
+      "mech_ballistic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Fight-specific movement without CNS drag"
+    "notes": "Fight-specific movement without CNS drag",
+    "work_sec": 180,
+    "rounds": 3,
+    "total_minutes": 9,
+    "rpe": 6,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Nasal Breathing Ruck March",
@@ -223,10 +356,21 @@
       "low_cns",
       "mech_systemic_fatigue",
       "mech_upper_carry",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
     "notes": "After lower body strength days only",
-    "intensity": "zone 2"
+    "intensity": "zone 2",
+    "total_minutes": 60,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ]
   },
   {
     "name": "Pool Running (Weight Belt)",
@@ -239,9 +383,18 @@
     "duration": "30min continuous",
     "tags": [
       "zero_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Mandatory for lower body injuries"
+    "notes": "Mandatory for lower body injuries",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Bike Zone 2 (Nasal Only)",
@@ -256,10 +409,19 @@
     "duration": "40min",
     "tags": [
       "low_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "notes": "Primary hamstring rehab modality",
-    "equipment_note": "Requires: Stationary Bike"
+    "equipment_note": "Requires: Stationary Bike",
+    "total_minutes": 40,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Swim Intervals (Freestyle)",
@@ -273,9 +435,22 @@
       "upper_body",
       "mech_upper_pull",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Active recovery after shoulder strength"
+    "notes": "Active recovery after shoulder strength",
+    "work_sec": 50,
+    "rounds": 20,
+    "total_minutes": 16.67,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Step Mill (No Hands)",
@@ -290,10 +465,21 @@
     "tags": [
       "quad_dominant",
       "mech_lower_squat",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
     "notes": "Contraindicated with knee pain",
-    "equipment_note": "Requires: Step Mill"
+    "equipment_note": "Requires: Step Mill",
+    "work_sec": 1800,
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Shadowboxing (Light Pace)",
@@ -307,9 +493,21 @@
     "tags": [
       "skill",
       "mech_upper_press",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Focus on technique, not intensity"
+    "notes": "Focus on technique, not intensity",
+    "work_sec": 600,
+    "rounds": 3,
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Rowing (Zone 2)",
@@ -329,7 +527,17 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Low-impact deadlift alternative",
-    "equipment_note": "Requires: Rower"
+    "equipment_note": "Requires: Rower",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Hiking (Weighted Vest)",
@@ -345,7 +553,17 @@
       "mech_trunk_stability",
       "mech_axial_heavy"
     ],
-    "notes": "Terrain variation recommended"
+    "notes": "Terrain variation recommended",
+    "work_sec": 3600,
+    "total_minutes": 60,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_axial_heavy",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Jump Rope (Recovery Pace)",
@@ -359,9 +577,20 @@
     "tags": [
       "footwork",
       "mech_reactive_rebound",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "Focus on rhythm, not speed"
+    "notes": "Focus on rhythm, not speed",
+    "rest_sec": 900,
+    "total_minutes": 15,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Sled Drag Walk",
@@ -377,10 +606,25 @@
       "posterior_chain",
       "mech_systemic_fatigue",
       "mech_trunk_stability",
-      "mech_grip_support"
+      "mech_grip_support",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
     "notes": "25% BW load max",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 100,
+    "rounds": 4,
+    "total_minutes": 6.67,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Recumbent Bike",
@@ -395,10 +639,20 @@
     "duration": "45min",
     "tags": [
       "rehab_friendly",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "notes": "For acute lower back pain",
-    "equipment_note": "Requires: Recumbent Bike"
+    "equipment_note": "Requires: Recumbent Bike",
+    "work_sec": 2700,
+    "total_minutes": 45,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Arm Ergometer",
@@ -416,7 +670,16 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Leg injury alternative",
-    "equipment_note": "Requires: Arm Ergometer"
+    "equipment_note": "Requires: Arm Ergometer",
+    "work_sec": 1800,
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Yoga Flow (Dynamic)",
@@ -429,9 +692,19 @@
     "duration": "45min",
     "tags": [
       "mobility",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Emphasize hip/shoulder ROM"
+    "notes": "Emphasize hip/shoulder ROM",
+    "work_sec": 2700,
+    "total_minutes": 45,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Farmers Walk (Light)",
@@ -447,9 +720,22 @@
       "grip",
       "mech_upper_carry",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_ballistic"
     ],
-    "notes": "50% max grip duration"
+    "notes": "50% max grip duration",
+    "work_sec": 100,
+    "rounds": 5,
+    "total_minutes": 8.33,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ]
   },
   {
     "name": "Stair Climbing (Recovery)",
@@ -462,9 +748,20 @@
     "tags": [
       "quad_dominant",
       "mech_lower_squat",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Skip every other step"
+    "notes": "Skip every other step",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Elliptical (Nasal Only)",
@@ -482,7 +779,15 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Backward motion for hamstrings",
-    "equipment_note": "Requires: Elliptical"
+    "equipment_note": "Requires: Elliptical",
+    "work_sec": 1800,
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Low-intensity capacity circuits (non-steady)",
@@ -497,7 +802,17 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "notes": "30% intensity technique work"
+    "notes": "30% intensity technique work",
+    "work_sec": 180,
+    "rounds": 5,
+    "total_minutes": 15,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Breath Control Drills",
@@ -511,7 +826,13 @@
     "tags": [
       "recovery"
     ],
-    "notes": "Diaphragmatic focus"
+    "notes": "Diaphragmatic focus",
+    "work_sec": 900,
+    "total_minutes": 15,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": []
   },
   {
     "name": "Sandbag Carry (Light)",
@@ -527,10 +848,23 @@
       "core",
       "mech_upper_carry",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
     "notes": "25% BW load",
-    "equipment_note": "Requires: Sandbag"
+    "equipment_note": "Requires: Sandbag",
+    "work_sec": 60,
+    "rounds": 5,
+    "total_minutes": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability",
+      "mech_upper_carry",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Agility Ladder (Recovery)",
@@ -545,7 +879,15 @@
       "footwork",
       "mech_reactive"
     ],
-    "notes": "50% speed, perfect form"
+    "notes": "50% speed, perfect form",
+    "rest_sec": 600,
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_reactive"
+    ]
   },
   {
     "name": "Band-Resisted Broad Jump",
@@ -563,9 +905,24 @@
       "mech_lower_jump",
       "mech_reactive",
       "mech_landing_impact",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "POSTERIOR CHAIN WARNING: Only program after upper body days. HAMSTRING ALERT: Disable if tightness >3/10"
+    "notes": "POSTERIOR CHAIN WARNING: Only program after upper body days. HAMSTRING ALERT: Disable if tightness >3/10",
+    "work_sec": 3,
+    "rest_sec": 24,
+    "rounds": 6,
+    "total_minutes": 2.3,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Medicine Ball Rotational Throw",
@@ -582,9 +939,23 @@
       "core",
       "mech_ballistic",
       "mech_trunk_rotation",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "SPINE LOAD RULE: No same week as max deadlifts. TAPER: Reduce to 3/side"
+    "notes": "SPINE LOAD RULE: No same week as max deadlifts. TAPER: Reduce to 3/side",
+    "work_sec": 5,
+    "rest_sec": 30,
+    "rounds": 8,
+    "total_minutes": 4.17,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Depth Jump to Sprint",
@@ -601,9 +972,25 @@
       "mech_reactive_rebound",
       "mech_acceleration",
       "mech_cns_high",
-      "high_impact_lower"
+      "high_impact_lower",
+      "mech_ballistic",
+      "mech_reactive"
     ],
-    "notes": "CNS LOAD: Requires 48h recovery after. BOX HEIGHT: 12-18\" based on experience"
+    "notes": "CNS LOAD: Requires 48h recovery after. BOX HEIGHT: 12-18\" based on experience",
+    "work_sec": 3,
+    "rounds": 5,
+    "total_minutes": 0.25,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Plyo Push-Up to Sprint",
@@ -620,9 +1007,30 @@
       "mech_upper_press",
       "mech_acceleration",
       "mech_cns_high",
-      "high_impact_upper"
+      "high_impact_upper",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_shoulder_overhead"
     ],
-    "notes": "BENCH PRESS PAIRING: Ideal 48h post heavy bench. SHOULDER INJURY: Replace with med ball throws"
+    "notes": "BENCH PRESS PAIRING: Ideal 48h post heavy bench. SHOULDER INJURY: Replace with med ball throws",
+    "work_sec": 5,
+    "rest_sec": 30,
+    "rounds": 6,
+    "total_minutes": 3,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_shoulder_overhead",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sled Sprint (Empty)",
@@ -640,10 +1048,29 @@
       "mech_acceleration",
       "mech_max_velocity",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "DEADLIFT RECOVERY: Safe 48h post pulls at <30% intensity. HAMSTRING: Preferred over hill sprints",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 15,
+    "rest_sec": 90,
+    "rounds": 8,
+    "total_minutes": 12.5,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_max_velocity",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Box Jump (Stick Landing)",
@@ -659,9 +1086,23 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "KNEE RULE: Depth must match competition squat. FATIGUE: Disable if vertical jump drops >10%"
+    "notes": "KNEE RULE: Depth must match competition squat. FATIGUE: Disable if vertical jump drops >10%",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "KB Swing (Heavy)",
@@ -681,7 +1122,20 @@
       "mech_grip_support",
       "mech_cns_high"
     ],
-    "notes": "DEADLIFT SUB: Use when axial loading contraindicated. WEIGHT: 24-32kg for athletes"
+    "notes": "DEADLIFT SUB: Use when axial loading contraindicated. WEIGHT: 24-32kg for athletes",
+    "work_sec": 8,
+    "rest_sec": 40,
+    "rounds": 8,
+    "total_minutes": 5.73,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
+    ]
   },
   {
     "name": "Alternating Bound",
@@ -697,9 +1151,23 @@
       "mech_lower_jump",
       "mech_reactive",
       "mech_landing_impact",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_trunk_stability"
     ],
-    "notes": "ANKLE STABILITY: Not for acute sprains. SURFACE: Grass preferred"
+    "notes": "ANKLE STABILITY: Not for acute sprains. SURFACE: Grass preferred",
+    "work_sec": 5,
+    "rounds": 4,
+    "total_minutes": 0.33,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Med Ball Chest Pass (Reactive)",
@@ -719,7 +1187,19 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "BENCH PRESS SYNERGY: Program 24h post volume bench. BALL WEIGHT: 4-6kg"
+    "notes": "BENCH PRESS SYNERGY: Program 24h post volume bench. BALL WEIGHT: 4-6kg",
+    "work_sec": 3,
+    "rounds": 10,
+    "total_minutes": 0.5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_reactive",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Hurdle Hop (Stick Landing)",
@@ -735,9 +1215,25 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive_rebound",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_reactive"
     ],
-    "notes": "HEIGHT: 20-24\". CONTRAINDICATED with hip impingement"
+    "notes": "HEIGHT: 20-24\". CONTRAINDICATED with hip impingement",
+    "work_sec": 5,
+    "rounds": 5,
+    "total_minutes": 0.42,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Band-Resisted Sprint Start",
@@ -754,9 +1250,27 @@
       "low_volume",
       "mech_acceleration",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "HAMSTRING PROTECTION: Lighter band if posterior tightness"
+    "notes": "HAMSTRING PROTECTION: Lighter band if posterior tightness",
+    "work_sec": 10,
+    "rest_sec": 80,
+    "rounds": 8,
+    "total_minutes": 10.67,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Depth Drop to Vertical",
@@ -772,9 +1286,25 @@
       "mech_landing_impact",
       "mech_reactive_rebound",
       "mech_lower_jump",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_reactive"
     ],
-    "notes": "BOX HEIGHT: 50% max vertical jump. CNS LOAD: Max 2x/week"
+    "notes": "BOX HEIGHT: 50% max vertical jump. CNS LOAD: Max 2x/week",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Sled Push (Light)",
@@ -791,10 +1321,24 @@
       "concentric",
       "mech_lower_hip_hinge",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
     "notes": "LOAD: 25% BW. DEADLIFT RECOVERY: Safe 48h post max effort",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 20,
+    "rest_sec": 120,
+    "rounds": 6,
+    "total_minutes": 12,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Single-Leg Hop (Stabilize)",
@@ -812,7 +1356,19 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "KNEE RULE: Must pass single-leg squat test first"
+    "notes": "KNEE RULE: Must pass single-leg squat test first",
+    "work_sec": 5,
+    "rounds": 4,
+    "total_minutes": 0.33,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Wall Ball Shot (Max Height)",
@@ -832,7 +1388,19 @@
       "mech_lower_squat",
       "mech_cns_high"
     ],
-    "notes": "TARGET: 10-12ft. SHOULDER CAUTION: Reduce volume if impingement"
+    "notes": "TARGET: 10-12ft. SHOULDER CAUTION: Reduce volume if impingement",
+    "work_sec": 3,
+    "rounds": 8,
+    "total_minutes": 0.4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_squat",
+      "mech_shoulder_overhead"
+    ]
   },
   {
     "name": "Broad Jump (Stick Landing)",
@@ -850,7 +1418,19 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "LANDING RULE: Must demonstrate proper mechanics first"
+    "notes": "LANDING RULE: Must demonstrate proper mechanics first",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Split Jump (Alternating)",
@@ -867,9 +1447,24 @@
       "mech_lower_lunge",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_trunk_stability"
     ],
-    "notes": "KNEE ALIGNMENT: Monitor valgus. DEPTH: Match fighting stance"
+    "notes": "KNEE ALIGNMENT: Monitor valgus. DEPTH: Match fighting stance",
+    "work_sec": 5,
+    "rounds": 5,
+    "total_minutes": 0.42,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Med Ball Slam (Rotational)",
@@ -889,7 +1484,19 @@
       "mech_shoulder_overhead",
       "mech_cns_high"
     ],
-    "notes": "WEIGHT: 6-8kg. SPINE RULE: No flexion under load"
+    "notes": "WEIGHT: 6-8kg. SPINE RULE: No flexion under load",
+    "work_sec": 3,
+    "rounds": 8,
+    "total_minutes": 0.4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Box Jump-Over (Continuous)",
@@ -905,9 +1512,25 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive_rebound",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_reactive"
     ],
-    "notes": "HEIGHT: 12-16\". CONTRAINDICATED with hip replacements"
+    "notes": "HEIGHT: 12-16\". CONTRAINDICATED with hip replacements",
+    "work_sec": 8,
+    "rounds": 4,
+    "total_minutes": 0.53,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Band-Resisted Lateral Bound",
@@ -928,7 +1551,20 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "GROIN STRAIN WARNING: Reduce ROM if tender"
+    "notes": "GROIN STRAIN WARNING: Reduce ROM if tender",
+    "work_sec": 4,
+    "rounds": 5,
+    "total_minutes": 0.33,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Thai Clinch EMOM",
@@ -944,9 +1580,25 @@
       "mech_grip_intensive",
       "mech_upper_pull",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_grip_support",
+      "mech_lower_lunge"
     ],
-    "notes": "HIP FLEXOR WARNING: Monitor fatigue. ALTERNATE weekly with sprawl drills"
+    "notes": "HIP FLEXOR WARNING: Monitor fatigue. ALTERNATE weekly with sprawl drills",
+    "work_sec": 60,
+    "rounds": 10,
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Takedown Sprawl Circuit",
@@ -962,9 +1614,25 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
-    "notes": "POSTERIOR CHAIN: 72h after deadlifts. GPP: Limit to 3 sets"
+    "notes": "POSTERIOR CHAIN: 72h after deadlifts. GPP: Limit to 3 sets",
+    "work_sec": 30,
+    "rounds": 5,
+    "total_minutes": 2.5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Pad Round Triples",
@@ -982,7 +1650,19 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "SHOULDER RECOVERY: Reduce volume if bench press >85% 1RM that week"
+    "notes": "SHOULDER RECOVERY: Reduce volume if bench press >85% 1RM that week",
+    "work_sec": 180,
+    "rounds": 8,
+    "total_minutes": 24,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Grappler Escape Chains",
@@ -997,9 +1677,22 @@
       "grip",
       "mech_grip_intensive",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_grip_support"
     ],
-    "notes": "GRIP WARNING: No same day as pull-ups. TAPER: Remove if hands torn"
+    "notes": "GRIP WARNING: No same day as pull-ups. TAPER: Remove if hands torn",
+    "work_sec": 240,
+    "rounds": 6,
+    "total_minutes": 4,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Wall Drill Intervals",
@@ -1014,9 +1707,22 @@
       "footwork",
       "mech_acceleration",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_upper_press"
     ],
-    "notes": "LOWER BODY: Contraindicated with ankle sprains <2 weeks"
+    "notes": "LOWER BODY: Contraindicated with ankle sprains <2 weeks",
+    "work_sec": 30,
+    "rounds": 12,
+    "total_minutes": 6,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sandbag Shouldering",
@@ -1034,10 +1740,26 @@
       "mech_lower_squat",
       "mech_ballistic",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_shoulder_overhead",
+      "mech_upper_press"
     ],
     "notes": "SPINE LOAD: Not same week as heavy cleans. WEIGHT: 25-35% BW",
-    "equipment_note": "Requires: Sandbag"
+    "equipment_note": "Requires: Sandbag",
+    "work_sec": 90,
+    "rounds": 5,
+    "total_minutes": 7.5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Battle Rope Gauntlet",
@@ -1056,10 +1778,26 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability",
       "mech_grip_intensive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "UPPER BODY: Program before rest day. FATIGUE: Reduce waves if bench press drops >10%",
-    "equipment_note": "Requires: Battle Ropes"
+    "equipment_note": "Requires: Battle Ropes",
+    "work_sec": 120,
+    "rounds": 4,
+    "total_minutes": 8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Tire Flip Sprints",
@@ -1077,10 +1815,25 @@
       "mech_lower_hip_hinge",
       "mech_ballistic",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "DEADLIFT RECOVERY: 72h minimum after max effort. TIRE WEIGHT: 50-70% deadlift 1RM",
-    "equipment_note": "Requires: Tire"
+    "equipment_note": "Requires: Tire",
+    "rest_sec": 120,
+    "total_minutes": 2,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Kettlebell Snatch Test",
@@ -1099,9 +1852,23 @@
       "mech_lower_hip_hinge",
       "mech_shoulder_overhead",
       "mech_grip_support",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_systemic_fatigue"
     ],
-    "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. WEIGHT: 16-24kg"
+    "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. WEIGHT: 16-24kg",
+    "work_sec": 600,
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Drag Intervals",
@@ -1119,10 +1886,31 @@
       "mech_upper_pull",
       "mech_trunk_stability",
       "mech_grip_support",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "notes": "HAMSTRING FRIENDLY: Preferred over sprints with tightness. LOAD: 30-40% BW",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 45,
+    "rest_sec": 90,
+    "rounds": 8,
+    "total_minutes": 16.5,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Sprawl-Burpee Complex",
@@ -1138,9 +1926,24 @@
       "mech_lower_hip_hinge",
       "mech_upper_press",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
-    "notes": "CNS LOAD: Max 2x/week. GPP: Reduce to 3 sets"
+    "notes": "CNS LOAD: Max 2x/week. GPP: Reduce to 3 sets",
+    "rest_sec": 120,
+    "total_minutes": 2,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Rope Climb Sprints",
@@ -1158,10 +1961,29 @@
       "pull",
       "mech_upper_pull",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Towel hangs if rope unavailable",
-    "equipment_note": "Requires: Climbing Rope"
+    "equipment_note": "Requires: Climbing Rope",
+    "work_sec": 15,
+    "rounds": 6,
+    "total_minutes": 1.5,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Med Ball Circuit",
@@ -1179,9 +2001,20 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "SPINE LOAD: Contraindicated with disc issues. WEIGHT: 6-10kg"
+    "notes": "SPINE LOAD: Contraindicated with disc issues. WEIGHT: 6-10kg",
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Hill Sprint Repeats",
@@ -1197,9 +2030,27 @@
       "mech_acceleration",
       "mech_lower_hip_hinge",
       "mech_deceleration",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "HAMSTRING ALERT: Replace with bike sprints if tight. GRADE: 15-20% incline"
+    "notes": "HAMSTRING ALERT: Replace with bike sprints if tight. GRADE: 15-20% incline",
+    "work_sec": 8,
+    "rounds": 8,
+    "total_minutes": 1.07,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_deceleration",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Wrestler Shot Series",
@@ -1216,9 +2067,24 @@
       "mech_lower_lunge",
       "mech_lower_hip_hinge",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "KNEE LOAD: Must pass bodyweight squat depth test first"
+    "notes": "KNEE LOAD: Must pass bodyweight squat depth test first",
+    "work_sec": 10,
+    "rounds": 10,
+    "total_minutes": 1.67,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Stair Running Intervals",
@@ -1233,9 +2099,24 @@
       "plyometric",
       "mech_acceleration",
       "mech_lower_squat",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
-    "notes": "ACHILLES WARNING: Not for acute tendonitis. STEP HEIGHT: 6-8 inches"
+    "notes": "ACHILLES WARNING: Not for acute tendonitis. STEP HEIGHT: 6-8 inches",
+    "work_sec": 15,
+    "rounds": 12,
+    "total_minutes": 3,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Heavy Bag Power Rounds",
@@ -1254,10 +2135,25 @@
       "mech_upper_press",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_systemic_fatigue"
     ],
     "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz",
-    "equipment_note": "Requires: Heavy Bag"
+    "equipment_note": "Requires: Heavy Bag",
+    "work_sec": 180,
+    "rounds": 5,
+    "total_minutes": 15,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sandbag Get-Up Complex",
@@ -1275,10 +2171,22 @@
       "mech_lower_squat",
       "mech_trunk_stability",
       "mech_shoulder_overhead",
-      "mech_grip_intensive"
+      "mech_grip_intensive",
+      "mech_upper_press"
     ],
     "notes": "SPINE LOAD: Reduce reps if form breaks. WEIGHT: 20-25% BW",
-    "equipment_note": "Requires: Sandbag"
+    "equipment_note": "Requires: Sandbag",
+    "rest_sec": 90,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sledgehammer Strikes",
@@ -1296,10 +2204,26 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
-      "mech_grip_intensive"
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_upper_press"
     ],
     "notes": "ELBOW WARNING: Not for golfers elbow. HAMMER WEIGHT: 6-8lbs",
-    "equipment_note": "Requires: Sledgehammer"
+    "equipment_note": "Requires: Sledgehammer",
+    "work_sec": 60,
+    "rounds": 5,
+    "total_minutes": 5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Defensive Movement Drill",
@@ -1313,9 +2237,23 @@
       "footwork",
       "reactive",
       "mech_reactive",
-      "mech_change_of_direction"
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
-    "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up"
+    "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up",
+    "work_sec": 30,
+    "rounds": 8,
+    "total_minutes": 4,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_reactive",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Ground-N-Pound Intervals",
@@ -1330,9 +2268,22 @@
       "top_control",
       "mech_upper_press",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_shoulder_overhead"
     ],
-    "notes": "SHOULDER ENDURANCE: Reduce volume if bench press >85% 1RM that week"
+    "notes": "SHOULDER ENDURANCE: Reduce volume if bench press >85% 1RM that week",
+    "work_sec": 90,
+    "rounds": 5,
+    "total_minutes": 7.5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Clinch Knee-to-Teep Drill",
@@ -1347,9 +2298,22 @@
       "hip_dominant",
       "mech_lower_hip_hinge",
       "mech_grip_intensive",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_grip_support"
     ],
-    "notes": "HIP FLEXOR RECOVERY: Follow with couch stretch series"
+    "notes": "HIP FLEXOR RECOVERY: Follow with couch stretch series",
+    "work_sec": 45,
+    "rounds": 8,
+    "total_minutes": 6,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Towel Pull-Up Sprints",
@@ -1364,9 +2328,27 @@
       "pull",
       "mech_upper_pull",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "GRIP WARNING: No same week as heavy deadlifts. SUB: Rope climbs if available"
+    "notes": "GRIP WARNING: No same week as heavy deadlifts. SUB: Rope climbs if available",
+    "rest_sec": 180,
+    "total_minutes": 3,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Plyo Push-Up Burpee",
@@ -1382,9 +2364,23 @@
       "mech_ballistic",
       "mech_upper_press",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_landing_impact"
     ],
-    "notes": "CHEST RECOVERY: Minimum 48h after heavy bench"
+    "notes": "CHEST RECOVERY: Minimum 48h after heavy bench",
+    "work_sec": 10,
+    "rounds": 5,
+    "total_minutes": 0.83,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sled Push-Pull Complex",
@@ -1402,10 +2398,27 @@
       "mech_lower_hip_hinge",
       "mech_upper_pull",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "rest_sec": 180,
+    "total_minutes": 3,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Wall Ball Conditioning",
@@ -1425,7 +2438,19 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. BALL WEIGHT: 6-8kg"
+    "notes": "SHOULDER PREHAB: Must pass 90s overhead hold first. BALL WEIGHT: 6-8kg",
+    "work_sec": 120,
+    "rounds": 5,
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Agility Ladder Power Drills",
@@ -1441,9 +2466,24 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_cns_high",
-      "high_impact_lower"
+      "high_impact_lower",
+      "mech_ballistic",
+      "mech_trunk_stability"
     ],
-    "notes": "ANKLE STABILITY: Not for acute sprains. PATTERN: Change every 2 sets"
+    "notes": "ANKLE STABILITY: Not for acute sprains. PATTERN: Change every 2 sets",
+    "work_sec": 30,
+    "rounds": 8,
+    "total_minutes": 4,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_cns_high",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Sandbag Bearhug Carry",
@@ -1461,10 +2501,24 @@
       "mech_upper_carry",
       "mech_grip_intensive",
       "mech_trunk_stability",
-      "mech_axial_heavy"
+      "mech_axial_heavy",
+      "mech_upper_press"
     ],
     "notes": "SPINE LOAD: Maintain neutral alignment. WEIGHT: 25-35% BW",
-    "equipment_note": "Requires: Sandbag"
+    "equipment_note": "Requires: Sandbag",
+    "work_sec": 60,
+    "rounds": 4,
+    "total_minutes": 4,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_axial_heavy",
+      "mech_grip_intensive",
+      "mech_trunk_stability",
+      "mech_upper_carry",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Striking Combos Under Fatigue",
@@ -1482,7 +2536,19 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz"
+    "notes": "UPPER BODY: Program before rest day. GLOVE WEIGHT: 12-16oz",
+    "work_sec": 180,
+    "rounds": 6,
+    "total_minutes": 18,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Tire Slam Intervals",
@@ -1501,10 +2567,24 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
-      "mech_grip_intensive"
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge"
     ],
     "notes": "ELBOW WARNING: Not for golfers elbow. SLEDGEHAMMER: 6-8lbs",
-    "equipment_note": "Requires: Tire + Sledgehammer"
+    "equipment_note": "Requires: Tire + Sledgehammer",
+    "work_sec": 45,
+    "rounds": 8,
+    "total_minutes": 6,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Defensive Level Change Drill",
@@ -1520,9 +2600,23 @@
       "mech_lower_squat",
       "mech_lower_lunge",
       "mech_reactive",
-      "mech_change_of_direction"
+      "mech_change_of_direction",
+      "mech_ballistic"
     ],
-    "notes": "QUAD LOAD: Must pass bodyweight squat depth test first"
+    "notes": "QUAD LOAD: Must pass bodyweight squat depth test first",
+    "work_sec": 20,
+    "rounds": 10,
+    "total_minutes": 3.33,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Plyo Step-Up Jumps",
@@ -1538,9 +2632,25 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
-    "notes": "BOX HEIGHT: 12-16\". KNEE ALIGNMENT: Monitor valgus"
+    "notes": "BOX HEIGHT: 12-16\". KNEE ALIGNMENT: Monitor valgus",
+    "work_sec": 8,
+    "rounds": 6,
+    "total_minutes": 0.8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Rope Wave Sprints",
@@ -1557,9 +2667,27 @@
       "grip",
       "mech_shoulder_overhead",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Battle ropes if rope unavailable"
+    "notes": "GRIP RECOVERY: No same week as max deadlifts. SUB: Battle ropes if rope unavailable",
+    "work_sec": 30,
+    "rest_sec": 120,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_shoulder_overhead"
+    ]
   },
   {
     "name": "Overhead Carry Complex",
@@ -1581,7 +2709,18 @@
       "mech_trunk_stability",
       "mech_grip_support"
     ],
-    "notes": "LOAD: 20-25% BW. SHOULDER STABILITY: Must pass overhead squat test"
+    "notes": "LOAD: 20-25% BW. SHOULDER STABILITY: Must pass overhead squat test",
+    "rest_sec": 180,
+    "total_minutes": 3,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ]
   },
   {
     "name": "Sprawl-to-Stand Sprint",
@@ -1598,9 +2737,25 @@
       "mech_acceleration",
       "mech_reactive",
       "mech_cns_high",
-      "high_impact_lower"
+      "high_impact_lower",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_lunge"
     ],
-    "notes": "POSTERIOR CHAIN: 48h after deadlifts. GPP: Reduce to 5 sets"
+    "notes": "POSTERIOR CHAIN: 48h after deadlifts. GPP: Reduce to 5 sets",
+    "rest_sec": 90,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Med Ball Reaction Drill",
@@ -1620,7 +2775,19 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "notes": "BALL WEIGHT: 2-4kg. SPACE: Minimum 10x10ft area"
+    "notes": "BALL WEIGHT: 2-4kg. SPACE: Minimum 10x10ft area",
+    "work_sec": 15,
+    "rounds": 10,
+    "total_minutes": 2.5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_reactive",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Kettlebell Snatch Complex",
@@ -1641,7 +2808,19 @@
       "mech_grip_support",
       "mech_cns_high"
     ],
-    "notes": "SHOULDER PREHAB: Must pass Turkish get-up test first. WEIGHT: 16-24kg"
+    "notes": "SHOULDER PREHAB: Must pass Turkish get-up test first. WEIGHT: 16-24kg",
+    "rest_sec": 120,
+    "total_minutes": 2,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead"
+    ]
   },
   {
     "name": "Sandbag Clean & Carry",
@@ -1660,9 +2839,23 @@
       "mech_ballistic",
       "mech_upper_carry",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_upper_press"
     ],
-    "notes": "LOAD: 25-30% BW. SPINE LOAD: Maintain neutral alignment"
+    "notes": "LOAD: 25-30% BW. SPINE LOAD: Maintain neutral alignment",
+    "rest_sec": 180,
+    "total_minutes": 3,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_lower_squat",
+      "mech_upper_carry",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Striking Defense Circuits",
@@ -1678,9 +2871,25 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_upper_press",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
-    "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up. FATIGUE: Stop if form breaks"
+    "notes": "ANKLE MOBILITY: Preceded by dynamic warm-up. FATIGUE: Stop if form breaks",
+    "work_sec": 180,
+    "rounds": 6,
+    "total_minutes": 18,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sled Drag Sprint Complex",
@@ -1698,9 +2907,28 @@
       "mech_upper_pull",
       "mech_acceleration",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
-    "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight"
+    "notes": "LOAD: 30% BW. HAMSTRING: Preferred over hill sprints when tight",
+    "rest_sec": 180,
+    "total_minutes": 3,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "MMA Gauntlet (Strike-Grapple-Strike)",
@@ -1718,7 +2946,20 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "ORDER: Boxing \u2192 Takedown \u2192 Ground strikes. REST: 1min between. NO HEAD IMPACT"
+    "notes": "ORDER: Boxing \u2192 Takedown \u2192 Ground strikes. REST: 1min between. NO HEAD IMPACT",
+    "work_sec": 180,
+    "rest_sec": 60,
+    "rounds": 5,
+    "total_minutes": 19,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Boxing Punishment Drill (Bad Position Rounds)",
@@ -1736,7 +2977,19 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "SIMULATION: Begin rounds already at 70% fatigue"
+    "notes": "SIMULATION: Begin rounds already at 70% fatigue",
+    "work_sec": 120,
+    "rounds": 6,
+    "total_minutes": 12,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Wrestler Chain Reaction Sparring",
@@ -1752,9 +3005,23 @@
       "mech_grip_intensive",
       "mech_lower_hip_hinge",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic"
     ],
-    "notes": "PARTNER REQUIRED: Switch attacker/defender every round"
+    "notes": "PARTNER REQUIRED: Switch attacker/defender every round",
+    "work_sec": 90,
+    "rounds": 8,
+    "total_minutes": 12,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Heat Acclimation Rounds",
@@ -1769,7 +3036,16 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "TEMPERATURE: 90-95\u00b0F. HYDRATION: +20% fluid intake pre/post"
+    "notes": "TEMPERATURE: 90-95\u00b0F. HYDRATION: +20% fluid intake pre/post",
+    "work_sec": 300,
+    "rounds": 3,
+    "total_minutes": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Water Jug Carries (No Sled)",
@@ -1784,9 +3060,24 @@
       "core",
       "mech_upper_carry",
       "mech_grip_intensive",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_grip_support",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "SUBSTITUTE: 5-gallon jugs @ 25-40lbs. GRIP: Switch hands every 20yds"
+    "notes": "SUBSTITUTE: 5-gallon jugs @ 25-40lbs. GRIP: Switch hands every 20yds",
+    "work_sec": 60,
+    "rounds": 5,
+    "total_minutes": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ]
   },
   {
     "name": "Tire Flip Drag (No Sled)",
@@ -1806,7 +3097,19 @@
       "mech_grip_intensive",
       "mech_systemic_fatigue"
     ],
-    "notes": "TIRE WEIGHT: 50-70% deadlift max. FORM: Maintain neutral spine"
+    "notes": "TIRE WEIGHT: 50-70% deadlift max. FORM: Maintain neutral spine",
+    "work_sec": 40,
+    "rounds": 6,
+    "total_minutes": 4,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Backpack Step-Ups (No Weight Vest)",
@@ -1823,7 +3126,18 @@
       "mech_lower_lunge",
       "mech_trunk_stability"
     ],
-    "notes": "LOAD: 15-20% BW. STEP HEIGHT: Match competition knee angle"
+    "notes": "LOAD: 15-20% BW. STEP HEIGHT: Match competition knee angle",
+    "work_sec": 50,
+    "rounds": 4,
+    "total_minutes": 3.33,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_lower_squat",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Dynamic Visual Tracking Drills",
@@ -1838,7 +3152,16 @@
       "reaction",
       "mech_reactive"
     ],
-    "notes": "OBJECTS: Use 2-3 colored balls. SPEED: Progress from slow to fast"
+    "notes": "OBJECTS: Use 2-3 colored balls. SPEED: Progress from slow to fast",
+    "work_sec": 180,
+    "rounds": 3,
+    "total_minutes": 9,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_reactive"
+    ]
   },
   {
     "name": "Tactical Breathing Recovery",
@@ -1853,7 +3176,14 @@
       "parasympathetic",
       "recovery"
     ],
-    "notes": "POST-SESSION: Use after high-CNS workouts. POSITION: Supine preferred"
+    "notes": "POST-SESSION: Use after high-CNS workouts. POSITION: Supine preferred",
+    "work_sec": 60,
+    "rounds": 5,
+    "total_minutes": 5,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": []
   },
   {
     "name": "Assault Bike :10s Sprints (ATP-PCr)",
@@ -1871,10 +3201,27 @@
       "explosive",
       "low_impact",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
     "notes": "Maintain RPM >90. Ideal post-upper body days (max effort)",
-    "equipment_note": "Requires: Assault Bike"
+    "equipment_note": "Requires: Assault Bike",
+    "work_sec": 10,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "KB Swing Intervals (Glycolytic)",
@@ -1896,7 +3243,20 @@
       "mech_grip_support",
       "mech_systemic_fatigue"
     ],
-    "notes": "24-32kg. Focus on hip snap, not arm pull (RPE 8)"
+    "notes": "24-32kg. Focus on hip snap, not arm pull (RPE 8)",
+    "work_sec": 30,
+    "rounds": 6,
+    "total_minutes": 3,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Push Sprints (ATP-PCr)",
@@ -1916,10 +3276,30 @@
       "mech_acceleration",
       "mech_lower_hip_hinge",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Load: 30% BW. No braking phase (max effort)",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 15,
+    "rest_sec": 90,
+    "rounds": 6,
+    "total_minutes": 9,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Med Ball Slams (Glycolytic)",
@@ -1941,7 +3321,20 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "6-10kg. Full extension on release (RPE 7-8)"
+    "notes": "6-10kg. Full extension on release (RPE 7-8)",
+    "work_sec": 20,
+    "rounds": 5,
+    "total_minutes": 1.67,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Band-Resisted Broad Jumps (ATP-PCr)",
@@ -1961,9 +3354,24 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "Band tension: 20-30% BW. Land softly (max effort)"
+    "notes": "Band tension: 20-30% BW. Land softly (max effort)",
+    "work_sec": 3,
+    "rounds": 5,
+    "total_minutes": 0.25,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Treadmill Hill Sprints (Glycolytic)",
@@ -1980,9 +3388,30 @@
       "eccentric",
       "mech_acceleration",
       "mech_lower_hip_hinge",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive"
     ],
-    "notes": "Contraindicated with hamstring tweaks (RPE 9)"
+    "notes": "Contraindicated with hamstring tweaks (RPE 9)",
+    "work_sec": 20,
+    "rest_sec": 800,
+    "rounds": 6,
+    "total_minutes": 68.67,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Battle Rope Waves (Glycolytic)",
@@ -2002,10 +3431,27 @@
       "mech_shoulder_overhead",
       "mech_trunk_stability",
       "mech_grip_intensive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Double waves only. No same day as bench (RPE 8)",
-    "equipment_note": "Requires: Battle Ropes"
+    "equipment_note": "Requires: Battle Ropes",
+    "work_sec": 30,
+    "rounds": 8,
+    "total_minutes": 4,
+    "rpe": 8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_intensive",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Depth Drops (ATP-PCr)",
@@ -2023,9 +3469,26 @@
       "mech_landing_impact",
       "mech_reactive_rebound",
       "mech_lower_jump",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_reactive"
     ],
-    "notes": "Box height: 12-18\". No rebound (max effort)"
+    "notes": "Box height: 12-18\". No rebound (max effort)",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Sandbag Shoulder Intervals (Glycolytic)",
@@ -2045,10 +3508,27 @@
       "mech_lower_squat",
       "mech_ballistic",
       "mech_grip_intensive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_shoulder_overhead",
+      "mech_upper_press"
     ],
     "notes": "20-25% BW. Alternate sides (RPE 7)",
-    "equipment_note": "Requires: Sandbag"
+    "equipment_note": "Requires: Sandbag",
+    "work_sec": 45,
+    "rounds": 5,
+    "total_minutes": 3.75,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Prowler Sprint Intervals (ATP-PCr)",
@@ -2069,10 +3549,30 @@
       "mech_acceleration",
       "mech_lower_hip_hinge",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Empty sled. No brakes at end (max effort)",
-    "equipment_note": "Requires: Prowler"
+    "equipment_note": "Requires: Prowler",
+    "work_sec": 10,
+    "rest_sec": 50,
+    "rounds": 8,
+    "total_minutes": 7.17,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Burpee Broad Jumps (Glycolytic)",
@@ -2091,9 +3591,25 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic"
     ],
-    "notes": "Minimize ground contact time (RPE 8)"
+    "notes": "Minimize ground contact time (RPE 8)",
+    "work_sec": 30,
+    "rounds": 4,
+    "total_minutes": 2,
+    "rpe": 8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Clap Push-Up Sprints (ATP-PCr)",
@@ -2112,9 +3628,25 @@
       "mech_upper_press",
       "mech_reactive",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_landing_impact"
     ],
-    "notes": "No same day as heavy pressing (max effort)"
+    "notes": "No same day as heavy pressing (max effort)",
+    "work_sec": 5,
+    "rounds": 6,
+    "total_minutes": 0.5,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Lateral Bound Intervals (Glycolytic)",
@@ -2133,9 +3665,27 @@
       "mech_lower_lateral",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_trunk_stability"
     ],
-    "notes": "Focus on stability, not max distance (RPE 8)"
+    "notes": "Focus on stability, not max distance (RPE 8)",
+    "work_sec": 20,
+    "rounds": 8,
+    "total_minutes": 2.67,
+    "rpe": 8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Sledgehammer Strikes (Glycolytic)",
@@ -2156,10 +3706,28 @@
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
       "mech_grip_intensive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge",
+      "mech_upper_press"
     ],
     "notes": "Alternate sides. 6-8lb hammer (RPE 7)",
-    "equipment_note": "Requires: Sledgehammer"
+    "equipment_note": "Requires: Sledgehammer",
+    "work_sec": 45,
+    "rounds": 5,
+    "total_minutes": 3.75,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Box Jump Repeats (ATP-PCr)",
@@ -2177,9 +3745,24 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "Box height: 24-30\". Full reset between reps (max effort)"
+    "notes": "Box height: 24-30\". Full reset between reps (max effort)",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Wall Ball Shot Intervals (Glycolytic)",
@@ -2201,7 +3784,20 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "6-8kg ball. Target 10ft+ (RPE 8)"
+    "notes": "6-8kg ball. Target 10ft+ (RPE 8)",
+    "work_sec": 20,
+    "rounds": 8,
+    "total_minutes": 2.67,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Band-Resisted Sprint Starts (ATP-PCr)",
@@ -2220,9 +3816,28 @@
       "low_volume",
       "mech_acceleration",
       "mech_lower_hip_hinge",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "Light band tension only (max effort)"
+    "notes": "Light band tension only (max effort)",
+    "work_sec": 10,
+    "rest_sec": 80,
+    "rounds": 8,
+    "total_minutes": 10.67,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Jump Squat Intervals (Glycolytic)",
@@ -2241,9 +3856,25 @@
       "mech_lower_squat",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic"
     ],
-    "notes": "Depth: Parallel only. No countermovement (RPE 8)"
+    "notes": "Depth: Parallel only. No countermovement (RPE 8)",
+    "work_sec": 30,
+    "rounds": 6,
+    "total_minutes": 3,
+    "rpe": 8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_squat",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Tire Flip Sprints (ATP-PCr)",
@@ -2263,10 +3894,27 @@
       "mech_ballistic",
       "mech_lower_hip_hinge",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Tire weight: 50-70% deadlift max (max effort)",
-    "equipment_note": "Requires: Tire"
+    "equipment_note": "Requires: Tire",
+    "work_sec": 2,
+    "rounds": 6,
+    "total_minutes": 0.2,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Defensive Sprawl Intervals (Glycolytic)",
@@ -2284,9 +3932,26 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
-    "notes": "Focus on hip pop, not max speed (RPE 8)"
+    "notes": "Focus on hip pop, not max speed (RPE 8)",
+    "work_sec": 20,
+    "rounds": 8,
+    "total_minutes": 2.67,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Single-Arm KB Snatch (ATP-PCr)",
@@ -2310,7 +3975,23 @@
       "mech_anti_rotation",
       "mech_cns_high"
     ],
-    "notes": "16-24kg. No press-out at top (max effort)"
+    "notes": "16-24kg. No press-out at top (max effort)",
+    "work_sec": 5,
+    "rest_sec": 25,
+    "rounds": 5,
+    "total_minutes": 2.08,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_anti_rotation",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead"
+    ]
   },
   {
     "name": "Agility Ladder Sprints (Glycolytic)",
@@ -2328,9 +4009,27 @@
       "mech_reactive",
       "mech_change_of_direction",
       "mech_systemic_fatigue",
-      "high_impact_lower"
+      "high_impact_lower",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_lunge"
     ],
-    "notes": "Change pattern every 2 rounds (RPE 8)"
+    "notes": "Change pattern every 2 rounds (RPE 8)",
+    "work_sec": 15,
+    "rounds": 10,
+    "total_minutes": 2.5,
+    "rpe": 8,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Heavy Bag Power Intervals (Glycolytic)",
@@ -2354,7 +4053,21 @@
       "mech_systemic_fatigue"
     ],
     "notes": "16oz gloves. Power shots only (RPE 8)",
-    "equipment_note": "Requires: Heavy Bag"
+    "equipment_note": "Requires: Heavy Bag",
+    "work_sec": 30,
+    "rounds": 8,
+    "total_minutes": 4,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sandbag Clean & Press (ATP-PCr)",
@@ -2379,7 +4092,22 @@
       "mech_cns_high"
     ],
     "notes": "20-25% BW. No press-out (max effort)",
-    "equipment_note": "Requires: Sandbag"
+    "equipment_note": "Requires: Sandbag",
+    "work_sec": 3,
+    "rounds": 5,
+    "total_minutes": 0.25,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_lower_squat",
+      "mech_shoulder_overhead",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Plyo Step-Up Intervals (Glycolytic)",
@@ -2397,9 +4125,26 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
-    "notes": "Box height: 12-16\". Alternate legs (RPE 8)"
+    "notes": "Box height: 12-16\". Alternate legs (RPE 8)",
+    "work_sec": 30,
+    "rounds": 6,
+    "total_minutes": 3,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Rope Climb Sprints (ATP-PCr)",
@@ -2419,10 +4164,30 @@
       "pull",
       "mech_upper_pull",
       "mech_grip_intensive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
     "notes": "Sub towel hangs if no rope (max effort)",
-    "equipment_note": "Requires: Climbing Rope"
+    "equipment_note": "Requires: Climbing Rope",
+    "work_sec": 1,
+    "rounds": 6,
+    "total_minutes": 0.1,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Shadowboxing Power Bursts (Glycolytic)",
@@ -2443,7 +4208,21 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "Max-speed combos. No pacing (RPE 9)"
+    "notes": "Max-speed combos. No pacing (RPE 9)",
+    "work_sec": 15,
+    "rounds": 10,
+    "total_minutes": 2.5,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sled Drag Sprints (ATP-PCr)",
@@ -2464,10 +4243,33 @@
       "mech_acceleration",
       "mech_trunk_stability",
       "mech_grip_support",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
     ],
     "notes": "Load: 30% BW. Walk back = rest (max effort)",
-    "equipment_note": "Requires: Sled"
+    "equipment_note": "Requires: Sled",
+    "work_sec": 10,
+    "rest_sec": 50,
+    "rounds": 8,
+    "total_minutes": 7.17,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_acceleration",
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Med Ball Throw Circuit (Glycolytic)",
@@ -2487,9 +4289,24 @@
       "mech_ballistic",
       "mech_trunk_rotation",
       "mech_shoulder_overhead",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge",
+      "mech_upper_press"
     ],
-    "notes": "6-8kg ball. 30s rest between rounds (RPE 8)"
+    "notes": "6-8kg ball. 30s rest between rounds (RPE 8)",
+    "rest_sec": 30,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Broad Jump Repeats (ATP-PCr)",
@@ -2507,9 +4324,24 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "Stick landings. Full reset between reps (max effort)"
+    "notes": "Stick landings. Full reset between reps (max effort)",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Grapple Escapes Under Fatigue (Glycolytic)",
@@ -2526,9 +4358,23 @@
       "reactive",
       "mech_grip_intensive",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic"
     ],
-    "notes": "Partner drills only. No live sparring (RPE 8)"
+    "notes": "Partner drills only. No live sparring (RPE 8)",
+    "work_sec": 45,
+    "rounds": 5,
+    "total_minutes": 3.75,
+    "rpe": 8,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_intensive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Tempo Shadowboxing (Aerobic)",
@@ -2551,7 +4397,16 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Focus on breathing/technique; no power output (zone 2 (50-60% effort))"
+    "notes": "Focus on breathing/technique; no power output (zone 2 (50-60% effort))",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Recovery Cycling (Nasal Breathing)",
@@ -2571,10 +4426,20 @@
       "low_impact",
       "parasympathetic",
       "recovery",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "equipment_note": "Requires: Stationary Bike",
-    "notes": ""
+    "notes": "",
+    "rest_sec": 2700,
+    "total_minutes": 45,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Swimming (Freestyle Laps)",
@@ -2593,9 +4458,22 @@
       "rehab_friendly",
       "mech_upper_pull",
       "mech_trunk_stability",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Ideal for shoulder recovery post-sparring"
+    "notes": "Ideal for shoulder recovery post-sparring",
+    "rest_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Incline Walk (Posture Focus)",
@@ -2617,7 +4495,16 @@
       "mech_systemic_fatigue",
       "mech_trunk_stability"
     ],
-    "notes": "15% incline, hands behind head to reinforce posture (zone 1-2)"
+    "notes": "15% incline, hands behind head to reinforce posture (zone 1-2)",
+    "work_sec": 1200,
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Rowing (Steady State)",
@@ -2641,7 +4528,17 @@
       "mech_systemic_fatigue"
     ],
     "equipment_note": "Requires: Rower",
-    "notes": ""
+    "notes": "",
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Footwork Ladder (Continuous Flow)",
@@ -2661,9 +4558,21 @@
       "coordination",
       "skill",
       "mech_reactive",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "No rest; focus on smooth transitions (low-moderate)"
+    "notes": "No rest; focus on smooth transitions (low-moderate)",
+    "rest_sec": 600,
+    "total_minutes": 10,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Light Heavy Bag (Pacing Drill)",
@@ -2683,9 +4592,22 @@
       "conditioning",
       "low_cns",
       "mech_upper_press",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Emphasize volume over power (30% power)"
+    "notes": "Emphasize volume over power (30% power)",
+    "work_sec": 300,
+    "rounds": 5,
+    "total_minutes": 5,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Defensive Movement Drills",
@@ -2705,9 +4627,22 @@
       "reactive",
       "skill",
       "mech_reactive",
-      "mech_change_of_direction"
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_trunk_rotation"
     ],
-    "notes": "Slips, pivots, rolls at conversational pace"
+    "notes": "Slips, pivots, rolls at conversational pace",
+    "total_minutes": 15,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_reactive",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Wall Drill Sparring (Light Tap)",
@@ -2725,9 +4660,22 @@
       "mma",
       "recovery",
       "mech_upper_press",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_systemic_fatigue"
     ],
-    "notes": "No power shots; pure technique (30% effort)"
+    "notes": "No power shots; pure technique (30% effort)",
+    "work_sec": 300,
+    "rounds": 3,
+    "total_minutes": 5,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Thai Clinch Walk (Light Resistance)",
@@ -2749,7 +4697,16 @@
       "mech_grip_support",
       "mech_trunk_stability"
     ],
-    "notes": "Focus on balance/positioning, not strength"
+    "notes": "Focus on balance/positioning, not strength",
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "3-Min Round Intervals (Bag/Pads)",
@@ -2773,7 +4730,17 @@
       "mech_shoulder_overhead",
       "mech_systemic_fatigue"
     ],
-    "notes": "Pace like a fight, but lower output (50% effort)"
+    "notes": "Pace like a fight, but lower output (50% effort)",
+    "rest_sec": 30,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "EMOM Jab-Cross (Aerobic)",
@@ -2791,9 +4758,21 @@
       "shoulders",
       "skill",
       "mech_upper_press",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Focus on crisp technique, not speed/power (light)"
+    "notes": "Focus on crisp technique, not speed/power (light)",
+    "work_sec": 600,
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Dynamic Yoga for Fighters",
@@ -2813,9 +4792,20 @@
       "mobility",
       "recovery",
       "parasympathetic",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Hip/shoulder focus for combat athletes"
+    "notes": "Hip/shoulder focus for combat athletes",
+    "work_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Breathwork + Slow Shadowboxing",
@@ -2834,7 +4824,15 @@
       "mental_toughness",
       "mech_upper_press"
     ],
-    "notes": "Nasal breathing only; no mouth"
+    "notes": "Nasal breathing only; no mouth",
+    "work_sec": 900,
+    "total_minutes": 15,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Pool Running (No Impact)",
@@ -2853,9 +4851,18 @@
       "aerobic",
       "zero_impact",
       "rehab_friendly",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Weight belt optional for buoyancy"
+    "notes": "Weight belt optional for buoyancy",
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Prowler Push (Light, Continuous)",
@@ -2879,7 +4886,16 @@
       "mech_systemic_fatigue"
     ],
     "notes": "Forward/backward alternating; no spikes in effort",
-    "equipment_note": "Requires: Prowler"
+    "equipment_note": "Requires: Prowler",
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Sandbag Carry (Bearhug)",
@@ -2901,9 +4917,26 @@
       "mech_upper_carry",
       "mech_grip_intensive",
       "mech_trunk_stability",
-      "mech_axial_heavy"
+      "mech_axial_heavy",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
     ],
-    "notes": "Grappler-specific grip endurance (light)"
+    "notes": "Grappler-specific grip endurance (light)",
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_axial_heavy",
+      "mech_grip_intensive",
+      "mech_grip_support",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_carry",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Ruck March (20-30lbs)",
@@ -2924,9 +4957,20 @@
       "environmental",
       "mech_systemic_fatigue",
       "mech_trunk_stability",
-      "mech_upper_carry"
+      "mech_upper_carry",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Outdoors only; nasal breathing encouraged"
+    "notes": "Outdoors only; nasal breathing encouraged",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_carry"
+    ]
   },
   {
     "name": "Breath-Hold Shadowboxing Intervals",
@@ -2947,7 +4991,18 @@
       "mech_trunk_rotation",
       "mech_systemic_fatigue"
     ],
-    "notes": "Exhale fully before rounds; recover between (50% effort)"
+    "notes": "Exhale fully before rounds; recover between (50% effort)",
+    "work_sec": 180,
+    "rounds": 5,
+    "total_minutes": 15,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Kettlebell Swings (EMOM Aerobic)",
@@ -2971,7 +5026,19 @@
       "mech_grip_support",
       "mech_systemic_fatigue"
     ],
-    "notes": "Focus on hip snap, not power (light)"
+    "notes": "Focus on hip snap, not power (light)",
+    "work_sec": 600,
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Drag (Light, RPE 4)",
@@ -2992,10 +5059,23 @@
       "mech_upper_pull",
       "mech_trunk_stability",
       "mech_grip_support",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
     "equipment_note": "Requires: Sled",
-    "notes": ""
+    "notes": "",
+    "total_minutes": 10,
+    "rpe": 4,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Meditative Jump Rope (Eyes Closed)",
@@ -3015,9 +5095,21 @@
       "cognitive",
       "recovery",
       "mech_reactive_rebound",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "Eyes closed for 10-20sec intervals"
+    "notes": "Eyes closed for 10-20sec intervals",
+    "work_sec": 600,
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Striking Combos @ 20% Effort",
@@ -3038,7 +5130,16 @@
       "mech_upper_press",
       "mech_trunk_rotation"
     ],
-    "notes": "Cooldown flow; zero fatigue"
+    "notes": "Cooldown flow; zero fatigue",
+    "total_minutes": 15,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "BJJ Flow Rolling (No Submissions)",
@@ -3058,9 +5159,20 @@
       "recovery",
       "transition",
       "mech_grip_support",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_trunk_rotation"
     ],
-    "notes": "No grinding; pure movement (30% effort)"
+    "notes": "No grinding; pure movement (30% effort)",
+    "total_minutes": 20,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_trunk_rotation",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Lateral Shuffle + Strike Drills",
@@ -3079,9 +5191,27 @@
       "footwork",
       "mech_lower_lateral",
       "mech_upper_press",
-      "mech_change_of_direction"
+      "mech_change_of_direction",
+      "mech_ballistic",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Emphasize angles, not explosiveness (light)"
+    "notes": "Emphasize angles, not explosiveness (light)",
+    "work_sec": 300,
+    "rounds": 3,
+    "total_minutes": 5,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_change_of_direction",
+      "mech_lower_lateral",
+      "mech_lower_lunge",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Wrestler Chain Drills (50% Effort)",
@@ -3104,7 +5234,18 @@
       "mech_grip_support",
       "mech_trunk_stability"
     ],
-    "notes": "No resistance; technique only"
+    "notes": "No resistance; technique only",
+    "rest_sec": 900,
+    "total_minutes": 15,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Muay Thai Skip Rope (Rhythm Focus)",
@@ -3124,9 +5265,23 @@
       "coordination",
       "light_impact",
       "mech_reactive_rebound",
-      "mech_landing_impact"
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive"
     ],
-    "notes": "Alternate foot patterns (e.g., skip-kick)"
+    "notes": "Alternate foot patterns (e.g., skip-kick)",
+    "work_sec": 900,
+    "total_minutes": 15,
+    "rpe": 7,
+    "impact_cost": "high",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_landing_impact",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Band-Resisted Jab/Cross (Slow Tempo)",
@@ -3146,9 +5301,22 @@
       "striking",
       "rehab_friendly",
       "mech_upper_press",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Bands anchored at chest height (40% effort)"
+    "notes": "Bands anchored at chest height (40% effort)",
+    "work_sec": 300,
+    "rounds": 3,
+    "total_minutes": 5,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Calf Raise Walk (Aerobic)",
@@ -3165,9 +5333,19 @@
       "unilateral",
       "rehab_friendly",
       "low_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Tibialis/calf endurance for kick defense"
+    "notes": "Tibialis/calf endurance for kick defense",
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Cooldown Flow (Striking + Mobility)",
@@ -3184,9 +5362,19 @@
       "aerobic",
       "mobility",
       "recovery",
-      "parasympathetic"
+      "parasympathetic",
+      "mech_upper_press"
     ],
-    "notes": "Post-training flush only (RPE 2)"
+    "notes": "Post-training flush only (RPE 2)",
+    "work_sec": 900,
+    "total_minutes": 15,
+    "rpe": 2,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Low Box Jump (Fast Reset)",
@@ -3204,7 +5392,19 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "BOX HEIGHT: 12\u201318\u201d. Focus on snap-down and fast reset."
+    "notes": "BOX HEIGHT: 12\u201318\u201d. Focus on snap-down and fast reset.",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Pogo Jump Series (Mini Bounce)",
@@ -3221,9 +5421,27 @@
       "mech_landing_impact",
       "mech_lower_jump",
       "mech_cns_high",
-      "high_impact_lower"
+      "high_impact_lower",
+      "mech_reactive",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
-    "notes": "Keep ground contact <150ms. Prioritize rhythm and posture."
+    "notes": "Keep ground contact <150ms. Prioritize rhythm and posture.",
+    "work_sec": 10,
+    "rounds": 3,
+    "total_minutes": 0.5,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_reactive_rebound",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Band-Resisted Vertical Jump",
@@ -3241,9 +5459,23 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_trunk_stability"
     ],
-    "notes": "Use light resistance bands. Emphasize speed over height."
+    "notes": "Use light resistance bands. Emphasize speed over height.",
+    "work_sec": 3,
+    "rounds": 5,
+    "total_minutes": 0.25,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Snapdown to Quick Hop",
@@ -3259,9 +5491,25 @@
       "mech_lower_hip_hinge",
       "mech_reactive",
       "mech_lower_jump",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_landing_impact"
     ],
-    "notes": "Sharp hinge into immediate mini-hop. Avoid max effort."
+    "notes": "Sharp hinge into immediate mini-hop. Avoid max effort.",
+    "work_sec": 4,
+    "rounds": 4,
+    "total_minutes": 0.27,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Mini Hurdle Quick Steps",
@@ -3277,9 +5525,23 @@
       "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_lower_lunge"
     ],
-    "notes": "Fast taps over 4\u20136\u201d hurdles. Emphasize light contacts."
+    "notes": "Fast taps over 4\u20136\u201d hurdles. Emphasize light contacts.",
+    "work_sec": 10,
+    "rounds": 4,
+    "total_minutes": 0.67,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Med Ball Drop Catch to Jump",
@@ -3300,7 +5562,20 @@
       "mech_landing_impact",
       "mech_cns_high"
     ],
-    "notes": "Partner drops ball \u2192 athlete catches + jumps. Use 2\u20134kg."
+    "notes": "Partner drops ball \u2192 athlete catches + jumps. Use 2\u20134kg.",
+    "work_sec": 3,
+    "rounds": 4,
+    "total_minutes": 0.2,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Mini Box Depth Drop",
@@ -3316,9 +5591,23 @@
       "mech_landing_impact",
       "mech_reactive_rebound",
       "mech_lower_jump",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_reactive"
     ],
-    "notes": "Height = 6\u201312\u201d. Cue soft land + quick reset. No rebound."
+    "notes": "Height = 6\u201312\u201d. Cue soft land + quick reset. No rebound.",
+    "work_sec": 3,
+    "rounds": 4,
+    "total_minutes": 0.2,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Band-Assisted Jump Reset",
@@ -3336,9 +5625,25 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Attach band overhead. Reduces load to maintain sharpness."
+    "notes": "Attach band overhead. Reduces load to maintain sharpness.",
+    "work_sec": 4,
+    "rounds": 4,
+    "total_minutes": 0.27,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive",
+      "mech_shoulder_overhead"
+    ]
   },
   {
     "name": "Wall Reactive Jump (Cue Start)",
@@ -3354,9 +5659,23 @@
       "mech_reactive",
       "mech_lower_jump",
       "mech_landing_impact",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "Start facing wall, coach gives go-cue. Jump straight up."
+    "notes": "Start facing wall, coach gives go-cue. Jump straight up.",
+    "work_sec": 3,
+    "rounds": 5,
+    "total_minutes": 0.25,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Quick Lateral Hop Tap",
@@ -3373,9 +5692,24 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_trunk_stability"
     ],
-    "notes": "Short-distance side hops. Reset after each rep."
+    "notes": "Short-distance side hops. Reset after each rep.",
+    "work_sec": 6,
+    "rounds": 4,
+    "total_minutes": 0.4,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lateral",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Tuck Jump (Submax)",
@@ -3391,9 +5725,23 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic"
     ],
-    "notes": "Cue: sharp tuck, soft land. No max height intention."
+    "notes": "Cue: sharp tuck, soft land. No max height intention.",
+    "work_sec": 4,
+    "rounds": 3,
+    "total_minutes": 0.2,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Band-Resisted Split Jump",
@@ -3414,7 +5762,20 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "Use light band tension. Stay upright with fast exchange."
+    "notes": "Use light band tension. Stay upright with fast exchange.",
+    "work_sec": 3,
+    "rounds": 4,
+    "total_minutes": 0.2,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Single-Leg Med Ball Toss Jump",
@@ -3435,7 +5796,20 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "Toss ball forward during jump. 2kg ball max."
+    "notes": "Toss ball forward during jump. 2kg ball max.",
+    "work_sec": 4,
+    "rounds": 3,
+    "total_minutes": 0.2,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Ankle Snap Bounce",
@@ -3453,7 +5827,18 @@
       "mech_cns_high",
       "high_impact_lower"
     ],
-    "notes": "Bounce on midfoot. No knee bend. High frequency bounce."
+    "notes": "Bounce on midfoot. No knee bend. High frequency bounce.",
+    "work_sec": 10,
+    "rounds": 4,
+    "total_minutes": 0.67,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive_rebound"
+    ]
   },
   {
     "name": "Split Stance Hop Switch",
@@ -3470,9 +5855,24 @@
       "mech_lower_jump",
       "mech_landing_impact",
       "mech_reactive",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_trunk_stability"
     ],
-    "notes": "Switch stance in air. Light contact, fast rhythm."
+    "notes": "Switch stance in air. Light contact, fast rhythm.",
+    "work_sec": 4,
+    "rounds": 4,
+    "total_minutes": 0.27,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Reactive Med Ball Chest Pass",
@@ -3492,7 +5892,19 @@
       "mech_reactive",
       "mech_cns_high"
     ],
-    "notes": "Partner gives unpredictable toss cue. Ball: 3\u20135kg. Emphasize snap."
+    "notes": "Partner gives unpredictable toss cue. Ball: 3\u20135kg. Emphasize snap.",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_reactive",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Plyo Push-Up on Knees",
@@ -3509,9 +5921,24 @@
       "mech_upper_press",
       "mech_reactive",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_landing_impact"
     ],
-    "notes": "Push explosively, hands leave floor. Submax only. Full rest between sets."
+    "notes": "Push explosively, hands leave floor. Submax only. Full rest between sets.",
+    "work_sec": 4,
+    "rounds": 4,
+    "total_minutes": 0.27,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Band-Resisted Straight Punch Release",
@@ -3539,7 +5966,19 @@
       "d7",
       "d6_to_d5"
     ],
-    "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed."
+    "notes": "Band attached to rear hand. Punch fast and release. Cue: handspeed.",
+    "work_sec": 5,
+    "rounds": 3,
+    "total_minutes": 0.25,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_trunk_rotation",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Overhead Med Ball Slam (Snappy)",
@@ -3559,7 +5998,19 @@
       "mech_trunk_rotation",
       "mech_cns_high"
     ],
-    "notes": "Use 2\u20134kg ball. Minimize effort, maximize intent and speed."
+    "notes": "Use 2\u20134kg ball. Minimize effort, maximize intent and speed.",
+    "work_sec": 3,
+    "rounds": 6,
+    "total_minutes": 0.3,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Seated Med Ball Chest Pop",
@@ -3577,9 +6028,23 @@
       "mech_ballistic",
       "mech_upper_press",
       "mech_trunk_stability",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Seated on floor, rapid chest-level throws. Partner return or wall."
+    "notes": "Seated on floor, rapid chest-level throws. Partner return or wall.",
+    "work_sec": 5,
+    "rounds": 4,
+    "total_minutes": 0.33,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Partner Manual Neck Resistance",
@@ -3599,7 +6064,17 @@
       "eccentric",
       "mech_trunk_stability"
     ],
-    "notes": "Partner applies progressive resistance in all directions to simulate fight-level impacts"
+    "notes": "Partner applies progressive resistance in all directions to simulate fight-level impacts",
+    "work_sec": 30,
+    "rounds": 4,
+    "total_minutes": 2,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Neck Harness Flexion/Extension",
@@ -3620,7 +6095,17 @@
       "eccentric",
       "mech_trunk_stability"
     ],
-    "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight"
+    "notes": "Builds structural neck strength to reduce KO risk - use 5-10lb weight",
+    "work_sec": 15,
+    "rounds": 4,
+    "total_minutes": 1,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Assault Bike Zone 2 Steady",
@@ -3639,9 +6124,18 @@
       "low_impact",
       "recovery",
       "posterior_chain",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Nasal breathing only; excellent recovery modality"
+    "notes": "Nasal breathing only; excellent recovery modality",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Echo Bike Tempo Intervals",
@@ -3660,9 +6154,21 @@
       "posterior_chain",
       "low_impact",
       "mech_systemic_fatigue",
-      "glycolytic"
+      "glycolytic",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Monumental work capacity builder without impact"
+    "notes": "Monumental work capacity builder without impact",
+    "work_sec": 180,
+    "rounds": 4,
+    "total_minutes": 12,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Stationary Bike Lactate Threshold",
@@ -3682,9 +6188,21 @@
       "conditioning",
       "posterior_chain",
       "glycolytic",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Builds aerobic power; zero joint impact"
+    "notes": "Builds aerobic power; zero joint impact",
+    "work_sec": 480,
+    "rounds": 2,
+    "total_minutes": 8,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Rogue Echo Bike Recovery Spin",
@@ -3704,9 +6222,20 @@
       "recovery",
       "low_impact",
       "cns_freshness",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Pure recovery; no glycogen depletion"
+    "notes": "Pure recovery; no glycogen depletion",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Concept2 Rower Zone 3 Block",
@@ -3725,9 +6254,22 @@
       "upper_body",
       "posterior_chain",
       "mech_upper_pull",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Full-body conditioning; safe for most injuries"
+    "notes": "Full-body conditioning; safe for most injuries",
+    "work_sec": 240,
+    "rounds": 3,
+    "total_minutes": 4,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Rower Pyramid (1-5-1min)",
@@ -3746,9 +6288,21 @@
       "upper_body",
       "posterior_chain",
       "explosive",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Pyramidal structure keeps intensity without true max"
+    "notes": "Pyramidal structure keeps intensity without true max",
+    "work_sec": 60,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_hip_hinge",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Air Dyne Bike Aerobic Base",
@@ -3767,9 +6321,18 @@
       "low_impact",
       "work_capacity",
       "conditioning",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Arm/leg combo; phenomenal base building"
+    "notes": "Arm/leg combo; phenomenal base building",
+    "total_minutes": 40,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "SkiErg Interval Complex",
@@ -3788,9 +6351,21 @@
       "posterior_chain",
       "conditioning",
       "power",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Full-body erg work; minimal impact"
+    "notes": "Full-body erg work; minimal impact",
+    "work_sec": 30,
+    "rounds": 6,
+    "total_minutes": 3,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Hydrow Steady State",
@@ -3809,9 +6384,18 @@
       "upper_body",
       "posterior_chain",
       "recovery",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Indoor rowing variation; excellent mental focus"
+    "notes": "Indoor rowing variation; excellent mental focus",
+    "total_minutes": 25,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Assault Bike Capacity Builder",
@@ -3830,9 +6414,20 @@
       "posterior_chain",
       "glycolytic",
       "work_capacity",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Clock-based; forces consistent power output"
+    "notes": "Clock-based; forces consistent power output",
+    "work_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Concept2 Rower Recovery Rows",
@@ -3852,9 +6447,18 @@
       "recovery",
       "upper_body",
       "posterior_chain",
-      "cns_freshness"
+      "cns_freshness",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Parasympathetic activation; zero strain"
+    "notes": "Parasympathetic activation; zero strain",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge"
+    ]
   },
   {
     "name": "BikeErg Power Repeats",
@@ -3873,9 +6477,23 @@
       "posterior_chain",
       "explosive",
       "high_cns",
-      "mech_cns_high"
+      "mech_cns_high",
+      "mech_ballistic",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Brief hard efforts; excellent for power adaptation"
+    "notes": "Brief hard efforts; excellent for power adaptation",
+    "work_sec": 15,
+    "rounds": 8,
+    "total_minutes": 2,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_cns_high",
+      "mech_lower_hip_hinge"
+    ]
   },
   {
     "name": "Watt Bike Tempo Climbs",
@@ -3894,9 +6512,23 @@
       "posterior_chain",
       "conditioning",
       "power",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
     ],
-    "notes": "Variable resistance builds force application"
+    "notes": "Variable resistance builds force application",
+    "work_sec": 120,
+    "rounds": 5,
+    "total_minutes": 10,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "SkiErg Recovery Flow",
@@ -3917,7 +6549,14 @@
       "posterior_chain",
       "cns_freshness"
     ],
-    "notes": "Light pole work; parasympathetic dominant"
+    "notes": "Light pole work; parasympathetic dominant",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": []
   },
   {
     "name": "Sled Push Aerobic Intervals",
@@ -3938,7 +6577,18 @@
       "mech_lower_hip_hinge",
       "mech_systemic_fatigue"
     ],
-    "notes": "Steady power; recovery focused"
+    "notes": "Steady power; recovery focused",
+    "work_sec": 40,
+    "rounds": 5,
+    "total_minutes": 3.33,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Drag Tempo Complex",
@@ -3957,9 +6607,21 @@
       "posterior_chain",
       "low_impact",
       "mech_lower_hip_hinge",
-      "conditioning"
+      "conditioning",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Backward drags are gentle on hamstrings"
+    "notes": "Backward drags are gentle on hamstrings",
+    "work_sec": 60,
+    "rounds": 3,
+    "total_minutes": 3,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Sprint Finisher",
@@ -3978,9 +6640,25 @@
       "posterior_chain",
       "low_impact",
       "power",
-      "mech_lower_hip_hinge"
+      "mech_lower_hip_hinge",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "Short bursts; safe sprint alternative"
+    "notes": "Short bursts; safe sprint alternative",
+    "work_sec": 20,
+    "rounds": 6,
+    "total_minutes": 2,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_lower_hip_hinge",
+      "mech_reactive"
+    ]
   },
   {
     "name": "Prowler Light Push Conditioning",
@@ -3999,9 +6677,19 @@
       "posterior_chain",
       "work_capacity",
       "low_impact",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Continuous low-impact work capacity"
+    "notes": "Continuous low-impact work capacity",
+    "total_minutes": 20,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Push/Drag Contrast",
@@ -4020,9 +6708,19 @@
       "posterior_chain",
       "low_impact",
       "mech_lower_hip_hinge",
-      "glycolytic"
+      "glycolytic",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Push-pull contrast in low-impact setting"
+    "notes": "Push-pull contrast in low-impact setting",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Crawl Conditioning",
@@ -4041,9 +6739,21 @@
       "upper_body",
       "posterior_chain",
       "low_impact",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Horizontal crawling; joint friendly"
+    "notes": "Horizontal crawling; joint friendly",
+    "work_sec": 45,
+    "rounds": 4,
+    "total_minutes": 3,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Light Sled Steady Base",
@@ -4062,9 +6772,19 @@
       "work_capacity",
       "posterior_chain",
       "low_impact",
-      "recovery"
+      "recovery",
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Minimal load accumulation; pure conditioning"
+    "notes": "Minimal load accumulation; pure conditioning",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Push EMOM Capacity",
@@ -4083,9 +6803,20 @@
       "posterior_chain",
       "low_impact",
       "work_capacity",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Scalable; maintains push quality each minute"
+    "notes": "Scalable; maintains push quality each minute",
+    "work_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Sled Harness Backward Drag",
@@ -4104,9 +6835,21 @@
       "posterior_chain",
       "low_impact",
       "core",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Backward movement is naturally hamstring-friendly"
+    "notes": "Backward movement is naturally hamstring-friendly",
+    "work_sec": 50,
+    "rounds": 5,
+    "total_minutes": 4.17,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Sled Push Recovery Flush",
@@ -4125,9 +6868,19 @@
       "aerobic",
       "posterior_chain",
       "low_impact",
-      "cns_freshness"
+      "cns_freshness",
+      "mech_lower_hip_hinge"
     ],
-    "notes": "Active recovery with parasympathetic tone"
+    "notes": "Active recovery with parasympathetic tone",
+    "rest_sec": 900,
+    "total_minutes": 15,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_lower_hip_hinge"
+    ]
   },
   {
     "name": "Pool Running Fartlek",
@@ -4144,9 +6897,19 @@
       "aerobic",
       "conditioning",
       "endurance",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Non-weight bearing intervals; perfect for injury rehab"
+    "notes": "Non-weight bearing intervals; perfect for injury rehab",
+    "total_minutes": 20,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Easy Continuous Swimming",
@@ -4165,7 +6928,14 @@
       "upper_body",
       "mech_systemic_fatigue"
     ],
-    "notes": "Non-impact base building; mental reset"
+    "notes": "Non-impact base building; mental reset",
+    "total_minutes": 30,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Kickboard Tempo Sets",
@@ -4182,9 +6952,21 @@
       "posterior_chain",
       "quad_dominant",
       "conditioning",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_lower_lunge"
     ],
-    "notes": "Focused leg work; excellent for knee rehab"
+    "notes": "Focused leg work; excellent for knee rehab",
+    "work_sec": 100,
+    "rounds": 6,
+    "total_minutes": 10,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Water Resistance Training",
@@ -4201,9 +6983,21 @@
       "zero_impact",
       "upper_body",
       "endurance",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
-    "notes": "Non-contact directional work in pool"
+    "notes": "Non-contact directional work in pool",
+    "work_sec": 180,
+    "rounds": 4,
+    "total_minutes": 12,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Pull Buoy Aerobic Threshold",
@@ -4220,9 +7014,21 @@
       "upper_body",
       "aerobic",
       "glycolytic",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Isolated upper body work; lower body unloaded"
+    "notes": "Isolated upper body work; lower body unloaded",
+    "work_sec": 300,
+    "rounds": 3,
+    "total_minutes": 5,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Swimming Interval Pyramid",
@@ -4239,9 +7045,22 @@
       "speed",
       "conditioning",
       "power",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive"
     ],
-    "notes": "Ascending/descending structure; minimal wall impact"
+    "notes": "Ascending/descending structure; minimal wall impact",
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Pool Treading Conditioning",
@@ -4258,9 +7077,19 @@
       "core",
       "stability",
       "upper_body",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
-    "notes": "Anti-gravity core work; very joint friendly"
+    "notes": "Anti-gravity core work; very joint friendly",
+    "total_minutes": 10,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Mixed Stroke Tempo Set",
@@ -4279,7 +7108,17 @@
       "endurance",
       "mech_systemic_fatigue"
     ],
-    "notes": "Variation prevents stroke overuse"
+    "notes": "Variation prevents stroke overuse",
+    "work_sec": 200,
+    "rounds": 4,
+    "total_minutes": 13.33,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Fins Sprint Repeats",
@@ -4296,9 +7135,26 @@
       "explosive",
       "posterior_chain",
       "speed",
-      "power"
+      "power",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_trunk_stability"
     ],
-    "notes": "Resistance tool enhances power output safely"
+    "notes": "Resistance tool enhances power output safely",
+    "work_sec": 50,
+    "rounds": 8,
+    "total_minutes": 6.67,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Elliptical Lactate Threshold",
@@ -4317,9 +7173,21 @@
       "aerobic",
       "glycolytic",
       "posterior_chain",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
     ],
-    "notes": "No ground contact; bilateral stability work"
+    "notes": "No ground contact; bilateral stability work",
+    "work_sec": 480,
+    "rounds": 2,
+    "total_minutes": 8,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Stair Mill Recovery Climbs",
@@ -4340,7 +7208,15 @@
       "quad_dominant",
       "mech_systemic_fatigue"
     ],
-    "notes": "Eccentric-light; excellent hamstring-safe work"
+    "notes": "Eccentric-light; excellent hamstring-safe work",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Incline Treadmill Walk Intervals",
@@ -4361,7 +7237,16 @@
       "endurance",
       "mech_systemic_fatigue"
     ],
-    "notes": "Walking variation eliminates impact"
+    "notes": "Walking variation eliminates impact",
+    "work_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Versa Climber Aerobic Base",
@@ -4382,7 +7267,14 @@
       "posterior_chain",
       "mech_systemic_fatigue"
     ],
-    "notes": "True zero-impact full-body modality"
+    "notes": "True zero-impact full-body modality",
+    "total_minutes": 25,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "StairMaster HIIT Capacity",
@@ -4401,9 +7293,21 @@
       "posterior_chain",
       "low_impact",
       "conditioning",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation"
     ],
-    "notes": "Controlled impact; no ankle torque"
+    "notes": "Controlled impact; no ankle torque",
+    "work_sec": 120,
+    "rounds": 5,
+    "total_minutes": 10,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Elliptical Tempo Intervals",
@@ -4424,7 +7328,17 @@
       "posterior_chain",
       "mech_systemic_fatigue"
     ],
-    "notes": "Anti-gravity; reduces Achilles/calf stress"
+    "notes": "Anti-gravity; reduces Achilles/calf stress",
+    "work_sec": 180,
+    "rounds": 4,
+    "total_minutes": 12,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Versa Climber EMOM Capacity",
@@ -4445,7 +7359,16 @@
       "work_capacity",
       "mech_systemic_fatigue"
     ],
-    "notes": "Clock-based maintains consistency"
+    "notes": "Clock-based maintains consistency",
+    "work_sec": 900,
+    "total_minutes": 15,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Heavy Bag Aerobic Pace",
@@ -4464,9 +7387,18 @@
       "upper_body",
       "shoulders",
       "recovery",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_upper_press"
     ],
-    "notes": "Low-intensity bag work; rhythm focused"
+    "notes": "Low-intensity bag work; rhythm focused",
+    "total_minutes": 10,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Battle Ropes Tempo Burner",
@@ -4485,9 +7417,26 @@
       "upper_body",
       "shoulders",
       "conditioning",
-      "explosive"
+      "explosive",
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
     ],
-    "notes": "Upper body glycolytic work; lower body unloaded"
+    "notes": "Upper body glycolytic work; lower body unloaded",
+    "work_sec": 40,
+    "rounds": 4,
+    "total_minutes": 2.67,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Double-End Bag Circuit",
@@ -4504,9 +7453,24 @@
       "upper_body",
       "shoulders",
       "conditioning",
-      "coordination"
+      "coordination",
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
     ],
-    "notes": "Reactive hand-speed work; no leg impact"
+    "notes": "Reactive hand-speed work; no leg impact",
+    "work_sec": 120,
+    "rounds": 5,
+    "total_minutes": 10,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Speed Bag Precision Drill",
@@ -4523,9 +7487,22 @@
       "upper_body",
       "shoulders",
       "cns_freshness",
-      "skill_refinement"
+      "skill_refinement",
+      "mech_systemic_fatigue",
+      "mech_upper_press"
     ],
-    "notes": "Skill rhythm and timing with low impact"
+    "notes": "Skill rhythm and timing with low impact",
+    "work_sec": 180,
+    "rounds": 5,
+    "total_minutes": 15,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_upper_press"
+    ]
   },
   {
     "name": "Sandbag Shoulder Clean Flow",
@@ -4544,9 +7521,27 @@
       "power",
       "explosive",
       "posterior_chain",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
-    "notes": "Upper-focused power work with lower body stability"
+    "notes": "Upper-focused power work with lower body stability",
+    "work_sec": 8,
+    "rounds": 5,
+    "total_minutes": 0.67,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_shoulder_overhead",
+      "mech_trunk_stability",
+      "mech_upper_press",
+      "mech_upper_pull"
+    ]
   },
   {
     "name": "Medicine Ball Pass Intervals",
@@ -4565,9 +7560,21 @@
       "upper_body",
       "power",
       "core",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_ballistic"
     ],
-    "notes": "Rotational upper body work without impact"
+    "notes": "Rotational upper body work without impact",
+    "work_sec": 30,
+    "rounds": 6,
+    "total_minutes": 3,
+    "rpe": 9,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Turkish Get-Up Skill Flow",
@@ -4588,7 +7595,17 @@
       "skill",
       "mech_trunk_stability"
     ],
-    "notes": "Skill-based conditioning without metabolic tax"
+    "notes": "Skill-based conditioning without metabolic tax",
+    "work_sec": 5,
+    "rounds": 5,
+    "total_minutes": 0.42,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ]
   },
   {
     "name": "Farmer Carry + Battle Rope Combo",
@@ -4607,9 +7624,26 @@
       "upper_body",
       "grip",
       "mech_upper_carry",
-      "mech_systemic_fatigue"
+      "mech_systemic_fatigue",
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Integrated grip + shoulder conditioning"
+    "notes": "Integrated grip + shoulder conditioning",
+    "work_sec": 30,
+    "rpe": 9,
+    "impact_cost": "high",
+    "lactate_load": "high",
+    "movement_cost": "high",
+    "mechanical_risk_tags": [
+      "mech_grip_support",
+      "mech_landing_impact",
+      "mech_reactive",
+      "mech_shoulder_overhead",
+      "mech_systemic_fatigue",
+      "mech_upper_carry"
+    ]
   },
   {
     "name": "Nasal Breathing Walk Tempo",
@@ -4628,7 +7662,15 @@
       "cns_freshness",
       "mech_systemic_fatigue"
     ],
-    "notes": "Mental reset; parasympathetic flush"
+    "notes": "Mental reset; parasympathetic flush",
+    "work_sec": 2400,
+    "total_minutes": 40,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
+    ]
   },
   {
     "name": "Foam Rolling Mobility Circuit",
@@ -4646,9 +7688,19 @@
       "mobility",
       "rehab_friendly",
       "cns_freshness",
-      "parasympathetic"
+      "parasympathetic",
+      "mech_trunk_rotation"
     ],
-    "notes": "Tissue care; zero training stimulus"
+    "notes": "Tissue care; zero training stimulus",
+    "work_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation"
+    ]
   },
   {
     "name": "Breathing Protocol Deep Work",
@@ -4667,7 +7719,14 @@
       "cns_freshness",
       "cognitive"
     ],
-    "notes": "Autonomic nervous system balancing"
+    "notes": "Autonomic nervous system balancing",
+    "rest_sec": 900,
+    "total_minutes": 15,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": []
   },
   {
     "name": "Cold Plunge Recovery Routine",
@@ -4684,9 +7743,19 @@
       "resilience",
       "parasympathetic",
       "endurance",
-      "cns_freshness"
+      "cns_freshness",
+      "mech_lower_lunge"
     ],
-    "notes": "Post-session recovery flush"
+    "notes": "Post-session recovery flush",
+    "rest_sec": 300,
+    "total_minutes": 5,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_lower_lunge"
+    ]
   },
   {
     "name": "Gentle Movement Flow",
@@ -4705,7 +7774,14 @@
       "balance",
       "coordination"
     ],
-    "notes": "Mobility + breathing integration"
+    "notes": "Mobility + breathing integration",
+    "rest_sec": 1800,
+    "total_minutes": 30,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": []
   },
   {
     "name": "PVC Pipe Mobility Prep",
@@ -4722,9 +7798,19 @@
       "recovery",
       "rehab_friendly",
       "cns_freshness",
-      "stability"
+      "stability",
+      "mech_shoulder_overhead"
     ],
-    "notes": "Joint-by-joint mobility work"
+    "notes": "Joint-by-joint mobility work",
+    "work_sec": 900,
+    "total_minutes": 15,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead"
+    ]
   },
   {
     "name": "Sauna Session Recovery",
@@ -4743,7 +7829,14 @@
       "resilience",
       "cns_freshness"
     ],
-    "notes": "Passive heat recovery tool"
+    "notes": "Passive heat recovery tool",
+    "rest_sec": 1200,
+    "total_minutes": 20,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "moderate",
+    "movement_cost": "moderate",
+    "mechanical_risk_tags": []
   },
   {
     "name": "Double-End Bag Snap Singles",
@@ -4769,13 +7862,24 @@
       "striking",
       "counter_striker",
       "distance_striker",
-      "boxer"
+      "boxer",
+      "mech_upper_press"
     ],
     "notes": "Fast single shots only. Keep rhythm and accuracy high. Optional D-1 only if coach-led and very brief.",
     "late_windows": [
       "d7",
       "d4_to_d2",
       "d1"
+    ],
+    "work_sec": 10,
+    "rounds": 5,
+    "total_minutes": 0.83,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press"
     ]
   },
   {
@@ -4807,7 +7911,15 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "work_sec": 20,
+    "rounds": 2,
+    "total_minutes": 0.67,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": []
   },
   {
     "name": "Heavy-Bag Single-Shot Clusters",
@@ -4832,7 +7944,9 @@
       "pressure_fighter",
       "counter_striker",
       "mech_ballistic",
-      "mech_trunk_rotation"
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
     "notes": "Single clean shots then reset to guard. Use D-3 only if hands and wrists are healthy.",
     "late_windows": [
@@ -4842,6 +7956,17 @@
     ],
     "contraindications": [
       "skip if hand, wrist, or shoulder symptoms are active"
+    ],
+    "work_sec": 90,
+    "rpe": 7,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_trunk_rotation",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ]
   },
   {
@@ -4866,7 +7991,9 @@
       "kicker",
       "boxer",
       "mech_reactive_rebound",
-      "mech_lower_jump"
+      "mech_lower_jump",
+      "mech_ballistic",
+      "mech_lower_lunge"
     ],
     "notes": "Low-amplitude ankle snaps for quickness. Keep contacts crisp and brief.",
     "late_windows": [
@@ -4876,6 +8003,19 @@
     ],
     "contraindications": [
       "skip if ankle, achilles, or foot symptoms are active"
+    ],
+    "work_sec": 5,
+    "rounds": 4,
+    "total_minutes": 0.33,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_ballistic",
+      "mech_lower_jump",
+      "mech_lower_lunge",
+      "mech_reactive_rebound"
     ]
   },
   {
@@ -4900,12 +8040,27 @@
       "low_impact",
       "counter_striker",
       "distance_striker",
-      "striking"
+      "striking",
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ],
     "notes": "Rhythm and timing rounds with sharp exits and guard recovery.",
     "late_windows": [
       "d7",
       "d4_to_d2"
+    ],
+    "work_sec": 20,
+    "rounds": 4,
+    "total_minutes": 1.33,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue",
+      "mech_trunk_stability",
+      "mech_upper_press"
     ]
   },
   {
@@ -4924,7 +8079,8 @@
       "mobility",
       "low_impact",
       "rehab_friendly",
-      "cns_freshness"
+      "cns_freshness",
+      "mech_systemic_fatigue"
     ],
     "notes": "Breathing-led reset with thoracic and ankle flow for late-fight freshness.",
     "late_windows": [
@@ -4933,6 +8089,15 @@
       "d6_to_d5",
       "d4_to_d2",
       "d1"
+    ],
+    "work_sec": 600,
+    "total_minutes": 10,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_systemic_fatigue"
     ]
   },
   {
@@ -4956,7 +8121,9 @@
       "recovery",
       "low_impact",
       "cns_freshness",
-      "coordination"
+      "coordination",
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation"
     ],
     "notes": "Keep ribs down and shoulder blade smooth. Use to keep shoulder rhythm fresh.",
     "late_windows": [
@@ -4965,6 +8132,17 @@
       "d6_to_d5",
       "d4_to_d2",
       "d1"
+    ],
+    "work_sec": 6,
+    "rounds": 2,
+    "total_minutes": 0.2,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": [
+      "mech_shoulder_overhead",
+      "mech_trunk_rotation"
     ]
   },
   {
@@ -4992,6 +8170,14 @@
     "late_windows": [
       "d4_to_d2",
       "d1"
-    ]
+    ],
+    "work_sec": 10,
+    "rounds": 2,
+    "total_minutes": 0.33,
+    "rpe": 5,
+    "impact_cost": "low",
+    "lactate_load": "low",
+    "movement_cost": "low",
+    "mechanical_risk_tags": []
   }
 ]

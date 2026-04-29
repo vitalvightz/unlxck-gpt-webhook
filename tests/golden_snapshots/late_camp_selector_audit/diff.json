@@ -51,7 +51,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Jump-in-Place (Max Frequency)"
+        "Pivot-and-Strike (Rotation Focus)"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
@@ -59,7 +59,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Jump-in-Place (Max Frequency)"
+        "Pivot-and-Strike (Rotation Focus)"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -107,7 +107,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Jump-in-Place (Max Frequency)"
+        "Pivot-and-Strike (Rotation Focus)"
       ],
       "added_winners": [
         "Band-Resisted Jab-Cross Primer",
@@ -115,7 +115,7 @@
         "Counter-Striker Split-Line Punch Isometric Hold",
         "Isometric Mid-Thigh Pull",
         "Overcoming Split-Squat Isometric",
-        "Jump-in-Place (Max Frequency)"
+        "Pivot-and-Strike (Rotation Focus)"
       ],
       "removed_winners": [
         "Band-Resisted Push Press",
@@ -145,7 +145,9 @@
         "Shadowboxing Intervals",
         "Explosive Boxing Burst Intervals"
       ],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Shadowboxing Intervals"
+      ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
@@ -208,7 +210,10 @@
       "removed_winners": [
         "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
       ],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Shadowboxing Intervals",
+        "Speed Bag Precision Drill"
+      ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
@@ -274,7 +279,10 @@
       "removed_winners": [
         "Fight-Pace Rounds: 6-10 x (2-3 min on / 1 min off)"
       ],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Shadowboxing Intervals",
+        "Speed Bag Precision Drill"
+      ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
@@ -337,7 +345,10 @@
       ],
       "added_winners": [],
       "removed_winners": [],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Shadowboxing Intervals",
+        "Speed Bag Precision Drill"
+      ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
@@ -407,7 +418,10 @@
       ],
       "added_winners": [],
       "removed_winners": [],
-      "newly_blocked": [],
+      "newly_blocked": [
+        "Shadowboxing Intervals",
+        "Speed Bag Precision Drill"
+      ],
       "no_longer_blocked": []
     },
     "ambiguous_tag_gaps_added": [
