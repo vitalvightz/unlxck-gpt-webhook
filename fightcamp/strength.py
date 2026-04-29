@@ -440,13 +440,16 @@ def _strength_metadata_score_adjustment(
         if cut_buckets_allowed and cut_bucket not in cut_buckets_allowed:
             adjustment -= 1.35
             reason_codes.append("strength_penalty_cut_bucket_mismatch")
-        if any(
-            _high_cost_level(level)
-            for level in (impact_cost, eccentric_cost, landing_cost, cns_load, soreness_risk, movement_cost)
-        ):
+    if cut_bucket in LATE_STRENGTH_HIGH_CUT_BUCKETS:
+        if cut_buckets_allowed and cut_bucket not in cut_buckets_allowed:
+            adjustment -= 1.35
+            reason_codes.append("strength_penalty_cut_bucket_mismatch")
+        
+        cost_levels = [level for level in (impact_cost, eccentric_cost, landing_cost, soreness_risk, cns_load, movement_cost) if level]
+        if any(_high_cost_level(level) for level in cost_levels):
             adjustment -= 0.75
             reason_codes.append("strength_penalty_active_cut_high_cost_metadata")
-        elif all(_low_cost_level(level) for level in (impact_cost, eccentric_cost, landing_cost, soreness_risk) if level):
+        elif cost_levels and all(_low_cost_level(level) for level in cost_levels):
             adjustment += 0.25
             reason_codes.append("strength_boost_active_cut_low_cost_metadata")
 
