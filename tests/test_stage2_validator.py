@@ -436,6 +436,119 @@ def test_validate_stage2_output_accepts_new_d3_sharpness_and_freshness_titles():
     assert "late_fight_meaningful_stress_overage" not in warning_codes
     assert "late_fight_forbidden_content" not in warning_codes
 
+
+def test_late_fight_window_rules_block_d10_sprint_start():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-10"),
+        final_plan_text="""
+        ## D-10
+        Monday - Sharpness Session
+        - Band-Resisted Sprint Start - 4 x 6 sec
+        - Mobility reset - 10 min
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_window_forbidden_exercise"]
+    assert blocked
+    assert blocked[0]["days_out_bucket"] == "D-10"
+    assert blocked[0]["window"] == "d13_to_d8"
+    assert "Band-Resisted Sprint Start" in blocked[0]["line"]
+
+
+def test_late_fight_window_rules_block_d3_med_ball_volume():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-3"),
+        final_plan_text="""
+        ## D-3
+        Wednesday - Freshness Session
+        - Med-ball punch throw - 4 x 3
+        - Breathing reset - 5 min
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_window_forbidden_exercise"]
+    assert blocked
+    assert blocked[0]["days_out_bucket"] == "D-3"
+    assert blocked[0]["window"] == "d4_to_d2"
+    assert "Med-ball punch throw" in blocked[0]["line"]
+
+
+def test_late_fight_window_rules_accept_new_taper_mirror_drill_cue():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-3"),
+        final_plan_text="""
+        ## D-3
+        Wednesday - Freshness Session
+        - Mirror drill - 4 x 20 sec
+        - Breathing reset - 5 min
+        """,
+    )
+    warning_codes = {warning["code"] for warning in report["warnings"]}
+    assert "late_fight_window_preferred_missing" not in warning_codes
+    assert "late_fight_window_forbidden_exercise" not in warning_codes
+
+
+def test_late_fight_window_rules_block_d7_jump_reset():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-7"),
+        final_plan_text="""
+        ## D-7
+        Tuesday - Sharpness
+        - Band-Assisted Jump Reset - 3 x 2
+        """,
+    )
+    assert any(w["code"] == "late_fight_window_forbidden_exercise" and w["days_out_bucket"] == "D-7" for w in report["warnings"])
+
+
+def test_late_fight_window_rules_block_d5_sprint_and_jump():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-5"),
+        final_plan_text="""
+        ## D-5
+        Thursday - Primer
+        - Sprinting starts - 4 x 6 sec
+        - Jumping series - 3 x 3
+        """,
+    )
+    assert any(w["code"] == "late_fight_window_forbidden_exercise" and w["days_out_bucket"] == "D-5" for w in report["warnings"])
+
+
+def test_late_fight_window_rules_block_d1_med_ball_barbell_trap_sprint_jump():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-1"),
+        final_plan_text="""
+        ## D-1
+        Friday - Primer
+        - Medicine ball punch throw - 2 x 2
+        - Barbell push press - 2 x 2
+        - Trap-bar pull - 2 x 2
+        - Sprint starts - 2 x 6 sec
+        - Jumping pogo - 2 x 3
+        """,
+    )
+    assert any(w["code"] == "late_fight_window_forbidden_exercise" and w["days_out_bucket"] == "D-1" for w in report["warnings"])
+
+
+def test_late_fight_window_rules_clean_d13_d6_d3_d1_sections_pass():
+    report = validate_stage2_output(
+        planning_brief=_late_fight_planning_brief("D-3"),
+        final_plan_text="""
+        ## D-13
+        - Band jab-cross - 4 x 6 sec
+        - Mobility reset - 10 min
+        ## D-6
+        - Explosive boxing burst intervals - 4 x 6 sec
+        - Reactive shuffle repeats - 3 x 20 sec
+        ## D-3
+        - Mirror drill - 4 x 20 sec
+        - Breathing reset - 5 min
+        ## D-1
+        - Band-Resisted Jab-Cross Primer - 2 x 6 sec
+        - Mobility Reset Flow - 8 min
+        """,
+    )
+    warning_codes = {w["code"] for w in report["warnings"]}
+    assert "late_fight_window_forbidden_exercise" not in warning_codes
+    assert "late_fight_window_preferred_missing" not in warning_codes
+
 def test_validate_stage2_output_accepts_same_level_subsections_inside_phase():
     base = _planning_brief_fixture()
     planning_brief = {
