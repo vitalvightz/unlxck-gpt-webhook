@@ -271,6 +271,30 @@ def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
         assert "d6_to_d5" in item["late_windows"]
 
 
+def test_band_resisted_sprint_starts_are_spp_only_across_conditioning_banks():
+    conditioning_data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
+    style_data = json.loads(Path("data/style_conditioning_bank.json").read_text(encoding="utf-8"))
+
+    def _iter_band_resisted_sprint_starts(items: list[dict]) -> list[dict]:
+        matches: list[dict] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", "")).lower()
+            duration = str(item.get("duration", "")).lower()
+            notes = str(item.get("notes", "")).lower()
+            blob = f"{name} {duration} {notes}"
+            if "band-resisted sprint start" in blob:
+                matches.append(item)
+        return matches
+
+    matched = _iter_band_resisted_sprint_starts(conditioning_data) + _iter_band_resisted_sprint_starts(style_data)
+    assert matched
+    for item in matched:
+        assert item.get("phases") == ["SPP"]
+        assert "TAPER" not in item.get("phases", [])
+
+
 def test_boxing_jump_reset_is_not_taper_metadata_and_d6_prefers_low_impact_bursts():
     data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
     by_name = {item["name"]: item for item in data}
@@ -328,3 +352,4 @@ def test_generated_boxing_d6_taper_uses_low_impact_alactic_not_jump_or_sprint_st
     ]
     assert "Band-Assisted Jump Reset" not in plan_text
     assert "Band-Resisted Sprint Start" not in plan_text
+    assert "Band-Resisted Sprint Starts (ATP-PCr)" not in plan_text
