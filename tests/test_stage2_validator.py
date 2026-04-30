@@ -1626,6 +1626,41 @@ def test_late_fight_countdown_blocks_resistance_and_mini_band_variants():
     assert any(w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
 
 
+def test_late_fight_countdown_blocks_single_day_non_rehab_band_work():
+    brief = _late_fight_planning_brief("D-5")
+    brief["late_fight_plan_spec"].update({"payload_mode": "late_fight_session_payload"})
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        Friday - Sharpness
+        - Band-Resisted Jab-Cross - 3 x 6 sec
+        """,
+    )
+
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
+    assert any(
+        w["days_out_bucket"] == "D-5" and w["blocked_drill"] == "non_rehab_band_work"
+        for w in blocked
+    )
+
+
+def test_late_fight_countdown_band_lockout_uses_phrase_boundaries():
+    brief = _late_fight_planning_brief("D-5")
+    brief["late_fight_plan_spec"].update({"payload_mode": "late_fight_session_payload"})
+
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        Friday - Technical
+        - Abandoned tempo cue review - 2 rounds
+        """,
+    )
+
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
+    assert not any(w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
+
+
 def test_late_fight_alactic_overage_d4():
     """D-4 plan with 7 alactic bursts (> 5 cap) must emit alactic_dose_overage."""
     report = validate_stage2_output(

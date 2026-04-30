@@ -1514,8 +1514,18 @@ def _late_fight_countdown_blocked_drill_warnings(
     return warnings
 
 
-def _late_fight_countdown_banded_lockout_warnings(final_plan_text: str) -> list[dict]:
+def _late_fight_countdown_banded_lockout_warnings(
+    spec: dict[str, Any],
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
     day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        match = re.match(r"^D-(\d+)$", days_out_bucket, flags=re.IGNORECASE)
+        if match:
+            day_blocks[int(match.group(1))] = plan_lines
+
     warnings: list[dict] = []
     for day, lines in day_blocks.items():
         if day > 7:
@@ -1523,24 +1533,19 @@ def _late_fight_countdown_banded_lockout_warnings(final_plan_text: str) -> list[
         for line in lines:
             if _line_is_instruction_only(line):
                 continue
-            line_lower = line.lower()
             has_band_token = any(
-                token in line_lower
+                phrase_in_text(line, token)
                 for token in (
-                    "band-resisted",
                     "band resisted",
                     "banded",
-                    "resistance-band",
                     "resistance band",
-                    "mini-band",
                     "mini band",
-                    "band-assisted",
                     "band assisted",
                 )
             )
             if not has_band_token:
                 continue
-            if any(phrase_in_text(line_lower, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
+            if any(phrase_in_text(line, phrase) for phrase in _LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES):
                 continue
             warnings.append(
                 {
