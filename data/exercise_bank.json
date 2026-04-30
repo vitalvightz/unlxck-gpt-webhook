@@ -1064,7 +1064,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -2049,7 +2052,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -2527,7 +2533,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -3928,7 +3937,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -4193,7 +4205,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -11802,9 +11817,7 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate",
-      "high",
-      "critical"
+      "moderate"
     ],
     "movement_cost": "low",
     "impact_cost": "low",
@@ -11950,9 +11963,7 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate",
-      "high",
-      "critical"
+      "moderate"
     ],
     "movement_cost": "low",
     "impact_cost": "low",
@@ -11990,6 +12001,7 @@
     "category": "mobility",
     "phases": [
       "GPP",
+      "SPP",
       "TAPER"
     ],
     "method": "rehab",

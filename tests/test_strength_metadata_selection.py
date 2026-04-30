@@ -253,6 +253,11 @@ def test_loaded_strength_touches_are_blocked_from_tight_late_windows():
 def test_d1_explicit_taper_windows_exclude_loaded_sprint_jump_and_eccentric_drills():
     risky_equipment = {"barbell", "trap_bar"}
     risky_tags = {"eccentric", "mech_lower_jump", "mech_landing_impact"}
+    risky_d1_names = {
+        "staggered-stance medicine-ball punch throw",
+        "light heavy-bag technical tempo",
+        "scapular pull-up hold",
+    }
 
     for item in _exercise_bank_items():
         if "TAPER" not in item.get("phases", []):
@@ -269,6 +274,7 @@ def test_d1_explicit_taper_windows_exclude_loaded_sprint_jump_and_eccentric_dril
         assert not tags & risky_tags
         assert "sprint start" not in name
         assert "jump" not in name
+        assert name not in risky_d1_names
 
 
 def test_good_taper_readiness_options_remain_available():
@@ -282,6 +288,14 @@ def test_good_taper_readiness_options_remain_available():
         "Scapular Pull-Up Hold": {"d4_to_d2"},
         "Light Heavy-Bag Technical Tempo": {"d4_to_d2"},
     }
+    full_cut_access = {
+        "Diaphragmatic Breathing Drills",
+        "Band Face Pull",
+        "Controlled Bird-Dog",
+        "Banded Hip Flexor Stretch",
+        "Mobility Reset Flow",
+    }
+    all_cut_buckets = {"none", "low", "moderate", "high", "critical", "extreme"}
 
     for name, windows in expected_windows.items():
         item = _exercise_named(name)
@@ -290,15 +304,25 @@ def test_good_taper_readiness_options_remain_available():
         assert item["soreness_risk"] == "low"
         assert item["eccentric_cost"] == "low"
         assert item["cns_load"] == "low"
+        if name in full_cut_access:
+            assert set(item["cut_buckets_allowed"]) == all_cut_buckets
+
+    mobility_reset_flow = _exercise_named("Mobility Reset Flow")
+    assert mobility_reset_flow["phases"] == ["GPP", "SPP", "TAPER"]
 
 
 def test_late_window_blocking_is_respected_for_real_strength_bank_item():
-    item = _exercise_named("Scapular Pull-Up Hold")
+    for name in (
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo",
+    ):
+        item = _exercise_named(name)
 
-    d4_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2)
-    d1_result = strength._evaluate_strength_late_window(item, window=D1)
+        d4_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2)
+        d1_result = strength._evaluate_strength_late_window(item, window=D1)
 
-    assert d4_result["blocked"] is False
-    assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
-    assert d1_result["blocked"] is True
-    assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+        assert d4_result["blocked"] is False
+        assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
+        assert d1_result["blocked"] is True
+        assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
