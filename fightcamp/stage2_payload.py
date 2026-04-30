@@ -194,8 +194,8 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     else:
         timeline_days = None
 
-    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
+    weakness_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
+    goal_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
     readiness_flags = set(_clean_list(athlete_model.get("readiness_flags", [])))
     short_window = isinstance(timeline_days, int) and timeline_days <= 7
     ultra_short_window = isinstance(timeline_days, int) and timeline_days <= 5
@@ -220,7 +220,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     def add_unique(bucket: list[dict], label: str, kind: str, reason: str) -> None:
         if label in used_labels:
             return
-        bucket.append(_priority_bucket(label, kind))
+        bucket.append(stage2_planning_brief_module._priority_bucket(label, kind))
         used_labels.add(label)
 
     immediate_performance_limiter = (
@@ -263,7 +263,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         moved = primary.pop()
         destination = embedded if moved["kind"] == "freshness_protection" else maintenance
         destination.append(
-            _priority_bucket(moved["label"], moved["kind"])
+            stage2_planning_brief_module._priority_bucket(moved["label"], moved["kind"])
         )
 
     conditioning_selected = bool(
@@ -299,7 +299,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
         *(value.replace("_", " ") for value in _clean_list(athlete_model.get("key_goals", []))),
         *(value.replace("_", " ") for value in _clean_list(athlete_model.get("weaknesses", []))),
     ]
-    claimed_terms = " ".join(_priority_bucket_labels(primary) + _priority_bucket_labels(maintenance) + _priority_bucket_labels(embedded) + _priority_bucket_labels(deferred)).lower()
+    claimed_terms = " ".join(stage2_planning_brief_module._priority_bucket_labels(primary) + stage2_planning_brief_module._priority_bucket_labels(maintenance) + stage2_planning_brief_module._priority_bucket_labels(embedded) + stage2_planning_brief_module._priority_bucket_labels(deferred)).lower()
     for label in raw_other_labels:
         normalized_label = str(label).strip()
         if not normalized_label or normalized_label.lower() in claimed_terms:
@@ -314,7 +314,7 @@ def _compress_short_camp_priorities(athlete_model: dict) -> dict:
     if len(maintenance) > 1:
         overflow = maintenance[1:]
         maintenance = maintenance[:1]
-        deferred.extend(_priority_bucket(item["label"], item["kind"]) for item in overflow)
+        deferred.extend(stage2_planning_brief_module._priority_bucket(item["label"], item["kind"]) for item in overflow)
 
     return {
         "timeline_days": timeline_days,
@@ -466,8 +466,8 @@ def _primary_limiter_key(athlete_model: dict, restrictions: list[dict]) -> str:
     if "gas tank maintenance" in compressed_labels:
         return "aerobic_repeatability"
 
-    weakness_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
-    goal_tokens = _normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
+    weakness_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("weaknesses", [])))
+    goal_tokens = stage2_planning_brief_module._normalize_limiter_tokens(_clean_list(athlete_model.get("key_goals", [])))
     style_tokens = _normalize_limiter_tokens(
         _clean_list(athlete_model.get("technical_styles", [])) + _clean_list(athlete_model.get("tactical_styles", []))
     )
