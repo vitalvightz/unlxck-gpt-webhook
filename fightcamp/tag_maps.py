@@ -200,9 +200,9 @@ GOAL_TAG_MAP = {
     "weight_cut": ["weight_cut", "recovery", "low_impact", "cns_freshness"],
 }
 
-GOAL_TAG_MAP["conditioning"] = GOAL_TAG_MAP["endurance"]
-GOAL_TAG_MAP["explosive"] = GOAL_TAG_MAP["power"]
-GOAL_TAG_MAP["reactive"] = GOAL_TAG_MAP["speed"]
+GOAL_TAG_MAP["conditioning"] = list(GOAL_TAG_MAP["endurance"])
+GOAL_TAG_MAP["explosive"] = list(GOAL_TAG_MAP["power"])
+GOAL_TAG_MAP["reactive"] = list(GOAL_TAG_MAP["speed"])
 
 WEAKNESS_TAG_MAP = {
     "core stability": ["core", "anti_rotation"],

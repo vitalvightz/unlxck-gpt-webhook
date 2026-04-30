@@ -28,13 +28,13 @@ export function computeDaysUntilFight(fightDate: string | null | undefined): num
 const KEY_GOAL_BLOCK_REASONS: Record<string, string> = {
   power: "Too late for power development.",
   strength: "Too late for strength development.",
-  conditioning: "Too late to build conditioning.",
+  conditioning: "Too late to build conditioning safely.",
   speed: "Fight-week freshness only.",
   skill_refinement: "Fight-week freshness only.",
 };
 
 const WEAK_AREA_BLOCK_REASONS: Record<string, string> = {
-  gas_tank: "Too late to build gas tank.",
+  gas_tank: "Too late to build gas tank safely.",
   strength: "Too late for strength development.",
   power: "Too late for power development.",
   speed: "Fight-week freshness only.",
