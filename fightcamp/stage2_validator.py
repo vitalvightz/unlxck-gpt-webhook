@@ -125,7 +125,7 @@ _LATE_FIGHT_TOKEN_PHRASES = {
     "layered_rehab_stack": ("rehab stack",),
 }
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
-_LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = ("mobility", "recovery", "rehab", "rehab_friendly", "prehab", "injury_prevention")
+_LATE_FIGHT_BAND_REHAB_ALLOW_PHRASES = ("mobility", "recovery", "rehab", "rehab friendly", "prehab", "injury prevention")
 _COUNTDOWN_LABEL_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?(D-(\d+))\b", re.IGNORECASE)
 _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
     6: (
