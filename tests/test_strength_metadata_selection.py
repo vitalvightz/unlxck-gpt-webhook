@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import strength
-from fightcamp.late_selector_windows import D4_TO_D2, D7
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D7
 
 
 def _flags(**overrides) -> dict:
@@ -29,6 +29,17 @@ def _flags(**overrides) -> dict:
 
 def _selected_names(result: dict) -> list[str]:
     return [entry["name"] for entry in result["why_log"]]
+
+
+def _exercise_bank_items() -> list[dict]:
+    return json.loads(Path("data/exercise_bank.json").read_text(encoding="utf-8"))
+
+
+def _exercise_named(name: str) -> dict:
+    for item in _exercise_bank_items():
+        if item["name"] == name:
+            return item
+    raise AssertionError(f"Missing exercise bank item: {name}")
 
 
 def _quality_passthrough(exercise, phase=None):
@@ -188,10 +199,105 @@ def test_explicit_low_impact_metadata_overrides_landing_tag_heuristic():
 
 
 def test_strength_bank_duplicate_names_are_resolved():
-    items = json.loads(Path("data/exercise_bank.json").read_text(encoding="utf-8"))
+    items = _exercise_bank_items()
     counts: dict[str, int] = {}
     for item in items:
         key = item["name"].strip().casefold()
         counts[key] = counts.get(key, 0) + 1
 
     assert {name: count for name, count in counts.items() if count > 1} == {}
+
+
+def test_strength_bank_removes_taper_from_developmental_or_high_cost_items():
+    expected_phases = {
+        "Hang Power Clean": ["SPP"],
+        "Slow-Lowered Pull-Up": ["GPP", "SPP"],
+        "Med Ball Scoop Toss": ["SPP"],
+        "Anti-Rotation Med Ball Slam": ["SPP"],
+        "Nordic Hamstring Curl": ["GPP"],
+        "Landmine Press": ["GPP", "SPP"],
+        "Band-Resisted Push Press": ["SPP"],
+        "Weighted Hanging Leg Raise": ["SPP"],
+        "Medicine-Ball Chest Toss": ["SPP"],
+        "Neck Harness Flexion": ["GPP"],
+        "Tabata Sprints (Treadmill/Row)": ["SPP"],
+        "Sprawl-to-Burpee": ["SPP"],
+        "Neck Harness Lateral Flexion": ["GPP"],
+        "3-Minute Heavy Bag Interval": ["SPP"],
+    }
+
+    for name, phases in expected_phases.items():
+        item = _exercise_named(name)
+        assert "TAPER" not in item["phases"]
+        assert item["phases"] == phases
+
+
+def test_loaded_strength_touches_are_blocked_from_tight_late_windows():
+    for name in (
+        "Isometric Mid-Thigh Pull",
+        "Trap-Bar Pin Pull Isometric",
+        "Overcoming Split-Squat Isometric",
+        "Landmine Split-Stance Punch Press",
+    ):
+        item = _exercise_named(name)
+
+        d7_result = strength._evaluate_strength_late_window(item, window=D7)
+        d1_result = strength._evaluate_strength_late_window(item, window=D1)
+
+        assert d7_result["blocked"] is True
+        assert d1_result["blocked"] is True
+        assert "late_strength_block_window_mismatch" in d7_result["block_codes"]
+        assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+
+
+def test_d1_explicit_taper_windows_exclude_loaded_sprint_jump_and_eccentric_drills():
+    risky_equipment = {"barbell", "trap_bar"}
+    risky_tags = {"eccentric", "mech_lower_jump", "mech_landing_impact"}
+
+    for item in _exercise_bank_items():
+        if "TAPER" not in item.get("phases", []):
+            continue
+        if "d1" not in {str(window).lower() for window in item.get("late_windows", [])}:
+            continue
+
+        equipment = set(str(item.get("equipment", "")).split(","))
+        tags = set(item.get("tags", []))
+        name = item["name"].lower()
+
+        assert not equipment & risky_equipment
+        assert item.get("movement") != "olympic"
+        assert not tags & risky_tags
+        assert "sprint start" not in name
+        assert "jump" not in name
+
+
+def test_good_taper_readiness_options_remain_available():
+    expected_windows = {
+        "Band-Resisted Jab-Cross Primer": {"d1", "d4_to_d2"},
+        "Technical Shadowboxing Tempo": {"d1", "d4_to_d2"},
+        "Band Row Speed Focus": {"d1", "d4_to_d2"},
+        "Mobility Reset Flow": {"d1", "d4_to_d2"},
+        "Band Face Pull": {"d1", "d4_to_d2"},
+        "Staggered-Stance Medicine-Ball Punch Throw": {"d4_to_d2"},
+        "Scapular Pull-Up Hold": {"d4_to_d2"},
+    }
+
+    for name, windows in expected_windows.items():
+        item = _exercise_named(name)
+        assert "TAPER" in item["phases"]
+        assert windows.issubset(set(item.get("late_windows", [])))
+        assert item["soreness_risk"] == "low"
+        assert item["eccentric_cost"] == "low"
+        assert item["cns_load"] == "low"
+
+
+def test_late_window_blocking_is_respected_for_real_strength_bank_item():
+    item = _exercise_named("Scapular Pull-Up Hold")
+
+    d4_result = strength._evaluate_strength_late_window(item, window=D4_TO_D2)
+    d1_result = strength._evaluate_strength_late_window(item, window=D1)
+
+    assert d4_result["blocked"] is False
+    assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
+    assert d1_result["blocked"] is True
+    assert "late_strength_block_window_mismatch" in d1_result["block_codes"]

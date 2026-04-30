@@ -188,7 +188,7 @@
     "name": "Med Ball Scoop Toss",
     "category": "striking",
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "method": "power",
     "movement": "rotational",
@@ -631,7 +631,7 @@
     "name": "Anti-Rotation Med Ball Slam",
     "category": "core",
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "method": "power",
     "movement": "core",
@@ -1041,14 +1041,17 @@
       "rehab_friendly",
       "mech_lower_lateral",
       "mech_trunk_stability",
-      "mech_lower_squat"
+      "mech_lower_squat",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "bands",
     "movement_cost": "low",
     "impact_cost": "low",
-    "eccentric_cost": "moderate",
+    "eccentric_cost": "low",
     "landing_cost": "none",
-    "cns_load": "moderate",
+    "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_lower_lateral",
@@ -1056,12 +1059,20 @@
       "mech_trunk_stability"
     ],
     "low_impact": true,
-    "low_eccentric": false,
-    "cns_freshness": false,
+    "low_eccentric": true,
+    "cns_freshness": true,
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
     ]
   },
   {
@@ -1106,8 +1117,7 @@
     "name": "Nordic Hamstring Curl",
     "category": "lower_body",
     "phases": [
-      "GPP",
-      "TAPER"
+      "GPP"
     ],
     "method": "rehab",
     "movement": "hinge",
@@ -1369,8 +1379,7 @@
     "category": "upper_body",
     "phases": [
       "GPP",
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "power",
     "movement": "vertical_push",
@@ -1718,7 +1727,7 @@
     "name": "Band-Resisted Push Press",
     "category": "upper_body",
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "method": "power",
     "movement": "vertical_push",
@@ -2018,14 +2027,17 @@
       "shoulders",
       "rehab_friendly",
       "mech_grip_support",
-      "mech_upper_pull"
+      "mech_upper_pull",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "bands",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
-    "cns_load": "moderate",
+    "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_grip_support",
@@ -2033,11 +2045,19 @@
     ],
     "low_impact": true,
     "low_eccentric": true,
-    "cns_freshness": false,
+    "cns_freshness": true,
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
     ]
   },
   {
@@ -2302,8 +2322,7 @@
     "name": "Weighted Hanging Leg Raise",
     "category": "core",
     "phases": [
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "rehab",
     "movement": "core",
@@ -2487,12 +2506,15 @@
     "tags": [
       "core",
       "rehab_friendly",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
     "impact_cost": "low",
-    "eccentric_cost": "moderate",
+    "eccentric_cost": "low",
     "landing_cost": "none",
     "cns_load": "low",
     "soreness_risk": "low",
@@ -2500,12 +2522,20 @@
       "mech_trunk_stability"
     ],
     "low_impact": true,
-    "low_eccentric": false,
+    "low_eccentric": true,
     "cns_freshness": true,
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
     ]
   },
   {
@@ -3077,7 +3107,7 @@
     "name": "Medicine-Ball Chest Toss",
     "category": "combat",
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "method": "power",
     "movement": "horizontal_push",
@@ -3312,8 +3342,7 @@
     "name": "Neck Harness Flexion",
     "category": "grip_neck",
     "phases": [
-      "GPP",
-      "TAPER"
+      "GPP"
     ],
     "method": "rehab",
     "movement": "isometric",
@@ -3745,7 +3774,7 @@
     "name": "Tabata Sprints (Treadmill/Row)",
     "category": "finishers",
     "phases": [
-      "TAPER"
+      "SPP"
     ],
     "method": "conditioning",
     "movement": "compound",
@@ -3880,23 +3909,34 @@
     "type": "unilateral",
     "tags": [
       "hip_dominant",
-      "rehab_friendly"
+      "rehab_friendly",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "bands",
     "movement_cost": "low",
     "impact_cost": "low",
-    "eccentric_cost": "moderate",
+    "eccentric_cost": "low",
     "landing_cost": "none",
-    "cns_load": "moderate",
+    "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [],
     "low_impact": true,
-    "low_eccentric": false,
-    "cns_freshness": false,
+    "low_eccentric": true,
+    "cns_freshness": true,
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
     ]
   },
   {
@@ -4132,25 +4172,36 @@
     "tags": [
       "core",
       "rehab_friendly",
-      "mech_trunk_stability"
+      "mech_trunk_stability",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness"
     ],
     "equipment": "bodyweight",
     "movement_cost": "low",
     "impact_cost": "low",
     "eccentric_cost": "low",
     "landing_cost": "none",
-    "cns_load": "moderate",
+    "cns_load": "low",
     "soreness_risk": "low",
     "mechanical_risk_tags": [
       "mech_trunk_stability"
     ],
     "low_impact": true,
     "low_eccentric": true,
-    "cns_freshness": false,
+    "cns_freshness": true,
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate"
+    ],
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
     ]
   },
   {
@@ -4222,8 +4273,7 @@
     "name": "Sprawl-to-Burpee",
     "category": "combat",
     "phases": [
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "conditioning",
     "movement": "compound",
@@ -4948,8 +4998,7 @@
     "name": "Neck Harness Lateral Flexion",
     "category": "boxing",
     "phases": [
-      "GPP",
-      "TAPER"
+      "GPP"
     ],
     "method": "rehab",
     "movement": "isometric",
@@ -5062,8 +5111,7 @@
     "name": "3-Minute Heavy Bag Interval",
     "category": "boxing",
     "phases": [
-      "SPP",
-      "TAPER"
+      "SPP"
     ],
     "method": "conditioning",
     "movement": "compound",
@@ -10572,13 +10620,12 @@
     "subfamily": "isometric_mid_thigh_pull",
     "late_windows": [
       "d21_to_d14",
-      "d13_to_d8",
-      "d7",
-      "d6_to_d5"
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
-      "high",
-      "critical"
+      "none",
+      "low",
+      "moderate"
     ],
     "goals": [
       "power",
@@ -10655,12 +10702,13 @@
     "phase_role": "late_strength_touch",
     "subfamily": "trap_bar_pin_pull_isometric",
     "late_windows": [
-      "d13_to_d8",
-      "d7"
+      "d21_to_d14",
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
-      "high",
-      "critical"
+      "none",
+      "low",
+      "moderate"
     ],
     "goals": [
       "power",
@@ -10750,8 +10798,7 @@
     "late_windows": [
       "d13_to_d8",
       "d7",
-      "d4_to_d2",
-      "d1"
+      "d4_to_d2"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -10836,9 +10883,8 @@
     "phase_role": "late_strength_touch",
     "subfamily": "overcoming_split_squat_isometric",
     "late_windows": [
-      "d13_to_d8",
-      "d7",
-      "d4_to_d2"
+      "d21_to_d14",
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11003,9 +11049,7 @@
       "d21_to_d14",
       "d13_to_d8",
       "d7",
-      "d6_to_d5",
-      "d4_to_d2",
-      "d1"
+      "d6_to_d5"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11240,9 +11284,7 @@
     "phase_role": "late_strength_touch",
     "subfamily": "split_stance_wall_drive_isometric",
     "late_windows": [
-      "d7",
-      "d4_to_d2",
-      "d1"
+      "d7"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11471,8 +11513,8 @@
     "phase_role": "late_strength_touch",
     "subfamily": "landmine_split_stance_punch_press",
     "late_windows": [
-      "d13_to_d8",
-      "d7"
+      "d21_to_d14",
+      "d13_to_d8"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11649,5 +11691,367 @@
       "none",
       "low"
     ]
+  },
+  {
+    "name": "Band Row Speed Focus",
+    "category": "upper_body",
+    "phases": [
+      "SPP",
+      "TAPER"
+    ],
+    "method": "power",
+    "movement": "pull",
+    "type": "bilateral",
+    "tags": [
+      "late_strength_touch",
+      "speed",
+      "neural_primer",
+      "coordination",
+      "skill_refinement",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "rehab_friendly",
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "equipment": "bands",
+    "phase_role": "late_strength_touch",
+    "subfamily": "band_row_speed_focus",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": true,
+    "neural_primer": true,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing",
+      "kickboxing",
+      "pressure_fighter",
+      "counter_striker"
+    ],
+    "goals": [
+      "speed",
+      "power",
+      "readiness"
+    ],
+    "weaknesses": [
+      "shoulder_endurance",
+      "posture"
+    ]
+  },
+  {
+    "name": "Scapular Pull-Up Hold",
+    "category": "upper_body",
+    "phases": [
+      "GPP",
+      "SPP",
+      "TAPER"
+    ],
+    "method": "strength",
+    "movement": "isometric",
+    "type": "bilateral",
+    "tags": [
+      "isometric",
+      "late_strength_touch",
+      "rehab_friendly",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "shoulders",
+      "upper_back",
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "equipment": "pullup_bar",
+    "phase_role": "late_strength_touch",
+    "subfamily": "scapular_pull_up_hold",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_pull",
+      "mech_grip_support"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing",
+      "kickboxing",
+      "grappler",
+      "wrestler"
+    ],
+    "goals": [
+      "readiness",
+      "posture"
+    ],
+    "weaknesses": [
+      "shoulder_stability",
+      "posture"
+    ]
+  },
+  {
+    "name": "Technical Shadowboxing Tempo",
+    "category": "striking",
+    "phases": [
+      "TAPER"
+    ],
+    "method": "primer",
+    "movement": "footwork",
+    "type": "bilateral",
+    "tags": [
+      "late_strength_touch",
+      "speed",
+      "coordination",
+      "skill_refinement",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "sport_specific",
+      "boxing",
+      "kickboxing",
+      "distance_striker",
+      "counter_striker",
+      "mech_trunk_rotation",
+      "mech_reactive"
+    ],
+    "equipment": "bodyweight",
+    "phase_role": "late_strength_touch",
+    "subfamily": "technical_shadowboxing_tempo",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_rotation",
+      "mech_reactive"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": true,
+    "neural_primer": true,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing",
+      "kickboxing",
+      "pressure_fighter",
+      "counter_striker",
+      "distance_striker"
+    ],
+    "goals": [
+      "speed",
+      "readiness",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "rhythm",
+      "footwork"
+    ],
+    "notes": "Short technical rhythm only; stop before fatigue or shoulder burn."
+  },
+  {
+    "name": "Light Heavy-Bag Technical Tempo",
+    "category": "striking",
+    "phases": [
+      "TAPER"
+    ],
+    "method": "primer",
+    "movement": "horizontal_push",
+    "type": "bilateral",
+    "tags": [
+      "late_strength_touch",
+      "coordination",
+      "skill_refinement",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "sport_specific",
+      "boxing",
+      "kickboxing",
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "equipment": "heavy_bag",
+    "phase_role": "late_strength_touch",
+    "subfamily": "light_heavy_bag_technical_tempo",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_upper_press",
+      "mech_trunk_rotation"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": true,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing",
+      "kickboxing",
+      "pressure_fighter",
+      "counter_striker"
+    ],
+    "goals": [
+      "readiness",
+      "skill_refinement"
+    ],
+    "weaknesses": [
+      "rhythm"
+    ],
+    "notes": "Touch-speed bag rhythm only; no hard rounds or volume accumulation."
+  },
+  {
+    "name": "Mobility Reset Flow",
+    "category": "mobility",
+    "phases": [
+      "GPP",
+      "TAPER"
+    ],
+    "method": "rehab",
+    "movement": "mobility",
+    "type": "bilateral",
+    "tags": [
+      "rehab_friendly",
+      "low_impact",
+      "low_eccentric",
+      "cns_freshness",
+      "mobility",
+      "breathing",
+      "mech_trunk_stability"
+    ],
+    "equipment": "bodyweight",
+    "phase_role": "late_strength_touch",
+    "subfamily": "mobility_reset_flow",
+    "late_windows": [
+      "d21_to_d14",
+      "d13_to_d8",
+      "d7",
+      "d6_to_d5",
+      "d4_to_d2",
+      "d1"
+    ],
+    "cut_buckets_allowed": [
+      "none",
+      "low",
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
+    ],
+    "movement_cost": "low",
+    "impact_cost": "low",
+    "eccentric_cost": "low",
+    "landing_cost": "none",
+    "cns_load": "low",
+    "soreness_risk": "low",
+    "mechanical_risk_tags": [
+      "mech_trunk_stability"
+    ],
+    "low_impact": true,
+    "low_eccentric": true,
+    "cns_freshness": true,
+    "sport_specific": false,
+    "neural_primer": false,
+    "ballistic_low_volume": false,
+    "tactical_styles": [
+      "boxing",
+      "kickboxing",
+      "grappler",
+      "wrestler"
+    ],
+    "goals": [
+      "readiness",
+      "mobility"
+    ],
+    "weaknesses": [
+      "stiffness",
+      "recovery"
+    ],
+    "notes": "Easy mobility and breathing reset; keep it restorative, not a workout."
   }
 ]

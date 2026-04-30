@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fightcamp import conditioning
-from fightcamp.late_selector_windows import D4_TO_D2
+from fightcamp.late_selector_windows import D1, D4_TO_D2, D7
 from fightcamp.stage2_payload import build_stage2_payload
 from fightcamp.training_context import TrainingContext
 
@@ -229,3 +229,32 @@ def test_coordination_bank_duplicate_names_are_resolved():
         counts[key] = counts.get(key, 0) + 1
 
     assert {name: count for name, count in counts.items() if count > 1} == {}
+
+
+def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
+    data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
+    sprint_starts = [
+        item
+        for item in data
+        if item["name"] in {"Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)"}
+    ]
+
+    assert {item["name"] for item in sprint_starts} == {
+        "Band-Resisted Sprint Start",
+        "Band-Resisted Sprint Starts (ATP-PCr)",
+    }
+    for item in sprint_starts:
+        assert "TAPER" not in item["phases"]
+        assert item["late_windows"] == ["d21_to_d14", "d13_to_d8"]
+        assert conditioning._evaluate_conditioning_late_window(
+            item,
+            system=item["system"],
+            window=D7,
+            bridge_rules={},
+        )["blocked"] is True
+        assert conditioning._evaluate_conditioning_late_window(
+            item,
+            system=item["system"],
+            window=D1,
+            bridge_rules={},
+        )["blocked"] is True
