@@ -489,6 +489,7 @@ def _evaluate_conditioning_late_window(
         }
 
     tags = set(normalize_tags(drill.get("tags", [])))
+    equipment = set(normalize_equipment_list(drill.get("equipment", [])))
     if window in TAPER_ONLY_CONDITIONING_WINDOWS:
         phases = {str(value).strip().upper() for value in (drill.get("phases") or []) if str(value).strip()}
         if phases and "TAPER" not in phases:
@@ -530,6 +531,22 @@ def _evaluate_conditioning_late_window(
 
     reason_codes: list[str] = []
     adjustment = 0.0
+    late_band_lockout_window = window in {D7, D6_TO_D5, D4_TO_D2, D1}
+    rehab_mobility_band_ok = bool(
+        tags
+        & {
+            "mobility",
+            "recovery",
+            "rehab",
+            "rehab_friendly",
+            "prehab",
+            "injury_prevention",
+        }
+    )
+    block_codes: list[str] = []
+    if late_band_lockout_window and "bands" in equipment and not rehab_mobility_band_ok:
+        block_codes.append("late_conditioning_block_band_work_lockout")
+        reason_codes.append("late_conditioning_penalty_band_work_lockout")
 
     if low_noise_sharpness:
         adjustment += 0.75
@@ -567,7 +584,6 @@ def _evaluate_conditioning_late_window(
         adjustment -= (0.8 if bridge_allows_glycolytic and window == "d21_to_d14" else 1.5) * severity
         reason_codes.append("late_conditioning_penalty_generic_glycolytic")
 
-    block_codes: list[str] = []
     if generic_glycolytic and not bridge_allows_glycolytic:
         block_codes.append("late_conditioning_block_bridge_glycolytic_cap")
 
