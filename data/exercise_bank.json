@@ -1064,7 +1064,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -2049,7 +2052,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -2527,7 +2533,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -3928,7 +3937,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -4193,7 +4205,10 @@
     "cut_buckets_allowed": [
       "none",
       "low",
-      "moderate"
+      "moderate",
+      "high",
+      "critical",
+      "extreme"
     ],
     "late_windows": [
       "d21_to_d14",
@@ -10968,7 +10983,8 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
+      "d4_to_d2",
+      "d1"
     ],
     "cut_buckets_allowed": [
       "high",
@@ -11797,14 +11813,16 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
+      "d4_to_d2",
+      "d1"
     ],
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate",
       "high",
-      "critical"
+      "critical",
+      "extreme"
     ],
     "movement_cost": "low",
     "impact_cost": "low",
@@ -11945,14 +11963,16 @@
       "d13_to_d8",
       "d7",
       "d6_to_d5",
-      "d4_to_d2"
+      "d4_to_d2",
+      "d1"
     ],
     "cut_buckets_allowed": [
       "none",
       "low",
       "moderate",
       "high",
-      "critical"
+      "critical",
+      "extreme"
     ],
     "movement_cost": "low",
     "impact_cost": "low",
@@ -11990,6 +12010,7 @@
     "category": "mobility",
     "phases": [
       "GPP",
+      "SPP",
       "TAPER"
     ],
     "method": "rehab",

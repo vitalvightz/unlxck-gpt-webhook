@@ -279,8 +279,19 @@ def test_good_taper_readiness_options_remain_available():
         "Mobility Reset Flow": {"d1", "d4_to_d2"},
         "Band Face Pull": {"d1", "d4_to_d2"},
         "Staggered-Stance Medicine-Ball Punch Throw": {"d4_to_d2"},
-        "Scapular Pull-Up Hold": {"d4_to_d2"},
+        "Scapular Pull-Up Hold": {"d1", "d4_to_d2"},
+        "Light Heavy-Bag Technical Tempo": {"d1", "d4_to_d2"},
     }
+    full_cut_access = {
+        "Diaphragmatic Breathing Drills",
+        "Band Face Pull",
+        "Controlled Bird-Dog",
+        "Banded Hip Flexor Stretch",
+        "Scapular Pull-Up Hold",
+        "Light Heavy-Bag Technical Tempo",
+        "Mobility Reset Flow",
+    }
+    all_cut_buckets = {"none", "low", "moderate", "high", "critical", "extreme"}
 
     for name, windows in expected_windows.items():
         item = _exercise_named(name)
@@ -289,6 +300,11 @@ def test_good_taper_readiness_options_remain_available():
         assert item["soreness_risk"] == "low"
         assert item["eccentric_cost"] == "low"
         assert item["cns_load"] == "low"
+        if name in full_cut_access:
+            assert set(item["cut_buckets_allowed"]) == all_cut_buckets
+
+    mobility_reset_flow = _exercise_named("Mobility Reset Flow")
+    assert mobility_reset_flow["phases"] == ["GPP", "SPP", "TAPER"]
 
 
 def test_late_window_blocking_is_respected_for_real_strength_bank_item():
@@ -299,5 +315,5 @@ def test_late_window_blocking_is_respected_for_real_strength_bank_item():
 
     assert d4_result["blocked"] is False
     assert "late_strength_boost_window_fit" in d4_result["reason_codes"]
-    assert d1_result["blocked"] is True
-    assert "late_strength_block_window_mismatch" in d1_result["block_codes"]
+    assert d1_result["blocked"] is False
+    assert "late_strength_boost_window_fit" in d1_result["reason_codes"]
