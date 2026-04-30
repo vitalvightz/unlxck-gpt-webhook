@@ -50,8 +50,53 @@ def test_weakness_aliases_resolve_to_existing_canonical_weakness_entries():
 
 
 def test_trunk_strength_alias_resolves_to_core_stability_tags():
-    assert WEAKNESS_NORMALIZER["trunk_strength"] == ["core stability"]
+    assert WEAKNESS_NORMALIZER["trunk_strength"] == ["trunk_strength"]
+    assert WEAKNESS_TAG_MAP["trunk_strength"] == ["core", "anti_rotation", "core stability"]
+    assert WEAKNESS_NORMALIZER["trunk strength"] == ["core stability"]
     assert WEAKNESS_TAG_MAP["core stability"] == ["core", "anti_rotation"]
+
+
+def test_current_ui_performance_values_resolve_to_scoring_tags():
+    key_goal_required_tags = {
+        "power": {"rate_of_force", "plyometric"},
+        "strength": {"posterior_chain", "upper_body"},
+        "conditioning": {"aerobic", "glycolytic", "work_capacity"},
+        "speed": {"speed", "reactive"},
+        "skill_refinement": {"skill_refinement", "decision_speed"},
+        "mobility": {"mobility", "movement_quality"},
+        "recovery": {"recovery", "cns_freshness", "parasympathetic"},
+        "weight_cut": {"weight_cut", "low_impact", "cns_freshness"},
+    }
+    weak_area_required_tags = {
+        "gas_tank": {"aerobic", "glycolytic", "conditioning", "work_capacity"},
+        "strength": {"posterior_chain", "quad_dominant", "upper_body", "core"},
+        "power": {"explosive", "rate_of_force", "plyometric"},
+        "speed": {"speed", "reaction", "reactive", "coordination"},
+        "footwork": {"footwork", "speed", "reactive", "coordination"},
+        "balance": {"balance", "stability", "unilateral"},
+        "mobility": {"mobility", "hip_dominant", "movement_quality", "range"},
+        "coordination": {"coordination", "balance", "reactive"},
+        "trunk_strength": {"core", "anti_rotation", "core stability"},
+    }
+
+    for value, required_tags in key_goal_required_tags.items():
+        canonical = GOAL_NORMALIZER.get(value, value)
+        assert required_tags.issubset(set(GOAL_TAG_MAP[canonical]))
+
+    for value, required_tags in weak_area_required_tags.items():
+        canonical_entries = WEAKNESS_NORMALIZER.get(value, [value])
+        assert canonical_entries
+        resolved_tags = {tag for canonical in canonical_entries for tag in WEAKNESS_TAG_MAP[canonical]}
+        assert required_tags.issubset(resolved_tags)
+
+
+def test_goal_tag_aliases_use_copied_scoring_routes():
+    assert GOAL_TAG_MAP["conditioning"] == GOAL_TAG_MAP["endurance"]
+    assert GOAL_TAG_MAP["conditioning"] is not GOAL_TAG_MAP["endurance"]
+    assert GOAL_TAG_MAP["explosive"] == GOAL_TAG_MAP["power"]
+    assert GOAL_TAG_MAP["explosive"] is not GOAL_TAG_MAP["power"]
+    assert GOAL_TAG_MAP["reactive"] == GOAL_TAG_MAP["speed"]
+    assert GOAL_TAG_MAP["reactive"] is not GOAL_TAG_MAP["speed"]
 
 
 def test_style_and_goal_tags_stay_normalized_for_curated_entries():
