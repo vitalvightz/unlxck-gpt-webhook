@@ -280,6 +280,7 @@ def test_good_taper_readiness_options_remain_available():
         "Band Face Pull": {"d1", "d4_to_d2"},
         "Staggered-Stance Medicine-Ball Punch Throw": {"d4_to_d2"},
         "Scapular Pull-Up Hold": {"d4_to_d2"},
+        "Light Heavy-Bag Technical Tempo": {"d4_to_d2"},
     }
 
     for name, windows in expected_windows.items():
