@@ -5812,35 +5812,6 @@
     ]
   },
   {
-    "name": "Ankle Snap Bounce",
-    "equipment": [],
-    "phases": [
-      "TAPER"
-    ],
-    "system": "ATP-PCr",
-    "duration": "4x10s, 30s rest",
-    "tags": [
-      "plyometric",
-      "ankle",
-      "mech_reactive_rebound",
-      "mech_landing_impact",
-      "mech_cns_high",
-      "high_impact_lower"
-    ],
-    "notes": "Bounce on midfoot. No knee bend. High frequency bounce.",
-    "work_sec": 10,
-    "rounds": 4,
-    "total_minutes": 0.67,
-    "impact_cost": "high",
-    "lactate_load": "low",
-    "movement_cost": "low",
-    "mechanical_risk_tags": [
-      "mech_cns_high",
-      "mech_landing_impact",
-      "mech_reactive_rebound"
-    ]
-  },
-  {
     "name": "Split Stance Hop Switch",
     "equipment": [],
     "phases": [
