@@ -1584,7 +1584,6 @@ def test_late_fight_countdown_clean_sample_has_no_d6_or_d1_blocked_drills():
         - Breathing + shoulder mobility
 
         D-1 — Neural primer
-        - Band-Resisted Jab-Cross Primer — 2 x 3
         - Band Face Pull — 1 x 10
         - Breathing reset
         """,
@@ -1592,6 +1591,39 @@ def test_late_fight_countdown_clean_sample_has_no_d6_or_d1_blocked_drills():
 
     warning_codes = {warning["code"] for warning in report["warnings"]}
     assert "late_fight_countdown_blocked_drill" not in warning_codes
+
+
+def test_late_fight_countdown_blocks_non_rehab_band_work_on_d7_and_d1():
+    brief = _late_fight_planning_brief("D-7")
+    brief["late_fight_plan_spec"].update({"payload_mode": "late_fight_countdown_only"})
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 — Sharpness
+        - Band-Resisted Split Jump
+        - Band-Resisted Jab-Cross
+
+        D-1 — Neural primer
+        - Band-Resisted Jab-Cross
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
+    assert any(w["days_out_bucket"] == "D-7" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
+    assert any(w["days_out_bucket"] == "D-1" and w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
+
+
+def test_late_fight_countdown_blocks_resistance_and_mini_band_variants():
+    brief = _late_fight_planning_brief("D-7")
+    report = validate_stage2_output(
+        planning_brief=brief,
+        final_plan_text="""
+        D-7 — Sharpness
+        - Resistance-band jab-cross release
+        - Mini-band split jump
+        """,
+    )
+    blocked = [w for w in report["warnings"] if w["code"] == "late_fight_countdown_blocked_drill"]
+    assert any(w["blocked_drill"] == "non_rehab_band_work" for w in blocked)
 
 
 def test_late_fight_alactic_overage_d4():

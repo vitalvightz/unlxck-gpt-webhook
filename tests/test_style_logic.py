@@ -17,6 +17,13 @@ def test_equipment_alias_split():
     assert set(normalize_equipment_list(["Med Balls / Bands"])) == {"medicine_ball", "bands"}
 
 
+def test_band_equipment_aliases_normalize_to_bands():
+    assert normalize_equipment_list("band") == ["bands"]
+    assert normalize_equipment_list("resistance_band") == ["bands"]
+    assert normalize_equipment_list("mini_band") == ["bands"]
+    assert normalize_equipment_list("banded") == ["bands"]
+
+
 def test_normalize_equipment_list_does_not_inject_bodyweight():
     assert normalize_equipment_list(["medicine_ball"]) == ["medicine_ball"]
 
