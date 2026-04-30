@@ -14,6 +14,7 @@ EQUIP_ALIASES = {
     "band": "bands",
     "banded": "bands",
     "mini_band": "bands",
+    "mini band": "bands",
     "mini bands": "bands",
     "resistance_band": "bands",
     "resistance bands": "bands",
