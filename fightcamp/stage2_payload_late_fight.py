@@ -1291,6 +1291,73 @@ def _late_fight_forbidden_blocks(days_until_fight: Any) -> list[str]:
     return []
 
 
+def _late_fight_countdown_exercise_rules(days_until_fight: Any) -> list[dict[str, Any]]:
+    days = _coerce_days(days_until_fight)
+    if days is None or days < 0:
+        return []
+
+    covered_days: list[int] = []
+    sequence = _countdown_mode_sequence(days)
+    if sequence:
+        for segment in sequence:
+            start_day = segment.get("start_day")
+            end_day = segment.get("end_day")
+            if not isinstance(start_day, int) or not isinstance(end_day, int):
+                continue
+            covered_days.extend(range(start_day, end_day - 1, -1))
+    else:
+        covered_days = [days]
+
+    rules: list[dict[str, Any]] = []
+    for day in dedupe_preserve_order(covered_days):
+        if day == 6:
+            rules.append(
+                {
+                    "countdown_label": "D-6",
+                    "blocked_drills": [
+                        "Band-Assisted Jump Reset",
+                        "Band-Resisted Sprint Start",
+                        "Band-Resisted Sprint Starts (ATP-PCr)",
+                    ],
+                    "preferred_drills": [
+                        "Explosive Boxing Burst Intervals",
+                        "Reactive Shuffle Repeats",
+                        "Band-Resisted Jab-Cross Primer",
+                    ],
+                    "reason": "D-6 boxing taper should keep sharpness low-impact and should not use jumps or sprint-start fallbacks.",
+                }
+            )
+        elif day == 1:
+            rules.append(
+                {
+                    "countdown_label": "D-1",
+                    "blocked_drills": [
+                        "Staggered-Stance Medicine-Ball Punch Throw",
+                        "medicine ball",
+                        "med-ball",
+                        "Band-Resisted Sprint Start",
+                        "Band-Resisted Sprint Starts (ATP-PCr)",
+                        "Jump Reset",
+                        "Heavy Bag",
+                        "Pull-Up Hold",
+                        "barbell",
+                        "trap bar",
+                        "slow eccentric",
+                        "loaded strength",
+                    ],
+                    "preferred_drills": [
+                        "Band-Resisted Jab-Cross Primer",
+                        "Band Face Pull",
+                        "Technical Shadowboxing Tempo",
+                        "Mobility Reset Flow",
+                        "Breathing Reset",
+                    ],
+                    "reason": "D-1 is a boring readiness day: no med-ball, jumps, sprint starts, pull-up holds, heavy bag, or loaded strength.",
+                }
+            )
+    return rules
+
+
 def _role_anchor(role_key: str) -> str:
     if role_key in {
         "primary_strength_day",
@@ -3435,6 +3502,7 @@ def _build_late_fight_plan_spec(days_until_fight: Any, athlete_model: dict) -> d
         "allowed_session_types": payload_block["allowed_session_types"],
         "forbidden_session_types": payload_block["forbidden_session_types"],
         "forbidden_blocks": payload_block["forbidden_blocks"],
+        "countdown_exercise_rules": _late_fight_countdown_exercise_rules(days_until_fight),
         "rendering_rules": payload_block["rendering_rules"],
         "max_meaningful_stress_exposures": _late_fight_max_meaningful_stress_exposures(days_until_fight),
         "max_active_roles": _late_fight_max_active_roles(days_until_fight),

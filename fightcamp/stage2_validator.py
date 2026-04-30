@@ -124,6 +124,28 @@ _LATE_FIGHT_TOKEN_PHRASES = {
     "layered_rehab_stack": ("rehab stack",),
 }
 _LATE_FIGHT_REHAB_PHRASES = ("rehab", "band external rotation", "scap", "mobility", "tissue", "breathing")
+_COUNTDOWN_LABEL_LINE = re.compile(r"^(?:#{1,6}\s*)?(?:[-*]\s*)?(?:\*\*)?(D-(\d+))\b", re.IGNORECASE)
+_LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS = {
+    6: (
+        "Band-Assisted Jump Reset",
+        "Band-Resisted Sprint Start",
+        "Band-Resisted Sprint Starts (ATP-PCr)",
+    ),
+    1: (
+        "Staggered-Stance Medicine-Ball Punch Throw",
+        "medicine ball",
+        "med-ball",
+        "Band-Resisted Sprint Start",
+        "Band-Resisted Sprint Starts (ATP-PCr)",
+        "Jump Reset",
+        "Heavy Bag",
+        "Pull-Up Hold",
+        "barbell",
+        "trap bar",
+        "slow eccentric",
+        "loaded strength",
+    ),
+}
 
 
 
@@ -1325,6 +1347,95 @@ def _late_fight_forbidden_matches(token: str, plan_lines: list[str], blocks: lis
     return [line for line in plan_lines if _line_matches_late_fight_token(line, token)]
 
 
+def _late_fight_countdown_blocks_by_day(final_plan_text: str) -> dict[int, list[str]]:
+    blocks: dict[int, list[str]] = {}
+    current_day: int | None = None
+    for raw_line in (final_plan_text or "").splitlines():
+        cleaned = _BULLET_PREFIX.sub("", raw_line).strip()
+        if not cleaned:
+            continue
+        match = _COUNTDOWN_LABEL_LINE.match(cleaned)
+        if match:
+            current_day = int(match.group(2))
+            blocks.setdefault(current_day, []).append(cleaned)
+            continue
+        if current_day is not None:
+            blocks.setdefault(current_day, []).append(cleaned)
+    return blocks
+
+
+def _countdown_blocked_drills_from_spec(spec: dict[str, Any]) -> dict[int, tuple[str, ...]]:
+    blocked: dict[int, list[str]] = {
+        day: list(phrases)
+        for day, phrases in _LATE_FIGHT_COUNTDOWN_BLOCKED_DRILLS.items()
+    }
+    for rule in spec.get("countdown_exercise_rules", []) or []:
+        if not isinstance(rule, dict):
+            continue
+        label = str(rule.get("countdown_label") or "")
+        match = re.search(r"D-(\d+)", label, flags=re.IGNORECASE)
+        if not match:
+            continue
+        day = int(match.group(1))
+        phrases = clean_list(rule.get("blocked_drills"))
+        if phrases:
+            blocked.setdefault(day, []).extend(phrases)
+    return {
+        day: tuple(dedupe_preserve_order([phrase for phrase in phrases if phrase]))
+        for day, phrases in blocked.items()
+    }
+
+
+def _late_fight_countdown_blocked_drill_warnings(
+    spec: dict[str, Any],
+    final_plan_text: str,
+    plan_lines: list[str],
+) -> list[dict]:
+    day_blocks = _late_fight_countdown_blocks_by_day(final_plan_text)
+    if not day_blocks:
+        days_out_bucket = str(spec.get("days_out_bucket") or "")
+        match = re.match(r"^D-(\d+)$", days_out_bucket, flags=re.IGNORECASE)
+        if match:
+            day_blocks[int(match.group(1))] = plan_lines
+
+    blocked_by_day = _countdown_blocked_drills_from_spec(spec)
+    warnings: list[dict] = []
+    seen: set[tuple[int, str, str]] = set()
+    for day, lines in day_blocks.items():
+        blocked_phrases = blocked_by_day.get(day, ())
+        if not blocked_phrases:
+            continue
+        for line in lines:
+            if _line_is_instruction_only(line):
+                continue
+            line_lower = line.lower()
+            line_compact = re.sub(r"[^a-z0-9]+", " ", line_lower).strip()
+            for phrase in blocked_phrases:
+                phrase_lower = phrase.lower()
+                phrase_compact = re.sub(r"[^a-z0-9]+", " ", phrase_lower).strip()
+                if not (
+                    phrase_in_text(line_lower, phrase)
+                    or phrase_lower in line_lower
+                    or (phrase_compact and phrase_compact in line_compact)
+                ):
+                    continue
+                key = (day, phrase.casefold(), line)
+                if key in seen:
+                    continue
+                seen.add(key)
+                warnings.append(
+                    {
+                        "code": "late_fight_countdown_blocked_drill",
+                        "message": f"D-{day} includes a drill that is blocked for that countdown day: {phrase}.",
+                        "days_out_bucket": f"D-{day}",
+                        "blocked_drill": phrase,
+                        "line": line,
+                        "blocking": True,
+                    }
+                )
+    return warnings
+
+
 # ---------------------------------------------------------------------------
 # Late-fight dosage ceiling helpers (Patch B)
 # ---------------------------------------------------------------------------
@@ -1605,6 +1716,7 @@ def _late_fight_warnings(planning_brief: dict, final_plan_text: str) -> list[dic
             }
         )
 
+    warnings.extend(_late_fight_countdown_blocked_drill_warnings(spec, final_plan_text, plan_lines))
     warnings.extend(_late_fight_dosage_warnings(spec, blocks))
 
     return warnings
