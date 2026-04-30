@@ -22,6 +22,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -113,60 +114,6 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
 
   return (
     <section className="auth-layout">
-      <div className="auth-rail">
-        <div className="hero-panel-copy">
-          <p className="eyebrow">{mode === "signup" ? "Free beta" : "Athlete access"}</p>
-          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Return to your athlete workspace."}</h1>
-          <p>
-            {mode === "signup"
-              ? "Create your account, complete onboarding, and generate a saved fight camp."
-              : "Resume onboarding and reopen saved plans from one athlete workspace."}
-          </p>
-        </div>
-        <div className="support-panel">
-          <p className="kicker">Flow</p>
-          <ol className="auth-flow">
-            <li>Sign in once and keep your intake on your athlete profile.</li>
-            <li>Resume the onboarding draft whenever you return.</li>
-            <li>Generate and reopen saved plans from the same workspace.</li>
-          </ol>
-        </div>
-        <div className="support-panel auth-preview-panel">
-          <div className="form-section-header">
-            <p className="kicker">Inside the workspace</p>
-            <h2 className="form-section-title">Pick up where you left off</h2>
-          </div>
-          <div className="auth-preview-stack">
-            <div className="auth-preview-item">
-              <span className="label">Onboarding</span>
-              <p className="muted">Draft steps stay attached to your athlete profile, so you can resume instead of restarting.</p>
-            </div>
-            <div className="auth-preview-item">
-              <span className="label">Saved plans</span>
-              <p className="muted">The latest camp reopens fast, with history and PDF exports still in reach.</p>
-            </div>
-            <div className="auth-preview-item">
-              <span className="label">Nutrition</span>
-              <p className="muted">Readiness, weight setup, and plan history stay connected in one workflow.</p>
-            </div>
-          </div>
-        </div>
-        <div className="support-panel">
-          <p className="kicker">Why athletes keep using it</p>
-          <ul className="summary-list">
-            <li>Every generated camp stays saved to the athlete account.</li>
-            <li>The same workspace holds onboarding, nutrition, and plan history.</li>
-            <li>Mobile-friendly access makes it easier to reopen camps between sessions.</li>
-          </ul>
-        </div>
-        {demoMode ? (
-          <div className="support-panel">
-            <p className="kicker">Demo mode</p>
-            <p className="muted">Use any email for demo access, or <code>@unlxck.test</code> for admin. Signup still follows the password-strength rule.</p>
-          </div>
-        ) : null}
-      </div>
-
       <div className="auth-card">
         <div className="auth-header">
           <div>
@@ -199,7 +146,9 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
               id="email"
               name="email"
               type="email"
+              inputMode="email"
               autoComplete="email"
+              autoFocus={mode === "login"}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               required
@@ -207,16 +156,27 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              minLength={8}
-            />
+            <div className="password-field">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
             {mode === "signup" ? <PasswordStrengthMeter strength={passwordStrength} /> : null}
           </div>
 
@@ -245,6 +205,65 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
             </button>
           </div>
         ) : null}
+      </div>
+
+      <div className="auth-rail">
+        <div className="hero-panel-copy">
+          <p className="eyebrow">{mode === "signup" ? "Free beta" : "Athlete access"}</p>
+          <h1>{mode === "signup" ? "Build your camp inside UNLXCK." : "Return to your athlete workspace."}</h1>
+          <p>
+            {mode === "signup"
+              ? "Create your account, complete onboarding, and generate a saved fight camp."
+              : "Resume onboarding and reopen saved plans from one athlete workspace."}
+          </p>
+        </div>
+        <details className="auth-rail-extras">
+          <summary>What's inside the workspace</summary>
+          <div className="auth-rail-extras-body">
+            <div className="support-panel">
+              <p className="kicker">Flow</p>
+              <ol className="auth-flow">
+                <li>Sign in once and keep your intake on your athlete profile.</li>
+                <li>Resume the onboarding draft whenever you return.</li>
+                <li>Generate and reopen saved plans from the same workspace.</li>
+              </ol>
+            </div>
+            <div className="support-panel auth-preview-panel">
+              <div className="form-section-header">
+                <p className="kicker">Inside the workspace</p>
+                <h2 className="form-section-title">Pick up where you left off</h2>
+              </div>
+              <div className="auth-preview-stack">
+                <div className="auth-preview-item">
+                  <span className="label">Onboarding</span>
+                  <p className="muted">Draft steps stay attached to your athlete profile, so you can resume instead of restarting.</p>
+                </div>
+                <div className="auth-preview-item">
+                  <span className="label">Saved plans</span>
+                  <p className="muted">The latest camp reopens fast, with history and PDF exports still in reach.</p>
+                </div>
+                <div className="auth-preview-item">
+                  <span className="label">Nutrition</span>
+                  <p className="muted">Readiness, weight setup, and plan history stay connected in one workflow.</p>
+                </div>
+              </div>
+            </div>
+            <div className="support-panel">
+              <p className="kicker">Why athletes keep using it</p>
+              <ul className="summary-list">
+                <li>Every generated camp stays saved to the athlete account.</li>
+                <li>The same workspace holds onboarding, nutrition, and plan history.</li>
+                <li>Mobile-friendly access makes it easier to reopen camps between sessions.</li>
+              </ul>
+            </div>
+            {demoMode ? (
+              <div className="support-panel">
+                <p className="kicker">Demo mode</p>
+                <p className="muted">Use any email for demo access, or <code>@unlxck.test</code> for admin. Signup still follows the password-strength rule.</p>
+              </div>
+            ) : null}
+          </div>
+        </details>
       </div>
     </section>
   );
