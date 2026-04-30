@@ -3356,7 +3356,7 @@
       "bands"
     ],
     "phases": [
-      "GPP"
+      "SPP"
     ],
     "system": "ATP-PCr",
     "modality": "plyo",
@@ -3819,7 +3819,7 @@
       "bands"
     ],
     "phases": [
-      "GPP"
+      "SPP"
     ],
     "system": "ATP-PCr",
     "modality": "sprint",
