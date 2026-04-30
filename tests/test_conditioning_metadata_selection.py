@@ -233,10 +233,10 @@ def test_coordination_bank_duplicate_names_are_resolved():
 
 def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
     data = json.loads(Path("data/conditioning_bank.json").read_text(encoding="utf-8"))
+    by_name = {item["name"]: item for item in data}
     sprint_starts = [
-        item
-        for item in data
-        if item["name"] in {"Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)"}
+        by_name[name]
+        for name in ("Band-Resisted Sprint Start", "Band-Resisted Sprint Starts (ATP-PCr)")
     ]
 
     assert {item["name"] for item in sprint_starts} == {
@@ -244,6 +244,7 @@ def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
         "Band-Resisted Sprint Starts (ATP-PCr)",
     }
     for item in sprint_starts:
+        assert item["phases"] == ["SPP"]
         assert "TAPER" not in item["phases"]
         assert item["late_windows"] == ["d21_to_d14", "d13_to_d8"]
         assert conditioning._evaluate_conditioning_late_window(
@@ -258,6 +259,16 @@ def test_boxing_sprint_starts_are_not_tight_window_taper_defaults():
             window=D1,
             bridge_rules={},
         )["blocked"] is True
+
+    safe_taper_options = {
+        "Explosive Boxing Burst Intervals",
+        "Reactive Shuffle Repeats",
+    }
+    assert safe_taper_options.issubset(by_name)
+    for name in safe_taper_options:
+        item = by_name[name]
+        assert item["phases"] == ["TAPER"]
+        assert "d6_to_d5" in item["late_windows"]
 
 
 def test_boxing_jump_reset_is_not_taper_metadata_and_d6_prefers_low_impact_bursts():
