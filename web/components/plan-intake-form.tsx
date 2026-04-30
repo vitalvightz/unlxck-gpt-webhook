@@ -8,7 +8,6 @@ import { RequireAuth } from "@/components/auth-guard";
 import { useAppSession } from "@/components/auth-provider";
 import { BodyMap, type BodyMapSide } from "@/components/body-map";
 import { CustomSelect } from "@/components/custom-select";
-import { Stage1PreviewPanel } from "@/components/stage1-preview-panel";
 import { generateStage1Preview, updateMe } from "@/lib/api";
 import {
   detectDeviceTimeZone,
@@ -2326,10 +2325,23 @@ export function PlanIntakeForm() {
                 </div>
               </article>
               {stage1Preview ? (
-                <Stage1PreviewPanel
-                  preview={stage1Preview}
-                  onClear={() => setStage1Preview(null)}
-                />
+                <article id="stage1-preview" className="step-card">
+                  <div className="form-section-header">
+                    <p className="kicker">Stage 1 only</p>
+                    <h2 className="form-section-title">Planner draft before Stage 2</h2>
+                    <p className="muted">
+                      Generated {new Date(stage1Preview.generated_at).toLocaleString()}. Stage 2 was skipped.
+                    </p>
+                  </div>
+                  <pre className="plan-text-block">
+                    {stage1Preview.plan_text || "No Stage 1 draft text returned."}
+                  </pre>
+                  <div className="plan-summary-actions">
+                    <button type="button" className="ghost-button" onClick={() => setStage1Preview(null)}>
+                      Clear preview
+                    </button>
+                  </div>
+                </article>
               ) : null}
             </div>
 
