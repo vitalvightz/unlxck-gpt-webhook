@@ -694,7 +694,7 @@ export function PlanIntakeForm() {
     }, 1500);
     return () => window.clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form, guidedInjuries, noRestrictions, hydrated, session?.access_token]);
+  }, [form, guidedInjuries, noRestrictions, hydrated, session?.access_token, currentStep]);
 
   useEffect(() => {
     if (!stage1Preview || currentStep !== steps.length - 1) {
